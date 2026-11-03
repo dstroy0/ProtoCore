@@ -19,9 +19,9 @@
 // The env sizes PROTOCORE_PQ_DEPTH 4, PROTOCORE_PQ_ITEM_SIZE 16, PROTOCORE_DMA_BUF_SIZE 8,
 // PROTOCORE_DMA_CHANNELS 2.
 
-#include "mmgr/dma/dma.h"
+#include "memoriam_praetereo/memoriam_praetereo.h"
 #include "server/core/preempt_queue/preempt_queue.h"
-// The host DMA driver defines the protocore_dma_hw_* hooks with external linkage, so it belongs to
+// The host DMA driver defines the mmgr_praet_hw_* hooks with external linkage, so it belongs to
 // exactly one translation unit. Unity's runner generator copies every line matching "#include" at
 // the start of a line into the runner; the space after the '#' keeps this one out of that copy and
 // out of a duplicate-definition link error.
@@ -38,7 +38,7 @@ typedef struct
     uint32_t v;                           // plain payload, and the completion sequence on a DMA item
     uint16_t len;                         // bytes the transfer moved
     uint8_t channel;                      // the channel it completed on
-    uint8_t dir;                          // protocore_dma_dir
+    uint8_t dir;                          // the event's direction
     uint8_t data[PROTOCORE_DMA_BUF_SIZE]; // RX: the completed buffer's bytes; TX: zero
 } PqItem;
 _Static_assert(sizeof(PqItem) == PROTOCORE_PQ_ITEM_SIZE, "a lane item carries one DMA completion whole");
@@ -160,18 +160,18 @@ static size_t g_isr_dropped;
 
 // Where the ISR runs on silicon: copy the completed bytes out of the ping-pong buffer and hand them
 // to the DMA lane, so the work happens in the lane's task instead of in the interrupt.
-static void on_dma_complete(const protocore_dma_event *ev, void *ctx)
+static void on_dma_complete(const mmgr_praet_event *ev, void *ctx)
 {
     (void)ctx;
     PqItem it;
     memset(&it, 0, sizeof(it));
-    it.v = ev->seq;
-    it.len = ev->len;
+    it.v = ev->sequence;
+    it.len = ev->bytes;
     it.channel = ev->channel;
-    it.dir = (uint8_t)ev->dir;
-    if (ev->dir == PROTOCORE_DMA_RX && ev->data != NULL)
+    it.dir = (uint8_t)ev->direction;
+    if (ev->direction == PROTOCORE_DMA_RX && ev->data != NULL)
     {
-        uint16_t n = ev->len;
+        uint16_t n = ev->bytes;
         if (n > (uint16_t)sizeof(it.data))
         {
             n = (uint16_t)sizeof(it.data);
@@ -195,13 +195,9 @@ static void open_dma_lane(uint8_t ch, proto_bool loopback)
     lane.handler = on_dma;
     TEST_ASSERT_TRUE(lane_start(PROTOCORE_PQ_LANE_DMA, &lane));
 
-    protocore_dma_config cfg;
-    memset(&cfg, 0, sizeof(cfg));
-    cfg.channel = ch;
-    cfg.periph = PROTOCORE_DMA_UART;
-    cfg.loopback = loopback;
-    cfg.on_complete = on_dma_complete;
-    TEST_ASSERT_TRUE(protocore_dma_open(&cfg));
+    static const PraetCallbackCfg complete = {.callback = on_dma_complete, .user = NULL};
+    TEST_ASSERT_TRUE(EMBED_CALL(praet.open, PraetCfg, .channel = ch, .peripheral = PROTOCORE_DMA_UART,
+                                .loopback = loopback, .on_complete = &complete));
 }
 
 void setUp(void)
@@ -432,7 +428,7 @@ void test_a_dma_completion_is_processed_off_the_interrupt(void)
     const uint8_t rx[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     TEST_ASSERT_TRUE(protocore_dma_host_feed(0, rx, (uint16_t)sizeof(rx)));
 
-    protocore_dma_poll(); // the transfer completes and the callback posts, in ISR context
+    EMBED_CALL(praet.poll, PraetCfg, .channel = 0u); // the transfer completes and the callback posts, in ISR context
     TEST_ASSERT_EQUAL_size_t(1u, g_isr_posted);
     TEST_ASSERT_EQUAL_size_t(0u, g_dma_n); // the callback itself did no work
 
@@ -456,8 +452,8 @@ void test_ping_pong_completions_reach_the_lane_in_order(void)
         rx[i] = (uint8_t)(0x10 + i);
     }
     TEST_ASSERT_TRUE(protocore_dma_host_feed(1, rx, (uint16_t)sizeof(rx)));
-    protocore_dma_poll();
-    protocore_dma_poll();
+    EMBED_CALL(praet.poll, PraetCfg, .channel = 0u);
+    EMBED_CALL(praet.poll, PraetCfg, .channel = 0u);
     TEST_ASSERT_EQUAL_size_t(2u, g_isr_posted);
 
     pump("protocore_pq_dma");
@@ -469,13 +465,14 @@ void test_ping_pong_completions_reach_the_lane_in_order(void)
     TEST_ASSERT_EQUAL_UINT32(g_dma[0].v + 1u, g_dma[1].v); // consecutive completions
 }
 
-// An egress completion says the buffer is free, so it carries a length and no bytes.
+// An egress completion says the buffer is free, so it carries a length and no byteio.
 void test_a_tx_completion_carries_no_bytes(void)
 {
     open_dma_lane(0, PROTO_FALSE);
     const uint8_t tx[3] = {1, 2, 3};
-    TEST_ASSERT_TRUE(protocore_dma_tx_submit(0, tx, (uint16_t)sizeof(tx)));
-    protocore_dma_poll();
+    TEST_ASSERT_TRUE(
+        EMBED_CALL(praet.tx_submit, PraetTransferCfg, .channel = 0, .buf = tx, .bytes = (uint16_t)sizeof(tx)));
+    EMBED_CALL(praet.poll, PraetCfg, .channel = 0u);
     pump("protocore_pq_dma");
     TEST_ASSERT_EQUAL_size_t(1u, g_dma_n);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DMA_TX, g_dma[0].dir);
@@ -493,8 +490,9 @@ void test_loopback_round_trips_through_the_lane(void)
 {
     open_dma_lane(1, PROTO_TRUE);
     const uint8_t tx[4] = {0xA0, 0xA1, 0xA2, 0xA3};
-    TEST_ASSERT_TRUE(protocore_dma_tx_submit(1, tx, (uint16_t)sizeof(tx)));
-    protocore_dma_poll();
+    TEST_ASSERT_TRUE(
+        EMBED_CALL(praet.tx_submit, PraetTransferCfg, .channel = 1, .buf = tx, .bytes = (uint16_t)sizeof(tx)));
+    EMBED_CALL(praet.poll, PraetCfg, .channel = 0u);
     pump("protocore_pq_dma");
     TEST_ASSERT_EQUAL_size_t(2u, g_dma_n);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DMA_TX, g_dma[0].dir);
@@ -513,7 +511,7 @@ void test_a_full_lane_drops_the_completion_in_the_isr(void)
     for (uint32_t i = 0; i < PROTOCORE_PQ_DEPTH + 1u; i++)
     {
         TEST_ASSERT_TRUE(protocore_dma_host_feed(0, rx, (uint16_t)sizeof(rx)));
-        protocore_dma_poll();
+        EMBED_CALL(praet.poll, PraetCfg, .channel = 0u);
     }
     TEST_ASSERT_EQUAL_size_t((size_t)PROTOCORE_PQ_DEPTH, g_isr_posted);
     TEST_ASSERT_EQUAL_size_t(1u, g_isr_dropped);

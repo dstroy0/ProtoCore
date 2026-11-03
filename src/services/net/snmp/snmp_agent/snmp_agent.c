@@ -7,9 +7,9 @@
  */
 
 #include "services/net/snmp/snmp_agent/snmp_agent.h"
-#include "mmgr/protomem/protomem.h" // mem.set / mem.cmp: the fixed-width compares and clears
-#include "mmgr/protostr/protostr.h" // str.len / str.copy: the bounded community and string handling
-#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len / cellul.copy: the bounded community and string handling
+#include "memoria_operor/memoria_operor.h"       // memor.set / memor.cmp: the fixed-width compares and clears
+#include "server/core/worker/worker.h"           // the persistent end this module's key material is taken from
 #include "services/net/snmp/snmp_v3/snmp_v3.h"
 
 #if PROTOCORE_ENABLE_SNMP
@@ -124,9 +124,10 @@ uint8_t *protocore_snmp_agent_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SNMP_AGENT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SNMP_AGENT_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
-        (void)str.copy(SNMP_AGENT_CTX(s_own.span)->ro, PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY, SNMP_COMMUNITY_MAX);
+        (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SNMP_AGENT_CTX(s_own.span)->ro,
+                         .src = PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY, .cap = SNMP_COMMUNITY_MAX);
     }
     return s_own.span;
 }
@@ -240,7 +241,7 @@ static SnmpMibEntry *mib_alloc(uint8_t *work)
         return NULL;
     }
     SnmpMibEntry *e = &SNMP_AGENT_CTX(work)->mib[SNMP_AGENT_CTX(work)->mib_count++];
-    mem.set(e, 0, sizeof(*e));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = e, .val = 0, .bytes = sizeof(*e));
     for (size_t i = 0; i < n; i++)
     {
         e->oid[i] = oid[i];
@@ -259,7 +260,8 @@ void protocore_snmp_agent_init(uint8_t *work)
     {
         ro = PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY;
     }
-    (void)str.copy(SNMP_AGENT_CTX(work)->ro, ro, sizeof(SNMP_AGENT_CTX(work)->ro));
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SNMP_AGENT_CTX(work)->ro, .src = ro,
+                     .cap = sizeof(SNMP_AGENT_CTX(work)->ro));
     SnmpAgentV.ok = PROTO_TRUE;
 }
 
@@ -273,7 +275,8 @@ void protocore_snmp_agent_set_rw_community(uint8_t *work)
         SnmpAgentV.ok = PROTO_FALSE;
         return;
     }
-    (void)str.copy(SNMP_AGENT_CTX(work)->rw, rw, sizeof(SNMP_AGENT_CTX(work)->rw));
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SNMP_AGENT_CTX(work)->rw, .src = rw,
+                     .cap = sizeof(SNMP_AGENT_CTX(work)->rw));
     SNMP_AGENT_CTX(work)->rw_set = PROTO_TRUE;
     SnmpAgentV.ok = PROTO_TRUE;
 }
@@ -289,7 +292,7 @@ void protocore_snmp_agent_add_string(uint8_t *work)
     const char *value = SnmpAgentV.object.text;
     e->val.type = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     e->val.str = value;
-    e->val.str_len = value ? str.len(value, SNMP_MSG_BUF_SIZE) : 0;
+    e->val.str_len = value ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = value, .cap = SNMP_MSG_BUF_SIZE) : 0;
     e->setter = SnmpAgentV.object.setter;
     SnmpAgentV.ok = PROTO_TRUE;
 }
@@ -462,7 +465,7 @@ static void enc_value(BerEnc *e, const SnmpValue *v)
 // oidbuf. Leaves the cursor past the value.
 static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
 {
-    mem.set(v, 0, sizeof(*v));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = v, .val = 0, .bytes = sizeof(*v));
     size_t save = d->pos;
     SnmpBerV.dec = d;
     SnmpBer.read_header(protocore_snmp_agent_span());
@@ -557,7 +560,8 @@ static void apply_set_all(uint8_t *work, size_t nvb, proto_bool v2c, long *err_s
 // stored community it is handed and no module state.
 static proto_bool community_match(const char *stored, const char *p, size_t len)
 {
-    return stored[0] != '\0' && str.len(stored, len + 1) == len && mem.cmp(stored, p, len) == 0;
+    return stored[0] != '\0' && EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = stored, .cap = len + 1) == len &&
+           EMBED_CALL(memor.cmp, MemoriaCfg, .src = stored, .other = p, .bytes = len) == 0;
 }
 
 // Response-PDU (RFC 3416 sec 4.2.4): request-id, error-status, error-index, then the first nout

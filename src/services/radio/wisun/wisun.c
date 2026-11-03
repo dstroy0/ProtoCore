@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_WISUN
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/radio/wisun/wisun.h"
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 // Emit one CoAP option (RFC 7252 sec 3.1): the (delta,length) nibble header + extended bytes + value.
 static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delta, const uint8_t *val, uint16_t vlen)
@@ -168,7 +168,7 @@ void protocore_wisun_init(uint8_t *work, WisunFan *fan, const protocore_ip *bord
     }
     else
     {
-        mem.set(&fan->border_router, 0, sizeof(fan->border_router));
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = &fan->border_router, .val = 0, .bytes = sizeof(fan->border_router));
     }
     fan->nodes = storage;
     fan->cap = storage ? cap : 0;
@@ -247,13 +247,13 @@ size_t protocore_wisun_nodes_json(uint8_t *work, const WisunFan *fan, char *out,
     {
         return 0;
     }
-    protocore_sb b = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&b, "[");
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "[");
     for (size_t i = 0; i < fan->count; i++)
     {
         if (i)
         {
-            Sb.put(&b, ",");
+            b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",");
         }
         char astr[PROTOCORE_IP_STR_MAX];
         astr[0] = '\0'; // a family-less address formats to nothing rather than to stack contents
@@ -261,19 +261,20 @@ size_t protocore_wisun_nodes_json(uint8_t *work, const WisunFan *fan, char *out,
         IpV.args.buf = astr;
         IpV.args.cap = sizeof(astr);
         Ip.format(work);
-        Sb.put(&b, "{\"addr\":\"");
-        Sb.put(&b, astr);
-        Sb.put(&b, "\",\"joined\":");
-        Sb.put(&b, fan->nodes[i].joined ? "true" : "false");
-        Sb.put(&b, "}");
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "{\"addr\":\"");
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = astr);
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "\",\"joined\":");
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b,
+                       .text = fan->nodes[i].joined ? "true" : "false");
+        b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "}");
     }
-    Sb.put(&b, "]");
-    if (!b.ok)
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "]");
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = out, .cap = cap, .at = b))
     {
         return 0;
     }
-    out[b.len] = '\0';
-    return b.len;
+    out[b] = '\0';
+    return b;
 }
 
 #endif // PROTOCORE_ENABLE_WISUN

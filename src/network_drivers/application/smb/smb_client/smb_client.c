@@ -11,9 +11,9 @@
 
 #if PROTOCORE_ENABLE_SMB
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/smb/smb_client/smb_client.h"
+#include "server/core/worker/worker.h" // the persistent end this module's key material is taken from
 
 #include "crypto/rng/rng.h" // protocore_rand_fill: the client GUID, salt and challenge
 #include "network_drivers/application/smb/ntlm/ntlm.h"
@@ -32,7 +32,7 @@
 static_assert(64 + 56 + PROTOCORE_SMB_BUF / 2 <= PROTOCORE_SMB_BUF - 4,
               "PROTOCORE_SMB_BUF is too small to frame a CREATE around a full-length path "
               "(64B header + 56B body + PROTOCORE_SMB_BUF/2 path must fit PROTOCORE_SMB_BUF-4)");
-// WRITE is the other payload-bearing case; its chunk_max already backs off by 128 bytes.
+// WRITE is the other payload-bearing case; its chunk_max already backs off by 128 byteio.
 static_assert(64 + 48 + (PROTOCORE_SMB_BUF - 128) <= PROTOCORE_SMB_BUF - 4,
               "PROTOCORE_SMB_BUF is too small to frame a WRITE around a full chunk");
 // SESSION_SETUP round 2 wraps the NTLMSSP AUTHENTICATE blob, capped at sizeof(SMB_CLIENT_CTX(work)->sp2).
@@ -65,7 +65,7 @@ static size_t utf16le(const char *s, uint8_t *out, size_t cap)
 // Find the MsvAvTimestamp (AvId 7) FILETIME in a CHALLENGE target-info blob; copy 8 bytes, else 0-fill.
 static void find_av_timestamp(const uint8_t *ti, size_t ti_len, uint8_t out[8])
 {
-    mem.set(out, 0, 8);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = 8);
     size_t p = 0;
     while (p + 4 <= ti_len)
     {
@@ -78,7 +78,7 @@ static void find_av_timestamp(const uint8_t *ti, size_t ti_len, uint8_t out[8])
         }
         if (id == 7 && len == 8 && p + 8 <= ti_len)
         {
-            mem.cpy(out, ti + p, 8);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = ti + p, .bytes = 8);
             return;
         }
         p += len;
@@ -154,8 +154,8 @@ static_assert(SMB_CLIENT_OFF_CTX + sizeof(SmbClientCtx) <= PROTOCORE_SMB_CLIENT_
               "PROTOCORE_SMB_CLIENT_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -181,7 +181,7 @@ uint8_t *protocore_smb_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SMB_CLIENT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SMB_CLIENT_BORROW);
     }
     return s_own.span;
 }
@@ -482,7 +482,8 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     // MIC = HMAC-MD5(session key, NEGOTIATE || CHALLENGE || AUTHENTICATE); write it into the zeroed field.
     uint8_t mic[PROTOCORE_NTLMSSP_MIC_LEN];
     Ntlm.mic(work, skey, ntneg, ntneg_n, chal_tok, chal_len, SMB_CLIENT_CTX(work)->ntauth, ntauth_n, mic);
-    mem.cpy(SMB_CLIENT_CTX(work)->ntauth + PROTOCORE_NTLMSSP_MIC_OFFSET, mic, PROTOCORE_NTLMSSP_MIC_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SMB_CLIENT_CTX(work)->ntauth + PROTOCORE_NTLMSSP_MIC_OFFSET, .src = mic,
+               .bytes = PROTOCORE_NTLMSSP_MIC_LEN);
     spnego_n = Spnego.wrap_authenticate(work, SMB_CLIENT_CTX(work)->ntauth, ntauth_n, SMB_CLIENT_CTX(work)->sp2,
                                         sizeof(SMB_CLIENT_CTX(work)->sp2));
     size_t sp2_n = spnego_n;
@@ -518,7 +519,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     }
     else
     {
-        mem.cpy(sign_key, skey, sizeof(sign_key));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = sign_key, .src = skey, .bytes = sizeof(sign_key));
         if (want_signing)
         {
             Smb2.sign(work, SMB_CLIENT_CTX(work)->crypto_work, skey, SMB_CLIENT_CTX(work)->tx + 4, mlen);
@@ -553,7 +554,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     }
     sign->active = want_signing && !guest_or_null;
     sign->algo = algo;
-    mem.cpy(sign->key, sign_key, sizeof(sign->key));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = sign->key, .src = sign_key, .bytes = sizeof(sign->key));
 
     // SMB 3.x transport encryption: derive the C2S/S2C cipher keys if the server negotiated a cipher (SMB 3.x,
     // non-guest), sized by the cipher (16 for -128, 32 for -256). A server that requires encryption globally
@@ -667,18 +668,18 @@ static SmbResult smb_create(uint8_t *work, const SmbConfig *cfg, SmbHandle *h, u
     }
     h->session_id = session_id;
     h->tree_id = tree_id;
-    mem.cpy(h->file_id, cr.file_id, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h->file_id, .src = cr.file_id, .bytes = 16);
     h->file_size = cr.end_of_file;
     h->next_message_id = 5;
     h->signing_active = sign->active;
     h->signing_algo = sign->algo;
-    mem.cpy(h->signing_key, sign->key, sizeof(h->signing_key));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h->signing_key, .src = sign->key, .bytes = sizeof(h->signing_key));
     // Carry the encryption state onto the handle so read/write/close keep encrypting with the same keys and a
     // continuing nonce (the counter must not restart, or a nonce would repeat under the same key).
     h->encrypt_active = crypt->active;
     h->enc_cipher = crypt->cipher;
-    mem.cpy(h->enc_c2s, crypt->c2s, sizeof(h->enc_c2s));
-    mem.cpy(h->enc_s2c, crypt->s2c, sizeof(h->enc_s2c));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h->enc_c2s, .src = crypt->c2s, .bytes = sizeof(h->enc_c2s));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h->enc_s2c, .src = crypt->s2c, .bytes = sizeof(h->enc_s2c));
     h->enc_nonce = crypt->nonce;
     return SMB_OK;
 }
@@ -761,10 +762,10 @@ SmbResult protocore_smb_client_smb_close(uint8_t *work, SmbHandle *h, SmbSendFn 
         return SMB_ERR_OVERFLOW;
     }
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
-    mem.cpy(sign.key, h->signing_key, sizeof(sign.key));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = sign.key, .src = h->signing_key, .bytes = sizeof(sign.key));
     SmbCrypt crypt = {h->encrypt_active, h->encrypt_active, h->enc_cipher, {0}, {0}, h->session_id, h->enc_nonce};
-    mem.cpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
-    mem.cpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = crypt.c2s, .src = h->enc_c2s, .bytes = sizeof(crypt.c2s));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = crypt.s2c, .src = h->enc_s2c, .bytes = sizeof(crypt.s2c));
     SmbResult rt = SMB_ERR_IO;
     int rl = smb_round_trip(work, send, recv, ctx, mlen, &sign, &crypt, &rt);
     h->enc_nonce = crypt.nonce; // persist the advanced nonce (must never repeat under the same key)
@@ -797,10 +798,10 @@ SmbResult protocore_smb_client_smb_read(uint8_t *work, SmbHandle *h, uint64_t of
     }
     *out_len = 0;
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
-    mem.cpy(sign.key, h->signing_key, sizeof(sign.key));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = sign.key, .src = h->signing_key, .bytes = sizeof(sign.key));
     SmbCrypt crypt = {h->encrypt_active, h->encrypt_active, h->enc_cipher, {0}, {0}, h->session_id, h->enc_nonce};
-    mem.cpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
-    mem.cpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = crypt.c2s, .src = h->enc_c2s, .bytes = sizeof(crypt.c2s));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = crypt.s2c, .src = h->enc_s2c, .bytes = sizeof(crypt.s2c));
     const size_t chunk_max = PROTOCORE_SMB_BUF - 96; // room for the header + READ response body
     size_t total = 0;
     while (total < cap)
@@ -850,7 +851,7 @@ SmbResult protocore_smb_client_smb_read(uint8_t *work, SmbHandle *h, uint64_t of
         {
             break;
         }
-        mem.cpy(out + total, r.data, r.data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + total, .src = r.data, .bytes = r.data_len);
         total += r.data_len;
         if (r.data_len < want)
         {
@@ -871,10 +872,10 @@ SmbResult protocore_smb_client_smb_write(uint8_t *work, SmbHandle *h, uint64_t o
     }
     *written = 0;
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
-    mem.cpy(sign.key, h->signing_key, sizeof(sign.key));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = sign.key, .src = h->signing_key, .bytes = sizeof(sign.key));
     SmbCrypt crypt = {h->encrypt_active, h->encrypt_active, h->enc_cipher, {0}, {0}, h->session_id, h->enc_nonce};
-    mem.cpy(crypt.c2s, h->enc_c2s, sizeof(crypt.c2s));
-    mem.cpy(crypt.s2c, h->enc_s2c, sizeof(crypt.s2c));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = crypt.c2s, .src = h->enc_c2s, .bytes = sizeof(crypt.c2s));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = crypt.s2c, .src = h->enc_s2c, .bytes = sizeof(crypt.s2c));
     const size_t chunk_max = PROTOCORE_SMB_BUF - 128; // room for the header + WRITE request body
     size_t total = 0;
     while (total < len)

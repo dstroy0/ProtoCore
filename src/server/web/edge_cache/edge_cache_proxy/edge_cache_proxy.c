@@ -10,16 +10,15 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
-#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
-#include "mmgr/plaintext/plaintext.h" // the persistent end the cached bytes are taken from
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
-#include "mmgr/secure/secure.h" // and the secure end the TLS half is taken from
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
+#include "server/core/worker/worker.h" // the persistent end the cached bytes are taken from
 #include "server/web/edge_cache/edge_cache/edge_cache.h"
 #include "server/web/edge_cache/edge_cache_proxy/edge_cache_proxy.h"
 #include "services/storage/dbm/dbm.h"
 #include "shared/http_date/http_date.h"
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 #include "network_drivers/presentation/http/http.h"                    // Http.set_edge_poll
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_get_header, http_pool
@@ -153,8 +152,8 @@ static_assert(EDGE_CACHE_PROXY_OFF_CTX + sizeof(EdgeCacheProxyCtx) <= PROTOCORE_
               "PROTOCORE_EDGE_PROXY_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(EDGE_CACHE_PROXY_OFF_CTX % _Alignof(EdgeCacheProxyCtx) == 0,
@@ -250,8 +249,8 @@ static EdgeRouteMap *map_match(uint8_t *work, const char *path)
         {
             continue;
         }
-        if (str.starts(path, EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix,
-                       sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix), PROTO_FALSE))
+        if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix,
+                       .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix), .ci = PROTO_FALSE))
         {
             return &EDGE_CACHE_PROXY_CTX(work)->maps[i];
         }
@@ -298,7 +297,7 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
         return 0;
     }
     size_t n = remaining < cap ? remaining : cap;
-    mem.cpy(buf, c->entry->body + c->off, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = c->entry->body + c->off, .bytes = n);
     c->off += n;
     return n;
 }
@@ -326,10 +325,12 @@ static void serve_hit(uint8_t *work, uint8_t slot, EdgeEntry *e, uint32_t now, c
         if (rr < 0) // syntactically valid but unsatisfiable -> 416, no body window served
         {
             char cr[48];
-            protocore_sb sb_cr = {cr, sizeof(cr), 0, PROTO_TRUE};
-            Sb.put(&sb_cr, "bytes */");
-            Sb.u32(&sb_cr, (uint32_t)((unsigned)e->body_len));
-            if (Sb.finish(&sb_cr) == 0)
+            size_t sb_cr = 0;
+            sb_cr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr,
+                               .text = "bytes */");
+            sb_cr = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr,
+                               .val = (uint32_t)((unsigned)e->body_len));
+            if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr) == 0)
             {
                 cr[0] = '\0';
             }
@@ -345,14 +346,20 @@ static void serve_hit(uint8_t *work, uint8_t slot, EdgeEntry *e, uint32_t now, c
             c->off = (uint32_t)rs;
             c->end = (uint32_t)re + 1;
             char cr[48];
-            protocore_sb sb_cr2 = {cr, sizeof(cr), 0, PROTO_TRUE};
-            Sb.put(&sb_cr2, "bytes ");
-            Sb.u32(&sb_cr2, (uint32_t)((unsigned)rs));
-            Sb.put(&sb_cr2, "-");
-            Sb.u32(&sb_cr2, (uint32_t)((unsigned)re));
-            Sb.put(&sb_cr2, "/");
-            Sb.u32(&sb_cr2, (uint32_t)((unsigned)e->body_len));
-            if (Sb.finish(&sb_cr2) == 0)
+            size_t sb_cr2 = 0;
+            sb_cr2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr2,
+                                .text = "bytes ");
+            sb_cr2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr2,
+                                .val = (uint32_t)((unsigned)rs));
+            sb_cr2 =
+                EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr2, .text = "-");
+            sb_cr2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr2,
+                                .val = (uint32_t)((unsigned)re));
+            sb_cr2 =
+                EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr2, .text = "/");
+            sb_cr2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr2,
+                                .val = (uint32_t)((unsigned)e->body_len));
+            if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = cr, .cap = sizeof(cr), .at = sb_cr2) == 0)
             {
                 cr[0] = '\0';
             }
@@ -385,9 +392,10 @@ static void serve_hit(uint8_t *work, uint8_t slot, EdgeEntry *e, uint32_t now, c
         age = 0;
     }
     char agebuf[12];
-    protocore_sb sb_agebuf = {agebuf, sizeof(agebuf), 0, PROTO_TRUE};
-    Sb.i64(&sb_agebuf, (int64_t)(age));
-    if (Sb.finish(&sb_agebuf) == 0)
+    size_t sb_agebuf = 0;
+    sb_agebuf = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = agebuf, .cap = sizeof(agebuf), .at = sb_agebuf,
+                           .sval = (int64_t)(age));
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = agebuf, .cap = sizeof(agebuf), .at = sb_agebuf) == 0)
     {
         agebuf[0] = '\0';
     }
@@ -420,7 +428,8 @@ static void serve_passthrough(uint8_t *work, uint8_t slot, EdgeFetch *f)
     EdgeCache.header_value(work);
     if (!EdgeCacheV.ok)
     {
-        str.copy(e->content_type, "application/octet-stream", sizeof(e->content_type));
+        EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = e->content_type, .src = "application/octet-stream",
+                   .cap = sizeof(e->content_type));
     }
     EdgeCacheV.header_value_args.hdrs = (const char *)f->buf;
     EdgeCacheV.header_value_args.len = f->head_len;
@@ -433,7 +442,7 @@ static void serve_passthrough(uint8_t *work, uint8_t slot, EdgeFetch *f)
     {
         bl = PROTOCORE_EDGE_BODY_MAX;
     }
-    mem.cpy(e->body, f->buf + f->body_off, bl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->body, .src = f->buf + f->body_off, .bytes = bl);
     e->body_len = (uint16_t)bl;
 
     EdgeServeCursor *c = &EDGE_CACHE_PROXY_CTX(work)->serve[slot];
@@ -501,10 +510,10 @@ static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpR
     EdgeCacheV.header_value_args.out = e->last_modified;
     EdgeCacheV.header_value_args.out_cap = sizeof(e->last_modified);
     EdgeCache.header_value(work);
-    size_t vhl = str.len(vary_hdr, sizeof(e->vary_names));
+    size_t vhl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = vary_hdr, .cap = sizeof(e->vary_names));
     if (vary_hdr[0] && vhl < sizeof(e->vary_names))
     {
-        mem.cpy(e->vary_names, vary_hdr, vhl + 1);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->vary_names, .src = vary_hdr, .bytes = vhl + 1);
     }
 
     size_t bl = f->body_len;
@@ -512,7 +521,7 @@ static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpR
     {
         bl = PROTOCORE_EDGE_BODY_MAX;
     }
-    mem.cpy(e->body, f->buf + f->body_off, bl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->body, .src = f->buf + f->body_off, .bytes = bl);
     e->body_len = (uint16_t)bl;
     EDGE_CACHE_PROXY_CTX(work)->store.stats.bytes_stored += bl;
 
@@ -530,7 +539,7 @@ static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpR
     if (EdgeCacheV.ok)
     {
         EdgeCacheV.parse_http_date_args.s = v;
-        EdgeCacheV.parse_http_date_args.len = str.len(v, sizeof(v));
+        EdgeCacheV.parse_http_date_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
         EdgeCache.parse_http_date(work);
         date = EdgeCacheV.epoch;
     }
@@ -543,14 +552,15 @@ static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpR
     if (EdgeCacheV.ok)
     {
         EdgeCacheV.parse_http_date_args.s = v;
-        EdgeCacheV.parse_http_date_args.len = str.len(v, sizeof(v));
+        EdgeCacheV.parse_http_date_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
         EdgeCache.parse_http_date(work);
         expires = EdgeCacheV.epoch;
     }
     if (e->last_modified[0])
     {
         EdgeCacheV.parse_http_date_args.s = e->last_modified;
-        EdgeCacheV.parse_http_date_args.len = str.len(e->last_modified, sizeof(e->last_modified));
+        EdgeCacheV.parse_http_date_args.len =
+            EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = e->last_modified, .cap = sizeof(e->last_modified));
         EdgeCache.parse_http_date(work);
         last_mod = EdgeCacheV.epoch;
     }
@@ -623,7 +633,7 @@ static void on_fetch_done(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, uint32
         if (EdgeCacheV.ok)
         {
             HttpcacheV.control_parse_args.s = v;
-            HttpcacheV.control_parse_args.len = str.len(v, sizeof(v));
+            HttpcacheV.control_parse_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = sizeof(v));
             HttpcacheV.control_parse_args.cc = &cc;
             Httpcache.control_parse(work);
         }
@@ -679,18 +689,29 @@ static proto_bool begin_origin_fetch(uint8_t *work, EdgeFetchSlot *fs, uint32_t 
         EdgeCacheV.build_conditional_args.cap = sizeof(cond);
         EdgeCache.build_conditional(work);
     }
-    protocore_sb sb_reqbuf = {EDGE_CACHE_PROXY_CTX(work)->reqbuf, sizeof(EDGE_CACHE_PROXY_CTX(work)->reqbuf), 0,
-                              PROTO_TRUE};
-    Sb.put(&sb_reqbuf, "GET ");
-    Sb.put(&sb_reqbuf, fs->path);
-    Sb.put(&sb_reqbuf, fs->query[0] ? "?" : "");
-    Sb.put(&sb_reqbuf, fs->query);
-    Sb.put(&sb_reqbuf, " HTTP/1.1\r\nHost: ");
-    Sb.put(&sb_reqbuf, m->origin_host);
-    Sb.put(&sb_reqbuf, "\r\nUser-Agent: PC-EdgeCache\r\nConnection: close\r\n");
-    Sb.put(&sb_reqbuf, cond);
-    Sb.put(&sb_reqbuf, "\r\n");
-    int rl = (int)Sb.finish(&sb_reqbuf);
+    char *const sb_reqbuf_out = EDGE_CACHE_PROXY_CTX(work)->reqbuf;
+    const size_t sb_reqbuf_cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->reqbuf);
+    size_t sb_reqbuf = 0;
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = "GET ");
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = fs->path);
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = fs->query[0] ? "?" : "");
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = fs->query);
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = " HTTP/1.1\r\nHost: ");
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = m->origin_host);
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = "\r\nUser-Agent: PC-EdgeCache\r\nConnection: close\r\n");
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = cond);
+    sb_reqbuf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap,
+                           .at = sb_reqbuf, .text = "\r\n");
+    int rl =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap, .at = sb_reqbuf);
     if (rl <= 0 || (size_t)rl >= sizeof(EDGE_CACHE_PROXY_CTX(work)->reqbuf))
     {
         return PROTO_FALSE;
@@ -743,16 +764,16 @@ static void mesh_snapshot_headers(const HttpReq *req, char *out, size_t cap)
     {
         const char *k = req->headers[i].key;
         const char *v = req->headers[i].val;
-        size_t kl = str.len(k, MAX_KEY_LEN);
-        size_t vl = str.len(v, MAX_VAL_LEN);
+        size_t kl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = k, .cap = MAX_KEY_LEN);
+        size_t vl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = v, .cap = MAX_VAL_LEN);
         if (pos + kl + 1 + vl + 1 >= cap)
         {
             break;
         }
-        mem.cpy(out + pos, k, kl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = k, .bytes = kl);
         pos += kl;
         out[pos++] = '\x1e';
-        mem.cpy(out + pos, v, vl);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + pos, .src = v, .bytes = vl);
         pos += vl;
         out[pos++] = '\x1f';
     }
@@ -808,7 +829,10 @@ static proto_bool mesh_store_and_serve(uint8_t *work, uint8_t slot, EdgeFetchSlo
     EdgeCacheV.entry_fresh_args.e = e;
     EdgeCacheV.entry_fresh_args.now_ms = now;
     EdgeCache.entry_fresh(work);
-    if (!EdgeMeshV.ok || !str.eq(e->key, fs->canon, sizeof(fs->canon), PROTO_FALSE) || !EdgeCacheV.ok)
+    if (!EdgeMeshV.ok ||
+        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = e->key, .other = fs->canon, .cap = sizeof(fs->canon),
+                    .ci = PROTO_FALSE) ||
+        !EdgeCacheV.ok)
     {
         EdgeCacheV.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
         EdgeCacheV.store_free_entry_args.e = e;
@@ -852,9 +876,10 @@ static proto_bool start_fetch(uint8_t *work, uint8_t slot, HttpReq *req, EdgeRou
     fs->revalidate = (reval != NULL);
     fs->reval_entry = reval;
     fs->route = m;
-    mem.cpy(fs->canon, canon, str.len(canon, sizeof(fs->canon) - 1) + 1);
-    str.copy(fs->path, req->path, sizeof(fs->path));
-    str.copy(fs->query, req->query, sizeof(fs->query));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fs->canon, .src = canon,
+               .bytes = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = canon, .cap = sizeof(fs->canon) - 1) + 1);
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = fs->path, .src = req->path, .cap = sizeof(fs->path));
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = fs->query, .src = req->query, .cap = sizeof(fs->query));
 
 #if PROTOCORE_ENABLE_EDGE_MESH
     // On a full miss (not a revalidation) with >= 1 sibling, query the mesh before the origin.
@@ -863,7 +888,8 @@ static proto_bool start_fetch(uint8_t *work, uint8_t slot, HttpReq *req, EdgeRou
         uint8_t digest[32];
         EdgeCacheV.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
         EdgeCacheV.key_digest_args.canon = canon;
-        EdgeCacheV.key_digest_args.len = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
+        EdgeCacheV.key_digest_args.len =
+            EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = canon, .cap = PROTOCORE_EDGE_KEY_MAX);
         EdgeCacheV.key_digest_args.digest = digest;
         EdgeCache.key_digest(work);
         mesh_snapshot_headers(req, EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs,
@@ -905,7 +931,8 @@ static EdgeEntry *try_promote_l2(uint8_t *work, const char *canon, uint32_t now)
     uint8_t digest[32];
     EdgeCacheV.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
     EdgeCacheV.key_digest_args.canon = canon;
-    EdgeCacheV.key_digest_args.len = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
+    EdgeCacheV.key_digest_args.len =
+        EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = canon, .cap = PROTOCORE_EDGE_KEY_MAX);
     EdgeCacheV.key_digest_args.digest = digest;
     EdgeCache.key_digest(work);
     EdgeCacheV.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
@@ -924,7 +951,8 @@ static EdgeEntry *try_promote_l2(uint8_t *work, const char *canon, uint32_t now)
     EdgeCacheSdV.get_args.scratch = EDGE_CACHE_PROXY_CTX(work)->sd_buf;
     EdgeCacheSdV.get_args.scratch_cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->sd_buf);
     EdgeCacheSd.get(work);
-    if (!EdgeCacheSdV.ok || !str.eq(e->key, canon, sizeof(e->key), PROTO_FALSE))
+    if (!EdgeCacheSdV.ok || !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = e->key, .other = canon,
+                                        .cap = sizeof(e->key), .ci = PROTO_FALSE))
     {
         EdgeCacheV.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
         EdgeCacheV.store_free_entry_args.e = e;
@@ -956,8 +984,10 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     {
         return MW_NEXT;
     }
-    proto_bool is_get = str.eq(req->method, "GET", sizeof("GET"), PROTO_FALSE);
-    proto_bool is_head = str.eq(req->method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
+    proto_bool is_get = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "GET", .cap = sizeof("GET"),
+                                   .ci = PROTO_FALSE);
+    proto_bool is_head = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "HEAD",
+                                    .cap = sizeof("HEAD"), .ci = PROTO_FALSE);
     if (!is_get && !is_head)
     {
         return MW_NEXT; // only cache safe methods
@@ -998,8 +1028,8 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     // poll after the async fetch has reused that buffer, so serve_hit resolves the window against this copy.
     const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), req, "Range");
     const char *rh = http_parser_text3;
-    str.copy(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot], rh ? rh : "",
-             sizeof(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot]));
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot], .src = rh ? rh : "",
+               .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot]));
 #endif
 
     uint32_t now = Clock.ms;
@@ -1175,18 +1205,20 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
     uint8_t *work = protocore_edge_cache_proxy_span();
 
     MeshLookupCtx *lc = (MeshLookupCtx *)ctx;
-    size_t nl = str.len(name, MAX_KEY_LEN);
+    size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = MAX_KEY_LEN);
     const char *p = lc->blob;
     while (*p)
     {
-        const char *rs = str.find(p, sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(p - lc->blob), "\x1e",
-                                  sizeof("\x1e"), PROTO_FALSE);
+        const char *rs = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p,
+                                    .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(p - lc->blob),
+                                    .other = "\x1e", .other_cap = sizeof("\x1e"), .ci = PROTO_FALSE);
         if (!rs)
         {
             break;
         }
-        const char *us = str.find(rs + 1, sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(rs + 1 - lc->blob),
-                                  "\x1f", sizeof("\x1f"), PROTO_FALSE);
+        const char *us = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = rs + 1,
+                                    .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(rs + 1 - lc->blob),
+                                    .other = "\x1f", .other_cap = sizeof("\x1f"), .ci = PROTO_FALSE);
         if (!us)
         {
             break;
@@ -1198,7 +1230,7 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
             {
                 vl = sizeof(lc->valbuf) - 1;
             }
-            mem.cpy(lc->valbuf, rs + 1, vl);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = lc->valbuf, .src = rs + 1, .bytes = vl);
             lc->valbuf[vl] = '\0';
             return lc->valbuf;
         }
@@ -1227,10 +1259,12 @@ static void mesh_answer(uint8_t *work, MeshConn *mc, const uint8_t digest[32], c
     uint8_t verify[32];
     EdgeCacheV.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
     EdgeCacheV.key_digest_args.canon = canon;
-    EdgeCacheV.key_digest_args.len = str.len(canon, PROTOCORE_EDGE_KEY_MAX);
+    EdgeCacheV.key_digest_args.len =
+        EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = canon, .cap = PROTOCORE_EDGE_KEY_MAX);
     EdgeCacheV.key_digest_args.digest = verify;
     EdgeCache.key_digest(work);
-    if (mem.cmp(verify, digest, 32) == 0) // integrity: the canonical key must hash to the advertised digest
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = verify, .other = digest, .bytes = 32) ==
+        0) // integrity: the canonical key must hash to the advertised digest
     {
         MeshLookupCtx lc;
         lc.blob = EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs;
@@ -1462,7 +1496,7 @@ uint8_t *protocore_edge_cache_proxy_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_EDGE_PROXY_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_EDGE_PROXY_BORROW);
     }
     return s_own.span;
 }
@@ -1529,7 +1563,8 @@ proto_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, cons
     {
         return PROTO_FALSE;
     }
-    if (str.len(path_prefix, sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[0].prefix)) >=
+    if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = path_prefix,
+                   .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[0].prefix)) >=
         sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[0].prefix))
     {
         return PROTO_FALSE;
@@ -1559,10 +1594,10 @@ proto_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, cons
         {
             continue;
         }
-        str.copy(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix, path_prefix,
-                 sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix));
-        str.copy(EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_host, host,
-                 sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_host));
+        EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix, .src = path_prefix,
+                   .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix));
+        EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_host, .src = host,
+                   .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_host));
         EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_port = port;
         EDGE_CACHE_PROXY_CTX(work)->maps[i].https = https;
         EDGE_CACHE_PROXY_CTX(work)->maps[i].used = PROTO_TRUE;
@@ -1580,7 +1615,7 @@ proto_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16
     {
         return PROTO_FALSE;
     }
-    size_t hl = str.len(host, PROTOCORE_MESH_HOST_MAX + 1);
+    size_t hl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = host, .cap = PROTOCORE_MESH_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_MESH_HOST_MAX)
     {
         return PROTO_FALSE;
@@ -1589,7 +1624,8 @@ proto_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16
     {
         if (!EDGE_CACHE_PROXY_CTX(work)->peers[i].used)
         {
-            mem.cpy(EDGE_CACHE_PROXY_CTX(work)->peers[i].host, host, hl + 1);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = EDGE_CACHE_PROXY_CTX(work)->peers[i].host, .src = host,
+                       .bytes = hl + 1);
             EDGE_CACHE_PROXY_CTX(work)->peers[i].port = port;
             EDGE_CACHE_PROXY_CTX(work)->peers[i].used = PROTO_TRUE;
             return PROTO_TRUE;
@@ -1652,7 +1688,8 @@ proto_bool protocore_edge_proxy_purge(uint8_t *work, const char *canonical_key)
         uint8_t digest[32];
         EdgeCacheV.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
         EdgeCacheV.key_digest_args.canon = canonical_key;
-        EdgeCacheV.key_digest_args.len = str.len(canonical_key, PROTOCORE_EDGE_KEY_MAX);
+        EdgeCacheV.key_digest_args.len =
+            EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = canonical_key, .cap = PROTOCORE_EDGE_KEY_MAX);
         EdgeCacheV.key_digest_args.digest = digest;
         EdgeCache.key_digest(work);
         EdgeCacheSdV.del_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;

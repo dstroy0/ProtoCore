@@ -191,7 +191,7 @@ static const Lwm2mTlvNs Lwm2mTlv __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_lwm2m_tlv_span(void);
 

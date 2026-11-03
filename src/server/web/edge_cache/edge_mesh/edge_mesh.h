@@ -95,7 +95,7 @@ struct EdgeFetchTransport;
 /** @brief What build_request takes: digest, canon, req_hdrs, out, cap. */
 typedef struct
 {
-    const uint8_t *digest; ///< 32 bytes.
+    const uint8_t *digest; ///< 32 byteio.
     const char *canon;
     const char
         *req_hdrs; ///< the requester's header snapshot (name RS value US ...) so the peer can match Vary variants; ...
@@ -108,7 +108,7 @@ typedef struct
 {
     const uint8_t *buf;
     size_t len;
-    uint8_t *digest_out; ///< 32 bytes.
+    uint8_t *digest_out; ///< 32 byteio.
     char *canon_out;
     size_t canon_cap;
     char *hdrs_out;

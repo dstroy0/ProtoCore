@@ -54,10 +54,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src")
     "${_pc_mmgr_src}/memoriam_praetereo/praet_descriptor.c"
     "${_pc_mmgr_src}/fractio/fractio.c"
     "${_pc_mmgr_src}/verba_scribo/verba_scribo.c"
+    "${_pc_mmgr_src}/verba_scribo/verba_linea.c"
     "${_pc_mmgr_src}/numeros_scribo/numeros_scribo.c")
   target_include_directories(pc_mmgr PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/MMgr/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/embedded_types/include")
-  target_compile_definitions(pc_mmgr PUBLIC MMGR_ENABLE_DMA=0 MMGR_ENABLE_EXTRAM=0)
 endif()

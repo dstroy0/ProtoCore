@@ -10,10 +10,11 @@ protocore_add_module(network_drivers/presentation/ssh/transport/transport
     crypto/asymmetric/bignum
     crypto/cipher/aes256ctr
     crypto/hash/sha256
-    mmgr/secure
+    mmgr
     network_drivers/presentation/ssh/common
     network_drivers/presentation/ssh/transport/phase_machine
   PRIVATE_DEPS
+    server/core/worker
     crypto/asymmetric/curve25519
     crypto/asymmetric/ecdsa
     crypto/asymmetric/ed25519
@@ -24,11 +25,7 @@ protocore_add_module(network_drivers/presentation/ssh/transport/transport
     crypto/pqc/mlkem
     crypto/pqc/sntrup761
     crypto/rng
-    mmgr/bytes
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/ssh
     network_drivers/presentation/ssh/auth
     network_drivers/presentation/ssh/network

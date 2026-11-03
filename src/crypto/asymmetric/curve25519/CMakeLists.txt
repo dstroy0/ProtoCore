@@ -7,5 +7,5 @@ protocore_add_module(crypto/asymmetric/curve25519
   SOURCES curve25519.c
   PRIVATE_DEPS
     crypto/asymmetric/fe25519
-    mmgr/protomem
+    mmgr
 )

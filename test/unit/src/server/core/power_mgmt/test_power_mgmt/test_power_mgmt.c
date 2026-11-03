@@ -718,7 +718,7 @@ void test_a_short_buffer_yields_nothing_not_a_prefix(void)
     TEST_ASSERT_TRUE(json_ok(g_json));
 }
 
-// Nothing to describe, nowhere to write it, or no room at all: each is reported as zero bytes.
+// Nothing to describe, nowhere to write it, or no room at all: each is reported as zero byteio.
 void test_the_report_refuses_what_it_cannot_write(void)
 {
     PowerPlan p;

@@ -17,11 +17,12 @@
  * touches the stack or BSS.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AES128GCM
 
-#include "mmgr/secure/secure.h" // protocore_secure_wipe: a schedule that is done is zeroed
+#include "server/core/worker/worker.h" // mmgr_zero_buf: a schedule that is done is zeroed
 
 #if PROTOCORE_HAS_HW_AESGCM
 #endif
@@ -31,8 +32,8 @@
 #include "crypto/aead/aes128gcm/aes128gcm.h"
 #include "crypto/ct_eq/ct_eq.h"     // protocore_ct_eq
 #include "crypto/mac/ghash/ghash.h" // the 4-bit-table GF(2^128) hash
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
+#include "memoria_operor/memoria_operor.h"
+#include "proximus_operor/proximus_operor.h" // proto_raw_u32 - the aliasing-permitted word load
 PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
@@ -47,7 +48,7 @@ typedef struct
 } Aes128Blk;
 static inline void blk_init(Aes128Blk *b, const uint8_t key[16])
 {
-    mem.cpy(b->key, key, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->key, .src = key, .bytes = 16);
 }
 static inline void blk_enc(Aes128Blk *b, const uint8_t in[16], uint8_t out[16])
 {
@@ -61,7 +62,7 @@ static inline void blk_free(Aes128Blk *b)
     // The accelerator's key bank is reloaded per block and holds nothing between them, but this
     // copy of the key does. It outlives the caller whenever the context is not a scratch borrow -
     // a TLS connection's keys live as long as the connection - so the bytes go here.
-    protocore_secure_wipe(b->key, sizeof(b->key));
+    mmgr_zero_buf(b->key, sizeof(b->key));
 }
 
 #endif
@@ -85,7 +86,7 @@ static inline void blk_free(Aes128Blk *b)
     // No vendor allocation to release, but the expanded schedule IS the key: every round key is
     // derived from it and the original is recoverable from the last one. It outlives the caller
     // whenever the context is not a scratch borrow, so the bytes go here.
-    protocore_secure_wipe(b->rk, sizeof(b->rk));
+    mmgr_zero_buf(b->rk, sizeof(b->rk));
 }
 
 #endif // !PROTOCORE_HAS_HW_AESGCM (SW path)
@@ -121,8 +122,8 @@ static_assert(AES128GCM_OFF_END <= PROTOCORE_AES128GCM_BORROW,
               "single-block context - raise it in protocore_config.h, which derives "
               "PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -152,7 +153,9 @@ static inline void xor16(uint8_t *dst, const uint8_t *src)
     // machine's own load and store at any alignment, and the fixup sequence only where the die needs it.
     for (int i = 0; i < 16; i += 4)
     {
-        proto_raw_put_u32(dst + i, proto_raw_u32(dst + i) ^ proto_raw_u32(src + i));
+        EMBED_CALL(proxim.put32, ProximusCfg, .dst = dst + i,
+                   .val = EMBED_CALL(proxim.load32, ProximusCfg, .at = dst + i) ^
+                          EMBED_CALL(proxim.load32, ProximusCfg, .at = src + i));
     }
 }
 
@@ -211,7 +214,7 @@ static void gctr(Aes128GcmWork *w, const uint8_t *in, size_t len, uint8_t *out)
 // 96-bit nonce: J0 = nonce || 0^31 || 1. Per record.
 static inline void set_j0(Aes128GcmWork *w, const uint8_t nonce[12])
 {
-    mem.cpy(w->j0, nonce, 12);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->j0, .src = nonce, .bytes = 12);
     w->j0[12] = 0;
     w->j0[13] = 0;
     w->j0[14] = 0;
@@ -224,7 +227,7 @@ static void gcm_tag(uint8_t *work, const uint8_t *aad, size_t aad_len, const uin
                     uint8_t tag_out[16])
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
-    mem.zero(w->acc, 16);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = w->acc, .bytes = 16, .val = 0);
     GhashV.update_args.acc = w->acc;
     GhashV.update_args.data = aad;
     GhashV.update_args.len = aad_len;
@@ -249,7 +252,7 @@ static proto_bool aes128gcm_key_load(uint8_t *work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
     blk_init(&w->blk, Aes128GcmV.key_args.key);
-    mem.zero(w->h, 16);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = w->h, .bytes = 16, .val = 0);
     aes128_ecb(w, w->h, w->h); // H = E(K, 0^128)
     GhashV.key_args.h = w->h;
     Ghash.key_init(AES128GCM_GHASH(work));
@@ -262,8 +265,8 @@ static void aes128gcm_key_release(uint8_t *work)
     blk_free(&w->blk);
     // H = E(K, 0^128) is derived from the key and forges a tag on its own, so it goes with it. The
     // rest of the context is per-record scratch over bytes the caller already holds.
-    protocore_secure_wipe(w->h, sizeof(w->h));
-    protocore_secure_wipe(w->ej0, sizeof(w->ej0));
+    mmgr_zero_buf(w->h, sizeof(w->h));
+    mmgr_zero_buf(w->ej0, sizeof(w->ej0));
 }
 
 static proto_bool aes128gcm_seal_record(uint8_t *work)
@@ -271,7 +274,7 @@ static proto_bool aes128gcm_seal_record(uint8_t *work)
     Aes128GcmWork *w = AES128GCM_GCM(work);
     set_j0(w, Aes128GcmV.seal_args.nonce);
     // Encrypt first (counter starts at inc32(J0)), then GHASH the resulting ciphertext.
-    mem.cpy(w->ctr, w->j0, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->ctr, .src = w->j0, .bytes = 16);
     inc32(w->ctr);
     gctr(w, Aes128GcmV.seal_args.pt, Aes128GcmV.seal_args.pt_len, Aes128GcmV.seal_args.ct_out);
     gcm_tag(work, Aes128GcmV.seal_args.aad, Aes128GcmV.seal_args.aad_len, Aes128GcmV.seal_args.ct_out,
@@ -290,7 +293,7 @@ static proto_bool aes128gcm_open_record(uint8_t *work)
     {
         return PROTO_FALSE; // tag mismatch: nothing written
     }
-    mem.cpy(w->ctr, w->j0, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->ctr, .src = w->j0, .bytes = 16);
     inc32(w->ctr);
     gctr(w, Aes128GcmV.open_args.ct, Aes128GcmV.open_args.ct_len, Aes128GcmV.open_args.out);
     return PROTO_TRUE;

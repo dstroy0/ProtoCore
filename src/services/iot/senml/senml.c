@@ -18,9 +18,9 @@
 
 #include "services/iot/senml/senml.h"
 
-#include "mmgr/membuild/membuild.h" // Sb: the Number rendering, and the resolved-Name concatenation
-#include "mmgr/span/span.h"         // protocore_span: the region a binary build writes into
 #include "network_drivers/presentation/codec/json/json.h"
+#include "spatium/spatium.h"           // mmgr_span: the region a binary build writes into
+#include "verba_scribo/verba_scribo.h" // Sb: the Number rendering, and the resolved-Name concatenation
 
 PROTOCORE_BEGIN_DECLS
 
@@ -52,16 +52,18 @@ static proto_bool is_integral(double d)
 static void json_number(uint8_t *work, protocore_json_writer *w, double d)
 {
     char tmp[SENML_JSON_NUMBER_MAX];
-    protocore_sb sb = {tmp, sizeof(tmp), 0, PROTO_TRUE};
+    size_t sb = 0;
     if (is_integral(d))
     {
-        Sb.i64(&sb, (int64_t)d);
+        sb = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb,
+                        .sval = (int64_t)d);
     }
     else
     {
-        Sb.g(&sb, d, SENML_JSON_NUMBER_DIGITS);
+        sb = EMBED_CALL(verba_fractio.g, VerbaFractioCfg, .out = tmp, .cap = sizeof(tmp), .at = sb, .real = d,
+                        .sig = SENML_JSON_NUMBER_DIGITS);
     }
-    if (Sb.finish(&sb) == 0)
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = tmp, .cap = sizeof(tmp), .at = sb) == 0)
     {
         tmp[0] = '\0';
     }
@@ -71,7 +73,7 @@ static void json_number(uint8_t *work, protocore_json_writer *w, double d)
 }
 
 // Encode a Number through the codec: an integer when integral, else a floating-point item.
-static void codec_number(const protocore_codec *c, protocore_span *w, double d)
+static void codec_number(const protocore_codec *c, mmgr_span *w, double d)
 {
     if (is_integral(d))
     {
@@ -229,7 +231,7 @@ void protocore_senml_binary_build(uint8_t *work)
     {
         return;
     }
-    protocore_span w = span.from(SenmlV.binary.buf, SenmlV.binary.cap);
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = SenmlV.binary.buf, .cap = SenmlV.binary.cap);
     c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {
@@ -283,11 +285,11 @@ void protocore_senml_binary_build(uint8_t *work)
             codec_number(c, &w, r->time);
         }
     }
-    if (!span.ok(w))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
         return;
     }
-    SenmlV.n = span.len(w);
+    SenmlV.n = w.pos;
     SenmlV.ok = PROTO_TRUE;
 }
 
@@ -325,11 +327,14 @@ void protocore_senml_resolve(uint8_t *work)
         }
 
         SenmlResolved *o = &out[i];
-        protocore_sb sb_name = {o->name, sizeof(o->name), 0, PROTO_TRUE};
-        Sb.put(&sb_name, base_name ? base_name : "");
-        Sb.put(&sb_name, r->name ? r->name : "");
-        (void)Sb.finish(&sb_name);
-        if (!sb_name.ok)
+        char *const sb_name_out = o->name;
+        size_t sb_name = 0;
+        sb_name = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_name_out, .cap = sizeof(o->name),
+                             .at = sb_name, .text = base_name ? base_name : "");
+        sb_name = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_name_out, .cap = sizeof(o->name),
+                             .at = sb_name, .text = r->name ? r->name : "");
+        (void)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_name_out, .cap = sizeof(o->name), .at = sb_name);
+        if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = sb_name_out, .cap = sizeof(o->name), .at = sb_name))
         {
             o->name[0] = '\0';
         }

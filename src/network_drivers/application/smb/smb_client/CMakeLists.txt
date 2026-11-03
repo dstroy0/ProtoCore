@@ -7,9 +7,9 @@ protocore_add_module(network_drivers/application/smb/smb_client
   DEPS
     network_drivers/application/smb/smb2
   PRIVATE_DEPS
+    server/core/worker
     crypto/rng
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     network_drivers/application/smb/ntlm
     network_drivers/application/smb/ntlmssp
     network_drivers/application/smb/spnego

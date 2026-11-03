@@ -12,10 +12,10 @@
  */
 
 #include "services/security/oauth2/oauth2.h"
-#include "mmgr/membuild/membuild.h" // Sb: the bounded builder the body is written with
-#include "mmgr/protomem/protomem.h" // mem.cpy: the reply into the module's own buffer
-#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
-#include "shared/hex/hex.h"         // Hex.digit: the two digits of a percent-encoded octet
+#include "memoria_operor/memoria_operor.h" // memor.cpy: the reply into the module's own buffer
+#include "server/core/worker/worker.h"     // the persistent end this module's key material is taken from
+#include "shared/hex/hex.h"                // Hex.digit: the two digits of a percent-encoded octet
+#include "verba_scribo/verba_scribo.h"     // Sb: the bounded builder the body is written with
 
 #if PROTOCORE_ENABLE_OAUTH2
 
@@ -66,7 +66,7 @@ uint8_t *protocore_oauth2_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_OAUTH2_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_OAUTH2_BORROW);
     }
     return s_own.span;
 }
@@ -82,34 +82,35 @@ static proto_bool unreserved(char c)
 
 // Append one form value: an unreserved octet passes, every other one becomes "%" HEXDIG HEXDIG in
 // the uppercase digits RFC 3986 sec 2.1 asks a producer for.
-static void put_form_value(uint8_t *work, protocore_sb *b, const char *s)
+static size_t put_form_value(uint8_t *work, char *out, size_t cap, size_t at, const char *s)
 {
     for (; *s; s++)
     {
         const unsigned char c = (unsigned char)*s;
         if (unreserved((char)c))
         {
-            Sb.ch(b, (char)c);
+            at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = (char)c);
             continue;
         }
-        Sb.ch(b, '%');
+        at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = '%');
         HexV.args.upper = PROTO_TRUE;
         HexV.args.nibble = (uint8_t)(c >> 4);
         Hex.digit(work);
-        Sb.ch(b, HexV.ch);
+        at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = HexV.ch);
         HexV.args.nibble = (uint8_t)(c & 0x0Fu);
         Hex.digit(work);
-        Sb.ch(b, HexV.ch);
+        at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = HexV.ch);
     }
+    return at;
 }
 
 // Append "&<name>=<encoded value>": one more parameter of the form body.
-static void put_param(uint8_t *work, protocore_sb *b, const char *name, const char *value)
+static size_t put_param(uint8_t *work, char *out, size_t cap, size_t at, const char *name, const char *value)
 {
-    Sb.ch(b, '&');
-    Sb.put(b, name);
-    Sb.ch(b, '=');
-    put_form_value(work, b, value);
+    at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = '&');
+    at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = name);
+    at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = '=');
+    return put_form_value(work, out, cap, at, value);
 }
 
 // RFC 6749 sec 4.1.3: grant_type=authorization_code, code, redirect_uri, client_id, the sec 2.3.1
@@ -124,20 +125,23 @@ void protocore_oauth2_build_code_request(uint8_t *work)
     {
         return;
     }
-    protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
-    Sb.put(&b, "grant_type=authorization_code");
-    put_param(work, &b, "code", Oauth2V.code_grant.code);
-    put_param(work, &b, "redirect_uri", Oauth2V.code_grant.redirect_uri);
-    put_param(work, &b, "client_id", Oauth2V.client.client_id);
+    char *const b_out = Oauth2V.request.out;
+    const size_t b_cap = Oauth2V.request.cap;
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = b_out, .cap = b_cap, .at = b,
+                   .text = "grant_type=authorization_code");
+    b = put_param(work, b_out, b_cap, b, "code", Oauth2V.code_grant.code);
+    b = put_param(work, b_out, b_cap, b, "redirect_uri", Oauth2V.code_grant.redirect_uri);
+    b = put_param(work, b_out, b_cap, b, "client_id", Oauth2V.client.client_id);
     if (Oauth2V.client.client_secret)
     {
-        put_param(work, &b, "client_secret", Oauth2V.client.client_secret);
+        b = put_param(work, b_out, b_cap, b, "client_secret", Oauth2V.client.client_secret);
     }
     if (Oauth2V.code_grant.code_verifier)
     {
-        put_param(work, &b, "code_verifier", Oauth2V.code_grant.code_verifier);
+        b = put_param(work, b_out, b_cap, b, "code_verifier", Oauth2V.code_grant.code_verifier);
     }
-    Oauth2V.i32 = (int32_t)Sb.finish(&b);
+    Oauth2V.i32 = (int32_t)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = b_out, .cap = b_cap, .at = b);
 }
 
 // RFC 6749 sec 6: grant_type=refresh_token, refresh_token, client_id, and the sec 2.3.1 client
@@ -151,15 +155,18 @@ void protocore_oauth2_build_refresh_request(uint8_t *work)
     {
         return;
     }
-    protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
-    Sb.put(&b, "grant_type=refresh_token");
-    put_param(work, &b, "refresh_token", Oauth2V.refresh_grant.refresh_token);
-    put_param(work, &b, "client_id", Oauth2V.client.client_id);
+    char *const b_out = Oauth2V.request.out;
+    const size_t b_cap = Oauth2V.request.cap;
+    size_t b = 0;
+    b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = b_out, .cap = b_cap, .at = b,
+                   .text = "grant_type=refresh_token");
+    b = put_param(work, b_out, b_cap, b, "refresh_token", Oauth2V.refresh_grant.refresh_token);
+    b = put_param(work, b_out, b_cap, b, "client_id", Oauth2V.client.client_id);
     if (Oauth2V.client.client_secret)
     {
-        put_param(work, &b, "client_secret", Oauth2V.client.client_secret);
+        b = put_param(work, b_out, b_cap, b, "client_secret", Oauth2V.client.client_secret);
     }
-    Oauth2V.i32 = (int32_t)Sb.finish(&b);
+    Oauth2V.i32 = (int32_t)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = b_out, .cap = b_cap, .at = b);
 }
 
 // RFC 6749 sec 5.1: read access_token, token_type, expires_in and refresh_token out of the reply,
@@ -250,7 +257,7 @@ static void post_and_parse(uint8_t *work, int body_len)
     const size_t k = HttpClientV.body_len < room ? HttpClientV.body_len : room;
     if (HttpClientV.body && k)
     {
-        mem.cpy(OAUTH2_CTX(work)->resp, HttpClientV.body, k);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = OAUTH2_CTX(work)->resp, .src = HttpClientV.body, .bytes = k);
     }
     OAUTH2_CTX(work)->resp[k] = '\0';
     Oauth2V.response.json = OAUTH2_CTX(work)->resp;

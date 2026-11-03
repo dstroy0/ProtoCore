@@ -5,8 +5,7 @@ protocore_add_module(server/web/edge_cache/edge_mesh
   GATE PROTOCORE_ENABLE_EDGE_MESH
   SOURCES edge_mesh.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     server/web/edge_cache/edge_cache
     server/web/edge_cache/edge_cache_sd
     server/web/edge_cache/edge_fetch

@@ -216,7 +216,7 @@ typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_http_parser_span(void);
 

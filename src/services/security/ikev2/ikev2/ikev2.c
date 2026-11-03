@@ -11,10 +11,11 @@
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_IKEV2
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/security/ikev2/ikev2/ikev2.h"
 
 #include "crypto/aead/aesgcm/aesgcm.h"               // the Encrypted payload's AEAD (RFC 5282)
@@ -23,7 +24,7 @@
 #include "crypto/asymmetric/rsa/rsa.h"               // RSA AUTH verify (RFC 7296 sec 3.8)
 #include "crypto/hash/sha256/sha256.h"               // the COOKIE hash (RFC 7296 sec 2.6)
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"      // the PRF: PRF_HMAC_SHA2_256 (RFC 4868 sec 4)
-#include "mmgr/secure/secure.h"                      // the per-call AEAD context borrow
+#include "server/core/worker/worker.h"               // the per-call AEAD context borrow
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -90,8 +91,8 @@ static size_t ike_hdr_build(uint8_t *buf, size_t cap, const IkeHeader *h)
     {
         return 0;
     }
-    mem.cpy(buf, h->init_spi, PROTOCORE_IKE_SPI_LEN);
-    mem.cpy(buf + 8, h->resp_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = h->init_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 8, .src = h->resp_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
     buf[16] = (uint8_t)h->next_payload;
     buf[17] = h->version;
     buf[18] = (uint8_t)h->exchange;
@@ -103,13 +104,13 @@ static size_t ike_hdr_build(uint8_t *buf, size_t cap, const IkeHeader *h)
 
 static proto_bool ike_hdr_parse(const uint8_t *buf, size_t len, IkeHeader *out)
 {
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     if (!buf || len < PROTOCORE_IKE_HDR_LEN)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out->init_spi, buf, PROTOCORE_IKE_SPI_LEN);
-    mem.cpy(out->resp_spi, buf + 8, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->init_spi, .src = buf, .bytes = PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->resp_spi, .src = buf + 8, .bytes = PROTOCORE_IKE_SPI_LEN);
     out->next_payload = (IkePayloadType)buf[16];
     out->version = buf[17];
     out->exchange = (IkeExchange)buf[18];
@@ -231,7 +232,7 @@ void protocore_ike_payload_build(uint8_t *work)
     put16(buf + 2, (uint16_t)total);
     if (body_len)
     {
-        mem.cpy(buf + PROTOCORE_IKE_PAYLOAD_HDR_LEN, body, body_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + PROTOCORE_IKE_PAYLOAD_HDR_LEN, .src = body, .bytes = body_len);
     }
     IkeV.n = total;
 }
@@ -305,7 +306,7 @@ static size_t ike_sa_build(uint8_t *buf, size_t cap, IkePayloadType next_payload
     pr[7] = num_transforms;
     if (spi_size)
     {
-        mem.cpy(pr + prop_hdr, spi, spi_size);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = pr + prop_hdr, .src = spi, .bytes = spi_size);
     }
     return sa_total;
 }
@@ -328,7 +329,7 @@ static size_t ike_ke_build(uint8_t *buf, size_t cap, IkePayloadType next_payload
     buf[7] = 0;
     if (data_len)
     {
-        mem.cpy(buf + 8, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 8, .src = data, .bytes = data_len);
     }
     return total;
 }
@@ -348,7 +349,7 @@ static size_t ike_nonce_build(uint8_t *buf, size_t cap, IkePayloadType next_payl
     }
     if (nonce_len)
     {
-        mem.cpy(buf + 4, nonce, nonce_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 4, .src = nonce, .bytes = nonce_len);
     }
     return total;
 }
@@ -372,7 +373,7 @@ static size_t ike_id_build(uint8_t *buf, size_t cap, IkePayloadType next_payload
     buf[7] = 0;
     if (data_len)
     {
-        mem.cpy(buf + 8, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 8, .src = data, .bytes = data_len);
     }
     return total;
 }
@@ -396,7 +397,7 @@ static size_t ike_auth_build(uint8_t *buf, size_t cap, IkePayloadType next_paylo
     buf[7] = 0;
     if (data_len)
     {
-        mem.cpy(buf + 8, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 8, .src = data, .bytes = data_len);
     }
     return total;
 }
@@ -421,12 +422,12 @@ static size_t ike_notify_build(uint8_t *buf, size_t cap, IkePayloadType next_pay
     size_t off = 8;
     if (spi_size)
     {
-        mem.cpy(buf + off, spi, spi_size);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = spi, .bytes = spi_size);
         off += spi_size;
     }
     if (data_len)
     {
-        mem.cpy(buf + off, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = data, .bytes = data_len);
     }
     return total;
 }
@@ -486,7 +487,7 @@ void protocore_ike_cert_build(uint8_t *work)
     buf[4] = IkeV.id.cert_encoding;
     if (data_len)
     {
-        mem.cpy(buf + 5, data, data_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 5, .src = data, .bytes = data_len);
     }
     IkeV.n = total;
 }
@@ -526,7 +527,7 @@ void protocore_ike_delete_build(uint8_t *work)
     put16(buf + 6, num_spis);
     if (spis_len)
     {
-        mem.cpy(buf + 8, spis, spis_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 8, .src = spis, .bytes = spis_len);
     }
     IkeV.n = total;
 }
@@ -566,8 +567,8 @@ void protocore_ike_ts_build(uint8_t *work)
         put16(buf + off + 2, (uint16_t)sel_len);
         put16(buf + off + 4, s->start_port);
         put16(buf + off + 6, s->end_port);
-        mem.cpy(buf + off + 8, s->start_addr, s->addr_len);
-        mem.cpy(buf + off + 8 + s->addr_len, s->end_addr, s->addr_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off + 8, .src = s->start_addr, .bytes = s->addr_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off + 8 + s->addr_len, .src = s->end_addr, .bytes = s->addr_len);
         off += sel_len;
     }
     if (off > 0xFFFF)
@@ -622,7 +623,7 @@ void protocore_ike_cp_build(uint8_t *work)
         off += 4;
         if (attrs[i].value_len)
         {
-            mem.cpy(buf + off, attrs[i].value, attrs[i].value_len);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = attrs[i].value, .bytes = attrs[i].value_len);
             off += attrs[i].value_len;
         }
     }
@@ -654,17 +655,17 @@ void protocore_ike_sk_build(uint8_t *work)
     size_t off = PROTOCORE_IKE_PAYLOAD_HDR_LEN;
     if (iv_len)
     {
-        mem.cpy(buf + off, iv, iv_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = iv, .bytes = iv_len);
         off += iv_len;
     }
     if (ct_len)
     {
-        mem.cpy(buf + off, ct, ct_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = ct, .bytes = ct_len);
         off += ct_len;
     }
     if (icv_len)
     {
-        mem.cpy(buf + off, icv, icv_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = icv, .bytes = icv_len);
     }
     IkeV.n = total;
 }
@@ -706,17 +707,17 @@ void protocore_ike_skf_build(uint8_t *work)
     size_t off = PROTOCORE_IKE_PAYLOAD_HDR_LEN + 4;
     if (iv_len)
     {
-        mem.cpy(buf + off, iv, iv_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = iv, .bytes = iv_len);
         off += iv_len;
     }
     if (ct_len)
     {
-        mem.cpy(buf + off, ct, ct_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = ct, .bytes = ct_len);
         off += ct_len;
     }
     if (icv_len)
     {
-        mem.cpy(buf + off, icv, icv_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + off, .src = icv, .bytes = icv_len);
     }
     IkeV.n = body;
 }
@@ -728,7 +729,7 @@ void protocore_ike_skf_parse(uint8_t *work)
     size_t body_len = IkeV.wire.len;
     size_t iv_len = IkeV.sk.iv_len;
     size_t icv_len = IkeV.sk.icv_len;
-    mem.set(&IkeV.sk_ref, 0, sizeof(IkeV.sk_ref));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &IkeV.sk_ref, .val = 0, .bytes = sizeof(IkeV.sk_ref));
     IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4 + iv_len + icv_len)
     {
@@ -764,7 +765,7 @@ void protocore_ike_frag_reasm_init(uint8_t *work)
     }
     r->total = 0;
     r->count = 0;
-    mem.set(r->present, 0, sizeof(r->present));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = r->present, .val = 0, .bytes = sizeof(r->present));
     r->pool = IkeV.out.buf;
     r->pool_cap = IkeV.out.cap;
     r->pool_used = 0;
@@ -808,7 +809,7 @@ void protocore_ike_frag_reasm_add(uint8_t *work)
     }
     if (len)
     {
-        mem.cpy(r->pool + r->pool_used, chunk, len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = r->pool + r->pool_used, .src = chunk, .bytes = len);
     }
     r->off[idx] = r->pool_used;
     r->len[idx] = len;
@@ -844,7 +845,7 @@ void protocore_ike_frag_reasm_assemble(uint8_t *work)
         }
         if (r->len[i])
         {
-            mem.cpy(out + off, r->pool + r->off[i], r->len[i]);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + off, .src = r->pool + r->off[i], .bytes = r->len[i]);
         }
         off += r->len[i];
     }
@@ -935,7 +936,7 @@ void protocore_ike_cookie_notify_build(uint8_t *work)
 
 static proto_bool ike_ke_parse(const uint8_t *body, size_t body_len, IkeKeRef *out)
 {
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     if (!body || body_len < 4) // Diffie-Hellman Group Num and RESERVED
     {
         return PROTO_FALSE;
@@ -958,7 +959,7 @@ void protocore_ike_id_parse(uint8_t *work)
     (void)work;
     const uint8_t *body = IkeV.wire.msg;
     size_t body_len = IkeV.wire.len;
-    mem.set(&IkeV.id_ref, 0, sizeof(IkeV.id_ref));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &IkeV.id_ref, .val = 0, .bytes = sizeof(IkeV.id_ref));
     IkeV.id_ref.id_type = IKE_ID_RESERVED;
     IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
@@ -974,7 +975,7 @@ void protocore_ike_id_parse(uint8_t *work)
 // Auth Method then three RESERVED octets precede Authentication Data (sec 3.8).
 static proto_bool ike_auth_parse(const uint8_t *body, size_t body_len, IkeAuthRef *out)
 {
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     out->auth_method = IKE_AUTH_RESERVED;
     if (!body || body_len < 4)
     {
@@ -998,7 +999,7 @@ void protocore_ike_notify_parse(uint8_t *work)
     (void)work;
     const uint8_t *body = IkeV.wire.msg;
     size_t body_len = IkeV.wire.len;
-    mem.set(&IkeV.notify_ref, 0, sizeof(IkeV.notify_ref));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &IkeV.notify_ref, .val = 0, .bytes = sizeof(IkeV.notify_ref));
     IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
@@ -1024,7 +1025,7 @@ void protocore_ike_delete_parse(uint8_t *work)
     (void)work;
     const uint8_t *body = IkeV.wire.msg;
     size_t body_len = IkeV.wire.len;
-    mem.set(&IkeV.delete_ref, 0, sizeof(IkeV.delete_ref));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &IkeV.delete_ref, .val = 0, .bytes = sizeof(IkeV.delete_ref));
     IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
@@ -1051,7 +1052,7 @@ void protocore_ike_sk_parse(uint8_t *work)
     size_t body_len = IkeV.wire.len;
     size_t iv_len = IkeV.sk.iv_len;
     size_t icv_len = IkeV.sk.icv_len;
-    mem.set(&IkeV.sk_ref, 0, sizeof(IkeV.sk_ref));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &IkeV.sk_ref, .val = 0, .bytes = sizeof(IkeV.sk_ref));
     IkeV.ok = PROTO_FALSE;
     if (!body || body_len < iv_len + icv_len)
     {
@@ -1071,7 +1072,7 @@ void protocore_ike_sk_parse(uint8_t *work)
 // Proposal Length bounds the substructure and must cover its header and SPI.
 static proto_bool ike_sa_first_proposal(const uint8_t *body, size_t body_len, IkeProposalRef *out)
 {
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     if (!body || body_len < 8)
     {
         return PROTO_FALSE;
@@ -1182,7 +1183,7 @@ void protocore_ike_ts_get(uint8_t *work)
     size_t body_len = IkeV.wire.len;
     uint8_t index = IkeV.ts.index;
     IkeTrafficSelector *out = &IkeV.sel;
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
     {
@@ -1230,7 +1231,7 @@ void protocore_ike_cp_parse(uint8_t *work)
     (void)work;
     const uint8_t *body = IkeV.wire.msg;
     size_t body_len = IkeV.wire.len;
-    mem.set(&IkeV.cp_ref, 0, sizeof(IkeV.cp_ref));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &IkeV.cp_ref, .val = 0, .bytes = sizeof(IkeV.cp_ref));
     IkeV.cp_ref.cfg_type = IKE_CFG_REQUEST;
     IkeV.ok = PROTO_FALSE;
     if (!body || body_len < 4)
@@ -1324,7 +1325,7 @@ static proto_bool ike_prf_plus(uint8_t *work, const uint8_t *key, size_t key_len
         {
             take = PROTOCORE_HMAC_SHA256_LEN;
         }
-        mem.cpy(out + produced, t, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + produced, .src = t, .bytes = take);
         produced += take;
     }
     return PROTO_TRUE;
@@ -1346,10 +1347,11 @@ static size_t build_ni_nr_spi(uint8_t *s, const uint8_t *ni, size_t ni_len, cons
         return 0;
     }
     size_t nlen = ni_len + nr_len;
-    mem.cpy(s, ni, ni_len);
-    mem.cpy(s + ni_len, nr, nr_len);
-    mem.cpy(s + nlen, spi_i, PROTOCORE_IKE_SPI_LEN);
-    mem.cpy(s + nlen + PROTOCORE_IKE_SPI_LEN, spi_r, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s, .src = ni, .bytes = ni_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s + ni_len, .src = nr, .bytes = nr_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s + nlen, .src = spi_i, .bytes = PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s + nlen + PROTOCORE_IKE_SPI_LEN, .src = spi_r,
+               .bytes = PROTOCORE_IKE_SPI_LEN);
     return nlen + 2 * PROTOCORE_IKE_SPI_LEN;
 }
 
@@ -1372,19 +1374,19 @@ static proto_bool sk_split_from_skeyseed(uint8_t *work, const uint8_t skeyseed[P
     }
 
     size_t o = 0;
-    mem.cpy(out->sk_d, ks + o, lens->sk_d);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sk_d, .src = ks + o, .bytes = lens->sk_d);
     o += lens->sk_d;
-    mem.cpy(out->sk_ai, ks + o, lens->sk_a);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sk_ai, .src = ks + o, .bytes = lens->sk_a);
     o += lens->sk_a;
-    mem.cpy(out->sk_ar, ks + o, lens->sk_a);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sk_ar, .src = ks + o, .bytes = lens->sk_a);
     o += lens->sk_a;
-    mem.cpy(out->sk_ei, ks + o, lens->sk_e);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sk_ei, .src = ks + o, .bytes = lens->sk_e);
     o += lens->sk_e;
-    mem.cpy(out->sk_er, ks + o, lens->sk_e);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sk_er, .src = ks + o, .bytes = lens->sk_e);
     o += lens->sk_e;
-    mem.cpy(out->sk_pi, ks + o, lens->sk_p);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sk_pi, .src = ks + o, .bytes = lens->sk_p);
     o += lens->sk_p;
-    mem.cpy(out->sk_pr, ks + o, lens->sk_p);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sk_pr, .src = ks + o, .bytes = lens->sk_p);
     out->sk_d_len = lens->sk_d;
     out->sk_a_len = lens->sk_a;
     out->sk_e_len = lens->sk_e;
@@ -1446,10 +1448,10 @@ void protocore_ike_rekey_derive_keys(uint8_t *work)
 
     uint8_t seed[PROTOCORE_IKE_X25519_LEN + 2 * PROTOCORE_IKE_NONCE_MAX];
     size_t sl = dh_len;
-    mem.cpy(seed, dh_secret, dh_len);
-    mem.cpy(seed + sl, ni, ni_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = seed, .src = dh_secret, .bytes = dh_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = seed + sl, .src = ni, .bytes = ni_len);
     sl += ni_len;
-    mem.cpy(seed + sl, nr, nr_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = seed + sl, .src = nr, .bytes = nr_len);
     sl += nr_len;
     uint8_t skeyseed[PROTOCORE_IKE_PRF_LEN];
     HmacSha256.mac(IkeV.work, sk_d_old, IkeV.keymat.sk_d_len, seed, sl, skeyseed);
@@ -1488,12 +1490,12 @@ void protocore_ike_child_keymat(uint8_t *work)
     size_t o = 0;
     if (dh_secret && dh_len)
     {
-        mem.cpy(seed, dh_secret, dh_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = seed, .src = dh_secret, .bytes = dh_len);
         o = dh_len;
     }
-    mem.cpy(seed + o, ni, ni_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = seed + o, .src = ni, .bytes = ni_len);
     o += ni_len;
-    mem.cpy(seed + o, nr, nr_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = seed + o, .src = nr, .bytes = nr_len);
     o += nr_len;
     IkeV.ok = ike_prf_plus(IkeV.work, sk_d, IkeV.keymat.sk_d_len, seed, o, IkeV.out.buf, IkeV.out.cap);
 }
@@ -1557,8 +1559,9 @@ void protocore_ike_suite_keylengths(uint8_t *work)
 // The nonce is the salt concatenated with the IV, in that order (RFC 5282 sec 4).
 static void ike_gcm_nonce(uint8_t nonce[PROTOCORE_AESGCM_IV_LEN], const uint8_t *salt, const uint8_t *iv)
 {
-    mem.cpy(nonce, salt, PROTOCORE_IKE_GCM_SALT_LEN);
-    mem.cpy(nonce + PROTOCORE_IKE_GCM_SALT_LEN, iv, PROTOCORE_IKE_GCM_IV_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = nonce, .src = salt, .bytes = PROTOCORE_IKE_GCM_SALT_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = nonce + PROTOCORE_IKE_GCM_SALT_LEN, .src = iv,
+               .bytes = PROTOCORE_IKE_GCM_IV_LEN);
 }
 
 // The Ciphertext field is the ciphertext followed by the Authentication Tag (RFC 5282 sec 3.2).
@@ -1573,8 +1576,9 @@ static proto_bool ike_sk_aead_seal(const uint8_t *key, const uint8_t *salt, cons
     ike_gcm_nonce(nonce, salt, iv);
     // A fresh IV per message makes the context single use: init, seal once, wipe.
     {
-        size_t mark = protocore_secure_mark();
-        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *gcm =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
         AesGcmV.seal_args.nonce = nonce;
@@ -1586,7 +1590,7 @@ static proto_bool ike_sk_aead_seal(const uint8_t *key, const uint8_t *salt, cons
         AesGcmV.seal_args.tag_out = out + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     return PROTO_TRUE;
 }
@@ -1602,8 +1606,9 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
     ike_gcm_nonce(nonce, salt, iv);
     proto_bool ok = PROTO_FALSE;
     {
-        size_t mark = protocore_secure_mark();
-        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *gcm =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
         AesGcmV.open_args.nonce = nonce;
@@ -1616,7 +1621,7 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
         AesGcm.open(gcm);
         ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     return ok;
 }
@@ -1643,11 +1648,14 @@ void protocore_ike_sk_aead_open(uint8_t *work)
 // only their operands, so the bytes the curve runs in are this file's.
 static proto_bool ike_x25519(proto_bool base, const uint8_t *scalar, const uint8_t *point, uint8_t *out)
 {
-    const size_t mark = protocore_secure_mark();
-    protocore_span w = protocore_secure_span(PROTOCORE_CURVE25519_BORROW, 8);
-    if (!span.ok(w))
+    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
+                             .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
+                                 PROTOCORE_CURVE25519_BORROW, protocore_secure_owner()),
+                             .cap = PROTOCORE_CURVE25519_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
     if (base)
@@ -1664,7 +1672,7 @@ static proto_bool ike_x25519(proto_bool base, const uint8_t *scalar, const uint8
         Curve25519.x25519(w.buf);
     }
     const proto_bool ok = Curve25519V.ok;
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     return ok;
 }
 
@@ -1779,8 +1787,8 @@ static size_t ike_signed_octets(uint8_t *work, uint8_t *scratch, size_t cap, con
     {
         return 0;
     }
-    mem.cpy(scratch, real, real_len);
-    mem.cpy(scratch + real_len, nonce, nonce_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = real, .bytes = real_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch + real_len, .src = nonce, .bytes = nonce_len);
     HmacSha256.mac(work, sk_p, sk_p_len, id_body, id_body_len, scratch + real_len + nonce_len);
     return total;
 }
@@ -1876,8 +1884,8 @@ static size_t ike_sa_init_build(uint8_t *buf, size_t cap, const uint8_t *init_sp
     }
 
     IkeHeader h;
-    mem.cpy(h.init_spi, init_spi, PROTOCORE_IKE_SPI_LEN);
-    mem.cpy(h.resp_spi, resp_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.init_spi, .src = init_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.resp_spi, .src = resp_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
     h.next_payload = IKE_PL_SA;
     h.version = PROTOCORE_IKE_VERSION;
     h.exchange = IKE_SA_INIT;
@@ -1927,7 +1935,7 @@ void protocore_ike_sa_init_build(uint8_t *work)
 // A Length that lies about the message fails closed.
 static proto_bool ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg *out)
 {
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
 
     IkeHeader h;
     if (!ike_hdr_parse(msg, len, &h))
@@ -1943,8 +1951,8 @@ static proto_bool ike_sa_init_parse(const uint8_t *msg, size_t len, IkeSaInitMsg
         return PROTO_FALSE;
     }
 
-    mem.cpy(out->init_spi, h.init_spi, PROTOCORE_IKE_SPI_LEN);
-    mem.cpy(out->resp_spi, h.resp_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->init_spi, .src = h.init_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->resp_spi, .src = h.resp_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
     out->is_response = (h.flags & PROTOCORE_IKE_FLAG_RESPONSE) != 0;
 
     IkePayloadIter it;
@@ -2007,8 +2015,8 @@ static size_t ike_sk_message_build(uint8_t *buf, size_t cap, const uint8_t *init
     }
 
     IkeHeader h;
-    mem.cpy(h.init_spi, init_spi, PROTOCORE_IKE_SPI_LEN);
-    mem.cpy(h.resp_spi, resp_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.init_spi, .src = init_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = h.resp_spi, .src = resp_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
     h.next_payload = IKE_PL_SK;
     h.version = PROTOCORE_IKE_VERSION;
     h.exchange = exchange;
@@ -2025,10 +2033,10 @@ static size_t ike_sk_message_build(uint8_t *buf, size_t cap, const uint8_t *init
     buf[IKE_SK_HDR_OFF + 1] = 0;
     put16(buf + IKE_SK_HDR_OFF + 2, (uint16_t)sk_len);
 
-    mem.cpy(buf + IKE_SK_IV_OFF, iv, PROTOCORE_IKE_GCM_IV_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + IKE_SK_IV_OFF, .src = iv, .bytes = PROTOCORE_IKE_GCM_IV_LEN);
     if (inner_len)
     {
-        mem.cpy(buf + IKE_SK_CT_OFF, inner, inner_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + IKE_SK_CT_OFF, .src = inner, .bytes = inner_len);
     }
     buf[IKE_SK_CT_OFF + inner_len] = 0x00; // Pad Length: no padding octets
 
@@ -2059,7 +2067,7 @@ void protocore_ike_auth_msg_build(uint8_t *work)
 // Verify the ICV, decrypt in place, then strip Padding and Pad Length (sec 3.14).
 static proto_bool ike_auth_msg_open(uint8_t *msg, size_t len, const uint8_t *key, const uint8_t *salt, IkeInnerRef *out)
 {
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     if (!msg || !key || !salt)
     {
         return PROTO_FALSE;
@@ -2178,12 +2186,12 @@ void protocore_ike_initiator_start(uint8_t *work)
         return;
     }
 
-    mem.set(hs, 0, sizeof(*hs));
-    mem.cpy(hs->sa.init_spi, our_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = hs, .val = 0, .bytes = sizeof(*hs));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->sa.init_spi, .src = our_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
     hs->sa.is_initiator = PROTO_TRUE;
     hs->sa.suite = *suite;
-    mem.cpy(hs->our_dh_priv, our_dh_priv, PROTOCORE_IKE_X25519_LEN);
-    mem.cpy(hs->our_nonce, our_nonce, nonce_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->our_dh_priv, .src = our_dh_priv, .bytes = PROTOCORE_IKE_X25519_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->our_nonce, .src = our_nonce, .bytes = nonce_len);
     hs->our_nonce_len = (uint16_t)nonce_len;
 
     uint8_t zero_spi[PROTOCORE_IKE_SPI_LEN] = {0};
@@ -2195,7 +2203,7 @@ void protocore_ike_initiator_start(uint8_t *work)
         hs->state = IKE_ST_FAILED;
         return;
     }
-    mem.cpy(hs->init_msg, IkeV.out.buf, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->init_msg, .src = IkeV.out.buf, .bytes = n);
     hs->init_msg_len = (uint16_t)n;
     hs->state = IKE_ST_SA_INIT_SENT;
     IkeV.n = n;
@@ -2220,13 +2228,15 @@ void protocore_ike_initiator_on_sa_init(uint8_t *work)
         hs->state = IKE_ST_FAILED;
         return;
     }
-    if (!m.is_response || mem.cmp(m.init_spi, hs->sa.init_spi, PROTOCORE_IKE_SPI_LEN) != 0 ||
+    if (!m.is_response ||
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = m.init_spi, .other = hs->sa.init_spi,
+                   .bytes = PROTOCORE_IKE_SPI_LEN) != 0 ||
         m.dh_group != hs->sa.suite.dh)
     {
         hs->state = IKE_ST_FAILED;
         return;
     }
-    mem.cpy(hs->sa.resp_spi, m.resp_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->sa.resp_spi, .src = m.resp_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
 
     // Nr is kept: the responder's AUTH is verified over it later (sec 2.15).
     if (m.nonce_len == 0 || m.nonce_len > PROTOCORE_IKE_NONCE_MAX)
@@ -2234,7 +2244,7 @@ void protocore_ike_initiator_on_sa_init(uint8_t *work)
         hs->state = IKE_ST_FAILED;
         return;
     }
-    mem.cpy(hs->peer_nonce, m.nonce, m.nonce_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->peer_nonce, .src = m.nonce, .bytes = m.nonce_len);
     hs->peer_nonce_len = (uint16_t)m.nonce_len;
 
     // RealMessage2 is the octets the responder signs (sec 2.15).
@@ -2243,7 +2253,7 @@ void protocore_ike_initiator_on_sa_init(uint8_t *work)
         hs->state = IKE_ST_FAILED;
         return;
     }
-    mem.cpy(hs->resp_msg, resp, resp_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->resp_msg, .src = resp, .bytes = resp_len);
     hs->resp_msg_len = (uint16_t)resp_len;
 
     // For the initiator Ni is ours and Nr is the responder's.
@@ -2379,7 +2389,7 @@ void protocore_ike_initiator_on_auth_psk(uint8_t *work)
     // An open decrypts in place, so the received message is copied first. SK_er carries
     // responder to initiator traffic (sec 2.14).
     uint8_t buf[PROTOCORE_IKE_MSG_MAX];
-    mem.cpy(buf, resp, resp_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = resp, .bytes = resp_len);
     IkeInnerRef opened;
     const uint8_t *idr_body = NULL, *authdata = NULL;
     size_t idr_body_len = 0, authdata_len = 0;
@@ -2444,17 +2454,18 @@ void protocore_ike_responder_on_sa_init(uint8_t *work)
         return;
     }
 
-    mem.set(hs, 0, sizeof(*hs));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = hs, .val = 0, .bytes = sizeof(*hs));
     hs->sa.is_initiator = PROTO_FALSE;
     hs->sa.suite = *suite;
-    mem.cpy(hs->sa.init_spi, m.init_spi, PROTOCORE_IKE_SPI_LEN); // the initiator's SPI, echoed
-    mem.cpy(hs->sa.resp_spi, our_spi, PROTOCORE_IKE_SPI_LEN);
-    mem.cpy(hs->our_dh_priv, our_dh_priv, PROTOCORE_IKE_X25519_LEN);
-    mem.cpy(hs->our_nonce, our_nonce, nonce_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->sa.init_spi, .src = m.init_spi,
+               .bytes = PROTOCORE_IKE_SPI_LEN); // the initiator's SPI, echoed
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->sa.resp_spi, .src = our_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->our_dh_priv, .src = our_dh_priv, .bytes = PROTOCORE_IKE_X25519_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->our_nonce, .src = our_nonce, .bytes = nonce_len);
     hs->our_nonce_len = (uint16_t)nonce_len;
-    mem.cpy(hs->peer_nonce, m.nonce, m.nonce_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->peer_nonce, .src = m.nonce, .bytes = m.nonce_len);
     hs->peer_nonce_len = (uint16_t)m.nonce_len;
-    mem.cpy(hs->init_msg, req, req_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->init_msg, .src = req, .bytes = req_len);
     hs->init_msg_len = (uint16_t)req_len;
 
     size_t n = ike_sa_init_build(IkeV.out.buf, IkeV.out.cap, m.init_spi, our_spi, 0, PROTO_TRUE, 1,
@@ -2465,7 +2476,7 @@ void protocore_ike_responder_on_sa_init(uint8_t *work)
         hs->state = IKE_ST_FAILED;
         return;
     }
-    mem.cpy(hs->resp_msg, IkeV.out.buf, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->resp_msg, .src = IkeV.out.buf, .bytes = n);
     hs->resp_msg_len = (uint16_t)n;
 
     // For the responder Ni is the peer's and Nr is ours.
@@ -2507,7 +2518,7 @@ void protocore_ike_responder_on_auth_psk(uint8_t *work)
     }
 
     uint8_t buf[PROTOCORE_IKE_MSG_MAX];
-    mem.cpy(buf, req, req_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = req, .bytes = req_len);
     IkeInnerRef opened;
     const uint8_t *idi_body = NULL, *authdata = NULL;
     size_t idi_body_len = 0, authdata_len = 0;

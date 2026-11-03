@@ -5,7 +5,8 @@ protocore_add_module(network_drivers/presentation/ssh
   GATE PROTOCORE_ENABLE_SSH
   SOURCES ssh.c
   PRIVATE_DEPS
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/presentation/ssh/common
 )
 

@@ -1,9 +1,10 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "mmgr/ring/ring.h"
+#include "memoria_anularis/memoria_anularis.h"
 #include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
+#include "rx_feed.h"
 #include <stdint.h>
 
 #include <unity.h>
@@ -17,19 +18,15 @@ void tearDown(void)
 
 static void feed(uint8_t s, const uint8_t *src, size_t n)
 {
-    size_t head = PROTO_ATOMIC_LOAD(&conn_pool[s].rx_head);
     for (size_t k = 0; k < n; k++)
     {
-        conn_pool[s].rx_buffer[(head + k) % RX_BUF_SIZE] = src[k];
+        rx_put(&conn_pool[s], src[k]);
     }
-    PROTO_ATOMIC_STORE(&conn_pool[s].rx_head, head + n);
 }
 
 static void reset_slot(uint8_t s)
 {
-    PROTO_ATOMIC_STORE(&conn_pool[s].rx_head, (size_t)0);
-    PROTO_ATOMIC_STORE(&conn_pool[s].rx_tail, (size_t)0);
-    conn_pool[s].rx_acked = 0;
+    rx_reset(&conn_pool[s]);
     conn_pool[s].id = s;
 }
 
@@ -140,8 +137,7 @@ static void test_stream_wraps_around_the_ring(void)
 {
     reset_slot(0);
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].rx_head, (size_t)(RX_BUF_SIZE - 4u));
-    PROTO_ATOMIC_STORE(&conn_pool[0].rx_tail, (size_t)(RX_BUF_SIZE - 4u));
+    rx_advance(&conn_pool[0], RX_BUF_SIZE - 4u);
     feed(0, (const uint8_t *)"WRAPPED!", 8);
 
     TEST_ASSERT_EQUAL_UINT32(8u, (uint32_t)protocore_conn_available(0));
@@ -153,8 +149,7 @@ static void test_stream_wraps_around_the_ring(void)
 static void test_peek_across_the_ring_seam(void)
 {
     reset_slot(0);
-    PROTO_ATOMIC_STORE(&conn_pool[0].rx_head, (size_t)(RX_BUF_SIZE - 3u));
-    PROTO_ATOMIC_STORE(&conn_pool[0].rx_tail, (size_t)(RX_BUF_SIZE - 3u));
+    rx_advance(&conn_pool[0], RX_BUF_SIZE - 3u);
     feed(0, (const uint8_t *)"SEAMTEST", 8);
 
     uint8_t got[8] = {0};
@@ -182,16 +177,13 @@ static void test_receive_buffer_holds_its_capacity_less_one(void)
 static void test_offered_space_never_reaches_the_ambiguous_point(void)
 {
     reset_slot(0);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(RX_BUF_SIZE - 1u),
-                             (uint32_t)protocore_ring_free(&conn_pool[0].rx_head, &conn_pool[0].rx_tail, RX_BUF_SIZE));
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(RX_BUF_SIZE - 1u), (uint32_t)rx_vacant(&conn_pool[0]));
 
     feed(0, (const uint8_t *)"abcd", 4);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(RX_BUF_SIZE - 1u - 4u),
-                             (uint32_t)protocore_ring_free(&conn_pool[0].rx_head, &conn_pool[0].rx_tail, RX_BUF_SIZE));
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(RX_BUF_SIZE - 1u - 4u), (uint32_t)rx_vacant(&conn_pool[0]));
 
     protocore_conn_consume(0, 4u);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(RX_BUF_SIZE - 1u),
-                             (uint32_t)protocore_ring_free(&conn_pool[0].rx_head, &conn_pool[0].rx_tail, RX_BUF_SIZE));
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(RX_BUF_SIZE - 1u), (uint32_t)rx_vacant(&conn_pool[0]));
 }
 
 static void test_peek_then_consume_drops_exactly_what_was_peeked(void)
@@ -209,94 +201,6 @@ static void test_peek_then_consume_drops_exactly_what_was_peeked(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY("BODY", body, 4);
 }
 
-static void test_a_free_unheld_slot_is_allocatable(void)
-{
-    _Atomic uint32_t free_mask = 0;
-    _Atomic uint32_t held = 0;
-    protocore_slot_mark(&free_mask, 0);
-
-    TEST_ASSERT_EQUAL_UINT32(protocore_slot_bit(0), protocore_slot_ready(&free_mask, &held, MAX_CONNS));
-    TEST_ASSERT_EQUAL_INT32(0, protocore_slot_next(protocore_slot_ready(&free_mask, &held, MAX_CONNS)));
-}
-
-static void test_a_held_slot_is_not_allocatable_even_when_free(void)
-{
-    _Atomic uint32_t free_mask = 0;
-    _Atomic uint32_t held = 0;
-    protocore_slot_mark(&free_mask, 0);
-    TEST_ASSERT_TRUE(protocore_slot_take(&held, 0));
-
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_slot_ready(&free_mask, &held, MAX_CONNS));
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_slot_next(protocore_slot_ready(&free_mask, &held, MAX_CONNS)));
-}
-
-static void test_dropping_the_hold_returns_the_slot(void)
-{
-    _Atomic uint32_t free_mask = 0;
-    _Atomic uint32_t held = 0;
-    protocore_slot_mark(&free_mask, 0);
-    (void)protocore_slot_take(&held, 0);
-    protocore_slot_drop(&held, 0);
-
-    TEST_ASSERT_EQUAL_UINT32(protocore_slot_bit(0), protocore_slot_ready(&free_mask, &held, MAX_CONNS));
-}
-
-static void test_a_busy_slot_is_not_allocatable(void)
-{
-    _Atomic uint32_t free_mask = 0;
-    _Atomic uint32_t held = 0;
-
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_slot_ready(&free_mask, &held, MAX_CONNS));
-    protocore_slot_mark(&free_mask, 0);
-    protocore_slot_clear(&free_mask, 0);
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_slot_ready(&free_mask, &held, MAX_CONNS));
-}
-
-static void test_a_hold_is_taken_once(void)
-{
-    _Atomic uint32_t held = 0;
-
-    TEST_ASSERT_TRUE(protocore_slot_take(&held, 0));
-    TEST_ASSERT_FALSE(protocore_slot_take(&held, 0));
-}
-
-static void test_the_lowest_ready_slot_is_picked(void)
-{
-    _Atomic uint32_t free_mask = 0;
-    _Atomic uint32_t held = 0;
-    for (size_t i = 0; i < MAX_CONNS; i++)
-    {
-        protocore_slot_mark(&free_mask, i);
-    }
-
-    TEST_ASSERT_EQUAL_INT32(0, protocore_slot_next(protocore_slot_ready(&free_mask, &held, MAX_CONNS)));
-
-    if (MAX_CONNS >= 3u)
-    {
-        (void)protocore_slot_take(&held, 0);
-        (void)protocore_slot_take(&held, 1);
-        TEST_ASSERT_EQUAL_INT32(2, protocore_slot_next(protocore_slot_ready(&free_mask, &held, MAX_CONNS)));
-    }
-}
-
-static void test_an_exhausted_pool_reports_no_slot(void)
-{
-    _Atomic uint32_t free_mask = 0;
-    _Atomic uint32_t held = 0;
-
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_slot_next(protocore_slot_ready(&free_mask, &held, MAX_CONNS)));
-}
-
-static void test_readiness_is_masked_to_the_pool(void)
-{
-    _Atomic uint32_t free_mask = 0xFFFFFFFFu;
-    _Atomic uint32_t held = 0;
-
-    uint32_t ready = protocore_slot_ready(&free_mask, &held, MAX_CONNS);
-    TEST_ASSERT_EQUAL_UINT32(protocore_slot_all(MAX_CONNS), ready);
-    TEST_ASSERT_EQUAL_UINT32(0u, ready & ~protocore_slot_all(MAX_CONNS));
-}
-
 static void test_slot_states_are_distinct_and_one_byte(void)
 {
     TEST_ASSERT_EQUAL_UINT32(1u, (uint32_t)sizeof(ConnState));
@@ -311,16 +215,16 @@ static void test_only_an_active_slot_with_a_pcb_is_reported_active(void)
     protocore_pcb stub;
     conn_pool[0].pcb = &stub;
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_CLOSING);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_CLOSING);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
     TEST_ASSERT_TRUE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
     conn_pool[0].pcb = saved;
 }
 
@@ -329,10 +233,10 @@ static void test_a_detached_slot_is_never_sendable(void)
     protocore_pcb *saved = conn_pool[0].pcb;
     conn_pool[0].pcb = NULL;
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_ACTIVE);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
-    PROTO_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
+    PROTOCORE_ATOMIC_STORE(&conn_pool[0].state, CONN_FREE);
     conn_pool[0].pcb = saved;
 }
 
@@ -369,14 +273,6 @@ int main(void)
     RUN_TEST(test_receive_buffer_holds_its_capacity_less_one);
     RUN_TEST(test_offered_space_never_reaches_the_ambiguous_point);
     RUN_TEST(test_peek_then_consume_drops_exactly_what_was_peeked);
-    RUN_TEST(test_a_free_unheld_slot_is_allocatable);
-    RUN_TEST(test_a_held_slot_is_not_allocatable_even_when_free);
-    RUN_TEST(test_dropping_the_hold_returns_the_slot);
-    RUN_TEST(test_a_busy_slot_is_not_allocatable);
-    RUN_TEST(test_a_hold_is_taken_once);
-    RUN_TEST(test_the_lowest_ready_slot_is_picked);
-    RUN_TEST(test_an_exhausted_pool_reports_no_slot);
-    RUN_TEST(test_readiness_is_masked_to_the_pool);
     RUN_TEST(test_slot_states_are_distinct_and_one_byte);
     RUN_TEST(test_only_an_active_slot_with_a_pcb_is_reported_active);
     RUN_TEST(test_a_detached_slot_is_never_sendable);

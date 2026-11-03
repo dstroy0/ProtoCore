@@ -80,7 +80,7 @@
 // 64-bit index arithmetic, none of which the target executes.
 //
 // Anything wider is not synthesized into one operation, it is done as n+1 of them: the move ladder
-// in mmgr/protomem.h enters at this width and steps down, and a lane carrier above it
+// in memoria_operor/memoria_operor.h enters at this width and steps down, and a lane carrier above it
 // is refused in protocore_config.h rather than compiled into half-registers the caller cannot see.
 #ifndef PROTOCORE_HW_WORD_BITS
 #define PROTOCORE_HW_WORD_BITS 32

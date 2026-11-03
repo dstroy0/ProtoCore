@@ -5,7 +5,7 @@ protocore_add_module(services/opcua/models/umati
   GATE PROTOCORE_ENABLE_UMATI
   SOURCES umati.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protostr
+    server/core/worker
+    mmgr
     services/opcua
 )

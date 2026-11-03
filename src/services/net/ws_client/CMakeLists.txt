@@ -5,13 +5,10 @@ protocore_add_module(services/net/ws_client
   GATE PROTOCORE_ENABLE_WS_CLIENT
   SOURCES ws_client.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/hash/sha1
     crypto/rng
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
-    mmgr/span
+    mmgr
     network_drivers/presentation/codec/base64
     network_drivers/transport/tcp/client
     server/clock

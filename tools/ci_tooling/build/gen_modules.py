@@ -462,6 +462,10 @@ DECL_KEYWORDS = ("SOURCES", "DEPS", "PRIVATE_DEPS", "GATE", "HEADER_ONLY", "OPT"
 # package cache, and MMgr, which is a submodule with its own mmgr_add_module() and its own audit.
 DECL_SKIP = {".git", ".pio", "build", "node_modules", "__pycache__", "MMgr"}
 
+# A DEPS name no CMakeLists declares with protocore_add_module(): MMgr, which include/CMakeLists.txt
+# builds as the target pc_mmgr. It is a real target, and its headers belong to no ProtoCore module.
+EXTERNAL_DEPS = {"mmgr"}
+
 
 def declared():
     """What every module's own CMakeLists.txt says: path -> {gate, deps, dir, sources, header_only}.
@@ -552,7 +556,7 @@ def audit(mods, unowned, strict):
     bad_dep, bad_source, bad_dir = [], [], []
     for path, d in sorted(decl.items()):
         for dep in d["deps"]:
-            if dep not in decl:
+            if dep not in decl and dep not in EXTERNAL_DEPS:
                 bad_dep.append((path, "DEPS %s, which no CMakeLists declares" % dep))
         for s in d["sources"]:
             if not os.path.isfile(os.path.join(ROOT, d["dir"], s)):
@@ -586,7 +590,7 @@ def audit(mods, unowned, strict):
                     q = q[:-1]
                 inferred.add("/".join(q))
         gap = sorted(inferred - set(d["deps"]))
-        stale = sorted(set(d["deps"]) - inferred)
+        stale = sorted(set(d["deps"]) - inferred - EXTERNAL_DEPS)
         if gap:
             undeclared.append((path, gap))
         if stale:

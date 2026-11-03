@@ -7,15 +7,16 @@
  */
 
 #include "protocore_config.h" // the entry point: the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_DTLS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 
 #include "crypto/aead/aes128gcm/aes128gcm.h"
-#include "mmgr/secure/secure.h" // the secure pool: header-protection key schedule
 #include "network_drivers/tls/key_schedule/key_schedule.h"
+#include "server/core/worker/worker.h" // the secure pool: header-protection key schedule
 
 // Unified-header first-byte fixed pattern and flag bits (RFC 9147 §4, Figure 3): 0 0 1 C S L E E.
 static const uint8_t DTLS_UH_FIXED = 0x20; // 001x xxxx
@@ -29,7 +30,7 @@ static const uint8_t DTLS_UH_EPOCH_MASK = 0x03;
 // (RFC 9147 §4.2.2 / RFC 8446 §5.3; the epoch is NOT mixed in). Same construction as QUIC.
 static void build_nonce(const uint8_t iv[12], uint64_t seq, uint8_t nonce[12])
 {
-    mem.cpy(nonce, iv, 12);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = nonce, .src = iv, .bytes = 12);
     for (int i = 0; i < 8; i++)
     {
         nonce[11 - i] ^= (uint8_t)(seq >> (8 * i));
@@ -87,14 +88,24 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     // carries the "dtls13" HKDF-Expand-Label prefix (RFC 9147 §4.2.3 / §5.9).
     // The key becomes a keyed context here and the raw bytes are wiped; nothing downstream wants them.
     // The borrow wipes on release, on every exit path.
-    size_t mark = protocore_secure_mark();
-    protocore_span k = protocore_secure_span(PROTOCORE_AES128GCM_KEY_LEN, 8);
-    protocore_span ws = protocore_secure_span(PROTOCORE_HKDF_BORROW, _Alignof(uint32_t));
-    protocore_span snk = protocore_secure_span(PROTOCORE_AES128GCM_KEY_LEN, 8);
-    if (!span.ok(k) || !span.ok(ws) || !span.ok(snk))
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span k = EMBED_CALL(spat.from, SpatiumCfg,
+                             .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
+                                 PROTOCORE_AES128GCM_KEY_LEN, protocore_secure_owner()),
+                             .cap = PROTOCORE_AES128GCM_KEY_LEN);
+    mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
+                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_HKDF_BORROW,
+                                                                                              protocore_secure_owner()),
+                              .cap = PROTOCORE_HKDF_BORROW);
+    mmgr_span snk = EMBED_CALL(spat.from, SpatiumCfg,
+                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
+                                   PROTOCORE_AES128GCM_KEY_LEN, protocore_secure_owner()),
+                               .cap = PROTOCORE_AES128GCM_KEY_LEN);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = k) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ws) ||
+        !EMBED_CALL(spat.ok, SpatiumCfg, .span = snk))
     {
-        protocore_secure_release(mark);
-        mem.zero(out->iv, sizeof(out->iv));
+        protocore_secure_guard()->temporary_buf_release(mark);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = out->iv, .bytes = sizeof(out->iv), .val = 0);
         return; // unkeyed: every protect/unprotect over these keys refuses
     }
     expand_label(work, ws.buf, secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
@@ -104,7 +115,7 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     expand_label(work, ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
     Aes128GcmV.block_key_args.key = snk.buf;
     Aes128Gcm.block_init(out->gcm);
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +147,8 @@ size_t protocore_dtls_record_plaintext_build(uint8_t *work, uint8_t content_type
     out[12] = (uint8_t)frag_len;
     if (frag_len)
     {
-        mem.cpy(out + PROTOCORE_DTLS_PLAINTEXT_HDR_LEN, fragment, frag_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + PROTOCORE_DTLS_PLAINTEXT_HDR_LEN, .src = fragment,
+                   .bytes = frag_len);
     }
     return total;
 }
@@ -203,7 +215,7 @@ size_t protocore_dtls_record_protect(uint8_t *work, DtlsRecordKeys *keys, uint64
     out[0] = flags;
     if (cid_len)
     {
-        mem.cpy(out + 1, cid, cid_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 1, .src = cid, .bytes = cid_len);
     }
     size_t seq_off = 1 + cid_len;
     out[seq_off] = (uint8_t)(seq >> 8); // plaintext sequence number (this header form is the AEAD AAD)
@@ -212,7 +224,7 @@ size_t protocore_dtls_record_protect(uint8_t *work, DtlsRecordKeys *keys, uint64
     out[seq_off + 3] = (uint8_t)enc_len;
 
     // Assemble the inner plaintext where it will be sealed (seal permits out == pt).
-    mem.cpy(out + hdr_len, plaintext, pt_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + hdr_len, .src = plaintext, .bytes = pt_len);
     out[hdr_len + pt_len] = content_type;
 
     uint8_t nonce[12];
@@ -274,7 +286,7 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
         // A connection-id record: a CID must have been negotiated for this direction, and it must be
         // ours (the CID is not length-prefixed on the wire - its length is known only from negotiation).
         if (expected_cid_len == 0 || off + expected_cid_len > rec_len ||
-            mem.cmp(rec + off, expected_cid, expected_cid_len) != 0)
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = rec + off, .other = expected_cid, .bytes = expected_cid_len) != 0)
         {
             return PROTO_FALSE;
         }
@@ -319,7 +331,7 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
 
     // Copy the header so we can write the decrypted sequence number into the AEAD AAD form.
     uint8_t hdr[1 + PROTOCORE_DTLS_CID_MAX + 4];
-    mem.cpy(hdr, rec, hdr_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hdr, .src = rec, .bytes = hdr_len);
 
     // Decrypt the sequence number (RFC 9147 §4.2.3).
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here

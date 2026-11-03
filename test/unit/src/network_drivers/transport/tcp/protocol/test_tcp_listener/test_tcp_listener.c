@@ -22,6 +22,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 #include "server/clock/clock.h" // Clock.millis: what a dispatch pass stamps
 #include "shared/ip/ip.h"
 #include <string.h>
@@ -123,18 +124,19 @@ void test_accept_claims_a_slot_and_wires_the_connection(void)
 }
 
 // The slot's ring cursors are reset at accept, so a slot reused after a previous connection does
-// not inherit its predecessor's unread bytes.
+// not inherit its predecessor's unread byteio.
 void test_accept_resets_the_ring_of_a_reused_slot(void)
 {
-    conn_pool[0].rx_head = 500;
-    conn_pool[0].rx_tail = 100;
-    conn_pool[0].rx_acked = 100;
+    rx_reset(&conn_pool[0]);
+    rx_put(&conn_pool[0], 0x41u);
+    rx_put(&conn_pool[0], 0x42u);
+    conn_pool[0].rx_unacked = 100;
 
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, accept_on(0, &g_newpcb));
     ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_UINT(0, ConnPoolV.n);
-    TEST_ASSERT_EQUAL_UINT(0, conn_pool[0].rx_acked);
+    TEST_ASSERT_EQUAL_UINT(0, conn_pool[0].rx_unacked);
 }
 
 // Each accept posts EVT_CONNECT naming the slot it claimed, which is how the session layer learns

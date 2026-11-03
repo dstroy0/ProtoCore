@@ -62,8 +62,8 @@ static_assert(ED25519_OFF_SHA + PROTOCORE_SHA512_BORROW <= PROTOCORE_ED25519_BOR
               "PROTOCORE_ED25519_BORROW is short of the working set and the nested SHA-512 borrow - "
               "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(ED25519_OFF_CTX % _Alignof(Ed25519Ctx) == 0,

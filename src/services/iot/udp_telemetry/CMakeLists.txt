@@ -5,10 +5,8 @@ protocore_add_module(services/iot/udp_telemetry
   GATE PROTOCORE_ENABLE_UDP_TELEMETRY
   SOURCES udp_telemetry.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/transport/udp/client
     shared/ip
 )

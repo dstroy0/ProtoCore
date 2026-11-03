@@ -8,7 +8,7 @@ protocore_add_module(network_drivers/session
     server/core/proto_handler
     server/core/worker
   PRIVATE_DEPS
-    mmgr/plaintext
+    mmgr
     network_drivers/presentation
     network_drivers/presentation/ssh/network
     network_drivers/transport/tcp/protocol

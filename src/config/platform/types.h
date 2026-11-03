@@ -77,8 +77,8 @@ typedef _Bool proto_bool;
  * `atomic_load_explicit` and `atomic_store_explicit` are `<stdatomic.h>`, which a file using these
  * includes itself: this header also reaches C++ sketches, where that header is not C11's.
  */
-#define PROTO_ATOMIC_LOAD(p) atomic_load_explicit((p), memory_order_acquire)
-#define PROTO_ATOMIC_STORE(p, v) atomic_store_explicit((p), (v), memory_order_release) ///< release store of @p v
+#define PROTOCORE_ATOMIC_LOAD(p) atomic_load_explicit((p), memory_order_acquire)
+#define PROTOCORE_ATOMIC_STORE(p, v) atomic_store_explicit((p), (v), memory_order_release) ///< release store of @p v
 
 /**
  * @brief Give a header's declarations C linkage, so their symbol names carry no parameter types.
@@ -87,6 +87,22 @@ typedef _Bool proto_bool;
  * under a C one. The sketches, ESP-IDF app code and Unity suites that call this library are C++;
  * src/ is C.
  */
+#include "embed_dispatch_layout.h" // EMBED_CALL, which the C++ arm below restates
+
+// C++ has no compound literal to take the address of, so a C++ translation unit builds the
+// argument struct as a temporary. It lives to the end of the full expression, which is the call.
+#ifdef __cplusplus
+extern "C++"
+{
+    template <typename ArgsType> const ArgsType *protocore_call_args(const ArgsType &args)
+    {
+        return &args;
+    }
+}
+#undef EMBED_CALL
+#define EMBED_CALL(entry_, ArgsType_, ...) entry_(protocore_call_args(ArgsType_{__VA_ARGS__}))
+#endif
+
 #ifdef __cplusplus
 #define PROTOCORE_BEGIN_DECLS                                                                                          \
     extern "C"                                                                                                         \

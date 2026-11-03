@@ -5,6 +5,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 #include "server/clock/clock.h" // Clock.millis: what a dispatch pass stamps
 #include <string.h>
 
@@ -223,8 +224,7 @@ void test_backpressure_counts_when_ring_full()
 {
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = NULL;
-    conn_pool[0].rx_head = 0;
-    conn_pool[0].rx_tail = 0;
+    rx_reset(&conn_pool[0]);
     protocore_pbuf p;
     memset(&p, 0, sizeof(p));
     p.tot_len = RX_BUF_SIZE * 2;
@@ -353,8 +353,7 @@ void test_enqueue_failure_from_recv_cb_counts_defer_drop()
     conn_pool[0].id = 0;
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = &pcb;
-    conn_pool[0].rx_head = 0;
-    conn_pool[0].rx_tail = 0;
+    rx_reset(&conn_pool[0]);
     conn_pool[0].listener_id = 1;
     listener_pool[1].active = PROTO_FALSE;
 

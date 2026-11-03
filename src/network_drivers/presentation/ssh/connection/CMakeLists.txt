@@ -7,13 +7,8 @@ protocore_add_module(network_drivers/presentation/ssh/connection
   DEPS
     network_drivers/presentation/ssh/common
   PRIVATE_DEPS
-    mmgr/bytes
-    mmgr/endian
-    mmgr/plaintext
-    mmgr/protoframe
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/presentation/ssh
     network_drivers/presentation/ssh/app/server
     network_drivers/presentation/ssh/network

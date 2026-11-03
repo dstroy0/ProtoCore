@@ -1,10 +1,10 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "mmgr/protoframe/protoframe.h"
 #include "network_drivers/presentation/telnet/telnet.h"
 #include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "numeros_scribo/numeros_scribo.h"
 #include "server/core/proto_handler/proto_handler.h"
 #include <stdint.h>
 #include <string.h>
@@ -274,9 +274,9 @@ void test_output_escaping_and_printf()
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 4);
 
     tcp_capture_reset();
-    static const protocore_field NEQ[] = {{PROTOCORE_FK_LIT, 0, 2, "n="}, PROTOCORE_U32, PROTOCORE_END};
+    static const mmgr_field NEQ[] = {{MMGR_FK_LIT, 0, 2, "n="}, MMGR_U32, MMGR_END};
     TelnetV.out.spec = NEQ;
-    TelnetV.out.val = (const protocore_fval[]){PROTOCORE_VU32(7u)};
+    TelnetV.out.val = (const mmgr_fval[]){MMGR_VU32(7u)};
     TelnetV.out.nv = 1;
     Telnet.frame(protocore_telnet_span());
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "n=7"));
@@ -391,7 +391,7 @@ void test_print_println_null_and_printf_empty()
     TEST_ASSERT_EQUAL_STRING("\r\n", tcp_captured());
 
     tcp_capture_reset();
-    static const protocore_field EMPTY[] = {PROTOCORE_END};
+    static const mmgr_field EMPTY[] = {MMGR_END};
     TelnetV.out.spec = EMPTY;
     TelnetV.out.val = NULL;
     TelnetV.out.nv = 0;

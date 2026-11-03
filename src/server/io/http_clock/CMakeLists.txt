@@ -5,7 +5,8 @@ protocore_add_module(server/io/http_clock
   GATE PROTOCORE_ENABLE_HTTP_CLOCK
   SOURCES http_clock.c
   PRIVATE_DEPS
-    mmgr/plaintext
+    server/core/worker
+    mmgr
     network_drivers/application/ntp_service
     services/timing_position/time_source
     shared/http_date

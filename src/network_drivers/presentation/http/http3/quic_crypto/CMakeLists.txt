@@ -7,8 +7,8 @@ protocore_add_module(network_drivers/presentation/http/http3/quic_crypto
   DEPS
     crypto/kdf/hkdf
   PRIVATE_DEPS
+    server/core/worker
     crypto/aead/aes128gcm
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     network_drivers/presentation/http/http3/quic_packet
 )

@@ -7,11 +7,9 @@ protocore_add_module(services/net/snmp/snmp_v3
   DEPS
     services/net/snmp/snmp_notify
   PRIVATE_DEPS
+    server/core/worker
     crypto/mac/hmac_sha256
-    mmgr/endian
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
     network_drivers/transport/udp/client
     server/clock
     services/net/snmp/snmp_agent

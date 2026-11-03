@@ -11,5 +11,5 @@ protocore_add_module(test/core_setup/hal/portable
     portable_platform.c
   DEPS
     crypto/asymmetric/bignum
-    mmgr/secure
+    mmgr
 )

@@ -36,7 +36,7 @@ static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out,
 // Minimal signed INTEGER content (two's complement, minimal length). Returns length in buf (<= 5).
 static size_t int_content(int32_t v, uint8_t *buf)
 {
-    // Build big-endian, then trim redundant sign bytes.
+    // Build big-endian, then trim redundant sign byteio.
     uint8_t tmp[4];
     tmp[0] = (uint8_t)(v >> 24);
     tmp[1] = (uint8_t)(v >> 16);

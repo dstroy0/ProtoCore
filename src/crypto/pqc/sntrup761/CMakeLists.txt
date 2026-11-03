@@ -8,5 +8,5 @@ protocore_add_module(crypto/pqc/sntrup761
   PRIVATE_DEPS
     crypto/hash/sha512
     crypto/rng
-    mmgr/protomem
+    mmgr
 )

@@ -6,6 +6,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 #include "server/clock/clock.h"
 #include "shared/ip/ip.h"
 #include <string.h>
@@ -78,7 +79,7 @@ void test_all_ring_buffers_empty_after_init()
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL(conn_pool[i].rx_head, conn_pool[i].rx_tail);
+        TEST_ASSERT_EQUAL(0u, rx_used(&conn_pool[i]));
     }
 }
 
@@ -93,7 +94,7 @@ void test_slot_ids_match_indices()
 void test_ring_empty_when_head_equals_tail()
 {
     TcpConn s = {0};
-    TEST_ASSERT_EQUAL(s.rx_head, s.rx_tail);
+    TEST_ASSERT_EQUAL(0u, rx_used(&s));
 }
 
 void test_ring_wrap_at_boundary()
@@ -112,18 +113,15 @@ void test_ring_full_sentinel_one_slot_reserved()
 void test_ring_can_store_size_minus_one_bytes()
 {
     TcpConn s = {0};
-    s.rx_head = 0;
-    s.rx_tail = 0;
+    rx_reset(&s);
     size_t count = 0;
     while (PROTO_TRUE)
     {
-        size_t next = (s.rx_head + 1) % RX_BUF_SIZE;
-        if (next == s.rx_tail)
+        if (rx_vacant(&s) == 0u)
         {
             break;
         }
-        s.rx_buffer[s.rx_head] = (uint8_t)count;
-        s.rx_head = next;
+        rx_put(&s, (uint8_t)((uint8_t)count));
         count++;
     }
     TEST_ASSERT_EQUAL(RX_BUF_SIZE - 1, (int)count);
@@ -331,35 +329,30 @@ void test_queue_not_null_after_init()
 void stress_ring_buffer_fill_drain_integrity()
 {
     TcpConn *s = &conn_pool[0];
-    s->rx_head = 0;
-    s->rx_tail = 0;
+    rx_reset(s);
     const int FILL = RX_BUF_SIZE - 1;
 
     for (int i = 0; i < FILL; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)(i & 0xFF);
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)(i & 0xFF)));
     }
 
-    TEST_ASSERT_EQUAL(RX_BUF_SIZE - 1, (int)((s->rx_head - s->rx_tail + RX_BUF_SIZE) % RX_BUF_SIZE));
+    TEST_ASSERT_EQUAL(RX_BUF_SIZE - 1, (int)rx_used(s));
 
     for (int i = 0; i < FILL; i++)
     {
         uint8_t expected = (uint8_t)(i & 0xFF);
-        uint8_t actual = s->rx_buffer[s->rx_tail];
-        s->rx_tail = (s->rx_tail + 1) % RX_BUF_SIZE;
+        uint8_t actual = rx_take(s);
         TEST_ASSERT_EQUAL_MESSAGE(expected, actual, "ring buffer byte mismatch");
     }
 
-    TEST_ASSERT_EQUAL(s->rx_head, s->rx_tail);
+    TEST_ASSERT_EQUAL(0u, rx_used(s));
 }
 
 void stress_ring_buffer_multi_cycle_no_corruption()
 {
     TcpConn *s = &conn_pool[0];
-    s->rx_head = 0;
-    s->rx_tail = 0;
+    rx_reset(s);
 
     uint8_t write_val = 0;
     uint8_t read_val = 0;
@@ -370,21 +363,18 @@ void stress_ring_buffer_multi_cycle_no_corruption()
 
         for (int i = 0; i < BATCH; i++)
         {
-            size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-            TEST_ASSERT_NOT_EQUAL_MESSAGE(next, s->rx_tail, "ring full during stress write");
-            s->rx_buffer[s->rx_head] = write_val++;
-            s->rx_head = next;
+            TEST_ASSERT_TRUE_MESSAGE(rx_vacant(s) != 0u, "ring full during stress write");
+            rx_put(s, (uint8_t)(write_val++));
         }
 
-        while (s->rx_tail != s->rx_head)
+        while (rx_used(s) != 0u)
         {
-            TEST_ASSERT_EQUAL_MESSAGE(read_val, s->rx_buffer[s->rx_tail], "ring corrupt on drain");
+            TEST_ASSERT_EQUAL_MESSAGE(read_val, rx_take(s), "ring corrupt on drain");
             read_val++;
-            s->rx_tail = (s->rx_tail + 1) % RX_BUF_SIZE;
         }
     }
 
-    TEST_ASSERT_EQUAL(s->rx_head, s->rx_tail);
+    TEST_ASSERT_EQUAL(0u, rx_used(s));
 }
 
 void stress_all_slots_timeout_simultaneously()
@@ -458,28 +448,24 @@ void stress_check_timeouts_high_call_rate()
 void stress_ring_buffer_byte_by_byte_fill_and_drain()
 {
     TcpConn *s = &conn_pool[0];
-    s->rx_head = 0;
-    s->rx_tail = 0;
+    rx_reset(s);
 
     int written = 0;
     while (PROTO_TRUE)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        if (next == s->rx_tail)
+        if (rx_vacant(s) == 0u)
         {
             break;
         }
-        s->rx_buffer[s->rx_head] = (uint8_t)(written & 0xFF);
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)(written & 0xFF)));
         written++;
     }
     TEST_ASSERT_EQUAL(RX_BUF_SIZE - 1, written);
 
     int read = 0;
-    while (s->rx_tail != s->rx_head)
+    while (rx_used(s) != 0u)
     {
-        TEST_ASSERT_EQUAL((uint8_t)(read & 0xFF), s->rx_buffer[s->rx_tail]);
-        s->rx_tail = (s->rx_tail + 1) % RX_BUF_SIZE;
+        TEST_ASSERT_EQUAL((uint8_t)(read & 0xFF), rx_take(s));
         read++;
     }
     TEST_ASSERT_EQUAL(written, read);
@@ -1130,25 +1116,23 @@ void test_ack_consumed_bounds_inactive_and_real_advance()
     ConnPool.ack_consumed(protocore_conn_pool_span());
 
     conn_pool[0].state = CONN_FREE;
-    conn_pool[0].rx_tail = 5;
-    conn_pool[0].rx_acked = 0;
+    conn_pool[0].rx_unacked = 5;
     ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(0u, (size_t)conn_pool[0].rx_acked);
+    TEST_ASSERT_EQUAL(5u, (size_t)conn_pool[0].rx_unacked);
 
     protocore_pcb fake = {0};
     conn_pool[0].pcb = &fake;
     ConnPoolV.slot = 0;
     ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    conn_pool[0].rx_tail = 5;
-    conn_pool[0].rx_acked = 2;
+    conn_pool[0].rx_unacked = 3;
     ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(5u, (size_t)conn_pool[0].rx_acked);
+    TEST_ASSERT_EQUAL(0u, (size_t)conn_pool[0].rx_unacked);
     ConnPoolV.slot = 0;
     ConnPool.ack_consumed(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(5u, (size_t)conn_pool[0].rx_acked);
+    TEST_ASSERT_EQUAL(0u, (size_t)conn_pool[0].rx_unacked);
 }
 
 void test_send_flush_success_and_write_failure()
@@ -1479,8 +1463,11 @@ void test_recv_cb_refuses_a_segment_that_does_not_fit()
     ConnPoolV.slot = 0;
     ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    conn_pool[0].rx_head = RX_BUF_SIZE - 2;
-    conn_pool[0].rx_tail = 0;
+    rx_reset(&conn_pool[0]);
+    for (size_t fill = 0; fill < RX_BUF_SIZE - 2u; fill++)
+    {
+        rx_put(&conn_pool[0], 0u);
+    }
     conn_pool[0].last_activity_ms = 5;
 
     protocore_pbuf seg = {0};
@@ -1503,8 +1490,7 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
     ConnPoolV.slot = 0;
     ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    conn_pool[0].rx_head = 0;
-    conn_pool[0].rx_tail = 0;
+    rx_reset(&conn_pool[0]);
     conn_pool[0].last_activity_ms = 0;
     set_now_ms(4242);
 
@@ -1523,7 +1509,7 @@ void test_recv_cb_accepts_and_copies_a_two_pbuf_segment()
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &seg1, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_UINT32(4242, conn_pool[0].last_activity_ms);
-    TEST_ASSERT_EQUAL(5u, (size_t)conn_pool[0].rx_head);
+    TEST_ASSERT_EQUAL(5u, rx_used(&conn_pool[0]));
 
     uint8_t got[5];
     for (int i = 0; i < 5; i++)
@@ -1551,8 +1537,7 @@ void test_recv_cb_zero_clock_and_zero_length_segment_edge_cases()
     ConnPoolV.slot = 0;
     ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span());
-    conn_pool[0].rx_head = 0;
-    conn_pool[0].rx_tail = 0;
+    rx_reset(&conn_pool[0]);
     set_now_ms(0);
 
     uint8_t byte = 'z';
@@ -1569,7 +1554,7 @@ void test_recv_cb_zero_clock_and_zero_length_segment_edge_cases()
     empty_seg.tot_len = 0;
     empty_seg.next = NULL;
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &fake, &empty_seg, PROTOCORE_NET_OK));
-    TEST_ASSERT_EQUAL(1u, (size_t)conn_pool[0].rx_head);
+    TEST_ASSERT_EQUAL(1u, rx_used(&conn_pool[0]));
 }
 
 void test_sent_cb_null_active_and_closing()
@@ -1679,8 +1664,7 @@ void test_accept_cb_claims_slot_and_wires_connection()
     TEST_ASSERT_EQUAL_PTR(&fake, c->pcb);
     TEST_ASSERT_EQUAL_UINT32(9001, c->last_activity_ms);
     TEST_ASSERT_EQUAL_UINT32(0, http_req_start_ms[c->id]);
-    TEST_ASSERT_EQUAL(0u, (size_t)c->rx_head);
-    TEST_ASSERT_EQUAL(0u, (size_t)c->rx_tail);
+    TEST_ASSERT_EQUAL(0u, rx_used(c));
     TEST_ASSERT_EQUAL_UINT8(0, c->listener_id);
     TEST_ASSERT_EQUAL_INT((int)PROTO_HTTP, (int)c->proto);
 

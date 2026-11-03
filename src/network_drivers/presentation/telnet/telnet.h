@@ -25,14 +25,10 @@
 #ifndef PROTOCORE_TELNET_H
 #define PROTOCORE_TELNET_H
 
+#include "numeros_scribo/numeros_scribo.h"
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
-
-// Only ever pointed at from here, so the tags are enough and the engine's header stays out of
-// every translation unit that includes this one.
-struct protocore_field;
-struct protocore_fval;
 
 #if PROTOCORE_ENABLE_TELNET
 
@@ -44,10 +40,10 @@ struct ProtoHandler;
 /** @brief RFC 854 NVT data: what a write puts on the terminal, as a line or as a field set. */
 typedef struct
 {
-    const char *text;                   ///< a line of NVT ASCII
-    const struct protocore_field *spec; ///< the field layout a frame is built from
-    const struct protocore_fval *val;   ///< the values that fill it
-    size_t nv;                          ///< how many
+    const char *text;       ///< a line of NVT ASCII
+    const mmgr_field *spec; ///< the field layout a frame is built from
+    const mmgr_fval *val;   ///< the values that fill it
+    size_t nv;              ///< how many
 } TelnetOutArgs;
 
 /**
@@ -68,7 +64,7 @@ typedef struct
  * @var TelnetNs::print          text to every connected client, no trailing newline added
  * @var TelnetNs::println        text + CRLF to every connected client
  * @var TelnetNs::frame          build @c out.spec and broadcast it. The shape is a `static const
- *                               protocore_field[]` the caller declares, so a console line costs a table
+ *                               mmgr_field[]` the caller declares, so a console line costs a table
  *                               walk rather than a format-string parse, and one longer than
  *                               TELNET_BUF_SIZE is dropped rather than clipped mid-word
  * @var TelnetNs::client_count   connected clients
@@ -79,10 +75,10 @@ typedef struct
  *                               this module free of a dependency on the session layer
  *
  * @code
- *   static const protocore_field HEAP[] = {{PROTOCORE_FK_LIT, 0, 11, "free heap: "}, PROTOCORE_U32,
- *                                   {PROTOCORE_FK_LIT, 0, 8, " bytes\r\n"}, PROTOCORE_END};
+ *   static const mmgr_field HEAP[] = {{MMGR_FK_LIT, 0, 11, "free heap: "}, MMGR_U32,
+ *                                   {MMGR_FK_LIT, 0, 8, " bytes\r\n"}, MMGR_END};
  *   Telnet.out.spec = HEAP;
- *   Telnet.out.val  = (const protocore_fval[]){PROTOCORE_VU32(free_heap_bytes())};
+ *   Telnet.out.val  = (const mmgr_fval[]){MMGR_VU32(free_heap_bytes())};
  *   Telnet.out.nv   = 1;
  *   Telnet.frame(Telnet.internal);
  * @endcode
@@ -149,7 +145,7 @@ static const TelnetNs Telnet __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_telnet_span(void);
 

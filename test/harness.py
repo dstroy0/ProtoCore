@@ -1227,6 +1227,33 @@ def _flag_split(flags):
     return incs, defs
 
 
+# The sources include/CMakeLists.txt builds as pc_mmgr. Every env links them, so no env names them.
+MMGR_SOURCES = [
+    "include/MMgr/src/clz/clz.c",
+    "include/MMgr/src/impensa_ancorae_acus/impensa_ancorae_acus_generic.c",
+    "include/MMgr/src/ascii_persona_bitorum/ascii_persona_bitorum.c",
+    "include/MMgr/src/bitorum_introitus_exitus/bitorum_introitus_exitus.c",
+    "include/MMgr/src/endian/endian.c",
+    "include/MMgr/src/proximus_operor/proximus_operor.c",
+    "include/MMgr/src/verbum_scrutor/verbum_scrutor.c",
+    "include/MMgr/src/memoria_operor/memoria_operor.c",
+    "include/MMgr/src/cellularum_laboro/cellularum_laboro.c",
+    "include/MMgr/src/spatium/spatium.c",
+    "include/MMgr/src/octetus_introitus_exitus/octetus_introitus_exitus.c",
+    "include/MMgr/src/locus_carcerum/locus_carcerum.c",
+    "include/MMgr/src/memoria_anularis/memoria_anularis.c",
+    "include/MMgr/src/memoria_externa/memoria_externa.c",
+    "include/MMgr/src/transformo/transformo.c",
+    "include/MMgr/src/memoriam_praetereo/memoriam_praetereo.c",
+    "include/MMgr/src/memoriam_praetereo/praet_ordo.c",
+    "include/MMgr/src/memoriam_praetereo/praet_descriptor.c",
+    "include/MMgr/src/fractio/fractio.c",
+    "include/MMgr/src/verba_scribo/verba_scribo.c",
+    "include/MMgr/src/verba_scribo/verba_linea.c",
+    "include/MMgr/src/numeros_scribo/numeros_scribo.c",
+]
+
+
 def _resolve_src(globs):
     """Expand an env's build_src_filter '+<glob>' entries into repo-relative .c paths.
 
@@ -1855,6 +1882,10 @@ def _reached_headers(sdir):
 
 
 COV_BUILD = ".pio_cov"  # per-env .gcno/.gcda from the instrumented build
+# Objects an env compiles uninstrumented, because gcov aborts reading their counters from that env
+# (`*** buffer overflow detected ***`) though the suite passes, under AddressSanitizer and UBSan
+# too. The other envs that build the file still measure it, so the merge still covers it.
+COV_SKIP = {"native_oidc_rfc7515": {"src/crypto/cipher/chacha20/chacha20.c"}}
 COV_REPORTS = "coverage_reports"  # per-env gcovr tracefiles, unioned once every env has run
 
 
@@ -1940,6 +1971,7 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
     for d in lib_incs:
         incs.append("-I" + os.path.relpath(d, ROOT).replace("\\", "/"))
     tus = _resolve_src(e["src"])
+    tus += [source for source in MMGR_SOURCES if source not in tus]
     tus.append(os.path.relpath(os.path.join(usrc, "unity.c"), ROOT).replace("\\", "/"))
     out_lines = []
     rc_total = 0
@@ -1990,7 +2022,8 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
             failed = None
             for src in srcs:
                 obj = _obj_for(objdir, src)
-                c = base + ["-c", src, "-o", obj]
+                skipped = src in COV_SKIP.get(name, ())
+                c = [flag for flag in base if not (skipped and flag == "--coverage")] + ["-c", src, "-o", obj]
                 if verbose:
                     out_lines.append(" ".join(c))
                 p = subprocess.run(c, capture_output=True, text=True, cwd=ROOT)
@@ -2059,18 +2092,28 @@ def describe_suite(suite):
     return {}
 
 
-def write_report(path, results, envs_run, passed, failed, secs):
-    """The run's TEST_REPORT.md: a header, then one collapsible section per suite."""
-    mark = "✅" if not failed else "❌"
+def write_report(path, results, envs_run, passed, failed, secs, unbuilt=()):
+    """The run's TEST_REPORT.md: a header, then one collapsible section per suite.
+
+    An env in @p unbuilt ran no test, so it has no Unity line to count and no suite section. The
+    header states it, because a total read from Unity lines alone reads green over a matrix that
+    did not compile.
+    """
+    mark = "✅" if not (failed or unbuilt) else "❌"
+    not_built = ", %d envs did not build" % len(unbuilt) if unbuilt else ""
     md = [
         "# Test Report",
         "",
         "**Generated:** " + time.strftime("%Y-%m-%d %H:%M:%S"),
         "**Command:** `harness.py run` over %d native envs" % envs_run,
-        "**Result:** %s %d passed, %d failed - %ds" % (mark, passed, failed, secs),
+        "**Result:** %s %d passed, %d failed%s - %ds" % (mark, passed, failed, not_built, secs),
         "",
         "---",
         "",
+    ]
+    if unbuilt:
+        md += ["## Envs that did not build", ""] + ["- `%s`" % name for name in unbuilt] + ["", "---", ""]
+    md += [
         "## Summary",
         "",
         "| Suite | Environment | Tests | Status | Duration |",
@@ -2130,7 +2173,11 @@ def cov_one(gc, name):
         cwd=ROOT,
     )
     full = os.path.join(ROOT, js)
-    return p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
+    produced = p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
+    if not produced:
+        # The caller names the env and refuses the merge. What gcovr said is the only record of why.
+        print("  gcovr exit %d for %s:\n%s" % (p.returncode, name, p.stderr.strip()[:12000]), file=sys.stderr)
+    return produced
 
 
 def cov_merge(gc, out_rel):
@@ -2342,6 +2389,7 @@ def cmd_run(a):
         shutil.rmtree(os.path.join(ROOT, COV_BUILD), ignore_errors=True)
     failed = []
     cov_failed = []
+    unbuilt = []
     results = []
     n_pass = n_fail = 0
     t0 = time.time()
@@ -2359,6 +2407,9 @@ def cmd_run(a):
             print(out)
         if rc != 0:
             failed.append(name)
+        built = "BUILD FAILED" not in out
+        if not built:
+            unbuilt.append(name)
         if a.report_out:
             by_suite = {}
             for suite, test, st in parse_unity(out):
@@ -2367,14 +2418,16 @@ def cmd_run(a):
                 n_fail += st == "FAIL"
             for suite, cases in by_suite.items():
                 results.append((name, suite, cases))
-        if a.coverage and not cov_one(gc, name):
+        # An env that did not build measured nothing, which is the same missing tracefile as gcovr
+        # producing none, whatever gcovr says when it is asked to read an empty build.
+        if a.coverage and (not built or not cov_one(gc, name)):
             print("  ERROR: gcovr produced no coverage report for %s" % name, file=sys.stderr)
             cov_failed.append(name)
     print("\n%d/%d envs passed" % (total - len(failed), total))
     if failed:
         print("failed: " + " ".join(failed))
     if a.report_out:
-        write_report(a.report_out, results, total, n_pass, n_fail, int(time.time() - t0))
+        write_report(a.report_out, results, total, n_pass, n_fail, int(time.time() - t0), unbuilt)
         print("Report written: %s" % a.report_out)
     if a.coverage:
         # A silently-missing per-env tracefile is the worst failure here: the merge only unions, so

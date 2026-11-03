@@ -97,11 +97,11 @@ BANS = [
     (
         re.compile(r"\b(?:memcpy|memmove|memcmp|memchr|memset)\s*\("),
         24,
-        "libc byte op; use mem.cpy / .move / .cmp / .chr / .set / .zero (mmgr/protomem.h), "
-        "or proto_raw_read / proto_raw_u16|u32|u64 (mmgr/rawmemcpy.h) for a raw unaligned move",
+        "libc byte op; use memor.cpy / .move_down / .move_up / .cmp / .chr / .set (memoria_operor.h), "
+        "or proxim.read / .load16|32|64 (proximus_operor.h) for a raw unaligned move",
     ),
     (re.compile(r"#\s*include\s*<c?stdio\.h>"), 25, "<stdio.h>/<cstdio>; nothing in src/ formats"),
-    (re.compile(r"#\s*include\s*<c?string\.h>"), 25, "<string.h>/<cstring>; use mem.* / str.*"),
+    (re.compile(r"#\s*include\s*<c?string\.h>"), 25, "<string.h>/<cstring>; use memor.* / cellul.*"),
     (re.compile(r"\bauto\b"), 3, "auto keyword; spell the explicit type"),
     (re.compile(r"\bdelay\s*\("), 4, "delay(); use pcdelay(ms) from server/clock/clock.h"),
     # Not preceded by `.` or `->`, as with the heap ban: TimeCompat publishes the reentrant call as
@@ -217,7 +217,7 @@ _STACK_ARRAY = re.compile(
 )
 _STACK_ARRAY_MSG = (
     "function-local array; stack is outside the deterministic footprint. Borrow it: "
-    "PlaintextScope + protocore_plaintext_alloc() for handler/IO buffers (fail closed on null), or a "
+    "protocore_plain_guard()->temporary_buf_alloc() for handler/IO buffers (fail closed on null), or a "
     "crypto_work region for crypto leaf math"
 )
 

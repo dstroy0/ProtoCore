@@ -9,8 +9,8 @@ factory floors, anything that can't rely on Wi-Fi. With `PROTOCORE_ENABLE_ETHERN
 layer gains `Physical.eth->init()` alongside `Physical.wifi->init()`:
 
 ```cpp
-Physical.eth->init();          // ETH.begin() with the ETH_PHY_* build-flag config
-while (!Physical.eth->ready()) delay(250);
+Physical.eth_init(protocore_physical_span());          // ETH.begin() with the ETH_PHY_* build-flag config
+while (!protocore_physical_eth_up()) delay(250);
 // ... server.begin(80) - now serving over Ethernet
 ```
 

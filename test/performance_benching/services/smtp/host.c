@@ -9,7 +9,7 @@
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_SMTP=1 test/performance_benching/services/smtp/host.c
 //   src/services/net/smtp/smtp.c src/network_drivers/presentation/codec/base64/base64.c
-//   src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bs && /tmp/bs
+//   src/memoria_operor/memoria_operor.h.c src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bs && /tmp/bs
 
 #define PROTOCORE_ENABLE_SMTP 1
 #include "services/net/smtp/smtp.h"

@@ -7,6 +7,6 @@ protocore_add_module(services/storage/docstore
   DEPS
     services/storage/dbm
   PRIVATE_DEPS
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/codec/json
 )

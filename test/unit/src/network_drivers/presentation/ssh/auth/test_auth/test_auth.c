@@ -7,7 +7,8 @@
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "server/clock/clock.h" // Clock.millis(): refresh the stamp auth.c judges the cooldown against
-#include <Arduino.h>            // set_millis(): time travel past the change cooldown
+#include "spatium/spatium.h"
+#include <Arduino.h> // set_millis(): time travel past the change cooldown
 #include <stdint.h>
 #include <unity.h>
 
@@ -66,7 +67,7 @@ static int auth_build_success(uint8_t *out, size_t *out_len, size_t cap)
 }
 
 // The publickey USERAUTH_REQUEST body writer, reached through the auth namespace.
-static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, size_t sid_len, const char *user,
+static void auth_write_publickey_request(mmgr_span *w, const uint8_t *sid, size_t sid_len, const char *user,
                                          const char *service, const char *pk_algo, const uint8_t *pk_blob,
                                          size_t pk_len)
 {
@@ -866,9 +867,9 @@ static void test_sec7_signed_data_field_order(void)
     const uint8_t sid[4] = {0xDE, 0xAD, 0xBE, 0xEF};
 
     uint8_t buf[256];
-    protocore_span w = protocore_span_from(buf, sizeof(buf));
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = buf, .cap = sizeof(buf));
     auth_write_publickey_request(&w, sid, sizeof(sid), "root", "ssh-connection", "ssh-ed25519", pk, pkn);
-    TEST_ASSERT_TRUE(protocore_span_ok(w));
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
 
     size_t o = 0;
     TEST_ASSERT_EQUAL_UINT32(4u, rd_u32(buf + o)); // string session identifier
@@ -899,15 +900,15 @@ static void test_sec7_request_is_the_signed_data_without_the_session_id(void)
     const uint8_t sid[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
     uint8_t signed_data[256];
-    protocore_span sd = protocore_span_from(signed_data, sizeof(signed_data));
+    mmgr_span sd = EMBED_CALL(spat.from, SpatiumCfg, .buf = signed_data, .cap = sizeof(signed_data));
     auth_write_publickey_request(&sd, sid, sizeof(sid), "user", "ssh-connection", "ssh-ed25519", pk, pkn);
 
     uint8_t request[256];
-    protocore_span rq = protocore_span_from(request, sizeof(request));
+    mmgr_span rq = EMBED_CALL(spat.from, SpatiumCfg, .buf = request, .cap = sizeof(request));
     auth_write_publickey_request(&rq, NULL, 0, "user", "ssh-connection", "ssh-ed25519", pk, pkn);
 
-    TEST_ASSERT_TRUE(protocore_span_ok(sd));
-    TEST_ASSERT_TRUE(protocore_span_ok(rq));
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = sd));
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = rq));
 
     const size_t sid_field = 4u + sizeof(sid);
     TEST_ASSERT_EQUAL_size_t(rq.pos + sid_field, sd.pos);
@@ -928,9 +929,9 @@ static void test_sec7_long_session_identifier_is_carried_whole(void)
     }
 
     uint8_t buf[256];
-    protocore_span w = protocore_span_from(buf, sizeof(buf));
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = buf, .cap = sizeof(buf));
     auth_write_publickey_request(&w, sid, sizeof(sid), "u", "ssh-connection", "ssh-ed25519", pk, pkn);
-    TEST_ASSERT_TRUE(protocore_span_ok(w));
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
     TEST_ASSERT_EQUAL_UINT32(64u, rd_u32(buf));
     TEST_ASSERT_EQUAL_HEX8(63u, buf[4 + 63]);
 }
@@ -940,9 +941,9 @@ static void test_sec7_undersized_span_is_reported(void)
     uint8_t pk[16];
     const size_t pkn = blob_of(pk, "ssh-ed25519", 11);
     uint8_t buf[16];
-    protocore_span w = protocore_span_from(buf, sizeof(buf));
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = buf, .cap = sizeof(buf));
     auth_write_publickey_request(&w, NULL, 0, "user", "ssh-connection", "ssh-ed25519", pk, pkn);
-    TEST_ASSERT_FALSE(protocore_span_ok(w));
+    TEST_ASSERT_FALSE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
 }
 
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE

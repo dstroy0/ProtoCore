@@ -14,9 +14,9 @@
  * seam mocked. The decoding/serialization of a panic stays pure in exc_decoder.c.
  */
 
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "config/platform/platform.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "memoria_operor/memoria_operor.h"
 #include "server/core/exc_decoder/exc_decoder.h"
 
 #if PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP
@@ -57,18 +57,18 @@ void protocore_exc_cd_summary(uint8_t *work)
         return;
     }
     protocore_crash_summary s;
-    mem.set(&s, 0, sizeof(s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &s, .val = 0, .bytes = sizeof(s));
     if (!protocore_platform_crashdump_summary(&s))
     {
         return;
     }
 
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     out->core = -1; // the summary does not name the core; the raw image does
     out->pc = s.pc;
     // The crashing task name is the most useful short label the summary carries, so it fills the
     // slot the console decoder puts the panic cause in.
-    str.copy(out->cause, s.task, sizeof(out->cause));
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = out->cause, .src = s.task, .cap = sizeof(out->cause));
 
     out->excvaddr = s.fault_addr;
     out->has_excvaddr = s.has_fault_addr ? PROTO_TRUE : PROTO_FALSE;

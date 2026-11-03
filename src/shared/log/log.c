@@ -10,9 +10,9 @@
  */
 
 #include "shared/log/log.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
-#include "mmgr/protoframe/protoframe.h" // frame.build: the line is a spec, not a format string
+#include "numeros_scribo/numeros_scribo.h" // numer.build: the line is a spec, not a format string
 #include <stdarg.h>
 #if PROTOCORE_ENABLE_LOGBUF
 #include "server/core/logbuf/logbuf.h"
@@ -33,7 +33,7 @@ uint8_t *protocore_log_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_LOG_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_LOG_BORROW);
     }
     return s_own.span;
 }
@@ -67,7 +67,7 @@ void protocore_log_set_sink(uint8_t *work)
 void protocore_log_emit(uint8_t *work)
 {
     const uint8_t level = LogV.frame.level;
-    const struct protocore_field *spec = LogV.frame.spec;
+    const mmgr_field *spec = LogV.frame.spec;
 
     if (!spec)
     {
@@ -79,7 +79,8 @@ void protocore_log_emit(uint8_t *work)
     // states its literals' lengths and bounds its string fields, so whether a message fits is
     // settled when the frame is declared. Nothing here decides it from the data.
     char line[PROTOCORE_LOG_LINE_LEN];
-    (void)frame.build(line, sizeof(line), spec, LogV.frame.v, LogV.frame.nv);
+    (void)EMBED_CALL(numer.build, NumerosCfg, .out = line, .cap = sizeof(line), .spec = spec, .vals = LogV.frame.v,
+                     .nvals = LogV.frame.nv);
 
 #if PROTOCORE_ENABLE_LOGBUF
     LogbufV.line.level = level;

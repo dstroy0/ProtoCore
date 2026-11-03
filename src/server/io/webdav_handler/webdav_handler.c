@@ -15,11 +15,9 @@
 
 #if PROTOCORE_ENABLE_WEBDAV
 
-#include "crypto/rng/rng.h" // Rng: the lock token's unpredictable half
-#include "mmgr/membuild/membuild.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.has: the traversal marker in a resolved subpath, tokens in a body
-#include "mmgr/secure/secure.h"     // the persistent end this module's state is taken from
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.has: the traversal marker in a resolved subpath, tokens in a body
+#include "crypto/rng/rng.h"                      // Rng: the lock token's unpredictable half
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
@@ -27,8 +25,10 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
 #include "server/clock/clock.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "server/io/webdav_handler/webdav_handler.h"
 #include "shared/mime/mime.h"
+#include "verba_scribo/verba_scribo.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -107,8 +107,8 @@ static_assert(WEBDAV_HANDLER_OFF_CTX + sizeof(DavCtx) <= PROTOCORE_WEBDAV_BORROW
               "PROTOCORE_WEBDAV_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -132,7 +132,7 @@ static int dav_root(uint8_t *work)
 // Returns false on overflow.
 static proto_bool dav_join(const char *root, const char *sub, char *out, size_t cap)
 {
-    size_t rlen = str.len(root, MAX_PATH_LEN);
+    size_t rlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = root, .cap = MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/')
     {
@@ -140,11 +140,11 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
     }
     proto_bool sub_slash = (sub[0] == '/');
     const char *sep = (root_slash || sub_slash) ? "" : "/";
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, root);
-    Sb.put(&sb_out, sep);
-    Sb.put(&sb_out, sub);
-    int wn = (int)Sb.finish(&sb_out);
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = root);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = sep);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = sub);
+    int wn = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out);
     // wn <= 0 cannot fire: snprintf only returns negative on an encoding error, which "%s%s%s"
     // cannot raise, and sep is "/" whenever root and sub are both empty, so the shortest join is
     // one byte. The truncation half (wn >= cap) is exercised.
@@ -158,7 +158,7 @@ static proto_bool dav_join(const char *root, const char *sub, char *out, size_t 
 // handler and the streaming-PUT begin hook.
 static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, size_t cap)
 {
-    size_t plen = str.len(r->path, MAX_PATH_LEN);
+    size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = r->path, .cap = MAX_PATH_LEN);
     // plen == 0 is unreachable: dav() always stores at least "*" - it appends the wildcard when the
     // prefix lacks one, so even dav("") yields a one-character pattern.
     if (plen > 0 && r->path[plen - 1] == '*')
@@ -168,8 +168,10 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     // Http.path_matches() against this same route, which already required reqpath to carry the mount
     // prefix, so the length test always holds. Kept so a future caller that resolves without
     // matching first still cannot index past the end of reqpath.
-    const char *sub = (str.len(reqpath, MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
-    if (str.has(sub, MAX_PATH_LEN - plen, "..", sizeof(".."), PROTO_FALSE))
+    const char *sub =
+        (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = reqpath, .cap = MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
+    if (EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = sub, .cap = MAX_PATH_LEN - plen, .other = "..",
+                   .other_cap = sizeof(".."), .ci = PROTO_FALSE))
     {
         return 403;
     }
@@ -180,7 +182,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     {
         return 414;
     }
-    size_t fpl = str.len(out, cap);
+    size_t fpl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = out, .cap = cap);
     if (fpl > 1 && out[fpl - 1] == '/')
     {
         out[fpl - 1] = '\0';
@@ -211,18 +213,22 @@ static proto_bool dav_write_blocked(uint8_t *work, HttpReq *req, const char *pat
 // True if the (always NUL-terminated) request body contains @p needle - used to spot a <shared> lockscope.
 static proto_bool dav_body_has(HttpReq *req, const char *needle)
 {
-    return str.has((const char *)req->body, req->body_len + 1u, needle, str.len(needle, 0xFFFF) + 1u, PROTO_FALSE);
+    return EMBED_CALL(
+        cellul.has, CatenaFinitaCfg, .src = (const char *)req->body, .cap = req->body_len + 1u, .other = needle,
+        .other_cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = needle, .cap = 0xFFFF) + 1u, .ci = PROTO_FALSE);
 }
 
 // Extract the token from a Lock-Token Coded-URL ("<opaquelocktoken:...>") into @p out; false if malformed.
 static proto_bool dav_coded_url_token(const char *coded, char *out, size_t cap)
 {
-    const char *lt = str.find(coded, MAX_VAL_LEN, "<", sizeof("<"), PROTO_FALSE);
+    const char *lt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = coded, .cap = MAX_VAL_LEN, .other = "<",
+                                .other_cap = sizeof("<"), .ci = PROTO_FALSE);
     if (!lt)
     {
         return PROTO_FALSE;
     }
-    const char *gt = str.find(lt, MAX_VAL_LEN - (size_t)(lt - coded), ">", sizeof(">"), PROTO_FALSE);
+    const char *gt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = lt, .cap = MAX_VAL_LEN - (size_t)(lt - coded),
+                                .other = ">", .other_cap = sizeof(">"), .ci = PROTO_FALSE);
     if (!gt)
     {
         return PROTO_FALSE;
@@ -232,7 +238,7 @@ static proto_bool dav_coded_url_token(const char *coded, char *out, size_t cap)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out, lt + 1, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = lt + 1, .bytes = n);
     out[n] = 0;
     return PROTO_TRUE;
 }
@@ -264,7 +270,8 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
     // accessor rather than a parameter.
     uint8_t *work = protocore_webdav_handler_span();
 
-    if (!str.eq(req->method, "PUT", sizeof("PUT"), PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "PUT", .cap = sizeof("PUT"),
+                    .ci = PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -378,22 +385,25 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     }
 
     char pat[MAX_PATH_LEN];
-    size_t n = str.len(url_prefix, MAX_PATH_LEN);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = url_prefix, .cap = MAX_PATH_LEN);
     if (n > 0 && url_prefix[n - 1] == '*')
     {
-        protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
-        Sb.put(&sb_pat, url_prefix);
-        if (Sb.finish(&sb_pat) == 0)
+        size_t sb_pat = 0;
+        sb_pat = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat,
+                            .text = url_prefix);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat) == 0)
         {
             pat[0] = '\0';
         }
     }
     else
     {
-        protocore_sb sb_pat2 = {pat, sizeof(pat), 0, PROTO_TRUE};
-        Sb.put(&sb_pat2, url_prefix);
-        Sb.put(&sb_pat2, "*");
-        if (Sb.finish(&sb_pat2) == 0)
+        size_t sb_pat2 = 0;
+        sb_pat2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat2,
+                             .text = url_prefix);
+        sb_pat2 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat2, .text = "*");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat2) == 0)
         {
             pat[0] = '\0';
         }
@@ -435,19 +445,29 @@ static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
     char header[RESP_HDR_BUF_SIZE];
     // in this file passes either "" or a string literal. Kept so the parameter stays optional.
-    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header, "HTTP/1.1 ");
-    Sb.i64(&sb_header, (int64_t)(code));
-    Sb.put(&sb_header, " ");
+    size_t sb_header = 0;
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "HTTP/1.1 ");
+    sb_header = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .sval = (int64_t)(code));
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = " ");
     HttpV.code = code;
     Http.status_text(protocore_http_span());
-    Sb.put(&sb_header, HttpV.text);
-    Sb.put(&sb_header, "\r\n");
-    Sb.put(&sb_header, extra_headers ? extra_headers : "");
-    Sb.put(&sb_header, "Content-Length: 0\r\n");
-    Sb.put(&sb_header, cl);
-    Sb.put(&sb_header, "\r\n");
-    int hlen = (int)Sb.finish(&sb_header);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = HttpV.text);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\n");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = extra_headers ? extra_headers : "");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "Content-Length: 0\r\n");
+    sb_header =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header, .text = cl);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\n");
+    int hlen =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header);
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = header;
     ConnPoolV.io.len = (proto_u16)hlen;
@@ -470,7 +490,7 @@ uint8_t *protocore_webdav_handler_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_WEBDAV_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_WEBDAV_BORROW);
     }
     return s_own.span;
 }
@@ -524,7 +544,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
 
     // Mount-prefix length and FS root, used by COPY/MOVE to resolve the Destination. As in
     // dav_resolve_path, plen == 0 is unreachable: dav() always stores at least "*".
-    size_t plen = str.len(r->path, MAX_PATH_LEN);
+    size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = r->path, .cap = MAX_PATH_LEN);
     if (plen > 0 && r->path[plen - 1] == '*')
     {
         plen--;
@@ -711,13 +731,15 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             return;
         }
         // The destination must live under this same mount.
-        if (str.diff(dest_url, r->path, plen, PROTO_FALSE) != plen)
+        if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = dest_url, .other = r->path, .cap = plen,
+                       .ci = PROTO_FALSE) != plen)
         {
             dav_send_status(slot_id, 502, "");
             return;
         }
         const char *dest_sub = dest_url + plen;
-        if (str.has(dest_sub, sizeof(dest_url) - plen, "..", sizeof(".."), PROTO_FALSE))
+        if (EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = dest_sub, .cap = sizeof(dest_url) - plen, .other = "..",
+                       .other_cap = sizeof(".."), .ci = PROTO_FALSE))
         {
             dav_send_status(slot_id, 403, "");
             return;
@@ -737,7 +759,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             dav_send_status(slot_id, 414, "");
             return;
         }
-        size_t dpl = str.len(dest_fs, sizeof(dest_fs));
+        size_t dpl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = dest_fs, .cap = sizeof(dest_fs));
         if (dpl > 1 && dest_fs[dpl - 1] == '/')
         {
             dest_fs[dpl - 1] = '\0';
@@ -853,9 +875,10 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         proto_bool shared, depth_inf;
         if (lk) // refreshed an existing lock: echo its stored scope / depth / token
         {
-            protocore_sb sb_token = {token, sizeof(token), 0, PROTO_TRUE};
-            Sb.put(&sb_token, lk->token);
-            if (Sb.finish(&sb_token) == 0)
+            size_t sb_token = 0;
+            sb_token = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = token, .cap = sizeof(token), .at = sb_token,
+                                  .text = lk->token);
+            if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = token, .cap = sizeof(token), .at = sb_token) == 0)
             {
                 token[0] = '\0';
             }
@@ -876,11 +899,14 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             RngV.fill_args.len = sizeof(tok_rand);
             Rng.fill(protocore_rng_span()); // boundary: bytes into the scalar
             tok ^= (unsigned long)tok_rand;
-            protocore_sb sb_token2 = {token, sizeof(token), 0, PROTO_TRUE};
-            Sb.put(&sb_token2, "opaquelocktoken:");
-            Sb.hex(&sb_token2, (uint64_t)(tok), 8);
-            Sb.put(&sb_token2, "-pc");
-            if (Sb.finish(&sb_token2) == 0)
+            size_t sb_token2 = 0;
+            sb_token2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = token, .cap = sizeof(token),
+                                   .at = sb_token2, .text = "opaquelocktoken:");
+            sb_token2 = EMBED_CALL(verba_numerus.hex, VerbaNumerusCfg, .out = token, .cap = sizeof(token),
+                                   .at = sb_token2, .val = (uint64_t)(tok), .min = 8);
+            sb_token2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = token, .cap = sizeof(token),
+                                   .at = sb_token2, .text = "-pc");
+            if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = token, .cap = sizeof(token), .at = sb_token2) == 0)
             {
                 token[0] = '\0';
             }
@@ -892,29 +918,41 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
                 return;
             }
         }
-        protocore_sb sb_buf = {WEBDAV_HANDLER_CTX(work)->buf, sizeof(WEBDAV_HANDLER_CTX(work)->buf), 0, PROTO_TRUE};
-        Sb.put(&sb_buf,
-               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:prop "
-               "xmlns:D=\"DAV:\"><D:lockdiscovery><D:activelock><D:locktype><D:write/></D:locktype><D:lockscope><D:");
-        Sb.put(&sb_buf, shared ? "shared" : "exclusive");
-        Sb.put(&sb_buf, "/></D:lockscope><D:depth>");
-        Sb.put(&sb_buf, depth_inf ? "infinity" : "0");
-        Sb.put(&sb_buf, "</D:depth><D:timeout>Second-");
-        Sb.u32(&sb_buf, (uint32_t)((unsigned long)timeout_s));
-        Sb.put(&sb_buf, "</D:timeout><D:locktoken><D:href>");
-        Sb.put(&sb_buf, token);
-        Sb.put(&sb_buf, "</D:href></D:locktoken></D:activelock></D:lockdiscovery></D:prop>\n");
-        if (Sb.finish(&sb_buf) == 0)
+        char *const sb_buf_out = WEBDAV_HANDLER_CTX(work)->buf;
+        const size_t sb_buf_cap = sizeof(WEBDAV_HANDLER_CTX(work)->buf);
+        size_t sb_buf = 0;
+        sb_buf = EMBED_CALL(
+            verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+            .text =
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:prop "
+                "xmlns:D=\"DAV:\"><D:lockdiscovery><D:activelock><D:locktype><D:write/></D:locktype><D:lockscope><D:");
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .text = shared ? "shared" : "exclusive");
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .text = "/></D:lockscope><D:depth>");
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .text = depth_inf ? "infinity" : "0");
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .text = "</D:depth><D:timeout>Second-");
+        sb_buf = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .val = (uint32_t)((unsigned long)timeout_s));
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .text = "</D:timeout><D:locktoken><D:href>");
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .text = token);
+        sb_buf = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf,
+                            .text = "</D:href></D:locktoken></D:activelock></D:lockdiscovery></D:prop>\n");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_buf_out, .cap = sb_buf_cap, .at = sb_buf) == 0)
         {
             WEBDAV_HANDLER_CTX(work)->buf[0] = '\0';
         }
         // RFC 4918 §10.5: Lock-Token uses a Coded-URL (angle-bracketed).
         char lt[64];
-        protocore_sb sb_lt = {lt, sizeof(lt), 0, PROTO_TRUE};
-        Sb.put(&sb_lt, "<");
-        Sb.put(&sb_lt, token);
-        Sb.put(&sb_lt, ">");
-        if (Sb.finish(&sb_lt) == 0)
+        size_t sb_lt = 0;
+        sb_lt = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = lt, .cap = sizeof(lt), .at = sb_lt, .text = "<");
+        sb_lt = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = lt, .cap = sizeof(lt), .at = sb_lt, .text = token);
+        sb_lt = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = lt, .cap = sizeof(lt), .at = sb_lt, .text = ">");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = lt, .cap = sizeof(lt), .at = sb_lt) == 0)
         {
             lt[0] = '\0';
         }
@@ -979,13 +1017,15 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
 
         // Self href: the request path, with a trailing '/' for a collection.
         char self_href[MAX_PATH_LEN + 2];
-        protocore_sb sb_self_href = {self_href, sizeof(self_href), 0, PROTO_TRUE};
-        Sb.put(&sb_self_href, req->path);
-        if (Sb.finish(&sb_self_href) == 0)
+        size_t sb_self_href = 0;
+        sb_self_href = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = self_href, .cap = sizeof(self_href),
+                                  .at = sb_self_href, .text = req->path);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = self_href, .cap = sizeof(self_href),
+                       .at = sb_self_href) == 0)
         {
             self_href[0] = '\0';
         }
-        size_t sl = str.len(self_href, sizeof(self_href));
+        size_t sl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = self_href, .cap = sizeof(self_href));
         // HttpReq::path[MAX_PATH_LEN] and the parser always leaves at least "/" in it, so sl is
         // between 1 and MAX_PATH_LEN-1. That makes `sl == 0` impossible, and makes the room test
         // below always true (self_href is MAX_PATH_LEN+2). Both are kept as bounds on an index.
@@ -1043,11 +1083,15 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
                     break;
                 }
                 char chref[MAX_PATH_LEN + 80];
-                protocore_sb sb_chref = {chref, sizeof(chref), 0, PROTO_TRUE};
-                Sb.put(&sb_chref, self_href);
-                Sb.put(&sb_chref, WEBDAV_HANDLER_CTX(work)->child);
-                Sb.put(&sb_chref, cst.is_dir ? "/" : "");
-                if (Sb.finish(&sb_chref) == 0)
+                size_t sb_chref = 0;
+                sb_chref = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = chref, .cap = sizeof(chref),
+                                      .at = sb_chref, .text = self_href);
+                sb_chref = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = chref, .cap = sizeof(chref),
+                                      .at = sb_chref, .text = WEBDAV_HANDLER_CTX(work)->child);
+                sb_chref = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = chref, .cap = sizeof(chref),
+                                      .at = sb_chref, .text = cst.is_dir ? "/" : "");
+                if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = chref, .cap = sizeof(chref), .at = sb_chref) ==
+                    0)
                 {
                     chref[0] = '\0';
                 }

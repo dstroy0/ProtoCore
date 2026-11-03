@@ -5,11 +5,9 @@ protocore_add_module(server/security/csrf
   GATE PROTOCORE_ENABLE_CSRF
   SOURCES csrf.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/ct_eq
     crypto/mac/hmac_sha256
-    mmgr/protoframe
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
     shared/hex
 )

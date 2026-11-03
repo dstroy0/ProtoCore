@@ -3,6 +3,7 @@
 //
 #include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 #include <pthread.h>
 #include <sched.h>
 #include <unity.h>
@@ -23,17 +24,12 @@ static void *ring_producer(void *arg)
     (void)arg;
     for (int i = 0; i < COUNT;)
     {
-        size_t head = g_slot.rx_head;
-        size_t tail = g_slot.rx_tail;
-        size_t used = (head + RX_BUF_SIZE - tail) % RX_BUF_SIZE;
-        size_t free_space = (RX_BUF_SIZE - 1) - used;
-        if (free_space == 0)
+        if (rx_vacant(&g_slot) == 0u)
         {
             sched_yield();
             continue;
         }
-        g_slot.rx_buffer[head] = (uint8_t)(i & 0xFF);
-        g_slot.rx_head = (head + 1) % RX_BUF_SIZE;
+        rx_put(&g_slot, (uint8_t)(i & 0xFF));
         ++i;
     }
     return NULL;
@@ -41,8 +37,7 @@ static void *ring_producer(void *arg)
 
 void test_spsc_ring_no_race(void)
 {
-    g_slot.rx_head = 0;
-    g_slot.rx_tail = 0;
+    rx_reset(&g_slot);
     g_slot.state = CONN_ACTIVE;
 
     pthread_t producer;
@@ -52,10 +47,9 @@ void test_spsc_ring_no_race(void)
     int recv = 0;
     while (recv < COUNT)
     {
-        if (g_slot.rx_tail != g_slot.rx_head)
+        if (rx_used(&g_slot) != 0u)
         {
-            uint8_t b = g_slot.rx_buffer[g_slot.rx_tail];
-            g_slot.rx_tail = (g_slot.rx_tail + 1) % RX_BUF_SIZE;
+            uint8_t b = rx_take(&g_slot);
             if (b != (uint8_t)(recv & 0xFF))
             {
                 ok = PROTO_FALSE;

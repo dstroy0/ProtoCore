@@ -5,9 +5,7 @@ protocore_add_module(network_drivers/presentation/http/sse
   GATE PROTOCORE_ENABLE_SSE
   SOURCES sse.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
-    mmgr/span
+    server/core/worker
+    mmgr
     network_drivers/transport/tcp/protocol
 )

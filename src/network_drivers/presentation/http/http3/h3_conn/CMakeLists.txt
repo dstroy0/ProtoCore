@@ -5,8 +5,7 @@ protocore_add_module(network_drivers/presentation/http/http3/h3_conn
   GATE PROTOCORE_ENABLE_HTTP3
   SOURCES h3_conn.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/http/http3/h3_frame
     network_drivers/presentation/http/http3/qpack
     network_drivers/presentation/http/http3/quic_conn

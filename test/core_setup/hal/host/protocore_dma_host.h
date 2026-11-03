@@ -15,25 +15,41 @@
 // Include from exactly one translation unit per test binary: the hook definitions are strong, so
 // two includers would collide.
 //
-// The engine advances only in protocore_dma_hw_poll(), so a test decides when a transfer completes and
+// The engine advances only in mmgr_praet_hw_poll(), so a test decides when a transfer completes and
 // the completion callback runs where the ISR would put it.
 
 #ifndef PROTOCORE_PROTOCORE_DMA_HOST_H
 #define PROTOCORE_PROTOCORE_DMA_HOST_H
 
-#include "mmgr/dma/dma.h"
-#include "mmgr/ring/ring.h"
+#include "protocore_config.h"
+
+#include "memoria_anularis/memoria_anularis.h"
+#include "memoriam_praetereo/memoriam_praetereo.h"
+#include <stdatomic.h>
 #include <stdint.h>
 #include <string.h>
 
 #if PROTOCORE_ENABLE_DMA
+
+// What an event's direction and a channel's peripheral mean on this seam.
+enum
+{
+    PROTOCORE_DMA_RX = 0,
+    PROTOCORE_DMA_TX = 1,
+};
+enum
+{
+    PROTOCORE_DMA_UART = 0,
+    PROTOCORE_DMA_I2C = 1,
+    PROTOCORE_DMA_SPI = 2,
+};
 
 // Several buffers' worth, so one feed spans more than one transfer and exercises the ping-pong
 // flip, and several submits accumulate before a capture. A ring capacity is a power of two, which
 // is what makes the index a mask.
 #define PROTOCORE_DMA_HOST_STAGE (PROTOCORE_DMA_BUF_SIZE * 4u)
 
-static_assert(PROTOCORE_RING_POW2(PROTOCORE_DMA_HOST_STAGE),
+static_assert(MMGR_RING_POW2(PROTOCORE_DMA_HOST_STAGE),
               "PROTOCORE_DMA_BUF_SIZE must be a power of two: the staging ring indexes with a mask");
 
 typedef struct
@@ -46,7 +62,9 @@ typedef struct
 typedef struct
 {
     proto_bool open;
-    protocore_dma_config cfg;
+    uint8_t peripheral;
+    embed_bool loopback;
+    const PraetCallbackCfg *on_complete;
 
     PcDmaStage rx; ///< injected, waiting to complete as ingress
     PcDmaStage tx; ///< transmitted, waiting to be read back
@@ -73,34 +91,50 @@ PROTOCORE_HOST_SHARED PcDmaHostCh g_protocore_dma[PROTOCORE_DMA_CHANNELS];
 // bytes on the line no sender ever submitted. This is the ring's own lossless-backpressure rule.
 static inline proto_bool protocore_dma_stage_put(PcDmaStage *s, const uint8_t *src, uint16_t n)
 {
-    if (src == NULL || n == 0 || n > protocore_ring_free(&s->head, &s->tail, PROTOCORE_DMA_HOST_STAGE))
+    const size_t tail = PROTOCORE_ATOMIC_LOAD(&s->tail);
+    size_t h = PROTOCORE_ATOMIC_LOAD(&s->head);
+    const size_t room = (PROTOCORE_DMA_HOST_STAGE - 1u) - MMGR_RING_WRAP(h - tail, PROTOCORE_DMA_HOST_STAGE);
+    if (src == NULL || n == 0 || n > room)
     {
         return PROTO_FALSE;
     }
-    size_t h = PROTO_ATOMIC_LOAD(&s->head);
-    h = protocore_ring_write_span(s->buf, PROTOCORE_DMA_HOST_STAGE, h, src, n);
-    PROTO_ATOMIC_STORE(&s->head, h);
+    for (uint16_t i = 0; i < n; i++)
+    {
+        s->buf[h] = src[i];
+        h = MMGR_RING_WRAP(h + 1u, PROTOCORE_DMA_HOST_STAGE);
+    }
+    PROTOCORE_ATOMIC_STORE(&s->head, h);
     return PROTO_TRUE;
 }
 
 static inline uint16_t protocore_dma_stage_get(PcDmaStage *s, uint8_t *out, uint16_t max)
 {
-    return (uint16_t)protocore_ring_read(s->buf, PROTOCORE_DMA_HOST_STAGE, &s->head, &s->tail, out, max);
+    const size_t h = PROTOCORE_ATOMIC_LOAD(&s->head);
+    size_t t = PROTOCORE_ATOMIC_LOAD(&s->tail);
+    uint16_t n = 0;
+    while (n < max && t != h)
+    {
+        out[n] = s->buf[t];
+        n++;
+        t = MMGR_RING_WRAP(t + 1u, PROTOCORE_DMA_HOST_STAGE);
+    }
+    PROTOCORE_ATOMIC_STORE(&s->tail, t);
+    return n;
 }
 
-static inline void protocore_dma_host_complete(PcDmaHostCh *c, uint8_t ch, protocore_dma_dir dir, const uint8_t *data,
+static inline void protocore_dma_host_complete(PcDmaHostCh *c, uint8_t ch, uint8_t direction, const uint8_t *data,
                                                uint16_t len)
 {
-    protocore_dma_event ev;
+    mmgr_praet_event ev;
     memset(&ev, 0, sizeof(ev));
     ev.data = data;
-    ev.len = len;
-    ev.seq = c->seq;
+    ev.bytes = len;
+    ev.sequence = c->seq;
     ev.channel = ch;
-    ev.periph = c->cfg.periph;
-    ev.dir = dir;
+    ev.peripheral = c->peripheral;
+    ev.direction = direction;
     c->seq = (uint16_t)(c->seq + 1u);
-    c->cfg.on_complete(&ev, c->cfg.ctx);
+    c->on_complete->callback(&ev, c->on_complete->user);
 }
 
 // --- what a test drives it with ---------------------------------------------
@@ -131,62 +165,62 @@ static inline void protocore_dma_host_reset(void)
     memset(g_protocore_dma, 0, sizeof(g_protocore_dma));
 }
 
-// --- the seam mmgr/dma.c dispatches to --------------------------------------
+// --- the seam memoriam_praetereo.c dispatches to ----------------------------
 
 // Declared here and defined once, in protocore_dma_host.c. They cannot be defined in this header:
 // Unity's runner generator copies a suite's includes into unity_runner.c, so a header definition
 // lands in two translation units and the link fails on all four. They also cannot be weak, because
-// dma.c's defaults already are and the two would tie instead of one winning.
-proto_bool protocore_dma_hw_open(const protocore_dma_config *cfg);
-proto_bool protocore_dma_hw_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len);
-void protocore_dma_hw_close(uint8_t ch);
-void protocore_dma_hw_poll(void);
-
+// memoriam_praetereo.c's defaults already are and the two would tie instead of one winning. The
+// declarations are memoriam_praetereo.h's own.
 #ifdef PROTOCORE_DMA_HOST_IMPL
-proto_bool protocore_dma_hw_open(const protocore_dma_config *cfg)
+embed_bool mmgr_praet_hw_open(const PraetCfg *args)
 {
-    if (cfg == NULL || cfg->channel >= PROTOCORE_DMA_CHANNELS || g_protocore_dma[cfg->channel].open)
+    if (args == NULL || args->channel >= PROTOCORE_DMA_CHANNELS || g_protocore_dma[args->channel].open)
     {
         return PROTO_FALSE;
     }
-    PcDmaHostCh *c = &g_protocore_dma[cfg->channel];
+    PcDmaHostCh *c = &g_protocore_dma[args->channel];
     memset(c, 0, sizeof(*c));
-    c->cfg = *cfg;
+    c->peripheral = args->peripheral;
+    c->loopback = args->loopback;
+    c->on_complete = args->on_complete;
     c->open = PROTO_TRUE;
     return PROTO_TRUE;
 }
 
-proto_bool protocore_dma_hw_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len)
+embed_bool mmgr_praet_hw_tx_submit(const PraetTransferCfg *args)
 {
+    const uint8_t ch = args->channel;
     if (ch >= PROTOCORE_DMA_CHANNELS || !g_protocore_dma[ch].open)
     {
         return PROTO_FALSE;
     }
     PcDmaHostCh *c = &g_protocore_dma[ch];
     // One transfer in flight per channel: a descriptor still loaded takes no second submit, and
-    // the caller waits for the TX-complete event (mmgr/dma.h).
+    // the caller waits for the TX-complete event.
     if (c->tx_pending > 0)
     {
         return PROTO_FALSE;
     }
-    if (!protocore_dma_stage_put(&c->tx, buf, len))
+    if (!protocore_dma_stage_put(&c->tx, args->buf, args->bytes))
     {
         return PROTO_FALSE;
     }
-    c->tx_pending = len;
+    c->tx_pending = args->bytes;
     return PROTO_TRUE;
 }
 
-void protocore_dma_hw_close(uint8_t ch)
+void mmgr_praet_hw_close(const PraetTransferCfg *args)
 {
-    if (ch < PROTOCORE_DMA_CHANNELS)
+    if (args->channel < PROTOCORE_DMA_CHANNELS)
     {
-        memset(&g_protocore_dma[ch], 0, sizeof(g_protocore_dma[ch]));
+        memset(&g_protocore_dma[args->channel], 0, sizeof(g_protocore_dma[args->channel]));
     }
 }
 
-void protocore_dma_hw_poll(void)
+void mmgr_praet_hw_poll(const PraetCfg *args)
 {
+    (void)args; // the simulated engine advances every open channel on one poll
     for (uint8_t ch = 0; ch < PROTOCORE_DMA_CHANNELS; ch++)
     {
         PcDmaHostCh *c = &g_protocore_dma[ch];
@@ -202,7 +236,7 @@ void protocore_dma_hw_poll(void)
             uint16_t n = c->tx_pending;
             c->tx_pending = 0;
             protocore_dma_host_complete(c, ch, PROTOCORE_DMA_TX, NULL, n);
-            if (c->cfg.loopback)
+            if (c->loopback)
             {
                 uint8_t moved[PROTOCORE_DMA_HOST_STAGE];
                 uint16_t got = protocore_dma_stage_get(&c->tx, moved, n);

@@ -17,10 +17,10 @@ static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads
 static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
-#include "mmgr/plaintext/plaintext.h"
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/core/worker/worker.h"
 
 // The largest single scratch allocation the plaintext arena will still serve.
 //
@@ -31,13 +31,13 @@ static uint8_t tw[4096]; // the borrow every namespace call in this suite runs o
 static size_t ws_scratch_available(void)
 {
     size_t lo = 0;
-    size_t hi = protocore_plaintext_capacity();
+    size_t hi = protocore_plain_guard()->buf_available();
     while (lo < hi)
     {
         size_t mid = lo + (hi - lo + 1u) / 2u;
-        size_t mark = protocore_plaintext_mark();
-        void *p = protocore_plaintext_alloc(mid, 1);
-        protocore_plaintext_release(mark);
+        size_t mark = protocore_plain_guard()->temporary_buf_mark();
+        void *p = protocore_plain_guard()->temporary_buf_alloc(mid, protocore_plain_owner());
+        protocore_plain_guard()->temporary_buf_release(mark);
         if (p != NULL)
         {
             lo = mid;
@@ -1075,7 +1075,7 @@ void stress_ws_parse_reset_100_cycles()
         TEST_ASSERT_EQUAL_STRING_MESSAGE(text, (const char *)ws->buf, "payload mismatch");
         WsV.slot = 0;
         Ws.free(protocore_ws_span());
-        conn_pool[0].rx_head = conn_pool[0].rx_tail = 0;
+        rx_reset(&conn_pool[0]);
     }
 }
 
@@ -1362,7 +1362,7 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
-    void *hog = protocore_plaintext_alloc(ws_scratch_available(), 1);
+    void *hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available(), protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1373,13 +1373,13 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 
-    protocore_plaintext_reset();
+    protocore_plain_guard()->temporary_buf_reset();
 }
 
 static void feed_compressed_with_arena_leaving(size_t leave)
 {
     static const uint8_t comp[] = {242, 72, 205, 201, 201, 215, 81, 8, 207, 47, 202, 73, 81, 4, 0};
-    conn_pool[0].rx_head = conn_pool[0].rx_tail = 0;
+    rx_reset(&conn_pool[0]);
     WsV.slot = 0;
     Ws.free(protocore_ws_span());
     WsV.slot = 0;
@@ -1388,8 +1388,8 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
-    protocore_plaintext_reset();
-    void *hog = protocore_plaintext_alloc(ws_scratch_available() - leave, 1);
+    protocore_plain_guard()->temporary_buf_reset();
+    void *hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available() - leave, protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1399,7 +1399,7 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
-    protocore_plaintext_reset();
+    protocore_plain_guard()->temporary_buf_reset();
 }
 
 void test_ws_permessage_deflate_partial_scratch_failures()
@@ -1452,8 +1452,8 @@ void test_ws_outbound_binary_and_scratch_starved()
     TEST_ASSERT_EQUAL_UINT8(0x80 | 0x40 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
 
-    protocore_plaintext_reset();
-    void *hog = protocore_plaintext_alloc(ws_scratch_available(), 1);
+    protocore_plain_guard()->temporary_buf_reset();
+    void *hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available(), protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     WsV.conn = ws;
@@ -1466,8 +1466,9 @@ void test_ws_outbound_binary_and_scratch_starved()
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
 
-    protocore_plaintext_reset();
-    hog = protocore_plaintext_alloc(ws_scratch_available() - (DEFLATE_SCRATCH_SIZE + 8), 1);
+    protocore_plain_guard()->temporary_buf_reset();
+    hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available() - (DEFLATE_SCRATCH_SIZE + 8),
+                                                       protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     WsV.conn = ws;
@@ -1479,7 +1480,7 @@ void test_ws_outbound_binary_and_scratch_starved()
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
-    protocore_plaintext_reset();
+    protocore_plain_guard()->temporary_buf_reset();
 }
 
 void test_ws_outbound_pmd_zero_len_and_control()

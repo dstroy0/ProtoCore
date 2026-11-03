@@ -29,6 +29,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 #include "server/clock/clock.h" // Clock.millis: what a dispatch pass stamps
 #include <string.h>
 
@@ -81,9 +82,7 @@ static void arm_slot(uint8_t slot)
     conn_pool[slot].pcb = &g_pcb;
     conn_pool[slot].listener_id = 0;
     conn_pool[slot].owner = 0;
-    conn_pool[slot].rx_head = 0;
-    conn_pool[slot].rx_tail = 0;
-    conn_pool[slot].rx_acked = 0;
+    rx_reset(&conn_pool[slot]);
     conn_pool[slot].last_activity_ms = 0;
     ConnPoolV.slot = slot;
     ConnPoolV.st = CONN_ACTIVE;
@@ -191,7 +190,7 @@ void test_reopened_window_never_exceeds_bytes_consumed(void)
 
     for (size_t r = 0; r < sizeof(arrive) / sizeof(arrive[0]); r++)
     {
-        if (arrive[r] <= protocore_ring_free(&conn_pool[0].rx_head, &conn_pool[0].rx_tail, RX_BUF_SIZE))
+        if (arrive[r] <= rx_vacant(&conn_pool[0]))
         {
             deliver(0, r * 32, arrive[r]);
         }
@@ -743,11 +742,12 @@ void test_allocator_takes_the_lowest_free_slot(void)
 
 void test_a_held_slot_is_not_allocatable_though_it_reads_free(void)
 {
-    protocore_slot_mark(&protocore_conn_bits.held, 0);
+    (void)EMBED_CALL(anularis.loculus_hold, AnularisCfg, .ring = &protocore_conn_slots, .index = 0u,
+                     .src = conn_pool[0].rx_buffer, .bytes = RX_BUF_SIZE);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state); // free...
     ConnPool.alloc_free(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT32(1, ConnPoolV.i32); // ...but not handed out
-    protocore_slot_clear(&protocore_conn_bits.held, 0);
+    EMBED_CALL(anularis.loculus_drop, AnularisCfg, .ring = &protocore_conn_slots, .index = 0u);
     ConnPool.alloc_free(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT32(0, ConnPoolV.i32);
 }
@@ -776,8 +776,9 @@ void test_free_bitmap_tracks_every_state_write(void)
     }
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        proto_bool free_bit = (PROTO_ATOMIC_LOAD(&protocore_conn_bits.free) >> i) & 1u;
-        proto_bool is_free = PROTO_ATOMIC_LOAD(&conn_pool[i].state) == CONN_FREE;
+        proto_bool free_bit =
+            (EMBED_CALL(anularis.loculus_ready, AnularisCfg, .ring = &protocore_conn_slots) >> i) & 1u;
+        proto_bool is_free = PROTOCORE_ATOMIC_LOAD(&conn_pool[i].state) == CONN_FREE;
         TEST_ASSERT_EQUAL(is_free, free_bit);
     }
 }

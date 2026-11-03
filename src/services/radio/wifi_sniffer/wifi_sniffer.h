@@ -12,7 +12,7 @@
  * channel-agility roaming, deciding when a candidate AP is enough stronger than the current one to switch.
  *
  * This is that pure decode + decision layer; the promiscuous-mode radio callback belongs to the app. No
- * heap, no stdlib, host-testable against captured frame bytes.
+ * heap, no stdlib, host-testable against captured frame byteio.
  */
 
 #ifndef PROTOCORE_WIFI_SNIFFER_H
@@ -333,7 +333,7 @@ static const WifiSnifferNs WifiSniffer __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_wifi_sniffer_span(void);
 

@@ -10,14 +10,14 @@
 
 #if PROTOCORE_ENABLE_FTP_SESSION
 
-#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "services/file_transfer/ftp/ftp_session/ftp_session.h"
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
-#include "mmgr/protoframe/protoframe.h"                  // protocore_field / protocore_fval: the log frames
-#include "mmgr/protostr/protostr.h"                      // str.copy: the bounded host copy
+#include "cellularum_laboro/cellularum_laboro.h"         // cellul.copy: the bounded host copy
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: both connections
+#include "numeros_scribo/numeros_scribo.h"               // mmgr_field / mmgr_fval: the log frames
 #include "server/clock/clock.h"                          // Clock.ms: the reply deadline
 #include "services/file_transfer/ftp/ftp/ftp.h"
 #include "shared/log/log.h"
@@ -62,8 +62,8 @@ static_assert(FTP_SESSION_OFF_CTX + sizeof(FtpSessionCtx) <= PROTOCORE_FTP_SESSI
               "PROTOCORE_FTP_SESSION_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -76,35 +76,29 @@ static_assert(
 
 // Log frames. Each is the shape of one message, fixed when the code was written, so the logger
 // builds it without parsing anything and a level that is compiled out costs the spec nothing.
-static const protocore_field LOG_BUILD_FAILED[] = {
-    {PROTOCORE_FK_LIT, 0, 18, "ftp: cannot build "}, PROTOCORE_STR, PROTOCORE_END};
-static const protocore_field LOG_SENT[] = {{PROTOCORE_FK_LIT, 0, 5, "ftp> "}, PROTOCORE_STR, PROTOCORE_END};
-static const protocore_field LOG_REPLY[] = {{PROTOCORE_FK_LIT, 0, 5, "ftp< "}, PROTOCORE_U32, PROTOCORE_END};
-static const protocore_field LOG_REPLY_TOO_BIG[] = {
-    {PROTOCORE_FK_LIT, 0, 48, "ftp: reply larger than PROTOCORE_FTP_REPLY_BUF ("},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 1, ")"},
-    PROTOCORE_END};
-static const protocore_field LOG_CTRL_CLOSED[] = {{PROTOCORE_FK_LIT, 0, 25, "ftp: control closed with "},
-                                                  PROTOCORE_U32,
-                                                  {PROTOCORE_FK_LIT, 0, 15, " bytes buffered"},
-                                                  PROTOCORE_END};
-static const protocore_field LOG_REPLY_TIMEOUT[] = {{PROTOCORE_FK_LIT, 0, 20, "ftp: reply timeout, "},
-                                                    PROTOCORE_U32,
-                                                    {PROTOCORE_FK_LIT, 0, 15, " bytes buffered"},
-                                                    PROTOCORE_END};
-static const protocore_field LOG_DATA_CONNECT_FAILED[] = {{PROTOCORE_FK_LIT, 0, 21, "ftp: data connect to "},
-                                                          PROTOCORE_STR,
-                                                          {PROTOCORE_FK_LIT, 0, 1, ":"},
-                                                          PROTOCORE_U32,
-                                                          {PROTOCORE_FK_LIT, 0, 7, " failed"},
-                                                          PROTOCORE_END};
-static const protocore_field LOG_CTRL_CONNECT_FAILED[] = {{PROTOCORE_FK_LIT, 0, 24, "ftp: control connect to "},
-                                                          PROTOCORE_STR,
-                                                          {PROTOCORE_FK_LIT, 0, 1, ":"},
-                                                          PROTOCORE_U32,
-                                                          {PROTOCORE_FK_LIT, 0, 7, " failed"},
-                                                          PROTOCORE_END};
+static const mmgr_field LOG_BUILD_FAILED[] = {{MMGR_FK_LIT, 0, 18, "ftp: cannot build "}, MMGR_STR, MMGR_END};
+static const mmgr_field LOG_SENT[] = {{MMGR_FK_LIT, 0, 5, "ftp> "}, MMGR_STR, MMGR_END};
+static const mmgr_field LOG_REPLY[] = {{MMGR_FK_LIT, 0, 5, "ftp< "}, MMGR_U32, MMGR_END};
+static const mmgr_field LOG_REPLY_TOO_BIG[] = {{MMGR_FK_LIT, 0, 48, "ftp: reply larger than PROTOCORE_FTP_REPLY_BUF ("},
+                                               MMGR_U32,
+                                               {MMGR_FK_LIT, 0, 1, ")"},
+                                               MMGR_END};
+static const mmgr_field LOG_CTRL_CLOSED[] = {
+    {MMGR_FK_LIT, 0, 25, "ftp: control closed with "}, MMGR_U32, {MMGR_FK_LIT, 0, 15, " bytes buffered"}, MMGR_END};
+static const mmgr_field LOG_REPLY_TIMEOUT[] = {
+    {MMGR_FK_LIT, 0, 20, "ftp: reply timeout, "}, MMGR_U32, {MMGR_FK_LIT, 0, 15, " bytes buffered"}, MMGR_END};
+static const mmgr_field LOG_DATA_CONNECT_FAILED[] = {{MMGR_FK_LIT, 0, 21, "ftp: data connect to "},
+                                                     MMGR_STR,
+                                                     {MMGR_FK_LIT, 0, 1, ":"},
+                                                     MMGR_U32,
+                                                     {MMGR_FK_LIT, 0, 7, " failed"},
+                                                     MMGR_END};
+static const mmgr_field LOG_CTRL_CONNECT_FAILED[] = {{MMGR_FK_LIT, 0, 24, "ftp: control connect to "},
+                                                     MMGR_STR,
+                                                     {MMGR_FK_LIT, 0, 1, ":"},
+                                                     MMGR_U32,
+                                                     {MMGR_FK_LIT, 0, 7, " failed"},
+                                                     MMGR_END};
 
 // ---------------------------------------------------------------------------
 // Control channel
@@ -121,10 +115,10 @@ static proto_bool ftp_send(uint8_t *work, const char *verb, const char *arg)
     size_t n = FtpV.n;
     if (n == 0)
     {
-        PROTOCORE_LOGW(LOG_BUILD_FAILED, ((const protocore_fval[]){PROTOCORE_VSTR(verb)}), 1);
+        PROTOCORE_LOGW(LOG_BUILD_FAILED, ((const mmgr_fval[]){MMGR_VSTR(verb)}), 1);
         return PROTO_FALSE;
     }
-    PROTOCORE_LOGD(LOG_SENT, ((const protocore_fval[]){PROTOCORE_VSTR(verb)}), 1);
+    PROTOCORE_LOGD(LOG_SENT, ((const mmgr_fval[]){MMGR_VSTR(verb)}), 1);
     TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
     TcpClientV.io.data = (const uint8_t *)FTP_SESSION_CTX(work)->cmd;
     TcpClientV.io.len = n;
@@ -144,8 +138,9 @@ static protocore_ftp_state ftp_await(uint8_t *work, int *code, size_t *rlen)
 {
     if (FTP_SESSION_CTX(work)->rx_consumed > 0)
     {
-        mem.move(FTP_SESSION_CTX(work)->rx, FTP_SESSION_CTX(work)->rx + FTP_SESSION_CTX(work)->rx_consumed,
-                 FTP_SESSION_CTX(work)->rx_len - FTP_SESSION_CTX(work)->rx_consumed);
+        EMBED_CALL(memor.move_down, MemoriaCfg, .dst = FTP_SESSION_CTX(work)->rx,
+                   .src = FTP_SESSION_CTX(work)->rx + FTP_SESSION_CTX(work)->rx_consumed,
+                   .bytes = FTP_SESSION_CTX(work)->rx_len - FTP_SESSION_CTX(work)->rx_consumed);
         FTP_SESSION_CTX(work)->rx_len -= FTP_SESSION_CTX(work)->rx_consumed;
         FTP_SESSION_CTX(work)->rx_consumed = 0;
     }
@@ -182,13 +177,13 @@ static protocore_ftp_state ftp_await(uint8_t *work, int *code, size_t *rlen)
         {
             *rlen = consumed;
         }
-        PROTOCORE_LOGD(LOG_REPLY, ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)*code)}), 1);
+        PROTOCORE_LOGD(LOG_REPLY, ((const mmgr_fval[]){MMGR_VU32((uint32_t)*code)}), 1);
         return PROTOCORE_FTP_READY;
     }
     if (FTP_SESSION_CTX(work)->rx_len == sizeof(FTP_SESSION_CTX(work)->rx))
     {
-        PROTOCORE_LOGW(LOG_REPLY_TOO_BIG,
-                       ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)sizeof(FTP_SESSION_CTX(work)->rx))}), 1);
+        PROTOCORE_LOGW(LOG_REPLY_TOO_BIG, ((const mmgr_fval[]){MMGR_VU32((uint32_t)sizeof(FTP_SESSION_CTX(work)->rx))}),
+                       1);
         return PROTOCORE_FTP_FAILED; // a reply that cannot fit is malformed, not incomplete
     }
     TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
@@ -199,16 +194,15 @@ static protocore_ftp_state ftp_await(uint8_t *work, int *code, size_t *rlen)
         TcpClient.available(protocore_tcp_client_span());
         if (TcpClientV.n == 0)
         {
-            PROTOCORE_LOGW(LOG_CTRL_CLOSED,
-                           ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)FTP_SESSION_CTX(work)->rx_len)}), 1);
+            PROTOCORE_LOGW(LOG_CTRL_CLOSED, ((const mmgr_fval[]){MMGR_VU32((uint32_t)FTP_SESSION_CTX(work)->rx_len)}),
+                           1);
             return PROTOCORE_FTP_FAILED;
         }
     }
     // Clock.ms is monotonic, so the subtraction is wrap-safe across a rollover.
     if ((int32_t)(Clock.ms - FTP_SESSION_CTX(work)->deadline) >= 0)
     {
-        PROTOCORE_LOGW(LOG_REPLY_TIMEOUT,
-                       ((const protocore_fval[]){PROTOCORE_VU32((uint32_t)FTP_SESSION_CTX(work)->rx_len)}), 1);
+        PROTOCORE_LOGW(LOG_REPLY_TIMEOUT, ((const mmgr_fval[]){MMGR_VU32((uint32_t)FTP_SESSION_CTX(work)->rx_len)}), 1);
         return PROTOCORE_FTP_FAILED;
     }
     return PROTOCORE_FTP_BUSY;
@@ -228,8 +222,7 @@ static proto_bool ftp_data_connect(uint8_t *work, const char *host, uint16_t por
     FTP_SESSION_CTX(work)->data = TcpClientV.i32;
     if (FTP_SESSION_CTX(work)->data < 0)
     {
-        PROTOCORE_LOGW(LOG_DATA_CONNECT_FAILED,
-                       ((const protocore_fval[]){PROTOCORE_VSTR(host), PROTOCORE_VU32((uint32_t)port)}), 2);
+        PROTOCORE_LOGW(LOG_DATA_CONNECT_FAILED, ((const mmgr_fval[]){MMGR_VSTR(host), MMGR_VU32((uint32_t)port)}), 2);
     }
     return FTP_SESSION_CTX(work)->data >= 0;
 }
@@ -237,15 +230,19 @@ static proto_bool ftp_data_connect(uint8_t *work, const char *host, uint16_t por
 /** @brief The dotted quad a PASV reply names, written into @p host. */
 static void ftp_pasv_host(const uint8_t ip[4], char *host, size_t cap)
 {
-    protocore_sb sb_host = {host, cap, 0, PROTO_TRUE};
-    Sb.u32(&sb_host, (uint32_t)((unsigned)ip[0]));
-    Sb.put(&sb_host, ".");
-    Sb.u32(&sb_host, (uint32_t)((unsigned)ip[1]));
-    Sb.put(&sb_host, ".");
-    Sb.u32(&sb_host, (uint32_t)((unsigned)ip[2]));
-    Sb.put(&sb_host, ".");
-    Sb.u32(&sb_host, (uint32_t)((unsigned)ip[3]));
-    if (Sb.finish(&sb_host) == 0)
+    size_t sb_host = 0;
+    sb_host = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = host, .cap = cap, .at = sb_host,
+                         .val = (uint32_t)((unsigned)ip[0]));
+    sb_host = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = host, .cap = cap, .at = sb_host, .text = ".");
+    sb_host = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = host, .cap = cap, .at = sb_host,
+                         .val = (uint32_t)((unsigned)ip[1]));
+    sb_host = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = host, .cap = cap, .at = sb_host, .text = ".");
+    sb_host = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = host, .cap = cap, .at = sb_host,
+                         .val = (uint32_t)((unsigned)ip[2]));
+    sb_host = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = host, .cap = cap, .at = sb_host, .text = ".");
+    sb_host = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = host, .cap = cap, .at = sb_host,
+                         .val = (uint32_t)((unsigned)ip[3]));
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = host, .cap = cap, .at = sb_host) == 0)
     {
         host[0] = '\0';
     }
@@ -295,7 +292,7 @@ uint8_t *protocore_ftp_session_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FTP_SESSION_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_FTP_SESSION_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         FTP_SESSION_CTX(s_own.span)->ctrl = -1;
         FTP_SESSION_CTX(s_own.span)->data = -1;
@@ -330,9 +327,8 @@ void protocore_ftp_session_store(uint8_t *work)
         FTP_SESSION_CTX(work)->ctrl = TcpClientV.i32;
         if (FTP_SESSION_CTX(work)->ctrl < 0)
         {
-            PROTOCORE_LOGW(
-                LOG_CTRL_CONNECT_FAILED,
-                ((const protocore_fval[]){PROTOCORE_VSTR(target->host), PROTOCORE_VU32((uint32_t)ctrl_port)}), 2);
+            PROTOCORE_LOGW(LOG_CTRL_CONNECT_FAILED,
+                           ((const mmgr_fval[]){MMGR_VSTR(target->host), MMGR_VU32((uint32_t)ctrl_port)}), 2);
             FtpSessionV.value = PROTOCORE_FTP_FAILED;
             return;
         }
@@ -455,7 +451,7 @@ void protocore_ftp_session_store(uint8_t *work)
             if (FtpV.ok)
             {
                 // Extended passive mode reuses the control connection's host.
-                str.copy(host, target->host, sizeof(host));
+                EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = host, .src = target->host, .cap = sizeof(host));
                 if (!ftp_data_connect(work, host, port) || !ftp_send(work, "STOR", remote_path))
                 {
                     break;

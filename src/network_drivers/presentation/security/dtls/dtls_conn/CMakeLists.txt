@@ -9,11 +9,11 @@ protocore_add_module(network_drivers/presentation/security/dtls/dtls_conn
     network_drivers/presentation/security/dtls/dtls_record
     network_drivers/tls/key_schedule
   PRIVATE_DEPS
+    server/core/worker
     crypto/asymmetric/curve25519
     crypto/asymmetric/ed25519
     crypto/ct_eq
-    mmgr/protomem
-    mmgr/secure
+    mmgr
     network_drivers/presentation/http/http3/tls13_msg
     network_drivers/presentation/http/http3/tls13_rpk
     server/clock

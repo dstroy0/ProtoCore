@@ -50,17 +50,17 @@ void setup()
     }
     Serial.print("Bringing up Ethernet");
     unsigned long t0 = millis();
-    while (!Physical.eth->ready() && millis() - t0 < 15000)
+    while (!protocore_physical_eth_up() && millis() - t0 < 15000)
     {
         delay(250);
         Serial.print('.');
     }
-    if (!Physical.eth->ready())
+    if (!protocore_physical_eth_up())
     {
         Serial.println("\nEthernet link did not come up (cable / DHCP?)");
         return;
     }
-    uint32_t ip = Physical.link->egress_ip(); // Ethernet is the egress here
+    uint32_t ip = protocore_physical_egress_ipv4(); // Ethernet is the egress here
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

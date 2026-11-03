@@ -6,6 +6,7 @@
 #include "network_drivers/presentation/presentation.h" // HttpConn: the per-slot request the parser fills
 #include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -28,8 +29,7 @@ static void push_rx(TcpConn *c, const char *s, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
-        c->rx_buffer[c->rx_head] = (uint8_t)s[i];
-        c->rx_head = (c->rx_head + 1) % RX_BUF_SIZE;
+        rx_put(c, (uint8_t)((uint8_t)s[i]));
     }
 }
 
@@ -101,9 +101,7 @@ void test_no_content_type_returns_false()
     TcpConn *c = &conn_pool[0];
     for (const char *p = raw; *p; p++)
     {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)*p;
-        c->rx_head = next;
+        rx_put(c, (uint8_t)((uint8_t)*p));
     }
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
@@ -125,9 +123,7 @@ void test_no_boundary_in_content_type_returns_false()
     TcpConn *c = &conn_pool[0];
     for (const char *p = raw; *p; p++)
     {
-        size_t next = (c->rx_head + 1) % RX_BUF_SIZE;
-        c->rx_buffer[c->rx_head] = (uint8_t)*p;
-        c->rx_head = next;
+        rx_put(c, (uint8_t)((uint8_t)*p));
     }
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());

@@ -15,8 +15,9 @@
 
 #include "crypto/aead/aes128gcm/aes128gcm.h"
 #include "crypto/kdf/hkdf/hkdf.h"
-#include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
+#include "server/core/worker/worker.h"
+#include "spatium/spatium.h"
 #include <string.h>
 
 #include <unity.h>
@@ -152,16 +153,19 @@ void test_fips197_aes128_block(void)
     hx("00112233445566778899aabbccddeeff", in, sizeof(in));
     hx("69c4e0d86a7b0430d8cdb78070b4c55a", want, sizeof(want));
 
-    size_t mark = protocore_secure_mark();
-    protocore_span w = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8);
-    TEST_ASSERT_TRUE(span.ok(w));
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
+                             .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW,
+                                                                                             protocore_secure_owner()),
+                             .cap = PROTOCORE_AES128GCM_BORROW);
+    TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
     Aes128GcmV.block_key_args.key = key;
     Aes128Gcm.block_init(w.buf);
     Aes128GcmV.block_args.in = in;
     Aes128GcmV.block_args.out = out;
     Aes128Gcm.block_encrypt(w.buf);
     Aes128Gcm.block_wipe(w.buf);
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     TEST_ASSERT_EQUAL_MEMORY(want, out, 16);
 }
 

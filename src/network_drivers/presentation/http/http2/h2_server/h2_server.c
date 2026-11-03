@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http2/h2_conn/h2_conn.h"
 #include "network_drivers/presentation/http/http2/h2_server/h2_server.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
@@ -87,8 +87,8 @@ static_assert(H2_SERVER_OFF_CTX + sizeof(H2ServerCtx) <= PROTOCORE_H2_SERVER_BOR
               "PROTOCORE_H2_SERVER_BORROW is short of the module context - raise it in"
               " protocore_config.h, which sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(H2_SERVER_OFF_CTX % _Alignof(H2ServerCtx) == 0,
@@ -164,32 +164,34 @@ static proto_bool value_ok(const char *v, size_t vl)
 // only with the value "trailers".
 static proto_bool connection_specific(const char *n, size_t nl)
 {
-    return (nl == 10 && mem.cmp(n, "connection", 10) == 0) || (nl == 16 && mem.cmp(n, "proxy-connection", 16) == 0) ||
-           (nl == 10 && mem.cmp(n, "keep-alive", 10) == 0) || (nl == 17 && mem.cmp(n, "transfer-encoding", 17) == 0) ||
-           (nl == 7 && mem.cmp(n, "upgrade", 7) == 0);
+    return (nl == 10 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "connection", .bytes = 10) == 0) ||
+           (nl == 16 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "proxy-connection", .bytes = 16) == 0) ||
+           (nl == 10 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "keep-alive", .bytes = 10) == 0) ||
+           (nl == 17 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "transfer-encoding", .bytes = 17) == 0) ||
+           (nl == 7 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "upgrade", .bytes = 7) == 0);
 }
 
 // The pseudo-header's bit, or 0 for a name that is not one this server knows (sec 8.3: an undefined
 // pseudo-header is malformed).
 static uint8_t pseudo_bit(const char *n, size_t nl)
 {
-    if (nl == 7 && mem.cmp(n, ":method", 7) == 0)
+    if (nl == 7 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = ":method", .bytes = 7) == 0)
     {
         return H2_PH_METHOD;
     }
-    if (nl == 7 && mem.cmp(n, ":scheme", 7) == 0)
+    if (nl == 7 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = ":scheme", .bytes = 7) == 0)
     {
         return H2_PH_SCHEME;
     }
-    if (nl == 5 && mem.cmp(n, ":path", 5) == 0)
+    if (nl == 5 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = ":path", .bytes = 5) == 0)
     {
         return H2_PH_PATH;
     }
-    if (nl == 10 && mem.cmp(n, ":authority", 10) == 0)
+    if (nl == 10 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = ":authority", .bytes = 10) == 0)
     {
         return H2_PH_AUTHORITY;
     }
-    if (nl == 9 && mem.cmp(n, ":protocol", 9) == 0)
+    if (nl == 9 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = ":protocol", .bytes = 9) == 0)
     {
         return H2_PH_PROTOCOL;
     }
@@ -203,7 +205,7 @@ static size_t set_field(char *dst, size_t cap, const char *src, size_t n)
     {
         n = cap - 1;
     }
-    mem.cpy(dst, src, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = src, .bytes = n);
     dst[n] = 0;
     return n;
 }
@@ -267,7 +269,7 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
                 *mask |= H2_HDR_BAD; // sec 8.3.1: ":path" is never empty for an http/https URI
                 return;
             }
-            const char *q = (const char *)mem.chr(v, vl, (uint8_t)'?');
+            const char *q = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = v, .bytes = vl, .val = (uint8_t)'?');
             size_t plen = vl;
             if (q)
             {
@@ -298,7 +300,8 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
         *mask |= H2_HDR_BAD;
         return;
     }
-    if (nl == 2 && mem.cmp(n, "te", 2) == 0 && !(vl == 8 && mem.cmp(v, "trailers", 8) == 0))
+    if (nl == 2 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "te", .bytes = 2) == 0 &&
+        !(vl == 8 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = v, .other = "trailers", .bytes = 8) == 0))
     {
         *mask |= H2_HDR_BAD;
         return;
@@ -309,7 +312,7 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
         set_field(h->key, sizeof h->key, n, nl);
         set_field(h->val, sizeof h->val, v, vl);
     }
-    if (nl == 14 && mem.cmp(n, "content-length", 14) == 0)
+    if (nl == 14 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "content-length", .bytes = 14) == 0)
     {
         size_t cl = 0;
         for (size_t i = 0; i < vl && v[i] >= '0' && v[i] <= '9'; i++)
@@ -360,7 +363,7 @@ static void open_conn(uint8_t *work)
     (void)work;
     const uint8_t slot = H2Server.slot;
     H2Callbacks cb;
-    mem.set(&cb, 0, sizeof cb);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &cb, .val = 0, .bytes = sizeof cb);
     cb.write = cb_write;
     cb.on_header = cb_header;
     cb.on_headers_end = cb_headers_end;

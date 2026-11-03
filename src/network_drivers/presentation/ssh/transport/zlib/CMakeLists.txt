@@ -5,8 +5,7 @@ protocore_add_module(network_drivers/presentation/ssh/transport/zlib
   GATE PROTOCORE_ENABLE_SSH_ZLIB
   SOURCES zlib.c
   PRIVATE_DEPS
-    mmgr/bitio
-    mmgr/protomem
+    mmgr
     network_drivers/presentation/codec/deflate/rfc1951
     network_drivers/presentation/ssh/common
 )

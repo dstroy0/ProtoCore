@@ -7,8 +7,7 @@ protocore_add_module(services/timing_position/gnss/ntrip_caster_listener
   DEPS
     services/timing_position/gnss/ntrip_caster
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/session
     network_drivers/transport/tcp
     network_drivers/transport/tcp/protocol

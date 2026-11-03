@@ -14,7 +14,7 @@
 
 #include "config/platform/platform.h" // the target's queues and tasks, under our names
 
-#include <stdatomic.h> // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include <stdatomic.h> // PROTOCORE_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker identity
@@ -135,9 +135,33 @@ const MaximumSecurityGuard *protocore_secure_guard(void)
     return &ghost_site.ghost_secure;
 }
 
+// The library's two owners, one per tier of secrecy. Each registers on its first take, which comes
+// before any cell can be counted to it, and a second context registering it at once is refused
+// with nothing changed.
+static CellOwner s_plain_owner = MMGR_CELL_OWNER("protocore_plain");
+static CellOwner s_secure_owner = MMGR_CELL_OWNER("protocore_secure");
+
+CellOwner *protocore_plain_owner(void)
+{
+    if (!mmgr_owner_registered(&s_plain_owner))
+    {
+        (void)mmgr_owner_register(&s_plain_owner);
+    }
+    return &s_plain_owner;
+}
+
+CellOwner *protocore_secure_owner(void)
+{
+    if (!mmgr_owner_registered(&s_secure_owner))
+    {
+        (void)mmgr_owner_register(&s_secure_owner);
+    }
+    return &s_secure_owner;
+}
+
 void *protocore_plain_persist(size_t n)
 {
-    void *p = protocore_plain_guard()->persistent_buf_alloc(n);
+    void *p = protocore_plain_guard()->persistent_buf_alloc(n, protocore_plain_owner());
     if (p != NULL)
     {
         mmgr_zero_buf(p, n);
@@ -147,7 +171,7 @@ void *protocore_plain_persist(size_t n)
 
 void *protocore_secure_persist(size_t n)
 {
-    void *p = protocore_secure_guard()->persistent_buf_alloc(n);
+    void *p = protocore_secure_guard()->persistent_buf_alloc(n, protocore_secure_owner());
     if (p != NULL)
     {
         mmgr_zero_buf(p, n);
@@ -228,7 +252,7 @@ static void worker_task(void *arg)
 {
     int id = (int)(intptr_t)arg;
     protocore_worker_set_self(id);
-    while (PROTO_ATOMIC_LOAD(&WORKER_CTX(protocore_worker_span())->run))
+    while (PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(protocore_worker_span())->run))
     {
         if (WORKER_CTX(protocore_worker_span())->pump)
         {
@@ -243,7 +267,7 @@ static void worker_task(void *arg)
 
 void protocore_workers_start(uint8_t *work)
 {
-    if (PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
+    if (PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return; // already running
     }
@@ -257,7 +281,7 @@ void protocore_workers_start(uint8_t *work)
                                                 WORKER_CTX(work)->dq_storage[i], &WORKER_CTX(work)->dq_struct[i]);
         }
     }
-    PROTO_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_TRUE);
+    PROTOCORE_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_TRUE);
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         int core = (PROTOCORE_WORKER_CORE + i) % PROTOCORE_PLATFORM_CORES;
@@ -319,11 +343,11 @@ void protocore_workers_run_deferred(uint8_t *work)
 
 void protocore_workers_stop(uint8_t *work)
 {
-    if (!PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
+    if (!PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return;
     }
-    PROTO_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_FALSE);
+    PROTOCORE_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_FALSE);
     // Tasks self-delete on their next iteration; give them a few ticks to exit
     // before the caller tears down the slots they were servicing.
     protocore_platform_task_delay(3);
@@ -331,7 +355,7 @@ void protocore_workers_stop(uint8_t *work)
 
 void protocore_workers_running(uint8_t *work)
 {
-    WorkersV.ok = PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run);
+    WorkersV.ok = PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

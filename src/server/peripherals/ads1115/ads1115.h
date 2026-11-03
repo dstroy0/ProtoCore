@@ -89,7 +89,7 @@ typedef struct
     uint8_t addr;
 } Ads1115BeginArgs;
 
-/** @brief What read_raw takes: channel, gain, raw. */
+/** @brief What read_raw takes: channel, gain, proxim. */
 typedef struct
 {
     uint8_t channel;
@@ -129,7 +129,7 @@ typedef struct
  * @var Ads1115Ns::config_single  build the 16-bit config word for a single-shot, single-ended ...
  * @var Ads1115Ns::raw_to_uv  convert a signed 16-bit sample to microvolts for gain's full-scale ...
  * @var Ads1115Ns::begin  initialize the I2C bus for the ADS1115 at addr. true on ESP32
- * @var Ads1115Ns::read_raw  single-shot read of channel (0..3) at gain into raw. false on error
+ * @var Ads1115Ns::read_raw  single-shot read of channel (0..3) at gain into proxim. false on error
  * @var Ads1115Ns::read_uv  single-shot read of channel at gain, converted to microvolts in ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
@@ -187,7 +187,7 @@ static const Ads1115Ns Ads1115 __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_ads1115_span(void);
 

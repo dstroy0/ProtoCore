@@ -118,7 +118,7 @@ void test_published_hpub_examples(void)
     Nats.hpub(nats_work);
     expect("HPUB FRONT.DOOR JOKE.22 45 56\r\nNATS/1.0\r\nBREAKFAST: donut\r\nLUNCH: burger\r\n\r\nKnock Knock\r\n");
 
-    // A header-only message: #total bytes equals #header bytes.
+    // A header-only message: #total bytes equals #header byteio.
     bind_out();
     NatsV.publish.subject = "NOTIFY";
     NatsV.publish.reply_to = NULL;

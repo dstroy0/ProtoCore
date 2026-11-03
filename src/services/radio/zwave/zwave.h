@@ -25,7 +25,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * protocore_zwave_build_frame() assembles a data frame carrying a function command, protocore_zwave_parse_frame()
  * frames + verifies one, and protocore_zwave_is_ack() / protocore_zwave_is_nak() / protocore_zwave_is_can() /
- * protocore_zwave_build_ack() handle the flow-control bytes. The per-command payload (GetVersion,
+ * protocore_zwave_build_ack() handle the flow-control byteio. The per-command payload (GetVersion,
  * SendData, AddNodeToNetwork, an ApplicationCommandHandler report, ...) is the application's.
  * Pure - you carry the bytes over your UART - so it is fully host-testable.
  *

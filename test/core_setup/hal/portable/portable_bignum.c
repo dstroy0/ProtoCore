@@ -17,7 +17,8 @@
 
 #include "config/platform/platform.h" // PROTOCORE_HAS_HW_BIGNUM
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "mmgr/secure/secure.h"
+#include "server/core/worker/worker.h"
+#include "spatium/spatium.h"
 
 #if !PROTOCORE_HAS_HW_BIGNUM
 
@@ -193,11 +194,14 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
 
     // The whole working set in one borrow. These are the same bytes the fixed layout carved by hand;
     // as struct members they cannot drift from a layout documented somewhere else.
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(BnExpmodWork), _Alignof(BnExpmodWork));
-    if (!span.ok(ws))
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span ws = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(sizeof(BnExpmodWork), protocore_secure_owner()),
+        .cap = sizeof(BnExpmodWork));
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
         return;
     }
@@ -237,7 +241,7 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     memset(one.d, 0, sizeof(protocore_bignum));
     one.d[0] = 1u;
     bn_monpro(out, result, &one, w->t);
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
 }
 
 #endif // !PROTOCORE_HAS_HW_BIGNUM

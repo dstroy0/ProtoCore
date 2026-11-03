@@ -60,7 +60,7 @@ void protocore_directnet_header(uint8_t *work)
     uint8_t *out = DirectnetV.header_args.out;
     size_t cap = DirectnetV.header_args.cap;
 
-    // SOH + slave(2) + type(1) + addr(4) + blocks(2) + ETB + LRC = 11 bytes.
+    // SOH + slave(2) + type(1) + addr(4) + blocks(2) + ETB + LRC = 11 byteio.
     const size_t n = 1 + 2 + 1 + 4 + 2 + 1 + 1;
     if (!out || cap < n)
     {

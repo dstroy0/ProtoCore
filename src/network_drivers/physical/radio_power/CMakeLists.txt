@@ -7,5 +7,6 @@ protocore_add_module(network_drivers/physical/radio_power
   DEPS
     network_drivers/physical/physical
   PRIVATE_DEPS
-    mmgr/plaintext
+    server/core/worker
+    mmgr
 )

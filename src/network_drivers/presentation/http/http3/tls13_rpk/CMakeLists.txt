@@ -5,6 +5,6 @@ protocore_add_module(network_drivers/presentation/http/http3/tls13_rpk
   GATE PROTOCORE_ENABLE_TLS_RPK
   SOURCES tls13_rpk.c
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
     network_drivers/presentation/http/http3/tls13_msg
 )

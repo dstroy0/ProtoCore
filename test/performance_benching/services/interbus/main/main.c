@@ -5,7 +5,7 @@
 // Interbus.build assembles a summation frame (loopback word + per-device 16-bit process-image
 // slices + CRC-16/CCITT FCS) from a word list, Interbus.parse validates the loopback + FCS and
 // disassembles it back into device words, and Interbus.fcs is the underlying CRC-16/CCITT-FALSE
-// (poly 0x1021, init 0xFFFF) run bit-by-bit over the frame bytes. All three are pure (zero heap, no
+// (poly 0x1021, init 0xFFFF) run bit-by-bit over the frame byteio. All three are pure (zero heap, no
 // stdlib). Like performance_benching/device/modbus, this is a pure protocol codec with no hardware involved, so every
 // call exercises the real production code path. The physical ring - the shift-register clocking that
 // actually circulates the frame around the fieldbus - is hardware-gated and deliberately out of scope

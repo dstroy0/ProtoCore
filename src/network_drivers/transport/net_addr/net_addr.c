@@ -7,7 +7,7 @@
  */
 
 #include "network_drivers/transport/net_addr/net_addr.h"
-#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: the byte reads of the stack's address words
+#include "proximus_operor/proximus_operor.h" // proxim.read: the byte reads of the stack's address words
 
 PROTOCORE_BEGIN_DECLS
 
@@ -43,7 +43,7 @@ void protocore_net_addr_to_ip(const protocore_net_ip *a, protocore_ip *out)
     }
     uint32_t word = protocore_net_ip4_u32(protocore_net_ip_as_v4(a));
     *out = protocore_ip_from_v4_octets(0, 0, 0, 0);
-    raw.read(out->bytes, (const uint8_t *)&word, 4);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = out->bytes, .at = (const uint8_t *)&word, .size = 4);
 }
 
 /**
@@ -68,7 +68,7 @@ proto_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *o
     {
 #if PROTOCORE_NET_HAS_IPV6
         protocore_net_ip6_mark(out);
-        raw.read(protocore_net_ip6_wbytes(out), a->bytes, 16);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = protocore_net_ip6_wbytes(out), .at = a->bytes, .size = 16);
         return PROTO_TRUE;
 #else
         return PROTO_FALSE;

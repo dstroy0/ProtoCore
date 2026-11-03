@@ -26,5 +26,5 @@ protocore_add_module(test/core_setup/boot
     startup_common.c
     startup_cortex_m.c
   DEPS
-    mmgr/protomem
+    mmgr
 )

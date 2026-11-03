@@ -401,10 +401,14 @@
 // bitmap of bound slots, the reentrancy latch and the text a joined group is formatted into. Scales
 // with the listener count and the ring. No key material, so the plaintext end. Proved against
 // sizeof(struct UdpListenerStorage) by a static_assert in udp/server/server.c.
+// One mmgr_ring: MMGR_RING_WORDS machine words, stated here because this header reaches no MMgr header.
+// The static_assert behind each borrow that uses it proves it against sizeof(mmgr_ring).
+#define PROTOCORE_RING_STORAGE_BYTES (40u * sizeof(size_t))
+
 #ifndef PROTOCORE_UDP_LISTENER_BORROW
 #define PROTOCORE_UDP_LISTENER_BORROW                                                                                  \
-    ((size_t)PROTOCORE_MAX_UDP_LISTENERS * ((size_t)PROTOCORE_UDP_RX_RING + 96u) + (size_t)PROTOCORE_UDP_RX_BUF_SIZE + \
-     256u)
+    ((size_t)PROTOCORE_MAX_UDP_LISTENERS * ((size_t)PROTOCORE_UDP_RX_RING + PROTOCORE_RING_STORAGE_BYTES + 96u) +      \
+     (size_t)PROTOCORE_UDP_RX_BUF_SIZE + 256u)
 #endif
 
 // The TCP/lower-level seam: one marshal record per connection slot, plus the stack thread it
@@ -441,7 +445,8 @@
 // so the plaintext end. Proved against sizeof(struct TcpClientStorage) by a static_assert in
 // tcp/client/client.c.
 #ifndef PROTOCORE_TCP_CLIENT_BORROW
-#define PROTOCORE_TCP_CLIENT_BORROW ((size_t)PROTOCORE_CLIENT_CONNS * ((size_t)PROTOCORE_CLIENT_RX_BUF + 96u) + 64u)
+#define PROTOCORE_TCP_CLIENT_BORROW                                                                                    \
+    ((size_t)PROTOCORE_CLIENT_CONNS * ((size_t)PROTOCORE_CLIENT_RX_BUF + PROTOCORE_RING_STORAGE_BYTES + 96u) + 64u)
 #endif
 
 // The one address a Happy Eyeballs preference step scores. The sort compares a key it holds against
@@ -725,7 +730,7 @@
 // The generator's borrow, split by offset in rng.c: the draw counter and the seeded flag, the seed,
 // the nonce, the ratchet's next seed, then the region ChaCha20 runs in. 88 octets over the cipher's
 // own borrow. This one is taken from the pool's PERSISTENT end and lives for the program, so the seed
-// survives across calls and a reseed lands in the same bytes. Proved by a static_assert in rng.c.
+// survives across calls and a reseed lands in the same byteio. Proved by a static_assert in rng.c.
 #ifndef PROTOCORE_RNG_BORROW
 #define PROTOCORE_RNG_BORROW (88 + PROTOCORE_CHACHA20_BORROW)
 #endif
@@ -1152,7 +1157,7 @@
 #endif
 
 // The SSH transport machine's host signing keys - the ed25519 seed and public half, the P-256
-// scalar and point, whether each is loaded - and the runtime KEX preference. Measured at 164 bytes.
+// scalar and point, whether each is loaded - and the runtime KEX preference. Measured at 164 byteio.
 // Host private keys, so the secure end.
 #ifndef PROTOCORE_SSH_TRANSPORT_BORROW
 #define PROTOCORE_SSH_TRANSPORT_BORROW 192u
@@ -1187,7 +1192,7 @@
 #endif
 
 // HTTP/2 runs over TLS, so a connection's bytes are secure. The slot table holds the pointers;
-// the connections hold the bytes.
+// the connections hold the byteio.
 #if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 #define PROTOCORE_SECURE_WORK_H2_SERVER                                                                                \
     (PROTOCORE_H2_SERVER_BORROW +                                                                                      \
@@ -1451,7 +1456,7 @@
 // the nameserver being asked, the query ID (RFC 1035 sec 4.1.1), the deadline it waits to, and the
 // busy flag a second host waits on. The vendor arm holds the stack's reported address instead of
 // the query. The spans it hands out are already taken from the secure end and its release wipes, so
-// the handles to them are kept beside their bytes. Proved against sizeof(struct ResolverStorage) by
+// the handles to them are kept beside their byteio. Proved against sizeof(struct ResolverStorage) by
 // a static_assert in dns_resolver.c.
 #ifndef PROTOCORE_DNS_RESOLVER_BORROW
 #define PROTOCORE_DNS_RESOLVER_BORROW 192u

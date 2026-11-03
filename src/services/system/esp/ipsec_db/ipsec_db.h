@@ -41,7 +41,7 @@ PROTOCORE_BEGIN_DECLS
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
-/** @brief Longest selector address (IPv6). IPv4 uses the low 4 bytes. */
+/** @brief Longest selector address (IPv6). IPv4 uses the low 4 byteio. */
 #define PROTOCORE_IPSEC_ADDR_MAX 16
 
 /** @brief Maximum policies in one SPD. */
@@ -175,8 +175,8 @@ typedef struct
     uint32_t spi;
     const uint8_t *dst;
     uint8_t addr_len;
-    const uint8_t *key;  ///< PROTOCORE_ESP_KEY_LEN bytes.
-    const uint8_t *salt; ///< PROTOCORE_ESP_SALT_LEN bytes.
+    const uint8_t *key;  ///< PROTOCORE_ESP_KEY_LEN byteio.
+    const uint8_t *salt; ///< PROTOCORE_ESP_SALT_LEN byteio.
     proto_bool inbound;
 } IpsecDbProtocoreIpsecSadAddArgs;
 

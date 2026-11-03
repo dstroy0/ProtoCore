@@ -19,10 +19,10 @@
 
 #if PROTOCORE_ENABLE_SSH_SCP
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/session/scp/ssh_scp/ssh_scp.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/session/scp/scp/scp.h"
@@ -51,8 +51,8 @@ static_assert(SSH_SCP_OFF_CTX + sizeof(SshScpCtx) <= PROTOCORE_SSH_SCP_BORROW,
               "PROTOCORE_SSH_SCP_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SSH_SCP_OFF_CTX % _Alignof(SshScpCtx) == 0,
@@ -149,7 +149,7 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
     {
         // A '/' terminator is what makes the target a directory, and it is also the separator the
         // accessor's join relies on, so the flag and the string agree without either being rebuilt.
-        size_t pl = str.len(c->dest, sizeof(c->dest));
+        size_t pl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->dest, .cap = sizeof(c->dest));
         c->dest_is_dir = (pl > 0 && c->dest[pl - 1] == '/');
         c->st = WAIT_CLINE;
         ack(c, PROTOCORE_SCP_ACK_OK); // ready for the control line
@@ -294,7 +294,7 @@ uint8_t *protocore_ssh_scp_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SSH_SCP_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SSH_SCP_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         SSH_SCP_CTX(s_own.span)->root = -1;
     }

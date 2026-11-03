@@ -4,6 +4,7 @@
 #include "network_drivers/presentation/presentation.h"
 #include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
+#include "rx_feed.h"
 #include "server/core/proto_handler/proto_handler.h"
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h"
@@ -27,9 +28,7 @@ static void push(uint8_t slot, const char *data)
     TcpConn *s = &conn_pool[slot];
     for (size_t i = 0; data[i]; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)data[i];
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)data[i]));
     }
 }
 
@@ -606,9 +605,7 @@ void stress_body_exactly_buf_size_all_stored()
     TcpConn *s = &conn_pool[0];
     for (int i = 0; i < BODY_BUF_SIZE; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)('A' + (i % 26));
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)('A' + (i % 26))));
     }
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
@@ -653,9 +650,7 @@ void stress_incremental_byte_by_byte_no_error()
 
     for (size_t i = 0; req[i]; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)req[i];
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)req[i]));
         HttpConnV.slot = 0;
         HttpConn.parse(protocore_http_conn_span());
         TEST_ASSERT_NOT_EQUAL_MESSAGE(PARSE_ERROR, http_pool[0].parse_state,
@@ -694,58 +689,48 @@ void stress_sequential_requests_no_state_leak()
 void race_interleaved_producer_consumer_ring_buffer()
 {
     TcpConn *s = &conn_pool[0];
-    s->rx_head = 0;
-    s->rx_tail = 0;
+    rx_reset(s);
 
     for (int i = 0; i < 100; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)i;
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)i));
     }
 
     for (int i = 0; i < 50; i++)
     {
-        TEST_ASSERT_EQUAL((uint8_t)i, s->rx_buffer[s->rx_tail]);
-        s->rx_tail = (s->rx_tail + 1) % RX_BUF_SIZE;
+        TEST_ASSERT_EQUAL((uint8_t)i, rx_take(s));
     }
 
     for (int i = 100; i < 150; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)i;
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)i));
     }
 
     for (int i = 50; i < 150; i++)
     {
-        TEST_ASSERT_EQUAL((uint8_t)i, s->rx_buffer[s->rx_tail]);
-        s->rx_tail = (s->rx_tail + 1) % RX_BUF_SIZE;
+        TEST_ASSERT_EQUAL((uint8_t)i, rx_take(s));
     }
 
-    TEST_ASSERT_EQUAL(s->rx_head, s->rx_tail);
+    TEST_ASSERT_EQUAL(0u, rx_used(s));
 }
 
 void race_ring_buffer_full_prevents_write()
 {
     TcpConn *s = &conn_pool[0];
-    s->rx_head = 0;
-    s->rx_tail = 0;
+    rx_reset(s);
 
     int written = 0;
     while (1)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        if (next == s->rx_tail)
+        if (rx_vacant(s) == 0u)
         {
             break;
         }
-        s->rx_buffer[s->rx_head] = (uint8_t)(written & 0xFF);
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)(written & 0xFF)));
         written++;
     }
 
-    TEST_ASSERT_EQUAL(s->rx_tail, (s->rx_head + 1) % RX_BUF_SIZE);
+    TEST_ASSERT_EQUAL(0u, rx_vacant(s));
     TEST_ASSERT_EQUAL(RX_BUF_SIZE - 1, written);
 }
 

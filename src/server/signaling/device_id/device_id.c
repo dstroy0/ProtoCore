@@ -50,7 +50,7 @@ void protocore_device_id_from_mac(uint8_t *work)
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
     const MaximumSecurityGuard *guard = protocore_secure_guard();
     const size_t mark = guard->temporary_buf_mark();
-    uint8_t *w = (uint8_t *)guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW);
+    uint8_t *w = (uint8_t *)guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW, protocore_secure_owner());
     if (!w)
     {
         guard->temporary_buf_release(mark);

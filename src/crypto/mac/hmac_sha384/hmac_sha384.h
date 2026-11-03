@@ -35,7 +35,7 @@ PROTOCORE_BEGIN_DECLS
  * @date    2026
  */
 
-/** @brief HMAC-SHA2-384 output length in bytes. */
+/** @brief HMAC-SHA2-384 output length in byteio. */
 #define PROTOCORE_HMAC_SHA384_LEN 48
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

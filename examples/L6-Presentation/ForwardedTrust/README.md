@@ -82,8 +82,10 @@ PC server;
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    while (!protocore_physical_wifi_up())
         delay(250);
 
     // Trust the reverse proxy(ies) in front of this device (set to YOUR proxy's subnet).

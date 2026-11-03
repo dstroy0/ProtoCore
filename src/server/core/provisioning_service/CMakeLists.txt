@@ -5,9 +5,8 @@ protocore_add_module(server/core/provisioning_service
   GATE PROTOCORE_ENABLE_PROVISIONING
   SOURCES provisioning_service.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/application/web_assets
     network_drivers/physical/physical
     network_drivers/transport/udp/server

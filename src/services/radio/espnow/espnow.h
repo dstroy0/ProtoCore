@@ -71,19 +71,19 @@ typedef struct
 /** @brief What peer_add takes: mac. */
 typedef struct
 {
-    const uint8_t *mac; ///< 6 bytes.
+    const uint8_t *mac; ///< 6 byteio.
 } EspnowPeerAddArgs;
 
 /** @brief What peer_has takes: mac. */
 typedef struct
 {
-    const uint8_t *mac; ///< 6 bytes.
+    const uint8_t *mac; ///< 6 byteio.
 } EspnowPeerHasArgs;
 
 /** @brief What peer_remove takes: mac. */
 typedef struct
 {
-    const uint8_t *mac; ///< 6 bytes.
+    const uint8_t *mac; ///< 6 byteio.
 } EspnowPeerRemoveArgs;
 
 /** @brief What begin takes: channel, cb. */
@@ -96,13 +96,13 @@ typedef struct
 /** @brief What add_peer takes: mac. */
 typedef struct
 {
-    const uint8_t *mac; ///< 6 bytes.
+    const uint8_t *mac; ///< 6 byteio.
 } EspnowAddPeerArgs;
 
 /** @brief What send takes: mac, type, payload, len. */
 typedef struct
 {
-    const uint8_t *mac; ///< 6 bytes.
+    const uint8_t *mac; ///< 6 byteio.
     uint8_t type;
     const uint8_t *payload;
     size_t len;
@@ -232,7 +232,7 @@ extern const uint8_t PROTOCORE_ESPNOW_BROADCAST[6];
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_espnow_span(void);
 

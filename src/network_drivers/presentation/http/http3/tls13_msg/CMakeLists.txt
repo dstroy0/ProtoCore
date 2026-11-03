@@ -7,6 +7,5 @@ protocore_add_module(network_drivers/presentation/http/http3/tls13_msg
   PRIVATE_DEPS
     crypto/asymmetric/ed25519
     crypto/pqc/mlkem
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

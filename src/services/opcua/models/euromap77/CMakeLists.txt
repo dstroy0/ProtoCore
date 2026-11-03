@@ -5,7 +5,7 @@ protocore_add_module(services/opcua/models/euromap77
   GATE PROTOCORE_ENABLE_EUROMAP77
   SOURCES euromap77.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protostr
+    server/core/worker
+    mmgr
     services/opcua
 )

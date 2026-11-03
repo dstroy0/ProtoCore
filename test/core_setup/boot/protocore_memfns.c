@@ -11,7 +11,7 @@
  * image has to carry them whatever the source says.
  *
  * Nothing new is written here. mmgr already moves and compares blocks, so these are the symbols the
- * linker asks for, resolved onto @ref mem. The library's own callers keep using @ref mem directly;
+ * linker asks for, resolved onto @ref memor. The library's own callers keep using @ref mem directly;
  * this exists for the calls the compiler makes.
  *
  * The optimizer is told to leave the bodies alone: it recognises a byte loop and rewrites it as a
@@ -19,7 +19,7 @@
  * rather than a library call.
  */
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 #include <stddef.h>
 
@@ -31,23 +31,30 @@
 
 PROTOCORE_NO_MEM_IDIOM void *memcpy(void *dst, const void *src, size_t n)
 {
-    mem.cpy(dst, src, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = src, .bytes = n);
     return dst;
 }
 
 PROTOCORE_NO_MEM_IDIOM void *memmove(void *dst, const void *src, size_t n)
 {
-    mem.move(dst, src, n);
+    if ((const unsigned char *)dst < (const unsigned char *)src)
+    {
+        EMBED_CALL(memor.move_down, MemoriaCfg, .dst = dst, .src = src, .bytes = n);
+    }
+    else
+    {
+        EMBED_CALL(memor.move_up, MemoriaCfg, .dst = dst, .src = src, .bytes = n);
+    }
     return dst;
 }
 
 PROTOCORE_NO_MEM_IDIOM void *memset(void *dst, int v, size_t n)
 {
-    mem.set(dst, (unsigned char)v, n);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = dst, .val = (unsigned char)v, .bytes = n);
     return dst;
 }
 
 PROTOCORE_NO_MEM_IDIOM int memcmp(const void *a, const void *b, size_t n)
 {
-    return mem.cmp(a, b, n);
+    return EMBED_CALL(memor.cmp, MemoriaCfg, .src = a, .other = b, .bytes = n);
 }

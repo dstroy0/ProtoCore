@@ -10,13 +10,13 @@
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h" // ssh_conn_slot() + the memory map
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
 #endif
@@ -68,7 +68,7 @@ uint8_t *protocore_ssh_network_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SSH_NETWORK_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SSH_NETWORK_BORROW);
     }
     return s_own.span;
 }
@@ -79,7 +79,7 @@ uint8_t *protocore_ssh_network_span(void)
 // Everything outbound goes through these two, so the pool a handle belongs to is decided in one
 // place instead of at each write site.
 
-/** @brief True while slot @p i's stream can still carry bytes. */
+/** @brief True while slot @p i's stream can still carry byteio. */
 static proto_bool stream_live(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS || SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i] == 0xFF)

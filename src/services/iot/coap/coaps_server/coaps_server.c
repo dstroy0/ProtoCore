@@ -7,13 +7,13 @@
  */
 
 #include "services/iot/coap/coaps_server/coaps_server.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's key material is taken from
 
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.set / mem.cmp: the spans a slot and the ring move
-#include "mmgr/protostr/protostr.h" // str.copy / str.eq: the peer address text
-#include "mmgr/ring/ring.h"         // the atomics the single-producer ingest ring's cursors are
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.copy / cellul.eq: the peer address text
+#include "memoria_anularis/memoria_anularis.h"   // the atomics the single-producer ingest ring's cursors are
+#include "memoria_operor/memoria_operor.h" // memor.cpy / memor.set / memor.cmp: the spans a slot and the ring move
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
 #include "server/clock/clock.h"            // Clock.millis: the reclaim clock
 #include "services/iot/coap/coaps/coaps.h" // Coaps.process: the handshake and the CoAP exchange
@@ -38,7 +38,7 @@ uint8_t *protocore_coaps_server_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_COAPS_SERVER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_COAPS_SERVER_BORROW);
     }
     return s_own.span;
 }
@@ -197,9 +197,9 @@ static proto_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const 
         return PROTO_FALSE;
     }
     CoapsIngest *e = &COAPS_SERVER_CTX(work)->ring[head];
-    mem.cpy(e->data, dg, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->data, .src = dg, .bytes = len);
     e->len = (uint16_t)len;
-    (void)str.copy(e->ip, ip, sizeof(e->ip));
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = e->ip, .src = ip, .cap = sizeof(e->ip));
     e->port = port;
     COAPS_SERVER_CTX(work)->ring_head = next; // published only once the entry is whole
     return PROTO_TRUE;
@@ -228,7 +228,9 @@ static CoapsSlot *slot_by_peer(uint8_t *work, const char *ip, uint16_t port)
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         CoapsSlot *s = &COAPS_SERVER_CTX(work)->pool[i];
-        if (s->used && s->peer_port == port && str.eq(s->peer_ip, ip, sizeof(s->peer_ip), PROTO_FALSE))
+        if (s->used && s->peer_port == port &&
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s->peer_ip, .other = ip, .cap = sizeof(s->peer_ip),
+                       .ci = PROTO_FALSE))
         {
             return s;
         }
@@ -253,7 +255,7 @@ static CoapsSlot *slot_by_cid(uint8_t *work, const uint8_t *cid, size_t avail)
         DtlsServerV.local_cid_args.out = sc;
         DtlsServer.local_cid(work);
         size_t sl = DtlsServerV.n;
-        if (sl && sl <= avail && mem.cmp(cid, sc, sl) == 0)
+        if (sl && sl <= avail && EMBED_CALL(memor.cmp, MemoriaCfg, .src = cid, .other = sc, .bytes = sl) == 0)
         {
             return s;
         }
@@ -269,7 +271,7 @@ static CoapsSlot *alloc_slot(uint8_t *work)
         if (!COAPS_SERVER_CTX(work)->pool[i].used)
         {
             CoapsSlot *s = &COAPS_SERVER_CTX(work)->pool[i];
-            mem.set(s, 0, sizeof(*s));
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
             s->used = PROTO_TRUE;
             return s;
         }
@@ -300,7 +302,7 @@ static CoapsSlot *open_conn(uint8_t *work, const char *ip, uint16_t port)
     DtlsServerV.init_args.peer_addr = bound ? paddr : NULL;
     DtlsServerV.init_args.peer_addr_len = bound ? sizeof(paddr) : 0;
     DtlsServer.init(work);
-    (void)str.copy(s->peer_ip, ip, sizeof(s->peer_ip));
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = s->peer_ip, .src = ip, .cap = sizeof(s->peer_ip));
     s->peer_port = port;
     return s;
 }
@@ -358,9 +360,11 @@ static void route_datagram(uint8_t *work, const CoapsIngest *ig, uint32_t now, u
         return; // an unknown Connection ID, or a full pool: the peer's retransmission recovers it
     }
     // A valid record from a new address moves where the replies go.
-    if (cid_rec && (s->peer_port != ig->port || !str.eq(s->peer_ip, ig->ip, sizeof(s->peer_ip), PROTO_FALSE)))
+    if (cid_rec &&
+        (s->peer_port != ig->port || !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s->peer_ip, .other = ig->ip,
+                                                 .cap = sizeof(s->peer_ip), .ci = PROTO_FALSE)))
     {
-        (void)str.copy(s->peer_ip, ig->ip, sizeof(s->peer_ip));
+        (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = s->peer_ip, .src = ig->ip, .cap = sizeof(s->peer_ip));
         s->peer_port = ig->port;
     }
     s->last_ms = now;
@@ -446,10 +450,10 @@ void protocore_coaps_server_begin(uint8_t *work)
     }
     COAPS_SERVER_CTX(work)->cert_der = CoapsServerV.identity.cert_der;
     COAPS_SERVER_CTX(work)->cert_len = CoapsServerV.identity.cert_len;
-    mem.cpy(COAPS_SERVER_CTX(work)->ed25519_seed, CoapsServerV.identity.ed25519_seed,
-            sizeof(COAPS_SERVER_CTX(work)->ed25519_seed));
-    mem.cpy(COAPS_SERVER_CTX(work)->cookie_key, CoapsServerV.identity.cookie_key,
-            sizeof(COAPS_SERVER_CTX(work)->cookie_key));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = COAPS_SERVER_CTX(work)->ed25519_seed,
+               .src = CoapsServerV.identity.ed25519_seed, .bytes = sizeof(COAPS_SERVER_CTX(work)->ed25519_seed));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = COAPS_SERVER_CTX(work)->cookie_key,
+               .src = CoapsServerV.identity.cookie_key, .bytes = sizeof(COAPS_SERVER_CTX(work)->cookie_key));
     COAPS_SERVER_CTX(work)->rng = CoapsServerV.identity.rng;
     COAPS_SERVER_CTX(work)->port = CoapsServerV.bind.port ? CoapsServerV.bind.port : PROTOCORE_COAPS_PORT;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)

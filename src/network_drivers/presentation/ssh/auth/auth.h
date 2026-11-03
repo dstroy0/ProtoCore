@@ -15,6 +15,7 @@
 #define PROTOCORE_AUTH_AUTH_H
 
 #include "network_drivers/presentation/ssh/common/common.h"
+#include "spatium/spatium.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -191,13 +192,13 @@ typedef struct
     size_t len;             ///< how many bytes it has
 } SshAuthMsgArgs;
 
-/** @brief Where a reply is written, either as a buffer or as a span. */
+/** @brief Where a reply is written, either as a buffer or as a spat. */
 typedef struct
 {
-    uint8_t *out;      ///< where a reply is written
-    size_t out_len;    ///< what was written
-    size_t cap;        ///< how much room it has
-    mmgr_span *w;      ///< the span a publickey request is built in
+    uint8_t *out;   ///< where a reply is written
+    size_t out_len; ///< what was written
+    size_t cap;     ///< how much room it has
+    mmgr_span *w;   ///< the span a publickey request is built in
 } SshAuthOutArgs;
 
 /** @brief RFC 4252 sec 5 / sec 7: the names one USERAUTH_REQUEST carries, and the key it offers. */
@@ -342,7 +343,7 @@ static const SshAuthNs SshAuth __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_ssh_auth_span(void);
 

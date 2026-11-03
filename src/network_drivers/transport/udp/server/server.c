@@ -11,8 +11,10 @@
  */
 
 #include "network_drivers/transport/udp/server/server.h"
-#include "mmgr/plaintext/plaintext.h"                    // the persistent end this module's state is taken from
 #include "network_drivers/transport/udp/common/common.h" // the wire layout the receive ring carries
+#include "proximus_operor/proximus_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
+#include "spatium/spatium.h"
 
 #include "config/platform/platform.h"                    // the stack's UDP, under our names
 #include "network_drivers/transport/diffserv/diffserv.h" // DSCP marking; compiles out when off
@@ -29,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * One ring, on the receive side: its producer is the stack's trampoline and its consumer is poll().
  * The index pair is single-producer / single-consumer, so both are `_Atomic` and reached only
- * through PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE. A send carries the caller's buffer to the wire
+ * through PROTOCORE_ATOMIC_LOAD / PROTOCORE_ATOMIC_STORE. A send carries the caller's buffer to the wire
  * inside one marshaled call, so nothing queues on the way out.
  */
 typedef struct
@@ -41,15 +43,14 @@ typedef struct
     proto_bool mcast;              ///< The slot joined a group and must leave it on teardown.
 
     uint8_t rx[PROTOCORE_UDP_RX_RING];
-    _Atomic size_t rx_head; ///< Producer: the stack's trampoline.
-    _Atomic size_t rx_tail; ///< Consumer: poll().
+    mmgr_ring ring; ///< Over rx. Producer: the stack's trampoline. Consumer: poll().
 
     protocore_udp_pcb *pcb; ///< The stack's control block; NULL when the slot is free.
 } UdpBind;
 
-static_assert(PROTOCORE_RING_POW2(PROTOCORE_UDP_RX_RING),
+static_assert(MMGR_RING_POW2(PROTOCORE_UDP_RX_RING),
               "PROTOCORE_UDP_RX_RING must be a power of two: a ring index wraps with a mask");
-static_assert(PROTOCORE_MAX_UDP_LISTENERS <= PROTOCORE_RING_SLOTS_MAX,
+static_assert(PROTOCORE_MAX_UDP_LISTENERS <= 32,
               "the bound-slot bitmask (UdpListenerInternal::bound) is a uint32; raise it or fall back to a scan");
 
 /**
@@ -108,10 +109,27 @@ static size_t bind_idx(uint8_t *work)
     return (size_t)(UDP_LISTENER_CTX(work)->slot - UDP_LISTENER_CTX(work)->bind);
 }
 
+/** @brief The bound-mask bit of slot @p idx. */
+static uint32_t bind_bit(size_t idx)
+{
+    return (uint32_t)1u << idx;
+}
+
+/** @brief The bound-mask bits of every slot in the pool. */
+static uint32_t bind_all(void)
+{
+    uint32_t all = 0xFFFFFFFFu;
+    if (PROTOCORE_MAX_UDP_LISTENERS < 32)
+    {
+        all = ((uint32_t)1u << PROTOCORE_MAX_UDP_LISTENERS) - 1u;
+    }
+    return all;
+}
+
 /** @brief True when slot @p idx is bound. */
 static proto_bool bind_used(uint8_t *work, size_t idx)
 {
-    return (PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_bit(idx)) != 0u;
+    return (PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_bit(idx)) != 0u;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -129,7 +147,7 @@ uint8_t *protocore_udp_listener_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_UDP_LISTENER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_UDP_LISTENER_BORROW);
     }
     return s_own.span;
 }
@@ -137,16 +155,16 @@ uint8_t *protocore_udp_listener_span(void)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the bound slot for ns->port, or NULL. */
 static void find_bind(uint8_t *work)
 {
-    uint32_t m = PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
+    uint32_t m = PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
     while (m != 0u)
     {
-        int32_t i = protocore_slot_next(m);
+        const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = m);
         if (UDP_LISTENER_CTX(work)->bind[i].port == UdpListenerV.port)
         {
             UDP_LISTENER_CTX(work)->slot = &UDP_LISTENER_CTX(work)->bind[i];
             return;
         }
-        m &= ~protocore_slot_bit((size_t)i);
+        m &= ~bind_bit((size_t)i);
     }
     UDP_LISTENER_CTX(work)->slot = NULL;
 }
@@ -154,10 +172,13 @@ static void find_bind(uint8_t *work)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the first free slot, or NULL when the pool is full. */
 static void free_bind(uint8_t *work)
 {
-    uint32_t free_slots =
-        ~PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
-    int32_t i = protocore_slot_next(free_slots);
-    UDP_LISTENER_CTX(work)->slot = (i < 0) ? NULL : &UDP_LISTENER_CTX(work)->bind[i];
+    const uint32_t free_slots = ~PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
+    const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = free_slots);
+    UDP_LISTENER_CTX(work)->slot = NULL;
+    if (i >= 0)
+    {
+        UDP_LISTENER_CTX(work)->slot = &UDP_LISTENER_CTX(work)->bind[i];
+    }
 }
 
 /** @brief Reset UDP_LISTENER_CTX(work)->slot's ring and handler state, leaving it free. */
@@ -169,9 +190,7 @@ static void bind_clear(uint8_t *work)
     UDP_LISTENER_CTX(work)->slot->ctx = NULL;
     UDP_LISTENER_CTX(work)->slot->group = empty;
     UDP_LISTENER_CTX(work)->slot->mcast = PROTO_FALSE;
-    protocore_slot_clear(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
-    PROTO_ATOMIC_STORE(&UDP_LISTENER_CTX(work)->slot->rx_head, 0);
-    PROTO_ATOMIC_STORE(&UDP_LISTENER_CTX(work)->slot->rx_tail, 0);
+    atomic_fetch_and_explicit(&UDP_LISTENER_CTX(work)->bound, ~bind_bit(bind_idx(work)), memory_order_release);
 }
 
 // ---------------------------------------------------------------------------
@@ -226,7 +245,7 @@ static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint1
     {
         return PROTO_FALSE;
     }
-    raw.read((uint8_t *)p->payload, data, len);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)p->payload, .at = data, .size = len);
     protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
     protocore_net_pbuf_free(p);
     return e == PROTOCORE_NET_OK;
@@ -262,7 +281,7 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
     protocore_net_addr_to_ip(addr, &d.addr);
     d.port = port;
     d.len = n;
-    if ((PROTOCORE_UDP_DGRAM_HDR + (size_t)n) > protocore_ring_free(&b->rx_head, &b->rx_tail, PROTOCORE_UDP_RX_RING))
+    if ((PROTOCORE_UDP_DGRAM_HDR + (size_t)n) > EMBED_CALL(anularis.vacant, AnularisCfg, .ring = &b->ring))
     {
         protocore_net_pbuf_free(p); // ring full: drop, which is what UDP already means
         return;
@@ -271,15 +290,14 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
     // what the producer's header stage lives in.
     uint8_t *work = protocore_udp_listener_span();
     uint8_t *whdr = UDP_LISTENER_CTX(work)->rx_whdr;
-    protocore_span w = span.from(whdr, PROTOCORE_UDP_DGRAM_HDR);
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = whdr, .cap = PROTOCORE_UDP_DGRAM_HDR);
     protocore_udp_dgram_encode(&w, &d);
-    if (!span.ok(w))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
         protocore_net_pbuf_free(p);
         return;
     }
-    size_t h = PROTO_ATOMIC_LOAD(&b->rx_head);
-    h = protocore_ring_write_span(b->rx, PROTOCORE_UDP_RX_RING, h, whdr, PROTOCORE_UDP_DGRAM_HDR);
+    (void)EMBED_CALL(anularis.put, AnularisCfg, .ring = &b->ring, .src = whdr, .bytes = PROTOCORE_UDP_DGRAM_HDR);
     size_t left = n;
     for (protocore_pbuf *q = p; q != NULL && left > 0; q = q->next)
     {
@@ -288,10 +306,10 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
         {
             take = left;
         }
-        h = protocore_ring_write_span(b->rx, PROTOCORE_UDP_RX_RING, h, (const uint8_t *)q->payload, take);
+        (void)EMBED_CALL(anularis.put, AnularisCfg, .ring = &b->ring, .src = (const uint8_t *)q->payload,
+                         .bytes = take);
         left -= take;
     }
-    PROTO_ATOMIC_STORE(&b->rx_head, h); // one release store publishes the whole entry
     protocore_net_pbuf_free(p);
 }
 
@@ -475,6 +493,8 @@ void protocore_udp_listener_listen(uint8_t *work)
     // The trampoline reads handler and work as soon as recv is armed, so set them first.
     UDP_LISTENER_CTX(work)->slot->handler = UdpListenerV.bind.handler;
     UDP_LISTENER_CTX(work)->slot->ctx = UdpListenerV.bind.handler_ctx;
+    (void)EMBED_CALL(anularis.init, AnularisCfg, .ring = &UDP_LISTENER_CTX(work)->slot->ring,
+                     .buf = UDP_LISTENER_CTX(work)->slot->rx, .capacity = PROTOCORE_UDP_RX_RING, .segment_count = 1u);
     UDP_LISTENER_CTX(work)->slot->port = UdpListenerV.port;
     if (!marshal_op(work, UDP_OP_BIND, UdpListenerV.port, NULL))
     {
@@ -482,7 +502,7 @@ void protocore_udp_listener_listen(uint8_t *work)
         UdpListenerV.ok = PROTO_FALSE;
         return;
     }
-    protocore_slot_mark(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
+    atomic_fetch_or_explicit(&UDP_LISTENER_CTX(work)->bound, bind_bit(bind_idx(work)), memory_order_release);
     UdpListenerV.ok = PROTO_TRUE;
 }
 
@@ -509,13 +529,15 @@ void protocore_udp_listener_listen_multicast(uint8_t *work)
     bind_clear(work);
     UDP_LISTENER_CTX(work)->slot->handler = UdpListenerV.bind.handler;
     UDP_LISTENER_CTX(work)->slot->ctx = UdpListenerV.bind.handler_ctx;
+    (void)EMBED_CALL(anularis.init, AnularisCfg, .ring = &UDP_LISTENER_CTX(work)->slot->ring,
+                     .buf = UDP_LISTENER_CTX(work)->slot->rx, .capacity = PROTOCORE_UDP_RX_RING, .segment_count = 1u);
     UDP_LISTENER_CTX(work)->slot->port = UdpListenerV.port;
     if (!marshal_op(work, UDP_OP_BIND_MCAST, UdpListenerV.port, &group))
     {
         UDP_LISTENER_CTX(work)->slot->handler = NULL;
         return;
     }
-    protocore_slot_mark(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
+    atomic_fetch_or_explicit(&UDP_LISTENER_CTX(work)->bound, bind_bit(bind_idx(work)), memory_order_release);
     UdpListenerV.ok = PROTO_TRUE;
 }
 
@@ -545,9 +567,8 @@ void protocore_udp_listener_poll(uint8_t *work)
         if (bind_used(work, (size_t)i))
         {
             protocore_udp_dgram d = {{PROTOCORE_IP_NONE, {0}}, 0, 0};
-            while (protocore_udp_dgram_take(b->rx, PROTOCORE_UDP_RX_RING, &b->rx_head, &b->rx_tail,
-                                            UDP_LISTENER_CTX(work)->rx_rhdr, &d, UDP_LISTENER_CTX(work)->rx_stage,
-                                            sizeof(UDP_LISTENER_CTX(work)->rx_stage)))
+            while (protocore_udp_dgram_take(&b->ring, UDP_LISTENER_CTX(work)->rx_rhdr, &d,
+                                            UDP_LISTENER_CTX(work)->rx_stage, sizeof(UDP_LISTENER_CTX(work)->rx_stage)))
             {
                 if (b->handler != NULL)
                 {

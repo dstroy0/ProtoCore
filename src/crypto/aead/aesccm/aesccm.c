@@ -26,7 +26,7 @@
 #endif
 #include "crypto/aead/aesccm/aesccm.h"
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // ---------------------------------------------------------------------------
 // AES single-block encrypt seam - one small wrapper, two platform bodies
@@ -41,7 +41,7 @@ typedef struct
 } AesBlk;
 static inline void blk_init(AesBlk *b, const uint8_t *key, size_t key_len)
 {
-    mem.cpy(b->key, key, key_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->key, .src = key, .bytes = key_len);
     b->key_bytes = (unsigned)key_len;
 }
 static inline void blk_enc(const AesBlk *b, const uint8_t in[16], uint8_t out[16])
@@ -103,8 +103,8 @@ static_assert(AESCCM_OFF_END <= PROTOCORE_AESCCM_BORROW,
               "PROTOCORE_AESCCM_BORROW is short of the record context - raise it in protocore_config.h, "
               "which sums it into the secure arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(AESCCM_OFF_CTX % _Alignof(CcmWork) == 0,
@@ -130,9 +130,9 @@ static inline void ecb(const CcmWork *w, const uint8_t in[16], uint8_t out[16])
 static inline void ctr_block(uint8_t A[16], const uint8_t *nonce, size_t nonce_len, size_t i)
 {
     const size_t L = 15 - nonce_len;
-    mem.set(A, 0, 16);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = A, .val = 0, .bytes = 16);
     A[0] = (uint8_t)(L - 1);
-    mem.cpy(A + 1, nonce, nonce_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = A + 1, .src = nonce, .bytes = nonce_len);
     for (size_t j = 0; j < L; j++)
     {
         A[15 - j] = (uint8_t)((i >> (8 * j)) & 0xff);
@@ -144,12 +144,12 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
                     const uint8_t *pt, size_t pt_len)
 {
     const size_t L = 15 - nonce_len;
-    mem.set(w->X, 0, 16);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = w->X, .val = 0, .bytes = 16);
 
-    // B0: flags = 64*Adata + 8*((M-2)/2) + (L-1); then nonce; then Q = pt_len big-endian in L bytes.
-    mem.set(w->blk, 0, 16);
+    // B0: flags = 64*Adata + 8*((M-2)/2) + (L-1); then nonce; then Q = pt_len big-endian in L byteio.
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = w->blk, .val = 0, .bytes = 16);
     w->blk[0] = (uint8_t)((aad_len > 0 ? 0x40 : 0x00) | (((PROTOCORE_AESCCM_TAG_LEN - 2) / 2) << 3) | (L - 1));
-    mem.cpy(w->blk + 1, nonce, nonce_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->blk + 1, .src = nonce, .bytes = nonce_len);
     for (size_t j = 0; j < L; j++)
     {
         w->blk[15 - j] = (uint8_t)((pt_len >> (8 * j)) & 0xff);
@@ -164,7 +164,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
     // into 16-byte blocks and zero-padded.
     if (aad_len > 0)
     {
-        mem.set(w->blk, 0, 16);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = w->blk, .val = 0, .bytes = 16);
         w->blk[0] = (uint8_t)((aad_len >> 8) & 0xff);
         w->blk[1] = (uint8_t)(aad_len & 0xff);
         size_t fill = 2;
@@ -176,7 +176,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
             {
                 take = aad_len - off;
             }
-            mem.cpy(w->blk + fill, aad + off, take);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->blk + fill, .src = aad + off, .bytes = take);
             off += take;
             fill += take;
             for (int i = 0; i < 16; i++)
@@ -184,7 +184,7 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
                 w->X[i] ^= w->blk[i];
             }
             ecb(w, w->X, w->X);
-            mem.set(w->blk, 0, 16);
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = w->blk, .val = 0, .bytes = 16);
             fill = 0;
         }
     }
@@ -193,13 +193,13 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
     size_t off = 0;
     while (off < pt_len)
     {
-        mem.set(w->blk, 0, 16);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = w->blk, .val = 0, .bytes = 16);
         size_t take = pt_len - off;
         if (take > 16)
         {
             take = 16;
         }
-        mem.cpy(w->blk, pt + off, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->blk, .src = pt + off, .bytes = take);
         for (int i = 0; i < 16; i++)
         {
             w->X[i] ^= w->blk[i];
@@ -279,7 +279,8 @@ static proto_bool aesccm_open_record(uint8_t *work, const uint8_t *key, size_t k
     proto_bool ok = protocore_ct_eq(w->blk, tag, PROTOCORE_AESCCM_TAG_LEN);
     if (!ok)
     {
-        mem.set(out, 0, ct_len); // fail closed: no unauthenticated plaintext escapes
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0,
+                   .bytes = ct_len); // fail closed: no unauthenticated plaintext escapes
         return PROTO_FALSE;
     }
     return PROTO_TRUE;

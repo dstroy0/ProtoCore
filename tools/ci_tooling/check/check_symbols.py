@@ -54,7 +54,8 @@ MACRO_LIMIT = 31
 # Foreign names that must never be "corrected": vendor parts and silicon registers whose
 # spelling is fixed by a datasheet. The rename pass learned this the hard way - a blanket
 # PC-prefix sweep would have renamed PCA9685 and the PCR_* register block.
-FOREIGN = re.compile(r"^(PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD)", re.I)
+# EMBED_CALL is embedded_types' macro. types.h restates it for C++, where the name has to stay the same.
+FOREIGN = re.compile(r"^(PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD|EMBED_CALL$)", re.I)
 
 
 def decomment(t):

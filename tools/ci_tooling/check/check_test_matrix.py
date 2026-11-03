@@ -87,7 +87,10 @@ def check():
         for token in src:
             glob = entry_glob(token)
             if glob is not None and not resolve(h, glob, cache):
-                dead.append((name, token))
+                # A submodule's path resolves only where the submodule is checked out, and the
+                # formatting job does not check one out. harness.py and CMake still read it there.
+                if "include/MMgr/" not in token:
+                    dead.append((name, token))
 
         base = base_of(src)
         # A `-<...>` entry re-bases what the interpolation carries, so overlap is not decidable here

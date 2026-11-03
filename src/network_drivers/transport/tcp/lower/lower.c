@@ -12,8 +12,8 @@
 #include "lower.h"
 #include "../protocol/protocol.h" // closing_check: the CLOSE_CHECK op finalizes a drained slot
 #include "config/platform/platform.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_DIFFSERV
 #include "../../diffserv/diffserv.h" // protocore_dscp_to_tos: the DS field byte the SET_TOS op stamps
@@ -235,7 +235,7 @@ uint8_t *protocore_tcp_lower_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TCP_LOWER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_TCP_LOWER_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         TCP_LOWER_CTX(s_own.span)->ttl = PROTOCORE_TCP_TTL;
     }

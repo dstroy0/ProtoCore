@@ -7,7 +7,7 @@ protocore_add_module(network_drivers/network/forward
   DEPS
     network_drivers/physical/physical
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    server/core/worker
+    mmgr
     server/clock
 )

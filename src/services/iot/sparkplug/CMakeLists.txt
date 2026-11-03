@@ -5,8 +5,7 @@ protocore_add_module(services/iot/sparkplug
   GATE PROTOCORE_ENABLE_SPARKPLUG
   SOURCES sparkplug.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    server/core/worker
+    mmgr
     services/iot/protobuf
 )

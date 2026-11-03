@@ -9,7 +9,7 @@ protocore_add_module(network_drivers/tls/record
     crypto/aead/aesgcm
     network_drivers/presentation/http/http3/tls13_msg
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/tls/key_schedule
 )

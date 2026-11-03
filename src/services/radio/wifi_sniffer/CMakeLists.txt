@@ -5,8 +5,8 @@ protocore_add_module(services/radio/wifi_sniffer
   GATE PROTOCORE_ENABLE_WIFI_SNIFFER
   SOURCES wifi_sniffer.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    server/core/worker
+    mmgr
     server/clock
     services/radio/promisc
     shared/pcap

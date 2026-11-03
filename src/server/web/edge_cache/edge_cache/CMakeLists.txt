@@ -6,8 +6,7 @@ protocore_add_module(server/web/edge_cache/edge_cache
   SOURCES edge_cache.c
   PRIVATE_DEPS
     crypto/hash/sha256
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/http/httpcache
     shared/http_date
 )

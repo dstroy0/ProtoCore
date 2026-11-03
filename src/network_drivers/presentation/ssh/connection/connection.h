@@ -115,7 +115,7 @@ int32_t protocore_ssh_sig_build_open_confirm(const SshFlow *f, uint32_t peer_id,
 int32_t protocore_ssh_sig_build_data(SshFlow *f, uint32_t peer_id, const uint8_t *data, size_t len, uint8_t *out,
                                      size_t cap, size_t *out_len);
 
-/** @brief CHANNEL_WINDOW_ADJUST granting @p add more bytes. Credit the window only once this is sent. */
+/** @brief CHANNEL_WINDOW_ADJUST granting @p add more byteio. Credit the window only once this is sent. */
 int32_t protocore_ssh_sig_build_window_adjust(uint32_t peer_id, uint32_t add, uint8_t *out, size_t cap,
                                               size_t *out_len);
 
@@ -863,7 +863,7 @@ static const SshConnectionNs SshConnection __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_ssh_connection_span(void);
 

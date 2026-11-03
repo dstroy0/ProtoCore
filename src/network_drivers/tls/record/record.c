@@ -6,7 +6,9 @@
  * @brief TLS 1.3 record layer over a reliable stream (RFC 8446 sec 5). See record.h.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_TLS
 
@@ -14,9 +16,9 @@
 
 #include "crypto/aead/aes128gcm/aes128gcm.h" // Aes128Gcm - the 0x1301 record AEAD
 #include "crypto/aead/aesgcm/aesgcm.h"       // AesGcm - the 0x1302 record AEAD
-#include "mmgr/protomem/protomem.h"          // mem.cpy / mem.zero
-#include "mmgr/secure/secure.h"              // the secure pool: key/iv material during derivation
+#include "memoria_operor/memoria_operor.h"   // memor.cpy / memor.set
 #include "network_drivers/tls/key_schedule/key_schedule.h"
+#include "server/core/worker/worker.h" // the secure pool: key/iv material during derivation
 
 /**
  * @brief The record layer's calls - what TlsRecordNs points at.
@@ -29,7 +31,7 @@
 // DTLS, which is why those three record layers agree on the shape and differ only in the counter.
 static void build_nonce(TlsRecordKeys *keys)
 {
-    mem.cpy(keys->nonce, keys->iv, PROTOCORE_TLS_RECORD_IV_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = keys->nonce, .src = keys->iv, .bytes = PROTOCORE_TLS_RECORD_IV_LEN);
     for (int i = 0; i < 8; i++)
     {
         keys->nonce[PROTOCORE_TLS_RECORD_IV_LEN - 1 - i] ^= (uint8_t)(keys->seq >> (8 * i));
@@ -183,28 +185,34 @@ void protocore_tls_record_keys_derive(uint8_t *work)
     // afterwards, so no raw key stays resident. The HKDF's own bytes are the wider suite's, since the
     // schedule under a SHA-384 connection runs HKDF-SHA384.
     const size_t key_len = cipher_key_len(out->cipher);
-    const size_t mark = protocore_secure_mark();
-    protocore_span k = protocore_secure_span(key_len, 8);
-    protocore_span ws = protocore_secure_span(PROTOCORE_HKDF_SHA384_BORROW, _Alignof(uint32_t));
-    if (!span.ok(k) || !span.ok(ws))
+    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span k =
+        EMBED_CALL(spat.from, SpatiumCfg,
+                   .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(key_len, protocore_secure_owner()),
+                   .cap = key_len);
+    mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
+                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
+                                  PROTOCORE_HKDF_SHA384_BORROW, protocore_secure_owner()),
+                              .cap = PROTOCORE_HKDF_SHA384_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = k) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_release(mark);
-        mem.zero(out->iv, sizeof(out->iv));
+        protocore_secure_guard()->temporary_buf_release(mark);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = out->iv, .bytes = sizeof(out->iv), .val = 0);
         return; // no key material: every protect/unprotect below fails closed on the unkeyed context
     }
     expand_label(work, out->cipher, ws.buf, TlsRecordV.key.secret, "key", k.buf, key_len);
     expand_label(work, out->cipher, ws.buf, TlsRecordV.key.secret, "iv", out->iv, sizeof(out->iv));
     // The arm may refuse the key; without a keyed context every record operation must refuse too.
     out->ready = aead_key_init(out->cipher, out->gcm, k.buf);
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
 }
 
 void protocore_tls_record_keys_wipe(uint8_t *work)
 {
     TlsRecordKeys *keys = TlsRecordV.key.keys;
     aead_key_wipe(keys->cipher, keys->gcm);
-    protocore_secure_wipe(keys->iv, sizeof(keys->iv));
-    protocore_secure_wipe(keys->nonce, sizeof(keys->nonce));
+    mmgr_zero_buf(keys->iv, sizeof(keys->iv));
+    mmgr_zero_buf(keys->nonce, sizeof(keys->nonce));
     keys->ready = PROTO_FALSE;
     keys->seq = 0;
 }
@@ -226,7 +234,8 @@ void protocore_tls_record_plaintext_build(uint8_t *work)
     hdr_write(out, TlsRecordV.content_type, frag_len);
     if (frag_len != 0)
     {
-        mem.cpy(out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN, TlsRecordV.plain.fragment, frag_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN,
+                   .src = TlsRecordV.plain.fragment, .bytes = frag_len);
     }
     TlsRecordV.n = total;
 }
@@ -292,7 +301,7 @@ void protocore_tls_record_protect(uint8_t *work)
     // Assemble the inner plaintext where it will be sealed (seal permits out == pt).
     if (pt_len != 0)
     {
-        mem.cpy(out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN, pt, pt_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + PROTOCORE_TLS_PLAINTEXT_HDR_LEN, .src = pt, .bytes = pt_len);
     }
     out[PROTOCORE_TLS_PLAINTEXT_HDR_LEN + pt_len] = content_type;
 

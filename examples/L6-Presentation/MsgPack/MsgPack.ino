@@ -60,11 +60,12 @@ static size_t protocore_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 
 // Decodes a posted MessagePack map of {string: integer} and echoes each parsed
 // field as "key=value" text. Shows the cursor decoder: read the map header, then
-// each key (str) and value (int), checking protocore_cspan_ok() at the end.
+// each key (str) and value (int), checking r.err at the end.
 static void on_decode(uint8_t id, HttpReq *req)
 {
-    protocore_cspan r;
-    r = protocore_cspan_from(req->body, req->body_len);
+    mmgr_cspan r;
+    const SpatiumCfg r_args = {.cbuf = req->body, .cap = req->body_len};
+    r = spat.cfrom(&r_args);
     size_t count;
     if (!MsgPack.get_map(&r, &count))
     {
@@ -73,7 +74,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     }
     char out[160];
     size_t o = 0;
-    for (size_t i = 0; i < count && protocore_cspan_ok(r); i++)
+    for (size_t i = 0; i < count && !r.err; i++)
     {
         const char *key;
         size_t klen;
@@ -84,7 +85,7 @@ static void on_decode(uint8_t id, HttpReq *req)
         }
         o += snprintf(out + o, sizeof(out) - o, "%.*s=%lld\n", (int)klen, key, (long long)val);
     }
-    if (!protocore_cspan_ok(r))
+    if (r.err)
     {
         send_text(id, 400, "text/plain", "malformed MessagePack");
         return;
@@ -95,21 +96,24 @@ static void on_decode(uint8_t id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    while (!protocore_physical_wifi_up())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ipv4(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     on_http("/telemetry.msgpack", HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
-        protocore_span w;
-        w = protocore_span_from(ctx.buf, sizeof(ctx.buf));
+        mmgr_span w;
+        const SpatiumCfg w_args = {.buf = ctx.buf, .cap = sizeof(ctx.buf)};
+        w = spat.from(&w_args);
         MsgPack.put_map(&w, 3);
         MsgPack.put_str(&w, "heap");
         MsgPack.put_uint(&w, ESP.getFreeHeap());
@@ -117,7 +121,7 @@ void setup()
         MsgPack.put_uint(&w, millis() / 1000);
         MsgPack.put_str(&w, "rssi");
         MsgPack.put_int(&w, Physical.wifi->rssi());
-        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
+        ctx.len = w.overflow ? 0 : w.pos;
         ctx.off = 0;
         send_chunked(id, 200, "application/msgpack", protocore_msgpack_source, &ctx);
     });

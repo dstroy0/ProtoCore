@@ -7,6 +7,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 #include "server/clock/clock.h"
 #include "server/core/proto_handler/proto_handler.h"
 #include <unity.h>
@@ -25,9 +26,7 @@ static void push_to_slot(uint8_t slot, const char *data)
     TcpConn *s = &conn_pool[slot];
     for (size_t i = 0; data[i]; i++)
     {
-        size_t next = (s->rx_head + 1) % RX_BUF_SIZE;
-        s->rx_buffer[s->rx_head] = (uint8_t)data[i];
-        s->rx_head = next;
+        rx_put(s, (uint8_t)((uint8_t)data[i]));
     }
 }
 

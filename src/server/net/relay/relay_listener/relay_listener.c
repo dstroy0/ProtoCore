@@ -11,11 +11,11 @@
 
 #if PROTOCORE_ENABLE_RELAY
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "server/net/relay/relay_listener/relay_listener.h"
 
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
 #include "network_drivers/transport/tcp/client/client.h"     // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
@@ -60,8 +60,8 @@ static_assert(RELAY_LISTENER_OFF_CTX + sizeof(RelayListenerCtx) <= PROTOCORE_REL
               "PROTOCORE_RELAY_LISTENER_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(RELAY_LISTENER_OFF_CTX % _Alignof(RelayListenerCtx) == 0,
@@ -336,7 +336,7 @@ uint8_t *protocore_relay_listener_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_RELAY_LISTENER_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_RELAY_LISTENER_BORROW);
     }
     return s_own.span;
 }
@@ -348,7 +348,7 @@ proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, 
     {
         return PROTO_FALSE;
     }
-    size_t hl = str.len(origin_host, PROTOCORE_RELAY_HOST_MAX + 1);
+    size_t hl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = origin_host, .cap = PROTOCORE_RELAY_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_RELAY_HOST_MAX)
     {
         return PROTO_FALSE;
@@ -368,7 +368,8 @@ proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, 
     }
     RELAY_LISTENER_CTX(work)->binds[idx].active = PROTO_TRUE;
     RELAY_LISTENER_CTX(work)->binds[idx].listener_id = listener_id;
-    mem.cpy(RELAY_LISTENER_CTX(work)->binds[idx].host, origin_host, hl + 1);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = RELAY_LISTENER_CTX(work)->binds[idx].host, .src = origin_host,
+               .bytes = hl + 1);
     RELAY_LISTENER_CTX(work)->binds[idx].port = origin_port;
     if (!RELAY_LISTENER_CTX(work)->registered)
     {

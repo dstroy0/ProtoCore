@@ -7,7 +7,6 @@ protocore_add_module(services/iot/senml
   DEPS
     network_drivers/presentation/codec
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/span
+    mmgr
     network_drivers/presentation/codec/json
 )

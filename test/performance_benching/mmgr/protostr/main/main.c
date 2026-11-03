@@ -1,9 +1,9 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// CCOUNT microbenchmark for the bounded-run search (mmgr/protostr).
+// CCOUNT microbenchmark for the bounded-run search (cellularum_laboro/cellularum_laboro.h).
 //
-// str.find dispatches on the needle's length and the shapes cost differently: one byte needs no
+// cellul.find dispatches on the needle's length and the shapes cost differently: one byte needs no
 // funnel, no lookahead word and no extent mask; two or three settle every start position in a word
 // at once through a mask chain; past that the anchor+verify body walks candidate lanes out of a
 // mask, which is the only shape whose cost depends on what the haystack holds. Each is timed
@@ -12,8 +12,8 @@
 //
 // The haystack is 32 KB of repeated request headers, long enough that the word loops rather than the
 // call dominate, with a marker planted at a known head and tail offset.
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "device_bench.h"
-#include "mmgr/protostr/protostr.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -53,32 +53,47 @@ void dbench_run(void)
 
         // One byte: the match mask and the terminator mask are the same shape, so whichever names
         // the lower lane settles it. ':' recurs every few bytes, '~' never occurs.
-        DBENCH_OP("find 1B hit head", 2000, sink += (uintptr_t)str.find(hay, HAY_LEN, ":", sizeof(":"), PROTO_FALSE));
-        DBENCH_OP("find 1B miss 32K", 2000, sink += (uintptr_t)str.find(hay, HAY_LEN, "~", sizeof("~"), PROTO_FALSE));
+        DBENCH_OP("find 1B hit head", 2000,
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = ":",
+                                                .other_cap = sizeof(":"), .ci = PROTO_FALSE));
+        DBENCH_OP("find 1B miss 32K", 2000,
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = "~",
+                                                .other_cap = sizeof("~"), .ci = PROTO_FALSE));
 
         // Two and three bytes: one chain of shifted masks decides every start in the word, at a cost
         // per word that does not depend on what the haystack holds. "zqx" never occurs, so the miss
         // times that chain with no candidate ever reaching a verify.
         DBENCH_OP("find 2B hit head", 2000,
-                  sink += (uintptr_t)str.find(hay, HAY_LEN, "\r\n", sizeof("\r\n"), PROTO_FALSE));
-        DBENCH_OP("find 2B miss 32K", 2000, sink += (uintptr_t)str.find(hay, HAY_LEN, "zq", sizeof("zq"), PROTO_FALSE));
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
+                                                .other = "\r\n", .other_cap = sizeof("\r\n"), .ci = PROTO_FALSE));
+        DBENCH_OP("find 2B miss 32K", 2000,
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = "zq",
+                                                .other_cap = sizeof("zq"), .ci = PROTO_FALSE));
         DBENCH_OP("find 3B miss 32K", 2000,
-                  sink += (uintptr_t)str.find(hay, HAY_LEN, "zqx", sizeof("zqx"), PROTO_FALSE));
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
+                                                .other = "zqx", .other_cap = sizeof("zqx"), .ci = PROTO_FALSE));
 
         // Past three: the anchor mask, then a candidate walked out of it per set lane.
         DBENCH_OP("find 13B hit head", 2000,
-                  sink += (uintptr_t)str.find(hay, HAY_LEN, MARK, sizeof(MARK), PROTO_FALSE));
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = MARK,
+                                                .other_cap = sizeof(MARK), .ci = PROTO_FALSE));
         DBENCH_OP("find 13B miss 32K", 2000,
-                  sink += (uintptr_t)str.find(hay, HAY_LEN, "X-Marker-Herz", sizeof("X-Marker-Herz"), PROTO_FALSE));
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
+                                                .other = "X-Marker-Herz", .other_cap = sizeof("X-Marker-Herz"),
+                                                .ci = PROTO_FALSE));
 
         // Case folding runs the same walk on a folded syndrome.
         DBENCH_OP("find 13B hit head ci", 2000,
-                  sink += (uintptr_t)str.find(hay, HAY_LEN, "x-marker-here", sizeof("x-marker-here"), PROTO_TRUE));
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
+                                                .other = "x-marker-here", .other_cap = sizeof("x-marker-here"),
+                                                .ci = PROTO_TRUE));
         DBENCH_OP("find 13B miss 32K ci", 2000,
-                  sink += (uintptr_t)str.find(hay, HAY_LEN, "x-marker-herz", sizeof("x-marker-herz"), PROTO_TRUE));
+                  sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
+                                                .other = "x-marker-herz", .other_cap = sizeof("x-marker-herz"),
+                                                .ci = PROTO_TRUE));
 
         // What walking the same 32 KB costs with no matching to do, as the floor the scans sit above.
-        DBENCH_OP("len 32K", 2000, sink += str.len(hay, HAY_LEN + 1u));
+        DBENCH_OP("len 32K", 2000, sink += EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN + 1u));
 
         (void)sink;
         DBENCH_DONE();

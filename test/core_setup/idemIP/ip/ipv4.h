@@ -5,7 +5,7 @@
  * @file ipv4.h
  * @brief The internet header, RFC 791 sec 3.1.
  *
- * Field offsets and the masks that split the packed ones, read out of the caller's bytes. Nothing
+ * Field offsets and the masks that split the packed ones, read out of the caller's byteio. Nothing
  * here stores or moves anything.
  */
 

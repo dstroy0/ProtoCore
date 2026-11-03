@@ -5,9 +5,8 @@ protocore_add_module(network_drivers/transport/tcp/client
   GATE PROTOCORE_ENABLE_TCP_CLIENT
   SOURCES client.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/ring
+    server/core/worker
+    mmgr
     network_drivers/network/dns/dns_resolver
     network_drivers/transport/diffserv
     network_drivers/transport/tcp/lower

@@ -7,9 +7,8 @@ protocore_add_module(network_drivers/application/ntp_server
   DEPS
     network_drivers/application/ntp
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/plaintext
-    mmgr/protomem
+    server/core/worker
+    mmgr
     network_drivers/transport/udp/server
     server/clock
     services/timing_position/time_source

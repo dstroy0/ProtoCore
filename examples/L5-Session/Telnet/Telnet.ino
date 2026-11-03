@@ -25,7 +25,7 @@
 #define PROTOCORE_ENABLE_TELNET 1
 
 #include "protocore.h"
-#include "mmgr/protoframe/protoframe.h"
+#include "numeros_scribo/numeros_scribo.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/telnet/telnet.h"
 
@@ -36,10 +36,10 @@ static const char *PASSWORD = "YOUR_PASSWORD";
 // Each reply's shape is a table, declared once. The library builds it by walking the table, so
 // nothing parses a format string at runtime and no line can come out half-written.
 // The fields are {kind, width, literal length, literal}; a valued field takes one argument below.
-static const protocore_field REPLY_HEAP[] = {
-    {PROTOCORE_FK_LIT, 0, 11, "free heap: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 8, " bytes\r\n"}, PROTOCORE_END};
-static const protocore_field REPLY_UPTIME[] = {{PROTOCORE_FK_LIT, 0, 8, "uptime: "}, PROTOCORE_U32, {PROTOCORE_FK_LIT, 0, 5, " ms\r\n"}, PROTOCORE_END};
-static const protocore_field REPLY_ECHO[] = {{PROTOCORE_FK_LIT, 0, 6, "echo: "}, PROTOCORE_STR, {PROTOCORE_FK_LIT, 0, 2, "\r\n"}, PROTOCORE_END};
+static const mmgr_field REPLY_HEAP[] = {
+    {MMGR_FK_LIT, 0, 11, "free heap: "}, MMGR_U32, {MMGR_FK_LIT, 0, 8, " bytes\r\n"}, MMGR_END};
+static const mmgr_field REPLY_UPTIME[] = {{MMGR_FK_LIT, 0, 8, "uptime: "}, MMGR_U32, {MMGR_FK_LIT, 0, 5, " ms\r\n"}, MMGR_END};
+static const mmgr_field REPLY_ECHO[] = {{MMGR_FK_LIT, 0, 6, "echo: "}, MMGR_STR, {MMGR_FK_LIT, 0, 2, "\r\n"}, MMGR_END};
 
 void on_command(const char *line, uint8_t conn_id)
 {
@@ -50,29 +50,31 @@ void on_command(const char *line, uint8_t conn_id)
     }
     else if (strcmp(line, "heap") == 0)
     {
-        Telnet.frame(REPLY_HEAP, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ESP.getFreeHeap())}, 1);
+        Telnet.frame(REPLY_HEAP, (const mmgr_fval[]){MMGR_VU32((uint32_t)ESP.getFreeHeap())}, 1);
     }
     else if (strcmp(line, "uptime") == 0)
     {
-        Telnet.frame(REPLY_UPTIME, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)millis())}, 1);
+        Telnet.frame(REPLY_UPTIME, (const mmgr_fval[]){MMGR_VU32((uint32_t)millis())}, 1);
     }
     else if (line[0])
     {
-        Telnet.frame(REPLY_ECHO, (const protocore_fval[]){PROTOCORE_VSTR(line)}, 1);
+        Telnet.frame(REPLY_ECHO, (const mmgr_fval[]){MMGR_VSTR(line)}, 1);
     }
 }
 
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    while (!protocore_physical_wifi_up())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ipv4(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("\nIP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

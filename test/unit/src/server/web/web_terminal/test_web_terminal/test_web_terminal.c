@@ -3,6 +3,7 @@
 //
 #include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "numeros_scribo/numeros_scribo.h"
 #include "protocore.h"
 #include "server/web/web_terminal/web_terminal.h"
 #include <stdio.h>
@@ -165,9 +166,10 @@ void test_printf_broadcast()
 {
     do_handshake(0);
     tcp_capture_reset();
-    static const protocore_field COUNT[] = {{PROTOCORE_FK_LIT, 0, 6, "count="}, PROTOCORE_U32, PROTOCORE_END};
+    static const mmgr_field COUNT[] = {{MMGR_FK_LIT, 0, 6, "count="}, MMGR_U32, MMGR_END};
     char out[32];
-    frame.build(out, sizeof(out), COUNT, (const protocore_fval[]){PROTOCORE_VU32(7u)}, 1);
+    EMBED_CALL(numer.build, NumerosCfg, .out = out, .cap = sizeof(out), .spec = COUNT,
+               .vals = (const mmgr_fval[]){MMGR_VU32(7u)}, .nvals = 1);
     WebTerminalV.print_args.s = out;
     WebTerminal.print(protocore_web_terminal_span());
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "count=7"));
@@ -218,9 +220,10 @@ void test_api_inert_before_begin()
     WebTerminal.print(protocore_web_terminal_span());
     WebTerminalV.println_args.s = "early";
     WebTerminal.println(protocore_web_terminal_span());
-    static const protocore_field EARLY[] = {{PROTOCORE_FK_LIT, 0, 6, "early "}, PROTOCORE_U32, PROTOCORE_END};
+    static const mmgr_field EARLY[] = {{MMGR_FK_LIT, 0, 6, "early "}, MMGR_U32, MMGR_END};
     char out[32];
-    frame.build(out, sizeof(out), EARLY, (const protocore_fval[]){PROTOCORE_VU32(1u)}, 1);
+    EMBED_CALL(numer.build, NumerosCfg, .out = out, .cap = sizeof(out), .spec = EARLY,
+               .vals = (const mmgr_fval[]){MMGR_VU32(1u)}, .nvals = 1);
     WebTerminalV.print_args.s = out;
     WebTerminal.print(protocore_web_terminal_span());
     TEST_ASSERT_EQUAL_size_t(0, strlen(tcp_captured()));

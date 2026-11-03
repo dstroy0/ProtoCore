@@ -11,18 +11,19 @@
  * matched route carries auth.
  */
 
-#include "crypto/ct_eq/ct_eq.h"        // protocore_ct_eq
-#include "crypto/hash/sha256/sha256.h" // protocore_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
-#include "mmgr/membuild/membuild.h"    // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"    // mem.chr: a span scan, for the decoded credential that carries NULs
-#include "mmgr/protostr/protostr.h"    // str.len / find / starts / eq / copy
-#include "mmgr/secure/secure.h"        // the credential table is key material
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len / find / starts / eq / copy
+#include "crypto/ct_eq/ct_eq.h"                  // protocore_ct_eq
+#include "crypto/hash/sha256/sha256.h"           // protocore_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
+#include "memoria_operor/memoria_operor.h"       // memor.chr: a span scan, for the decoded credential that carries NULs
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.decode (Basic)
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a challenge writes on
 #include "protocore.h"
-#include "server/clock/clock.h" // protocore_millis() for the stateless nonce
-#include "shared/hex/hex.h"     // protocore_hex_encode/decode
+#include "proximus_operor/proximus_operor.h"
+#include "server/clock/clock.h"        // protocore_millis() for the stateless nonce
+#include "server/core/worker/worker.h" // the credential table is key material
+#include "shared/hex/hex.h"            // protocore_hex_encode/decode
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 // ---------------------------------------------------------------------------
 // Basic Auth helpers
@@ -40,13 +41,14 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
     // Every step is measured against `end` rather than against the capacity: a remaining length
     // computed as cap-minus-offset underflows the moment a cursor passes the end, and an unsigned
     // underflow hands the search a bound of nearly the whole address space.
-    const size_t klen = str.len(key, 32);
+    const size_t klen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = 32);
     const char *const end = hdr + hdr_cap;
     const char *p = hdr;
 
     while (p < end)
     {
-        p = str.find(p, (size_t)(end - p), key, klen + 1u, PROTO_FALSE);
+        p = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p, .cap = (size_t)(end - p), .other = key,
+                       .other_cap = klen + 1u, .ci = PROTO_FALSE);
         if (p == NULL)
         {
             return PROTO_FALSE;
@@ -76,7 +78,8 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
             {
                 return PROTO_FALSE;
             }
-            ve = str.find(vs, (size_t)(end - vs), "\"", 2u, PROTO_FALSE);
+            ve = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = vs, .cap = (size_t)(end - vs), .other = "\"",
+                            .other_cap = 2u, .ci = PROTO_FALSE);
             if (!ve)
             {
                 return PROTO_FALSE;
@@ -96,7 +99,7 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
         {
             vlen = out_size - 1;
         }
-        raw.read(out, vs, vlen);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = out, .at = vs, .size = vlen);
         out[vlen] = '\0';
         return PROTO_TRUE;
     }
@@ -162,7 +165,7 @@ uint8_t *protocore_http_auth_span(void)
 {
     if (s_span == NULL)
     {
-        s_span = protocore_secure_persist_span(PROTOCORE_HTTP_AUTH_BORROW).buf;
+        s_span = (uint8_t *)protocore_secure_persist(PROTOCORE_HTTP_AUTH_BORROW);
     }
     return s_span;
 }
@@ -190,9 +193,9 @@ void protocore_auth_add(uint8_t *work)
         return;
     }
     AuthCred *c = &a->cred[a->count];
-    (void)str.copy(c->realm, AuthV.cred.realm, MAX_AUTH_LEN);
-    (void)str.copy(c->user, AuthV.cred.user, MAX_AUTH_LEN);
-    (void)str.copy(c->pass, AuthV.cred.pass, MAX_AUTH_LEN);
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = c->realm, .src = AuthV.cred.realm, .cap = MAX_AUTH_LEN);
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = c->user, .src = AuthV.cred.user, .cap = MAX_AUTH_LEN);
+    (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = c->pass, .src = AuthV.cred.pass, .cap = MAX_AUTH_LEN);
     c->digest = AuthV.cred.digest;
     AuthV.u8 = a->count++;
 }
@@ -211,15 +214,16 @@ void protocore_auth_rekey(uint8_t *work)
     for (int i = 0; i < 4; i++)
     {
         uint32_t r = protocore_platform_rand_u32();
-        raw.put_u32(seed + i * 4, r);
+        EMBED_CALL(proxim.put32, ProximusCfg, .dst = seed + i * 4, .val = r);
     }
     uint32_t c = counter;
     uint32_t t = (uint32_t)Clock.ms;
-    raw.put_u32(seed + 16, c);
-    raw.put_u32(seed + 20, t);
+    EMBED_CALL(proxim.put32, ProximusCfg, .dst = seed + 16, .val = c);
+    EMBED_CALL(proxim.put32, ProximusCfg, .dst = seed + 20, .val = t);
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     Sha256.hash(AUTH_SHA(work), seed, sizeof(seed), d);
-    raw.read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = a->digest_secret, .at = d,
+               .size = sizeof(a->digest_secret)); // first 128 bits
 }
 
 // Stateless Digest nonce (RFC 7616 3.3): "<issue_ms_hex>.<mac_hex>" where the MAC
@@ -230,8 +234,9 @@ void protocore_auth_rekey(uint8_t *work)
 static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t issue, char *mac_hex)
 {
     uint8_t material[20];
-    raw.read(material, secret, 16);
-    raw.put_u32(material + 16, issue); // endian-symmetric: minted and verified the same way
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = material, .at = secret, .size = 16);
+    EMBED_CALL(proxim.put32, ProximusCfg, .dst = material + 16,
+               .val = issue); // endian-symmetric: minted and verified the same way
     uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
     Sha256.hash(AUTH_SHA(work), material, sizeof(material), d);
     HexV.io.in = d;
@@ -255,11 +260,11 @@ void protocore_auth_mint_nonce(uint8_t *work)
     Hex.encode(work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
     digest_nonce_mac(work, AUTH_TABLE(work)->digest_secret, issue, mac_hex);
-    protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
-    Sb.put(&sb_out, issue_hex);
-    Sb.put(&sb_out, ".");
-    Sb.put(&sb_out, mac_hex);
-    if (Sb.finish(&sb_out) == 0)
+    size_t sb_out = 0;
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = issue_hex);
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = ".");
+    sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = mac_hex);
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb_out) == 0)
     {
         out[0] = '\0';
     }
@@ -271,7 +276,7 @@ void protocore_auth_verify_nonce(uint8_t *work)
     AuthV.expired = PROTO_FALSE;
     AuthV.ok = PROTO_FALSE;
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
-    if (str.len(nonce, 42) != 8 + 1 + 32 || nonce[8] != '.')
+    if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = nonce, .cap = 42) != 8 + 1 + 32 || nonce[8] != '.')
     {
         return;
     }
@@ -335,26 +340,38 @@ void protocore_auth_challenge(uint8_t *work)
         AuthV.nonce_args.out = nonce;
         AuthV.nonce_args.cap = sizeof(nonce);
         protocore_auth_mint_nonce(work); // a fresh, timestamped nonce per challenge
-        protocore_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
-        Sb.put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
-        Sb.put(&sb_challenge, c->realm);
-        Sb.put(&sb_challenge, "\", qop=\"auth\", algorithm=SHA-256, nonce=\"");
-        Sb.put(&sb_challenge, nonce);
-        Sb.put(&sb_challenge, "\"");
-        Sb.put(&sb_challenge, stale ? ", stale=true" : "");
-        Sb.put(&sb_challenge, "\r\n");
-        if (Sb.finish(&sb_challenge) == 0)
+        size_t sb_challenge = 0;
+        sb_challenge = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                  .at = sb_challenge, .text = "WWW-Authenticate: Digest realm=\"");
+        sb_challenge = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                  .at = sb_challenge, .text = c->realm);
+        sb_challenge = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                  .at = sb_challenge, .text = "\", qop=\"auth\", algorithm=SHA-256, nonce=\"");
+        sb_challenge = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                  .at = sb_challenge, .text = nonce);
+        sb_challenge = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                  .at = sb_challenge, .text = "\"");
+        sb_challenge = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                  .at = sb_challenge, .text = stale ? ", stale=true" : "");
+        sb_challenge = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                  .at = sb_challenge, .text = "\r\n");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = challenge, .cap = sizeof(challenge),
+                       .at = sb_challenge) == 0)
         {
             challenge[0] = '\0';
         }
     }
     else
     {
-        protocore_sb sb_challenge2 = {challenge, sizeof(challenge), 0, PROTO_TRUE};
-        Sb.put(&sb_challenge2, "WWW-Authenticate: Basic realm=\"");
-        Sb.put(&sb_challenge2, c->realm);
-        Sb.put(&sb_challenge2, "\"\r\n");
-        if (Sb.finish(&sb_challenge2) == 0)
+        size_t sb_challenge2 = 0;
+        sb_challenge2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                   .at = sb_challenge2, .text = "WWW-Authenticate: Basic realm=\"");
+        sb_challenge2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                   .at = sb_challenge2, .text = c->realm);
+        sb_challenge2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = challenge, .cap = sizeof(challenge),
+                                   .at = sb_challenge2, .text = "\"\r\n");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = challenge, .cap = sizeof(challenge),
+                       .at = sb_challenge2) == 0)
         {
             challenge[0] = '\0';
         }
@@ -365,16 +382,25 @@ void protocore_auth_challenge(uint8_t *work)
 
     static const char body[] = "Unauthorized";
     char header[RESP_HDR_BUF_SIZE];
-    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header, "HTTP/1.1 401 Unauthorized\r\n");
-    Sb.put(&sb_header, challenge);
-    Sb.put(&sb_header, "Content-Type: text/plain\r\nContent-Length: ");
-    Sb.i64(&sb_header, (int64_t)((int)(sizeof(body) - 1)));
-    Sb.put(&sb_header, "\r\n");
-    Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-    Sb.put(&sb_header, cl);
-    Sb.put(&sb_header, "\r\n");
-    int hlen = (int)Sb.finish(&sb_header);
+    size_t sb_header = 0;
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "HTTP/1.1 401 Unauthorized\r\n");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = challenge);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "Content-Type: text/plain\r\nContent-Length: ");
+    sb_header = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .sval = (int64_t)((int)(sizeof(body) - 1)));
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\n");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    sb_header =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header, .text = cl);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\n");
+    int hlen =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header);
 
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
@@ -406,7 +432,8 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     (void)slot_id;
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Authorization");
     const char *auth_hdr = http_parser_text;
-    if (!auth_hdr || !str.starts(auth_hdr, "Basic ", sizeof("Basic "), PROTO_FALSE))
+    if (!auth_hdr || !EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = auth_hdr, .other = "Basic ",
+                                 .cap = sizeof("Basic "), .ci = PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -425,7 +452,7 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     }
     decoded[n] = '\0';
 
-    const char *colon = (const char *)mem.chr(decoded, n, ':');
+    const char *colon = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = decoded, .bytes = n, .val = ':');
     if (!colon)
     {
         return PROTO_FALSE;
@@ -438,8 +465,10 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     // Length-bounded, constant-time compare of BOTH fields (never strcmp): an embedded NUL in the decoded
     // credential must not truncate the submitted password ("pass\0junk" must not equal "pass"), and the
     // byte compare must run to completion so it does not leak how many leading bytes matched.
-    proto_bool user_ok = (ulen == str.len(c->user, MAX_AUTH_LEN)) && protocore_ct_eq(decoded, c->user, ulen);
-    proto_bool pass_ok = (plen == str.len(c->pass, MAX_AUTH_LEN)) && protocore_ct_eq(pass, c->pass, plen);
+    proto_bool user_ok = (ulen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->user, .cap = MAX_AUTH_LEN)) &&
+                         protocore_ct_eq(decoded, c->user, ulen);
+    proto_bool pass_ok = (plen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->pass, .cap = MAX_AUTH_LEN)) &&
+                         protocore_ct_eq(pass, c->pass, plen);
     return user_ok && pass_ok;
 }
 
@@ -452,7 +481,8 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     // Use the full-length Authorization capture (the scratch header value is
     // capped at MAX_VAL_LEN, far shorter than a Digest header).
     const char *hdr = req->authorization;
-    if (!str.starts(hdr, "Digest ", sizeof("Digest "), PROTO_FALSE))
+    if (!EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = hdr, .other = "Digest ", .cap = sizeof("Digest "),
+                    .ci = PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -477,7 +507,8 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     }
 
     // Identity + challenge binding must match before any hashing.
-    if (!str.eq(username, c->user, sizeof(username), PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = username, .other = c->user, .cap = sizeof(username),
+                    .ci = PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -491,7 +522,7 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     {
         return PROTO_FALSE;
     }
-    if (!str.eq(qop, "auth", sizeof("auth"), PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = qop, .other = "auth", .cap = sizeof("auth"), .ci = PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -502,25 +533,29 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     char target[MAX_PATH_LEN + MAX_QUERY_LEN + 2];
     if (req->query[0])
     {
-        protocore_sb sb_target = {target, sizeof(target), 0, PROTO_TRUE};
-        Sb.put(&sb_target, req->path);
-        Sb.put(&sb_target, "?");
-        Sb.put(&sb_target, req->query);
-        if (Sb.finish(&sb_target) == 0)
+        size_t sb_target = 0;
+        sb_target = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = target, .cap = sizeof(target), .at = sb_target,
+                               .text = req->path);
+        sb_target = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = target, .cap = sizeof(target), .at = sb_target,
+                               .text = "?");
+        sb_target = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = target, .cap = sizeof(target), .at = sb_target,
+                               .text = req->query);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = target, .cap = sizeof(target), .at = sb_target) == 0)
         {
             target[0] = '\0';
         }
     }
     else
     {
-        protocore_sb sb_target2 = {target, sizeof(target), 0, PROTO_TRUE};
-        Sb.put(&sb_target2, req->path);
-        if (Sb.finish(&sb_target2) == 0)
+        size_t sb_target2 = 0;
+        sb_target2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = target, .cap = sizeof(target),
+                                .at = sb_target2, .text = req->path);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = target, .cap = sizeof(target), .at = sb_target2) == 0)
         {
             target[0] = '\0';
         }
     }
-    if (!str.eq(uri, target, sizeof(uri), PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = uri, .other = target, .cap = sizeof(uri), .ci = PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
@@ -530,40 +565,57 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     char ha2[65];
     char expected[65];
 
-    protocore_sb sb_tmp = {tmp, sizeof(tmp), 0, PROTO_TRUE};
-    Sb.put(&sb_tmp, c->user);
-    Sb.put(&sb_tmp, ":");
-    Sb.put(&sb_tmp, c->realm);
-    Sb.put(&sb_tmp, ":");
-    Sb.put(&sb_tmp, c->pass);
-    int n = (int)Sb.finish(&sb_tmp);
+    size_t sb_tmp = 0;
+    sb_tmp =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp, .text = c->user);
+    sb_tmp = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp, .text = ":");
+    sb_tmp =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp, .text = c->realm);
+    sb_tmp = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp, .text = ":");
+    sb_tmp =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp, .text = c->pass);
+    int n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = tmp, .cap = sizeof(tmp), .at = sb_tmp);
     sha256_hex(work, (const uint8_t *)tmp, (size_t)n, ha1);
 
     char tmp2[sizeof(uri) + 16];
-    protocore_sb sb_tmp2 = {tmp2, sizeof(tmp2), 0, PROTO_TRUE};
-    Sb.put(&sb_tmp2, req->method);
-    Sb.put(&sb_tmp2, ":");
-    Sb.put(&sb_tmp2, uri);
-    n = (int)Sb.finish(&sb_tmp2);
+    size_t sb_tmp2 = 0;
+    sb_tmp2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp2, .cap = sizeof(tmp2), .at = sb_tmp2,
+                         .text = req->method);
+    sb_tmp2 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp2, .cap = sizeof(tmp2), .at = sb_tmp2, .text = ":");
+    sb_tmp2 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp2, .cap = sizeof(tmp2), .at = sb_tmp2, .text = uri);
+    n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = tmp2, .cap = sizeof(tmp2), .at = sb_tmp2);
     sha256_hex(work, (const uint8_t *)tmp2, (size_t)n, ha2);
 
     char tmp3[65 + 48 + 16 + 64 + 8 + 65 + 8];
-    protocore_sb sb_tmp3 = {tmp3, sizeof(tmp3), 0, PROTO_TRUE};
-    Sb.put(&sb_tmp3, ha1);
-    Sb.put(&sb_tmp3, ":");
-    Sb.put(&sb_tmp3, nonce);
-    Sb.put(&sb_tmp3, ":");
-    Sb.put(&sb_tmp3, nc);
-    Sb.put(&sb_tmp3, ":");
-    Sb.put(&sb_tmp3, cnonce);
-    Sb.put(&sb_tmp3, ":");
-    Sb.put(&sb_tmp3, qop);
-    Sb.put(&sb_tmp3, ":");
-    Sb.put(&sb_tmp3, ha2);
-    n = (int)Sb.finish(&sb_tmp3);
+    size_t sb_tmp3 = 0;
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = ha1);
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = ":");
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = nonce);
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = ":");
+    sb_tmp3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = nc);
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = ":");
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = cnonce);
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = ":");
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = qop);
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = ":");
+    sb_tmp3 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3, .text = ha2);
+    n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = tmp3, .cap = sizeof(tmp3), .at = sb_tmp3);
     sha256_hex(work, (const uint8_t *)tmp3, (size_t)n, expected);
 
-    if (!str.eq(expected, response, sizeof(expected), PROTO_TRUE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = expected, .other = response, .cap = sizeof(expected),
+                    .ci = PROTO_TRUE))
     {
         return PROTO_FALSE; // wrong credentials - leave *stale untouched (no transparent retry)
     }

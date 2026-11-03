@@ -7,5 +7,5 @@ protocore_add_module(network_drivers/presentation/security/dtls/dtls_handshake
   PRIVATE_DEPS
     crypto/ct_eq
     crypto/mac/hmac_sha256
-    mmgr/protomem
+    mmgr
 )

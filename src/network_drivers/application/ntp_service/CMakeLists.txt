@@ -5,9 +5,8 @@ protocore_add_module(network_drivers/application/ntp_service
   GATE PROTOCORE_ENABLE_NTP
   SOURCES ntp_service.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/plaintext
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/application/ntp
     network_drivers/transport/udp/server
     server/clock

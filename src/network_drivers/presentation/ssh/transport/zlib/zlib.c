@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
 
-#include "mmgr/bitio/bitio.h"
+#include "bitorum_introitus_exitus/bitorum_introitus_exitus.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // the sec 3.2.5 tables
 
 #define PROTOCORE_MIN_MATCH 3   // shortest LZ77 back-reference
@@ -25,7 +25,7 @@
 #define PROTOCORE_NONE 0xFFFF                      // empty hash slot / chain terminator
 
 // Emit one raw byte (only valid on a byte boundary: the zlib header and sync marker).
-static void put_byte(protocore_bit_writer *w, uint8_t b)
+static void put_byte(mmgr_bitor *w, uint8_t b)
 {
     if (w->cnt >= w->cap)
     {
@@ -115,7 +115,7 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
         n = -1; // sizing invariant (hist <= PROTOCORE_WINDOW, src_len <= MAX_IN) should prevent this
         return n;
     }
-    mem.cpy(z->work + hist, src, src_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = z->work + hist, .src = src, .bytes = src_len);
     size_t total = hist + src_len;
     const uint8_t *buf = z->work;
 
@@ -131,7 +131,7 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
         z->head[h] = (uint16_t)p;
     }
 
-    protocore_bit_writer w;
+    mmgr_bitor w;
     w.out = dst;
     w.cap = dst_cap;
     w.cnt = 0;
@@ -149,8 +149,8 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
     }
 
     // One fixed-Huffman block, not final: BFINAL=0 (1 bit), BTYPE=01 (2 bits, value 1).
-    bitw.put(&w, 0, 1);
-    bitw.put(&w, 1, 2);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 0, .bit_count = 1);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 1, .bit_count = 2);
 
     size_t i = hist; // emit tokens only for the new input
     while (i < total)
@@ -210,10 +210,11 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
 
     // End-of-block, then a Z_SYNC_FLUSH: byte-align via an empty stored block and KEEP its
     // 0x00 0x00 0xff 0xff tail on the wire (SSH sends it; a zlib inflate() flushes at the boundary).
-    bitw.put(&w, z->ll_code[256], z->ll_len[256]); // end-of-block symbol
-    bitw.put(&w, 0, 1);                            // BFINAL=0 (empty stored block)
-    bitw.put(&w, 0, 2);                            // BTYPE=00 (stored)
-    bitw.align(&w);
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = z->ll_code[256],
+               .bit_count = z->ll_len[256]);                                   // end-of-block symbol
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 0, .bit_count = 1); // BFINAL=0 (empty stored block)
+    EMBED_CALL(bitio.put, BitorumCfg, .writer = &w, .val = 0, .bit_count = 2); // BTYPE=00 (stored)
+    EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
     put_byte(&w, 0x00);
     put_byte(&w, 0x00);
     put_byte(&w, 0xff);
@@ -232,7 +233,7 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
     }
     if (keep < total)
     {
-        mem.move(z->work, z->work + total - keep, keep);
+        EMBED_CALL(memor.move_down, MemoriaCfg, .dst = z->work, .src = z->work + total - keep, .bytes = keep);
     }
     z->hist = keep;
 

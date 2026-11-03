@@ -57,13 +57,13 @@ typedef struct
     size_t len;
 } Sht3xCrc8Args;
 
-/** @brief What temp_mc takes: raw. */
+/** @brief What temp_mc takes: proxim. */
 typedef struct
 {
     uint16_t raw;
 } Sht3xTempMcArgs;
 
-/** @brief What rh_mpct takes: raw. */
+/** @brief What rh_mpct takes: proxim. */
 typedef struct
 {
     uint16_t raw;
@@ -72,7 +72,7 @@ typedef struct
 /** @brief What parse takes: resp, temp_mc, rh_mpct. */
 typedef struct
 {
-    const uint8_t *resp; ///< 6 bytes.
+    const uint8_t *resp; ///< 6 byteio.
     int32_t *temp_mc;
     int32_t *rh_mpct;
 } Sht3xParseArgs;
@@ -176,7 +176,7 @@ static const Sht3xNs Sht3x __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_sht3x_span(void);
 

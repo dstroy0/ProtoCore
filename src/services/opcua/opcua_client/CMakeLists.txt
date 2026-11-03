@@ -7,6 +7,5 @@ protocore_add_module(services/opcua/opcua_client
   DEPS
     services/opcua
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

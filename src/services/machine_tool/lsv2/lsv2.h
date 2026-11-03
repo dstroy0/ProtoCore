@@ -10,7 +10,7 @@
  *        `services/haas_mdc` (Haas).
  *
  * Wire framing (byte-exact, both directions): a telegram is a 4-byte big-endian payload-length prefix,
- * then a 4-character ASCII command / response mnemonic, then `payload-length` payload bytes. The length
+ * then a 4-character ASCII command / response mnemonic, then `payload-length` payload byteio. The length
  * counts ONLY the payload - the mnemonic is not included - so a telegram with no payload is exactly 8
  * bytes on the wire (e.g. a bare `T_OK` acknowledgement is `00 00 00 00 'T' '_' 'O' 'K'`). The command
  * mnemonics group into login / logout (`A_LG` / `A_LO`), file system (`C_*` write, `R_*` read), and
@@ -168,7 +168,7 @@ proto_bool protocore_lsv2_is_error(const Lsv2Telegram *t);
 
 /**
  * @brief Decode an error response's two-byte payload into @p err_class and @p err_code.
- * @return true on an error mnemonic (`T_ER` / `T_BD`) carrying exactly two payload bytes.
+ * @return true on an error mnemonic (`T_ER` / `T_BD`) carrying exactly two payload byteio.
  */
 proto_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
 

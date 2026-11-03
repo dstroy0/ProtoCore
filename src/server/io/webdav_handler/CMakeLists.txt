@@ -5,11 +5,9 @@ protocore_add_module(server/io/webdav_handler
   GATE PROTOCORE_ENABLE_WEBDAV
   SOURCES webdav_handler.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/rng
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    mmgr
     network_drivers/application/webdav
     network_drivers/presentation/http
     network_drivers/presentation/http/http_parser

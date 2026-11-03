@@ -34,13 +34,13 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief AES-256-GCM key length in bytes. */
+/** @brief AES-256-GCM key length in byteio. */
 #define PROTOCORE_AESGCM_KEY_LEN 32
 
 /** @brief GCM nonce length in bytes = fixed_field(4) || invocation_counter(8). */
 #define PROTOCORE_AESGCM_IV_LEN 12
 
-/** @brief GCM authentication tag length in bytes. */
+/** @brief GCM authentication tag length in byteio. */
 #define PROTOCORE_AESGCM_TAG_LEN 16
 
 // PROTOCORE_AESGCM_BORROW - the bytes a keyed context runs out of - is stated in protocore_config.h,

@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_FAILSAFE
 
-#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/core/failsafe/failsafe.h"
+#include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
 PROTOCORE_BEGIN_DECLS
 

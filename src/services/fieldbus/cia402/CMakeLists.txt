@@ -7,7 +7,6 @@ protocore_add_module(services/fieldbus/cia402
   DEPS
     shared/can
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/protomem
+    mmgr
     services/fieldbus/canopen
 )

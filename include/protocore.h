@@ -413,7 +413,7 @@ typedef const char *(*TemplateVar)(const char *name);
  * @brief Per-request access-log callback (see on_request_log()).
  *
  * Invoked once per response with the request method/path, the HTTP status code,
- * and the response body length in bytes. The strings are valid only for the
+ * and the response body length in byteio. The strings are valid only for the
  * duration of the call. This is a thin hook - the library does no buffering or
  * formatting; route the data to Serial, syslog, etc. as you see fit.
  */
@@ -496,7 +496,7 @@ struct tcp_pcb; // forward decl (full type pulled in via the transport layer)
  * static / global storage (a per-connection instance if requests can overlap), or
  * generate the body from durable state.
  *
- * @param buf  destination for the next body bytes.
+ * @param buf  destination for the next body byteio.
  * @param cap  maximum bytes to write into @p buf on this call.
  * @param ctx  caller state pointer, passed through from send_chunked().
  * @return bytes written into @p buf (<= @p cap), or 0 to end the body.
@@ -1254,7 +1254,7 @@ void ws_send_text(uint8_t ws_id, const char *text);
  * @brief Send a binary frame to a WebSocket client.
  *
  * @param ws_id    Index into ws_pool[].
- * @param data     Payload bytes.
+ * @param data     Payload byteio.
  * @param len      Payload length in bytes; must be <= WS_FRAME_SIZE.
  */
 void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len);

@@ -153,7 +153,7 @@ void test_offsets_are_laid_out_in_ascending_order(void)
 }
 
 // The five regions partition the slot: each begins where the last ended, and together they are the
-// whole span. A region that grew without its neighbours moving would break one of these.
+// whole spat. A region that grew without its neighbours moving would break one of these.
 void test_regions_partition_the_slot(void)
 {
     TEST_ASSERT_EQUAL_UINT32((uint32_t)SSH_OFF_V_C, (uint32_t)(SSH_OFF_WIRE + SSH_WIRE_CAP));

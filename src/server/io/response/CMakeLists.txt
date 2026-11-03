@@ -4,9 +4,7 @@
 protocore_add_module(server/io/response
   SOURCES response.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/application/web_assets
     network_drivers/presentation/http
     network_drivers/session

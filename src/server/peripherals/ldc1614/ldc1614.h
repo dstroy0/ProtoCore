@@ -194,7 +194,7 @@ static const Ldc1614Ns Ldc1614 __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_ldc1614_span(void);
 

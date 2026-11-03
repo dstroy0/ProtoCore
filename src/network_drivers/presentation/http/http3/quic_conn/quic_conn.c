@@ -23,14 +23,14 @@ static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint ne
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "crypto/aead/aes128gcm/aes128gcm.h" // PROTOCORE_AES128GCM_TAG_LEN
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the context span is key material
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/quic_conn/quic_conn.h"
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
+#include "server/core/worker/worker.h" // the context span is key material
 
 PROTOCORE_BEGIN_DECLS
 
@@ -121,8 +121,8 @@ static_assert(QUIC_OFF_CRYPTO + 3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX <= PROTOCO
               "per packet-number space - raise it in protocore_config.h, which derives "
               "PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(QUIC_OFF_CTX % _Alignof(QuicConnCtx) == 0,
@@ -234,9 +234,9 @@ static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, proto_bool create)
     }
     // The bytes are the connection's and outlive the stream that last held them.
     uint8_t *tx = free_slot->tx;
-    mem.set(free_slot, 0, sizeof(*free_slot));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = free_slot, .val = 0, .bytes = sizeof(*free_slot));
     free_slot->tx = tx;
-    mem.set(tx, 0, PROTOCORE_QUIC_STREAM_TX);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = tx, .val = 0, .bytes = PROTOCORE_QUIC_STREAM_TX);
     free_slot->id = id;
     return free_slot;
 }
@@ -246,20 +246,20 @@ static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *
                            uint8_t our_scid_len, const QuicConnCallbacks *cb)
 {
     uint8_t *b = qc->b; // the plaintext span is the connection's, bound before this call
-    mem.set(qc, 0, sizeof(*qc));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = qc, .val = 0, .bytes = sizeof(*qc));
     qc->b = b;
     if (!quic_conn_slot_storage(qc))
     {
         qc->closed = PROTO_TRUE; // no bytes to run out of; the connection answers nothing
         return;
     }
-    // The span carries the previous connection's stream and handshake bytes.
-    mem.set(qc->b, 0, PROTOCORE_QUIC_CONN_BORROW);
-    mem.cpy(qc->odcid, odcid, odcid_len);
+    // The span carries the previous connection's stream and handshake byteio.
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = qc->b, .val = 0, .bytes = PROTOCORE_QUIC_CONN_BORROW);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = qc->odcid, .src = odcid, .bytes = odcid_len);
     qc->odcid_len = odcid_len;
-    mem.cpy(qc->dcid, peer_scid, peer_scid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = qc->dcid, .src = peer_scid, .bytes = peer_scid_len);
     qc->dcid_len = peer_scid_len;
-    mem.cpy(qc->scid, our_scid, our_scid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = qc->scid, .src = our_scid, .bytes = our_scid_len);
     qc->scid_len = our_scid_len;
     if (cb)
     {
@@ -281,10 +281,10 @@ static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *
     // The server's transport parameters carry the connection IDs the handshake must echo.
     QuicTlsConfig c = *cfg;
     c.params.has_original_dcid = PROTO_TRUE;
-    mem.cpy(c.params.original_dcid, odcid, odcid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c.params.original_dcid, .src = odcid, .bytes = odcid_len);
     c.params.original_dcid_len = odcid_len;
     c.params.has_initial_scid = PROTO_TRUE;
-    mem.cpy(c.params.initial_scid, our_scid, our_scid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c.params.initial_scid, .src = our_scid, .bytes = our_scid_len);
     c.params.initial_scid_len = our_scid_len;
     QuicTlsServerV.server_init_args.qt = &qc->tls;
     QuicTlsServerV.server_init_args.cfg = &c;
@@ -326,7 +326,7 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
     {
         nl = PROTOCORE_QUIC_CRYPTO_RX - s->crypto_rx_have; // clamp to the reassembly window
     }
-    mem.cpy(s->crypto_rx + s->crypto_rx_have, nd, nl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->crypto_rx + s->crypto_rx_have, .src = nd, .bytes = nl);
     s->crypto_rx_have += nl;
     s->crypto_rx_off += nl;
 
@@ -338,7 +338,8 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
     size_t used = QuicTlsServerV.n;
     if (used)
     {
-        mem.move(s->crypto_rx, s->crypto_rx + used, s->crypto_rx_have - used);
+        EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->crypto_rx, .src = s->crypto_rx + used,
+                   .bytes = s->crypto_rx_have - used);
         s->crypto_rx_have -= used;
     }
     // A fatal TLS error (bad Finished, unsupported handshake) becomes a QUIC CRYPTO_ERROR: report it
@@ -575,7 +576,7 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     {
         return 0;
     }
-    mem.cpy(work, dg, pkt_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = work, .src = dg, .bytes = pkt_len);
     uint64_t pn = 0;
     size_t quic_crypto_n = QuicCrypto.packet_unprotect(quic_crypto_work, work, pn_offset, (size_t)payload_length,
                                                        qc->space[level].largest_rx, keys, is_long, plain, &pn);
@@ -861,7 +862,7 @@ static size_t build_packet(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *o
     if ((size_t)pn_len + frame_len < 4)
     {
         size_t pad = 4 - pn_len - frame_len;
-        mem.set(frames + frame_len, 0, pad);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = frames + frame_len, .val = 0, .bytes = pad);
         frame_len += pad;
     }
 
@@ -904,7 +905,7 @@ static size_t build_packet(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *o
             return 0;
         }
         out[0] = (uint8_t)(0x40 | (pn_len - 1));
-        mem.cpy(out + 1, qc->dcid, qc->dcid_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 1, .src = qc->dcid, .bytes = qc->dcid_len);
         p = 1 + qc->dcid_len;
     }
 
@@ -925,7 +926,7 @@ static size_t build_packet(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *o
     }
     p += pn_len;
 
-    mem.cpy(out + p, frames, frame_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = frames, .bytes = frame_len);
 
     size_t quic_crypto_n = QuicCrypto.packet_protect(work, out, cap, pn_offset, pn_len, pn, frame_len, keys, is_long);
     size_t total = quic_crypto_n;
@@ -1104,7 +1105,7 @@ static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const ui
     }
     size_t room = PROTOCORE_QUIC_STREAM_TX - st->tx_have;
     size_t take = len < room ? len : room;
-    mem.cpy(st->tx + st->tx_have, data, take);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = st->tx + st->tx_have, .src = data, .bytes = take);
     st->tx_have += take;
     if (fin && take == len)
     {
@@ -1243,12 +1244,12 @@ void protocore_quic_conn_owns(uint8_t *work)
     {
         return;
     }
-    if (len == qc->scid_len && mem.cmp(dcid, qc->scid, len) == 0)
+    if (len == qc->scid_len && EMBED_CALL(memor.cmp, MemoriaCfg, .src = dcid, .other = qc->scid, .bytes = len) == 0)
     {
         QuicConnV.ok = PROTO_TRUE;
         return;
     }
-    if (len == qc->odcid_len && mem.cmp(dcid, qc->odcid, len) == 0)
+    if (len == qc->odcid_len && EMBED_CALL(memor.cmp, MemoriaCfg, .src = dcid, .other = qc->odcid, .bytes = len) == 0)
     {
         QuicConnV.ok = PROTO_TRUE;
     }

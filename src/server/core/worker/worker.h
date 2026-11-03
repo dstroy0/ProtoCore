@@ -89,6 +89,12 @@ const MinimumSecurityGuard *protocore_plain_guard(void);
 /** @brief The key-material guard the calling worker borrows through. Never NULL. */
 const MaximumSecurityGuard *protocore_secure_guard(void);
 
+/** @brief The owner every plaintext take in the library names. Registered, and never NULL. */
+CellOwner *protocore_plain_owner(void);
+
+/** @brief The owner every key-material take in the library names. Registered, and never NULL. */
+CellOwner *protocore_secure_owner(void);
+
 /**
  * @brief @p n persistent plaintext bytes, zeroed, or NULL if the calling worker's cellblock is full.
  *
@@ -219,7 +225,7 @@ static const WorkerNs Workers __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_worker_span(void);
 

@@ -11,8 +11,8 @@ arduino-esp32 3.x ETH SPI API (`ETH.begin(ETH_PHY_W5500, ...)`); once the link h
 server accepts on it with no other change:
 
 ```cpp
-Physical.eth->init();          // ETH.begin(ETH_PHY_W5500, ...) with the PROTOCORE_ETH_W5500_* pins
-while (!Physical.eth->ready()) delay(250);
+Physical.eth_init(protocore_physical_span());          // ETH.begin(ETH_PHY_W5500, ...) with the PROTOCORE_ETH_W5500_* pins
+while (!protocore_physical_eth_up()) delay(250);
 // ... server.begin(80) - now serving over W5500 Ethernet
 ```
 

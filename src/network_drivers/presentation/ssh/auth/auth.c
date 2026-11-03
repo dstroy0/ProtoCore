@@ -6,25 +6,26 @@
  * @brief RFC 4252 user authentication: service request, publickey, password, keyboard-interactive.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h"
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
-#include "crypto/asymmetric/ecdsa/ecdsa.h"     // Ecdsa (ecdsa-sha2-nistp256)
-#include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519 (ssh-ed25519 client keys)
-#include "mmgr/bytes/bytes.h"                  // bytes.rd_str() - the RFC 4251 sec 5 string reader
-#include "mmgr/endian/endian.h"                // endian.wr32be() - the one source of truth for wire integers
-#include "mmgr/plaintext/plaintext.h"          // protocore_plaintext_span() for the verify buffers
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.eq() - the bounded string compare the wire fields use
-#include "mmgr/secure/secure.h"
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.eq() - the bounded string compare the wire fields use
+#include "crypto/asymmetric/ecdsa/ecdsa.h"       // Ecdsa (ecdsa-sha2-nistp256)
+#include "crypto/asymmetric/ed25519/ed25519.h"   // Ed25519 (ssh-ed25519 client keys)
+#include "endian/endian.h"                       // endian.wr32be() - the one source of truth for wire integers
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"         // ssh_connection_dispatch()
 #include "network_drivers/presentation/ssh/network/network.h"               // SshNetwork.emit()
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"     // Rsa, PROTOCORE_RSA_KEY_BYTES
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_sess[], SshPhase
-#include "server/clock/clock.h" // protocore_millis(): the password-change cooldown clock
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // protocore_ssh_read_string_at() - the RFC 4251 sec 5 string reader
+#include "server/clock/clock.h"                                // protocore_millis(): the password-change cooldown clock
+#include "server/core/worker/worker.h"                         // temporary_buf_alloc() for the verify buffers
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp/comp.h" // ssh_comp_on_auth_success()
@@ -106,7 +107,7 @@ uint8_t *protocore_ssh_auth_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SSH_AUTH_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SSH_AUTH_BORROW);
     }
     return s_own.span;
 }
@@ -114,7 +115,7 @@ uint8_t *protocore_ssh_auth_span(void)
 // Count one failure for slot @p i. At the threshold, emit the sec 4 DISCONNECT into @p out and
 // report that the caller should close. SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE is the reason
 // RFC 4250 sec 4.2.2 assigns to an exhausted authentication.
-static proto_bool auth_failure_over_threshold(uint8_t i, protocore_span out)
+static proto_bool auth_failure_over_threshold(uint8_t i, mmgr_span out)
 {
     if (i >= MAX_SSH_CONNS || ++SSH_AUTH_CTX(protocore_ssh_auth_span())->failures[i] < SSH_MAX_AUTH_ATTEMPTS)
     {
@@ -140,8 +141,8 @@ static void auth_flush_state(uint8_t i)
     SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change[i] = PROTOCORE_SSH_PW_CHANGE_NONE;
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
     SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = PROTO_FALSE;
-    protocore_secure_wipe(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user,
-                          sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user));
+    mmgr_zero_buf(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user,
+                  sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user));
 #endif
 }
 
@@ -149,11 +150,14 @@ static void auth_flush_state(uint8_t i)
 // belongs to, and flush that state when either changes.
 static void auth_identity_check(uint8_t i, const char *user, const char *service)
 {
-    const proto_bool same = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known &&
-                            str.eq(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user, user,
-                                   sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user), PROTO_FALSE) &&
-                            str.eq(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service, service,
-                                   sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service), PROTO_FALSE);
+    const proto_bool same =
+        SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known &&
+        EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user,
+                   .other = user, .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user),
+                   .ci = PROTO_FALSE) &&
+        EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service,
+                   .other = service, .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service),
+                   .ci = PROTO_FALSE);
     if (same)
     {
         return;
@@ -162,17 +166,17 @@ static void auth_identity_check(uint8_t i, const char *user, const char *service
     {
         auth_flush_state(i);
     }
-    str.copy(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user, user,
-             sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user));
-    str.copy(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service, service,
-             sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service));
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user, .src = user,
+               .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user));
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service,
+               .src = service, .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service));
     SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known = PROTO_TRUE;
 }
 
 void protocore_ssh_auth_write_publickey_request(uint8_t *work)
 {
     (void)work;
-    protocore_span *w = SshAuthV.out_args.w;
+    mmgr_span *w = SshAuthV.out_args.w;
     const uint8_t *sid = SshAuthV.userauth.sid;
     const size_t sid_len = SshAuthV.userauth.sid_len;
     const char *user = SshAuthV.userauth.user;
@@ -184,11 +188,11 @@ void protocore_ssh_auth_write_publickey_request(uint8_t *work)
     {
         protocore_ssh_wr_str(w, sid, sid_len);
     }
-    bytes.put(w, SSH_MSG_USERAUTH_REQUEST);
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = w, .byte = SSH_MSG_USERAUTH_REQUEST);
     protocore_ssh_wr_cstr(w, user);
     protocore_ssh_wr_cstr(w, service);
     protocore_ssh_wr_cstr(w, "publickey");
-    bytes.put(w, 1); // signature present
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = w, .byte = 1); // signature present
     protocore_ssh_wr_cstr(w, pk_algo);
     protocore_ssh_wr_str(w, pk_blob, pk_len);
 }
@@ -237,10 +241,10 @@ void protocore_ssh_auth_reset(uint8_t *work)
     SSH_AUTH_CTX(protocore_ssh_auth_span())->failures[i] = 0;
     SSH_AUTH_CTX(protocore_ssh_auth_span())->started[i] = PROTO_FALSE;
     SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known = PROTO_FALSE;
-    protocore_secure_wipe(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user,
-                          sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user));
-    protocore_secure_wipe(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service,
-                          sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service));
+    mmgr_zero_buf(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user,
+                  sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user));
+    mmgr_zero_buf(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service,
+                  sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service));
 }
 
 void protocore_ssh_auth_set_password_cb(uint8_t *work)
@@ -309,11 +313,14 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
         *out_len = SshAuthV.out_args.out_len;
         return SshAuthV.i32;
     }
-    size_t mark = protocore_plaintext_mark();
-    protocore_span signed_data = protocore_plaintext_span(SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, 4);
-    if (!span.ok(signed_data))
+    size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    mmgr_span signed_data = EMBED_CALL(spat.from, SpatiumCfg,
+                                       .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(
+                                           SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, protocore_plain_owner()),
+                                       .cap = SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = signed_data))
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
         SshAuthV.partial = PROTO_FALSE;
@@ -323,7 +330,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     }
     if (req->signed_prefix_len > SSH_PKT_BUF_SIZE || 4 + sid_len + req->signed_prefix_len > signed_data.cap)
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
         SshAuthV.partial = PROTO_FALSE;
@@ -332,16 +339,18 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
         return SshAuthV.i32;
     }
     size_t sd = 0;
-    endian.wr32be(signed_data.buf + sd, (uint32_t)sid_len);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = signed_data.buf + sd, .val = (uint32_t)sid_len,
+               .width = MMGR_ENDIAN_32);
     sd += 4;
-    mem.cpy(signed_data.buf + sd, sid, sid_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = signed_data.buf + sd, .src = sid, .bytes = sid_len);
     sd += sid_len;
-    mem.cpy(signed_data.buf + sd, req->signed_prefix, req->signed_prefix_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = signed_data.buf + sd, .src = req->signed_prefix,
+               .bytes = req->signed_prefix_len);
     sd += req->signed_prefix_len;
 
     proto_bool sig_ok = ssh_pubkey_verify(i, req->pk_algo, req->pk_blob, req->pk_blob_len, req->signature,
                                           req->signature_len, signed_data.buf, sd);
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
     if (sig_ok)
     {
         PhaseMachineV.auth_done_args.i = i;
@@ -370,7 +379,7 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
     const uint8_t *payload = SshAuthV.msg.payload;
     const size_t len = SshAuthV.msg.len;
     SshAuthReq *req = SshAuthV.req;
-    mem.set(req, 0, sizeof(*req));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = req, .val = 0, .bytes = sizeof(*req));
     if (len < 1 || payload[0] != SSH_MSG_USERAUTH_REQUEST)
     {
         SshAuthV.i32 = -1;
@@ -390,7 +399,8 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
     }
     // RFC 4252 sec 5: the service to start after auth must be one the server offers, and it sits
     // inside the signed blob, so a service the server never checks is one the signature does not bind.
-    if (!str.eq(req->service, "ssh-connection", sizeof(req->service), PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->service, .other = "ssh-connection",
+                    .cap = sizeof(req->service), .ci = PROTO_FALSE))
     {
         SshAuthV.i32 = -1;
         return;
@@ -401,7 +411,8 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
         return;
     }
 
-    if (str.eq(req->method, "password", sizeof(req->method), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "password", .cap = sizeof(req->method),
+                   .ci = PROTO_FALSE))
     {
         // boolean (FALSE = not a password change) || string password [|| string new-password]
         if (off >= len)
@@ -424,7 +435,8 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
         }
         req->is_password = PROTO_TRUE;
     }
-    else if (str.eq(req->method, "publickey", sizeof(req->method), PROTO_FALSE))
+    else if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "publickey",
+                        .cap = sizeof(req->method), .ci = PROTO_FALSE))
     {
         // boolean has_signature || string algo || string pubkey-blob [|| string signature]
         if (off >= len)
@@ -438,7 +450,7 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
             SshAuthV.i32 = -1;
             return;
         }
-        if (!bytes.rd_str(payload, len, &off, &req->pk_blob, &req->pk_blob_len))
+        if (!protocore_ssh_read_string_at(payload, len, &off, &req->pk_blob, &req->pk_blob_len))
         {
             SshAuthV.i32 = -1;
             return;
@@ -452,7 +464,7 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
         {
             const uint8_t *sigblob;
             uint32_t sigblob_len;
-            if (!bytes.rd_str(payload, len, &off, &sigblob, &sigblob_len))
+            if (!protocore_ssh_read_string_at(payload, len, &off, &sigblob, &sigblob_len))
             {
                 SshAuthV.i32 = -1;
                 return;
@@ -461,12 +473,12 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
             size_t so = 0;
             const uint8_t *salgo;
             uint32_t salgo_len;
-            if (!bytes.rd_str(sigblob, sigblob_len, &so, &salgo, &salgo_len))
+            if (!protocore_ssh_read_string_at(sigblob, sigblob_len, &so, &salgo, &salgo_len))
             {
                 SshAuthV.i32 = -1;
                 return;
             }
-            if (!bytes.rd_str(sigblob, sigblob_len, &so, &req->signature, &req->signature_len))
+            if (!protocore_ssh_read_string_at(sigblob, sigblob_len, &so, &req->signature, &req->signature_len))
             {
                 SshAuthV.i32 = -1;
                 return;
@@ -475,7 +487,8 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
         req->is_pubkey = PROTO_TRUE;
     }
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-    else if (str.eq(req->method, "keyboard-interactive", sizeof(req->method), PROTO_FALSE))
+    else if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "keyboard-interactive",
+                        .cap = sizeof(req->method), .ci = PROTO_FALSE))
     {
         // RFC 4256 §3.1: string(language tag, deprecated) || string(submethods). Both are ignored -
         // this server always drives a single "Password:" prompt.
@@ -514,8 +527,8 @@ void protocore_ssh_auth_build_failure(uint8_t *work)
         return;
     }
     out[0] = SSH_MSG_USERAUTH_FAILURE;
-    endian.wr32be(out + 1, ml);
-    mem.cpy(out + 5, methods, ml);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 1, .val = ml, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 5, .src = methods, .bytes = ml);
     out[5 + ml] = partial ? 1 : 0;
     *out_len = 5 + ml + 1;
     SshAuthV.i32 = 0;
@@ -543,20 +556,20 @@ void protocore_ssh_auth_build_success(uint8_t *work)
 // be accepted, send a signature" probe response (RFC 4252 §7).
 static int build_pk_ok(const SshAuthReq *req, uint8_t *out, size_t *out_len, size_t cap)
 {
-    uint32_t al = (uint32_t)str.len(req->pk_algo, sizeof(req->pk_algo));
+    uint32_t al = (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = req->pk_algo, .cap = sizeof(req->pk_algo));
     if (cap < (size_t)1 + 4 + al + 4 + req->pk_blob_len)
     {
         return -1;
     }
     size_t o = 0;
     out[o++] = SSH_MSG_USERAUTH_PK_OK;
-    endian.wr32be(out + o, al);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + o, .val = al, .width = MMGR_ENDIAN_32);
     o += 4;
-    mem.cpy(out + o, req->pk_algo, al);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + o, .src = req->pk_algo, .bytes = al);
     o += al;
-    endian.wr32be(out + o, req->pk_blob_len);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + o, .val = req->pk_blob_len, .width = MMGR_ENDIAN_32);
     o += 4;
-    mem.cpy(out + o, req->pk_blob, req->pk_blob_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + o, .src = req->pk_blob, .bytes = req->pk_blob_len);
     o += req->pk_blob_len;
     *out_len = o;
     return 0;
@@ -576,17 +589,18 @@ static int build_info_request(uint8_t *out, size_t *out_len, size_t cap)
     }
     size_t o = 0;
     out[o++] = SSH_MSG_USERAUTH_INFO_REQUEST;
-    endian.wr32be(out + o, 0); // name = ""
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + o, .val = 0, .width = MMGR_ENDIAN_32); // name = ""
     o += 4;
-    endian.wr32be(out + o, 0); // instruction = ""
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + o, .val = 0, .width = MMGR_ENDIAN_32); // instruction = ""
     o += 4;
-    endian.wr32be(out + o, 0); // language tag = "" (deprecated)
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + o, .val = 0,
+               .width = MMGR_ENDIAN_32); // language tag = "" (deprecated)
     o += 4;
-    endian.wr32be(out + o, 1); // num-prompts = 1
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + o, .val = 1, .width = MMGR_ENDIAN_32); // num-prompts = 1
     o += 4;
-    endian.wr32be(out + o, pl);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + o, .val = pl, .width = MMGR_ENDIAN_32);
     o += 4;
-    mem.cpy(out + o, prompt, pl);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + o, .src = prompt, .bytes = pl);
     o += pl;
     out[o++] = 0; // echo = FALSE (the response is a password)
     *out_len = o;
@@ -648,8 +662,10 @@ void protocore_ssh_auth_handle_request(uint8_t *work)
             return;
         }
         SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = PROTO_TRUE;
-        size_t ul = str.len(req.user, sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user) - 1);
-        mem.cpy(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user, req.user, ul);
+        size_t ul = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = req.user,
+                               .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user) - 1);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user, .src = req.user,
+                   .bytes = ul);
         SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user[ul] = '\0';
         SshAuthV.i32 = build_info_request(out, out_len, cap);
         return;
@@ -673,14 +689,14 @@ void protocore_ssh_auth_handle_request(uint8_t *work)
             SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change_last_ms = now;
             SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change[i] = PROTOCORE_SSH_PW_CHANGE_BUSY;
             SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change_cb(i, req.user, req.password, req.new_password);
-            protocore_secure_wipe(req.password, sizeof(req.password));
-            protocore_secure_wipe(req.new_password, sizeof(req.new_password));
+            mmgr_zero_buf(req.password, sizeof(req.password));
+            mmgr_zero_buf(req.new_password, sizeof(req.new_password));
             *out_len = 0; // the reply follows once the application reports
             SshAuthV.i32 = 0;
             return;
         }
-        protocore_secure_wipe(req.password, sizeof(req.password));
-        protocore_secure_wipe(req.new_password, sizeof(req.new_password));
+        mmgr_zero_buf(req.password, sizeof(req.password));
+        mmgr_zero_buf(req.new_password, sizeof(req.new_password));
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
         SshAuthV.partial = PROTO_FALSE;
@@ -700,8 +716,8 @@ void protocore_ssh_auth_handle_request(uint8_t *work)
 #endif
 
     // Wipe both passwords from the stack regardless of the outcome.
-    protocore_secure_wipe(req.password, sizeof(req.password));
-    protocore_secure_wipe(req.new_password, sizeof(req.new_password));
+    mmgr_zero_buf(req.password, sizeof(req.password));
+    mmgr_zero_buf(req.new_password, sizeof(req.new_password));
 
     if (ok)
     {
@@ -815,9 +831,9 @@ void protocore_ssh_auth_handle_info_response(uint8_t *work)
     }
 
     // Wipe the response and the remembered user from memory regardless of outcome.
-    protocore_secure_wipe(resp, sizeof(resp));
-    protocore_secure_wipe(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user,
-                          sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user));
+    mmgr_zero_buf(resp, sizeof(resp));
+    mmgr_zero_buf(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user,
+                  sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user));
 
     if (ok)
     {
@@ -855,12 +871,15 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
     }
     // The reply buffer is borrowed for this dispatch, not carried on the worker stack: it is the
     // single largest frame on the SSH path and the handshake below it is the deepest call chain in
-    // the library. protocore_plaintext_span binds the capacity to the allocation.
-    size_t mark = protocore_plaintext_mark();
-    protocore_span reply = protocore_plaintext_span(SSH_PKT_BUF_SIZE, 16);
-    if (!span.ok(reply))
+    // the library. temporary_buf_alloc binds the capacity to the allocation.
+    size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    mmgr_span reply = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner()),
+        .cap = SSH_PKT_BUF_SIZE);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = reply))
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         SshAuthV.i32 = -1;
         return; // arena exhausted: fail closed, the caller drops the connection
     }
@@ -874,7 +893,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.auth_complete(work);
         if (PhaseMachineV.ok)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = 0;
             return;
         }
@@ -882,7 +901,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.admits_userauth(work);
         if (!PhaseMachineV.ok)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = -1;
             return;
         }
@@ -895,7 +914,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         n = SshAuthV.out_args.out_len;
         if (SshAuthV.i32 != 0)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = -1;
             return;
         }
@@ -915,11 +934,11 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         // SUCCESS or the publickey PK_OK probe does not. Past the threshold, disconnect.
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE && auth_failure_over_threshold(i, reply))
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = -1;
             return; // close the connection
         }
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         SshAuthV.i32 = 0;
         return;
 
@@ -936,7 +955,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.auth_complete(work);
         if (PhaseMachineV.ok)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = 0;
             return;
         }
@@ -944,7 +963,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.admits_userauth(work);
         if (!PhaseMachineV.ok)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = -1;
             return;
         }
@@ -957,7 +976,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         n = SshAuthV.out_args.out_len;
         if (SshAuthV.i32 != 0)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = -1;
             return;
         }
@@ -973,11 +992,11 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
 #endif
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE && auth_failure_over_threshold(i, reply))
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = -1;
             return;
         }
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         SshAuthV.i32 = 0;
         return;
 #endif
@@ -1005,11 +1024,11 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
                 SshNetworkV.msg.len = dn;
                 SshNetwork.emit(protocore_ssh_network_span());
             }
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             SshAuthV.i32 = -1;
             return;
         }
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         SshConnectionV.chan.slot = i;
         SshConnectionV.msg_type = msg_type;
         SshConnectionV.chan.payload = payload;
@@ -1029,7 +1048,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         SshNetworkV.msg.len = un;
         SshNetwork.emit(protocore_ssh_network_span());
     }
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
     SshAuthV.i32 = 0;
     return;
 }
@@ -1060,19 +1079,22 @@ void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
     {
         return;
     }
-    size_t mark = protocore_plaintext_mark();
-    protocore_span reply = protocore_plaintext_span(SSH_PKT_BUF_SIZE, 4);
+    size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    mmgr_span reply = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner()),
+        .cap = SSH_PKT_BUF_SIZE);
     size_t n = 0;
     int built = -1;
     SshAuthV.out_args.out = reply.buf;
     SshAuthV.out_args.cap = reply.cap;
-    if (span.ok(reply) && pw == PROTOCORE_SSH_PW_CHANGE_OK)
+    if (EMBED_CALL(spat.ok, SpatiumCfg, .span = reply) && pw == PROTOCORE_SSH_PW_CHANGE_OK)
     {
         protocore_ssh_auth_build_success(work);
         built = SshAuthV.i32;
         n = SshAuthV.out_args.out_len;
     }
-    else if (span.ok(reply))
+    else if (EMBED_CALL(spat.ok, SpatiumCfg, .span = reply))
     {
         SshAuthV.partial = PROTO_FALSE;
         protocore_ssh_auth_build_failure(work);
@@ -1086,7 +1108,7 @@ void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

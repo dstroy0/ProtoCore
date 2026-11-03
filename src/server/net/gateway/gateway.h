@@ -197,7 +197,7 @@ typedef proto_bool (*protocore_gateway_uplink_fn)(const protocore_gateway_msg *m
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_gateway_span(void);
 

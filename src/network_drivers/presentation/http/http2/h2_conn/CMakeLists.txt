@@ -5,9 +5,7 @@ protocore_add_module(network_drivers/presentation/http/http2/h2_conn
   GATE PROTOCORE_ENABLE_HTTP2
   SOURCES h2_conn.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/presentation/http/http2/h2_frame
     network_drivers/presentation/http/http2/hpack
 )

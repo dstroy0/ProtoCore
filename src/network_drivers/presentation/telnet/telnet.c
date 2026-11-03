@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_TELNET
 
-#include "mmgr/plaintext/plaintext.h"   // the persistent end this module's state is taken from
-#include "mmgr/protoframe/protoframe.h" // frame.build: a console line is a spec, not a format string
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/telnet/telnet.h"
+#include "numeros_scribo/numeros_scribo.h" // numer.build: a console line is a spec, not a format string
+#include "server/core/worker/worker.h"     // the persistent end this module's state is taken from
 
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a call acts on
 #include "server/core/proto_handler/proto_handler.h"
@@ -93,7 +93,7 @@ uint8_t *protocore_telnet_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TELNET_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_TELNET_BORROW);
     }
     return s_own.span;
 }
@@ -191,7 +191,7 @@ void protocore_telnet_accept(uint8_t *work)
         ConnPool.close(protocore_conn_pool_span());
         return;
     }
-    mem.set(t, 0, sizeof(*t));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = t, .val = 0, .bytes = sizeof(*t));
     t->used = PROTO_TRUE;
     t->slot = TelnetV.slot;
     t->st = TN_NORMAL;
@@ -389,7 +389,9 @@ void protocore_telnet_print(uint8_t *work)
 {
     if (TelnetV.out.text)
     {
-        broadcast(work, TelnetV.out.text, str.len(TelnetV.out.text, TELNET_BUF_SIZE)); // line-oriented console
+        broadcast(work, TelnetV.out.text,
+                  EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = TelnetV.out.text,
+                             .cap = TELNET_BUF_SIZE)); // line-oriented console
     }
 }
 
@@ -397,7 +399,8 @@ void protocore_telnet_println(uint8_t *work)
 {
     if (TelnetV.out.text)
     {
-        broadcast(work, TelnetV.out.text, str.len(TelnetV.out.text, TELNET_BUF_SIZE));
+        broadcast(work, TelnetV.out.text,
+                  EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = TelnetV.out.text, .cap = TELNET_BUF_SIZE));
     }
     broadcast(work, "\r\n", 2);
 }
@@ -405,7 +408,8 @@ void protocore_telnet_println(uint8_t *work)
 void protocore_telnet_frame(uint8_t *work)
 {
     char buf[TELNET_BUF_SIZE];
-    size_t n = frame.build(buf, sizeof(buf), TelnetV.out.spec, TelnetV.out.val, TelnetV.out.nv);
+    size_t n = EMBED_CALL(numer.build, NumerosCfg, .out = buf, .cap = sizeof(buf), .spec = TelnetV.out.spec,
+                          .vals = TelnetV.out.val, .nvals = TelnetV.out.nv);
     if (n > 0)
     {
         broadcast(work, buf, n);

@@ -4,12 +4,9 @@
 protocore_add_module(server/io/websocket_sse
   SOURCES websocket_sse.c
   PRIVATE_DEPS
+    server/core/worker
     crypto/hash/sha1
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
-    mmgr/span
+    mmgr
     network_drivers/presentation/codec/base64
     network_drivers/presentation/http/http_parser
     network_drivers/presentation/http/sse

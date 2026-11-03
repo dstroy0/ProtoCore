@@ -14,12 +14,12 @@
  */
 
 #include "services/iot/statsd/statsd.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_STATSD
 
-#include "mmgr/protomem/protomem.h"                      // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr/protostr.h"                      // str.copy / str.len: the bounded field moves
+#include "cellularum_laboro/cellularum_laboro.h"         // cellul.copy / cellul.len: the bounded field moves
+#include "memoria_operor/memoria_operor.h"               // memor.cpy: the spans a line is assembled from
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one metric, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the daemon address, once
 
@@ -145,7 +145,7 @@ static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const c
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out + *pos, src, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = src, .bytes = len);
     *pos += len;
     return PROTO_TRUE;
 }
@@ -165,7 +165,7 @@ uint8_t *protocore_statsd_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_STATSD_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_STATSD_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         STATSD_CTX(s_own.span)->port = PROTOCORE_STATSD_PORT;
     }
@@ -180,7 +180,8 @@ void protocore_statsd_init(uint8_t *work)
     STATSD_CTX(work)->port = StatsdV.server.port ? StatsdV.server.port : PROTOCORE_STATSD_PORT;
     if (StatsdV.tags.global && StatsdV.tags.global[0])
     {
-        (void)str.copy(STATSD_CTX(work)->tags, StatsdV.tags.global, sizeof(STATSD_CTX(work)->tags));
+        (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = STATSD_CTX(work)->tags, .src = StatsdV.tags.global,
+                         .cap = sizeof(STATSD_CTX(work)->tags));
     }
     else
     {
@@ -222,8 +223,10 @@ void protocore_statsd_format(uint8_t *work)
     // one character their selector holds.
     const char t = (char)type;
     size_t pos = 0;
-    if (!line_append(out, cap, &pos, name, str.len(name, cap)) || !line_append(out, cap, &pos, ":", 1) ||
-        !line_append(out, cap, &pos, value, str.len(value, cap)) || !line_append(out, cap, &pos, "|", 1))
+    if (!line_append(out, cap, &pos, name, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = cap)) ||
+        !line_append(out, cap, &pos, ":", 1) ||
+        !line_append(out, cap, &pos, value, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = value, .cap = cap)) ||
+        !line_append(out, cap, &pos, "|", 1))
     {
         return;
     }
@@ -247,7 +250,8 @@ void protocore_statsd_format(uint8_t *work)
         return;
     }
     if (tags && tags[0] &&
-        (!line_append(out, cap, &pos, "|#", 2) || !line_append(out, cap, &pos, tags, str.len(tags, cap))))
+        (!line_append(out, cap, &pos, "|#", 2) ||
+         !line_append(out, cap, &pos, tags, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = tags, .cap = cap))))
     {
         return;
     }

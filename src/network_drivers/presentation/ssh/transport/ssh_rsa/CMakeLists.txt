@@ -7,6 +7,6 @@ protocore_add_module(network_drivers/presentation/ssh/transport/ssh_rsa
   DEPS
     crypto/asymmetric/rsa
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    server/core/worker
+    mmgr
 )

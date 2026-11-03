@@ -50,7 +50,7 @@
 
 #include "crypto/asymmetric/ecdsa/ecdsa.h"
 #include "crypto/hash/sha256/sha256.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 // P-256 has no dedicated ECC accelerator on any die in the list, so the RSA MODMULT is the field and
 // scalar layer's win wherever it exists - track PROTOCORE_RSA_MODMUL_HW, which the crypto HAL states
@@ -623,14 +623,14 @@ static void protocore_hmac_cat(uint8_t *work, uint8_t out[32], const uint8_t key
 {
     uint8_t buf[97]; // 32 (V) + 1 (tag) + 32 (x) + 32 (e)
     size_t n = 0;
-    mem.cpy(buf + n, v, vlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = v, .bytes = vlen);
     n += vlen;
     if (tag >= 0)
     {
         buf[n++] = (uint8_t)tag;
-        mem.cpy(buf + n, x, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = x, .bytes = 32);
         n += 32;
-        mem.cpy(buf + n, e, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = e, .bytes = 32);
         n += 32;
     }
     HmacSha256.mac(ECDSA_HMAC(work), key, 32, buf, n, out);
@@ -700,8 +700,8 @@ static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t 
 
     uint8_t V[32];
     uint8_t K[32];
-    mem.set(V, 0x01, 32);
-    mem.set(K, 0x00, 32);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = V, .val = 0x01, .bytes = 32);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = K, .val = 0x00, .bytes = 32);
     protocore_hmac_cat(work, K, K, V, 32, 0x00, x_oct, h_oct);
     protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
     protocore_hmac_cat(work, K, K, V, 32, 0x01, x_oct, h_oct);
@@ -719,7 +719,7 @@ static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t 
             return PROTO_TRUE;
         }
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
-        mem.cpy(buf, V, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = V, .bytes = 32);
         buf[32] = 0x00;
         HmacSha256.mac(ECDSA_HMAC(work), K, 32, buf, 33, K);
         protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);

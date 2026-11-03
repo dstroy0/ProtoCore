@@ -5,10 +5,8 @@ protocore_add_module(network_drivers/application/sftp/ssh_sftp
   GATE PROTOCORE_ENABLE_SSH_SFTP
   SOURCES ssh_sftp.c
   PRIVATE_DEPS
-    mmgr/endian
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/application/sftp/sftp
     network_drivers/presentation/ssh/connection
     network_drivers/presentation/ssh/network

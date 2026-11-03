@@ -3,7 +3,7 @@
 
 /**
  * @file der.c
- * @brief One DER value at a time, over the caller's bytes. See der.h.
+ * @brief One DER value at a time, over the caller's byteio. See der.h.
  */
 
 #include "shared/der/der.h"

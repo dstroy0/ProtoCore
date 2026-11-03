@@ -99,6 +99,9 @@ static const mmgr_field FILESYSTEM_ROOT[] = {MMGR_STR, MMGR_END};
  *             site rather than tested here.
  * @return bytes written, or 0 on overflow - the engine already knows the length, so it is handed
  *         back rather than left for the caller to rediscover with a scan. */
+// C only, with protocore_fs_resolve below: the join's values are an array compound literal, which C++
+// has no form of, and no C++ file calls either.
+#ifndef __cplusplus
 PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     if (dir[0] == '/')
@@ -148,6 +151,7 @@ PROTOCORE_INLINE int protocore_fs_resolve(const char *root, const char *dir, con
     }
     return 0;
 }
+#endif
 
 // --- status ---------------------------------------------------------------------------------
 //
@@ -292,7 +296,7 @@ extern FilesystemNs Fs;
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_filesystem_span(void);
 

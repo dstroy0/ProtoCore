@@ -44,6 +44,14 @@ BASELINE = bl.path_for(__file__, "owned_context_baseline")
 # scattered outliers, so they are exempt. Keyed by the exact variable name.
 SHARED_SUBSTRATE = {
     "conn_pool",  # transport/tcp/protocol/protocol.c - the TCP connection pool (extern in tcp/common.h)
+    "protocore_conn_slots",  # transport/tcp/protocol/protocol.c - the slot ring (extern in tcp/common.h)
+    "s_conn_slots_bytes",  # transport/tcp/protocol/protocol.c - the storage the slot ring is laid over
+    # server/core/worker/worker.c - what names a worker and an owner, both read before any context exists.
+    "s_ctx",
+    "s_ctx_worker",
+    "s_bound",
+    "s_plain_owner",
+    "s_secure_owner",
     "http_pool",  # presentation/http/http_parser/http_parser.c - the parsed-request pool (extern in http_parser.h)
     "ws_pool",  # presentation/http/websocket/websocket.c - the WebSocket connection pool (extern in websocket.h)
     "protocore_sse_pool",  # presentation/http/sse/sse.c - the SSE connection pool (extern in sse.h)

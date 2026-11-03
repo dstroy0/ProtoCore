@@ -7,6 +7,7 @@
  */
 
 #include "protocore_config.h"
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
@@ -15,14 +16,9 @@
 #include "crypto/asymmetric/ecdsa/ecdsa.h"           // ecdh-sha2-nistp256 + ecdsa host-key verify
 #include "crypto/asymmetric/ed25519/ed25519.h"       // ssh-ed25519 host key + client auth
 #include "crypto/hash/sha256/sha256.h"
-#include "crypto/rng/rng.h"             // Rng
-#include "mmgr/arena/arena.h"           // protocore_worker_set_self (own scratch slot)
-#include "mmgr/bytes/bytes.h"           // bytes.* writers / bytes.rd_str() - the byte verbs this file frames with
-#include "mmgr/plaintext/plaintext.h"   // protocore_plaintext_alloc for the large hybrid C_INIT
-#include "mmgr/protoframe/protoframe.h" // the one frame engine
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.put_u32 - one unaligned store, not four
-#include "mmgr/secure/secure.h"
+#include "crypto/rng/rng.h"                // Rng
+#include "locus_carcerum/locus_carcerum.h" // protocore_worker_set_self (own scratch slot)
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
 #include "network_drivers/presentation/ssh/client/client.h"
 #include "network_drivers/presentation/ssh/common/common.h"
@@ -34,7 +30,11 @@
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/tcp.h"           // protocore_client_*
-#include "server/clock/clock.h"                          // protocore_millis, pcdelay
+#include "numeros_scribo/numeros_scribo.h"               // the one frame engine
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.* writers / protocore_ssh_read_string_at() - the byte verbs this file frames with
+#include "proximus_operor/proximus_operor.h" // proxim.put_u32 - one unaligned store, not four
+#include "server/clock/clock.h"              // protocore_millis, pcdelay
+#include "server/core/worker/worker.h"       // temporary_buf_alloc for the large hybrid C_INIT
 #include "shared/log/log.h"
 
 #if PROTOCORE_ENABLE_PQC_KEX
@@ -51,17 +51,14 @@
 PROTOCORE_BEGIN_DECLS
 
 // Log frames: each message's shape is fixed here, so nothing is parsed when one is emitted.
-static const protocore_field LOG_FWD_FAIL[] = {{PROTOCORE_FK_LIT, 0, 9, "ssh-fwd: "}, PROTOCORE_STR, PROTOCORE_END};
-static const protocore_field LOG_FWD_OPEN[] = {
-    {PROTOCORE_FK_LIT, 0, 46, "ssh-fwd: forwarded-tcpip open, local connect(:"},
-    PROTOCORE_U32,
-    {PROTOCORE_FK_LIT, 0, 6, ") cid="},
-    PROTOCORE_I64,
-    PROTOCORE_END};
-static const protocore_field LOG_FWD_UP[] = {{PROTOCORE_FK_LIT, 0, 40, "ssh-fwd: tcpip-forward up (remote port :"},
-                                             PROTOCORE_U32,
-                                             {PROTOCORE_FK_LIT, 0, 1, ")"},
-                                             PROTOCORE_END};
+static const mmgr_field LOG_FWD_FAIL[] = {{MMGR_FK_LIT, 0, 9, "ssh-fwd: "}, MMGR_STR, MMGR_END};
+static const mmgr_field LOG_FWD_OPEN[] = {{MMGR_FK_LIT, 0, 46, "ssh-fwd: forwarded-tcpip open, local connect(:"},
+                                          MMGR_U32,
+                                          {MMGR_FK_LIT, 0, 6, ") cid="},
+                                          MMGR_I64,
+                                          MMGR_END};
+static const mmgr_field LOG_FWD_UP[] = {
+    {MMGR_FK_LIT, 0, 40, "ssh-fwd: tcpip-forward up (remote port :"}, MMGR_U32, {MMGR_FK_LIT, 0, 1, ")"}, MMGR_END};
 
 // ---------------------------------------------------------------------------
 // Client session state
@@ -110,8 +107,8 @@ static_assert(SSH_CLIENT_OFF_CTX + sizeof(SshClientStorage) <= PROTOCORE_SSH_CLI
               "PROTOCORE_SSH_CLIENT_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -137,7 +134,7 @@ uint8_t *protocore_ssh_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SSH_CLIENT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SSH_CLIENT_BORROW);
     }
     return s_own.span;
 }
@@ -164,11 +161,11 @@ static void cli_wipe(void);
 static proto_bool send_service_request(void)
 {
     uint8_t out[1 + 4 + 12];
-    protocore_span w = span.from(out, sizeof(out));
-    bytes.put(&w, SSH_MSG_SERVICE_REQUEST);
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = sizeof(out));
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_SERVICE_REQUEST);
     protocore_ssh_wr_cstr(&w, "ssh-userauth");
-    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
-                          SshClient.ok);
+    return EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
+                                                          cli_send(protocore_ssh_client_span()), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -228,7 +225,8 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     }
     uint8_t fp[32];
     Sha256.hash(fwork, ks, ks_len, fp);
-    if (mem.cmp(fp, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.host_pin, 32) != 0)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = fp, .other = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.host_pin,
+                   .bytes = 32) != 0)
     {
         cli_fail("relay host key does not match the pin");
         return PROTO_FALSE;
@@ -281,15 +279,15 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     SshTransport.exchange_hash(protocore_ssh_transport_span());
     if (SshTransportV.i32 != 0)
     {
-        protocore_secure_wipe(k_be, sizeof(k_be));
+        mmgr_zero_buf(k_be, sizeof(k_be));
         return PROTO_FALSE;
     }
     h_len = SshTransportV.kexhash.hash_len;
-    mem.cpy(H, SshTransportV.kexhash.hash, h_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H, .src = SshTransportV.kexhash.hash, .bytes = h_len);
 
     if (!ssh_hostkey_verify(SSH_CLI_SLOT, ks, ks_len, sig, sig_len, H, h_len))
     {
-        protocore_secure_wipe(k_be, sizeof(k_be));
+        mmgr_zero_buf(k_be, sizeof(k_be));
         cli_fail("relay signature verification failed");
         return PROTO_FALSE;
     }
@@ -301,7 +299,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     const uint8_t *sid = ssh_session_id(SSH_CLI_SLOT, &sid_len);
     if (sid == NULL)
     {
-        protocore_secure_wipe(k_be, sizeof(k_be));
+        mmgr_zero_buf(k_be, sizeof(k_be));
         cli_fail("no session identifier after key exchange");
         return PROTO_FALSE;
     }
@@ -309,7 +307,7 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     // ssh_kex_install_keys populates c2s/s2c per the RFC 4253 §7.2 letters for the negotiated
     // cipher/MAC; the packet layer's is_client flag selects the send/receive direction. The hybrids
     // encode K as a fixed 32/64-byte string (k_is_string); the classical methods as an mpint. The
-    // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 bytes.
+    // -sha512 method derives over SHA-512 (is512), so H and the session_id are 64 byteio.
     const proto_bool is512 = ssh_kex_is_sha512(SSH_CLIENT_CTX(protocore_ssh_client_span())->kex);
     const SshKdfInputs kdf_in = {.work = (cli_crypto_work(protocore_ssh_client_span()), SshClient.work),
                                  .K_be = k_be,
@@ -320,12 +318,10 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
                                  .k_is_string = k_is_string,
                                  .is512 = is512};
     ssh_kex_install_keys(SSH_CLI_SLOT, &kdf_in);
-    protocore_secure_wipe(k_be, sizeof(k_be));
-    protocore_secure_wipe(SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv,
-                          sizeof(((SshClientStorage *)0)->kex_priv));
+    mmgr_zero_buf(k_be, sizeof(k_be));
+    mmgr_zero_buf(SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv, sizeof(((SshClientStorage *)0)->kex_priv));
 #if PROTOCORE_ENABLE_PQC_KEX || PROTOCORE_ENABLE_SSH_SNTRUP761
-    protocore_secure_wipe((uint8_t *)&SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb,
-                          sizeof(((SshClientStorage *)0)->hyb));
+    mmgr_zero_buf((uint8_t *)&SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb, sizeof(((SshClientStorage *)0)->hyb));
 #endif
 
     uint8_t nk = SSH_MSG_NEWKEYS;
@@ -423,8 +419,8 @@ static proto_bool build_kex_public(void)
         BignumV.to_bytes_args.in = &e;
         Bignum.to_bytes(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 256;
-        protocore_secure_wipe(&x, sizeof(x));
-        protocore_secure_wipe(&e, sizeof(e));
+        mmgr_zero_buf(&x, sizeof(x));
+        mmgr_zero_buf(&e, sizeof(e));
         return PROTO_TRUE;
     }
 #if PROTOCORE_ENABLE_PQC_KEX
@@ -439,9 +435,9 @@ static proto_bool build_kex_public(void)
         RngV.fill_args.len = sizeof(z);
         Rng.fill(protocore_rng_span());
         MlKem.keygen(work, d, z, ek, SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk);
-        protocore_secure_wipe(d, sizeof(d));
-        protocore_secure_wipe(z, sizeof(z));
-        protocore_secure_wipe(ek, sizeof(ek)); // ek persists inside mlkem_dk
+        mmgr_zero_buf(d, sizeof(d));
+        mmgr_zero_buf(z, sizeof(z));
+        mmgr_zero_buf(ek, sizeof(ek)); // ek persists inside mlkem_dk
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
@@ -457,14 +453,16 @@ static proto_bool build_kex_public(void)
         // sntrup761 keypair (sk kept for Decaps; pk is embedded in sk) + an X25519 ephemeral. C_INIT
         // (pk || Q_C) is assembled at send time from sk; Q_C lives in qc[0..31]. pk is only needed
         // transiently here (sk embeds a copy), so it borrows the scratch arena.
-        size_t mark = protocore_plaintext_mark();
-        uint8_t *pk = (uint8_t *)protocore_plaintext_alloc(PROTOCORE_SNTRUP761_PK_BYTES, 1);
+        size_t mark = protocore_plain_guard()->temporary_buf_mark();
+        uint8_t *pk = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_SNTRUP761_PK_BYTES,
+                                                                              protocore_plain_owner());
         if (!pk)
         {
             return PROTO_FALSE;
         }
         Sntrup761.keypair(work, pk, SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk);
-        protocore_plaintext_release(mark); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
+        protocore_plain_guard()->temporary_buf_release(
+            mark); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
@@ -508,23 +506,25 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         const uint8_t *ek =
             SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk + 1152; // ek follows the 1152-byte dk_pke in dk
         const size_t clen = MLKEM768_EK_BYTES + 32;
-        mem.cpy(hs->cpub, ek, MLKEM768_EK_BYTES);
-        mem.cpy(hs->cpub + MLKEM768_EK_BYTES, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->cpub, .src = ek, .bytes = MLKEM768_EK_BYTES);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->cpub + MLKEM768_EK_BYTES,
+                   .src = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc, .bytes = 32);
         hs->cpub_len = (uint16_t)clen;
         const size_t plen = 1 + 4 + clen;
-        size_t mark = protocore_plaintext_mark();
-        uint8_t *out = (uint8_t *)protocore_plaintext_alloc(plen, 1);
+        size_t mark = protocore_plain_guard()->temporary_buf_mark();
+        uint8_t *out = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(plen, protocore_plain_owner());
         if (!out)
         {
             return PROTO_FALSE;
         }
-        protocore_span w = span.from(out, plen);
-        bytes.put(&w, SSH_MSG_KEXDH_INIT);
-        bytes.put_be(&w, (uint32_t)clen, 4);
-        bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok = span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
-                                       cli_send(protocore_ssh_client_span()), SshClient.ok);
-        protocore_plaintext_release(mark);
+        mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = plen);
+        EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_KEXDH_INIT);
+        EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w, .value = (uint32_t)clen, .bytes = 4);
+        EMBED_CALL(byteio.raw, OctetusCfg, .write_span = &w, .src = (const uint8_t *)hs->cpub, .bytes = clen);
+        proto_bool ok =
+            EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
+                                                           cli_send(protocore_ssh_client_span()), SshClient.ok);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return ok;
     }
 #endif
@@ -538,23 +538,25 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         const uint8_t *pk =
             SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk + PROTOCORE_SNTRUP761_SK_PK_OFFSET;
         const size_t clen = PROTOCORE_SNTRUP761_PK_BYTES + 32;
-        mem.cpy(hs->cpub, pk, PROTOCORE_SNTRUP761_PK_BYTES);
-        mem.cpy(hs->cpub + PROTOCORE_SNTRUP761_PK_BYTES, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->cpub, .src = pk, .bytes = PROTOCORE_SNTRUP761_PK_BYTES);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->cpub + PROTOCORE_SNTRUP761_PK_BYTES,
+                   .src = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc, .bytes = 32);
         hs->cpub_len = (uint16_t)clen;
         const size_t plen = 1 + 4 + clen;
-        size_t mark = protocore_plaintext_mark();
-        uint8_t *out = (uint8_t *)protocore_plaintext_alloc(plen, 1);
+        size_t mark = protocore_plain_guard()->temporary_buf_mark();
+        uint8_t *out = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(plen, protocore_plain_owner());
         if (!out)
         {
             return PROTO_FALSE;
         }
-        protocore_span w = span.from(out, plen);
-        bytes.put(&w, SSH_MSG_KEXDH_INIT);
-        bytes.put_be(&w, (uint32_t)clen, 4);
-        bytes.raw(&w, hs->cpub, clen);
-        proto_bool ok = span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
-                                       cli_send(protocore_ssh_client_span()), SshClient.ok);
-        protocore_plaintext_release(mark);
+        mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = plen);
+        EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_KEXDH_INIT);
+        EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w, .value = (uint32_t)clen, .bytes = 4);
+        EMBED_CALL(byteio.raw, OctetusCfg, .write_span = &w, .src = (const uint8_t *)hs->cpub, .bytes = clen);
+        proto_bool ok =
+            EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
+                                                           cli_send(protocore_ssh_client_span()), SshClient.ok);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return ok;
     }
 #endif
@@ -562,13 +564,13 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
     // KEXDH_INIT (msg 30): string(Q_C) for curve/ecdh, mpint(e) for DH. The exchange hash takes the
     // value as it stands here, before either encoding is applied.
     SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
-    mem.cpy(hs->cpub, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc,
-            SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = hs->cpub, .src = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc,
+               .bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len);
     hs->cpub_len = (uint16_t)SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len;
 
     uint8_t out[1 + 4 + 260];
-    protocore_span w = span.from(out, sizeof(out));
-    bytes.put(&w, SSH_MSG_KEXDH_INIT);
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = sizeof(out));
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_KEXDH_INIT);
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->kex == SSH_KEX_DH_GROUP14)
     {
         // mpint(e): minimal, with a sign byte if the top bit is set.
@@ -580,20 +582,21 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         }
         size_t mag = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len - i;
         proto_bool pad = (mag > 0 && (SSH_CLIENT_CTX(protocore_ssh_client_span())->qc[i] & 0x80) != 0);
-        bytes.put_be(&w, (uint32_t)(mag + (pad ? 1 : 0)), 4);
+        EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w, .value = (uint32_t)(mag + (pad ? 1 : 0)), .bytes = 4);
         if (pad)
         {
-            bytes.put(&w, 0);
+            EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = 0);
         }
-        bytes.raw(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc + i, mag);
+        EMBED_CALL(byteio.raw, OctetusCfg, .write_span = &w,
+                   .src = (const uint8_t *)(SSH_CLIENT_CTX(protocore_ssh_client_span())->qc + i), .bytes = mag);
     }
     else
     {
         protocore_ssh_wr_str(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc,
                              SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len);
     }
-    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
-                          SshClient.ok);
+    return EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
+                                                          cli_send(protocore_ssh_client_span()), SshClient.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -672,16 +675,17 @@ SshClientNs SshClient = {.send = cli_send,
 static proto_bool send_tcpip_forward(void)
 {
     uint8_t out[128];
-    protocore_span w = span.from(out, sizeof(out));
-    bytes.put(&w, SSH_MSG_GLOBAL_REQUEST);
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = sizeof(out));
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_GLOBAL_REQUEST);
     protocore_ssh_wr_cstr(&w, "tcpip-forward");
-    bytes.put(&w, 1); // want reply
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = 1); // want reply
     protocore_ssh_wr_cstr(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_addr
                                   ? SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_addr
                                   : "");
-    bytes.put_be(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_port, 4);
-    return span.ok(w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos, cli_send(protocore_ssh_client_span()),
-                          SshClient.ok);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w,
+               .value = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_port, .bytes = 4);
+    return EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
+                                                          cli_send(protocore_ssh_client_span()), SshClient.ok);
 }
 // ---------------------------------------------------------------------------
 // RFC 4252 sec 7 - the outbound role's publickey request
@@ -696,10 +700,10 @@ static proto_bool send_userauth_publickey(void)
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
     uint8_t pkblob[4 + 11 + 4 + 32];
-    protocore_span pw = span.from(pkblob, sizeof(pkblob));
+    mmgr_span pw = EMBED_CALL(spat.from, SpatiumCfg, .buf = pkblob, .cap = sizeof(pkblob));
     protocore_ssh_wr_cstr(&pw, NAME_ED25519);
     protocore_ssh_wr_str(&pw, pub, 32);
-    if (!span.ok(pw))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = pw))
     {
         return PROTO_FALSE;
     }
@@ -714,7 +718,7 @@ static proto_bool send_userauth_publickey(void)
         return PROTO_FALSE; // no completed exchange: the signature would bind to no session
     }
     uint8_t signed_data[256 + SSH_KEXHASH_MAX_LEN];
-    protocore_span sd = span.from(signed_data, sizeof(signed_data));
+    mmgr_span sd = EMBED_CALL(spat.from, SpatiumCfg, .buf = signed_data, .cap = sizeof(signed_data));
     SshAuthV.out_args.w = &sd;
     SshAuthV.userauth.sid = sid;
     SshAuthV.userauth.sid_len = sid_len;
@@ -724,7 +728,7 @@ static proto_bool send_userauth_publickey(void)
     SshAuthV.userauth.pk_blob = pkblob;
     SshAuthV.userauth.pk_len = pw.pos;
     SshAuth.write_publickey_request(protocore_ssh_auth_span());
-    if (!span.ok(sd))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = sd))
     {
         return PROTO_FALSE;
     }
@@ -734,17 +738,17 @@ static proto_bool send_userauth_publickey(void)
 
     // Signature blob: string("ssh-ed25519") || string(sig64).
     uint8_t sigblob[4 + 11 + 4 + 64];
-    protocore_span sg = span.from(sigblob, sizeof(sigblob));
+    mmgr_span sg = EMBED_CALL(spat.from, SpatiumCfg, .buf = sigblob, .cap = sizeof(sigblob));
     protocore_ssh_wr_cstr(&sg, NAME_ED25519);
     protocore_ssh_wr_str(&sg, sig, 64);
-    if (!span.ok(sg))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = sg))
     {
         return PROTO_FALSE;
     }
 
     // The full USERAUTH_REQUEST is the signed prefix (minus the session_id) plus the signature.
     uint8_t out[300];
-    protocore_span w = span.from(out, sizeof(out));
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = sizeof(out));
     SshAuthV.out_args.w = &w;
     SshAuthV.userauth.sid = NULL;
     SshAuthV.userauth.sid_len = 0;
@@ -755,7 +759,7 @@ static proto_bool send_userauth_publickey(void)
     SshAuthV.userauth.pk_len = pw.pos;
     SshAuth.write_publickey_request(protocore_ssh_auth_span());
     protocore_ssh_wr_str(&w, sigblob, sg.pos);
-    if (!span.ok(w))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
         return PROTO_FALSE;
     }
@@ -920,8 +924,8 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
                 handled = PROTO_TRUE;
                 SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_UP;
                 PROTOCORE_LOGI(LOG_FWD_UP,
-                               ((const protocore_fval[]){PROTOCORE_VU32(
-                                   (uint32_t)SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_port)}),
+                               ((const mmgr_fval[]){
+                                   MMGR_VU32((uint32_t)SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_port)}),
                                1);
             }
             else if (type == SSH_MSG_REQUEST_FAILURE)
@@ -974,7 +978,7 @@ static void protocore_ssh_client_begin(uint8_t *work)
     }
 
     protocore_ssh_client_end(work);
-    mem.set(protocore_ssh_client_span(), 0, sizeof(SshClientStorage));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = protocore_ssh_client_span(), .val = 0, .bytes = sizeof(SshClientStorage));
     SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg = *cfg;
     SshConnectionV.chan.slot = SSH_CLI_SLOT;
     SshConnection.channel_init(protocore_ssh_connection_span()); // the channel table this slot's bridges hang off
@@ -1123,14 +1127,14 @@ static void protocore_ssh_client_end(uint8_t *work)
     SshNetwork.release(protocore_ssh_network_span());
     ssh_keymat_wipe(SSH_CLI_SLOT);
     cli_wipe();
-    mem.set(protocore_ssh_client_span(), 0, sizeof(SshClientStorage));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = protocore_ssh_client_span(), .val = 0, .bytes = sizeof(SshClientStorage));
     SSH_CLIENT_CTX(protocore_ssh_client_span())->cid = -1;
     SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_IDLE;
 }
 
 static void cli_fail(const char *why)
 {
-    PROTOCORE_LOGW(LOG_FWD_FAIL, ((const protocore_fval[]){PROTOCORE_VSTR(why)}), 1);
+    PROTOCORE_LOGW(LOG_FWD_FAIL, ((const mmgr_fval[]){MMGR_VSTR(why)}), 1);
     SSH_CLIENT_CTX(protocore_ssh_client_span())->state = PROTOCORE_SSH_CLIENT_FAILED;
     SshNetworkV.ssh_slot = SSH_CLI_SLOT;
     SshNetwork.chan_close_all(protocore_ssh_network_span());
@@ -1150,7 +1154,7 @@ static void cli_fail(const char *why)
 // session id all live here for the life of one connection.
 static void cli_wipe(void)
 {
-    protocore_secure_wipe(protocore_ssh_client_span(), sizeof(SshClientStorage));
+    mmgr_zero_buf(protocore_ssh_client_span(), sizeof(SshClientStorage));
 }
 
 PROTOCORE_END_DECLS

@@ -19,13 +19,13 @@
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/sftp/ssh_sftp/ssh_sftp.h"
 #include "network_drivers/session/session.h" // sftp_sess: the session the connection carries
+#include "server/core/worker/worker.h"       // the persistent end this module's state is taken from
 
-#include "mmgr/endian/endian.h"     // the u32 <-> big-endian bytes serializers
-#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "cellularum_laboro/cellularum_laboro.h" // str: the bounded-run walks
+#include "endian/endian.h"                       // the u32 <-> big-endian bytes serializers
 #include "network_drivers/application/sftp/sftp/sftp.h"
 #include "network_drivers/presentation/ssh/connection/connection.h" // callbacks + setters
 #include "network_drivers/presentation/ssh/network/network.h" // protocore_ssh_channel_send_data / protocore_ssh_channel_send_close
@@ -68,8 +68,8 @@ static_assert(SSH_SFTP_OFF_CTX + sizeof(SshSftpCtx) <= PROTOCORE_SSH_SFTP_BORROW
               "PROTOCORE_SSH_SFTP_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(SSH_SFTP_OFF_CTX % _Alignof(SshSftpCtx) == 0,
@@ -94,7 +94,7 @@ uint8_t *protocore_ssh_sftp_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SSH_SFTP_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SSH_SFTP_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         SSH_SFTP_CTX(s_own.span)->root = -1;
     }
@@ -141,20 +141,20 @@ static int handle_index(SftpSession *s, const uint8_t *h, uint32_t hl)
     {
         return -1;
     }
-    uint32_t idx = endian.rd32be(h);
+    uint32_t idx = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = h, .width = MMGR_ENDIAN_32);
     return handle_open(s, (int)idx) ? (int)idx : -1;
 }
 
 // --- helpers --------------------------------------------------------------------------------------
 // Take a wire path (length-prefixed, not NUL-terminated) into request slot @p slot as a C string. "" and "."
-// both name the mount root. Nothing is resolved here; the string that comes back is the client's own bytes.
+// both name the mount root. Nothing is resolved here; the string that comes back is the client's own byteio.
 static const char *req_path(uint8_t *work, int slot, const uint8_t *p, uint32_t plen)
 {
     if (p == NULL || plen >= PROTOCORE_FILESYSTEM_PATH_MAX)
     {
         return NULL;
     }
-    mem.cpy(SSH_SFTP_CTX(work)->req[slot], p, plen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SSH_SFTP_CTX(work)->req[slot], .src = p, .bytes = plen);
     SSH_SFTP_CTX(work)->req[slot][plen] = '\0';
     if (plen == 0 || (plen == 1 && SSH_SFTP_CTX(work)->req[slot][0] == '.'))
     {
@@ -208,7 +208,8 @@ static void send_status(uint8_t *work, SftpSession *s, uint32_t id, uint32_t cod
 static void send_handle(uint8_t *work, SftpSession *s, uint32_t id, int hi)
 {
     // The serializer returns the width it wrote, which is the length the HANDLE string carries.
-    size_t n = endian.wr32be(SSH_SFTP_CTX(work)->hb, (uint32_t)hi);
+    size_t n = EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = SSH_SFTP_CTX(work)->hb, .val = (uint32_t)hi,
+                          .width = MMGR_ENDIAN_32);
     SftpV.build_handle_args.id = id;
     SftpV.build_handle_args.handle = SSH_SFTP_CTX(work)->hb;
     SftpV.build_handle_args.hlen = n;
@@ -283,8 +284,8 @@ static size_t build_entry(uint8_t *work, const protocore_mnt_stat *st, const cha
         return 0;
     }
     size_t el = w.off - 4;
-    mem.move(SSH_SFTP_CTX(work)->ent, SSH_SFTP_CTX(work)->ent + 4,
-             el); // drop the reserved prefix so the entry bytes start at ent[0]
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = SSH_SFTP_CTX(work)->ent, .src = SSH_SFTP_CTX(work)->ent + 4,
+               .bytes = el); // drop the reserved prefix so the entry bytes start at ent[0]
     return el;
 }
 
@@ -337,7 +338,8 @@ static void do_readdir(uint8_t *work, SftpSession *s, uint32_t id, SftpHandle *H
             break;
         }
         size_t el = build_entry(work, &st, SSH_SFTP_CTX(work)->nm,
-                                str.len(SSH_SFTP_CTX(work)->nm, sizeof(SSH_SFTP_CTX(work)->nm)));
+                                EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = SSH_SFTP_CTX(work)->nm,
+                                           .cap = sizeof(SSH_SFTP_CTX(work)->nm)));
         if (el == 0)
         {
             continue; // entry could not be serialized (pathological name) - skip it
@@ -356,7 +358,7 @@ static void do_readdir(uint8_t *work, SftpSession *s, uint32_t id, SftpHandle *H
             }
             else // stash it for the next READDIR
             {
-                mem.cpy(H->pend, SSH_SFTP_CTX(work)->ent, el);
+                EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H->pend, .src = SSH_SFTP_CTX(work)->ent, .bytes = el);
                 H->pend_len = (uint16_t)el;
                 H->has_pending = PROTO_TRUE;
             }
@@ -388,12 +390,12 @@ static void do_readdir(uint8_t *work, SftpSession *s, uint32_t id, SftpHandle *H
 // handle-to-path map. The accessor resolves it again; it is the client's bytes, not a resolved path.
 static void keep_req(SftpHandle *H, const char *req)
 {
-    size_t n = str.len(req, sizeof(H->req));
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = req, .cap = sizeof(H->req));
     if (n >= sizeof(H->req))
     {
         n = sizeof(H->req) - 1;
     }
-    mem.cpy(H->req, req, n);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H->req, .src = req, .bytes = n);
     H->req[n] = '\0';
 }
 
@@ -869,7 +871,7 @@ static proto_bool process_acc(uint8_t *work, SftpSession *s)
         {
             return PROTO_TRUE; // need the length prefix + the type byte
         }
-        uint32_t plen = endian.rd32be(s->acc);
+        uint32_t plen = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = s->acc, .width = MMGR_ENDIAN_32);
         if (plen == 0)
         {
             return PROTO_FALSE; // malformed
@@ -929,7 +931,8 @@ static proto_bool process_acc(uint8_t *work, SftpSession *s)
             size_t chunk = have < datalen ? have : datalen;
             write_stream_bytes(s, s->acc + hdr, chunk);
             size_t consumed = hdr + chunk;
-            mem.move(s->acc, s->acc + consumed, s->acc_len - consumed);
+            EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->acc, .src = s->acc + consumed,
+                       .bytes = s->acc_len - consumed);
             s->acc_len -= (uint16_t)consumed;
             if (s->wr_remaining == 0)
             {
@@ -951,7 +954,7 @@ static proto_bool process_acc(uint8_t *work, SftpSession *s)
             return PROTO_TRUE; // wait for the rest
         }
         handle_packet(work, s, s->acc, total);
-        mem.move(s->acc, s->acc + total, s->acc_len - total);
+        EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->acc, .src = s->acc + total, .bytes = s->acc_len - total);
         s->acc_len -= (uint16_t)total;
     }
 }
@@ -1014,7 +1017,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
             return;
         }
         size_t take = len < space ? len : space;
-        mem.cpy(s->acc + s->acc_len, data, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->acc + s->acc_len, .src = data, .bytes = take);
         s->acc_len += (uint16_t)take;
         data += take;
         len -= take;

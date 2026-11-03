@@ -16,14 +16,13 @@
 
 #if PROTOCORE_ENABLE_FILE_SERVING
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/application/file_serving/file_serving.h"
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/session/session.h"                 // file_send: the transfer the connection carries
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response is written on
+#include "server/core/worker/worker.h"                       // the persistent end this module's state is taken from
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr/protostr.h" // str.find / str.has: the month table, traversal and gzip markers
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.find / cellul.has: the month table, traversal and gzip markers
 #include "network_drivers/application/http_range/http_range.h" // http_parse_byte_range (shared with the edge cache)
 #include "network_drivers/presentation/http/route/http_route/http_route.h"
 #include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
@@ -31,6 +30,7 @@
 #include "server/storage/filesystem/filesystem.h" // protocore_fs_* - the accessor owns the root, the join, and the .. guard
 #include "shared/mime/mime.h"                     // mime_type, PROTOCORE_MIME_*
 #include "shared/time_compat/time_compat.h"       // protocore_gmtime_r (portable reentrant UTC)
+#include "verba_scribo/verba_scribo.h"            // verba_scribo frame builder
 #include <stdio.h>                                // snprintf, sscanf
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
@@ -66,8 +66,8 @@ static_assert(FILE_SERVING_OFF_CTX + sizeof(FileCtx) <= PROTOCORE_FILE_SERVING_B
               "PROTOCORE_FILE_SERVING_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(
@@ -93,7 +93,7 @@ uint8_t *protocore_file_serving_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FILE_SERVING_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_FILE_SERVING_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         FILE_SERVING_CTX(s_own.span)->root = -1;
     }
@@ -185,7 +185,8 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
         return PROTO_FALSE;
     }
     static const char MONTHS[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
-    const char *mp = str.find(MONTHS, sizeof(MONTHS), mon, sizeof(mon), PROTO_FALSE);
+    const char *mp = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = MONTHS, .cap = sizeof(MONTHS), .other = mon,
+                                .other_cap = sizeof(mon), .ci = PROTO_FALSE);
     // Must align to a 3-char month boundary: a malformed token like "ebM" appears in
     // the table at a non-multiple-of-3 offset and would otherwise mis-parse as a month.
     if (!mp || ((mp - MONTHS) % 3) != 0)
@@ -243,7 +244,7 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     {
         return PROTO_TRUE; // "*" matches the existing representation
     }
-    size_t etlen = str.len(etag, 40);
+    size_t etlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = etag, .cap = 40);
     const char *p = inm;
     while (*p)
     {
@@ -262,13 +263,21 @@ static proto_bool inm_matches(const char *inm, const char *etag)
         }
         if (tag[0] == '"')
         {
-            const char *end = str.find(tag + 1, str.len(tag + 1, MAX_VAL_LEN) + 1u, "\"", sizeof("\""), PROTO_FALSE);
-            if (end && (size_t)(end - tag + 1) == etlen && str.diff(tag, etag, etlen, PROTO_FALSE) == etlen)
+            const char *end =
+                EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = tag + 1,
+                           .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = tag + 1, .cap = MAX_VAL_LEN) + 1u,
+                           .other = "\"", .other_cap = sizeof("\""), .ci = PROTO_FALSE);
+            if (end && (size_t)(end - tag + 1) == etlen &&
+                EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = tag, .other = etag, .cap = etlen, .ci = PROTO_FALSE) ==
+                    etlen)
             {
                 return PROTO_TRUE;
             }
         }
-        const char *comma = str.find(p, str.len(p, MAX_VAL_LEN) + 1u, ",", sizeof(","), PROTO_FALSE);
+        const char *comma =
+            EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p,
+                       .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = p, .cap = MAX_VAL_LEN) + 1u, .other = ",",
+                       .other_cap = sizeof(","), .ci = PROTO_FALSE);
         if (!comma)
         {
             break;
@@ -334,11 +343,15 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     enc_line[0] = '\0';
     if (content_encoding)
     {
-        protocore_sb sb_enc_line = {enc_line, sizeof(enc_line), 0, PROTO_TRUE};
-        Sb.put(&sb_enc_line, "Content-Encoding: ");
-        Sb.put(&sb_enc_line, content_encoding);
-        Sb.put(&sb_enc_line, "\r\n");
-        if (Sb.finish(&sb_enc_line) == 0)
+        size_t sb_enc_line = 0;
+        sb_enc_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = enc_line, .cap = sizeof(enc_line),
+                                 .at = sb_enc_line, .text = "Content-Encoding: ");
+        sb_enc_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = enc_line, .cap = sizeof(enc_line),
+                                 .at = sb_enc_line, .text = content_encoding);
+        sb_enc_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = enc_line, .cap = sizeof(enc_line),
+                                 .at = sb_enc_line, .text = "\r\n");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = enc_line, .cap = sizeof(enc_line),
+                       .at = sb_enc_line) == 0)
         {
             enc_line[0] = '\0';
         }
@@ -351,13 +364,18 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     // If-None-Match is present - its If-Modified-Since is not older than the file.
     time_t mtime = (time_t)(st.mtime);
     char etag[40];
-    protocore_sb sb_etag = {etag, sizeof(etag), 0, PROTO_TRUE};
-    Sb.put(&sb_etag, "\"");
-    Sb.hex(&sb_etag, (uint64_t)((unsigned)file_size), 1);
-    Sb.put(&sb_etag, "-");
-    Sb.hex(&sb_etag, (uint64_t)((unsigned long)mtime), 1);
-    Sb.put(&sb_etag, "\"");
-    if (Sb.finish(&sb_etag) == 0)
+    size_t sb_etag = 0;
+    sb_etag =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = etag, .cap = sizeof(etag), .at = sb_etag, .text = "\"");
+    sb_etag = EMBED_CALL(verba_numerus.hex, VerbaNumerusCfg, .out = etag, .cap = sizeof(etag), .at = sb_etag,
+                         .val = (uint64_t)((unsigned)file_size), .min = 1);
+    sb_etag =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = etag, .cap = sizeof(etag), .at = sb_etag, .text = "-");
+    sb_etag = EMBED_CALL(verba_numerus.hex, VerbaNumerusCfg, .out = etag, .cap = sizeof(etag), .at = sb_etag,
+                         .val = (uint64_t)((unsigned long)mtime), .min = 1);
+    sb_etag =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = etag, .cap = sizeof(etag), .at = sb_etag, .text = "\"");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = etag, .cap = sizeof(etag), .at = sb_etag) == 0)
     {
         etag[0] = '\0';
     }
@@ -371,11 +389,15 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     protocore_file_serving_http_rfc1123(work);
     if (lm_date[0])
     {
-        protocore_sb sb_lastmod_line = {lastmod_line, sizeof(lastmod_line), 0, PROTO_TRUE};
-        Sb.put(&sb_lastmod_line, "Last-Modified: ");
-        Sb.put(&sb_lastmod_line, lm_date);
-        Sb.put(&sb_lastmod_line, "\r\n");
-        if (Sb.finish(&sb_lastmod_line) == 0)
+        size_t sb_lastmod_line = 0;
+        sb_lastmod_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = lastmod_line, .cap = sizeof(lastmod_line),
+                                     .at = sb_lastmod_line, .text = "Last-Modified: ");
+        sb_lastmod_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = lastmod_line, .cap = sizeof(lastmod_line),
+                                     .at = sb_lastmod_line, .text = lm_date);
+        sb_lastmod_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = lastmod_line, .cap = sizeof(lastmod_line),
+                                     .at = sb_lastmod_line, .text = "\r\n");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = lastmod_line, .cap = sizeof(lastmod_line),
+                       .at = sb_lastmod_line) == 0)
         {
             lastmod_line[0] = '\0';
         }
@@ -395,16 +417,24 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
         Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
         char h304[RESP_HDR_BUF_SIZE];
-        protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
-        Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
-        Sb.put(&sb_h304, etag);
-        Sb.put(&sb_h304, "\r\n");
-        Sb.put(&sb_h304, lastmod_line);
-        Sb.put(&sb_h304, protocore_resp_cache_control());
-        Sb.put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-        Sb.put(&sb_h304, cl);
-        Sb.put(&sb_h304, "\r\n");
-        int n304 = (int)Sb.finish(&sb_h304);
+        size_t sb_h304 = 0;
+        sb_h304 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304,
+                             .text = "HTTP/1.1 304 Not Modified\r\nETag: ");
+        sb_h304 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304, .text = etag);
+        sb_h304 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304,
+                             .text = "\r\n");
+        sb_h304 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304,
+                             .text = lastmod_line);
+        sb_h304 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304,
+                             .text = protocore_resp_cache_control());
+        sb_h304 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304,
+                             .text = protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        sb_h304 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304, .text = cl);
+        sb_h304 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304,
+                             .text = "\r\n");
+        int n304 = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304);
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = h304;
         ConnPoolV.io.len = (proto_u16)n304;
@@ -413,11 +443,15 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
         return;
     }
     char etag_line[48];
-    protocore_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
-    Sb.put(&sb_etag_line, "ETag: ");
-    Sb.put(&sb_etag_line, etag);
-    Sb.put(&sb_etag_line, "\r\n");
-    if (Sb.finish(&sb_etag_line) == 0)
+    size_t sb_etag_line = 0;
+    sb_etag_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = etag_line, .cap = sizeof(etag_line),
+                              .at = sb_etag_line, .text = "ETag: ");
+    sb_etag_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = etag_line, .cap = sizeof(etag_line),
+                              .at = sb_etag_line, .text = etag);
+    sb_etag_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = etag_line, .cap = sizeof(etag_line),
+                              .at = sb_etag_line, .text = "\r\n");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = etag_line, .cap = sizeof(etag_line), .at = sb_etag_line) ==
+        0)
     {
         etag_line[0] = '\0';
     }
@@ -447,14 +481,20 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
         Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
         char h416[RESP_HDR_BUF_SIZE];
-        protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
-        Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
-        Sb.u32(&sb_h416, (uint32_t)((unsigned)file_size));
-        Sb.put(&sb_h416, "\r\nContent-Length: 0\r\n");
-        Sb.put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-        Sb.put(&sb_h416, cl);
-        Sb.put(&sb_h416, "\r\n");
-        int n416 = (int)Sb.finish(&sb_h416);
+        size_t sb_h416 = 0;
+        sb_h416 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416,
+                             .text = "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
+        sb_h416 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416,
+                             .val = (uint32_t)((unsigned)file_size));
+        sb_h416 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416,
+                             .text = "\r\nContent-Length: 0\r\n");
+        sb_h416 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416,
+                             .text = protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        sb_h416 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416, .text = cl);
+        sb_h416 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416,
+                             .text = "\r\n");
+        int n416 = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416);
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = h416;
         ConnPoolV.io.len = (proto_u16)n416;
@@ -466,15 +506,23 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     {
         status = 206;
         body_len = r_end - r_start + 1;
-        protocore_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
-        Sb.put(&sb_range_line, "Content-Range: bytes ");
-        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_start));
-        Sb.put(&sb_range_line, "-");
-        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_end));
-        Sb.put(&sb_range_line, "/");
-        Sb.u32(&sb_range_line, (uint32_t)((unsigned)file_size));
-        Sb.put(&sb_range_line, "\r\n");
-        if (Sb.finish(&sb_range_line) == 0)
+        size_t sb_range_line = 0;
+        sb_range_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = range_line, .cap = sizeof(range_line),
+                                   .at = sb_range_line, .text = "Content-Range: bytes ");
+        sb_range_line = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = range_line, .cap = sizeof(range_line),
+                                   .at = sb_range_line, .val = (uint32_t)((unsigned)r_start));
+        sb_range_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = range_line, .cap = sizeof(range_line),
+                                   .at = sb_range_line, .text = "-");
+        sb_range_line = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = range_line, .cap = sizeof(range_line),
+                                   .at = sb_range_line, .val = (uint32_t)((unsigned)r_end));
+        sb_range_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = range_line, .cap = sizeof(range_line),
+                                   .at = sb_range_line, .text = "/");
+        sb_range_line = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = range_line, .cap = sizeof(range_line),
+                                   .at = sb_range_line, .val = (uint32_t)((unsigned)file_size));
+        sb_range_line = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = range_line, .cap = sizeof(range_line),
+                                   .at = sb_range_line, .text = "\r\n");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = range_line, .cap = sizeof(range_line),
+                       .at = sb_range_line) == 0)
         {
             range_line[0] = '\0';
         }
@@ -497,28 +545,47 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
 #endif
 
     char header[RESP_HDR_BUF_SIZE];
-    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header, "HTTP/1.1 ");
-    Sb.i64(&sb_header, (int64_t)(status));
-    Sb.put(&sb_header, " ");
+    size_t sb_header = 0;
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "HTTP/1.1 ");
+    sb_header = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .sval = (int64_t)(status));
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = " ");
     HttpV.code = status;
     Http.status_text(protocore_http_span());
-    Sb.put(&sb_header, HttpV.text);
-    Sb.put(&sb_header, "\r\nContent-Type: ");
-    Sb.put(&sb_header, content_type);
-    Sb.put(&sb_header, "\r\nContent-Length: ");
-    Sb.u32(&sb_header, (uint32_t)((unsigned)body_len));
-    Sb.put(&sb_header, "\r\n");
-    Sb.put(&sb_header, accept_ranges);
-    Sb.put(&sb_header, range_line);
-    Sb.put(&sb_header, enc_line);
-    Sb.put(&sb_header, etag_line);
-    Sb.put(&sb_header, lastmod_line);
-    Sb.put(&sb_header, protocore_resp_cache_control());
-    Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-    Sb.put(&sb_header, cl);
-    Sb.put(&sb_header, "\r\n");
-    int hlen = (int)Sb.finish(&sb_header);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = HttpV.text);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\nContent-Type: ");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = content_type);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\nContent-Length: ");
+    sb_header = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .val = (uint32_t)((unsigned)body_len));
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\n");
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = accept_ranges);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = range_line);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = enc_line);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = etag_line);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = lastmod_line);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = protocore_resp_cache_control());
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    sb_header =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header, .text = cl);
+    sb_header = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header,
+                           .text = "\r\n");
+    int hlen =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header);
     if (hlen == 0)
     {
         header[0] = '\0';
@@ -688,14 +755,16 @@ void protocore_file_serving_serve_static(uint8_t *work)
     // exact-match route for a path the caller never named - a route that serves something other
     // than what was asked for is worse than a route that does not exist.
     char pat[MAX_PATH_LEN];
-    size_t n = str.len(url_prefix, MAX_PATH_LEN);
-    protocore_sb sb_pat = {pat, sizeof(pat), 0, PROTO_TRUE};
-    Sb.put(&sb_pat, url_prefix);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = url_prefix, .cap = MAX_PATH_LEN);
+    size_t sb_pat = 0;
+    sb_pat =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat, .text = url_prefix);
     if (n == 0 || url_prefix[n - 1] != '*')
     {
-        Sb.put(&sb_pat, "*"); // not already a wildcard: append one
+        sb_pat = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat,
+                            .text = "*"); // not already a wildcard: append one
     }
-    if (Sb.finish(&sb_pat) == 0)
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = pat, .cap = sizeof(pat), .at = sb_pat) == 0)
     {
         return; // prefix + wildcard does not fit: register nothing
     }
@@ -723,15 +792,18 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
     // Request path beyond the mount prefix (route path minus its trailing '*'). plen == 0 is
     // unreachable: serve_static() always stores at least "*" (it appends the wildcard when the
     // prefix lacks one), so the pattern is never empty.
-    size_t plen = str.len(r->path, MAX_PATH_LEN);
+    size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = r->path, .cap = MAX_PATH_LEN);
     if (plen > 0 && r->path[plen - 1] == '*')
     {
         plen--;
     }
-    const char *sub = (str.len(req->path, MAX_PATH_LEN) >= plen) ? req->path + plen : "";
+    const char *sub = (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = req->path, .cap = MAX_PATH_LEN) >= plen)
+                          ? req->path + plen
+                          : "";
 
     // Reject path traversal before touching the filesystem.
-    if (str.has(sub, MAX_PATH_LEN - plen, "..", sizeof(".."), PROTO_FALSE))
+    if (EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = sub, .cap = MAX_PATH_LEN - plen, .other = "..",
+                   .other_cap = sizeof(".."), .ci = PROTO_FALSE))
     {
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
@@ -740,7 +812,7 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
     MntV.args.id = r->mnt_id;
     Mnt.root_of(work);
     const char *root = MntV.text;
-    size_t rlen = str.len(root, MAX_PATH_LEN);
+    size_t rlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = root, .cap = MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
     {
@@ -750,21 +822,25 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
     const char *sep = (root_slash || sub_slash) ? "" : "/";
 
     // Directory or bare-prefix request → index.html.
-    size_t slen = str.len(sub, MAX_PATH_LEN);
+    size_t slen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = sub, .cap = MAX_PATH_LEN);
     proto_bool dir = (slen == 0) || (sub[slen - 1] == '/');
 
     // A path that does not fit is refused, not truncated: a clipped path names a different file,
     // and serving one the caller never asked for is worse than a 404.
     char fs_path[256];
-    protocore_sb sb_path = {fs_path, sizeof(fs_path), 0, PROTO_TRUE};
-    Sb.put(&sb_path, root);
-    Sb.put(&sb_path, sep);
-    Sb.put(&sb_path, sub);
+    size_t sb_path = 0;
+    sb_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = fs_path, .cap = sizeof(fs_path), .at = sb_path,
+                         .text = root);
+    sb_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = fs_path, .cap = sizeof(fs_path), .at = sb_path,
+                         .text = sep);
+    sb_path = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = fs_path, .cap = sizeof(fs_path), .at = sb_path,
+                         .text = sub);
     if (dir)
     {
-        protocore_sb_lit(&sb_path, "index.html");
+        sb_path = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = fs_path, .cap = sizeof(fs_path), .at = sb_path,
+                             .text = "index.html", .text_len = sizeof("index.html") - 1u);
     }
-    if (Sb.finish(&sb_path) == 0)
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = fs_path, .cap = sizeof(fs_path), .at = sb_path) == 0)
     {
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
@@ -779,13 +855,15 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
     // exists. Content-Type stays that of the original (uncompressed) resource.
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Accept-Encoding");
     const char *ae = http_parser_text;
-    if (ae && str.has(ae, MAX_VAL_LEN, "gzip", sizeof("gzip"), PROTO_FALSE))
+    if (ae && EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = ae, .cap = MAX_VAL_LEN, .other = "gzip",
+                         .other_cap = sizeof("gzip"), .ci = PROTO_FALSE))
     {
         char gz[260];
-        protocore_sb sb_gz = {gz, sizeof(gz), 0, PROTO_TRUE};
-        Sb.put(&sb_gz, fs_path);
-        Sb.put(&sb_gz, ".gz");
-        int gn = (int)Sb.finish(&sb_gz);
+        size_t sb_gz = 0;
+        sb_gz =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = gz, .cap = sizeof(gz), .at = sb_gz, .text = fs_path);
+        sb_gz = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = gz, .cap = sizeof(gz), .at = sb_gz, .text = ".gz");
+        int gn = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = gz, .cap = sizeof(gz), .at = sb_gz);
         // Neither length half can fail: fs_path is a 256-byte buffer, so gn is at most 258 and
         // always under gz's 260. Both are kept because the two buffer sizes are independent
         // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE

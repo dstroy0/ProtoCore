@@ -6,7 +6,9 @@
  * @brief TLS 1.3 handshake driver over the stream record layer. See handshake.h.
  */
 
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_TLS
 
@@ -20,11 +22,11 @@
 #if PROTOCORE_ENABLE_X509
 #include "crypto/x509/x509/x509.h" // X509: the peer's certificate and the name it speaks for
 #endif
-#include "mmgr/protomem/protomem.h"   // mem.cpy: the peer's presented key
-#include "mmgr/protostr/protostr.h"   // str.len: the ALPN protocol name lengths
-#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read
-#include "mmgr/secure/secure.h"       // the borrow this driver runs out of, and protocore_secure_wipe
+#include "cellularum_laboro/cellularum_laboro.h"                         // cellul.len: the ALPN protocol name lengths
+#include "memoria_operor/memoria_operor.h"                               // memor.cpy: the peer's presented key
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h" // the RFC 7250 RawPublicKey credential
+#include "proximus_operor/proximus_operor.h"                             // proxim.read
+#include "server/core/worker/worker.h" // the borrow this driver runs out of, and mmgr_zero_buf
 
 // The secure-pool term this file declares against PROTOCORE_SECURE_ARENA_SIZE: one borrow per TLS
 // connection, taken from the persistent end and held for the life of the connection.
@@ -356,7 +358,7 @@ static const char *alpn_select(const TlsConnConfig *cfg, const uint8_t *list, si
     for (uint8_t k = 0; k < cfg->alpn_count; k++)
     {
         const char *want = cfg->alpn[k];
-        const size_t want_len = str.len(want, 255);
+        const size_t want_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = want, .cap = 255);
         size_t i = 2;
         while (i < list_len)
         {
@@ -365,7 +367,7 @@ static const char *alpn_select(const TlsConnConfig *cfg, const uint8_t *list, si
             {
                 return NULL; // malformed list: nothing selectable
             }
-            if (nl == want_len && mem.cmp(list + i, want, nl) == 0)
+            if (nl == want_len && EMBED_CALL(memor.cmp, MemoriaCfg, .src = list + i, .other = want, .bytes = nl) == 0)
             {
                 return want;
             }
@@ -518,8 +520,10 @@ static proto_bool slot_storage(uint8_t *work)
     {
         return PROTO_TRUE;
     }
-    protocore_span b = secure.persist_span(PROTOCORE_TLS_CONN_BORROW);
-    if (!span.ok(b))
+    mmgr_span b =
+        EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_TLS_CONN_BORROW),
+                   .cap = PROTOCORE_TLS_CONN_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = b))
     {
         return PROTO_FALSE;
     }
@@ -543,12 +547,12 @@ void protocore_tls_connection_init(uint8_t *work)
     }
     // The bytes carry the previous tenant's key material; the pointers to them stay, or the next
     // init would ask the persistent end for a second borrow it never gives back.
-    protocore_secure_wipe(c->tx, PROTOCORE_TLS_CONN_BORROW);
-    protocore_secure_wipe(&c->ks, sizeof(c->ks));
-    protocore_secure_wipe(&c->hs_tx, sizeof(c->hs_tx));
-    protocore_secure_wipe(&c->hs_rx, sizeof(c->hs_rx));
-    protocore_secure_wipe(&c->ap_tx, sizeof(c->ap_tx));
-    protocore_secure_wipe(&c->ap_rx, sizeof(c->ap_rx));
+    mmgr_zero_buf(c->tx, PROTOCORE_TLS_CONN_BORROW);
+    mmgr_zero_buf(&c->ks, sizeof(c->ks));
+    mmgr_zero_buf(&c->hs_tx, sizeof(c->hs_tx));
+    mmgr_zero_buf(&c->hs_rx, sizeof(c->hs_rx));
+    mmgr_zero_buf(&c->ap_tx, sizeof(c->ap_tx));
+    mmgr_zero_buf(&c->ap_rx, sizeof(c->ap_rx));
     c->hs_keys_ready = PROTO_FALSE;
     c->ap_keys_ready = PROTO_FALSE;
     c->alert = 0;
@@ -644,7 +648,7 @@ static proto_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, 
     w[TLS_OFF_PEERKEY] = (uint8_t)alg;
     w[TLS_OFF_PEERKEY + 1] = (uint8_t)(key_len >> 8);
     w[TLS_OFF_PEERKEY + 2] = (uint8_t)key_len;
-    mem.cpy(TLS_PEERKEY_P(w), key, key_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = TLS_PEERKEY_P(w), .src = key, .bytes = key_len);
     return PROTO_TRUE;
 }
 
@@ -818,7 +822,7 @@ static void client_on_cert_verify(uint8_t *work, const uint8_t *msg, size_t len)
     }
     // The key the Certificate carried, as much of a certificate as a signature check reads.
     X509Cert signer;
-    mem.set(&signer, 0, sizeof(signer));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &signer, .val = 0, .bytes = sizeof(signer));
     signer.key_alg = (protocore_x509_key_alg)TLS_PEERKEY_ALG(c->tx);
     signer.key.p = TLS_PEERKEY_P(c->tx);
     signer.key.len = TLS_PEERKEY_LEN(c->tx);

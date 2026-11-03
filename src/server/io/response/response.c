@@ -12,18 +12,19 @@
  * other file can name.
  */
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder (replaces snprintf)
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.len: send_text measures the body it was handed
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: send_text measures the body it was handed
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/session/session.h"                 // the per-connection tables this reads
 #include "network_drivers/transport/tcp/common/common.h"     // conn_pool, TcpConn/ConnState
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.send: the bytes a response writes
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h" // PROTOCORE_ENABLE_STATS, PROTOCORE_ENABLE_METRICS, PROTOCORE_ENABLE_LOGBUF
+#include "proximus_operor/proximus_operor.h"
 #include "server/io/http_clock/http_clock.h" // HttpClock.date: which clock the Date header reads
 #include "shared/hex/hex.h"                  // protocore_hex_u32 (chunk size-line writer)
 #include "shared/mime/mime.h"                // PROTOCORE_MIME_*, mime tables
+#include "verba_scribo/verba_scribo.h"       // verba_scribo frame builder (replaces snprintf)
 
 static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
@@ -32,14 +33,14 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 #include "server/clock/clock.h" // protocore_millis: the library clock, not the platform's
 
 // Render @p v as decimal into the fixed field @p dst. Both exposition snapshots below fill a
-// dozen of these. Unlike snprintf, Sb.finish() does NOT terminate when the value would not
+// dozen of these. Unlike snprintf, verba_finis.finish() does NOT terminate when the value would not
 // fit - it reports 0 and leaves the buffer untouched - so an over-long value must be turned
 // into an empty field explicitly, or the exposition would serve the PREVIOUS snapshot's digits.
 static void num_field(char *dst, size_t cap, uint32_t v)
 {
-    protocore_sb b = {dst, cap, 0, PROTO_TRUE};
-    Sb.u32(&b, v);
-    if (Sb.finish(&b) == 0)
+    size_t b = 0;
+    b = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = dst, .cap = cap, .at = b, .val = v);
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = dst, .cap = cap, .at = b) == 0)
     {
         dst[0] = '\0';
     }
@@ -124,12 +125,17 @@ void set_cors(const char *origin)
         s_resp.cors_header_buf[0] = '\0';
         return;
     }
-    protocore_sb sb = {s_resp.cors_header_buf, sizeof(s_resp.cors_header_buf), 0, PROTO_TRUE};
-    Sb.put(&sb, "Access-Control-Allow-Origin: ");
-    Sb.put(&sb, origin);
-    Sb.put(&sb, "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
-                "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
-    if (Sb.finish(&sb) == 0)
+    char *const sb_out = s_resp.cors_header_buf;
+    size_t sb = 0;
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sizeof(s_resp.cors_header_buf), .at = sb,
+                    .text = "Access-Control-Allow-Origin: ");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sizeof(s_resp.cors_header_buf), .at = sb,
+                    .text = origin);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sizeof(s_resp.cors_header_buf), .at = sb,
+                    .text = "\r\nAccess-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, HEAD, "
+                            "OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_out, .cap = sizeof(s_resp.cors_header_buf), .at = sb) ==
+        0)
     {
         s_resp.cors_header_buf[0] = '\0';
     }
@@ -143,11 +149,16 @@ void set_cache_control(const char *value)
         s_resp.cache_control_buf[0] = '\0';
         return;
     }
-    protocore_sb sb = {s_resp.cache_control_buf, sizeof(s_resp.cache_control_buf), 0, PROTO_TRUE};
-    Sb.put(&sb, "Cache-Control: ");
-    Sb.put(&sb, value);
-    Sb.put(&sb, "\r\n");
-    if (Sb.finish(&sb) == 0)
+    char *const sb_out = s_resp.cache_control_buf;
+    size_t sb = 0;
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sizeof(s_resp.cache_control_buf), .at = sb,
+                    .text = "Cache-Control: ");
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sizeof(s_resp.cache_control_buf), .at = sb,
+                    .text = value);
+    sb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_out, .cap = sizeof(s_resp.cache_control_buf), .at = sb,
+                    .text = "\r\n");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_out, .cap = sizeof(s_resp.cache_control_buf),
+                   .at = sb) == 0)
     {
         s_resp.cache_control_buf[0] = '\0';
     }
@@ -182,7 +193,9 @@ void protocore_resp_reset(void)
 static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar resolver, proto_bool emit, size_t *total)
 {
     const char *at = *p;
-    const char *end = str.find(at + 2, str.len(at + 2, 0xFFFF) + 1u, "}}", sizeof("}}"), PROTO_FALSE);
+    const char *end = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = at + 2,
+                                 .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = at + 2, .cap = 0xFFFF) + 1u,
+                                 .other = "}}", .other_cap = sizeof("}}"), .ci = PROTO_FALSE);
     size_t nlen = end ? (size_t)(end - (at + 2)) : 0;
     if (!end || nlen > 32)
     {
@@ -199,7 +212,7 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
         return;
     }
     char name[33];
-    mem.cpy(name, at + 2, nlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = name, .src = at + 2, .bytes = nlen);
     name[nlen] = '\0';
     const char *val = resolver ? resolver(name) : NULL;
     if (!val)
@@ -208,7 +221,7 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
     }
     // Bounded by what the send can carry, which is the width of its length parameter. Spelling that
     // as a literal stated the same bound twice, in two places that could disagree.
-    size_t vlen = str.len(val, UINT16_MAX);
+    size_t vlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = val, .cap = UINT16_MAX);
     *total += vlen;
     if (emit && vlen)
     {
@@ -276,17 +289,27 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    protocore_sb hb = {header, RESP_HDR_BUF_SIZE, 0, PROTO_TRUE};
-    protocore_sb_lit(&hb, "HTTP/1.1 ");
-    Sb.u32(&hb, (uint32_t)code);
-    protocore_sb_lit(&hb, " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb, HttpV.text);
-    protocore_sb_lit(&hb, "\r\nContent-Type: ");
-    Sb.put(&hb, content_type);
-    protocore_sb_lit(&hb, "\r\nContent-Length: ");
-    Sb.u32(&hb, (uint32_t)body_len);
-    protocore_sb_lit(&hb, "\r\n");
-    int hlen = (int)Sb.finish(&hb);
+    size_t hb = 0;
+    hb = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .text = "HTTP/1.1 ", .text_len = sizeof("HTTP/1.1 ") - 1u);
+    hb = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .val = (uint32_t)code);
+    hb = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb, .text = " ",
+                    .text_len = sizeof(" ") - 1u);
+    HttpV.code = code, Http.status_text(protocore_http_span()),
+    hb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .text = HttpV.text);
+    hb = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .text = "\r\nContent-Type: ", .text_len = sizeof("\r\nContent-Type: ") - 1u);
+    hb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .text = content_type);
+    hb = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .text = "\r\nContent-Length: ", .text_len = sizeof("\r\nContent-Length: ") - 1u);
+    hb = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .val = (uint32_t)body_len);
+    hb = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
+                    .text = "\r\n", .text_len = sizeof("\r\n") - 1u);
+    int hlen = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     HttpV.slot = slot_id;
@@ -343,24 +366,32 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     proto_bool raw = (http_pool[slot_id].version != HTTP_11);
 
     char header[RESP_HDR_BUF_SIZE];
-    protocore_sb hb2 = {header, RESP_HDR_BUF_SIZE, 0, PROTO_TRUE};
+    size_t hb2 = 0;
     if (raw)
     {
         keep = PROTO_FALSE; // close-delimited: the connection close IS the message boundary
         cl = "Connection: close\r\n";
-        Sb.put(&hb2, "HTTP/1.0 ");
+        hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
+                         .text = "HTTP/1.0 ");
     }
     else
     {
-        Sb.put(&hb2, "HTTP/1.1 ");
+        hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
+                         .text = "HTTP/1.1 ");
     }
-    Sb.u32(&hb2, (uint32_t)code);
-    Sb.put(&hb2, " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb2, HttpV.text);
-    Sb.put(&hb2, "\r\nContent-Type: ");
-    Sb.put(&hb2, content_type);
-    Sb.put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
-    int hlen = (int)Sb.finish(&hb2);
+    hb2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
+                     .val = (uint32_t)code);
+    hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2, .text = " ");
+    HttpV.code = code, Http.status_text(protocore_http_span()),
+    hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
+                     .text = HttpV.text);
+    hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
+                     .text = "\r\nContent-Type: ");
+    hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
+                     .text = content_type);
+    hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
+                     .text = raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
+    int hlen = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     ConnPoolV.slot = slot_id;
@@ -479,7 +510,7 @@ void chunk_send_pump(uint8_t slot_id)
             size_t nd = HexV.u8;
             size_t sn = nd + 2; // "<hex>\r\n"
             uint8_t *start = body - sn;
-            mem.cpy(start, digits, nd);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = start, .src = digits, .bytes = nd);
             start[nd] = '\r';
             start[nd + 1] = '\n';
             body[n] = '\r';
@@ -510,16 +541,17 @@ void proto_add_response_header(uint8_t slot_id, const char *name, const char *va
     }
 
     char *buf = s_resp.extra_hdr[slot_id];
-    size_t used = str.len(buf, EXTRA_HDR_BUF_SIZE);
+    size_t used = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = buf, .cap = EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
-    protocore_sb hb3 = {buf + used, room, 0, PROTO_TRUE};
-    Sb.put(&hb3, name);
-    Sb.put(&hb3, ": ");
-    Sb.put(&hb3, value);
-    Sb.put(&hb3, "\r\n");
+    char *const hb3_out = buf + used;
+    size_t hb3 = 0;
+    hb3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hb3_out, .cap = room, .at = hb3, .text = name);
+    hb3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hb3_out, .cap = room, .at = hb3, .text = ": ");
+    hb3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hb3_out, .cap = room, .at = hb3, .text = value);
+    hb3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = hb3_out, .cap = room, .at = hb3, .text = "\r\n");
     // A latched builder may have written the pieces that did fit, so rewinding to `used` is what
     // drops the header whole rather than leaving a truncated one.
-    if (Sb.finish(&hb3) == 0)
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = hb3_out, .cap = room, .at = hb3) == 0)
     {
         buf[used] = '\0';
     }
@@ -533,20 +565,21 @@ void set_cookie(uint8_t slot_id, const char *name, const char *value, const char
     }
 
     char *buf = s_resp.extra_hdr[slot_id];
-    size_t used = str.len(buf, EXTRA_HDR_BUF_SIZE);
+    size_t used = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = buf, .cap = EXTRA_HDR_BUF_SIZE);
     size_t room = EXTRA_HDR_BUF_SIZE - used;
-    protocore_sb cb = {buf + used, room, 0, PROTO_TRUE};
-    Sb.put(&cb, "Set-Cookie: ");
-    Sb.put(&cb, name);
-    Sb.put(&cb, "=");
-    Sb.put(&cb, value);
+    char *const cb_out = buf + used;
+    size_t cb = 0;
+    cb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cb_out, .cap = room, .at = cb, .text = "Set-Cookie: ");
+    cb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cb_out, .cap = room, .at = cb, .text = name);
+    cb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cb_out, .cap = room, .at = cb, .text = "=");
+    cb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cb_out, .cap = room, .at = cb, .text = value);
     if (attrs != NULL && attrs[0] != '\0')
     {
-        Sb.put(&cb, "; ");
-        Sb.put(&cb, attrs);
+        cb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cb_out, .cap = room, .at = cb, .text = "; ");
+        cb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cb_out, .cap = room, .at = cb, .text = attrs);
     }
-    Sb.put(&cb, "\r\n");
-    if (Sb.finish(&cb) == 0)
+    cb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = cb_out, .cap = room, .at = cb, .text = "\r\n");
+    if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = cb_out, .cap = room, .at = cb) == 0)
     {
         buf[used] = '\0'; // would not fit: drop this cookie entirely
     }
@@ -668,34 +701,41 @@ static StatsCtx s_stats;
 
 static const char *stats_var(const char *name)
 {
-    if (str.eq(name, "uptime_ms", sizeof("uptime_ms"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "uptime_ms", .cap = sizeof("uptime_ms"),
+                   .ci = PROTO_FALSE))
     {
         return s_stats.uptime;
     }
-    if (str.eq(name, "requests", sizeof("requests"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "requests", .cap = sizeof("requests"),
+                   .ci = PROTO_FALSE))
     {
         return s_stats.requests;
     }
-    if (str.eq(name, "http_2xx", sizeof("http_2xx"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "http_2xx", .cap = sizeof("http_2xx"),
+                   .ci = PROTO_FALSE))
     {
         return s_stats.n2xx;
     }
-    if (str.eq(name, "http_4xx", sizeof("http_4xx"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "http_4xx", .cap = sizeof("http_4xx"),
+                   .ci = PROTO_FALSE))
     {
         return s_stats.n4xx;
     }
-    if (str.eq(name, "http_5xx", sizeof("http_5xx"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "http_5xx", .cap = sizeof("http_5xx"),
+                   .ci = PROTO_FALSE))
     {
         return s_stats.n5xx;
     }
-    if (str.eq(name, "active_conns", sizeof("active_conns"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "active_conns", .cap = sizeof("active_conns"),
+                   .ci = PROTO_FALSE))
     {
         return s_stats.active;
     }
     // The not-found tail is unreachable: stats_var is only ever invoked by stats() against
     // PROTOCORE_STATS_JSON, and that asset's seven placeholders are exactly the seven names tested here,
     // so the last one always matches. Kept because the resolver has to answer an unknown name.
-    if (str.eq(name, "free_heap", sizeof("free_heap"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "free_heap", .cap = sizeof("free_heap"),
+                   .ci = PROTO_FALSE))
     {
         return s_stats.heap;
     }
@@ -757,43 +797,53 @@ static MetricsCtx s_metrics;
 
 static const char *metrics_var(const char *name)
 {
-    if (str.eq(name, "uptime_seconds", sizeof("uptime_seconds"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "uptime_seconds", .cap = sizeof("uptime_seconds"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.uptime;
     }
-    if (str.eq(name, "requests_total", sizeof("requests_total"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "requests_total", .cap = sizeof("requests_total"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.requests;
     }
-    if (str.eq(name, "resp_2xx", sizeof("resp_2xx"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "resp_2xx", .cap = sizeof("resp_2xx"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.n2xx;
     }
-    if (str.eq(name, "resp_4xx", sizeof("resp_4xx"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "resp_4xx", .cap = sizeof("resp_4xx"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.n4xx;
     }
-    if (str.eq(name, "resp_5xx", sizeof("resp_5xx"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "resp_5xx", .cap = sizeof("resp_5xx"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.n5xx;
     }
-    if (str.eq(name, "active_conns", sizeof("active_conns"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "active_conns", .cap = sizeof("active_conns"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.active;
     }
-    if (str.eq(name, "max_conns", sizeof("max_conns"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "max_conns", .cap = sizeof("max_conns"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.max;
     }
-    if (str.eq(name, "free_heap", sizeof("free_heap"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "free_heap", .cap = sizeof("free_heap"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.heap;
     }
-    if (str.eq(name, "min_free_heap", sizeof("min_free_heap"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "min_free_heap", .cap = sizeof("min_free_heap"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.minheap;
     }
-    if (str.eq(name, "heap_size", sizeof("heap_size"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "heap_size", .cap = sizeof("heap_size"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.heapsize;
     }
@@ -802,7 +852,8 @@ static const char *metrics_var(const char *name)
     // assumption - test_metrics_emits_prometheus asserts every emitted sample line carries a
     // value, which fails the moment a placeholder stops resolving (as three of them silently did
     // until the resolver names were aligned with the template).
-    if (str.eq(name, "max_alloc_heap", sizeof("max_alloc_heap"), PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "max_alloc_heap", .cap = sizeof("max_alloc_heap"),
+                   .ci = PROTO_FALSE))
     {
         return s_metrics.maxalloc;
     }
@@ -910,7 +961,7 @@ const size_t PROTOCORE_RESP_HDR_OVERFLOW_LEN = sizeof(PROTOCORE_RESP_HDR_OVERFLO
 
 int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, const char *cl)
 {
-    // hlen is the caller's status-line length from Sb.finish, which reports 0 for a status line
+    // hlen is the caller's status-line length from verba_finis.finish, which reports 0 for a status line
     // that did not fit. Appending the trailer at offset 0 in that case would emit a response with
     // no status line at all, so 0 propagates as failure and the caller sends a canned reply.
     //
@@ -936,11 +987,15 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
     HttpClock.date(protocore_http_clock_span());
     if (HttpClockV.n > 0)
     {
-        protocore_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, PROTO_TRUE};
-        Sb.put(&sb_date_hdr, "Date: ");
-        Sb.put(&sb_date_hdr, HttpClockV.imf);
-        Sb.put(&sb_date_hdr, "\r\n");
-        if (Sb.finish(&sb_date_hdr) == 0)
+        size_t sb_date_hdr = 0;
+        sb_date_hdr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = date_hdr, .cap = sizeof(date_hdr),
+                                 .at = sb_date_hdr, .text = "Date: ");
+        sb_date_hdr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = date_hdr, .cap = sizeof(date_hdr),
+                                 .at = sb_date_hdr, .text = HttpClockV.imf);
+        sb_date_hdr = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = date_hdr, .cap = sizeof(date_hdr),
+                                 .at = sb_date_hdr, .text = "\r\n");
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = date_hdr, .cap = sizeof(date_hdr),
+                       .at = sb_date_hdr) == 0)
         {
             date_hdr[0] = '\0';
         }
@@ -948,14 +1003,20 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
 #else
     const char *date_hdr = "";
 #endif
-    protocore_sb sb411 = {buf + hlen, cap - (size_t)hlen, 0, PROTO_TRUE};
-    Sb.put(&sb411, date_hdr);
-    Sb.put(&sb411, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-    Sb.put(&sb411, protocore_resp_extra_hdr(slot_id));
-    Sb.put(&sb411, cl);
-    Sb.put(&sb411, "\r\n");
-    int n = (int)Sb.finish(&sb411);
-    if (!sb411.ok)
+    char *const sb411_out = buf + hlen;
+    const size_t sb411_cap = cap - (size_t)hlen;
+    size_t sb411 = 0;
+    sb411 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb411_out, .cap = sb411_cap, .at = sb411, .text = date_hdr);
+    sb411 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb411_out, .cap = sb411_cap, .at = sb411,
+                       .text = protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    sb411 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb411_out, .cap = sb411_cap, .at = sb411,
+                       .text = protocore_resp_extra_hdr(slot_id));
+    sb411 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb411_out, .cap = sb411_cap, .at = sb411, .text = cl);
+    sb411 =
+        EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb411_out, .cap = sb411_cap, .at = sb411, .text = "\r\n");
+    int n = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb411_out, .cap = sb411_cap, .at = sb411);
+    if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = sb411_out, .cap = sb411_cap, .at = sb411))
     {
         return 0; // trailer does not fit: refuse the response rather than send a headless one
     }
@@ -977,7 +1038,8 @@ void send_text(uint8_t slot_id, int code, const char *content_type, const char *
     // 0xFFFF is how far the scan is willing to look, not a claim the caller's string is that long:
     // a body is a handler's string of unstated capacity, and the bound is what keeps a missing
     // terminator from becoming an unbounded walk.
-    send_bin(slot_id, code, content_type, (const uint8_t *)payload, (payload != NULL) ? str.len(payload, 0xFFFF) : 0);
+    send_bin(slot_id, code, content_type, (const uint8_t *)payload,
+             (payload != NULL) ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = payload, .cap = 0xFFFF) : 0);
 }
 
 void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t *body, size_t body_len)
@@ -1012,17 +1074,28 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    protocore_sb sb_header2 = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header2, "HTTP/1.1 ");
-    Sb.i64(&sb_header2, (int64_t)(code));
-    Sb.put(&sb_header2, " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header2, HttpV.text);
-    Sb.put(&sb_header2, "\r\nContent-Type: ");
-    Sb.put(&sb_header2, content_type);
-    Sb.put(&sb_header2, "\r\nContent-Length: ");
-    Sb.i64(&sb_header2, (int64_t)(payload_len));
-    Sb.put(&sb_header2, "\r\n");
-    int hlen = (int)Sb.finish(&sb_header2);
+    size_t sb_header2 = 0;
+    sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .text = "HTTP/1.1 ");
+    sb_header2 = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .sval = (int64_t)(code));
+    sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .text = " ");
+    HttpV.code = code, Http.status_text(protocore_http_span()),
+    sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .text = HttpV.text);
+    sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .text = "\r\nContent-Type: ");
+    sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .text = content_type);
+    sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .text = "\r\nContent-Length: ");
+    sb_header2 = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .sval = (int64_t)(payload_len));
+    sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
+                            .text = "\r\n");
+    int hlen =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header2);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
     if (hlen == 0)
     {
@@ -1052,7 +1125,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     // small keep-alive response is one marshal (write+output).
     if (!head && payload_len > 0 && (size_t)hlen + (size_t)payload_len <= sizeof(header))
     {
-        raw.read(header + hlen, payload, (size_t)payload_len);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = header + hlen, .at = payload, .size = (size_t)payload_len);
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
         ConnPoolV.io.len = (proto_u16)(hlen + payload_len);
@@ -1115,13 +1188,20 @@ void send_empty(uint8_t slot_id, int code)
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    protocore_sb sb_header3 = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header3, "HTTP/1.1 ");
-    Sb.i64(&sb_header3, (int64_t)(code));
-    Sb.put(&sb_header3, " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header3, HttpV.text);
-    Sb.put(&sb_header3, "\r\nContent-Length: 0\r\n");
-    int hlen = (int)Sb.finish(&sb_header3);
+    size_t sb_header3 = 0;
+    sb_header3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
+                            .text = "HTTP/1.1 ");
+    sb_header3 = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
+                            .sval = (int64_t)(code));
+    sb_header3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
+                            .text = " ");
+    HttpV.code = code, Http.status_text(protocore_http_span()),
+    sb_header3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
+                            .text = HttpV.text);
+    sb_header3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
+                            .text = "\r\nContent-Length: 0\r\n");
+    int hlen =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     ConnPoolV.slot = slot_id;
@@ -1164,15 +1244,24 @@ void redirect(uint8_t slot_id, int code, const char *location)
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
-    protocore_sb sb_header4 = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header4, "HTTP/1.1 ");
-    Sb.i64(&sb_header4, (int64_t)(code));
-    Sb.put(&sb_header4, " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header4, HttpV.text);
-    Sb.put(&sb_header4, "\r\nLocation: ");
-    Sb.put(&sb_header4, location);
-    Sb.put(&sb_header4, "\r\nContent-Length: 0\r\n");
-    int hlen = (int)Sb.finish(&sb_header4);
+    size_t sb_header4 = 0;
+    sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
+                            .text = "HTTP/1.1 ");
+    sb_header4 = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
+                            .sval = (int64_t)(code));
+    sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
+                            .text = " ");
+    HttpV.code = code, Http.status_text(protocore_http_span()),
+    sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
+                            .text = HttpV.text);
+    sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
+                            .text = "\r\nLocation: ");
+    sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
+                            .text = location);
+    sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
+                            .text = "\r\nContent-Length: 0\r\n");
+    int hlen =
+        (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header4);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
 
     ConnPoolV.slot = slot_id;

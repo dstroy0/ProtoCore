@@ -232,8 +232,8 @@ static const Tls13KsNs Tls13Ks __attribute__((unused)) = {
     .transcript_peek = protocore_tls13_ks_transcript_peek,
 };
 
-#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS
-
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS
 
 #endif // PROTOCORE_TLS_KEY_SCHEDULE_H

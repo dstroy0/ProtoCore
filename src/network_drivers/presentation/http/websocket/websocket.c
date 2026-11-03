@@ -19,17 +19,16 @@
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
-#include "mmgr/span/span.h"     // span.ok: whether the pool had the bytes
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a frame goes out on
+#include "server/core/worker/worker.h"                       // the persistent end this module's state is taken from
 #include "shared/utf8/utf8.h"
+#include "spatium/spatium.h" // spat.ok: whether the pool had the bytes
 
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
-#include "mmgr/plaintext/plaintext.h"
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #endif
@@ -66,8 +65,8 @@ static_assert(WS_OFF_CTX + sizeof(WsCtx) <= PROTOCORE_WS_BORROW,
               "PROTOCORE_WS_BORROW is short of the module context - raise it in protocore_config.h,"
               " which sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(WS_OFF_CTX % _Alignof(WsCtx) == 0,
@@ -292,12 +291,12 @@ void protocore_ws_send_frame(uint8_t *work)
                   "WS deflate scratch exceeds the arena");
     // The compressed buffer is handed to `payload` below and read by the emit calls at the end of
     // this function, so the borrow spans the whole function and is released at each exit.
-    size_t pt_mark = protocore_plaintext_mark();
+    size_t pt_mark = protocore_plain_guard()->temporary_buf_mark();
     if (ws->pmd && len > 0 && len <= PROTOCORE_WS_DEFLATE_MAX && (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY))
     {
         size_t cap = (size_t)len + len / 8 + 16; // static-Huffman worst-case headroom
-        void *scr = protocore_plaintext_alloc(DEFLATE_SCRATCH_SIZE, 16);
-        uint8_t *cbuf = (uint8_t *)protocore_plaintext_alloc(cap, 1);
+        void *scr = protocore_plain_guard()->temporary_buf_alloc(DEFLATE_SCRATCH_SIZE, protocore_plain_owner());
+        uint8_t *cbuf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(cap, protocore_plain_owner());
         if (scr && cbuf)
         {
             size_t clen = 0;
@@ -330,7 +329,7 @@ void protocore_ws_send_frame(uint8_t *work)
     {
         proto_bool sent = ws_emit_one(slot, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
 #if PROTOCORE_ENABLE_WS_DEFLATE
-        protocore_plaintext_release(pt_mark);
+        protocore_plain_guard()->temporary_buf_release(pt_mark);
 #endif
         WsV.ok = sent;
         return;
@@ -349,7 +348,7 @@ void protocore_ws_send_frame(uint8_t *work)
         if (!ws_emit_one(slot, b0, payload + off, chunk))
         {
 #if PROTOCORE_ENABLE_WS_DEFLATE
-            protocore_plaintext_release(pt_mark);
+            protocore_plain_guard()->temporary_buf_release(pt_mark);
 #endif
             return;
         }
@@ -357,7 +356,7 @@ void protocore_ws_send_frame(uint8_t *work)
         first = PROTO_FALSE;
     }
 #if PROTOCORE_ENABLE_WS_DEFLATE
-    protocore_plaintext_release(pt_mark);
+    protocore_plain_guard()->temporary_buf_release(pt_mark);
 #endif
     WsV.ok = PROTO_TRUE;
 }
@@ -449,21 +448,24 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             // bounded and cannot fail.
             static_assert(PROTOCORE_PLAINTEXT_WORK_WS_RECV <= PROTOCORE_PLAINTEXT_ARENA_SIZE,
                           "WS inflate scratch exceeds the arena");
-            size_t pt_mark = protocore_plaintext_mark();
+            size_t pt_mark = protocore_plain_guard()->temporary_buf_mark();
             size_t comp_len = ws->msg_len;
-            uint8_t *in = (uint8_t *)protocore_plaintext_alloc(comp_len + 4, 1);
-            uint8_t *out = (uint8_t *)protocore_plaintext_alloc(WS_FRAME_SIZE, 1);
-            uint8_t *tbl = (uint8_t *)protocore_plaintext_alloc(INFLATE_SCRATCH_SIZE, 16);
+            uint8_t *in =
+                (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(comp_len + 4, protocore_plain_owner());
+            uint8_t *out =
+                (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(WS_FRAME_SIZE, protocore_plain_owner());
+            uint8_t *tbl =
+                (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(INFLATE_SCRATCH_SIZE, protocore_plain_owner());
             if (!in || !out || !tbl)
             {
-                protocore_plaintext_release(pt_mark);
+                protocore_plain_guard()->temporary_buf_release(pt_mark);
                 WsV.conn = ws;
                 WsV.frame.code = WS_CLOSE_PROTOCOL;
                 protocore_ws_close(work); // arena exhausted: fail closed
                 ws->parse_state = WS_ERROR;
                 return;
             }
-            mem.cpy(in, ws->buf, comp_len);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = in, .src = ws->buf, .bytes = comp_len);
             in[comp_len] = 0x00;
             in[comp_len + 1] = 0x00;
             in[comp_len + 2] = 0xff;
@@ -480,7 +482,7 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             InflateResult rc = InflateV.value;
             if (rc == INFLATE_ERR_OVERFLOW)
             {
-                protocore_plaintext_release(pt_mark);
+                protocore_plain_guard()->temporary_buf_release(pt_mark);
                 WsV.conn = ws;
                 WsV.frame.code = WS_CLOSE_TOO_BIG;
                 protocore_ws_close(work);
@@ -489,17 +491,17 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             }
             if (rc != INFLATE_OK)
             {
-                protocore_plaintext_release(pt_mark);
+                protocore_plain_guard()->temporary_buf_release(pt_mark);
                 WsV.conn = ws;
                 WsV.frame.code = WS_CLOSE_PROTOCOL;
                 protocore_ws_close(work);
                 ws->parse_state = WS_ERROR;
                 return;
             }
-            mem.cpy(ws->buf, out, dlen);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ws->buf, .src = out, .bytes = dlen);
             ws->msg_len = dlen;
             ws->msg_compressed = PROTO_FALSE;
-            protocore_plaintext_release(pt_mark);
+            protocore_plain_guard()->temporary_buf_release(pt_mark);
         }
 #endif
         // Whole message received - surface it to the application.
@@ -827,7 +829,7 @@ uint8_t *protocore_ws_span(void)
     static uint8_t *s_span;
     if (s_span == NULL)
     {
-        s_span = protocore_secure_persist_span(PROTOCORE_WS_BORROW).buf;
+        s_span = (uint8_t *)protocore_secure_persist(PROTOCORE_WS_BORROW);
     }
     return s_span;
 }

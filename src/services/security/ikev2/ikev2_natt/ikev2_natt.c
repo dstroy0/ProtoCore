@@ -7,13 +7,13 @@
  */
 
 #include "services/security/ikev2/ikev2_natt/ikev2_natt.h"
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 
 #if PROTOCORE_ENABLE_IKEV2
 
 #include "crypto/hash/sha1/sha1.h"
-#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"     // protocore_span, span.ok
+#include "server/core/worker/worker.h" // the pool the digest borrow comes from
+#include "spatium/spatium.h"           // mmgr_span, spat.ok
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -41,11 +41,11 @@ static size_t natd_input(uint8_t *buf, const uint8_t *init_spi, const uint8_t *r
         return 0;
     }
     size_t n = 0;
-    mem.cpy(buf + n, init_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = init_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
     n += PROTOCORE_IKE_SPI_LEN;
-    mem.cpy(buf + n, resp_spi, PROTOCORE_IKE_SPI_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = resp_spi, .bytes = PROTOCORE_IKE_SPI_LEN);
     n += PROTOCORE_IKE_SPI_LEN;
-    mem.cpy(buf + n, ip, ip_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = ip, .bytes = ip_len);
     n += ip_len;
     buf[n++] = (uint8_t)(port >> 8);
     buf[n++] = (uint8_t)port;
@@ -65,15 +65,18 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
     {
         return 0;
     }
-    const size_t mark = protocore_secure_mark();
-    protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
-    if (!span.ok(w))
+    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
+                             .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA1_BORROW,
+                                                                                             protocore_secure_owner()),
+                             .cap = PROTOCORE_SHA1_BORROW);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
         return 0;
     }
     Sha1.hash(w.buf, in, n, out);
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     return PROTOCORE_IKE_NATD_HASH_LEN;
 }
 
@@ -106,7 +109,8 @@ static proto_bool natd_match(uint8_t *work)
     {
         return PROTO_FALSE;
     }
-    return mem.cmp(expect, IkeNattV.digest.received, PROTOCORE_IKE_NATD_HASH_LEN) == 0;
+    return EMBED_CALL(memor.cmp, MemoriaCfg, .src = expect, .other = IkeNattV.digest.received,
+                      .bytes = PROTOCORE_IKE_NATD_HASH_LEN) == 0;
 }
 
 void protocore_ike_natt_hash(uint8_t *work)

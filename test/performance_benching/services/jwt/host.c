@@ -10,7 +10,7 @@
 //   -DPROTOCORE_ENABLE_JWT=1 test/performance_benching/services/jwt/host.c
 //   src/services/security/jwt/jwt.c src/network_drivers/presentation/codec/base64/base64.c
 //   src/crypto/mac/hmac_sha256.c src/crypto/hash/sha256.c src/mmgr/secure.c src/mmgr/arena.c
-//   src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bjwt && /tmp/bjwt
+//   src/memoria_operor/memoria_operor.h.c src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bjwt && /tmp/bjwt
 
 #define PROTOCORE_ENABLE_JWT 1
 #include "services/security/jwt/jwt.h"

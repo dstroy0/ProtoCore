@@ -7,9 +7,8 @@ protocore_add_module(services/net/snmp/snmp_agent
   DEPS
     services/net/snmp/snmp_ber
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/transport/udp/server
     server/clock
     services/net/snmp/snmp_v3

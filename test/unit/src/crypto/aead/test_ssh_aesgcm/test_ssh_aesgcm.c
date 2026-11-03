@@ -139,7 +139,7 @@ static const struct kat KAT_PARTIAL = {
     "eb7cb754c824e8d96f7c6d9b76c7d26fb874ffbf1d65c6f64a698d839b0b06145dae82057ad55994cf59ad7f67c0fa5e85fab8",
     "bc95c532fecc594c36d1550286a7a3f0"};
 
-// Seal the vector's plaintext and compare both halves of the AEAD output to the published bytes.
+// Seal the vector's plaintext and compare both halves of the AEAD output to the published byteio.
 static void seal_matches(const struct kat *v)
 {
     uint8_t key[32], iv[12], pt[64], aad[64], ct[64], tag[16];
@@ -160,7 +160,7 @@ static void seal_matches(const struct kat *v)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(tag, got_tag, 16);
 }
 
-// Open the vector's ciphertext and compare the recovered plaintext to the published bytes.
+// Open the vector's ciphertext and compare the recovered plaintext to the published byteio.
 static void open_matches(const struct kat *v)
 {
     uint8_t key[32], iv[12], pt[64], aad[64], ct[64], tag[16], got[64];

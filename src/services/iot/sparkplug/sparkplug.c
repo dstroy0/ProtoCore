@@ -15,12 +15,12 @@
 
 #if PROTOCORE_ENABLE_SPARKPLUG
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "services/iot/sparkplug/sparkplug.h"
 
-#include "mmgr/protomem/protomem.h"         // mem.cpy / mem.set: the spans a topic and a decode move
-#include "mmgr/protostr/protostr.h"         // str.len: the bounded length of each topic element
-#include "services/iot/protobuf/protobuf.h" // the wire codec a Payload and a Metric are written with
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of each topic element
+#include "memoria_operor/memoria_operor.h"       // memor.cpy / memor.set: the spans a topic and a decode move
+#include "services/iot/protobuf/protobuf.h"      // the wire codec a Payload and a Metric are written with
 
 PROTOCORE_BEGIN_DECLS
 
@@ -174,7 +174,7 @@ uint8_t *protocore_sparkplug_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SPARKPLUG_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_SPARKPLUG_BORROW);
     }
     return s_own.span;
 }
@@ -196,34 +196,36 @@ void protocore_sparkplug_build_topic(uint8_t *work)
     {
         return;
     }
-    size_t need = SPB_TOPIC_PREFIX_LEN + str.len(group, cap) + 1 + str.len(type, cap) + 1 + str.len(node, cap);
+    size_t need = SPB_TOPIC_PREFIX_LEN + EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = group, .cap = cap) + 1 +
+                  EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = type, .cap = cap) + 1 +
+                  EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = node, .cap = cap);
     if (device)
     {
-        need += 1 + str.len(device, cap);
+        need += 1 + EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = device, .cap = cap);
     }
     if (need + 1 > cap) // + NUL
     {
         return;
     }
     size_t p = 0;
-    mem.cpy(out + p, SPB_TOPIC_PREFIX, SPB_TOPIC_PREFIX_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = SPB_TOPIC_PREFIX, .bytes = SPB_TOPIC_PREFIX_LEN);
     p += SPB_TOPIC_PREFIX_LEN;
-    size_t n = str.len(group, cap);
-    mem.cpy(out + p, group, n);
+    size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = group, .cap = cap);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = group, .bytes = n);
     p += n;
     out[p++] = '/';
-    n = str.len(type, cap);
-    mem.cpy(out + p, type, n);
+    n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = type, .cap = cap);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = type, .bytes = n);
     p += n;
     out[p++] = '/';
-    n = str.len(node, cap);
-    mem.cpy(out + p, node, n);
+    n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = node, .cap = cap);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = node, .bytes = n);
     p += n;
     if (device)
     {
         out[p++] = '/';
-        n = str.len(device, cap);
-        mem.cpy(out + p, device, n);
+        n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = device, .cap = cap);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + p, .src = device, .bytes = n);
         p += n;
     }
     out[p] = '\0';
@@ -285,7 +287,7 @@ void protocore_sparkplug_parse_payload(uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = PROTO_FALSE;
-    mem.set(&SparkplugV.header, 0, sizeof(SparkplugV.header));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &SparkplugV.header, .val = 0, .bytes = sizeof(SparkplugV.header));
     if (!SparkplugV.source.buf)
     {
         return;
@@ -465,7 +467,7 @@ void protocore_sparkplug_parse_metric(uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = PROTO_FALSE;
-    mem.set(&SparkplugV.metric, 0, sizeof(SparkplugV.metric));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = &SparkplugV.metric, .val = 0, .bytes = sizeof(SparkplugV.metric));
     if (!SparkplugV.source.buf)
     {
         return;

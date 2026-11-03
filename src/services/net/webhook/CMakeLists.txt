@@ -5,9 +5,7 @@ protocore_add_module(services/net/webhook
   GATE PROTOCORE_ENABLE_WEBHOOK
   SOURCES webhook.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     services/net/http_client
     shared/mime
 )

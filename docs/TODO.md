@@ -782,7 +782,7 @@ Open follow-ups discovered during the above:
       _Status (done):_ arena core + LIFO mark/release + RAII `PlaintextScope` landed
       (`test_plaintext`; exhaustion + no-accumulate verified); the single-owner debug
       assert (`assert_single_owner` / `xTaskGetCurrentTaskHandle`, per worker) guards
-      against a foreign-task borrow; `protocore_plaintext_reset()` wired into `server_tick()`.
+      against a foreign-task borrow; `protocore_plain_guard()->temporary_buf_reset()` wired into `server_tick()`.
       Tenants migrated: `ssh_pkt_recv` (its ~2 KB stack buffer removed), `ssh_conn`,
       the OIDC verifier's ~2.6 KB decode buffers, and - the planned final tenant - the
       **permessage-deflate window** (both the outbound `deflate_raw` and inbound
@@ -1082,7 +1082,7 @@ shipped work:
       posts them into the preempting task queue. Zero heap, fail-closed. The
       ingress/egress **simulator** (`PROTOCORE_DMA_SIMULATE`, default on) exercises the whole
       pipeline with no physical loopback - on the host bench and on-device; a real silicon
-      driver plugs into the `protocore_dma_hw_*` hooks. Host-tested (`native_dma`, 11 cases) +
+      driver plugs into the `mmgr_praet_hw_*` hooks. Host-tested (`native_preempt_queue`) +
       HW-verified (example `DmaIngest`; and a combined webserver + continuous-DMA rig
       ingested 2.2M+ frames with zero integrity errors under HTTP stress, no heap growth).
       Remaining: the real UHCI-UART / `spi_master`-DMA silicon backend (needs peripheral

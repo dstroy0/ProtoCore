@@ -31,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
 /**
  * @brief Format a deterministic RFC 4122 v5 UUID from a 6-byte MAC.
  *
- * @param mac  six MAC bytes.
+ * @param mac  six MAC byteio.
  * @param out  buffer of at least PROTOCORE_UUID_STR_LEN bytes; receives
  *             "xxxxxxxx-xxxx-5xxx-yxxx-xxxxxxxxxxxx" (lowercase, null-terminated).
  */
@@ -83,7 +83,7 @@ static const DeviceIdNs DeviceId __attribute__((unused)) = {
 #if PROTOCORE_HAS_VENDOR_MAC
 /**
  * @brief Format this device's UUID from its burned-in factory station MAC.
- * @param out  buffer of at least PROTOCORE_UUID_STR_LEN bytes.
+ * @param out  buffer of at least PROTOCORE_UUID_STR_LEN byteio.
  */
 
 #endif

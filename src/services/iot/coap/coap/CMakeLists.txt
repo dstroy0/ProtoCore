@@ -5,9 +5,8 @@ protocore_add_module(services/iot/coap/coap
   GATE PROTOCORE_ENABLE_COAP
   SOURCES coap.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/transport/udp/server
     server/clock
     shared/ip

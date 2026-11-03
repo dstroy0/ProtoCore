@@ -5,8 +5,7 @@ protocore_add_module(services/opcua
   GATE PROTOCORE_ENABLE_OPCUA
   SOURCES opcua.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     network_drivers/transport/tcp
     network_drivers/transport/tcp/common
     network_drivers/transport/tcp/protocol

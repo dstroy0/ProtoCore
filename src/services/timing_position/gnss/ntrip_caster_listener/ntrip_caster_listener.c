@@ -11,8 +11,8 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/gnss/ntrip_caster_listener/ntrip_caster_listener.h"
 
 #include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
@@ -78,7 +78,7 @@ static int rover_find_free()
 // Find a mount by name, optionally constrained to a given listener (-1 = any).
 static int mount_index(const char *name, int listener_id)
 {
-    const size_t nl = str.len(name, PROTOCORE_NTRIP_MOUNT_MAX);
+    const size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = PROTOCORE_NTRIP_MOUNT_MAX);
     if (nl >= PROTOCORE_NTRIP_MOUNT_MAX)
     {
         return -1;
@@ -93,7 +93,8 @@ static int mount_index(const char *name, int listener_id)
         {
             continue;
         }
-        if (str.eq(s_ctx.mounts[i].name, name, nl + 1, PROTO_FALSE))
+        if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s_ctx.mounts[i].name, .other = name, .cap = nl + 1,
+                       .ci = PROTO_FALSE))
         {
             return i;
         }
@@ -144,12 +145,12 @@ static proto_bool auth_ok(const NtripRequest *req, const char *expect)
     {
         return PROTO_FALSE;
     }
-    size_t el = str.len(expect, req->auth_b64_len + 1);
+    size_t el = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = expect, .cap = req->auth_b64_len + 1);
     if (el != req->auth_b64_len)
     {
         return PROTO_FALSE;
     }
-    return mem.cmp(req->auth_b64, expect, el) == 0;
+    return EMBED_CALL(memor.cmp, MemoriaCfg, .src = req->auth_b64, .other = expect, .bytes = el) == 0;
 }
 
 static void serve_sourcetable(CasterRover *r, NtripVersion version)
@@ -313,7 +314,7 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     {
         return PROTO_FALSE;
     }
-    size_t nl = str.len(mount->mountpoint, PROTOCORE_NTRIP_MOUNT_MAX + 1);
+    size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = mount->mountpoint, .cap = PROTOCORE_NTRIP_MOUNT_MAX + 1);
     if (nl == 0 || nl >= PROTOCORE_NTRIP_MOUNT_MAX)
     {
         return PROTO_FALSE;
@@ -334,7 +335,7 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     CasterMount *m = &s_ctx.mounts[idx];
     m->active = PROTO_TRUE;
     m->listener_id = listener_id;
-    mem.cpy(m->name, mount->mountpoint, nl + 1);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = m->name, .src = mount->mountpoint, .bytes = nl + 1);
     m->cfg = *mount;
     m->cfg.mountpoint = m->name; // point the copied cfg at our owned name
     m->auth_b64 = auth_b64;

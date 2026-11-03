@@ -14,12 +14,12 @@ static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never 
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protostr/protostr.h"                 // str: the bounded-run walks
-#include "mmgr/rawmemcpy/rawmemcpy.h"               // raw.read: each field moves into the slot
+#include "cellularum_laboro/cellularum_laboro.h"    // str: the bounded-run walks
 #include "network_drivers/presentation/http/http.h" // Http.match_and_execute
 #include "network_drivers/presentation/http/http3/h3_server/h3_server.h"
 #include "network_drivers/session/session.h"                 // the per-connection tables this reads
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
+#include "proximus_operor/proximus_operor.h"                 // proxim.read: each field moves into the slot
 
 PROTOCORE_BEGIN_DECLS
 
@@ -39,7 +39,7 @@ static void rng(uint8_t *work)
         {
             n = len - i;
         }
-        raw.read(out + i, &r, n);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = out + i, .at = &r, .size = n);
         i += n;
     }
 }
@@ -68,36 +68,38 @@ static void request(uint8_t *work)
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
 
     // Map the semantic request fields into the shared HttpReq (as protocore_h2_server does per stream).
-    size_t mn = str.len(method, sizeof(r->method));
+    size_t mn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = method, .cap = sizeof(r->method));
     if (mn >= sizeof(r->method))
     {
         mn = sizeof(r->method) - 1;
     }
-    raw.read(r->method, method, mn);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = r->method, .at = method, .size = mn);
     r->method[mn] = 0;
 
     // Bounded by everything the request could occupy here, path and query together, rather than by
     // the path field alone: a '?' past the path cap still names a query this slot has room for, and
     // capping the search at the path would drop it while keeping the truncated path.
-    const char *q = str.find(path, sizeof(r->path) + sizeof(r->query), "?", sizeof("?"), PROTO_FALSE);
-    size_t plen = (q != NULL) ? (size_t)(q - path) : str.len(path, sizeof(r->path));
+    const char *q = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = path, .cap = sizeof(r->path) + sizeof(r->query),
+                               .other = "?", .other_cap = sizeof("?"), .ci = PROTO_FALSE);
+    size_t plen =
+        (q != NULL) ? (size_t)(q - path) : EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = path, .cap = sizeof(r->path));
     if (plen >= sizeof(r->path))
     {
         plen = sizeof(r->path) - 1;
     }
-    raw.read(r->path, path, plen);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = r->path, .at = path, .size = plen);
     r->path[plen] = 0;
-    r->path_idx = str.len(r->path, sizeof(r->path));
+    r->path_idx = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = r->path, .cap = sizeof(r->path));
     if (q != NULL)
     {
-        size_t ql = str.len(q + 1, sizeof(r->query));
+        size_t ql = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = q + 1, .cap = sizeof(r->query));
         if (ql >= sizeof(r->query))
         {
             ql = sizeof(r->query) - 1;
         }
-        raw.read(r->query, q + 1, ql);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = r->query, .at = q + 1, .size = ql);
         r->query[ql] = 0;
-        r->query_idx = str.len(r->query, sizeof(r->query));
+        r->query_idx = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = r->query, .cap = sizeof(r->query));
     }
 
     // :authority maps to Host, the way the h2 bridge does.
@@ -105,20 +107,20 @@ static void request(uint8_t *work)
     {
         Header *h = &r->headers[r->header_count];
         r->header_count++;
-        raw.read(h->key, "host", 5);
-        size_t vl = str.len(authority, sizeof(h->val));
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = h->key, .at = "host", .size = 5);
+        size_t vl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = authority, .cap = sizeof(h->val));
         if (vl >= sizeof(h->val))
         {
             vl = sizeof(h->val) - 1;
         }
-        raw.read(h->val, authority, vl);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = h->val, .at = authority, .size = vl);
         h->val[vl] = 0;
     }
 
     if (body && body_len)
     {
         size_t n = body_len > BODY_BUF_SIZE ? BODY_BUF_SIZE : body_len;
-        raw.read(r->body, body, n);
+        EMBED_CALL(proxim.read, ProximusCfg, .dst = r->body, .at = body, .size = n);
         r->body_len = n;
         r->body[r->body_len] = 0;
         r->body_bytes_read = body_len;

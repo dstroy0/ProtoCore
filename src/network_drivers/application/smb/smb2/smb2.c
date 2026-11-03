@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SMB
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/smb/smb2/smb2.h"
 
 #include "crypto/aead/aes128gcm/aes128gcm.h"    // Aes128Gcm keyed AEAD (SMB 3.x AES-128-GCM)
@@ -20,8 +20,8 @@
 #include "crypto/kdf/kdf/kdf.h"                 // Kdf for SMB 3.x key derivation
 #include "crypto/mac/aes_cmac/aes_cmac.h"       // AesCmac for SMB 3.x message signing
 #include "crypto/mac/hmac_sha256/hmac_sha256.h" // HmacSha256 for SMB 2.x message signing
-#include "mmgr/endian/endian.h"
-#include "mmgr/secure/secure.h" // the per-call GCM context borrow
+#include "endian/endian.h"
+#include "server/core/worker/worker.h" // the per-call GCM context borrow
 
 static const uint8_t SMB2_PROTOCOL_ID[4] = {0xFE, 'S', 'M', 'B'};
 
@@ -43,7 +43,7 @@ size_t protocore_smb2_transport_frame(uint8_t *work, uint8_t *out, size_t cap, c
     out[1] = (uint8_t)(msg_len >> 16);
     out[2] = (uint8_t)(msg_len >> 8);
     out[3] = (uint8_t)(msg_len);
-    mem.cpy(out + 4, msg, msg_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4, .src = msg, .bytes = msg_len);
     return 4 + msg_len;
 }
 
@@ -67,17 +67,21 @@ size_t protocore_smb2_build_header(uint8_t *work, uint8_t *buf, size_t cap, Smb2
     {
         return 0;
     }
-    mem.set(buf, 0, PROTOCORE_SMB2_HEADER_SIZE);
-    mem.cpy(buf + 0, SMB2_PROTOCOL_ID, 4); // ProtocolId
-    endian.wr16le(buf + 4, 64);            // StructureSize
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = buf, .val = 0, .bytes = PROTOCORE_SMB2_HEADER_SIZE);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + 0, .src = SMB2_PROTOCOL_ID, .bytes = 4);         // ProtocolId
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 4, .val = 64, .width = MMGR_ENDIAN_16); // StructureSize
     // bytes 6 CreditCharge and 8 Status/ChannelSequence stay zero
-    endian.wr16le(buf + 12, (uint16_t)command); // Command
-    endian.wr16le(buf + 14, credit_request);    // CreditRequest
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 12, .val = (uint16_t)command,
+               .width = MMGR_ENDIAN_16); // Command
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 14, .val = credit_request,
+               .width = MMGR_ENDIAN_16); // CreditRequest
     // byte 16 Flags stays zero for a client request; byte 20 NextCommand stays zero
-    endian.wr64le(buf + 24, message_id); // MessageId
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 24, .val = message_id,
+               .width = MMGR_ENDIAN_64); // MessageId
     // byte 32 Reserved stays zero
-    endian.wr32le(buf + 36, tree_id);    // TreeId
-    endian.wr64le(buf + 40, session_id); // SessionId
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 36, .val = tree_id, .width = MMGR_ENDIAN_32); // TreeId
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = buf + 40, .val = session_id,
+               .width = MMGR_ENDIAN_64); // SessionId
     // bytes 48 through 63 Signature stay zero
     return PROTOCORE_SMB2_HEADER_SIZE;
 }
@@ -90,17 +94,20 @@ proto_bool protocore_smb2_parse_header(uint8_t *work, const uint8_t *buf, size_t
     {
         return PROTO_FALSE;
     }
-    if (mem.cmp(buf, SMB2_PROTOCOL_ID, 4) != 0 || endian.rd16le(buf + 4) != 64)
+    if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = buf, .other = SMB2_PROTOCOL_ID, .bytes = 4) != 0 ||
+        (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_16) != 64)
     {
         return PROTO_FALSE;
     }
-    out->status = endian.rd32le(buf + 8);
-    out->command = (Smb2Command)endian.rd16le(buf + 12);
-    out->credit_response = endian.rd16le(buf + 14);
-    out->flags = endian.rd32le(buf + 16);
-    out->message_id = endian.rd64le(buf + 24);
-    out->tree_id = endian.rd32le(buf + 36);
-    out->session_id = endian.rd64le(buf + 40);
+    out->status = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 8, .width = MMGR_ENDIAN_32);
+    out->command =
+        (Smb2Command)(uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 12, .width = MMGR_ENDIAN_16);
+    out->credit_response =
+        (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 14, .width = MMGR_ENDIAN_16);
+    out->flags = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 16, .width = MMGR_ENDIAN_32);
+    out->message_id = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 24, .width = MMGR_ENDIAN_64);
+    out->tree_id = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 36, .width = MMGR_ENDIAN_32);
+    out->session_id = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 40, .width = MMGR_ENDIAN_64);
     return PROTO_TRUE;
 }
 
@@ -122,16 +129,18 @@ size_t protocore_smb2_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap, c
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE; // NEGOTIATE request body
-    mem.set(b, 0, 36);
-    endian.wr16le(b + 0, 36);            // StructureSize
-    endian.wr16le(b + 2, ndialects);     // DialectCount
-    endian.wr16le(b + 4, security_mode); // SecurityMode
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0, .bytes = 36);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 36, .width = MMGR_ENDIAN_16); // StructureSize
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 2, .val = ndialects, .width = MMGR_ENDIAN_16); // DialectCount
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 4, .val = security_mode,
+               .width = MMGR_ENDIAN_16); // SecurityMode
     // byte 6 Reserved and byte 8 Capabilities stay zero
-    mem.cpy(b + 12, client_guid, 16); // ClientGuid
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + 12, .src = client_guid, .bytes = 16); // ClientGuid
     // byte 28 ClientStartTime stays zero; only 3.1.1 reinterprets these 8 bytes as negotiate-context fields
     for (uint16_t i = 0; i < ndialects; i++)
     {
-        endian.wr16le(b + 36 + i * 2, (uint16_t)dialects[i]);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 36 + i * 2, .val = (uint16_t)dialects[i],
+                   .width = MMGR_ENDIAN_16);
     }
     return total;
 }
@@ -156,21 +165,25 @@ proto_bool protocore_smb2_parse_negotiate_response(uint8_t *work, const uint8_t 
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 65) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        65) // StructureSize
     {
         return PROTO_FALSE;
     }
 
-    out->security_mode = endian.rd16le(b + 2);
-    out->dialect = endian.rd16le(b + 4);
-    mem.cpy(out->server_guid, b + 8, 16);
-    out->capabilities = endian.rd32le(b + 24);
-    out->max_transact = endian.rd32le(b + 28);
-    out->max_read = endian.rd32le(b + 32);
-    out->max_write = endian.rd32le(b + 36);
+    out->security_mode = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 2, .width = MMGR_ENDIAN_16);
+    out->dialect = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 4, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->server_guid, .src = b + 8, .bytes = 16);
+    out->capabilities = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 24, .width = MMGR_ENDIAN_32);
+    out->max_transact = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 28, .width = MMGR_ENDIAN_32);
+    out->max_read = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 32, .width = MMGR_ENDIAN_32);
+    out->max_write = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 36, .width = MMGR_ENDIAN_32);
 
-    uint16_t sec_off = endian.rd16le(b + 56); // SecurityBufferOffset - from the start of the SMB2 header (msg)
-    uint16_t sec_len = endian.rd16le(b + 58); // SecurityBufferLength
+    uint16_t sec_off =
+        (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 56,
+                             .width = MMGR_ENDIAN_16); // SecurityBufferOffset - from the start of the SMB2 header (msg)
+    uint16_t sec_len = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 58,
+                                            .width = MMGR_ENDIAN_16); // SecurityBufferLength
     if (sec_len == 0)
     {
         out->sec_buf = NULL;
@@ -228,28 +241,37 @@ size_t protocore_smb2_build_negotiate_311(uint8_t *work, uint8_t *buf, size_t ca
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
-    mem.set(b, 0, ctx_start - PROTOCORE_SMB2_HEADER_SIZE); // fixed body + dialects + alignment pad
-    endian.wr16le(b + 0, 36);                              // StructureSize
-    endian.wr16le(b + 2, ndialects);                       // DialectCount
-    endian.wr16le(b + 4, security_mode);                   // SecurityMode
-    endian.wr32le(b + 8, SMB2_GLOBAL_CAP_ENCRYPTION);      // Capabilities: advertise encryption support
-    mem.cpy(b + 12, client_guid, 16);                      // ClientGuid
-    endian.wr32le(b + 28, (uint32_t)ctx_start);            // NegotiateContextOffset (overlays ClientStartTime)
-    endian.wr16le(b + 32, ctx_count);                      // NegotiateContextCount (preauth + signing [+ encryption])
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0,
+               .bytes = ctx_start - PROTOCORE_SMB2_HEADER_SIZE); // fixed body + dialects + alignment pad
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 36, .width = MMGR_ENDIAN_16); // StructureSize
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 2, .val = ndialects, .width = MMGR_ENDIAN_16); // DialectCount
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 4, .val = security_mode,
+               .width = MMGR_ENDIAN_16); // SecurityMode
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 8, .val = SMB2_GLOBAL_CAP_ENCRYPTION,
+               .width = MMGR_ENDIAN_32); // Capabilities: advertise encryption support
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + 12, .src = client_guid, .bytes = 16); // ClientGuid
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 28, .val = (uint32_t)ctx_start,
+               .width = MMGR_ENDIAN_32); // NegotiateContextOffset (overlays ClientStartTime)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 32, .val = ctx_count,
+               .width = MMGR_ENDIAN_16); // NegotiateContextCount (preauth + signing [+ encryption])
     for (uint16_t i = 0; i < ndialects; i++)
     {
-        endian.wr16le(b + 36 + i * 2, (uint16_t)dialects[i]);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 36 + i * 2, .val = (uint16_t)dialects[i],
+                   .width = MMGR_ENDIAN_16);
     }
 
     // Context 1 - PREAUTH_INTEGRITY_CAPABILITIES (mandatory once 0x0311 is offered), §2.2.3.1.1.
     uint8_t *c = buf + ctx_start;
-    endian.wr16le(c + 0, SMB2_PREAUTH_INTEGRITY_CAPABILITIES);
-    endian.wr16le(c + 2, (uint16_t)preauth_data);
-    endian.wr32le(c + 4, 0);                              // Reserved
-    endian.wr16le(c + 8, 1);                              // HashAlgorithmCount
-    endian.wr16le(c + 10, (uint16_t)salt_len);            // SaltLength
-    endian.wr16le(c + 12, SMB2_PREAUTH_INTEGRITY_SHA512); // HashAlgorithms[0]
-    mem.cpy(c + 14, salt, salt_len);                      // Salt
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c + 0, .val = SMB2_PREAUTH_INTEGRITY_CAPABILITIES,
+               .width = MMGR_ENDIAN_16);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c + 2, .val = (uint16_t)preauth_data, .width = MMGR_ENDIAN_16);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c + 4, .val = 0, .width = MMGR_ENDIAN_32); // Reserved
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c + 8, .val = 1, .width = MMGR_ENDIAN_16); // HashAlgorithmCount
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c + 10, .val = (uint16_t)salt_len,
+               .width = MMGR_ENDIAN_16); // SaltLength
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c + 12, .val = SMB2_PREAUTH_INTEGRITY_SHA512,
+               .width = MMGR_ENDIAN_16);                                              // HashAlgorithms[0]
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c + 14, .src = salt, .bytes = salt_len); // Salt
 
     // Context 2 - SIGNING_CAPABILITIES advertising AES-CMAC (the algorithm this client signs 3.x with;
     // the mandatory-to-implement SMB 3.x signer and the Windows default). A 3.1.1 server that accepts it
@@ -257,13 +279,16 @@ size_t protocore_smb2_build_negotiate_311(uint8_t *work, uint8_t *buf, size_t ca
     uint8_t *c2 = c + preauth_ctx + preauth_pad;
     if (preauth_pad)
     {
-        mem.set(c + preauth_ctx, 0, preauth_pad);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = c + preauth_ctx, .val = 0, .bytes = preauth_pad);
     }
-    endian.wr16le(c2 + 0, SMB2_SIGNING_CAPABILITIES);
-    endian.wr16le(c2 + 2, 4);                      // DataLength
-    endian.wr32le(c2 + 4, 0);                      // Reserved
-    endian.wr16le(c2 + 8, 1);                      // SigningAlgorithmCount
-    endian.wr16le(c2 + 10, SMB2_SIGNING_AES_CMAC); // SigningAlgorithms[0]
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c2 + 0, .val = SMB2_SIGNING_CAPABILITIES,
+               .width = MMGR_ENDIAN_16);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c2 + 2, .val = 4, .width = MMGR_ENDIAN_16); // DataLength
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c2 + 4, .val = 0, .width = MMGR_ENDIAN_32); // Reserved
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c2 + 8, .val = 1,
+               .width = MMGR_ENDIAN_16); // SigningAlgorithmCount
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c2 + 10, .val = SMB2_SIGNING_AES_CMAC,
+               .width = MMGR_ENDIAN_16); // SigningAlgorithms[0]
 
     // Context 3 - ENCRYPTION_CAPABILITIES listing the offered ciphers in preference order (§2.2.3.1.2). A
     // server that accepts one may require an encrypted session/share; we then wrap messages in a
@@ -273,15 +298,19 @@ size_t protocore_smb2_build_negotiate_311(uint8_t *work, uint8_t *buf, size_t ca
         uint8_t *c3 = c2 + sign_ctx + sign_pad;
         if (sign_pad)
         {
-            mem.set(c2 + sign_ctx, 0, sign_pad);
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = c2 + sign_ctx, .val = 0, .bytes = sign_pad);
         }
-        endian.wr16le(c3 + 0, SMB2_ENCRYPTION_CAPABILITIES);
-        endian.wr16le(c3 + 2, (uint16_t)(2 + 2 * cipher_count)); // DataLength = CipherCount(2) + Ciphers[]
-        endian.wr32le(c3 + 4, 0);                                // Reserved
-        endian.wr16le(c3 + 8, (uint16_t)cipher_count);           // CipherCount
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c3 + 0, .val = SMB2_ENCRYPTION_CAPABILITIES,
+                   .width = MMGR_ENDIAN_16);
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c3 + 2, .val = (uint16_t)(2 + 2 * cipher_count),
+                   .width = MMGR_ENDIAN_16); // DataLength = CipherCount(2) + Ciphers[]
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c3 + 4, .val = 0, .width = MMGR_ENDIAN_32); // Reserved
+        EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c3 + 8, .val = (uint16_t)cipher_count,
+                   .width = MMGR_ENDIAN_16); // CipherCount
         for (size_t i = 0; i < cipher_count; i++)
         {
-            endian.wr16le(c3 + 10 + i * 2, ciphers[i]); // Ciphers[i]
+            EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = c3 + 10 + i * 2, .val = ciphers[i],
+                       .width = MMGR_ENDIAN_16); // Ciphers[i]
         }
     }
     return total;
@@ -295,7 +324,7 @@ proto_bool protocore_smb2_parse_negotiate_contexts(uint8_t *work, const uint8_t 
     {
         return PROTO_FALSE;
     }
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     Smb2Header h;
     proto_bool smb2_ok = Smb2.parse_header(work, msg, len, &h);
     if (!smb2_ok || h.command != SMB2_NEGOTIATE)
@@ -307,12 +336,15 @@ proto_bool protocore_smb2_parse_negotiate_contexts(uint8_t *work, const uint8_t 
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 65) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        65) // StructureSize
     {
         return PROTO_FALSE;
     }
-    uint16_t count = endian.rd16le(b + 6); // NegotiateContextCount (reserved for < 3.1.1)
-    uint32_t off = endian.rd32le(b + 60);  // NegotiateContextOffset (from the SMB2 header start)
+    uint16_t count = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 6,
+                                          .width = MMGR_ENDIAN_16); // NegotiateContextCount (reserved for < 3.1.1)
+    uint32_t off = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 60,
+                                        .width = MMGR_ENDIAN_32); // NegotiateContextOffset (from the SMB2 header start)
     if (count == 0 || off < PROTOCORE_SMB2_HEADER_SIZE)
     {
         ok = PROTO_FALSE; // not a 3.1.1 response carrying a context list
@@ -327,8 +359,9 @@ proto_bool protocore_smb2_parse_negotiate_contexts(uint8_t *work, const uint8_t 
         {
             return PROTO_FALSE;
         }
-        uint16_t ctype = endian.rd16le(msg + p);
-        uint16_t dlen = endian.rd16le(msg + p + 2); // Reserved (4) follows at p+4
+        uint16_t ctype = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = msg + p, .width = MMGR_ENDIAN_16);
+        uint16_t dlen = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = msg + p + 2,
+                                             .width = MMGR_ENDIAN_16); // Reserved (4) follows at p+4
         size_t data = p + 8;
         if (data + dlen > len)
         {
@@ -337,32 +370,39 @@ proto_bool protocore_smb2_parse_negotiate_contexts(uint8_t *work, const uint8_t 
         const uint8_t *d = msg + data;
         if (ctype == SMB2_PREAUTH_INTEGRITY_CAPABILITIES && dlen >= 6)
         {
-            uint16_t hcount = endian.rd16le(d + 0); // HashAlgorithmCount
-            uint16_t slen = endian.rd16le(d + 2);   // SaltLength
+            uint16_t hcount = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d + 0,
+                                                   .width = MMGR_ENDIAN_16); // HashAlgorithmCount
+            uint16_t slen = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d + 2,
+                                                 .width = MMGR_ENDIAN_16); // SaltLength
             if (hcount >= 1 && (size_t)dlen >= 4 + (size_t)hcount * 2 + slen)
             {
                 out->have_preauth = PROTO_TRUE;
-                out->hash_algorithm = endian.rd16le(d + 4); // HashAlgorithms[0]
+                out->hash_algorithm = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d + 4,
+                                                           .width = MMGR_ENDIAN_16); // HashAlgorithms[0]
                 out->salt_len = slen;
                 out->salt = slen ? d + 4 + (size_t)hcount * 2 : NULL;
             }
         }
         else if (ctype == SMB2_SIGNING_CAPABILITIES && dlen >= 4)
         {
-            uint16_t scount = endian.rd16le(d + 0); // SigningAlgorithmCount
+            uint16_t scount = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d + 0,
+                                                   .width = MMGR_ENDIAN_16); // SigningAlgorithmCount
             if (scount >= 1 && (size_t)dlen >= 2 + (size_t)scount * 2)
             {
                 out->have_signing = PROTO_TRUE;
-                out->signing_algorithm = endian.rd16le(d + 2); // SigningAlgorithms[0]
+                out->signing_algorithm = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d + 2,
+                                                              .width = MMGR_ENDIAN_16); // SigningAlgorithms[0]
             }
         }
         else if (ctype == SMB2_ENCRYPTION_CAPABILITIES && dlen >= 4)
         {
-            uint16_t ccount = endian.rd16le(d + 0); // CipherCount
+            uint16_t ccount = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d + 0,
+                                                   .width = MMGR_ENDIAN_16); // CipherCount
             if (ccount >= 1 && (size_t)dlen >= 2 + (size_t)ccount * 2)
             {
                 out->have_encryption = PROTO_TRUE;
-                out->cipher = endian.rd16le(d + 2); // Ciphers[0]
+                out->cipher = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d + 2,
+                                                   .width = MMGR_ENDIAN_16); // Ciphers[0]
             }
         }
         p = data + dlen;
@@ -376,7 +416,8 @@ void protocore_smb2_preauth_init(uint8_t *work, SmbPreauth *p)
 
     if (p)
     {
-        mem.set(p->hash, 0, sizeof(p->hash)); // the preauth hash starts as 64 zero bytes (MS-SMB2 §3.1.5.2)
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = p->hash, .val = 0,
+                   .bytes = sizeof(p->hash)); // the preauth hash starts as 64 zero bytes (MS-SMB2 §3.1.5.2)
     }
 }
 
@@ -391,7 +432,7 @@ void protocore_smb2_preauth_update(uint8_t *work, uint8_t *crypto_work, SmbPreau
     // hash = SHA-512(previous hash || message); chain the current value with the next handshake message.
     // Snapshot the previous hash so the digest input never aliases its output buffer.
     uint8_t prev[PROTOCORE_SMB2_PREAUTH_HASH_LEN];
-    mem.cpy(prev, p->hash, sizeof(prev));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = prev, .src = p->hash, .bytes = sizeof(prev));
     Sha512.init(crypto_work);
     Sha512.update(crypto_work, prev, sizeof(prev));
     Sha512.update(crypto_work, msg, len);
@@ -415,16 +456,18 @@ size_t protocore_smb2_build_session_setup(uint8_t *work, uint8_t *buf, size_t ca
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
-    mem.set(b, 0, body);
-    endian.wr16le(b + 0, 25); // StructureSize (fixed 24 + 1 for the variable buffer)
-    b[2] = 0;                 // Flags (SMB2_SESSION_FLAG_BINDING only for 3.x channel binding)
-    b[3] = security_mode;     // SecurityMode (one byte here)
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0, .bytes = body);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 25,
+               .width = MMGR_ENDIAN_16); // StructureSize (fixed 24 + 1 for the variable buffer)
+    b[2] = 0;                            // Flags (SMB2_SESSION_FLAG_BINDING only for 3.x channel binding)
+    b[3] = security_mode;                // SecurityMode (one byte here)
     // byte 4 Capabilities and byte 8 Channel stay zero
-    endian.wr16le(b + 12,
-                  (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body)); // SecurityBufferOffset (from the header start)
-    endian.wr16le(b + 14, (uint16_t)sec_len);                     // SecurityBufferLength
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 12, .val = (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body),
+               .width = MMGR_ENDIAN_16); // SecurityBufferOffset (from the header start)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 14, .val = (uint16_t)sec_len,
+               .width = MMGR_ENDIAN_16); // SecurityBufferLength
     // byte 16 PreviousSessionId stays zero for a fresh session
-    mem.cpy(b + body, sec_buf, sec_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + body, .src = sec_buf, .bytes = sec_len);
     return total;
 }
 
@@ -448,14 +491,18 @@ proto_bool protocore_smb2_parse_session_setup_response(uint8_t *work, const uint
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 9) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        9) // StructureSize
     {
         return PROTO_FALSE;
     }
 
-    out->session_flags = endian.rd16le(b + 2);
-    uint16_t sec_off = endian.rd16le(b + 4); // SecurityBufferOffset - from the start of the SMB2 header (msg)
-    uint16_t sec_len = endian.rd16le(b + 6); // SecurityBufferLength
+    out->session_flags = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 2, .width = MMGR_ENDIAN_16);
+    uint16_t sec_off =
+        (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 4,
+                             .width = MMGR_ENDIAN_16); // SecurityBufferOffset - from the start of the SMB2 header (msg)
+    uint16_t sec_len = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 6,
+                                            .width = MMGR_ENDIAN_16); // SecurityBufferLength
     if (sec_len == 0)
     {
         out->sec_buf = NULL;
@@ -488,12 +535,15 @@ size_t protocore_smb2_build_tree_connect(uint8_t *work, uint8_t *buf, size_t cap
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
-    mem.set(b, 0, body);
-    endian.wr16le(b + 0, 9); // StructureSize
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0, .bytes = body);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 9, .width = MMGR_ENDIAN_16); // StructureSize
     // byte 2 Flags/Reserved stays zero
-    endian.wr16le(b + 4, (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body)); // PathOffset (from the header start) = 72
-    endian.wr16le(b + 6, (uint16_t)path_len);                            // PathLength
-    mem.cpy(b + body, path_utf16, path_len);                             // the \\server\share path (UTF-16LE)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 4, .val = (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body),
+               .width = MMGR_ENDIAN_16); // PathOffset (from the header start) = 72
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 6, .val = (uint16_t)path_len,
+               .width = MMGR_ENDIAN_16); // PathLength
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + body, .src = path_utf16,
+               .bytes = path_len); // the \\server\share path (UTF-16LE)
     return total;
 }
 
@@ -515,14 +565,15 @@ proto_bool protocore_smb2_parse_tree_connect_response(uint8_t *work, const uint8
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 16) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        16) // StructureSize
     {
         return PROTO_FALSE;
     }
     out->share_type = b[2];
-    out->share_flags = endian.rd32le(b + 4);
-    out->capabilities = endian.rd32le(b + 8);
-    out->maximal_access = endian.rd32le(b + 12);
+    out->share_flags = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 4, .width = MMGR_ENDIAN_32);
+    out->capabilities = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 8, .width = MMGR_ENDIAN_32);
+    out->maximal_access = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 12, .width = MMGR_ENDIAN_32);
     return PROTO_TRUE;
 }
 
@@ -544,20 +595,28 @@ size_t protocore_smb2_build_create(uint8_t *work, uint8_t *buf, size_t cap, uint
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
-    mem.set(b, 0, body);
-    endian.wr16le(b + 0, 57); // StructureSize (fixed 56 + 1 for the variable buffer)
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0, .bytes = body);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 57,
+               .width = MMGR_ENDIAN_16); // StructureSize (fixed 56 + 1 for the variable buffer)
     // byte 2 SecurityFlags and byte 3 RequestedOplockLevel stay zero (SMB2_OPLOCK_LEVEL_NONE)
-    endian.wr32le(b + 4, 2); // ImpersonationLevel = Impersonation
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 4, .val = 2,
+               .width = MMGR_ENDIAN_32); // ImpersonationLevel = Impersonation
     // byte 8 SmbCreateFlags and byte 16 Reserved stay zero
-    endian.wr32le(b + 24, desired_access);                                // DesiredAccess
-    endian.wr32le(b + 28, 0);                                             // FileAttributes = 0
-    endian.wr32le(b + 32, share_access);                                  // ShareAccess
-    endian.wr32le(b + 36, create_disposition);                            // CreateDisposition
-    endian.wr32le(b + 40, create_options);                                // CreateOptions
-    endian.wr16le(b + 44, (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body)); // NameOffset (from the header start) = 120
-    endian.wr16le(b + 46, (uint16_t)name_len);                            // NameLength
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 24, .val = desired_access,
+               .width = MMGR_ENDIAN_32);                                                          // DesiredAccess
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 28, .val = 0, .width = MMGR_ENDIAN_32); // FileAttributes = 0
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 32, .val = share_access,
+               .width = MMGR_ENDIAN_32); // ShareAccess
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 36, .val = create_disposition,
+               .width = MMGR_ENDIAN_32); // CreateDisposition
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 40, .val = create_options,
+               .width = MMGR_ENDIAN_32); // CreateOptions
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 44, .val = (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body),
+               .width = MMGR_ENDIAN_16); // NameOffset (from the header start) = 120
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 46, .val = (uint16_t)name_len,
+               .width = MMGR_ENDIAN_16); // NameLength
     // bytes 48 CreateContextsOffset and 52 CreateContextsLength stay zero
-    mem.cpy(b + body, name_utf16, name_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + body, .src = name_utf16, .bytes = name_len);
     return total;
 }
 
@@ -578,14 +637,16 @@ proto_bool protocore_smb2_parse_create_response(uint8_t *work, const uint8_t *ms
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 89) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        89) // StructureSize
     {
         return PROTO_FALSE;
     }
-    out->create_action = endian.rd32le(b + 4);
-    out->end_of_file = endian.rd64le(b + 48);
-    out->file_attributes = endian.rd32le(b + 56);
-    mem.cpy(out->file_id, b + 64, 16); // FileId (persistent 8 + volatile 8)
+    out->create_action = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 4, .width = MMGR_ENDIAN_32);
+    out->end_of_file = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 48, .width = MMGR_ENDIAN_64);
+    out->file_attributes = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 56, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->file_id, .src = b + 64,
+               .bytes = 16); // FileId (persistent 8 + volatile 8)
     return PROTO_TRUE;
 }
 
@@ -605,10 +666,10 @@ size_t protocore_smb2_build_close(uint8_t *work, uint8_t *buf, size_t cap, uint6
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
-    mem.set(b, 0, body);
-    endian.wr16le(b + 0, 24); // StructureSize
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0, .bytes = body);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 24, .width = MMGR_ENDIAN_16); // StructureSize
     // byte 2 Flags stays zero (no POSTQUERY_ATTRIB); byte 4 Reserved stays zero
-    mem.cpy(b + 8, file_id, 16); // FileId
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + 8, .src = file_id, .bytes = 16); // FileId
     return total;
 }
 
@@ -629,12 +690,13 @@ proto_bool protocore_smb2_parse_close_response(uint8_t *work, const uint8_t *msg
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 60) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        60) // StructureSize
     {
         return PROTO_FALSE;
     }
-    out->end_of_file = endian.rd64le(b + 48);
-    out->file_attributes = endian.rd32le(b + 56);
+    out->end_of_file = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 48, .width = MMGR_ENDIAN_64);
+    out->file_attributes = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 56, .width = MMGR_ENDIAN_32);
     return PROTO_TRUE;
 }
 
@@ -654,15 +716,16 @@ size_t protocore_smb2_build_read(uint8_t *work, uint8_t *buf, size_t cap, uint64
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
-    mem.set(b, 0, body + 1);
-    endian.wr16le(b + 0, 49); // StructureSize
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0, .bytes = body + 1);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 49, .width = MMGR_ENDIAN_16); // StructureSize
     b[2] = (uint8_t)(PROTOCORE_SMB2_HEADER_SIZE +
                      16); // Padding: requested data offset in the response (header + 16-byte body)
     // byte 3 Flags stays zero
-    endian.wr32le(b + 4, length); // Length
-    endian.wr64le(b + 8, offset); // Offset
-    mem.cpy(b + 16, file_id, 16); // FileId
-    endian.wr32le(b + 32, 1);     // MinimumCount = 1 (fail if the server returns nothing)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 4, .val = length, .width = MMGR_ENDIAN_32); // Length
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 8, .val = offset, .width = MMGR_ENDIAN_64); // Offset
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + 16, .src = file_id, .bytes = 16);                    // FileId
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 32, .val = 1,
+               .width = MMGR_ENDIAN_32); // MinimumCount = 1 (fail if the server returns nothing)
     // bytes 36 Channel, 40 RemainingBytes and 44/46 ReadChannelInfoOffset/Length stay zero
     // the one-byte Buffer at b+48 stays zero (already zeroed)
     return total;
@@ -686,13 +749,15 @@ proto_bool protocore_smb2_parse_read_response(uint8_t *work, const uint8_t *msg,
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 17) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        17) // StructureSize
     {
         return PROTO_FALSE;
     }
 
-    uint8_t data_off = b[2];                  // DataOffset - from the start of the SMB2 header (msg)
-    uint32_t data_len = endian.rd32le(b + 4); // DataLength
+    uint8_t data_off = b[2]; // DataOffset - from the start of the SMB2 header (msg)
+    uint32_t data_len =
+        (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 4, .width = MMGR_ENDIAN_32); // DataLength
     if (data_len == 0)
     {
         out->data = NULL;
@@ -726,14 +791,16 @@ size_t protocore_smb2_build_write(uint8_t *work, uint8_t *buf, size_t cap, uint6
     }
 
     uint8_t *b = buf + PROTOCORE_SMB2_HEADER_SIZE;
-    mem.set(b, 0, body);
-    endian.wr16le(b + 0, 49);                                            // StructureSize
-    endian.wr16le(b + 2, (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body)); // DataOffset (from the header start) = 112
-    endian.wr32le(b + 4, (uint32_t)data_len);                            // Length
-    endian.wr64le(b + 8, offset);                                        // Offset
-    mem.cpy(b + 16, file_id, 16);                                        // FileId
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = b, .val = 0, .bytes = body);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 0, .val = 49, .width = MMGR_ENDIAN_16); // StructureSize
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 2, .val = (uint16_t)(PROTOCORE_SMB2_HEADER_SIZE + body),
+               .width = MMGR_ENDIAN_16); // DataOffset (from the header start) = 112
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 4, .val = (uint32_t)data_len,
+               .width = MMGR_ENDIAN_32);                                                              // Length
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = b + 8, .val = offset, .width = MMGR_ENDIAN_64); // Offset
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + 16, .src = file_id, .bytes = 16);                    // FileId
     // bytes 32 Channel, 36 RemainingBytes, 40/42 WriteChannelInfoOffset/Length and 44 Flags stay zero
-    mem.cpy(b + body, data, data_len); // the data to write
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b + body, .src = data, .bytes = data_len); // the data to write
     return total;
 }
 
@@ -754,11 +821,13 @@ proto_bool protocore_smb2_parse_write_response(uint8_t *work, const uint8_t *msg
         return PROTO_FALSE;
     }
     const uint8_t *b = msg + PROTOCORE_SMB2_HEADER_SIZE;
-    if (endian.rd16le(b + 0) != 17) // StructureSize
+    if ((uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 0, .width = MMGR_ENDIAN_16) !=
+        17) // StructureSize
     {
         return PROTO_FALSE;
     }
-    out->count = endian.rd32le(b + 4); // Count (bytes written)
+    out->count = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = b + 4,
+                                      .width = MMGR_ENDIAN_32); // Count (bytes written)
     return PROTO_TRUE;
 }
 
@@ -780,7 +849,7 @@ static void mac_hmac_sha256(uint8_t *crypto_work, const uint8_t key[16], const u
 {
     uint8_t mac[32];
     HmacSha256.mac(crypto_work, key, 16, msg, len, mac);
-    mem.cpy(out16, mac, 16); // Signature = first 16 octets of the HMAC
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out16, .src = mac, .bytes = 16); // Signature = first 16 octets of the HMAC
 }
 
 static void mac_aes_cmac(uint8_t *crypto_work, const uint8_t key[16], const uint8_t *msg, size_t len, uint8_t out16[16])
@@ -794,11 +863,17 @@ static void smb2_sign_framed(uint8_t *crypto_work, const uint8_t key[16], uint8_
     {
         return;
     }
-    endian.wr32le(msg + PROTOCORE_SMB2_FLAGS_OFF, endian.rd32le(msg + PROTOCORE_SMB2_FLAGS_OFF) | SMB2_FLAGS_SIGNED);
-    mem.set(msg + PROTOCORE_SMB2_SIGNATURE_OFF, 0, PROTOCORE_SMB2_SIGNATURE_LEN); // zero the Signature before the MAC
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = msg + PROTOCORE_SMB2_FLAGS_OFF,
+               .val = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = msg + PROTOCORE_SMB2_FLAGS_OFF,
+                                           .width = MMGR_ENDIAN_32) |
+                      SMB2_FLAGS_SIGNED,
+               .width = MMGR_ENDIAN_32);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = msg + PROTOCORE_SMB2_SIGNATURE_OFF, .val = 0,
+               .bytes = PROTOCORE_SMB2_SIGNATURE_LEN); // zero the Signature before the MAC
     uint8_t tag[PROTOCORE_SMB2_SIGNATURE_LEN];
     mac(crypto_work, key, msg, msg_len, tag);
-    mem.cpy(msg + PROTOCORE_SMB2_SIGNATURE_OFF, tag, PROTOCORE_SMB2_SIGNATURE_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = msg + PROTOCORE_SMB2_SIGNATURE_OFF, .src = tag,
+               .bytes = PROTOCORE_SMB2_SIGNATURE_LEN);
 }
 
 static proto_bool smb2_verify_framed(uint8_t *crypto_work, const uint8_t key[16], uint8_t *msg, size_t msg_len,
@@ -809,12 +884,14 @@ static proto_bool smb2_verify_framed(uint8_t *crypto_work, const uint8_t key[16]
         return PROTO_FALSE;
     }
     uint8_t received[PROTOCORE_SMB2_SIGNATURE_LEN];
-    mem.cpy(received, msg + PROTOCORE_SMB2_SIGNATURE_OFF, PROTOCORE_SMB2_SIGNATURE_LEN);
-    mem.set(msg + PROTOCORE_SMB2_SIGNATURE_OFF, 0, PROTOCORE_SMB2_SIGNATURE_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = received, .src = msg + PROTOCORE_SMB2_SIGNATURE_OFF,
+               .bytes = PROTOCORE_SMB2_SIGNATURE_LEN);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = msg + PROTOCORE_SMB2_SIGNATURE_OFF, .val = 0,
+               .bytes = PROTOCORE_SMB2_SIGNATURE_LEN);
     uint8_t tag[PROTOCORE_SMB2_SIGNATURE_LEN];
     mac(crypto_work, key, msg, msg_len, tag);
-    mem.cpy(msg + PROTOCORE_SMB2_SIGNATURE_OFF, received,
-            PROTOCORE_SMB2_SIGNATURE_LEN); // restore; the message is unchanged
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = msg + PROTOCORE_SMB2_SIGNATURE_OFF, .src = received,
+               .bytes = PROTOCORE_SMB2_SIGNATURE_LEN); // restore; the message is unchanged
     uint8_t diff = 0;
     for (size_t i = 0; i < PROTOCORE_SMB2_SIGNATURE_LEN; i++)
     {
@@ -875,20 +952,21 @@ proto_bool protocore_smb2_derive_signing_key(uint8_t *work, const uint8_t *sessi
             return PROTO_FALSE;
         }
         static const char label[] = "SMBSigningKey"; // sizeof == 14 ("SMBSigningKey\0")
-        mem.cpy(fixed + n, label, sizeof(label));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = label, .bytes = sizeof(label));
         n += sizeof(label);
-        fixed[n++] = 0x00;               // Label||0x00 separator
-        mem.cpy(fixed + n, preauth, 64); // Context = the 64-byte preauth-integrity hash
+        fixed[n++] = 0x00; // Label||0x00 separator
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = preauth,
+                   .bytes = 64); // Context = the 64-byte preauth-integrity hash
         n += 64;
     }
     else
     {
         static const char label[] = "SMB2AESCMAC"; // sizeof == 12 ("SMB2AESCMAC\0")
         static const char context[] = "SmbSign";   // sizeof == 8  ("SmbSign\0")
-        mem.cpy(fixed + n, label, sizeof(label));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = label, .bytes = sizeof(label));
         n += sizeof(label);
         fixed[n++] = 0x00; // separator
-        mem.cpy(fixed + n, context, sizeof(context));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = context, .bytes = sizeof(context));
         n += sizeof(context);
     }
     // [L] = the derived-key length in bits (128), 32-bit big-endian.
@@ -896,11 +974,12 @@ proto_bool protocore_smb2_derive_signing_key(uint8_t *work, const uint8_t *sessi
     fixed[n++] = 0x00;
     fixed[n++] = 0x00;
     fixed[n++] = 0x80;
-    size_t mark = protocore_secure_mark();
-    uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    uint8_t *w =
+        (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_KDF_BORROW, protocore_secure_owner());
     proto_bool kdf_ok = Kdf.ctr_hmac_sha256(w, session_key, 16, fixed, n, out_key, 16);
     const proto_bool derived = kdf_ok;
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     return derived;
 }
 
@@ -921,10 +1000,12 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
         }
         static const char c2s_label[] = "SMBC2SCipherKey"; // sizeof == 16 (15 chars + NUL)
         static const char s2c_label[] = "SMBS2CCipherKey";
-        mem.cpy(fixed + n, c2s ? c2s_label : s2c_label, sizeof(c2s_label));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = c2s ? c2s_label : s2c_label,
+                   .bytes = sizeof(c2s_label));
         n += sizeof(c2s_label);
-        fixed[n++] = 0x00;               // Label||0x00 separator
-        mem.cpy(fixed + n, preauth, 64); // Context = the 64-byte preauth-integrity hash
+        fixed[n++] = 0x00; // Label||0x00 separator
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = preauth,
+                   .bytes = 64); // Context = the 64-byte preauth-integrity hash
         n += 64;
     }
     else
@@ -932,10 +1013,10 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
         static const char label[] = "SMB2AESCCM";  // sizeof == 11
         static const char ctx_in[] = "ServerIn ";  // sizeof == 10 (note the trailing space, MS-SMB2 §3.1.4.2)
         static const char ctx_out[] = "ServerOut"; // sizeof == 10
-        mem.cpy(fixed + n, label, sizeof(label));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = label, .bytes = sizeof(label));
         n += sizeof(label);
         fixed[n++] = 0x00;
-        mem.cpy(fixed + n, c2s ? ctx_in : ctx_out, sizeof(ctx_in));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = fixed + n, .src = c2s ? ctx_in : ctx_out, .bytes = sizeof(ctx_in));
         n += sizeof(ctx_in);
     }
     const uint32_t l_bits = (uint32_t)(key_len * 8); // [L] = key length in bits, 32-bit big-endian
@@ -943,11 +1024,12 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
     fixed[n++] = (uint8_t)((l_bits >> 16) & 0xff);
     fixed[n++] = (uint8_t)((l_bits >> 8) & 0xff);
     fixed[n++] = (uint8_t)(l_bits & 0xff);
-    size_t mark = protocore_secure_mark();
-    uint8_t *w = protocore_secure_span(PROTOCORE_KDF_BORROW, 8).buf;
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    uint8_t *w =
+        (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_KDF_BORROW, protocore_secure_owner());
     proto_bool kdf_ok = Kdf.ctr_hmac_sha256(w, session_key, 16, fixed, n, out_key, key_len);
     const proto_bool derived = kdf_ok;
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
     return derived;
 }
 
@@ -980,13 +1062,18 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
 
     // TRANSFORM_HEADER (MS-SMB2 §2.2.41). Signature (the AEAD tag) is filled after sealing; it and the
     // ProtocolId are outside the AAD, which is the header from the Nonce field to its end (offsets 20..51).
-    mem.set(out, 0, PROTOCORE_SMB2_TRANSFORM_HDR_LEN);
-    endian.wr32le(out + 0, PROTOCORE_SMB2_TRANSFORM_PROTOCOL_ID); // ProtocolId 0xFD 'S' 'M' 'B'
-    mem.cpy(out + 20, nonce, PROTOCORE_SMB2_NONCE_FIELD_LEN);     // Nonce field (16 bytes; AEAD uses the leading bytes)
-    endian.wr32le(out + 36, (uint32_t)msg_len);                   // OriginalMessageSize
-    endian.wr16le(out + 40, 0);                                   // Reserved
-    endian.wr16le(out + 42, 0x0001);                              // Flags = Encrypted (3.1.1)
-    endian.wr64le(out + 44, session_id);                          // SessionId
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = PROTOCORE_SMB2_TRANSFORM_HDR_LEN);
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 0, .val = PROTOCORE_SMB2_TRANSFORM_PROTOCOL_ID,
+               .width = MMGR_ENDIAN_32); // ProtocolId 0xFD 'S' 'M' 'B'
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 20, .src = nonce,
+               .bytes = PROTOCORE_SMB2_NONCE_FIELD_LEN); // Nonce field (16 bytes; AEAD uses the leading bytes)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 36, .val = (uint32_t)msg_len,
+               .width = MMGR_ENDIAN_32); // OriginalMessageSize
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 40, .val = 0, .width = MMGR_ENDIAN_16); // Reserved
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 42, .val = 0x0001,
+               .width = MMGR_ENDIAN_16); // Flags = Encrypted (3.1.1)
+    EMBED_CALL(parva_extremitas.wr, EndianCfg, .dst = out + 44, .val = session_id,
+               .width = MMGR_ENDIAN_64); // SessionId
 
     uint8_t *ct = out + PROTOCORE_SMB2_TRANSFORM_HDR_LEN;
     const uint8_t *aad = out + 20; // 32 bytes: Nonce field .. SessionId
@@ -997,8 +1084,9 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
-        size_t mark = protocore_secure_mark();
-        uint8_t *g = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *g = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW,
+                                                                              protocore_secure_owner());
         Aes128GcmV.key_args.key = key;
         Aes128Gcm.key_init(g);
         Aes128GcmV.seal_args.nonce = out + 20;
@@ -1010,7 +1098,7 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         Aes128GcmV.seal_args.tag_out = tag;
         Aes128Gcm.seal(g);
         Aes128Gcm.key_wipe(g);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
         ok = PROTO_TRUE;
         break;
@@ -1018,8 +1106,9 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_mark();
-        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *gcm =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
         AesGcmV.seal_args.nonce = out + 20;
@@ -1031,17 +1120,18 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         AesGcmV.seal_args.tag_out = tag;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
         ok = PROTO_TRUE;
         break;
     case SMB2_ENCRYPTION_AES128_CCM:
     case SMB2_ENCRYPTION_AES256_CCM: {
-        size_t mark = protocore_secure_mark();
-        uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *c =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESCCM_BORROW, protocore_secure_owner());
         proto_bool aes_ccm_ok = AesCcm.seal(c, key, key_len, out + 20, nonce_len, aad, 32, msg, msg_len, ct, tag);
         ok = aes_ccm_ok;
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     break;
     default:
@@ -1051,7 +1141,7 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     {
         return 0;
     }
-    mem.cpy(out + 4, tag, 16); // Signature = the 16-byte AEAD tag
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4, .src = tag, .bytes = 16); // Signature = the 16-byte AEAD tag
     return PROTOCORE_SMB2_TRANSFORM_HDR_LEN + msg_len;
 }
 
@@ -1066,12 +1156,15 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     {
         return 0;
     }
-    if (endian.rd32le(in + 0) != PROTOCORE_SMB2_TRANSFORM_PROTOCOL_ID)
+    if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = in + 0, .width = MMGR_ENDIAN_32) !=
+        PROTOCORE_SMB2_TRANSFORM_PROTOCOL_ID)
     {
         return 0;
     }
     size_t ct_len = in_len - PROTOCORE_SMB2_TRANSFORM_HDR_LEN;
-    if (endian.rd32le(in + 36) != (uint32_t)ct_len || out_cap < ct_len) // OriginalMessageSize must match
+    if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = in + 36, .width = MMGR_ENDIAN_32) !=
+            (uint32_t)ct_len ||
+        out_cap < ct_len) // OriginalMessageSize must match
     {
         return 0;
     }
@@ -1079,12 +1172,12 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     // AAD = header[20..51] (32 bytes), tag = Signature (in+4), ciphertext = in+52; the AEAD nonce is the leading
     // bytes of the AAD (the Nonce field). Snapshot the AAD and tag before decrypting: callers decrypt in place
     // (out aliases in), and the CCM open writes the recovered plaintext over the header before it reads the AAD
-    // and tag to compute/verify the MAC - so reading them from @p in after decryption would see clobbered bytes.
+    // and tag to compute/verify the MAC - so reading them from @p in after decryption would see clobbered byteio.
     // Copying the 48 header bytes makes in-place decryption safe for every cipher. Fails closed on a bad tag.
     uint8_t aad[32];
     uint8_t tag[16];
-    mem.cpy(aad, in + 20, 32);
-    mem.cpy(tag, in + 4, 16);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = aad, .src = in + 20, .bytes = 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = tag, .src = in + 4, .bytes = 16);
     const uint8_t *ct = in + PROTOCORE_SMB2_TRANSFORM_HDR_LEN;
     proto_bool ok = PROTO_FALSE;
     switch (cipher)
@@ -1092,8 +1185,9 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
-        size_t mark = protocore_secure_mark();
-        uint8_t *g = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *g = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW,
+                                                                              protocore_secure_owner());
         Aes128GcmV.key_args.key = key;
         Aes128Gcm.key_init(g);
         Aes128GcmV.open_args.nonce = aad;
@@ -1106,15 +1200,16 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         Aes128Gcm.open(g);
         ok = Aes128GcmV.ok;
         Aes128Gcm.key_wipe(g);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     break;
     case SMB2_ENCRYPTION_AES256_GCM: {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_mark();
-        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *gcm =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
         AesGcmV.open_args.nonce = aad;
@@ -1127,16 +1222,17 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         AesGcm.open(gcm);
         ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     break;
     case SMB2_ENCRYPTION_AES128_CCM:
     case SMB2_ENCRYPTION_AES256_CCM: {
-        size_t mark = protocore_secure_mark();
-        uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *c =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESCCM_BORROW, protocore_secure_owner());
         proto_bool aes_ccm_ok = AesCcm.open(c, key, key_len, aad, nonce_len, aad, 32, ct, ct_len, tag, out);
         ok = aes_ccm_ok;
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     break;
     default:

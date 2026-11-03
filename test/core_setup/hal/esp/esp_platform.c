@@ -58,7 +58,7 @@ uint32_t protocore_platform_heap_max_alloc(void)
     return (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
 }
 
-// The high-water mark counts stack words never touched; the seam reports bytes.
+// The high-water mark counts stack words never touched; the seam reports byteio.
 uint32_t protocore_platform_stack_free(void)
 {
     return (uint32_t)uxTaskGetStackHighWaterMark(NULL) * (uint32_t)sizeof(StackType_t);
@@ -118,6 +118,15 @@ int protocore_platform_set_cpu_mhz(uint32_t mhz)
 #endif // PROTOCORE_HAS_VENDOR_PM
 
 #if PROTOCORE_HAS_VENDOR_BT
+#include "sdkconfig.h" // CONFIG_BT_ENABLED: whether this build compiled the controller in
+
+#if !defined(CONFIG_BT_ENABLED)
+// The SDK ships a controller and this build did not compile it in, so no memory was released.
+int protocore_platform_bt_release(void)
+{
+    return 0;
+}
+#else
 #include "esp_bt.h"
 
 int protocore_platform_bt_release(void)
@@ -130,6 +139,7 @@ int protocore_platform_bt_release(void)
     }
     return esp_bt_controller_mem_release(ESP_BT_MODE_BTDM) == ESP_OK;
 }
+#endif // CONFIG_BT_ENABLED
 #endif // PROTOCORE_HAS_VENDOR_BT
 
 #if PROTOCORE_HAS_VENDOR_OTA

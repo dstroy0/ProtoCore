@@ -3,7 +3,7 @@
 #
 # test_roaming: test_roaming.c, plus the generated Unity runner.
 
-protocore_add_suite(unit/src/mmgr/test_roaming
+protocore_add_suite(unit/src/network_drivers/datalink/roaming/test_roaming
   SOURCES
     test_roaming.c
 )

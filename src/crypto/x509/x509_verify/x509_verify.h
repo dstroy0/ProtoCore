@@ -148,7 +148,7 @@ static const X509VerifyNs X509Verify __attribute__((unused)) = {
  * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
  * borrow comes from. RSA is what sizes it - a 2048-bit verification works over the modulus.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_x509_verify_span(void);
 

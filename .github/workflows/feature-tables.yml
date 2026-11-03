@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       # Regenerate every source-derived doc region, through the one CI entry point. Order matters
       # and ci.py holds it: later generators read what earlier ones wrote. It prints ok/FAIL per

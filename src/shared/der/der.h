@@ -3,7 +3,7 @@
 
 /**
  * @file der.h
- * @brief ASN.1 Distinguished Encoding Rules: one TLV at a time, over the caller's bytes.
+ * @brief ASN.1 Distinguished Encoding Rules: one TLV at a time, over the caller's byteio.
  *
  * X.690 sec 10 makes DER a canonical subset of BER: every length is definite, and the shortest form
  * that fits. That is the whole of what this reads - an indefinite length, a redundant long form, or

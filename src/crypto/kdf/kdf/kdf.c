@@ -19,8 +19,8 @@
 
 #include "crypto/kdf/kdf/kdf.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
-#include "mmgr/endian/endian.h"
-#include "mmgr/protomem/protomem.h"
+#include "endian/endian.h"
+#include "memoria_operor/memoria_operor.h"
 
 // The one definition, private to this TU. Only what is not derivable: the counter and the block K(i)
 // lands in. K(i) is derived from Ki, so it is key material and never lands on the stack.
@@ -38,8 +38,8 @@ static_assert(KDF_OFF_CTX + sizeof(KdfCtx) <= PROTOCORE_KDF_BORROW,
               "PROTOCORE_KDF_BORROW is short of the PRF's bytes, the counter and the block - raise it in "
               "protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(KDF_OFF_CTX % _Alignof(KdfCtx) == 0,
@@ -65,7 +65,7 @@ proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_
     size_t done = 0;
     for (uint32_t counter = 1; done < out_len; counter++)
     {
-        protocore_wr32be(c->ctr, counter);
+        EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = c->ctr, .val = counter, .width = MMGR_ENDIAN_32);
         HmacSha256.init(hw, ki, ki_len);
         HmacSha256.update(hw, c->ctr, sizeof(c->ctr));
         HmacSha256.update(hw, fixed, fixed_len);
@@ -75,7 +75,7 @@ proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_
         {
             take = out_len - done;
         }
-        mem.cpy(out + done, c->block, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + done, .src = c->block, .bytes = take);
         done += take;
     }
     return PROTO_TRUE;

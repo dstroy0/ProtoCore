@@ -444,9 +444,30 @@ static const PhysicalNs Physical __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_physical_span(void);
+
+/** @brief Physical.wifi_ready as an expression, for a bring-up loop to wait on. */
+PROTOCORE_INLINE proto_bool protocore_physical_wifi_up(void)
+{
+    Physical.wifi_ready(protocore_physical_span());
+    return PhysicalV.ok;
+}
+
+/** @brief Physical.eth_ready as an expression, for a bring-up loop to wait on. */
+PROTOCORE_INLINE proto_bool protocore_physical_eth_up(void)
+{
+    Physical.eth_ready(protocore_physical_span());
+    return PhysicalV.ok;
+}
+
+/** @brief Physical.egress_ip as an expression: the address a sketch prints once its link is up. */
+PROTOCORE_INLINE uint32_t protocore_physical_egress_ipv4(void)
+{
+    Physical.egress_ip(protocore_physical_span());
+    return PhysicalV.u32;
+}
 
 PROTOCORE_END_DECLS
 

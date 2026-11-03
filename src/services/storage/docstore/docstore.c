@@ -12,7 +12,7 @@
 
 #include "services/storage/docstore/docstore.h"
 
-#include "mmgr/protostr/protostr.h" // str.eq: the string-field find compare
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.eq: the string-field find compare
 #include "network_drivers/presentation/codec/json/json.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -100,7 +100,8 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
         Json.get_str(json_work);
         if (JsonV.ok)
         {
-            match = str.eq(f->fieldtmp, f->sval, sizeof(f->fieldtmp), PROTO_FALSE);
+            match = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = f->fieldtmp, .other = f->sval,
+                               .cap = sizeof(f->fieldtmp), .ci = PROTO_FALSE);
         }
     }
     else if (f->kind == FIND_INT)

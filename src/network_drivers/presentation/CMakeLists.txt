@@ -8,8 +8,8 @@ protocore_add_module(network_drivers/presentation
     network_drivers/session
     network_drivers/transport/tcp/evt
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/presentation/http/http2/h2_server
     network_drivers/presentation/http/sse
     network_drivers/presentation/http/websocket

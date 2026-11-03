@@ -5,8 +5,8 @@ protocore_add_module(services/fieldbus/modbus/modbus
   GATE PROTOCORE_ENABLE_MODBUS
   SOURCES modbus.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    server/core/worker
+    mmgr
     network_drivers/transport/tcp
     network_drivers/transport/tcp/common
     network_drivers/transport/tcp/protocol

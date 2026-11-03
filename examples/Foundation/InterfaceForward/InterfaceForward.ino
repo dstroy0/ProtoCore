@@ -17,11 +17,11 @@
 // a real build would send B out Wi-Fi / Ethernet / a bus (or another DMA channel).
 //
 // Build flags (whole build):
-//   PROTOCORE_ENABLE_DMA=1 PROTOCORE_ENABLE_PREEMPT_QUEUE=1 PROTOCORE_ENABLE_FORWARD=1 PROTOCORE_DMA_SIMULATE=1
+//   PROTOCORE_ENABLE_DMA=1 MMGR_ENABLE_DMA=1 PROTOCORE_ENABLE_PREEMPT_QUEUE=1 PROTOCORE_ENABLE_FORWARD=1 PROTOCORE_DMA_SIMULATE=1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "network_drivers/network/forward/forward.h"
-#include "mmgr/dma/dma.h"
+#include "memoriam_praetereo/memoriam_praetereo.h"
 #include "server/core/preempt_queue/preempt_queue.h"
 
 
@@ -60,16 +60,21 @@ static void on_forward(const void *item, void *)
 }
 
 // DMA-complete on interface A: copy the frame and post it onto the FORWARD lane.
-static void on_dma_complete(const protocore_dma_event *ev, void *)
+// The direction a port reports for a completed receive, and the peripheral numbers it is opened on.
+static const uint8_t DMA_DIRECTION_RX = 0u;
+static const uint8_t DMA_PERIPHERAL_UART = 0u;
+static const uint8_t DMA_PERIPHERAL_SPI = 2u;
+
+static void on_dma_complete(const mmgr_praet_event *ev, void *)
 {
-    if (ev->dir != protocore_dma_dir::PROTOCORE_DMA_RX)
+    if (ev->direction != DMA_DIRECTION_RX)
     {
         return;
     }
     pq_item it = {};
     it.msg.src = IF_A;
-    it.msg.len = ev->len;
-    uint16_t n = (ev->len < sizeof(it.msg.bytes)) ? ev->len : sizeof(it.msg.bytes);
+    it.msg.len = ev->bytes;
+    uint16_t n = (ev->bytes < sizeof(it.msg.bytes)) ? ev->bytes : sizeof(it.msg.bytes);
     memcpy(it.msg.bytes, ev->data, n);
     Session.workers->queue->post_from_isr(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &it);
 }
@@ -88,11 +93,10 @@ void setup()
     Session.workers->queue->start(protocore_pq_lane::PROTOCORE_PQ_LANE_FORWARD, &fwd);
 
     // Interface A ingress: a DMA channel fed by the simulator.
-    protocore_dma_config a = {};
-    a.channel = IF_A;
-    a.periph = protocore_dma_periph::PROTOCORE_DMA_UART;
-    a.on_complete = on_dma_complete;
-    protocore_dma_open(&a);
+    // Looped back on itself, so a frame this sketch submits arrives as the receive a line would bring.
+    static const PraetCallbackCfg dma_complete = {on_dma_complete, nullptr};
+    const PraetCfg a = {IF_A, DMA_PERIPHERAL_UART, true, &dma_complete};
+    praet.open(&a);
 
     // Forwarding rule: A -> B allowed (default-deny otherwise), no rate cap.
     protocore_forward_reset();
@@ -110,7 +114,7 @@ static uint8_t g_seq = 0;
 
 void loop()
 {
-    // A frame arrives on interface A. protocore_dma_poll() completes the RX, which fires the
+    // A frame arrives on interface A. praet.poll completes the RX, which fires the
     // callback -> FORWARD lane -> forwarding plane -> IF_B egress. Every 5th frame is a
     // "bad" one (first byte 0xFF) that the ingress ACL should drop.
     uint8_t frame[8] = {0xBB, g_seq, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
@@ -118,8 +122,10 @@ void loop()
     {
         frame[0] = 0xFF;
     }
-    protocore_dma_sim_feed(IF_A, frame, sizeof(frame));
-    protocore_dma_poll();
+    const PraetTransferCfg frame_out = {IF_A, frame, sizeof(frame)};
+    praet.tx_submit(&frame_out);
+    static const PraetCfg poll_all = {0u, 0u, false, nullptr};
+    praet.poll(&poll_all);
     g_seq++;
 
     if ((g_seq & 0x07) == 0)

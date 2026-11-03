@@ -5,6 +5,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "rx_feed.h"
 
 #include "protocore_net_host.h"
 
@@ -51,7 +52,7 @@ void test_delivery_through_the_wired_callback_fills_the_ring()
     char seg[] = "GET / HTTP/1.1\r\n";
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, protocore_net_host_deliver(peer, seg, (uint16_t)(sizeof(seg) - 1)));
 
-    TEST_ASSERT_EQUAL_UINT32(sizeof(seg) - 1, (uint32_t)conn_pool[0].rx_head);
+    TEST_ASSERT_EQUAL_UINT32(sizeof(seg) - 1, (uint32_t)rx_used(&conn_pool[0]));
     TEST_ASSERT_EQUAL_MEMORY(seg, conn_pool[0].rx_buffer, sizeof(seg) - 1);
 }
 

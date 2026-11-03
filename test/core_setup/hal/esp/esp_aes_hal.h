@@ -43,7 +43,7 @@
 #include "test/core_setup/hal/host/host_hw_reg.h"
 #endif
 
-#include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load at any alignment
+#include "proximus_operor/proximus_operor.h" // proto_raw_u32 - the aliasing-permitted word load at any alignment
 
 PROTOCORE_BEGIN_DECLS
 
@@ -100,7 +100,7 @@ static inline void protocore_aes_hw_setkey(const uint8_t *key, unsigned key_byte
     const unsigned words = key_bytes / 4u;
     for (unsigned i = 0; i < words; i++)
     {
-        PROTOCORE_HW_WR(PROTOCORE_AES_KEY_MEM + 4u * i, proto_raw_u32(key + 4u * i));
+        PROTOCORE_HW_WR(PROTOCORE_AES_KEY_MEM + 4u * i, EMBED_CALL(proxim.load32, ProximusCfg, .at = key + 4u * i));
     }
     PROTOCORE_HW_WR(PROTOCORE_AES_MODE, PROTOCORE_AES_MODE_ENCRYPT + (key_bytes / 8u - 2u));
 }
@@ -108,14 +108,14 @@ static inline void protocore_aes_hw_setkey(const uint8_t *key, unsigned key_byte
 /**
  * @brief Encrypt one block under the loaded key. Requires @ref protocore_aes_hw_setkey first.
  *
- * @param in   PROTOCORE_AES_HW_BLOCK_LEN input bytes.
+ * @param in   PROTOCORE_AES_HW_BLOCK_LEN input byteio.
  * @param out  PROTOCORE_AES_HW_BLOCK_LEN output bytes; may alias @p in.
  */
 static inline void protocore_aes_hw_block(const uint8_t *in, uint8_t *out)
 {
     for (unsigned i = 0; i < 4u; i++)
     {
-        PROTOCORE_HW_WR(PROTOCORE_AES_TEXT_IN + 4u * i, proto_raw_u32(in + 4u * i));
+        PROTOCORE_HW_WR(PROTOCORE_AES_TEXT_IN + 4u * i, EMBED_CALL(proxim.load32, ProximusCfg, .at = in + 4u * i));
     }
     PROTOCORE_HW_WR(PROTOCORE_AES_TRIGGER, 1u);
     uint32_t spins = 0u;
@@ -133,7 +133,8 @@ static inline void protocore_aes_hw_block(const uint8_t *in, uint8_t *out)
     }
     for (unsigned i = 0; i < 4u; i++)
     {
-        proto_raw_put_u32(out + 4u * i, PROTOCORE_HW_RD(PROTOCORE_AES_TEXT_OUT + 4u * i));
+        EMBED_CALL(proxim.put32, ProximusCfg, .dst = out + 4u * i,
+                   .val = PROTOCORE_HW_RD(PROTOCORE_AES_TEXT_OUT + 4u * i));
     }
 }
 

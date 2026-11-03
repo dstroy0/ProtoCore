@@ -9,7 +9,8 @@
 // relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common
 //   -DPROTOCORE_ENABLE_MODBUS=1 test/performance_benching/services/modbus/host.c
-//   src/services/fieldbus/modbus/modbus.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bm && /tmp/bm
+//   src/services/fieldbus/modbus/modbus.c src/memoria_operor/memoria_operor.h.c
+//   src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bm && /tmp/bm
 
 #define PROTOCORE_ENABLE_MODBUS 1
 #include "network_drivers/transport/tcp/tcp.h" // TcpConn / conn_pool type (for the stubs)

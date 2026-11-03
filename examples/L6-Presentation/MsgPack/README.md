@@ -12,18 +12,19 @@ MessagePack is widely supported across languages, so pick it over CBOR when your
 consuming stack already speaks it - the API and the zero-heap pattern are
 identical.
 
-**Encoding with `protocore_span`.** Initialize over a stack buffer, declare the map
-size, emit pairs, check `protocore_span_ok()`, write `protocore_span_len()` bytes:
+**Encoding with `mmgr_span`.** Initialize over a stack buffer, declare the map
+size, emit pairs, check `w.overflow`, write `w.pos` bytes:
 
 ```cpp
 uint8_t buf[64];
-protocore_span w;
-w = protocore_span_from( buf, sizeof(buf));
+mmgr_span w;
+const SpatiumCfg w_args = {.buf =  buf, .cap = sizeof(buf)};
+w = spat.from(&w_args);
 MsgPack.put_map(&w, 3);
 MsgPack.put_str(&w, "heap"); MsgPack.put_uint(&w, ESP.getFreeHeap());
 MsgPack.put_str(&w, "uptime"); MsgPack.put_uint(&w, millis() / 1000);
 MsgPack.put_str(&w, "rssi"); MsgPack.put_int(&w, Physical.wifi->rssi());
-ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;   // page these bytes out below
+ctx.len = w.overflow ? 0 : w.pos;   // page these bytes out below
 ```
 
 As with CBOR, the payload is binary so it is delivered through the binary-safe
@@ -31,22 +32,23 @@ As with CBOR, the payload is binary so it is delivered through the binary-safe
 (slice by slice, returning 0 to finish) rather than the C-string `send()`. The
 generator's `ctx` must outlive the call, so it is `static`.
 
-**Decoding with `protocore_cspan`.** The cursor decoder is the mirror image: bind a
+**Decoding with `mmgr_cspan`.** The cursor decoder is the mirror image: bind a
 reader to the bytes, read the map header, then each key/value, and check
-`protocore_cspan_ok()` once at the end (it is sticky, so a single check covers the
+`r.err` once at the end (it is sticky, so a single check covers the
 whole parse). Strings point straight into the source buffer, no copy:
 
 ```cpp
-protocore_cspan r;
-r = protocore_cspan_from( req->body, req->body_len);
+mmgr_cspan r;
+const SpatiumCfg r_args = {.cbuf =  req->body, .cap = req->body_len};
+r = spat.cfrom(&r_args);
 size_t count;
 if (!MsgPack.get_map(&r, &count)) { /* not a map */ }
-for (size_t i = 0; i < count && protocore_cspan_ok(r); i++) {
+for (size_t i = 0; i < count && !r.err; i++) {
     const char *key; size_t klen; int64_t val;
     if (!MsgPack.get_str(&r, &key, &klen) || !MsgPack.get_int(&r, &val)) break;
     // use key[0..klen) and val
 }
-if (!protocore_cspan_ok(r)) { /* malformed / truncated */ }
+if (r.err) { /* malformed / truncated */ }
 ```
 
 Every read is bounds-checked, so malformed or truncated input fails closed rather
@@ -110,8 +112,9 @@ static size_t protocore_msgpack_source(uint8_t *out, size_t cap, void *vctx)
 // Decodes a posted MessagePack map of {string: integer} and echoes "key=value".
 static void on_decode(uint8_t id, HttpReq *req)
 {
-    protocore_cspan r;
-    r = protocore_cspan_from( req->body, req->body_len); // cursor over the request body
+    mmgr_cspan r;
+    const SpatiumCfg r_args = {.cbuf =  req->body, .cap = req->body_len};
+    r = spat.cfrom(&r_args); // cursor over the request body
     size_t count;
     if (!MsgPack.get_map(&r, &count)) // header must be a map
     {
@@ -120,7 +123,7 @@ static void on_decode(uint8_t id, HttpReq *req)
     }
     char out[160];
     size_t o = 0;
-    for (size_t i = 0; i < count && protocore_cspan_ok(r); i++)
+    for (size_t i = 0; i < count && !r.err; i++)
     {
         const char *key;
         size_t klen;
@@ -129,7 +132,7 @@ static void on_decode(uint8_t id, HttpReq *req)
             break;
         o += snprintf(out + o, sizeof(out) - o, "%.*s=%lld\n", (int)klen, key, (long long)val);
     }
-    if (!protocore_cspan_ok(r)) // one sticky check covers the whole parse
+    if (r.err) // one sticky check covers the whole parse
     {
         server.send(id, 400, "text/plain", "malformed MessagePack");
         return;
@@ -140,21 +143,24 @@ static void on_decode(uint8_t id, HttpReq *req)
 void setup()
 {
     Serial.begin(115200);
-    Physical.wifi->init(SSID, PASSWORD);
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
     Serial.print("Connecting to WiFi");
-    while (!Physical.wifi->ready())
+    while (!protocore_physical_wifi_up())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // library egress IP (network byte order), no Arduino WiFi
+    uint32_t ip = protocore_physical_egress_ipv4(); // library egress IP (network byte order), no Arduino WiFi
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     server.on("/telemetry.msgpack", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {
         static MpCtx ctx; // static: must outlive send_chunked
-        protocore_span w;
-        w = protocore_span_from( ctx.buf, sizeof(ctx.buf));
+        mmgr_span w;
+        const SpatiumCfg w_args = {.buf =  ctx.buf, .cap = sizeof(ctx.buf)};
+        w = spat.from(&w_args);
         MsgPack.put_map(&w, 3);
         MsgPack.put_str(&w, "heap");
         MsgPack.put_uint(&w, ESP.getFreeHeap());
@@ -162,7 +168,7 @@ void setup()
         MsgPack.put_uint(&w, millis() / 1000);
         MsgPack.put_str(&w, "rssi");
         MsgPack.put_int(&w, Physical.wifi->rssi());
-        ctx.len = protocore_span_ok(w) ? protocore_span_len(w) : 0;
+        ctx.len = w.overflow ? 0 : w.pos;
         ctx.off = 0;
         server.send_chunked(id, 200, "application/msgpack", protocore_msgpack_source, &ctx);
     });

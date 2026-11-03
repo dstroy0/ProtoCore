@@ -13,17 +13,17 @@
 
 #if PROTOCORE_ENABLE_CONFIG_IO
 
-#include "mmgr/protoframe/protoframe.h" // the one frame engine
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "numeros_scribo/numeros_scribo.h" // the one frame engine
 #include "server/storage/config_io/config_io.h"
 
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
 #include "server/storage/config_store/config_store.h"
 
 PROTOCORE_BEGIN_DECLS
 
 // An exported u32 field is one number.
-static const protocore_field CFG_U32[] = {PROTOCORE_U32, PROTOCORE_END};
+static const mmgr_field CFG_U32[] = {MMGR_U32, MMGR_END};
 
 #define PROTOCORE_VAL_MAX 128 // export/import value field cap
 #define PROTOCORE_KEY_MAX 16  // NVS key cap (15 + null)
@@ -33,8 +33,11 @@ static proto_bool field_type(const protocore_cfg_field *fields, size_t n, const 
 {
     for (size_t i = 0; i < n; i++)
     {
-        if (fields[i].key &&
-            str.eq(fields[i].key, key, str.len(fields[i].key, PROTOCORE_KEY_MAX - 1u) + 1u, PROTO_FALSE))
+        if (fields[i].key && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = fields[i].key, .other = key,
+                                        .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = fields[i].key,
+                                                          .cap = PROTOCORE_KEY_MAX - 1u) +
+                                               1u,
+                                        .ci = PROTO_FALSE))
         {
             *out = fields[i].type;
             return PROTO_TRUE;
@@ -46,16 +49,17 @@ static proto_bool field_type(const protocore_cfg_field *fields, size_t n, const 
 // Append "<key>=<val>\n" to out at *pos, overflow-safe. Returns false on overflow.
 static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key, const char *val)
 {
-    size_t kn = str.len(key, cap + 1), vn = str.len(val, cap + 1);
+    size_t kn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = cap + 1),
+           vn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = val, .cap = cap + 1);
     size_t need = kn + 1 + vn + 1; // key '=' val '\n'
     if (*pos + need >= cap)        // keep room for the null terminator
     {
         return PROTO_FALSE;
     }
-    mem.cpy(out + *pos, key, kn);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = key, .bytes = kn);
     *pos += kn;
     out[(*pos)++] = '=';
-    mem.cpy(out + *pos, val, vn);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = val, .bytes = vn);
     *pos += vn;
     out[(*pos)++] = '\n';
     out[*pos] = '\0';
@@ -100,8 +104,8 @@ void protocore_config_io_export(uint8_t *work)
             ConfigStoreV.get_u32_args.def = 0;
             ConfigStore.get_u32(protocore_config_store_span());
             // Fails closed to an empty string on its own, so there is no failure arm to write here.
-            frame.build(val, sizeof(val), CFG_U32, (const protocore_fval[]){PROTOCORE_VU32((uint32_t)ConfigStoreV.ms)},
-                        1);
+            EMBED_CALL(numer.build, NumerosCfg, .out = val, .cap = sizeof(val), .spec = CFG_U32,
+                       .vals = (const mmgr_fval[]){MMGR_VU32((uint32_t)ConfigStoreV.ms)}, .nvals = 1);
         }
         else
         {
@@ -134,7 +138,7 @@ static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n
     if (t == PROTOCORE_CFG_U32)
     {
         ConfigStoreV.set_u32_args.key = key;
-        ConfigStoreV.set_u32_args.val = (uint32_t)str.to_ulong(val, NULL);
+        ConfigStoreV.set_u32_args.val = (uint32_t)EMBED_CALL(cellul.to_ulong, TransfiguroCfg, .src = val, .end = NULL);
         ConfigStore.set_u32(protocore_config_store_span());
         return ConfigStoreV.ok;
     }
@@ -194,9 +198,9 @@ void protocore_config_io_import(uint8_t *work)
         {
             char key[PROTOCORE_KEY_MAX];
             char val[PROTOCORE_VAL_MAX];
-            mem.cpy(key, text + i, klen);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = key, .src = text + i, .bytes = klen);
             key[klen] = '\0';
-            mem.cpy(val, text + eq + 1, vlen);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = val, .src = text + eq + 1, .bytes = vlen);
             val[vlen] = '\0';
             if (config_apply_field(fields, n, key, val))
             {

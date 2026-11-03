@@ -5,11 +5,8 @@ protocore_add_module(server/web/edge_cache/edge_cache_proxy
   GATE PROTOCORE_ENABLE_EDGE_CACHE
   SOURCES edge_cache_proxy.c
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
-    mmgr/secure
+    server/core/worker
+    mmgr
     network_drivers/application/http_range
     network_drivers/presentation/http
     network_drivers/presentation/http/http_parser

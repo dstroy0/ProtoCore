@@ -5,11 +5,7 @@ protocore_add_module(protocore
   SOURCES protocore.c
   PRIVATE_DEPS
     crypto/rng
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protoframe
-    mmgr/protostr
-    mmgr/rawmemcpy
+    mmgr
     network_drivers/application/web_assets
     network_drivers/application/webdav
     network_drivers/presentation

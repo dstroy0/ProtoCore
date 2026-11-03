@@ -5,8 +5,7 @@ protocore_add_module(network_drivers/presentation/http/http_parser
   GATE PROTOCORE_ENABLE_HTTP_PARSER
   SOURCES http_parser.c
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
-    mmgr/protostr
+    server/core/worker
+    mmgr
     shared/ip
 )

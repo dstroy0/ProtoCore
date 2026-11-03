@@ -7,5 +7,5 @@ protocore_add_module(services/storage/dbm
   DEPS
     services/storage/wal/wal_store
   PRIVATE_DEPS
-    mmgr/protomem
+    mmgr
 )

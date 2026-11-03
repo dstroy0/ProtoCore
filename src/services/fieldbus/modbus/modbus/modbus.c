@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_MODBUS
 
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "services/fieldbus/modbus/modbus/modbus.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_MODBUS
 
@@ -48,8 +48,8 @@ static_assert(MODBUS_OFF_CTX + sizeof(ModbusCtx) <= PROTOCORE_MODBUS_BORROW,
               "PROTOCORE_MODBUS_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(MODBUS_OFF_CTX % _Alignof(ModbusCtx) == 0,
@@ -92,7 +92,7 @@ uint8_t *protocore_modbus_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_plaintext_persist_span(PROTOCORE_MODBUS_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_MODBUS_BORROW);
     }
     return s_own.span;
 }
@@ -102,10 +102,14 @@ void protocore_modbus_process_adu(uint8_t *work);
 void protocore_modbus_server_init(uint8_t *work)
 {
 
-    mem.set(MODBUS_CTX(work)->coils, 0, sizeof(MODBUS_CTX(work)->coils));
-    mem.set(MODBUS_CTX(work)->discrete, 0, sizeof(MODBUS_CTX(work)->discrete));
-    mem.set(MODBUS_CTX(work)->holding, 0, sizeof(MODBUS_CTX(work)->holding));
-    mem.set(MODBUS_CTX(work)->input, 0, sizeof(MODBUS_CTX(work)->input));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = MODBUS_CTX(work)->coils, .val = 0,
+               .bytes = sizeof(MODBUS_CTX(work)->coils));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = MODBUS_CTX(work)->discrete, .val = 0,
+               .bytes = sizeof(MODBUS_CTX(work)->discrete));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = MODBUS_CTX(work)->holding, .val = 0,
+               .bytes = sizeof(MODBUS_CTX(work)->holding));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = MODBUS_CTX(work)->input, .val = 0,
+               .bytes = sizeof(MODBUS_CTX(work)->input));
     MODBUS_CTX(work)->write_cb = NULL;
 }
 
@@ -195,7 +199,7 @@ static void wr16(uint8_t *p, uint16_t v)
     p[1] = (uint8_t)(v & 0xFF);
 }
 
-// Build an exception PDU (fc|0x80, code). Always 2 bytes.
+// Build an exception PDU (fc|0x80, code). Always 2 byteio.
 static size_t pdu_exception(ModbusFunction fc, ModbusException code, uint8_t *out)
 {
     out[0] = (uint8_t)((uint8_t)fc | 0x80);
@@ -246,7 +250,7 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         }
         out[0] = (uint8_t)fc;
         out[1] = bytes;
-        mem.set(out + 2, 0, bytes);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = out + 2, .val = 0, .bytes = bytes);
         for (uint16_t i = 0; i < qty; i++)
         {
             if (bit_get(src, (uint16_t)(start + i)))
@@ -314,7 +318,7 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return 0;
         }
-        mem.cpy(out, pdu, 5); // echo request
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = pdu, .bytes = 5); // echo request
         return 5;
     }
 
@@ -338,7 +342,7 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return 0;
         }
-        mem.cpy(out, pdu, 5);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = pdu, .bytes = 5);
         return 5;
     }
 
@@ -434,7 +438,7 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return 0;
         }
-        mem.cpy(out, pdu, 7); // echo request (address + both masks)
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = pdu, .bytes = 7); // echo request (address + both masks)
         return 7;
     }
 

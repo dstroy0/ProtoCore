@@ -18,20 +18,7 @@ PROTOCORE_BEGIN_DECLS
 
 static size_t put_u(char *out, size_t cap, size_t at, uint32_t v)
 {
-    char tmp[11];
-    int n = 0;
-    do
-    {
-        tmp[n++] = (char)('0' + (int)(v % 10));
-        v /= 10;
-    } while (v);
-    char digits[12];
-    for (int i = 0; i < n; i++)
-    {
-        digits[i] = tmp[n - 1 - i];
-    }
-    digits[n] = '\0';
-    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = digits);
+    return EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = out, .cap = cap, .at = at, .val = v);
 }
 
 size_t protocore_utmc_request(const char *object_id, char *out, size_t cap)

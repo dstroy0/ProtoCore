@@ -17,7 +17,7 @@
 // natively rather than one only silicon can answer.
 
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "mmgr/secure/secure.h"
+#include "server/core/worker/worker.h"
 #include <string.h>
 
 #include <unity.h>
@@ -50,7 +50,7 @@ static uint8_t g_work[PROTOCORE_BIGNUM_BORROW] __attribute__((aligned(8)));
 
 void setUp(void)
 {
-    protocore_secure_reset();
+    protocore_secure_guard()->temporary_buf_reset();
 }
 void tearDown(void)
 {

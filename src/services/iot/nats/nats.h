@@ -34,7 +34,7 @@
  *     -ERR <error message><CRLF>
  *
  * #header bytes counts the header section including its terminating CR LF CR LF, and #total bytes
- * counts that section plus the payload, so an HPUB takes the whole section as one span.
+ * counts that section plus the payload, so an HPUB takes the whole section as one spat.
  *
  * The Overview states operation names are case insensitive. The parser here matches them in the
  * upper case a server writes.

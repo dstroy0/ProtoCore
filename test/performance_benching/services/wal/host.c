@@ -10,7 +10,8 @@
 //   -DPROTOCORE_ENABLE_REDIS=1 test/performance_benching/services/wal/host.c src/services/storage/wal/wal.c
 //   src/services/storage/wal/wal_store.c src/services/storage/dbm/dbm.c src/services/storage/docstore/docstore.c
 //   src/network_drivers/presentation/codec/json/json.c src/services/storage/sqlite/sqlite_format.c
-//   src/services/iot/redis_resp/redis_resp.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bench_ds && /tmp/bench_ds
+//   src/services/iot/redis_resp/redis_resp.c src/memoria_operor/memoria_operor.h.c
+//   src/cellularum_laboro/cellularum_laboro.h.c -o /tmp/bench_ds && /tmp/bench_ds
 
 #include "services/iot/redis_resp/redis_resp.h"
 #include "services/storage/dbm/dbm.h"

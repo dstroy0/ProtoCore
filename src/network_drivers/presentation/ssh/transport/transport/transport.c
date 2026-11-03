@@ -6,10 +6,14 @@
  * @brief RFC 4253: identification exchange, algorithm negotiation, key exchange, binary packet.
  */
 
+#include "endian/endian.h"
+#include "locus_carcerum/locus_carcerum.h"
 #include "protocore_config.h"
+#include "spatium/spatium.h"
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
+#include "cellularum_laboro/cellularum_laboro.h" // cellul.len / cellul.eq - the bounded string verbs
 #include "crypto/aead/aesgcm/aesgcm.h"
 #include "crypto/aead/chachapoly/chachapoly.h"
 #include "crypto/asymmetric/bignum/bignum.h"         // Bignum, protocore_bignum
@@ -22,13 +26,8 @@
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512/hmac_sha512.h"
-#include "crypto/rng/rng.h"           // protocore_rand_fill
-#include "mmgr/bytes/bytes.h"         // bytes.* writers / bytes.rd_str() - the byte verbs this file frames with
-#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
-#include "mmgr/plaintext/plaintext.h" // protocore_plaintext_span - host-key staging off the worker stack
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h" // str.len / str.eq - the bounded string verbs
-#include "mmgr/secure/secure.h"
+#include "crypto/rng/rng.h" // protocore_rand_fill
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/ssh/auth/auth.h" // ssh_auth_dispatch()
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/network/network.h"               // SshNetwork.emit()
@@ -37,7 +36,10 @@
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h"
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
-#include "server/clock/clock.h" // protocore_millis() (re-key timer)
+#include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.* writers / protocore_ssh_read_string_at() - the byte verbs this file frames with
+#include "server/clock/clock.h"        // protocore_millis() (re-key timer)
+#include "server/core/worker/worker.h" // temporary_buf_alloc - host-key staging off the worker stack
+#include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem/mlkem.h" // MlKem (PQ/T hybrid KEX responder)
@@ -180,7 +182,7 @@ uint8_t *protocore_ssh_transport_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = protocore_secure_persist_span(PROTOCORE_SSH_TRANSPORT_BORROW).buf;
+        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_SSH_TRANSPORT_BORROW);
         // A borrow arrives zeroed, and these do not start at zero.
         SSH_TRANSPORT_CTX(s_own.span)->prefer_rsa = PROTO_TRUE;
     }
@@ -198,12 +200,13 @@ proto_bool ssh_kex_prefer_rsa(void)
 
 void protocore_ssh_hostkey_ed25519_set(const uint8_t seed[32])
 {
-    // The public key derives through SHA-512, out of slot 0's bytes.
+    // The public key derives through SHA-512, out of slot 0's byteio.
     if (!ssh_pkt_slot_storage(&ssh_pkt[0]))
     {
         return;
     }
-    mem.cpy(SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed, seed, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed, .src = seed,
+               .bytes = 32);
     Ed25519.pubkey(ssh_pkt[0].crypto_work, SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_seed,
                    SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_pub);
     SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_have = PROTO_TRUE;
@@ -221,7 +224,8 @@ void protocore_ssh_hostkey_ecdsa_set(const uint8_t priv[PROTOCORE_ECDSA_P256_PRI
     {
         return;
     }
-    mem.cpy(SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_priv, priv, PROTOCORE_ECDSA_P256_PRIV_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_priv, .src = priv,
+               .bytes = PROTOCORE_ECDSA_P256_PRIV_LEN);
     SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_have = PROTO_TRUE;
 }
 proto_bool protocore_ssh_hostkey_ecdsa_available(void)
@@ -243,7 +247,7 @@ static void build_kex_list(char *out, size_t cap, proto_bool as_client)
     char ext_info[SSH_EXT_INFO_INDICATOR_MAX];
     ext_info[0] = ',';
     const char *extension_text = Extension.info_indicator(protocore_ssh_transport_span(), as_client);
-    str.copy(ext_info + 1, extension_text, sizeof(ext_info) - 1);
+    EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = ext_info + 1, .src = extension_text, .cap = sizeof(ext_info) - 1);
     const char *c1 = KEX_C25519;
     const char *c2 = KEX_C25519_LIBSSH;
     const char *dh = KEX_DH;
@@ -254,49 +258,79 @@ static void build_kex_list(char *out, size_t cap, proto_bool as_client)
     // is gated independently so a footprint-bound build can offer ML-KEM only (kexlist[192] holds
     // the full both-hybrid list with margin, so the appends never truncate).
 #if PROTOCORE_ENABLE_PQC_KEX
-    protocore_sb sb_mlkem = {out + n, cap - n, 0, PROTO_TRUE};
-    Sb.put(&sb_mlkem, KEX_MLKEM768);
-    protocore_sb_lit(&sb_mlkem, ",");
-    n += Sb.finish(&sb_mlkem);
+    char *const sb_mlkem_out = out + n;
+    const size_t sb_mlkem_cap = cap - n;
+    size_t sb_mlkem = 0;
+    sb_mlkem = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_mlkem_out, .cap = sb_mlkem_cap, .at = sb_mlkem,
+                          .text = KEX_MLKEM768);
+    sb_mlkem = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = sb_mlkem_out, .cap = sb_mlkem_cap, .at = sb_mlkem,
+                          .text = ",", .text_len = sizeof(",") - 1u);
+    n += EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_mlkem_out, .cap = sb_mlkem_cap, .at = sb_mlkem);
 #endif
 #if PROTOCORE_ENABLE_SSH_SNTRUP761
-    protocore_sb sb_sntrup = {out + n, cap - n, 0, PROTO_TRUE};
-    Sb.put(&sb_sntrup, KEX_SNTRUP761);
-    protocore_sb_lit(&sb_sntrup, ",");
-    n += Sb.finish(&sb_sntrup);
+    char *const sb_sntrup_out = out + n;
+    const size_t sb_sntrup_cap = cap - n;
+    size_t sb_sntrup = 0;
+    sb_sntrup = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb_sntrup_out, .cap = sb_sntrup_cap,
+                           .at = sb_sntrup, .text = KEX_SNTRUP761);
+    sb_sntrup = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = sb_sntrup_out, .cap = sb_sntrup_cap,
+                           .at = sb_sntrup, .text = ",", .text_len = sizeof(",") - 1u);
+    n += EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_sntrup_out, .cap = sb_sntrup_cap, .at = sb_sntrup);
 #endif
     if (SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->prefer_rsa)
     {
-        protocore_sb sb157 = {out + n, cap - n, 0, PROTO_TRUE};
-        Sb.put(&sb157, dh);
-        Sb.put(&sb157, ",");
-        Sb.put(&sb157, ec);
-        Sb.put(&sb157, ",");
-        Sb.put(&sb157, c1);
-        Sb.put(&sb157, ",");
-        Sb.put(&sb157, c2);
-        protocore_sb_lit(&sb157, ",");
-        Sb.put(&sb157, ext_info);
-        if (Sb.finish(&sb157) == 0)
+        char *const sb157_out = out + n;
+        const size_t sb157_cap = cap - n;
+        size_t sb157 = 0;
+        sb157 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157, .text = dh);
+        sb157 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157, .text = ",");
+        sb157 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157, .text = ec);
+        sb157 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157, .text = ",");
+        sb157 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157, .text = c1);
+        sb157 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157, .text = ",");
+        sb157 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157, .text = c2);
+        sb157 = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157,
+                           .text = ",", .text_len = sizeof(",") - 1u);
+        sb157 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157,
+                           .text = ext_info);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb157_out, .cap = sb157_cap, .at = sb157) == 0)
         {
-            sb157.p[0] = '\0';
+            sb157_out[0] = '\0';
         }
     }
     else
     {
-        protocore_sb sb159 = {out + n, cap - n, 0, PROTO_TRUE};
-        Sb.put(&sb159, c1);
-        Sb.put(&sb159, ",");
-        Sb.put(&sb159, c2);
-        Sb.put(&sb159, ",");
-        Sb.put(&sb159, ec);
-        Sb.put(&sb159, ",");
-        Sb.put(&sb159, dh);
-        protocore_sb_lit(&sb159, ",");
-        Sb.put(&sb159, ext_info);
-        if (Sb.finish(&sb159) == 0)
+        char *const sb159_out = out + n;
+        const size_t sb159_cap = cap - n;
+        size_t sb159 = 0;
+        sb159 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159, .text = c1);
+        sb159 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159, .text = ",");
+        sb159 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159, .text = c2);
+        sb159 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159, .text = ",");
+        sb159 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159, .text = ec);
+        sb159 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159, .text = ",");
+        sb159 =
+            EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159, .text = dh);
+        sb159 = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159,
+                           .text = ",", .text_len = sizeof(",") - 1u);
+        sb159 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159,
+                           .text = ext_info);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb159_out, .cap = sb159_cap, .at = sb159) == 0)
         {
-            sb159.p[0] = '\0';
+            sb159_out[0] = '\0';
         }
     }
 }
@@ -342,13 +376,17 @@ static void build_hostkey_list(char *out, size_t cap, proto_bool as_client)
         {
             continue;
         }
-        size_t l = str.len(out, cap);
-        protocore_sb sb194 = {out + l, cap - l, 0, PROTO_TRUE};
-        Sb.put(&sb194, l ? "," : "");
-        Sb.put(&sb194, cand[k].name);
-        if (Sb.finish(&sb194) == 0)
+        size_t l = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = out, .cap = cap);
+        char *const sb194_out = out + l;
+        const size_t sb194_cap = cap - l;
+        size_t sb194 = 0;
+        sb194 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb194_out, .cap = sb194_cap, .at = sb194,
+                           .text = l ? "," : "");
+        sb194 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = sb194_out, .cap = sb194_cap, .at = sb194,
+                           .text = cand[k].name);
+        if (EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb194_out, .cap = sb194_cap, .at = sb194) == 0)
         {
-            sb194.p[0] = '\0';
+            sb194_out[0] = '\0';
         }
     }
 }
@@ -372,8 +410,8 @@ static proto_bool first_name_is(const uint8_t *peer, uint32_t peer_len, const ch
     {
         return PROTO_FALSE;
     }
-    const size_t ol = str.len(ours, (size_t)peer_len + 1u);
-    return peer_len == ol && mem.cmp(peer, ours, ol) == 0;
+    const size_t ol = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = ours, .cap = (size_t)peer_len + 1u);
+    return peer_len == ol && EMBED_CALL(memor.cmp, MemoriaCfg, .src = peer, .other = ours, .bytes = ol) == 0;
 }
 
 // RFC 4253 sec 7.1: "If both sides make the same guess, that algorithm MUST be used." Each side's
@@ -387,8 +425,11 @@ static proto_bool same_guess(const uint8_t *peer_kex, uint32_t peer_kex_len, con
     char hklist[SSH_HKLIST_BUF];
     build_kex_list(kexlist, sizeof(kexlist), as_client);
     build_hostkey_list(hklist, sizeof(hklist), as_client);
-    kexlist[namelist_first_len((const uint8_t *)kexlist, (uint32_t)str.len(kexlist, sizeof(kexlist)))] = '\0';
-    hklist[namelist_first_len((const uint8_t *)hklist, (uint32_t)str.len(hklist, sizeof(hklist)))] = '\0';
+    kexlist[namelist_first_len(
+        (const uint8_t *)kexlist,
+        (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = kexlist, .cap = sizeof(kexlist)))] = '\0';
+    hklist[namelist_first_len((const uint8_t *)hklist, (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = hklist,
+                                                                            .cap = sizeof(hklist)))] = '\0';
     return first_name_is(peer_kex, peer_kex_len, kexlist) && first_name_is(peer_hk, peer_hk_len, hklist);
 }
 
@@ -398,14 +439,14 @@ static proto_bool same_guess(const uint8_t *peer_kex, uint32_t peer_kex_len, con
 
 proto_bool namelist_contains(const uint8_t *list, uint32_t len, const char *want)
 {
-    size_t wl = str.len(want, (size_t)len + 1);
+    size_t wl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = want, .cap = (size_t)len + 1);
     uint32_t start = 0;
     for (uint32_t i = 0; i <= len; i++)
     {
         if (i == len || list[i] == ',')
         {
             uint32_t elen = i - start;
-            if (elen == wl && mem.cmp(list + start, want, wl) == 0)
+            if (elen == wl && EMBED_CALL(memor.cmp, MemoriaCfg, .src = list + start, .other = want, .bytes = wl) == 0)
             {
                 return PROTO_TRUE;
             }
@@ -432,8 +473,9 @@ static int cand_match(const uint8_t *tok, uint32_t tlen, const AlgCand *cands, i
 {
     for (int c = 0; c < n; c++)
     {
-        size_t cl = str.len(cands[c].name, (size_t)tlen + 1);
-        if (cands[c].avail && cl == tlen && mem.cmp(tok, cands[c].name, tlen) == 0)
+        size_t cl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = cands[c].name, .cap = (size_t)tlen + 1);
+        if (cands[c].avail && cl == tlen &&
+            EMBED_CALL(memor.cmp, MemoriaCfg, .src = tok, .other = cands[c].name, .bytes = tlen) == 0)
         {
             return c;
         }
@@ -505,7 +547,7 @@ void ssh_transport_init(uint8_t i)
 
     // The session's buffers, at their offsets in the connection's storage.
     SshSession *s = &ssh_sess[i];
-    mem.set(s, 0, sizeof(*s));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     s->v_c = (char *)(base + SSH_OFF_V_C);
     s->v_s = (char *)(base + SSH_OFF_V_S);
     s->ident_buf = base + SSH_OFF_IDENT;
@@ -579,12 +621,12 @@ void protocore_ssh_transport_send_ident(uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    mem.cpy(out, ours, vlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = ours, .bytes = vlen);
     out[vlen] = '\r';
     out[vlen + 1] = '\n';
     *out_len = vlen + 2;
 
-    mem.cpy(kept, ours, vlen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = kept, .src = ours, .bytes = vlen);
     kept[vlen] = '\0';
     *kept_len = (uint16_t)vlen;
     SshTransportV.i32 = 0;
@@ -605,7 +647,8 @@ static proto_bool ident_protoversion_ok(const uint8_t *line, uint16_t n)
         return PROTO_FALSE; // no '-' closing the protoversion
     }
     const uint16_t vlen = (uint16_t)(p - 4);
-    return (vlen == 3 && mem.cmp(line + 4, "2.0", 3) == 0) || (vlen == 4 && mem.cmp(line + 4, "1.99", 4) == 0);
+    return (vlen == 3 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = line + 4, .other = "2.0", .bytes = 3) == 0) ||
+           (vlen == 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = line + 4, .other = "1.99", .bytes = 4) == 0);
 }
 
 void protocore_ssh_transport_recv_ident(uint8_t *work)
@@ -650,14 +693,14 @@ void protocore_ssh_transport_recv_ident(uint8_t *work)
                 n--;
             }
 
-            if (n >= 4 && mem.cmp(s->ident_buf, "SSH-", 4) == 0)
+            if (n >= 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = s->ident_buf, .other = "SSH-", .bytes = 4) == 0)
             {
                 if (n > SSH_VERSION_CONTENT_MAX || !ident_protoversion_ok(s->ident_buf, n))
                 {
                     SshTransportV.i32 = -1;
                     return;
                 }
-                mem.cpy(theirs, s->ident_buf, n);
+                EMBED_CALL(memor.cpy, MemoriaCfg, .dst = theirs, .src = s->ident_buf, .bytes = n);
                 theirs[n] = '\0';
                 *theirs_len = n;
                 s->ident_len = 0;
@@ -710,14 +753,14 @@ void protocore_ssh_transport_kexinit_build(uint8_t *work)
     SshSession *s = &ssh_sess[i];
     const proto_bool as_client = ssh_pkt[i].is_client;
 
-    protocore_span w = span.from(payload, cap);
-    bytes.put(&w, SSH_MSG_KEXINIT);
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = payload, .cap = cap);
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_KEXINIT);
 
     uint8_t cookie[16];
     RngV.fill_args.out = cookie;
     RngV.fill_args.len = sizeof(cookie);
     Rng.fill(protocore_rng_span());
-    bytes.raw(&w, cookie, sizeof(cookie));
+    EMBED_CALL(byteio.raw, OctetusCfg, .write_span = &w, .src = (const uint8_t *)cookie, .bytes = sizeof(cookie));
 
     char kexlist[SSH_KEXLIST_BUF];
     // All four host-key algs = "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256" is 57
@@ -735,10 +778,10 @@ void protocore_ssh_transport_kexinit_build(uint8_t *work)
     protocore_ssh_wr_cstr(&w, ALG_COMP_ZLIB);   // compression s2c (zlib@openssh.com / zlib when built in, else none)
     protocore_ssh_wr_cstr(&w, "");              // languages c2s
     protocore_ssh_wr_cstr(&w, "");              // languages s2c
-    bytes.put(&w, 0);                           // first_kex_packet_follows = false
-    bytes.put_be(&w, 0, 4);                     // reserved
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = 0);                 // first_kex_packet_follows = false
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w, .value = 0, .bytes = 4); // reserved
 
-    if (!span.ok(w))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
         SshTransportV.i32 = -1;
         return;
@@ -759,7 +802,7 @@ void protocore_ssh_transport_kexinit_build(uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    mem.cpy(kept, payload, w.pos);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = kept, .src = payload, .bytes = w.pos);
     *kept_len = (uint16_t)w.pos;
 
     *len = w.pos;
@@ -768,7 +811,7 @@ void protocore_ssh_transport_kexinit_build(uint8_t *work)
 }
 
 // A KEXINIT name-list is an RFC 4251 sec 5 string holding comma-separated names, so reading one is
-// bytes.rd_str(); what makes it a name-list is what negotiate_alg()/namelist_contains() do with it.
+// protocore_ssh_read_string_at(); what makes it a name-list is what negotiate_alg()/namelist_contains() do with it.
 
 // Negotiate the key-exchange method from the client's kex_algorithms name-list, in our preference order
 // (PQC hybrid first when enabled; RSA group first when prefer_rsa). false = no mutual method.
@@ -891,7 +934,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    mem.cpy(peer, payload, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = peer, .src = payload, .bytes = len);
     *peer_len = (uint16_t)len;
 
     size_t off = 1 + 16; // skip msg type + 16-byte cookie
@@ -900,7 +943,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
     uint32_t nlen;
 
     // kex_algorithms: negotiate the KEX method by the CLIENT's preference (RFC 4253 §7.1).
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
@@ -920,7 +963,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
         return; // no mutual KEX
     }
     // server_host_key_algorithms: negotiate, restricted to keys we actually hold.
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
@@ -938,7 +981,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
     const AlgCand cc[3] = {{"chacha20-poly1305@openssh.com", SSH_CIPHER_CHACHA20POLY1305, PROTO_TRUE},
                            {ALG_CIPHER_GCM, SSH_CIPHER_AES256GCM, PROTO_TRUE},
                            {ALG_CIPHER, SSH_CIPHER_AES256CTR, PROTO_TRUE}};
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
@@ -950,7 +993,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
@@ -973,7 +1016,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
     proto_bool need_mac_s2c = (s->cipher_alg_s2c == SSH_CIPHER_AES256CTR);
     int m_c2s = SSH_MAC_HMAC_SHA256;
     int m_s2c = SSH_MAC_HMAC_SHA256;
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
@@ -983,7 +1026,7 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
@@ -1003,14 +1046,14 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
                                   {"zlib", SSH_COMP_ZLIB, PROTO_TRUE},
                                   {"none", SSH_COMP_NONE, PROTO_TRUE}};
         int comp = 0;
-        if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
+        if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
             SshTransportV.i32 = -1;
             return;
         }
         Comp.set_c2s(protocore_ssh_comp_span(), i, comp);
-        if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
+        if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
             SshTransportV.i32 = -1;
@@ -1020,12 +1063,12 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
     }
 #else
     // Both directions must offer "none" (no compression built in).
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
         SshTransportV.i32 = -1;
         return;
     }
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen) || !namelist_contains(list, nlen, ALG_COMP))
     {
         SshTransportV.i32 = -1;
         return;
@@ -1034,12 +1077,12 @@ void protocore_ssh_transport_kexinit_parse(uint8_t *work)
 
     // Two language name-lists (RFC 4253 sec 7.1, ignored), then the guess flag and the reserved uint32.
     // Each read advances off, so these are the first list and then the second.
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
     }
-    if (!bytes.rd_str(payload, len, &off, &list, &nlen))
+    if (!protocore_ssh_read_string_at(payload, len, &off, &list, &nlen))
     {
         SshTransportV.i32 = -1;
         return;
@@ -1089,7 +1132,7 @@ static void hash_u32(uint8_t *work, uint32_t v)
     hash_bytes(work, b, 4);
 }
 
-// Hash an SSH string: uint32 length + raw bytes.
+// Hash an SSH string: uint32 length + raw byteio.
 static void hash_string(uint8_t *work, const uint8_t *data, size_t len)
 {
     hash_u32(work, (uint32_t)len);
@@ -1211,24 +1254,25 @@ static proto_bool parse_rsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t *
     size_t off = 0;
     const uint8_t *type;
     uint32_t type_len;
-    if (!bytes.rd_str(blob, blen, &off, &type, &type_len))
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &type, &type_len))
     {
         return PROTO_FALSE;
     }
-    if (type_len != 7 || mem.cmp(type, "ssh-rsa", 7) != 0)
+    if (type_len != 7 || EMBED_CALL(memor.cmp, MemoriaCfg, .src = type, .other = "ssh-rsa", .bytes = 7) != 0)
     {
         return PROTO_FALSE;
     }
     const uint8_t *e_mp;
     uint32_t e_len;
-    if (!bytes.rd_str(blob, blen, &off, &e_mp, &e_len) || !bytes.mpint_fixed(e_mp, e_len, e_be, 4))
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &e_mp, &e_len) ||
+        !protocore_ssh_mpint_fixed(e_mp, e_len, e_be, 4))
     {
         return PROTO_FALSE;
     }
     const uint8_t *n_mp;
     uint32_t n_len;
-    if (!bytes.rd_str(blob, blen, &off, &n_mp, &n_len) ||
-        !bytes.mpint_fixed(n_mp, n_len, n_be, PROTOCORE_RSA_KEY_BYTES))
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &n_mp, &n_len) ||
+        !protocore_ssh_mpint_fixed(n_mp, n_len, n_be, PROTOCORE_RSA_KEY_BYTES))
     {
         return PROTO_FALSE;
     }
@@ -1241,21 +1285,21 @@ static proto_bool parse_ed25519_pubkey(const uint8_t *blob, uint32_t blen, uint8
     size_t off = 0;
     const uint8_t *type;
     uint32_t type_len;
-    if (!bytes.rd_str(blob, blen, &off, &type, &type_len))
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &type, &type_len))
     {
         return PROTO_FALSE;
     }
-    if (type_len != 11 || mem.cmp(type, "ssh-ed25519", 11) != 0)
+    if (type_len != 11 || EMBED_CALL(memor.cmp, MemoriaCfg, .src = type, .other = "ssh-ed25519", .bytes = 11) != 0)
     {
         return PROTO_FALSE;
     }
     const uint8_t *pk;
     uint32_t pk_len;
-    if (!bytes.rd_str(blob, blen, &off, &pk, &pk_len) || pk_len != 32)
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &pk, &pk_len) || pk_len != 32)
     {
         return PROTO_FALSE;
     }
-    mem.cpy(pub, pk, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = pub, .src = pk, .bytes = 32);
     return PROTO_TRUE;
 }
 
@@ -1266,27 +1310,28 @@ static proto_bool parse_ecdsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t
     size_t off = 0;
     const uint8_t *type;
     uint32_t type_len;
-    if (!bytes.rd_str(blob, blen, &off, &type, &type_len))
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &type, &type_len))
     {
         return PROTO_FALSE;
     }
-    if (type_len != 19 || mem.cmp(type, "ecdsa-sha2-nistp256", 19) != 0)
+    if (type_len != 19 ||
+        EMBED_CALL(memor.cmp, MemoriaCfg, .src = type, .other = "ecdsa-sha2-nistp256", .bytes = 19) != 0)
     {
         return PROTO_FALSE;
     }
     const uint8_t *curve;
     uint32_t curve_len;
-    if (!bytes.rd_str(blob, blen, &off, &curve, &curve_len))
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &curve, &curve_len))
     {
         return PROTO_FALSE;
     }
-    if (curve_len != 8 || mem.cmp(curve, "nistp256", 8) != 0)
+    if (curve_len != 8 || EMBED_CALL(memor.cmp, MemoriaCfg, .src = curve, .other = "nistp256", .bytes = 8) != 0)
     {
         return PROTO_FALSE;
     }
     const uint8_t *q;
     uint32_t q_len;
-    if (!bytes.rd_str(blob, blen, &off, &q, &q_len))
+    if (!protocore_ssh_read_string_at(blob, blen, &off, &q, &q_len))
     {
         return PROTO_FALSE;
     }
@@ -1294,7 +1339,7 @@ static proto_bool parse_ecdsa_pubkey(const uint8_t *blob, uint32_t blen, uint8_t
     {
         return PROTO_FALSE;
     }
-    mem.cpy(pub, q, PROTOCORE_ECDSA_P256_PUB_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = pub, .src = q, .bytes = PROTOCORE_ECDSA_P256_PUB_LEN);
     return PROTO_TRUE;
 }
 
@@ -1306,12 +1351,13 @@ static proto_bool parse_ecdsa_sig(const uint8_t *sig, uint32_t slen, uint8_t *ou
     const uint8_t *s;
     uint32_t r_len;
     uint32_t s_len;
-    if (!bytes.rd_str(sig, slen, &off, &r, &r_len) || !bytes.rd_str(sig, slen, &off, &s, &s_len))
+    if (!protocore_ssh_read_string_at(sig, slen, &off, &r, &r_len) ||
+        !protocore_ssh_read_string_at(sig, slen, &off, &s, &s_len))
     {
         return PROTO_FALSE;
     }
-    return bytes.mpint_fixed(r, r_len, out, PROTOCORE_ECDSA_P256_COORD_LEN) &&
-           bytes.mpint_fixed(s, s_len, out + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN);
+    return protocore_ssh_mpint_fixed(r, r_len, out, PROTOCORE_ECDSA_P256_COORD_LEN) &&
+           protocore_ssh_mpint_fixed(s, s_len, out + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN);
 }
 
 proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const uint8_t *sig, size_t sig_len,
@@ -1328,22 +1374,34 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
     uint32_t stype_len;
     const uint8_t *raw;
     uint32_t raw_len;
-    if (!bytes.rd_str(sig, (uint32_t)sig_len, &soff, &stype, &stype_len) ||
-        !bytes.rd_str(sig, (uint32_t)sig_len, &soff, &raw, &raw_len))
+    if (!protocore_ssh_read_string_at(sig, (uint32_t)sig_len, &soff, &stype, &stype_len) ||
+        !protocore_ssh_read_string_at(sig, (uint32_t)sig_len, &soff, &raw, &raw_len))
     {
         return PROTO_FALSE;
     }
 
     // The key material is staged in the arena rather than on the worker stack: this runs at the
     // deepest point of the handshake, under the curve and bignum paths.
-    size_t mark = protocore_plaintext_mark();
-    protocore_span n_be = protocore_plaintext_span(PROTOCORE_RSA_KEY_BYTES, 4);
-    protocore_span e_be = protocore_plaintext_span(4, 4);
-    protocore_span pub = protocore_plaintext_span(PROTOCORE_ECDSA_P256_PUB_LEN, 4);
-    protocore_span ec_sig = protocore_plaintext_span(PROTOCORE_ECDSA_P256_SIG_LEN, 4);
-    if (!span.ok(n_be) || !span.ok(e_be) || !span.ok(pub) || !span.ok(ec_sig))
+    size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    mmgr_span n_be = EMBED_CALL(spat.from, SpatiumCfg,
+                                .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_RSA_KEY_BYTES,
+                                                                                               protocore_plain_owner()),
+                                .cap = PROTOCORE_RSA_KEY_BYTES);
+    mmgr_span e_be = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(4, protocore_plain_owner()), .cap = 4);
+    mmgr_span pub = EMBED_CALL(spat.from, SpatiumCfg,
+                               .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(
+                                   PROTOCORE_ECDSA_P256_PUB_LEN, protocore_plain_owner()),
+                               .cap = PROTOCORE_ECDSA_P256_PUB_LEN);
+    mmgr_span ec_sig = EMBED_CALL(spat.from, SpatiumCfg,
+                                  .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(
+                                      PROTOCORE_ECDSA_P256_SIG_LEN, protocore_plain_owner()),
+                                  .cap = PROTOCORE_ECDSA_P256_SIG_LEN);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = n_be) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = e_be) ||
+        !EMBED_CALL(spat.ok, SpatiumCfg, .span = pub) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_sig))
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
 
@@ -1374,7 +1432,7 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
         break;
     }
     }
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
     return ok;
 }
 
@@ -1408,8 +1466,8 @@ int ssh_kexdh_parse_init(const uint8_t *payload, size_t len, uint8_t e_be[256])
         return -1; // e exceeds 2048 bits
     }
 
-    mem.set(e_be, 0, 256);
-    mem.cpy(e_be + (256 - vlen), m + off, vlen);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = e_be, .val = 0, .bytes = 256);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e_be + (256 - vlen), .src = m + off, .bytes = vlen);
     return 0;
 }
 
@@ -1427,7 +1485,7 @@ static int parse_ecdh_init(const uint8_t *payload, size_t len, uint8_t qc[32])
     {
         return -1;
     }
-    mem.cpy(qc, payload + 5, 32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = qc, .src = payload + 5, .bytes = 32);
     return 0;
 }
 
@@ -1445,7 +1503,7 @@ static int parse_ecdh_init_p256(const uint8_t *payload, size_t len, uint8_t qc[P
     {
         return -1;
     }
-    mem.cpy(qc, payload + 5, PROTOCORE_ECDSA_P256_PUB_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = qc, .src = payload + 5, .bytes = PROTOCORE_ECDSA_P256_PUB_LEN);
     return 0;
 }
 
@@ -1457,10 +1515,10 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
 {
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ED25519)
     {
-        protocore_span w = span.from(ks, cap);
+        mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = ks, .cap = cap);
         protocore_ssh_wr_str(&w, (const uint8_t *)HOSTKEY_ED, sizeof(HOSTKEY_ED) - 1);
         protocore_ssh_wr_str(&w, SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ed_pub, 32);
-        if (!span.ok(w))
+        if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
         {
             return -1;
         }
@@ -1469,12 +1527,12 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
     }
     if (ssh_sess[i].hostkey_alg == SSH_HOSTKEY_ECDSA_NISTP256)
     {
-        protocore_span w = span.from(ks, cap);
+        mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = ks, .cap = cap);
         protocore_ssh_wr_str(&w, (const uint8_t *)HOSTKEY_ECDSA, sizeof(HOSTKEY_ECDSA) - 1);
         protocore_ssh_wr_str(&w, (const uint8_t *)"nistp256", 8); // RFC 5656 curve identifier
         protocore_ssh_wr_str(&w, SSH_TRANSPORT_CTX(protocore_ssh_transport_span())->ecdsa_pub,
                              PROTOCORE_ECDSA_P256_PUB_LEN);
-        if (!span.ok(w))
+        if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
         {
             return -1;
         }
@@ -1518,10 +1576,10 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
             return -1;
         }
         // ECDSA signature blob is mpint(r) || mpint(s) (RFC 5656 §3.1.2).
-        protocore_span w = span.from(sig, sig_cap);
+        mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = sig, .cap = sig_cap);
         protocore_ssh_wr_mpint(&w, raw, PROTOCORE_ECDSA_P256_COORD_LEN);
         protocore_ssh_wr_mpint(&w, raw + PROTOCORE_ECDSA_P256_COORD_LEN, PROTOCORE_ECDSA_P256_COORD_LEN);
-        if (!span.ok(w))
+        if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
         {
             return -1;
         }
@@ -1572,8 +1630,8 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
                            const char *sig_name, const uint8_t *sig, size_t sig_len, uint8_t *out, size_t *out_len,
                            size_t cap)
 {
-    protocore_span w = span.from(out, cap);
-    bytes.put(&w, SSH_MSG_KEXDH_REPLY);
+    mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = cap);
+    EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_KEXDH_REPLY);
     protocore_ssh_wr_str(&w, ks, ks_len); // K_S
     if (ssh_sess[i].kex_alg == SSH_KEX_DH_GROUP14)
     {
@@ -1583,11 +1641,12 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
     {
         protocore_ssh_wr_str(&w, spub, spub_len); // Q_S (curve25519) or S_REPLY (hybrid), a raw string
     }
-    uint32_t nl = (uint32_t)str.len(sig_name, w.cap);
-    bytes.put_be(&w, 4 + nl + 4 + (uint32_t)sig_len, 4); // signature blob length
+    uint32_t nl = (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = sig_name, .cap = w.cap);
+    EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w, .value = 4 + nl + 4 + (uint32_t)sig_len,
+               .bytes = 4); // signature blob length
     protocore_ssh_wr_str(&w, (const uint8_t *)sig_name, nl);
     protocore_ssh_wr_str(&w, sig, sig_len);
-    if (!span.ok(w))
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
         return -1;
     }
@@ -1680,7 +1739,7 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     uint8_t k_pq[32];
     proto_bool ml_kem_ok = MlKem.encaps(ssh_pkt[i].crypto_work, ek, m, s_reply, k_pq); // ciphertext -> s_reply[0..1087]
     proto_bool ok = ml_kem_ok;
-    protocore_secure_wipe(m, sizeof(m));
+    mmgr_zero_buf(m, sizeof(m));
     if (!ok)
     {
         return -1; // malformed encapsulation key (FIPS 203 modulus check)
@@ -1698,16 +1757,17 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     }
     if (zacc == 0) // low-order X25519 point (RFC 7748 §6.1)
     {
-        protocore_secure_wipe(k_pq, sizeof(k_pq));
-        protocore_secure_wipe(k_cl, sizeof(k_cl));
+        mmgr_zero_buf(k_pq, sizeof(k_pq));
+        mmgr_zero_buf(k_cl, sizeof(k_cl));
         return -1;
     }
-    mem.cpy(s_reply + MLKEM768_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s_reply + MLKEM768_CT_BYTES, .src = ssh_sess[i].ecdh_pk,
+               .bytes = 32); // S_PK1: server X25519 public
 
     if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
     {
-        protocore_secure_wipe(k_pq, sizeof(k_pq));
-        protocore_secure_wipe(k_cl, sizeof(k_cl));
+        mmgr_zero_buf(k_pq, sizeof(k_pq));
+        mmgr_zero_buf(k_cl, sizeof(k_cl));
         return -1;
     }
     uint8_t *hw = ssh_pkt[i].crypto_work;
@@ -1715,8 +1775,8 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     Sha256.update(hw, k_pq, sizeof(k_pq)); // K = SHA256(K_PQ || K_CL) (RFC 9370 concat combiner)
     Sha256.update(hw, k_cl, sizeof(k_cl));
     Sha256.final(hw, k_out);
-    protocore_secure_wipe(k_pq, sizeof(k_pq));
-    protocore_secure_wipe(k_cl, sizeof(k_cl));
+    mmgr_zero_buf(k_pq, sizeof(k_pq));
+    mmgr_zero_buf(k_cl, sizeof(k_cl));
     return 0;
 }
 #endif // PROTOCORE_ENABLE_PQC_KEX (ML-KEM hybrid)
@@ -1757,18 +1817,19 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
     }
     if (zacc == 0) // low-order X25519 point (RFC 7748 §6.1)
     {
-        protocore_secure_wipe(k_pq, sizeof(k_pq));
-        protocore_secure_wipe(k_cl, sizeof(k_cl));
+        mmgr_zero_buf(k_pq, sizeof(k_pq));
+        mmgr_zero_buf(k_cl, sizeof(k_cl));
         return -1;
     }
-    mem.cpy(s_reply + PROTOCORE_SNTRUP761_CT_BYTES, ssh_sess[i].ecdh_pk, 32); // S_PK1: server X25519 public
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s_reply + PROTOCORE_SNTRUP761_CT_BYTES, .src = ssh_sess[i].ecdh_pk,
+               .bytes = 32); // S_PK1: server X25519 public
 
     Sha512.init(work);
     Sha512.update(work, k_pq, sizeof(k_pq)); // K = SHA512(K_PQ || K_CL) (RFC 9370 concat combiner)
     Sha512.update(work, k_cl, sizeof(k_cl));
     Sha512.final(work, k_out);
-    protocore_secure_wipe(k_pq, sizeof(k_pq));
-    protocore_secure_wipe(k_cl, sizeof(k_cl));
+    mmgr_zero_buf(k_pq, sizeof(k_pq));
+    mmgr_zero_buf(k_cl, sizeof(k_cl));
     return 0;
 }
 #endif // PROTOCORE_ENABLE_SSH_SNTRUP761
@@ -1796,7 +1857,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
     //    the hybrid); k_hash / k_hash_len select K's encoding (an mpint for DH / curve, a fixed 32-byte
     //    string for the hybrid). k_be holds K right-aligned so hash_mpint / the KDF strip to minimal.
     uint8_t k_be[256];
-    mem.set(k_be, 0, sizeof(k_be));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = k_be, .val = 0, .bytes = sizeof(k_be));
     uint8_t cpub[256];
     uint8_t spub[256]; // client / server public value (right-aligned) for DH / curve25519
     const uint8_t *cpub_p = cpub;
@@ -1833,16 +1894,16 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
         }
         if (zacc == 0)
         {
-            protocore_secure_wipe(kk, sizeof(kk));
+            mmgr_zero_buf(kk, sizeof(kk));
             SshTransportV.i32 = -1;
             return;
         }
-        mem.cpy(k_be + (256 - 32), kk, 32);
-        mem.cpy(cpub, qc, 32);
-        mem.cpy(spub, s->ecdh_pk, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k_be + (256 - 32), .src = kk, .bytes = 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = cpub, .src = qc, .bytes = 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = spub, .src = s->ecdh_pk, .bytes = 32);
         cpub_len = spub_len = 32;
         pub_is_string = PROTO_TRUE;
-        protocore_secure_wipe(kk, sizeof(kk));
+        mmgr_zero_buf(kk, sizeof(kk));
     }
 #if PROTOCORE_ENABLE_PQC_KEX
     else if (s->kex_alg == SSH_KEX_MLKEM768_X25519)
@@ -1905,13 +1966,14 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
             SshTransportV.i32 = -1;
             return;
         }
-        mem.cpy(k_be + (256 - PROTOCORE_ECDSA_P256_COORD_LEN), kk, PROTOCORE_ECDSA_P256_COORD_LEN);
-        mem.cpy(cpub, qc, PROTOCORE_ECDSA_P256_PUB_LEN);
-        mem.cpy(spub, qs, PROTOCORE_ECDSA_P256_PUB_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k_be + (256 - PROTOCORE_ECDSA_P256_COORD_LEN), .src = kk,
+                   .bytes = PROTOCORE_ECDSA_P256_COORD_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = cpub, .src = qc, .bytes = PROTOCORE_ECDSA_P256_PUB_LEN);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = spub, .src = qs, .bytes = PROTOCORE_ECDSA_P256_PUB_LEN);
         cpub_len = PROTOCORE_ECDSA_P256_PUB_LEN;
         spub_len = PROTOCORE_ECDSA_P256_PUB_LEN;
         pub_is_string = PROTO_TRUE;
-        protocore_secure_wipe(kk, sizeof(kk));
+        mmgr_zero_buf(kk, sizeof(kk));
     }
     else
     {
@@ -1942,8 +2004,8 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
         BignumV.to_bytes_args.bytes = k_be;
         BignumV.to_bytes_args.in = &K;
         Bignum.to_bytes(ssh_pkt[i].crypto_work);
-        protocore_secure_wipe(&K, sizeof(K));
-        mem.cpy(cpub, e_be, 256);
+        mmgr_zero_buf(&K, sizeof(K));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = cpub, .src = e_be, .bytes = 256);
         BignumV.to_bytes_args.bytes = spub;
         BignumV.to_bytes_args.in = ssh_dh[i].f;
         Bignum.to_bytes(ssh_pkt[i].crypto_work);
@@ -1954,7 +2016,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
     size_t ks_len = 0;
     if (encode_hostkey(i, ks, &ks_len, sizeof(ks)) != 0)
     {
-        protocore_secure_wipe(k_be, sizeof(k_be));
+        mmgr_zero_buf(k_be, sizeof(k_be));
         SshTransportV.i32 = -1;
         return;
     }
@@ -1984,7 +2046,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
     const char *sig_name = NULL;
     if (sign_hash(i, H, h_len, sig, &sig_len, sizeof(sig), &sig_name) != 0)
     {
-        protocore_secure_wipe(k_be, sizeof(k_be));
+        mmgr_zero_buf(k_be, sizeof(k_be));
         SshTransportV.i32 = -1;
         return;
     }
@@ -1992,7 +2054,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
     // 5. Assemble the reply, then derive the six session keys (id fixed at first KEX's H).
     if (build_kex_reply(i, ks, ks_len, spub_p, spub_len, sig_name, sig, sig_len, reply_out, reply_len, cap) != 0)
     {
-        protocore_secure_wipe(k_be, sizeof(k_be));
+        mmgr_zero_buf(k_be, sizeof(k_be));
         SshTransportV.i32 = -1;
         return;
     }
@@ -2005,7 +2067,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
                                  .k_is_string = k_is_string,
                                  .is512 = is512};
     ssh_kex_install_keys(i, &kdf_in);
-    protocore_secure_wipe(k_be, sizeof(k_be));
+    mmgr_zero_buf(k_be, sizeof(k_be));
 
     PhaseMachineV.kex_done_args.i = i;
     PhaseMachine.kex_done(work);
@@ -2076,7 +2138,7 @@ void protocore_ssh_transport_newkeys_complete(uint8_t *work)
         }
         if (old->gcm_ctx_c2s != NULL)
         {
-            protocore_secure_wipe(old->gcm_ctx_c2s, SSH_EPOCH_STRIDE); // the epoch opens the run it names
+            mmgr_zero_buf(old->gcm_ctx_c2s, SSH_EPOCH_STRIDE); // the epoch opens the run it names
         }
         old->mac_mode_c2s = 0;
         old->mac_mode_s2c = 0;
@@ -2212,8 +2274,8 @@ proto_bool ssh_pkt_slot_storage(SshPacketState *s)
 }
 
 // Compute the MAC over 4-byte seq_no || buf using the HMAC named by mac_mode, working out of the
-// slot's own bytes. For E&M the buf is the plaintext packet; for ETM it is the length field ||
-// ciphertext. Writes ssh_mac_len() bytes.
+// slot's own byteio. For E&M the buf is the plaintext packet; for ETM it is the length field ||
+// ciphertext. Writes ssh_mac_len() byteio.
 static void compute_mac_mode(uint8_t mac_mode, uint8_t *work, const uint8_t *mac_key, uint32_t seq_no,
                              const uint8_t *buf, size_t buf_len, uint8_t *mac_out)
 {
@@ -2253,7 +2315,8 @@ void ssh_pkt_init(uint8_t i)
     uint8_t *ciphw = s->cipher_work;
     uint8_t *kexw = s->crypto_work;
     uint8_t *rx = s->rx_buf;
-    mem.set(s, 0, sizeof(*s)); // is_client defaults false = server role
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0,
+               .bytes = sizeof(*s)); // is_client defaults false = server role
     s->tx_wire = wire;
     s->mac_work = macw;
     s->cipher_work = ciphw;
@@ -2434,17 +2497,17 @@ static inline uint8_t km_recv_mac_mode(const SshKeyMat *km, proto_bool cli)
 
 int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len, size_t out_cap, const SshDir *dir)
 {
-    size_t comp_scope = protocore_plaintext_mark();
+    size_t comp_scope = protocore_plain_guard()->temporary_buf_mark();
     if (i >= MAX_SSH_CONNS)
     {
-        protocore_plaintext_release(comp_scope);
+        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
     // The payload was built in place at SSH_WIRE_PAYLOAD_OFF, so its message number is there.
     const uint8_t msg_no = (payload_len >= 1) ? out[SSH_WIRE_PAYLOAD_OFF] : 0u;
     if (payload_len < 1 || !ssh_may_send(i, msg_no))
     {
-        protocore_plaintext_release(comp_scope);
+        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
     // Framing our KEXINIT is what opens the sec 7.1 window; ssh_newkeys_sent() closes it.
@@ -2458,13 +2521,13 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     // Sequence overflow guard.
     if (s->seq_no_send >= SSH_SEQ_CLOSE_THRESHOLD)
     {
-        protocore_plaintext_release(comp_scope);
+        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
 
     if (!ssh_pkt_slot_storage(s))
     {
-        protocore_plaintext_release(comp_scope);
+        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
 
@@ -2478,7 +2541,7 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     {
         // TODO(slot): the compressor's output still borrows; it has no named offset yet.
         size_t bound = ssh_deflate_bound(payload_len);
-        uint8_t *cbuf = (uint8_t *)protocore_plaintext_alloc(bound, 16);
+        uint8_t *cbuf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(bound, protocore_plain_owner());
         size_t clen = 0;
         // Staged inside the guard: as the right operand of `||` this must not run when the
         // allocation above it failed.
@@ -2491,15 +2554,15 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
         }
         if (comp_failed)
         {
-            protocore_plaintext_release(comp_scope);
+            protocore_plain_guard()->temporary_buf_release(comp_scope);
             return -1;
         }
         if (SSH_WIRE_PAYLOAD_OFF + clen > out_cap)
         {
-            protocore_plaintext_release(comp_scope);
+            protocore_plain_guard()->temporary_buf_release(comp_scope);
             return -1;
         }
-        mem.cpy(out + SSH_WIRE_PAYLOAD_OFF, cbuf, clen);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + SSH_WIRE_PAYLOAD_OFF, .src = cbuf, .bytes = clen);
         payload_len = clen;
     }
 #endif
@@ -2558,7 +2621,7 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
 
     if (wire_len > out_cap)
     {
-        protocore_plaintext_release(comp_scope);
+        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
 
@@ -2619,13 +2682,13 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
         Aes256CtrV.crypt_args.out = out;
         Aes256CtrV.crypt_args.len = 4 + pkt_len;
         Aes256Ctr.crypt(s->cipher_work);
-        mem.cpy(out + 4 + pkt_len, mac, tag_len);
-        protocore_secure_wipe(mac, sizeof(mac));
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 4 + pkt_len, .src = mac, .bytes = tag_len);
+        mmgr_zero_buf(mac, sizeof(mac));
     }
 
     *out_len = wire_len;
     s->seq_no_send++;
-    protocore_plaintext_release(comp_scope);
+    protocore_plain_guard()->temporary_buf_release(comp_scope);
     return 0;
 }
 
@@ -2636,7 +2699,7 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
     {
         return -1;
     }
-    mem.cpy(out + SSH_WIRE_PAYLOAD_OFF, payload, payload_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + SSH_WIRE_PAYLOAD_OFF, .src = payload, .bytes = payload_len);
     return ssh_pkt_send_at(i, out, payload_len, out_len, out_cap, dir);
 }
 
@@ -2651,12 +2714,13 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
 //         compressed stream / decompression overflow (the caller must wipe + disconnect).
 static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payload_len, ssh_msg_handler_t handler)
 {
-    size_t inflate_scope = protocore_plaintext_mark();
+    size_t inflate_scope = protocore_plain_guard()->temporary_buf_mark();
 #if PROTOCORE_ENABLE_SSH_ZLIB
     proto_bool comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), i);
     if (comp_ok)
     {
-        uint8_t *dbuf = (uint8_t *)protocore_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
+        uint8_t *dbuf =
+            (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner());
         size_t dlen = 0;
         // Staged inside the guard: as the right operand of `||` this must not run when the
         // allocation above it failed.
@@ -2668,21 +2732,21 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
         }
         if (inflate_failed)
         {
-            protocore_plaintext_release(inflate_scope);
+            protocore_plain_guard()->temporary_buf_release(inflate_scope);
             return -1; // malformed stream, or a payload that decompresses beyond the uncompressed limit
         }
         if (dlen == 0)
         {
-            protocore_plaintext_release(inflate_scope);
+            protocore_plain_guard()->temporary_buf_release(inflate_scope);
             return 0; // the packet carried only flush bits (no message); consume it and move on
         }
         handler(i, dbuf[0], dbuf, dlen);
-        protocore_plaintext_release(inflate_scope);
+        protocore_plain_guard()->temporary_buf_release(inflate_scope);
         return 0;
     }
 #endif
     handler(i, payload[0], payload, payload_len);
-    protocore_plaintext_release(inflate_scope);
+    protocore_plain_guard()->temporary_buf_release(inflate_scope);
     return 0;
 }
 
@@ -2706,7 +2770,7 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     // tag), which is what rx_buf spans.
     if (pkt_len < 1 || pkt_len > SSH_RX_ASM_CAP - 4 - PROTOCORE_CHACHAPOLY_TAG_LEN)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -2726,14 +2790,14 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     ChachaPoly.decrypt(s->cipher_work);
     if (!ChachaPolyV.ok)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1; // caller must close connection
     }
 
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -2742,14 +2806,14 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     uint8_t pad_len_byte = s->rx_buf[4];
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, s->rx_buf + 5, payload_len, handler) < 0)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -2757,15 +2821,15 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
     // Consume, then wipe the plaintext the shift left behind.
     size_t consumed = wire_need;
     size_t left = s->rx_len - consumed;
-    mem.move(s->rx_buf, s->rx_buf + consumed, left);
-    protocore_secure_wipe(s->rx_buf + left, consumed);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->rx_buf, .src = s->rx_buf + consumed, .bytes = left);
+    mmgr_zero_buf(s->rx_buf + left, consumed);
     s->rx_len = left;
     return 1;
 }
 
 static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_handler_t handler)
 {
-    size_t scratch_scope = protocore_plaintext_mark();
+    size_t scratch_scope = protocore_plain_guard()->temporary_buf_mark();
     // aes256-gcm@openssh.com (RFC 5647): the 4-byte packet_length is sent in the clear and is
     // the AEAD's additional authenticated data; the 16-byte GCM tag is verified over
     // (length || ciphertext) BEFORE any plaintext is produced.
@@ -2774,25 +2838,25 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     // packet must fit the reassembly region (RFC 4253 sec 6.1: 35000 bytes including the tag).
     if (pkt_len < 1 || pkt_len > SSH_RX_ASM_CAP - 4 - PROTOCORE_AESGCM_TAG_LEN || (pkt_len % 16) != 0)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
-        protocore_plaintext_release(scratch_scope);
+        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1;
     }
     size_t wire_need = 4 + pkt_len + PROTOCORE_AESGCM_TAG_LEN;
     if (s->rx_len < wire_need)
     {
-        protocore_plaintext_release(scratch_scope);
+        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return 0; // incomplete packet
     }
 
     const size_t scratch_sz = pkt_len; // plaintext = padding_length || payload || padding
-    uint8_t *scratch = (uint8_t *)protocore_plaintext_alloc(scratch_sz, 16);
+    uint8_t *scratch = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(scratch_sz, protocore_plain_owner());
     if (!scratch)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
-        protocore_plaintext_release(scratch_scope);
+        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1;
     }
 
@@ -2808,10 +2872,10 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     AesGcm.open(km_recv_gcm(km, s->is_client));
     if (!AesGcmV.ok)
     {
-        protocore_secure_wipe(scratch, scratch_sz);
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(scratch, scratch_sz);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
-        protocore_plaintext_release(scratch_scope);
+        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1; // caller must close connection
     }
     // Tag verified: advance the RFC 5647 invocation counter (recv success).
@@ -2820,8 +2884,8 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
 
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
-        protocore_secure_wipe(scratch, scratch_sz);
-        protocore_plaintext_release(scratch_scope);
+        mmgr_zero_buf(scratch, scratch_sz);
+        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1;
     }
     s->seq_no_recv++;
@@ -2829,23 +2893,24 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     uint8_t pad_len_byte = scratch[0];
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
-        protocore_secure_wipe(scratch, scratch_sz);
-        protocore_plaintext_release(scratch_scope);
+        mmgr_zero_buf(scratch, scratch_sz);
+        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, scratch + 1, payload_len, handler) < 0)
     {
-        protocore_secure_wipe(scratch, scratch_sz);
-        protocore_plaintext_release(scratch_scope);
+        mmgr_zero_buf(scratch, scratch_sz);
+        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1;
     }
 
     size_t consumed = wire_need;
-    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->rx_buf, .src = s->rx_buf + consumed,
+               .bytes = s->rx_len - consumed);
     s->rx_len -= consumed;
-    protocore_secure_wipe(scratch, scratch_sz);
-    protocore_plaintext_release(scratch_scope);
+    mmgr_zero_buf(scratch, scratch_sz);
+    protocore_plain_guard()->temporary_buf_release(scratch_scope);
     return 1;
 }
 
@@ -2860,7 +2925,7 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     // packet must fit the reassembly region (RFC 4253 sec 6.1: 35000 bytes including the mac).
     if (pkt_len < 1 || pkt_len > SSH_RX_ASM_CAP - 4 - mac_tag || (pkt_len % 16) != 0)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -2875,12 +2940,12 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
                      expected_mac);
     if (!protocore_ct_eq(expected_mac, s->rx_buf + 4 + pkt_len, mac_tag))
     {
-        protocore_secure_wipe(expected_mac, sizeof(expected_mac));
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(expected_mac, sizeof(expected_mac));
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1; // caller must close connection
     }
-    protocore_secure_wipe(expected_mac, sizeof(expected_mac));
+    mmgr_zero_buf(expected_mac, sizeof(expected_mac));
 
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
@@ -2902,23 +2967,24 @@ static int ssh_recv_ctr_etm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg
     uint8_t pad_len_byte = s->rx_buf[4];
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, s->rx_buf + 5, payload_len, handler) < 0)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
 
     size_t consumed = wire_need;
-    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->rx_buf, .src = s->rx_buf + consumed,
+               .bytes = s->rx_len - consumed);
     // Wipe what the shift left behind: this packet was decrypted in place, so the tail past the new
     // length still holds its plaintext.
-    protocore_secure_wipe(s->rx_buf + (s->rx_len - consumed), consumed);
+    mmgr_zero_buf(s->rx_buf + (s->rx_len - consumed), consumed);
     s->rx_len -= consumed;
     return 1;
 }
@@ -2951,7 +3017,7 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // mac), and the encrypted portion must be a whole number of AES blocks.
     if (pkt_len < 1 || enc_len > SSH_RX_ASM_CAP - mac_tag || (enc_len % 16) != 0)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -2981,17 +3047,17 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     if (!protocore_ct_eq(expected_mac, rx_mac, mac_tag))
     {
         // MAC failure: zero everything and disconnect.
-        protocore_secure_wipe(expected_mac, sizeof(expected_mac));
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(expected_mac, sizeof(expected_mac));
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1; // caller must close connection
     }
-    protocore_secure_wipe(expected_mac, sizeof(expected_mac));
+    mmgr_zero_buf(expected_mac, sizeof(expected_mac));
 
     // MAC verified.  Sequence overflow guard.
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -3003,14 +3069,14 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // exceed the packet (which would underflow payload_len).
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, s->rx_buf + 5, payload_len, handler) < 0)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -3018,8 +3084,8 @@ static int ssh_recv_ctr_emac(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_ms
     // Consume from rx_buf, then wipe the plaintext the shift left behind.
     size_t consumed = wire_need;
     size_t left = s->rx_len - consumed;
-    mem.move(s->rx_buf, s->rx_buf + consumed, left);
-    protocore_secure_wipe(s->rx_buf + left, consumed);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->rx_buf, .src = s->rx_buf + consumed, .bytes = left);
+    mmgr_zero_buf(s->rx_buf + left, consumed);
     s->rx_len = left;
     return 1;
 }
@@ -3032,7 +3098,7 @@ static int ssh_recv_plain(uint8_t i, SshPacketState *s, const SshKeyMat *km, ssh
     // The whole packet must fit the reassembly region (RFC 4253 sec 6.1: 35000 bytes).
     if (pkt_len < 1 || pkt_len > SSH_RX_ASM_CAP - 4)
     {
-        protocore_secure_wipe(s->rx_buf, s->rx_len);
+        mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
         return -1;
     }
@@ -3061,7 +3127,8 @@ static int ssh_recv_plain(uint8_t i, SshPacketState *s, const SshKeyMat *km, ssh
     }
 
     size_t consumed = wire_need;
-    mem.move(s->rx_buf, s->rx_buf + consumed, s->rx_len - consumed);
+    EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->rx_buf, .src = s->rx_buf + consumed,
+               .bytes = s->rx_len - consumed);
     s->rx_len -= consumed;
     return 1;
 }
@@ -3091,12 +3158,12 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
         {
             // The buffer is full yet no complete packet could be extracted -> a single packet larger than the
             // buffer. Discard and disconnect.
-            protocore_secure_wipe(s->rx_buf, s->rx_len);
+            mmgr_zero_buf(s->rx_buf, s->rx_len);
             s->rx_len = 0;
             return -1;
         }
         size_t take = len < space ? len : space;
-        mem.cpy(s->rx_buf + s->rx_len, data, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->rx_buf + s->rx_len, .src = data, .bytes = take);
         s->rx_len += take;
         data += take;
         len -= take;
@@ -3201,7 +3268,7 @@ void ssh_session_id_latch(uint8_t i, const uint8_t *h, size_t h_len)
     {
         return;
     }
-    mem.cpy(s->session_id, h, h_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->session_id, .src = h, .bytes = h_len);
     s->session_id_len = (uint8_t)h_len;
     s->have_session_id = PROTO_TRUE;
 }
@@ -3339,7 +3406,7 @@ static inline void hash_K(uint8_t *work, const uint8_t K_be[256], proto_bool k_i
 }
 
 // The caller's region, split by offset the way the slot's own borrow is: the exchange hash works out
-// of the front, the K1 || K2 chain accumulates behind it. A caller hands in PROTOCORE_SSH_KDF_BORROW bytes.
+// of the front, the K1 || K2 chain accumulates behind it. A caller hands in PROTOCORE_SSH_KDF_BORROW byteio.
 #define SSH_KDF_OFF_HASH 0u
 #define SSH_KDF_OFF_ACC (SSH_KDF_OFF_HASH + PROTOCORE_SSH_KEXHASH_BORROW)
 static_assert(SSH_KDF_OFF_ACC + SSH_KDF_MAX <= PROTOCORE_SSH_KDF_BORROW,
@@ -3391,8 +3458,8 @@ void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out
         SshKexHash.final(work);
         have += blk;
     }
-    mem.cpy(out, acc, out_len);
-    protocore_secure_wipe(acc, SSH_KDF_MAX); // the cipher key, the IV and both MAC keys pass through here
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = acc, .bytes = out_len);
+    mmgr_zero_buf(acc, SSH_KDF_MAX); // the cipher key, the IV and both MAC keys pass through here
 }
 
 // Install one direction's key material into the connection's own keymat. RFC 4253 sec 7.2 fixes the
@@ -3435,11 +3502,11 @@ static void install_direction(SshKeyMat *km, const SshKdfInputs *in, proto_bool 
     if (cipher_alg == SSH_CIPHER_AES256GCM)
     {
         // RFC 5647: this mode keeps only the schedule, so the key lands in aes_key - which GCM does not
-        // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV bytes.
+        // otherwise use - becomes the keyed context, and is wiped. The nonce is the low 12 IV byteio.
         ssh_kdf_derive(in, key_label, aes_key, PROTOCORE_AES256CTR_KEY_LEN);
         AesGcmV.key_args.key = aes_key;
         AesGcm.key_init(gcm_ctx);
-        protocore_secure_wipe(aes_key, PROTOCORE_AES256CTR_KEY_LEN);
+        mmgr_zero_buf(aes_key, PROTOCORE_AES256CTR_KEY_LEN);
         return;
     }
 
@@ -3525,7 +3592,7 @@ int ssh_pkt_build_disconnect(uint32_t reason_code, const char *desc, size_t desc
     out[o++] = (uint8_t)(desc_len >> 16);
     out[o++] = (uint8_t)(desc_len >> 8);
     out[o++] = (uint8_t)(desc_len);
-    mem.cpy(out + o, desc, desc_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + o, .src = desc, .bytes = desc_len);
     o += desc_len;
     out[o++] = 0; // language tag: empty string (4-byte length 0)
     out[o++] = 0;
@@ -3549,12 +3616,15 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
 
     // The reply buffer is borrowed for this dispatch, not carried on the worker stack: it is the
     // single largest frame on the SSH path and the handshake below it is the deepest call chain in
-    // the library. protocore_plaintext_span binds the capacity to the allocation.
-    size_t mark = protocore_plaintext_mark();
-    protocore_span reply = protocore_plaintext_span(SSH_PKT_BUF_SIZE, 16);
-    if (!span.ok(reply))
+    // the library. temporary_buf_alloc binds the capacity to the allocation.
+    size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    mmgr_span reply = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner()),
+        .cap = SSH_PKT_BUF_SIZE);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = reply))
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return -1; // arena exhausted: fail closed, the caller drops the connection
     }
     size_t n = 0;
@@ -3564,11 +3634,11 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_IGNORE:
     case SSH_MSG_DEBUG:         // RFC 4253 sec 11.3: display or discard; never answered
     case SSH_MSG_UNIMPLEMENTED: // sec 11.4: answering it with another would loop
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return 0;
 
     case SSH_MSG_DISCONNECT:
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return -1; // peer is closing
 
     case SSH_MSG_KEXINIT:
@@ -3580,7 +3650,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         protocore_ssh_transport_kexinit_parse(protocore_ssh_transport_span());
         if (SshTransportV.i32 != 0)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
         // RFC 4253 sec 7.1: "a party MUST respond with its own SSH_MSG_KEXINIT message, except when
@@ -3594,10 +3664,10 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_ssh_transport_kex_generate(protocore_ssh_transport_span());
             if (SshTransportV.i32 != 0)
             {
-                protocore_plaintext_release(mark);
+                protocore_plain_guard()->temporary_buf_release(mark);
                 return -1;
             }
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return 0;
         }
         SshTransportV.slot = i;
@@ -3607,7 +3677,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         n = SshTransportV.out_args.out_len;
         if (SshTransportV.i32 != 0)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
         SshNetworkV.ssh_slot = i;
@@ -3618,10 +3688,10 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         protocore_ssh_transport_kex_generate(protocore_ssh_transport_span());
         if (SshTransportV.i32 != 0)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return 0;
 
     case SSH_MSG_KEXDH_INIT:
@@ -3629,7 +3699,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         PhaseMachine.admits_kexdh_init(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
         // RFC 4253 sec 7.1: the client sent this ahead of the reply on a guess that lost negotiation,
@@ -3637,7 +3707,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         if (s->drop_guessed_kex_pkt)
         {
             s->drop_guessed_kex_pkt = PROTO_FALSE;
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return 0;
         }
         SshTransportV.slot = i;
@@ -3649,7 +3719,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         n = SshTransportV.out_args.out_len;
         if (SshTransportV.i32 != 0)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
         SshNetworkV.ssh_slot = i;
@@ -3666,7 +3736,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_ssh_transport_newkeys_sent(
                 protocore_ssh_transport_span()); // ...but our outbound is encrypted from the next packet on
         }
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return 0; // ssh_kexdh_handle advanced phase to NEWKEYS
 
     case SSH_MSG_NEWKEYS:
@@ -3676,7 +3746,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         protocore_ssh_transport_newkeys_complete(protocore_ssh_transport_span());
         if (SshTransportV.i32 != 0) // activate encryption; → SERVICE or OPEN
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
         // RFC 8308: with encryption now active, advertise the signature algorithms
@@ -3702,11 +3772,11 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             SshNetworkV.msg.len = n;
             SshNetwork.emit(protocore_ssh_network_span()); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return 0;
 
     case SSH_MSG_EXT_INFO:
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return 0; // RFC 8308: a client may send its own EXT_INFO; we ignore it
 
     case SSH_MSG_SERVICE_REQUEST:
@@ -3718,7 +3788,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         PhaseMachine.admits_service_request(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
         {
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
         // sec 10: "If the server rejects the service request, it SHOULD send an appropriate
@@ -3735,7 +3805,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
                 SshNetworkV.msg.len = dn;
                 SshNetwork.emit(protocore_ssh_network_span());
             }
-            protocore_plaintext_release(mark);
+            protocore_plain_guard()->temporary_buf_release(mark);
             return -1;
         }
         SshNetworkV.ssh_slot = i;
@@ -3744,13 +3814,13 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         SshNetwork.emit(protocore_ssh_network_span());
         PhaseMachineV.service_done_args.i = i;
         PhaseMachine.service_done(protocore_ssh_transport_span());
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return 0;
 
     default:
         break;
     }
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
     // 50 and above are not ours: sec 6 hands them to the authentication protocol.
     SshAuthV.slot = i;
     SshAuthV.msg_type = msg_type;
@@ -3777,7 +3847,8 @@ int ssh_transport_service_request(const uint8_t *payload, size_t len, uint8_t *o
     {
         return -1;
     }
-    if (!str.eq(svc, "ssh-userauth", sizeof(svc), PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = svc, .other = "ssh-userauth", .cap = sizeof(svc),
+                    .ci = PROTO_FALSE))
     {
         return -1;
     }
@@ -3790,8 +3861,8 @@ int ssh_transport_service_request(const uint8_t *payload, size_t len, uint8_t *o
         return -1;
     }
     out[0] = SSH_MSG_SERVICE_ACCEPT;
-    endian.wr32be(out + 1, nl);
-    mem.cpy(out + 5, name, nl);
+    EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = out + 1, .val = nl, .width = MMGR_ENDIAN_32);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + 5, .src = name, .bytes = nl);
     *out_len = 5 + nl;
     return 0;
 }
@@ -3816,7 +3887,7 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
     {
         return PROTO_FALSE;
     }
-    mem.set(k_be, 0, 256);
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = k_be, .val = 0, .bytes = 256);
     switch (e->alg)
     {
     case SSH_KEX_CURVE25519: {
@@ -3837,11 +3908,11 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
         }
         if (zacc == 0)
         {
-            protocore_secure_wipe(k32, 32);
+            mmgr_zero_buf(k32, 32);
             return PROTO_FALSE;
         }
-        mem.cpy(k_be + (256 - 32), k32, 32);
-        protocore_secure_wipe(k32, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k_be + (256 - 32), .src = k32, .bytes = 32);
+        mmgr_zero_buf(k32, 32);
         return PROTO_TRUE;
     }
     case SSH_KEX_ECDH_NISTP256: {
@@ -3855,8 +3926,8 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
         {
             return PROTO_FALSE;
         }
-        mem.cpy(k_be + (256 - 32), k32, 32);
-        protocore_secure_wipe(k32, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k_be + (256 - 32), .src = k32, .bytes = 32);
+        mmgr_zero_buf(k32, 32);
         return PROTO_TRUE;
     }
     case SSH_KEX_DH_GROUP14: {
@@ -3882,8 +3953,8 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
         BignumV.to_bytes_args.bytes = k_be;
         BignumV.to_bytes_args.in = &K;
         Bignum.to_bytes(e->work);
-        protocore_secure_wipe(&x, sizeof(x));
-        protocore_secure_wipe(&K, sizeof(K));
+        mmgr_zero_buf(&x, sizeof(x));
+        mmgr_zero_buf(&K, sizeof(K));
         return PROTO_TRUE;
     }
 #if PROTOCORE_ENABLE_PQC_KEX
@@ -3908,16 +3979,16 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
         }
         if (zacc == 0)
         {
-            protocore_secure_wipe(k_pq, sizeof(k_pq));
-            protocore_secure_wipe(k_cl, sizeof(k_cl));
+            mmgr_zero_buf(k_pq, sizeof(k_pq));
+            mmgr_zero_buf(k_cl, sizeof(k_cl));
             return PROTO_FALSE;
         }
         Sha256.init(e->work);
         Sha256.update(e->work, k_pq, 32);
         Sha256.update(e->work, k_cl, 32);
         Sha256.final(e->work, k_be + (256 - 32));
-        protocore_secure_wipe(k_pq, sizeof(k_pq));
-        protocore_secure_wipe(k_cl, sizeof(k_cl));
+        mmgr_zero_buf(k_pq, sizeof(k_pq));
+        mmgr_zero_buf(k_cl, sizeof(k_cl));
         return PROTO_TRUE;
     }
 #endif
@@ -3943,16 +4014,16 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
         }
         if (zacc == 0)
         {
-            protocore_secure_wipe(k_pq, sizeof(k_pq));
-            protocore_secure_wipe(k_cl, sizeof(k_cl));
+            mmgr_zero_buf(k_pq, sizeof(k_pq));
+            mmgr_zero_buf(k_cl, sizeof(k_cl));
             return PROTO_FALSE;
         }
         Sha512.init(e->work);
         Sha512.update(e->work, k_pq, sizeof(k_pq));
         Sha512.update(e->work, k_cl, 32);
         Sha512.final(e->work, k_be + (256 - 64));
-        protocore_secure_wipe(k_pq, sizeof(k_pq));
-        protocore_secure_wipe(k_cl, sizeof(k_cl));
+        mmgr_zero_buf(k_pq, sizeof(k_pq));
+        mmgr_zero_buf(k_cl, sizeof(k_cl));
         return PROTO_TRUE;
     }
 #endif
@@ -3967,16 +4038,20 @@ proto_bool ssh_pubkey_algo_supported(const char *pk_algo, const uint8_t *blob, u
         return PROTO_FALSE;
     }
     const char *blob_type = NULL;
-    if (str.eq(pk_algo, HOSTKEY_ED, SSH_AUTH_ALGO_MAX, PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pk_algo, .other = HOSTKEY_ED, .cap = SSH_AUTH_ALGO_MAX,
+                   .ci = PROTO_FALSE))
     {
         blob_type = "ssh-ed25519";
     }
-    else if (str.eq(pk_algo, HOSTKEY_ECDSA, SSH_AUTH_ALGO_MAX, PROTO_FALSE))
+    else if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pk_algo, .other = HOSTKEY_ECDSA, .cap = SSH_AUTH_ALGO_MAX,
+                        .ci = PROTO_FALSE))
     {
         blob_type = "ecdsa-sha2-nistp256";
     }
-    else if (str.eq(pk_algo, SSH_RSA_SIG_ALG_SHA256, SSH_AUTH_ALGO_MAX, PROTO_FALSE) ||
-             str.eq(pk_algo, SSH_RSA_SIG_ALG_SHA512, SSH_AUTH_ALGO_MAX, PROTO_FALSE))
+    else if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pk_algo, .other = SSH_RSA_SIG_ALG_SHA256,
+                        .cap = SSH_AUTH_ALGO_MAX, .ci = PROTO_FALSE) ||
+             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pk_algo, .other = SSH_RSA_SIG_ALG_SHA512,
+                        .cap = SSH_AUTH_ALGO_MAX, .ci = PROTO_FALSE))
     {
         blob_type = "ssh-rsa";
     }
@@ -3985,28 +4060,41 @@ proto_bool ssh_pubkey_algo_supported(const char *pk_algo, const uint8_t *blob, u
         return PROTO_FALSE; // an algorithm this end does not verify
     }
 
-    const uint32_t tlen = (uint32_t)str.len(blob_type, SSH_AUTH_ALGO_MAX);
-    return blob_len >= 4u + tlen && endian.rd32be(blob) == tlen && mem.cmp(blob + 4, blob_type, tlen) == 0;
+    const uint32_t tlen = (uint32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = blob_type, .cap = SSH_AUTH_ALGO_MAX);
+    return blob_len >= 4u + tlen &&
+           (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = blob, .width = MMGR_ENDIAN_32) == tlen &&
+           EMBED_CALL(memor.cmp, MemoriaCfg, .src = blob + 4, .other = blob_type, .bytes = tlen) == 0;
 }
 
 proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len)
 {
-    proto_bool is_ed = blob_len >= 4 + 11 && mem.cmp(blob,
-                                                     "\x00\x00\x00\x0b"
-                                                     "ssh-ed25519",
-                                                     4 + 11) == 0;
-    proto_bool is_ecdsa = blob_len >= 4 + 19 && mem.cmp(blob,
-                                                        "\x00\x00\x00\x13"
-                                                        "ecdsa-sha2-nistp256",
-                                                        4 + 19) == 0;
-    size_t mark = protocore_plaintext_mark();
-    protocore_span n_be = protocore_plaintext_span(PROTOCORE_RSA_KEY_BYTES, 4);
-    protocore_span e_be = protocore_plaintext_span(4, 4);
-    protocore_span ed_pub = protocore_plaintext_span(32, 4);
-    protocore_span ec_pub = protocore_plaintext_span(PROTOCORE_ECDSA_P256_PUB_LEN, 4);
-    if (!span.ok(n_be) || !span.ok(e_be) || !span.ok(ed_pub) || !span.ok(ec_pub))
+    proto_bool is_ed = blob_len >= 4 + 11 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = blob,
+                                                        .other = "\x00\x00\x00\x0b"
+                                                                 "ssh-ed25519",
+                                                        .bytes = 4 + 11) == 0;
+    proto_bool is_ecdsa = blob_len >= 4 + 19 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = blob,
+                                                           .other = "\x00\x00\x00\x13"
+                                                                    "ecdsa-sha2-nistp256",
+                                                           .bytes = 4 + 19) == 0;
+    size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    mmgr_span n_be = EMBED_CALL(spat.from, SpatiumCfg,
+                                .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_RSA_KEY_BYTES,
+                                                                                               protocore_plain_owner()),
+                                .cap = PROTOCORE_RSA_KEY_BYTES);
+    mmgr_span e_be = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(4, protocore_plain_owner()), .cap = 4);
+    mmgr_span ed_pub = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(32, protocore_plain_owner()), .cap = 32);
+    mmgr_span ec_pub = EMBED_CALL(spat.from, SpatiumCfg,
+                                  .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(
+                                      PROTOCORE_ECDSA_P256_PUB_LEN, protocore_plain_owner()),
+                                  .cap = PROTOCORE_ECDSA_P256_PUB_LEN);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = n_be) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = e_be) ||
+        !EMBED_CALL(spat.ok, SpatiumCfg, .span = ed_pub) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_pub))
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
     proto_bool parsed = PROTO_FALSE;
@@ -4022,7 +4110,7 @@ proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len)
     {
         parsed = parse_rsa_pubkey(blob, blob_len, n_be.buf, e_be.buf);
     }
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
     return parsed;
 }
 
@@ -4035,25 +4123,36 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     {
         return PROTO_FALSE;
     }
-    proto_bool is_ed = blob_len >= 4 + 11 && mem.cmp(blob,
-                                                     "\x00\x00\x00\x0b"
-                                                     "ssh-ed25519",
-                                                     4 + 11) == 0;
-    proto_bool is_ecdsa = blob_len >= 4 + 19 && mem.cmp(blob,
-                                                        "\x00\x00\x00\x13"
-                                                        "ecdsa-sha2-nistp256",
-                                                        4 + 19) == 0;
+    proto_bool is_ed = blob_len >= 4 + 11 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = blob,
+                                                        .other = "\x00\x00\x00\x0b"
+                                                                 "ssh-ed25519",
+                                                        .bytes = 4 + 11) == 0;
+    proto_bool is_ecdsa = blob_len >= 4 + 19 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = blob,
+                                                           .other = "\x00\x00\x00\x13"
+                                                                    "ecdsa-sha2-nistp256",
+                                                           .bytes = 4 + 19) == 0;
     // Borrowed for this dispatch rather than carried on the worker stack. This sits on the deepest
     // call chain in the library (dispatch -> auth -> ed25519 verify -> ed_add), so the key material
     // and the signature staging buffer are what drive the worker stack requirement.
-    size_t mark = protocore_plaintext_mark();
-    protocore_span n_be = protocore_plaintext_span(PROTOCORE_RSA_KEY_BYTES, 4);
-    protocore_span e_be = protocore_plaintext_span(4, 4);
-    protocore_span ed_pub = protocore_plaintext_span(32, 4);
-    protocore_span ec_pub = protocore_plaintext_span(PROTOCORE_ECDSA_P256_PUB_LEN, 4);
-    if (!span.ok(n_be) || !span.ok(e_be) || !span.ok(ed_pub) || !span.ok(ec_pub))
+    size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    mmgr_span n_be = EMBED_CALL(spat.from, SpatiumCfg,
+                                .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_RSA_KEY_BYTES,
+                                                                                               protocore_plain_owner()),
+                                .cap = PROTOCORE_RSA_KEY_BYTES);
+    mmgr_span e_be = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(4, protocore_plain_owner()), .cap = 4);
+    mmgr_span ed_pub = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(32, protocore_plain_owner()), .cap = 32);
+    mmgr_span ec_pub = EMBED_CALL(spat.from, SpatiumCfg,
+                                  .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(
+                                      PROTOCORE_ECDSA_P256_PUB_LEN, protocore_plain_owner()),
+                                  .cap = PROTOCORE_ECDSA_P256_PUB_LEN);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = n_be) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = e_be) ||
+        !EMBED_CALL(spat.ok, SpatiumCfg, .span = ed_pub) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_pub))
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
     proto_bool parsed = PROTO_FALSE;
@@ -4071,20 +4170,21 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     }
     if (!parsed)
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
 
     // For RSA the signature hash is chosen by the client's algorithm name (RFC 8332), not the key
     // blob: rsa-sha2-512 -> SHA-512, otherwise SHA-256.
     protocore_rsa_hash rh = PROTOCORE_RSA_HASH_SHA256;
-    if (str.eq(pk_algo, SSH_RSA_SIG_ALG_SHA512, SSH_AUTH_ALGO_MAX, PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pk_algo, .other = SSH_RSA_SIG_ALG_SHA512,
+                   .cap = SSH_AUTH_ALGO_MAX, .ci = PROTO_FALSE))
     {
         rh = PROTOCORE_RSA_HASH_SHA512;
     }
     if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
     {
-        protocore_plaintext_release(mark);
+        protocore_plain_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
     uint8_t *work = ssh_pkt[i].crypto_work;
@@ -4096,8 +4196,11 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     }
     else if (is_ecdsa)
     {
-        protocore_span ec_sig = protocore_plaintext_span(PROTOCORE_ECDSA_P256_SIG_LEN, 4);
-        sig_ok = span.ok(ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
+        mmgr_span ec_sig = EMBED_CALL(spat.from, SpatiumCfg,
+                                      .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(
+                                          PROTOCORE_ECDSA_P256_SIG_LEN, protocore_plain_owner()),
+                                      .cap = PROTOCORE_ECDSA_P256_SIG_LEN);
+        sig_ok = EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
                  Ecdsa.verify(work, ec_pub.buf, signed_data, signed_len, ec_sig.buf);
     }
     else
@@ -4112,7 +4215,7 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
         Rsa.verify(work);
         sig_ok = RsaV.ok;
     }
-    protocore_plaintext_release(mark);
+    protocore_plain_guard()->temporary_buf_release(mark);
     return sig_ok;
 }
 
@@ -4147,8 +4250,8 @@ void ssh_transport_key_re_exchange(uint8_t i)
     {
         return;
     }
-    size_t mark = protocore_secure_mark();
-    uint8_t *buf = (uint8_t *)protocore_secure_alloc(SSH_PKT_BUF_SIZE, 16);
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    uint8_t *buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_secure_owner());
     size_t n = 0;
     SshTransportV.slot = i;
     SshTransportV.out_args.out = buf;
@@ -4165,7 +4268,7 @@ void ssh_transport_key_re_exchange(uint8_t i)
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
-    protocore_secure_release(mark);
+    protocore_secure_guard()->temporary_buf_release(mark);
 }
 
 // ---------------------------------------------------------------------------

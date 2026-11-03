@@ -6,8 +6,8 @@ protocore_add_module(network_drivers/transport/tcp/lower
   DEPS
     network_drivers/transport/tcp/common
   PRIVATE_DEPS
-    mmgr/plaintext
-    mmgr/protomem
+    server/core/worker
+    mmgr
     network_drivers/tls
     network_drivers/transport/diffserv
     network_drivers/transport/tcp/protocol

@@ -65,14 +65,14 @@ void setup()
     Serial.begin(115200);
 
     // Wired uplink to the collector.
-    Physical.eth->init();
+    Physical.eth_init(protocore_physical_span());
     Serial.print("Bringing up Ethernet");
-    while (!Physical.eth->ready())
+    while (!protocore_physical_eth_up())
     {
         delay(250);
         Serial.print('.');
     }
-    uint32_t ip = Physical.link->egress_ip(); // Ethernet is the egress here
+    uint32_t ip = protocore_physical_egress_ipv4(); // Ethernet is the egress here
     Serial.printf("\nEthernet IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 

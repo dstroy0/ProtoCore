@@ -5,7 +5,6 @@ protocore_add_module(server/core/exc_coredump
   GATE PROTOCORE_ENABLE_EXC_DECODER AND PROTOCORE_HAS_VENDOR_COREDUMP
   SOURCES exc_coredump.c
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
     server/core/exc_decoder
 )

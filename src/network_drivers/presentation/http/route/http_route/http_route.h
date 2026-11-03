@@ -138,7 +138,7 @@ void protocore_http_routes_reset(uint8_t *work);
  * this module rather than to any one caller. Taken once from the end of the secure pool, which no
  * mark and no release walks, so the table lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_http_route_span(void);
 

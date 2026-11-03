@@ -326,7 +326,7 @@ proto_bool protocore_n2k_decode_attitude(const uint8_t *payload, size_t len, N2k
 proto_bool protocore_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemperature *out);
 
 /** @brief Decoded Battery Status (PGN 127508): a battery bank's voltage, current, and temperature. Each
- *  measurement clears a validity flag for a not-available raw. */
+ *  measurement clears a validity flag for a not-available proxim. */
 typedef struct
 {
     uint8_t instance;         ///< battery instance

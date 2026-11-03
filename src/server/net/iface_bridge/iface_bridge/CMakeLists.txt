@@ -7,6 +7,6 @@ protocore_add_module(server/net/iface_bridge/iface_bridge
   DEPS
     shared/ip
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/secure
+    server/core/worker
+    mmgr
 )

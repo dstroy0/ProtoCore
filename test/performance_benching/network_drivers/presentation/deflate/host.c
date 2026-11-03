@@ -10,7 +10,8 @@
 //   -DPROTOCORE_ENABLE_WEBSOCKET=1 -DPROTOCORE_ENABLE_WS_DEFLATE=1
 //   test/performance_benching/network_drivers/presentation/deflate/host.c
 //   src/network_drivers/presentation/codec/deflate/deflate.c
-//   src/network_drivers/presentation/codec/inflate/inflate.c src/mmgr/protomem.c -o /tmp/bd && /tmp/bd
+//   src/network_drivers/presentation/codec/inflate/inflate.c src/memoria_operor/memoria_operor.h.c -o /tmp/bd &&
+//   /tmp/bd
 
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"

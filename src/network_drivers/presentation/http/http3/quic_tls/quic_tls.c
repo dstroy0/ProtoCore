@@ -17,7 +17,7 @@ PROTOCORE_BEGIN_DECLS
 #endif
 #include "crypto/asymmetric/curve25519/curve25519.h"
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq: the Finished compare
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 
@@ -54,7 +54,7 @@ static void fail(QuicTls *qt, uint8_t alert)
     qt->alert = alert;
 }
 
-// Point the key schedule's handle at this connection's schedule and its bytes. Every step below
+// Point the key schedule's handle at this connection's schedule and its byteio. Every step below
 // reads them off the handle, so the binding is set before each call.
 static void ks_bind(QuicTls *qt)
 {
@@ -270,9 +270,9 @@ static proto_bool process_client_hello(uint8_t *work, QuicTls *qt, const uint8_t
         Curve25519V.x25519_base_args.scalar = qt->cfg.ephemeral_priv;
         Curve25519V.x25519_base_args.out = server_pub;
         Curve25519.x25519_base(qt->sign_work);
-        mem.cpy(server_share + MLKEM768_CT_BYTES, server_pub, 32);
-        mem.cpy(ecdhe, ml_ss, 32);
-        mem.cpy(ecdhe + 32, x_ss, 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = server_share + MLKEM768_CT_BYTES, .src = server_pub, .bytes = 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ecdhe, .src = ml_ss, .bytes = 32);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ecdhe + 32, .src = x_ss, .bytes = 32);
         ecdhe_len = 64;
         share_len = MLKEM768_CT_BYTES + 32;
         group = TLS_GROUP_X25519MLKEM768;
@@ -459,7 +459,7 @@ void protocore_quic_tls_server_server_init(uint8_t *work)
     QuicTls *qt = QuicTlsServerV.server_init_args.qt;
     const QuicTlsConfig *cfg = QuicTlsServerV.server_init_args.cfg;
 
-    mem.zero(qt, sizeof(*qt));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = qt, .bytes = sizeof(*qt), .val = 0);
     qt->cfg = *cfg;
     qt->transcript = qt->hash_work;
     transcript_start(qt, qt->transcript);

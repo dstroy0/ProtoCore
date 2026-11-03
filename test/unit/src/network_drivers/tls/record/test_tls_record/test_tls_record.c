@@ -269,7 +269,7 @@ void test_plaintext_build_bounds(void)
     TlsRecord.plaintext_build(NULL);
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(APP_PAYLOAD), TlsRecordV.n);
 
-    // sec 5.1: "The length MUST NOT exceed 2^14 bytes."
+    // sec 5.1: "The length MUST NOT exceed 2^14 byteio."
     TlsRecordV.plain.frag_len = PROTOCORE_TLS_MAX_PLAINTEXT + 1;
     TlsRecordV.out_args.out_cap = sizeof(g_out);
     TlsRecord.plaintext_build(NULL);
@@ -522,7 +522,7 @@ void test_the_two_suites_do_not_open_each_other(void)
     derive384(AP_SECRET_384);
     TEST_ASSERT_FALSE(unprotect(sealed256, n256, opened, sizeof(opened), &info));
 
-    // And the two seals of the same plaintext are not the same bytes.
+    // And the two seals of the same plaintext are not the same byteio.
     TEST_ASSERT_TRUE(n384 != n256 || memcmp(sealed384, sealed256, n384) != 0);
 }
 

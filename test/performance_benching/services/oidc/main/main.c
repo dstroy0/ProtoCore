@@ -24,7 +24,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "mmgr/plaintext/plaintext.h" // protocore_plaintext_reset() (the verify path borrows from this arena)
+#include "server/core/worker/worker.h" // temporary_buf_reset() (the verify path borrows from this arena)
 #include "services/security/oidc/oidc.h"
 
 #include <stdbool.h>
@@ -54,7 +54,8 @@ static const uint32_t NOW = 1700000100; // after iat(1700000000), before exp(410
 
 void dbench_run(void)
 {
-    protocore_plaintext_reset(); // start from an empty per-dispatch arena (verify borrows ~2.6 KB from it)
+    protocore_plain_guard()
+        ->temporary_buf_reset(); // start from an empty per-dispatch arena (verify borrows ~2.6 KB from it)
 
     // Pre-resolve the signing key once so pc_oidc_verify_with_key benches the crypto path in
     // isolation (the JWKS scan/decode is timed separately by pc_oidc_jwks_find below).

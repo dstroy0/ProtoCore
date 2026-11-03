@@ -19,8 +19,9 @@
 
 #include "config/platform/platform.h" // PROTOCORE_HAS_HW_BIGNUM, PROTOCORE_HOST
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/secure/secure.h"
+#include "memoria_operor/memoria_operor.h"
+#include "server/core/worker/worker.h"
+#include "spatium/spatium.h"
 
 #if PROTOCORE_HOST && PROTOCORE_HAS_HW_BIGNUM
 
@@ -110,25 +111,29 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
 {
     bn_init();
 
-    size_t mark = protocore_secure_mark();
-    protocore_span ws = protocore_secure_span(sizeof(BnExpmodHost), _Alignof(BnExpmodHost));
-    if (!span.ok(ws))
+    size_t mark = protocore_secure_guard()->temporary_buf_mark();
+    mmgr_span ws = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(sizeof(BnExpmodHost), protocore_secure_owner()),
+        .cap = sizeof(BnExpmodHost));
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_release(mark);
-        mem.zero(out, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
+        protocore_secure_guard()->temporary_buf_release(mark);
+        EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = sizeof(*out),
+                   .val = 0); // pool exhausted: a zero result fails every downstream check
         return;
     }
     BnExpmodHost *w = (BnExpmodHost *)(ws.buf);
 
     // The MODMULT takes canonical operands. p is above 2^2047 and the base is a 2048-bit value, so
     // one conditional subtract canonicalizes any input this can be handed.
-    mem.cpy(w->b.d, base->d, sizeof(w->b.d));
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->b.d, .src = base->d, .bytes = sizeof(w->b.d));
     if (bn_cmp_raw(w->b.d, group14_p.d, PROTOCORE_BN_LIMBS) >= 0)
     {
         sub_p(w->b.d);
     }
 
-    mem.zero(w->acc.d, sizeof(w->acc.d));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = w->acc.d, .bytes = sizeof(w->acc.d), .val = 0);
     w->acc.d[0] = 1u;
 
     protocore_rsa_hw_acquire();
@@ -146,8 +151,8 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     }
     protocore_rsa_hw_release();
 
-    mem.cpy(out->d, w->acc.d, sizeof(out->d));
-    protocore_secure_release(mark);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->d, .src = w->acc.d, .bytes = sizeof(out->d));
+    protocore_secure_guard()->temporary_buf_release(mark);
 }
 
 PROTOCORE_END_DECLS

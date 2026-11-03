@@ -13,7 +13,7 @@
  *     [station][command][RX/RY bit data...][RWr/RWw word data...][sum-checksum]
  *
  * A station's process image is a fixed BSS block; this frames it. The checksum is the low byte of the
- * arithmetic sum of the framed bytes. The RS-485 timing and the CC-Link IE Field (Gigabit) PHY are the
+ * arithmetic sum of the framed byteio. The RS-485 timing and the CC-Link IE Field (Gigabit) PHY are the
  * hardware-gated part; this is the frame + process-image accessors. Pure, zero heap, host-testable.
  */
 

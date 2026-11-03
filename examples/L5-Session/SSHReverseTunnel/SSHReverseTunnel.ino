@@ -86,8 +86,10 @@ void setup()
 {
     Serial.begin(115200);
     delay(300);
-    Physical.wifi->init(WIFI_SSID, WIFI_PASS);
-    while (!Physical.wifi->ready())
+    PhysicalV.wifi.ssid = WIFI_SSID;
+    PhysicalV.wifi.password = WIFI_PASS;
+    Physical.wifi_init(protocore_physical_span());
+    while (!protocore_physical_wifi_up())
     {
         delay(200);
     }

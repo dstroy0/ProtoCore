@@ -10,12 +10,12 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem/protomem.h"
-#include "mmgr/protostr/protostr.h"
+#include "cellularum_laboro/cellularum_laboro.h"
+#include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http2/h2_conn/h2_conn.h"
 #include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h" // H2Settings, the SETTINGS ids
 #include "network_drivers/presentation/http/http2/hpack/hpack.h"       // the dynamic table this context carries
+#include "verba_scribo/verba_scribo.h"                                 // verba_scribo frame builder
 
 PROTOCORE_BEGIN_DECLS
 
@@ -70,7 +70,7 @@ typedef struct
 // The caller's borrow, split: the context, then the regions it works out of. One pointer arrives
 // and every region is that pointer plus a compile-time offset, so the assert below proves the span
 // covers them before anything runs.
-// The widest frame a received frame provokes us to send: a header plus a PING's 8 opaque bytes.
+// The widest frame a received frame provokes us to send: a header plus a PING's 8 opaque byteio.
 #define H2_CTL_FRAME_MAX (H2_FRAME_HEADER_LEN + 8)
 
 #define H2_CONN_OFF_CTX 0u
@@ -83,8 +83,8 @@ static_assert(H2_CONN_OFF_CTL + H2_CTL_FRAME_MAX <= PROTOCORE_H2_CONN_BORROW,
               "PROTOCORE_H2_CONN_BORROW is short of one connection - raise PROTOCORE_H2_CONN_RECORD"
               " in protocore_config.h, which sums it into its arena");
 
-// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
-// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// A region reached through a cast is only aligned if its OFFSET is: a cellblock aligns each cell to
+// MMGR_CARCER_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
 // compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
 // assert above bounds the far end of the chain and says nothing about where a region begins.
 static_assert(H2_CONN_OFF_CTX % _Alignof(H2ConnCtx) == 0,
@@ -132,7 +132,8 @@ static H2Stream *alloc_stream(uint8_t *work, uint32_t id)
     {
         if (H2_CONN_CTX(work)->streams[i].id == 0)
         {
-            mem.set(&H2_CONN_CTX(work)->streams[i], 0, sizeof H2_CONN_CTX(work)->streams[i]);
+            EMBED_CALL(memor.set, MemoriaCfg, .dst = &H2_CONN_CTX(work)->streams[i], .val = 0,
+                       .bytes = sizeof H2_CONN_CTX(work)->streams[i]);
             H2_CONN_CTX(work)->streams[i].id = id;
             H2_CONN_CTX(work)->streams[i].state = H2_ST_OPEN;
             H2_CONN_CTX(work)->streams[i].send_window = (int32_t)H2_CONN_CTX(work)->peer.initial_window_size;
@@ -289,7 +290,7 @@ static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char
         }
         return PROTO_TRUE;
     }
-    if (nl == 14 && mem.cmp(name, "content-length", 14) == 0)
+    if (nl == 14 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = name, .other = "content-length", .bytes = 14) == 0)
     {
         note_content_length(b->work, b->stream_id, val, vl);
     }
@@ -418,7 +419,7 @@ static proto_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const ui
     {
         return PROTO_FALSE;
     }
-    mem.cpy(H2_CONN_HBLOCK(work), p, plen);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H2_CONN_HBLOCK(work), .src = p, .bytes = plen);
     H2_CONN_CTX(work)->hblock_len = plen;
     H2_CONN_CTX(work)->hblock_stream = h->stream_id;
     H2_CONN_CTX(work)->hblock_end_stream = end_stream;
@@ -443,7 +444,8 @@ static proto_bool handle_continuation(uint8_t *work, const H2FrameHeader *h, con
     {
         return PROTO_FALSE;
     }
-    mem.cpy(H2_CONN_HBLOCK(work) + H2_CONN_CTX(work)->hblock_len, payload, h->length);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H2_CONN_HBLOCK(work) + H2_CONN_CTX(work)->hblock_len, .src = payload,
+               .bytes = h->length);
     H2_CONN_CTX(work)->hblock_len += h->length;
     if (h->flags & H2_FLAG_END_HEADERS)
     {
@@ -682,7 +684,7 @@ static proto_bool process_frame(uint8_t *work)
 
 void protocore_h2_conn_init(uint8_t *work)
 {
-    mem.set(H2_CONN_CTX(work), 0, sizeof(H2ConnCtx));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = H2_CONN_CTX(work), .val = 0, .bytes = sizeof(H2ConnCtx));
     H2_CONN_CTX(work)->cb = *H2ConnV.init_args.cb;
     H2_CONN_CTX(work)->phase = 0;
     (H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.settings_defaults(work));
@@ -725,7 +727,8 @@ static proto_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
             {
                 take = len - off;
             }
-            mem.cpy(H2_CONN_FHDR(work) + H2_CONN_CTX(work)->fhave, data + off, take);
+            EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H2_CONN_FHDR(work) + H2_CONN_CTX(work)->fhave, .src = data + off,
+                       .bytes = take);
             H2_CONN_CTX(work)->fhave += take;
             off += take;
             if (H2_CONN_CTX(work)->fhave < H2_FRAME_HEADER_LEN)
@@ -745,7 +748,8 @@ static proto_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
         {
             take = len - off;
         }
-        mem.cpy(H2_CONN_FBUF(work) + (H2_CONN_CTX(work)->fhave - H2_FRAME_HEADER_LEN), data + off, take);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H2_CONN_FBUF(work) + (H2_CONN_CTX(work)->fhave - H2_FRAME_HEADER_LEN),
+                   .src = data + off, .bytes = take);
         H2_CONN_CTX(work)->fhave += take;
         off += take;
         if (H2_CONN_CTX(work)->fhave < total)
@@ -774,9 +778,10 @@ static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
     uint8_t block[256];
     size_t bo = 0;
     char num[16];
-    protocore_sb sb_num = {num, sizeof num, 0, PROTO_TRUE};
-    Sb.i64(&sb_num, (int64_t)(status));
-    int nl = (int)Sb.finish(&sb_num);
+    size_t sb_num = 0;
+    sb_num = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = num, .cap = sizeof num, .at = sb_num,
+                        .sval = (int64_t)(status));
+    int nl = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = num, .cap = sizeof num, .at = sb_num);
     size_t w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
                 HpackV.encode_args.name = ":status", HpackV.encode_args.name_len = 7, HpackV.encode_args.value = num,
                 HpackV.encode_args.value_len = (size_t)nl, Hpack.encode_header(work), HpackV.n);
@@ -793,17 +798,19 @@ static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
         w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
              HpackV.encode_args.name = "content-type", HpackV.encode_args.name_len = 12,
              HpackV.encode_args.value = content_type,
-             HpackV.encode_args.value_len = str.len(content_type, sizeof block * 2), Hpack.encode_header(work),
-             HpackV.n);
+             HpackV.encode_args.value_len =
+                 EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content_type, .cap = sizeof block * 2),
+             Hpack.encode_header(work), HpackV.n);
         if (!w)
         {
             return PROTO_FALSE;
         }
         bo += w;
     }
-    protocore_sb sb_num2 = {num, sizeof num, 0, PROTO_TRUE};
-    Sb.u32(&sb_num2, (uint32_t)((unsigned)body_len));
-    int cl = (int)Sb.finish(&sb_num2);
+    size_t sb_num2 = 0;
+    sb_num2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = num, .cap = sizeof num, .at = sb_num2,
+                         .val = (uint32_t)((unsigned)body_len));
+    int cl = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = num, .cap = sizeof num, .at = sb_num2);
     w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
          HpackV.encode_args.name = "content-length", HpackV.encode_args.name_len = 14, HpackV.encode_args.value = num,
          HpackV.encode_args.value_len = (size_t)cl, Hpack.encode_header(work), HpackV.n);

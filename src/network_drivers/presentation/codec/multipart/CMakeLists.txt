@@ -7,6 +7,5 @@ protocore_add_module(network_drivers/presentation/codec/multipart
   DEPS
     network_drivers/presentation/http/http_parser
   PRIVATE_DEPS
-    mmgr/protomem
-    mmgr/protostr
+    mmgr
 )

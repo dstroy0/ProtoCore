@@ -21,7 +21,7 @@
  *
  * The receive ring is a memoria_anularis ring over the slot's own aligned rx_buffer: one producer
  * (the stack callbacks) and one consumer (the owning worker), with the ordering inside the ring.
- * `state` is `_Atomic`, read and written through PROTO_ATOMIC_LOAD / PROTO_ATOMIC_STORE.
+ * `state` is `_Atomic`, read and written through PROTOCORE_ATOMIC_LOAD / PROTOCORE_ATOMIC_STORE.
  *
  * **Backpressure (lossless)**
  * When a whole inbound segment will not fit the free ring space, the recv callback refuses it
@@ -115,6 +115,9 @@ extern uint32_t protocore_ap_ip;
  *  Sized CONN_POOL_SLOTS: MAX_CONNS TCP slots plus any reserved internal dispatch slot(s)
  *  (HTTP/3); the TCP accept path only ever uses [0, MAX_CONNS). */
 extern TcpConn conn_pool[CONN_POOL_SLOTS];
+
+/** @brief The pool's slot ring, whose loculi are the slots. Defined in protocol/protocol.c. */
+extern mmgr_ring protocore_conn_slots;
 
 // The receive ring is drained through ::ConnPool - available, read_byte, peek, consume and read -
 // and a slot is asked about through active, iface, listener_id, tls, owner, proto_of and pcb_of.

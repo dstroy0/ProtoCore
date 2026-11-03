@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/system/esp/esp/esp.h"
 
 #include "crypto/aead/aesgcm/aesgcm.h"
-#include "mmgr/secure/secure.h" // the per-call GCM context borrow
+#include "server/core/worker/worker.h" // the per-call GCM context borrow
 
 static void put32be(uint8_t *p, uint32_t v)
 {
@@ -29,8 +29,8 @@ static uint32_t get32be(const uint8_t *p)
 }
 static void esp_nonce(uint8_t nonce[PROTOCORE_AESGCM_IV_LEN], const uint8_t *salt, const uint8_t *iv)
 {
-    mem.cpy(nonce, salt, PROTOCORE_ESP_SALT_LEN);
-    mem.cpy(nonce + PROTOCORE_ESP_SALT_LEN, iv, PROTOCORE_ESP_IV_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = nonce, .src = salt, .bytes = PROTOCORE_ESP_SALT_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = nonce + PROTOCORE_ESP_SALT_LEN, .src = iv, .bytes = PROTOCORE_ESP_IV_LEN);
 }
 // Bytes the ESP header + IV occupy before the ciphertext (also the AAD length = SPI|Seq).
 #define PROTOCORE_ESP_CT_OFF (PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN)
@@ -63,12 +63,12 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
 
     put32be(out, spi);
     put32be(out + 4, seq);
-    mem.cpy(out + PROTOCORE_ESP_HDR_LEN, iv, PROTOCORE_ESP_IV_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + PROTOCORE_ESP_HDR_LEN, .src = iv, .bytes = PROTOCORE_ESP_IV_LEN);
 
     uint8_t *pt = out + PROTOCORE_ESP_CT_OFF;
     if (payload_len)
     {
-        mem.cpy(pt, payload, payload_len);
+        EMBED_CALL(memor.cpy, MemoriaCfg, .dst = pt, .src = payload, .bytes = payload_len);
     }
     for (size_t i = 0; i < padn; i++)
     {
@@ -84,8 +84,9 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_mark();
-        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *gcm =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
         AesGcmV.seal_args.nonce = nonce;
@@ -97,7 +98,7 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
         AesGcmV.seal_args.tag_out = pt + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     return total;
 }
@@ -130,8 +131,9 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_mark();
-        uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
+        size_t mark = protocore_secure_guard()->temporary_buf_mark();
+        uint8_t *gcm =
+            (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
         AesGcmV.open_args.nonce = nonce;
@@ -144,7 +146,7 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
         AesGcm.open(gcm);
         ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
-        protocore_secure_release(mark);
+        protocore_secure_guard()->temporary_buf_release(mark);
     }
     if (!ok)
     {

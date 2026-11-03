@@ -9,9 +9,8 @@ protocore_add_module(network_drivers/application/file_serving
     network_drivers/presentation/http/route/http_route
     server/storage/mnt
   PRIVATE_DEPS
-    mmgr/membuild
-    mmgr/plaintext
-    mmgr/protostr
+    server/core/worker
+    mmgr
     network_drivers/application/http_range
     network_drivers/presentation/http
     network_drivers/session

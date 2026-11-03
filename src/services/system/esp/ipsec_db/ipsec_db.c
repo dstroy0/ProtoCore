@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-#include "mmgr/protomem/protomem.h"
+#include "memoria_operor/memoria_operor.h"
 #include "services/system/esp/ipsec_db/ipsec_db.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -19,7 +19,8 @@ PROTOCORE_BEGIN_DECLS
 // (memcmp) is the numeric compare.
 static proto_bool in_range(const uint8_t *addr, const uint8_t *lo, const uint8_t *hi, uint8_t len)
 {
-    return mem.cmp(addr, lo, len) >= 0 && mem.cmp(addr, hi, len) <= 0;
+    return EMBED_CALL(memor.cmp, MemoriaCfg, .src = addr, .other = lo, .bytes = len) >= 0 &&
+           EMBED_CALL(memor.cmp, MemoriaCfg, .src = addr, .other = hi, .bytes = len) <= 0;
 }
 static proto_bool port_in(uint16_t p, uint16_t lo, uint16_t hi)
 {
@@ -177,14 +178,14 @@ void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work)
         return;
     }
 
-    mem.set(out, 0, sizeof(*out));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     uint8_t len = (uint8_t)ts_src->addr_len; // addr_len is an IP address length (<= 16), fits a uint8_t
     out->addr_len = len;
     out->ip_protocol = ts_src->ip_protocol ? ts_src->ip_protocol : ts_dst->ip_protocol;
-    mem.cpy(out->src_lo, ts_src->start_addr, len);
-    mem.cpy(out->src_hi, ts_src->end_addr, len);
-    mem.cpy(out->dst_lo, ts_dst->start_addr, len);
-    mem.cpy(out->dst_hi, ts_dst->end_addr, len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->src_lo, .src = ts_src->start_addr, .bytes = len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->src_hi, .src = ts_src->end_addr, .bytes = len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->dst_lo, .src = ts_dst->start_addr, .bytes = len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->dst_hi, .src = ts_dst->end_addr, .bytes = len);
     out->src_port_lo = ts_src->start_port;
     out->src_port_hi = ts_src->end_port;
     out->dst_port_lo = ts_dst->start_port;
@@ -248,12 +249,12 @@ void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work)
         return;
     }
 
-    mem.set(e, 0, sizeof(*e));
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = e, .val = 0, .bytes = sizeof(*e));
     e->spi = spi;
     e->addr_len = addr_len;
-    mem.cpy(e->dst, dst, addr_len);
-    mem.cpy(e->key, key, PROTOCORE_ESP_KEY_LEN);
-    mem.cpy(e->salt, salt, PROTOCORE_ESP_SALT_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->dst, .src = dst, .bytes = addr_len);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->key, .src = key, .bytes = PROTOCORE_ESP_KEY_LEN);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->salt, .src = salt, .bytes = PROTOCORE_ESP_SALT_LEN);
     e->seq = 0;
     e->inbound = inbound;
     if (inbound)
@@ -301,7 +302,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work)
         IpsecDbV.ok = PROTO_FALSE;
         return;
     }
-    mem.set(e, 0, sizeof(*e)); // wipe the key material with the slot
+    EMBED_CALL(memor.set, MemoriaCfg, .dst = e, .val = 0, .bytes = sizeof(*e)); // wipe the key material with the slot
     e->valid = PROTO_FALSE;
     if (sad->count)
     {

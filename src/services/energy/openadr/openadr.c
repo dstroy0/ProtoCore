@@ -17,20 +17,7 @@ PROTOCORE_BEGIN_DECLS
 
 static size_t put_u64(char *out, size_t cap, size_t at, uint64_t v)
 {
-    char tmp[21];
-    int n = 0;
-    do
-    {
-        tmp[n++] = (char)('0' + (int)(v % 10));
-        v /= 10;
-    } while (v);
-    char digits[22];
-    for (int i = 0; i < n; i++)
-    {
-        digits[i] = tmp[n - 1 - i];
-    }
-    digits[n] = '\0';
-    return EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = digits);
+    return EMBED_CALL(verba_numerus.u64, VerbaNumerusCfg, .out = out, .cap = cap, .at = at, .val = v);
 }
 
 // Format a double with 3 decimal places (no stdlib). Rounds to milli-units; handles the sign.

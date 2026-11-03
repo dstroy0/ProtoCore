@@ -30,10 +30,10 @@ PROTOCORE_BEGIN_DECLS
  * @date    2026
  */
 
-/** @brief SHA-512 digest length in bytes. */
+/** @brief SHA-512 digest length in byteio. */
 #define PROTOCORE_SHA512_DIGEST_LEN 64
 
-/** @brief SHA-512 block size in bytes. */
+/** @brief SHA-512 block size in byteio. */
 #define PROTOCORE_SHA512_BLOCK_LEN 128
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

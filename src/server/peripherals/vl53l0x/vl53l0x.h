@@ -168,7 +168,7 @@ static const Vl53l0xNs Vl53l0x __attribute__((unused)) = {
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span.
+ * @return the spat.
  */
 uint8_t *protocore_vl53l0x_span(void);
 

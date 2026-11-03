@@ -62,7 +62,7 @@ if (result < 0) { Serial.printf("begin() failed (error %d)\n", result); return; 
 ```
 
 **Getting the device's address.** Use the library's own accessor,
-`Physical.link->egress_ip()`, which returns the egress IP in network byte order. The
+`protocore_physical_egress_ipv4()`, which returns the egress IP in network byte order. The
 Arduino `WiFi` classes are not used anywhere in this library or its examples:
 all networking goes through the library transport, so the same sketch works
 regardless of which interface carries the traffic.
@@ -127,8 +127,8 @@ comments:
 // (http_get_query / http_get_header). Any PROTOCORE_ENABLE_* override must be
 // #defined BEFORE this include to take effect in the sketch.
 #include "protocore.h"
-// Physical.wifi->init() / Physical.wifi->ready(): the physical-layer (L1) WiFi bring-up
-// helpers, plus Physical.link->egress_ip() for the assigned address.
+// Physical.wifi->init() / protocore_physical_wifi_up(): the physical-layer (L1) WiFi bring-up
+// helpers, plus protocore_physical_egress_ipv4() for the assigned address.
 #include "network_drivers/physical/physical/physical.h"
 
 // Credentials. Replace these with your network before flashing.
@@ -152,15 +152,17 @@ void setup()
     Serial.begin(115200);
 
     // Bring up WiFi (station mode) and poll until the link + IP are ready.
-    // Physical.wifi->ready() is non-blocking; this loop is the one place a sketch spins.
-    Physical.wifi->init(SSID, PASSWORD);
-    while (!Physical.wifi->ready())
+    // protocore_physical_wifi_up() is non-blocking; this loop is the one place a sketch spins.
+    PhysicalV.wifi.ssid = SSID;
+    PhysicalV.wifi.password = PASSWORD;
+    Physical.wifi_init(protocore_physical_span());
+    while (!protocore_physical_wifi_up())
         delay(250);
 
     // The library's own egress-IP accessor, in network byte order. No Arduino
     // WiFi class is involved, so this works whichever interface is carrying
     // the traffic.
-    uint32_t ip = Physical.link->egress_ip();
+    uint32_t ip = protocore_physical_egress_ipv4();
     Serial.printf("IP: %u.%u.%u.%u\n", (unsigned)(ip & 0xFF), (unsigned)((ip >> 8) & 0xFF),
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
