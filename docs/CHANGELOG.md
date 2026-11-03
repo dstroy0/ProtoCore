@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`a823497`](https://github.com/dstroy0/ProtoCore/commit/a8234970502f5cb842e4de15ce3f35b601eb0784))
 - update CHANGELOG.md [skip ci] ([`e3d7d43`](https://github.com/dstroy0/ProtoCore/commit/e3d7d43998f949b753b5f0401a183764b82b3c7f))
 - update test report + coverage [skip ci] ([`52cb758`](https://github.com/dstroy0/ProtoCore/commit/52cb758308b13edd1d7f89bc0ab36ce53abc427e))
 - update CHANGELOG.md [skip ci] ([`1489cf2`](https://github.com/dstroy0/ProtoCore/commit/1489cf2bc50c79991bc32b8f754f086840466ea6))
@@ -465,6 +466,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Port the remaining sketch calls onto the TCP, UDP, SSH, Physical, preempt-queue and service handles, declare the SSH host key setters, and bind the GPIO map and HTTP delivery route installers to the weak entries they override. ([`a10acf0`](https://github.com/dstroy0/ProtoCore/commit/a10acf0e4b7fb8c807d5752b0e51c20c6c68c407))
 - Wrap the web assets requirement error and realign the test report table. ([`2bff3f9`](https://github.com/dstroy0/ProtoCore/commit/2bff3f90f9f156aa45225fbe050a2c3ae1275713))
 - Port the example sketches onto the handle and span call shapes, fix the library faults their C++ builds hit, and restore the prose words the namespace rename overwrote. ([`fe77f7b`](https://github.com/dstroy0/ProtoCore/commit/fe77f7b7bf9501d0db31d8f550595123732e885d))
 - Merge pull request #48 from dstroy0/mmgr-latest-ci-repair ([`b0ee534`](https://github.com/dstroy0/ProtoCore/commit/b0ee534bd170f6a9180e3ced7a142cc286ab2a8d))
@@ -892,6 +894,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`83a91fa`](https://github.com/dstroy0/ProtoCore/commit/83a91fa625b7dc9a015e7722f30563e3e866133c))
 - update ESP32 build footprints [skip ci] ([`1bc928b`](https://github.com/dstroy0/ProtoCore/commit/1bc928bdab80003c757a942a114da50caada655a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4aee461`](https://github.com/dstroy0/ProtoCore/commit/4aee461184ff718f5053a57768165495227e9ac6))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`1818462`](https://github.com/dstroy0/ProtoCore/commit/1818462dcb54ac84342841cff3f055a11b5703f9))
