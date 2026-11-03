@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`e3d7d43`](https://github.com/dstroy0/ProtoCore/commit/e3d7d43998f949b753b5f0401a183764b82b3c7f))
 - update test report + coverage [skip ci] ([`52cb758`](https://github.com/dstroy0/ProtoCore/commit/52cb758308b13edd1d7f89bc0ab36ce53abc427e))
 - update CHANGELOG.md [skip ci] ([`1489cf2`](https://github.com/dstroy0/ProtoCore/commit/1489cf2bc50c79991bc32b8f754f086840466ea6))
 - update test report + coverage [skip ci] ([`d154a56`](https://github.com/dstroy0/ProtoCore/commit/d154a56386d78874cfef73658b670fa8e3ec1a1e))
@@ -464,6 +465,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Wrap the web assets requirement error and realign the test report table. ([`2bff3f9`](https://github.com/dstroy0/ProtoCore/commit/2bff3f90f9f156aa45225fbe050a2c3ae1275713))
 - Port the example sketches onto the handle and span call shapes, fix the library faults their C++ builds hit, and restore the prose words the namespace rename overwrote. ([`fe77f7b`](https://github.com/dstroy0/ProtoCore/commit/fe77f7b7bf9501d0db31d8f550595123732e885d))
 - Merge pull request #48 from dstroy0/mmgr-latest-ci-repair ([`b0ee534`](https://github.com/dstroy0/ProtoCore/commit/b0ee534bd170f6a9180e3ced7a142cc286ab2a8d))
 - Set the PlatformIO build cache directory from HOME. ([`407dd0d`](https://github.com/dstroy0/ProtoCore/commit/407dd0dc8dfa550376fe57ffcb48ad91eab3e5bf))
