@@ -339,6 +339,11 @@ typedef ip_addr_t protocore_net_ip;
 #define protocore_net_igmp_join igmp_joingroup
 #define protocore_net_igmp_leave igmp_leavegroup
 
+// A device serves HTTP through on_http(), and the route table is what on_http() fills.
+#ifndef PROTOCORE_ENABLE_HTTP_ROUTE
+#define PROTOCORE_ENABLE_HTTP_ROUTE 1
+#endif
+
 #ifndef PROTOCORE_HAS_BUS
 #define PROTOCORE_HAS_BUS 1
 #endif
