@@ -60,6 +60,11 @@ typedef struct
     uint8_t netif;                    ///< the interface of the connection
     uint8_t slot;                     ///< the pool entry of the connection, or PROTOCORE_TCP_ENGINE_SLOT_NONE
     proto_bool open;                  ///< the TCB is open, and the engine took it
+    proto_bool timing;         ///< an RFC 6298 sample runs, and the ACK of TcpPcbCtl::rtseq ends it
+    uint32_t timed_ms;         ///< the millisecond that the timed segment went out
+    uint32_t peer_window;      ///< SEG.WND of the last segment of the peer, for the RFC 5681 sec 2 test
+    uint32_t persist_interval; ///< the interval to the next zero-window probe, 0 while no probe runs
+    uint32_t linger_deadline;  ///< the millisecond that FIN-WAIT-2 ends at, 0 while no deadline runs
 } TcpEngineRow;
 
 /** @brief One record for each pool entry. */
@@ -157,6 +162,48 @@ static uint32_t engine_send_mss(const TcpPcbIo *tcb_io)
     const uint32_t ceiling = engine_receive_mss(tcb_io->info.ip_version);
     const uint32_t mss = tcb_io->ctl.mss;
     return (mss != 0u && mss < ceiling) ? mss : ceiling;
+}
+
+// --- the timers ------------------------------------------------------------------
+
+// A deadline interval milliseconds out. Zero names the deadline that does not run. A deadline that lands on
+// zero thus takes the next millisecond.
+static uint32_t engine_deadline(uint32_t now_ms, uint32_t interval)
+{
+    const uint32_t at = now_ms + interval;
+    return (at == 0u) ? 1u : at;
+}
+
+// True where a deadline runs and the clock reached it. RFC 9293 sec 3.4 arithmetic modulo 2^32 makes the
+// distance signed.
+static proto_bool engine_passed(uint32_t now_ms, uint32_t deadline)
+{
+    // Explicit cast reads the distance as signed, which arithmetic modulo 2^32 allows
+    return deadline != 0u && (int32_t)(now_ms - deadline) >= 0;
+}
+
+// Copies the loaded TCB into the operand block of TcpOut for a timer or congestion entry. FlightSize is
+// SND.NXT less SND.UNA.
+static void engine_out_load(const struct TcpEngineStorage *context, uint32_t now_ms)
+{
+    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    out_io->vars = tcb_io->vars;
+    out_io->ctl = tcb_io->ctl;
+    out_io->state = tcb_io->state;
+    out_io->timer_args = (TcpOutTimerArgs){0};
+    out_io->timer_args.now_ms = now_ms;
+    out_io->timer_args.flight = tcb_io->vars.snd_nxt - tcb_io->vars.snd_una;
+    out_io->timer_args.smss = engine_send_mss(tcb_io);
+}
+
+// RFC 6298 (5.1): a segment that holds data, a SYN or a FIN starts the retransmission timer, where the timer
+// does not run. The caller stores the TCB.
+static void engine_timer_arm(const struct TcpEngineStorage *context, uint32_t now_ms)
+{
+    engine_out_load(context, now_ms);
+    TcpOut.rtx_arm(context->units->tcp_out);
+    IDEMIP_TCP_PCB_IO(context->units->tcp_pcb)->ctl = IDEMIP_TCP_OUT_IO(context->units->tcp_out)->ctl;
 }
 
 // --- the events ------------------------------------------------------------------
@@ -464,6 +511,7 @@ static proto_bool engine_open_passive(struct TcpEngineStorage *context, const Tc
         return PROTO_FALSE;
     }
     TcpEngineRow *const row = &context->rows[tcb];
+    *row = (TcpEngineRow){0};
     EMBED_CALL(proxim.read, ProximusCfg, .dst = row->next_hop, .at = idemip_eth_src(args->frame),
                .size = IDEMIP_MAC_LEN);
     row->netif = args->netif;
@@ -580,21 +628,115 @@ static void engine_release(TcpEngineSlot *slot, uint32_t snd_una, uint32_t iss)
     }
 }
 
-// RFC 5681 sec 3.1: an ACK of new data opens the congestion window. RFC 3465 counts the octets of the ACK.
-static void engine_congestion_acknowledge(const struct TcpEngineStorage *context, uint16_t tcb, uint32_t acked)
+// An ACK of new data, on the TCB of a pool entry. The acknowledged segments leave the transmit ring. The ACK
+// of the timed segment gives an RFC 6298 sample, which TcpOut.rtt refuses after a resend (Karn). RFC 6298
+// (5.2) stops the timer once the peer acknowledges each octet, and (5.3) restarts it on new data otherwise. RFC
+// 5681 sec 3.2 step 6 ends fast recovery. Otherwise sec 3.1 opens the congestion window, and RFC 3465 counts
+// the octets of the ACK.
+static void engine_acknowledged(const struct TcpEngineStorage *context, TcpEngineRow *row, TcpEngineSlot *slot,
+                                uint32_t acked, uint32_t now_ms)
 {
     TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
     TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
-    out_io->vars = tcb_io->vars;
-    out_io->ctl = tcb_io->ctl;
-    out_io->state = tcb_io->state;
-    out_io->timer_args = (TcpOutTimerArgs){0};
+    engine_release(slot, tcb_io->vars.snd_una, tcb_io->vars.iss);
+    engine_out_load(context, now_ms);
+    if (row->timing && (tcb_io->vars.snd_una - tcb_io->ctl.rtseq) < 0x80000000u)
+    {
+        const uint32_t sample = now_ms - row->timed_ms;
+        out_io->timer_args.sample_ms = (sample != 0u) ? sample : 1u;
+        TcpOut.rtt(context->units->tcp_out);
+        row->timing = PROTO_FALSE;
+    }
+    if (tcb_io->vars.snd_una == tcb_io->vars.snd_nxt)
+    {
+        TcpOut.rtx_stop(context->units->tcp_out);
+    }
+    else
+    {
+        TcpOut.rtx_restart(context->units->tcp_out);
+    }
     out_io->timer_args.acked = acked;
-    out_io->timer_args.flight = tcb_io->vars.snd_nxt - tcb_io->vars.snd_una;
-    out_io->timer_args.smss = engine_send_mss(tcb_io);
-    TcpOut.cc_ack(context->units->tcp_out);
+    if (out_io->ctl.dupacks < (uint8_t)IDEMIP_TCP_DUPACK_THRESH)
+    {
+        TcpOut.cc_ack(context->units->tcp_out);
+    }
+    // cc_recover deflates cwnd after fast recovery, and it sets the duplicate count back to zero in each case.
+    TcpOut.cc_recover(context->units->tcp_out);
     tcb_io->ctl = out_io->ctl;
-    (void)engine_tcb_store(context, tcb);
+    (void)engine_tcb_store(context, slot->tcb);
+}
+
+// RFC 6298 (5.4) and RFC 5681 sec 3.2 step 2: the earliest segment that the peer did not acknowledge goes out
+// again. In SYN-RECEIVED that is the SYN,ACK. Then it is the text at SND.UNA, one MSS at most and within one
+// transmit segment. Last it is the FIN. False where nothing waits or the frame does not go out.
+static proto_bool engine_resend(const struct TcpEngineStorage *context, const TcpEngineSlot *slot,
+                                const TcpEngineEndpoint *endpoint)
+{
+    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpEngineOutbound outbound = {
+        .seq = tcb_io->vars.snd_una,
+        .ack = tcb_io->vars.rcv_nxt,
+        .window = tcb_io->vars.rcv_wnd,
+    };
+    size_t front = 0u;
+    if (tcb_io->state == IDEMIP_TCP_STATE_SYN_RECEIVED)
+    {
+        outbound.seq = tcb_io->vars.iss;
+        outbound.options = (uint16_t)IDEMIP_TCP_OUT_OPT_MSS;
+        // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
+        outbound.flags = (uint8_t)(IDEMIP_TCP_SYN | IDEMIP_TCP_ACK);
+    }
+    else if (slot->sent != slot->released &&
+             EMBED_CALL(anularis.seg_front, AnularisCfg, .ring = slot->transmit, .out_index = &front))
+    {
+        const uint8_t *const segment = EMBED_CALL(anularis.seg_at, AnularisCfg, .ring = slot->transmit, .index = front);
+        uint32_t len = engine_head_read(segment) - slot->front_acknowledged;
+        const uint32_t in_flight = slot->sent - slot->released;
+        const uint32_t mss = engine_send_mss(tcb_io);
+        len = (len < in_flight) ? len : in_flight;
+        len = (len < mss) ? len : mss;
+        outbound.text = segment + PROTOCORE_TCP_ENGINE_SEGMENT_HEAD + slot->front_acknowledged;
+        // Explicit cast narrows the count, which the send MSS holds below 65536
+        outbound.len = (uint16_t)len;
+        // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
+        outbound.flags = (uint8_t)(IDEMIP_TCP_ACK | IDEMIP_TCP_PSH);
+    }
+    else if (slot->fin_sent && tcb_io->vars.snd_una != tcb_io->vars.snd_nxt)
+    {
+        // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
+        outbound.flags = (uint8_t)(IDEMIP_TCP_FIN | IDEMIP_TCP_ACK);
+    }
+    else
+    {
+        return PROTO_FALSE;
+    }
+    return engine_emit(context, endpoint, &outbound);
+}
+
+// RFC 5681 sec 2 DUPLICATE ACKNOWLEDGMENT. Data is in flight, and SEG.ACK is SND.UNA. The segment carries
+// no text, and it carries neither SYN nor FIN. Its window is the window of the last segment. A closed window
+// is the probe of RFC 9293 sec 3.8.6.1 and no loss. The third duplicate sends the segment at SND.UNA again:
+// RFC 5681 sec 3.2 step 2, fast retransmit.
+static void engine_duplicate(const struct TcpEngineStorage *context, TcpEngineRow *row, const TcpEngineSlot *slot,
+                             const TcpEngineEndpoint *endpoint, uint32_t now_ms)
+{
+    const TcpInIo *const in_io = IDEMIP_TCP_IN_IO(context->units->tcp_in);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    if (tcb_io->vars.snd_nxt == tcb_io->vars.snd_una || in_io->seg.data_len != 0u ||
+        (in_io->seg.flags & (IDEMIP_TCP_SYN | IDEMIP_TCP_FIN)) != 0u || in_io->seg.ack != tcb_io->vars.snd_una ||
+        in_io->seg.wnd != row->peer_window || tcb_io->vars.snd_wnd == 0u)
+    {
+        return;
+    }
+    engine_out_load(context, now_ms);
+    TcpOut.cc_dupack(context->units->tcp_out);
+    tcb_io->ctl = IDEMIP_TCP_OUT_IO(context->units->tcp_out)->ctl;
+    (void)engine_tcb_store(context, slot->tcb);
+    if (tcb_io->ctl.dupacks == (uint8_t)IDEMIP_TCP_DUPACK_THRESH)
+    {
+        row->timing = PROTO_FALSE;
+        (void)engine_resend(context, slot, endpoint);
+    }
 }
 
 // What the last Dispatch.input decided about a segment on an open TCB.
@@ -630,7 +772,12 @@ static void engine_tcb_segment(struct TcpEngineStorage *context, const TcpEngine
             // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
             .flags = (uint8_t)reply.flags,
         };
-        (void)engine_emit(context, &endpoint, &outbound);
+        // RFC 6298 (5.1): the SYN,ACK starts the retransmission timer, which sends it again where no ACK comes.
+        if (engine_emit(context, &endpoint, &outbound) && (reply.flags & IDEMIP_TCP_SYN) != 0u)
+        {
+            engine_timer_arm(context, args->now_ms);
+            (void)engine_tcb_store(context, tcb);
+        }
     }
     const uint8_t index = row->slot;
     TcpEngineSlot *const slot = (index < PROTOCORE_TCP_ENGINE_SLOTS) ? &context->slots[index] : NULL;
@@ -640,9 +787,13 @@ static void engine_tcb_segment(struct TcpEngineStorage *context, const TcpEngine
     }
     if ((act & IDEMIP_TCP_IN_ACT_ACKED) != 0u && slot != NULL)
     {
-        engine_release(slot, tcb_io->vars.snd_una, tcb_io->vars.iss);
-        engine_congestion_acknowledge(context, tcb, acked);
+        engine_acknowledged(context, row, slot, acked, args->now_ms);
     }
+    if ((act & IDEMIP_TCP_IN_ACT_DUPACK) != 0u && slot != NULL)
+    {
+        engine_duplicate(context, row, slot, &endpoint, args->now_ms);
+    }
+    row->peer_window = IDEMIP_TCP_IN_IO(context->units->tcp_in)->seg.wnd;
     if ((act & IDEMIP_TCP_IN_ACT_TEXT) != 0u)
     {
         engine_text(slot, index, args->frame + text_off, text_len);
@@ -710,8 +861,9 @@ static TcpEngineCursor engine_cursor(const TcpEngineSlot *slot)
 }
 
 // RFC 9293 sec 3.10.4 CLOSE: the FIN goes out after the last text octet. ESTABLISHED moves to FIN-WAIT-1, and
-// CLOSE-WAIT to LAST-ACK.
-static void engine_fin_send(struct TcpEngineStorage *context, TcpEngineSlot *slot, const TcpEngineEndpoint *endpoint)
+// CLOSE-WAIT to LAST-ACK. The FIN starts the retransmission timer.
+static void engine_fin_send(struct TcpEngineStorage *context, TcpEngineSlot *slot, const TcpEngineEndpoint *endpoint,
+                            uint32_t now_ms)
 {
     TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
     const TcpEngineOutbound outbound = {
@@ -728,16 +880,19 @@ static void engine_fin_send(struct TcpEngineStorage *context, TcpEngineSlot *slo
     tcb_io->vars.snd_nxt++;
     tcb_io->state = (tcb_io->state == IDEMIP_TCP_STATE_CLOSE_WAIT) ? IDEMIP_TCP_STATE_LAST_ACK
                                                                    : IDEMIP_TCP_STATE_FIN_WAIT_1;
+    engine_timer_arm(context, now_ms);
     slot->fin_sent = engine_tcb_store(context, slot->tcb);
 }
 
 // Sends up to budget text octets of a pool entry. Each run of octets in one transmit segment goes out in its
-// own segment, one MSS at most. Returns the octets that went out. Each segment advances SND.NXT, and the TCB
-// goes back to TcpPcb after each one.
+// own segment, one MSS at most. Returns the octets that went out. Each segment advances SND.NXT and starts
+// the retransmission timer, and the TCB goes back to TcpPcb after each one. Where no RFC 6298 sample runs,
+// the first segment starts one.
 static uint32_t engine_text_send(struct TcpEngineStorage *context, TcpEngineSlot *slot,
                                  const TcpEngineEndpoint *endpoint, uint32_t budget, uint32_t now_ms)
 {
     TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpEngineRow *const row = &context->rows[slot->tcb];
     const uint32_t mss = engine_send_mss(tcb_io);
     uint32_t sent = 0u;
     for (uint32_t step = 0u; step <= PROTOCORE_TCP_ENGINE_SEGMENTS && sent < budget; step++)
@@ -766,11 +921,90 @@ static uint32_t engine_text_send(struct TcpEngineStorage *context, TcpEngineSlot
         }
         tcb_io->ctl.last_send_ms = now_ms;
         tcb_io->vars.snd_nxt += len;
+        if (!row->timing)
+        {
+            row->timing = PROTO_TRUE;
+            row->timed_ms = now_ms;
+            tcb_io->ctl.rtseq = tcb_io->vars.snd_nxt;
+        }
         slot->sent += len;
         sent += len;
+        engine_timer_arm(context, now_ms);
         (void)engine_tcb_store(context, slot->tcb);
     }
     return sent;
+}
+
+// RFC 9293 sec 3.8.6.1: the peer closed its window, and text waits. Where nothing is in flight, the persist
+// timer starts at RTO. Each expiry sends one text octet as a probe and doubles the interval, up to the RTO
+// ceiling. A probe that the peer did not take goes out again at SND.UNA. MUST-29 keeps the connection open
+// while the peer acknowledges the probes. The probes thus never reach the retransmission timer, which ends
+// the connection after R2.
+static void engine_persist(struct TcpEngineStorage *context, TcpEngineSlot *slot, const TcpEngineEndpoint *endpoint,
+                           const TcpEngineCursor *cursor, uint32_t now_ms)
+{
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpEngineRow *const row = &context->rows[slot->tcb];
+    const proto_bool idle = tcb_io->vars.snd_una == tcb_io->vars.snd_nxt;
+    if (tcb_io->vars.snd_wnd != 0u || (!idle && row->persist_interval == 0u))
+    {
+        return;
+    }
+    if (row->persist_interval == 0u)
+    {
+        row->persist_interval = (tcb_io->ctl.rto != 0u) ? tcb_io->ctl.rto : IDEMIP_TCP_RTO_INIT_MS;
+        tcb_io->ctl.persist_deadline = engine_deadline(now_ms, row->persist_interval);
+        (void)engine_tcb_store(context, slot->tcb);
+        return;
+    }
+    if (!engine_passed(now_ms, tcb_io->ctl.persist_deadline))
+    {
+        return;
+    }
+    if (idle)
+    {
+        const TcpEngineOutbound outbound = {
+            .text = cursor->text,
+            .seq = tcb_io->vars.snd_nxt,
+            .ack = tcb_io->vars.rcv_nxt,
+            .window = tcb_io->vars.rcv_wnd,
+            .len = 1u,
+            // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
+            .flags = (uint8_t)(IDEMIP_TCP_ACK | IDEMIP_TCP_PSH),
+        };
+        if (engine_emit(context, endpoint, &outbound))
+        {
+            tcb_io->vars.snd_nxt++;
+            slot->sent++;
+        }
+    }
+    else
+    {
+        (void)engine_resend(context, slot, endpoint);
+    }
+    const uint32_t doubled = row->persist_interval << 1;
+    row->persist_interval = (doubled < IDEMIP_TCP_RTO_MAX_MS) ? doubled : IDEMIP_TCP_RTO_MAX_MS;
+    tcb_io->ctl.persist_deadline = engine_deadline(now_ms, row->persist_interval);
+    (void)engine_tcb_store(context, slot->tcb);
+}
+
+// The peer opened its window again, and the probes end. A probe octet that is still in flight now waits on
+// the retransmission timer.
+static void engine_persist_end(struct TcpEngineStorage *context, const TcpEngineSlot *slot, uint32_t now_ms)
+{
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpEngineRow *const row = &context->rows[slot->tcb];
+    if (tcb_io->vars.snd_wnd == 0u || row->persist_interval == 0u)
+    {
+        return;
+    }
+    row->persist_interval = 0u;
+    tcb_io->ctl.persist_deadline = 0u;
+    if (tcb_io->vars.snd_una != tcb_io->vars.snd_nxt)
+    {
+        engine_timer_arm(context, now_ms);
+    }
+    (void)engine_tcb_store(context, slot->tcb);
 }
 
 // RFC 9293 sec 3.8.6.2.1: TcpOut.send decides how many text octets of a pool entry go out now. The usable
@@ -782,6 +1016,7 @@ static void engine_transmit(struct TcpEngineStorage *context, TcpEngineSlot *slo
 {
     TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
     TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    engine_persist_end(context, slot, now_ms);
     for (uint32_t decision = 0u; decision <= PROTOCORE_TCP_ENGINE_SEGMENTS; decision++)
     {
         const TcpEngineCursor cursor = engine_cursor(slot);
@@ -790,7 +1025,7 @@ static void engine_transmit(struct TcpEngineStorage *context, TcpEngineSlot *slo
             slot->closed = PROTO_TRUE;
             if (!slot->fin_sent)
             {
-                engine_fin_send(context, slot, endpoint);
+                engine_fin_send(context, slot, endpoint, now_ms);
             }
             return;
         }
@@ -809,6 +1044,7 @@ static void engine_transmit(struct TcpEngineStorage *context, TcpEngineSlot *slo
         TcpOut.send(context->units->tcp_out);
         if (out_io->status != IDEMIP_OK || !out_io->res.send_now)
         {
+            engine_persist(context, slot, endpoint, &cursor, now_ms);
             return;
         }
         // RFC 5681 sec 4.1 can shrink cwnd after an idle interval, and the decision carries it.
@@ -852,8 +1088,43 @@ static void engine_window_open(struct TcpEngineStorage *context, const TcpEngine
     (void)engine_emit(context, endpoint, &outbound);
 }
 
-// One open pool entry: its window, its text, its FIN. The entry goes back once the peer acknowledged the FIN, and
-// with it each text octet in front of the FIN.
+// RFC 6298 (5.4) through (5.6): the retransmission timer of a pool entry expired. TcpOut.rtx_expire doubles
+// RTO, starts the timer again, and sets RFC 5681 sec 3.1 cwnd to one segment. The earliest unacknowledged
+// segment then goes out again. RFC 9293 sec 3.8.3 (c) closes the connection after R2 transmissions. The
+// sec 3.10.4 ABORT sends <SEQ=SND.NXT><CTL=RST>, and the owner gets EVT_ERROR. False where the connection
+// ended.
+static proto_bool engine_expire(struct TcpEngineStorage *context, uint8_t index, const TcpEngineEndpoint *endpoint,
+                                uint32_t now_ms)
+{
+    TcpEngineSlot *const slot = &context->slots[index];
+    TcpEngineRow *const row = &context->rows[slot->tcb];
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    engine_out_load(context, now_ms);
+    out_io->timer_args.resent = tcb_io->ctl.nrtx != 0u;
+    TcpOut.rtx_expire(context->units->tcp_out);
+    tcb_io->ctl = out_io->ctl;
+    row->timing = PROTO_FALSE;
+    if (out_io->res.r2)
+    {
+        const uint16_t tcb = slot->tcb;
+        const TcpEngineOutbound outbound = {
+            .seq = tcb_io->vars.snd_nxt,
+            // Explicit cast narrows the control bit, which RFC 9293 sec 3.1 holds in the low eight bits
+            .flags = (uint8_t)IDEMIP_TCP_RST,
+        };
+        (void)engine_emit(context, endpoint, &outbound);
+        engine_slot_end(context, index);
+        engine_tcb_close(context, tcb);
+        return PROTO_FALSE;
+    }
+    (void)engine_tcb_store(context, slot->tcb);
+    (void)engine_resend(context, slot, endpoint);
+    return PROTO_TRUE;
+}
+
+// One pool entry with a connection: its retransmission timer, its window, its text, its FIN. The entry goes
+// back once the peer acknowledged the FIN, and with it each text octet in front of the FIN.
 static void engine_slot_service(struct TcpEngineStorage *context, uint8_t index, uint32_t now_ms)
 {
     TcpEngineSlot *const slot = &context->slots[index];
@@ -863,6 +1134,14 @@ static void engine_slot_service(struct TcpEngineStorage *context, uint8_t index,
         return;
     }
     const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    if (engine_passed(now_ms, tcb_io->ctl.rtx_deadline) && !engine_expire(context, index, &endpoint, now_ms))
+    {
+        return;
+    }
+    if (slot->state != TCP_ENGINE_SLOT_OPEN)
+    {
+        return;
+    }
     const IdemIpTcpState state = tcb_io->state;
     if (!slot->closed && (state == IDEMIP_TCP_STATE_ESTABLISHED || state == IDEMIP_TCP_STATE_FIN_WAIT_1 ||
                           state == IDEMIP_TCP_STATE_FIN_WAIT_2))
@@ -879,23 +1158,39 @@ static void engine_slot_service(struct TcpEngineStorage *context, uint8_t index,
     }
 }
 
-// RFC 9293 sec 3.6 MUST-13: a TIME-WAIT TCB closes once 2 MSL passed. TcpIn sets the deadline.
-static void engine_time_wait_end(struct TcpEngineStorage *context, uint32_t now_ms)
+// The two waits at the end of a connection. RFC 9293 sec 3.6 MUST-13: a TIME-WAIT TCB closes once 2 MSL
+// passed, and TcpIn sets that deadline. A FIN-WAIT-2 TCB with no pool entry closes after
+// PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS, because its peer sent no FIN.
+static void engine_end_waits(struct TcpEngineStorage *context, uint32_t now_ms)
 {
     TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
     for (uint16_t tcb = 0u; tcb < IDEMIP_TCP_PCBS; tcb++)
     {
-        if (!context->rows[tcb].open)
+        TcpEngineRow *const row = &context->rows[tcb];
+        if (!row->open)
         {
             continue;
         }
         tcb_io->pcb_args.index = tcb;
         TcpPcb.load(context->units->tcp_pcb);
-        // Explicit cast reads the distance as signed, which RFC 9293 sec 3.4 arithmetic modulo 2^32 allows
-        if (tcb_io->status == IDEMIP_OK && tcb_io->state == IDEMIP_TCP_STATE_TIME_WAIT &&
-            (int32_t)(now_ms - tcb_io->ctl.time_wait_deadline) >= 0)
+        if (tcb_io->status != IDEMIP_OK)
+        {
+            continue;
+        }
+        if (tcb_io->state == IDEMIP_TCP_STATE_TIME_WAIT && engine_passed(now_ms, tcb_io->ctl.time_wait_deadline))
         {
             engine_tcb_close(context, tcb);
+        }
+        else if (tcb_io->state == IDEMIP_TCP_STATE_FIN_WAIT_2 && row->slot == PROTOCORE_TCP_ENGINE_SLOT_NONE)
+        {
+            if (row->linger_deadline == 0u)
+            {
+                row->linger_deadline = engine_deadline(now_ms, PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS);
+            }
+            else if (engine_passed(now_ms, row->linger_deadline))
+            {
+                engine_tcb_close(context, tcb);
+            }
         }
     }
 }
@@ -1060,7 +1355,7 @@ void protocore_tcp_engine_service(uint8_t *work)
     for (uint8_t index = 0u; index < PROTOCORE_TCP_ENGINE_SLOTS; index++)
     {
         TcpEngineSlot *const slot = &context->slots[index];
-        if (slot->state == TCP_ENGINE_SLOT_OPEN)
+        if (slot->state == TCP_ENGINE_SLOT_OPEN || slot->state == TCP_ENGINE_SLOT_OPENING)
         {
             engine_slot_service(context, index, now_ms);
         }
@@ -1069,7 +1364,7 @@ void protocore_tcp_engine_service(uint8_t *work)
             engine_slot_free(context, index);
         }
     }
-    engine_time_wait_end(context, now_ms);
+    engine_end_waits(context, now_ms);
     TcpEngineV.ok = PROTO_TRUE;
 }
 

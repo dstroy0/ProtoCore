@@ -3837,7 +3837,15 @@
  */
 #ifndef PROTOCORE_TCP_ENGINE_BORROW
 #define PROTOCORE_TCP_ENGINE_BORROW                                                                                    \
-    ((IDEMIP_TCP_PCBS * 12u) + (MAX_CONNS * ((2u * sizeof(uint8_t *)) + 24u)) + (2u * sizeof(uint8_t *)) + 64u)
+    ((IDEMIP_TCP_PCBS * 32u) + (MAX_CONNS * ((2u * sizeof(uint8_t *)) + 24u)) + (2u * sizeof(uint8_t *)) + 64u)
+#endif
+/**
+ * @brief The milliseconds that a TCB stays in FIN-WAIT-2 after its pool entry goes back. The peer then sent
+ *        no FIN, and the TCB closes. RFC 9293 sets no bound, and a TCB that waits forever takes a TCB from
+ *        each later connection.
+ */
+#ifndef PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS
+#define PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS 60000u
 #endif
 /** @brief The share of the TCP engine in the plaintext arena: its context alone. */
 #define PROTOCORE_PLAINTEXT_WORK_TCPENGINE PROTOCORE_TCP_ENGINE_BORROW

@@ -115,6 +115,7 @@ typedef struct
     uint16_t to_port; ///< the local port, 0 for PORT_OWN
     uint16_t mss;     ///< the value of an MSS Option, 0 for none
     uint8_t flags;
+    proto_bool closed_window; ///< the Window field is 0, and 8192 otherwise
 } PeerSegment;
 
 // Puts one segment of the peer on the wire, to the address of the interface.
@@ -142,7 +143,7 @@ static void peer_send(const PeerSegment *segment)
     put32(tcp + 8, segment->ack);
     tcp[12] = (uint8_t)(((20u + options) / 4u) << 4);
     tcp[13] = segment->flags;
-    put16(tcp + 14, 8192u);
+    put16(tcp + 14, segment->closed_window ? 0u : 8192u);
     if (options != 0u)
     {
         tcp[20] = 2u;
@@ -569,4 +570,190 @@ void test_a_segment_past_rcv_nxt_waits_and_lands_after_the_gap(void)
     Dma.pinned(dma);
     TEST_ASSERT_EQUAL_UINT16_MESSAGE(0u, IDEMIP_DMA_IO(dma)->pinned, "a receive descriptor stayed pinned");
     reset_and_release(40011u, PEER_ISS + 11u);
+}
+
+// RFC 6298 (5.4): text that the peer does not acknowledge within RTO goes out again at SND.UNA. Its ACK stops
+// the timer (5.2), and nothing goes out after that.
+void test_lost_text_goes_out_again_after_the_rto(void)
+{
+    const uint32_t iss = handshake(40012u);
+    TEST_ASSERT_EQUAL_UINT(3u, owner_write("abc"));
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    TEST_ASSERT_EQUAL_UINT32(iss + 1u, engine_sent().seq);
+    pass();
+    TEST_ASSERT_EQUAL_MESSAGE(0u, sent_count(), "the text went out again before RTO");
+
+    s_now_ms += IDEMIP_TCP_RTO_INIT_MS;
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    const EngineSegment again = engine_sent();
+    TEST_ASSERT_EQUAL_UINT32(iss + 1u, again.seq);
+    TEST_ASSERT_EQUAL_UINT16(3u, again.text_len);
+    TEST_ASSERT_EQUAL_MEMORY("abc", again.text, 3u);
+
+    peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = iss + 4u, .port = 40012u, .flags = TCP_ACK});
+    pass();
+    s_now_ms += IDEMIP_TCP_RTO_MAX_MS;
+    pass();
+    TEST_ASSERT_EQUAL_MESSAGE(0u, sent_count(), "the timer ran on after the ACK of each octet");
+    reset_and_release(40012u, PEER_ISS + 1u);
+}
+
+// RFC 6298 (5.1): the SYN,ACK starts the timer. Where the ACK of the handshake does not come, the SYN,ACK goes
+// out again with the same ISS.
+void test_a_lost_syn_ack_goes_out_again(void)
+{
+    peer_send(&(PeerSegment){.seq = PEER_ISS, .port = 40013u, .mss = 536u, .flags = TCP_SYN});
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    const EngineSegment first = engine_sent();
+    s_now_ms += IDEMIP_TCP_RTO_INIT_MS;
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    const EngineSegment second = engine_sent();
+    TEST_ASSERT_EQUAL_HEX8(TCP_SYN | TCP_ACK, second.flags);
+    TEST_ASSERT_EQUAL_UINT32(first.seq, second.seq);
+    TEST_ASSERT_EQUAL_UINT32(PEER_ISS + 1u, second.ack);
+    TEST_ASSERT_EQUAL_UINT16(1460u, second.mss);
+
+    peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = first.seq + 1u, .port = 40013u, .flags = TCP_ACK});
+    pass();
+    (void)event_expect(EVT_CONNECT);
+    reset_and_release(40013u, PEER_ISS + 1u);
+}
+
+// RFC 9293 sec 3.8.3 (c): after R2 transmissions of the same segment, the connection closes. The ABORT of sec
+// 3.10.4 sends <SEQ=SND.NXT><CTL=RST>, and the owner gets EVT_ERROR.
+void test_a_peer_that_never_answers_gets_a_reset(void)
+{
+    const uint32_t iss = handshake(40014u);
+    TEST_ASSERT_EQUAL_UINT(1u, owner_write("x"));
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    (void)engine_sent();
+    uint32_t resends = 0u;
+    proto_bool reset = PROTO_FALSE;
+    for (uint32_t expiry = 0u; expiry < 2u * IDEMIP_TCP_MAXRTX && !reset; expiry++)
+    {
+        s_now_ms += IDEMIP_TCP_RTO_MAX_MS;
+        pass();
+        while (sent_count() != 0u)
+        {
+            const EngineSegment segment = engine_sent();
+            if ((segment.flags & TCP_RST) != 0u)
+            {
+                TEST_ASSERT_EQUAL_UINT32(iss + 2u, segment.seq);
+                reset = PROTO_TRUE;
+            }
+            else
+            {
+                TEST_ASSERT_EQUAL_UINT32(iss + 1u, segment.seq);
+                resends++;
+            }
+        }
+    }
+    TEST_ASSERT_TRUE_MESSAGE(reset, "the connection never ended");
+    TEST_ASSERT_EQUAL_UINT32(IDEMIP_TCP_MAXRTX - 1u, resends);
+    (void)event_expect(EVT_ERROR);
+    TEST_ASSERT_TRUE(owner_close());
+    pass();
+}
+
+// RFC 5681 sec 3.2 step 2: the third duplicate ACK sends the segment at SND.UNA again, before RTO. The first
+// two send nothing.
+void test_three_duplicate_acks_send_the_lost_segment_again(void)
+{
+    const uint32_t iss = handshake(40015u);
+    char fill[(PROTOCORE_TCP_ENGINE_SEGMENTS * SEGMENT_TEXT) + 1u];
+    memset(fill, 'f', sizeof fill - 1u);
+    fill[sizeof fill - 1u] = '\0';
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_TCP_ENGINE_SEGMENTS * SEGMENT_TEXT, owner_write(fill));
+    pass();
+    TEST_ASSERT_EQUAL(PROTOCORE_TCP_ENGINE_SEGMENTS, sent_count());
+    while (sent_count() != 0u)
+    {
+        (void)engine_sent();
+    }
+    for (uint32_t duplicate = 1u; duplicate <= IDEMIP_TCP_DUPACK_THRESH; duplicate++)
+    {
+        peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = iss + 1u, .port = 40015u, .flags = TCP_ACK});
+        pass();
+        if (duplicate < IDEMIP_TCP_DUPACK_THRESH)
+        {
+            TEST_ASSERT_EQUAL_MESSAGE(0u, sent_count(), "a duplicate before the third sent a segment");
+        }
+    }
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    const EngineSegment again = engine_sent();
+    TEST_ASSERT_EQUAL_UINT32(iss + 1u, again.seq);
+    TEST_ASSERT_EQUAL_UINT16(SEGMENT_TEXT, again.text_len);
+
+    peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = iss + 1u + (PROTOCORE_TCP_ENGINE_SEGMENTS * SEGMENT_TEXT),
+                             .port = 40015u, .flags = TCP_ACK});
+    pass();
+    TEST_ASSERT_EQUAL(0u, sent_count());
+    reset_and_release(40015u, PEER_ISS + 1u);
+}
+
+// RFC 9293 sec 3.8.6.1: a closed window holds the text back, and the persist timer sends one octet as a
+// probe. A probe that the peer does not take goes out again on a doubled interval. Once the window opens, the
+// rest of the text goes out behind the probe.
+void test_a_closed_window_draws_probes_until_it_opens(void)
+{
+    const uint32_t iss = handshake(40016u);
+    peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = iss + 1u, .port = 40016u, .flags = TCP_ACK,
+                             .closed_window = PROTO_TRUE});
+    pass();
+    TEST_ASSERT_EQUAL_UINT(3u, owner_write("zzz"));
+    pass();
+    TEST_ASSERT_EQUAL_MESSAGE(0u, sent_count(), "text went out into a closed window");
+
+    s_now_ms += IDEMIP_TCP_RTO_INIT_MS;
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    const EngineSegment probe = engine_sent();
+    TEST_ASSERT_EQUAL_UINT32(iss + 1u, probe.seq);
+    TEST_ASSERT_EQUAL_UINT16(1u, probe.text_len);
+
+    peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = iss + 1u, .port = 40016u, .flags = TCP_ACK,
+                             .closed_window = PROTO_TRUE});
+    pass();
+    s_now_ms += IDEMIP_TCP_RTO_INIT_MS;
+    pass();
+    TEST_ASSERT_EQUAL_MESSAGE(0u, sent_count(), "the second probe came before the doubled interval");
+    s_now_ms += IDEMIP_TCP_RTO_INIT_MS;
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    const EngineSegment again = engine_sent();
+    TEST_ASSERT_EQUAL_UINT32(iss + 1u, again.seq);
+    TEST_ASSERT_EQUAL_UINT16(1u, again.text_len);
+
+    peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = iss + 2u, .port = 40016u, .flags = TCP_ACK});
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    const EngineSegment rest = engine_sent();
+    TEST_ASSERT_EQUAL_UINT32(iss + 2u, rest.seq);
+    TEST_ASSERT_EQUAL_UINT16(2u, rest.text_len);
+    TEST_ASSERT_EQUAL_MEMORY("zz", rest.text, 2u);
+    reset_and_release(40016u, PEER_ISS + 1u);
+}
+
+// The owner closes first, and the peer acknowledges the FIN and sends none. FIN-WAIT-2 then ends after
+// PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS, and a SYN from the same port opens a new connection.
+void test_fin_wait_2_ends_after_its_deadline(void)
+{
+    const uint32_t iss = handshake(40017u);
+    TEST_ASSERT_TRUE(owner_close());
+    pass();
+    TEST_ASSERT_EQUAL(1u, sent_count());
+    TEST_ASSERT_EQUAL_HEX8(TCP_FIN | TCP_ACK, engine_sent().flags);
+    peer_send(&(PeerSegment){.seq = PEER_ISS + 1u, .ack = iss + 2u, .port = 40017u, .flags = TCP_ACK});
+    pass();
+    pass();
+    event_none();
+    s_now_ms += PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS;
+    pass();
+    (void)handshake(40017u);
+    reset_and_release(40017u, PEER_ISS + 1u);
 }
