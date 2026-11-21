@@ -7,4 +7,5 @@
 add_subdirectory(client)
 add_subdirectory(protocol)
 add_subdirectory(test_tcp)
+add_subdirectory(test_tcp_engine)
 add_subdirectory(test_tcp_evt)

@@ -1995,6 +1995,21 @@
         "unit/src/network_drivers/network/forward/test_forward"
       ]
     },
+    "native_tcp_engine": {
+      "desc": "The TCP engine (network_drivers/transport/tcp/engine) on the idemIP stack over the fake PHY of idemIP.\nA SYN to a listener gets a SYN,ACK, text lands in the receive ring of the slot, the transmit ring goes out and its acknowledged octets leave the ring, a FIN closes, and a reset ends the slot.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_IDEMIP=1"
+      ],
+      "src": [
+        "+<server/core/worker/worker.c>",
+        "+<network_drivers/network/stack/stack.c>",
+        "+<network_drivers/transport/tcp/engine/engine.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/transport/tcp/test_tcp_engine"
+      ]
+    },
     "native_stack": {
       "desc": "The idemIP stack (network_drivers/network/stack) over the fake PHY of idemIP, at 192.168.1.2/24.\nIt answers an RFC 826 REQUEST with a REPLY, and an RFC 792 Echo with an Echo Reply.",
       "flags": [
@@ -2003,6 +2018,7 @@
       "src": [
         "+<server/core/worker/worker.c>",
         "+<network_drivers/network/stack/stack.c>",
+        "+<network_drivers/transport/tcp/engine/engine.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
@@ -2017,6 +2033,7 @@
       "src": [
         "+<server/core/worker/worker.c>",
         "+<network_drivers/network/stack/stack.c>",
+        "+<network_drivers/transport/tcp/engine/engine.c>",
         "+<network_drivers/physical/wifi_link/wifi_link.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>"
       ],

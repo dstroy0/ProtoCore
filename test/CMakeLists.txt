@@ -11880,6 +11880,7 @@ protocore_env(native_stack
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/engine/engine.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
   DEFINES
     "PROTOCORE_ENABLE_IDEMIP=1"
@@ -12180,6 +12181,31 @@ protocore_env(native_tcp_conn
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TCP=1"
+  INCLUDES
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
+    "${PROTOCORE_ROOT}/test/support"
+    "${PROTOCORE_ROOT}/src"
+    "${PROTOCORE_ROOT}/include"
+    "${PROTOCORE_ROOT}/include/idemIP"
+    "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/include/MMgr/include"
+    "${PROTOCORE_ROOT}/include/MMgr/src"
+    "${PROTOCORE_ROOT}/include/embedded_types/include"
+    "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
+)
+
+# The TCP engine (network_drivers/transport/tcp/engine) on the idemIP stack over the fake PHY of idemIP.
+protocore_env(native_tcp_engine
+  SUITE unit/src/network_drivers/transport/tcp/test_tcp_engine
+  SOURCES
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/engine/engine.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+  DEFINES
+    "PROTOCORE_ENABLE_IDEMIP=1"
+  LIBS
+    pc_idemip
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13458,6 +13484,7 @@ protocore_env(native_wifi_link
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/engine/engine.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/wifi_link/wifi_link.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
   DEFINES

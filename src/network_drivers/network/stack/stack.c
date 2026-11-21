@@ -22,6 +22,7 @@
 
 #include "src/idemip.h" // every unit of idemIP, its borrow and its operand block
 
+#include "network_drivers/transport/tcp/engine/engine.h" // the TCP engine, which acts on each TCP decision of Dispatch
 #include "server/core/worker/worker.h" // the owners of the units, mmgr_zero_buf, and the context of this module
 
 PROTOCORE_BEGIN_DECLS
@@ -352,6 +353,23 @@ static proto_bool stack_transmit_hold(struct StackStorage *context, uint8_t inde
     return PROTO_TRUE;
 }
 
+// Sends the buffer that an interface holds, with len octets of frame in it. False where the ring takes no
+// frame. The interface then keeps the buffer for its next frame.
+static proto_bool stack_transmit_post(struct StackStorage *context, uint8_t index, size_t len)
+{
+    DmaIo *const dma_io = IDEMIP_DMA_IO(context->units.dma[index]);
+    dma_io->desc_args.index = context->transmit_index[index];
+    // Explicit cast narrows the length, which IDEMIP_DMA_FRAME_MAX holds below 65536
+    dma_io->desc_args.len = (uint16_t)len;
+    Dma.tx_post(context->units.dma[index]);
+    if (dma_io->status != IDEMIP_OK)
+    {
+        return PROTO_FALSE;
+    }
+    context->transmit[index] = NULL;
+    return PROTO_TRUE;
+}
+
 // Writes the IP header and the Ethernet header of an ICMP reply in front of its message. The two go in
 // the reply buffer of the interface, and the call gives the length of the frame. The frame goes to the link source of the request. That
 // address is the next hop back to the requester. Zero where Netif has no record of the interface.
@@ -420,27 +438,15 @@ static proto_bool stack_answer(struct StackStorage *context, uint8_t index, cons
     {
         len = stack_icmp_frame(context, index, request);
     }
-    if (len == 0u)
-    {
-        return PROTO_FALSE;
-    }
-    DmaIo *const dma_io = IDEMIP_DMA_IO(context->units.dma[index]);
-    dma_io->desc_args.index = context->transmit_index[index];
-    // Explicit cast narrows the length, which IDEMIP_DMA_FRAME_MAX holds below 65536
-    dma_io->desc_args.len = (uint16_t)len;
-    Dma.tx_post(context->units.dma[index]);
-    if (dma_io->status != IDEMIP_OK)
-    {
-        return PROTO_FALSE;
-    }
-    context->transmit[index] = NULL;
-    return PROTO_TRUE;
+    return len != 0u && stack_transmit_post(context, index, len);
 }
 
 // Drains the receive ring of one interface. Each frame goes through Dispatch, its reply goes out, and its
 // descriptor goes back to the engine. Each descriptor goes back, and a unit that pins the frame keeps
-// it. The post ends the claim of this pass, and the last unpin gives the descriptor back.
-static void stack_drain(struct StackStorage *context, uint8_t index, uint32_t now_ms, uint32_t random_word)
+// it. The post ends the claim of this pass, and the last unpin gives the descriptor back. The TCP engine
+// acts on each TCP decision, where the arena had room for its borrow.
+static void stack_drain(struct StackStorage *context, uint8_t index, uint32_t now_ms, uint32_t random_word,
+                        uint8_t *engine)
 {
     DmaIo *const dma_io = IDEMIP_DMA_IO(context->units.dma[index]);
     DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units.dispatch);
@@ -468,6 +474,14 @@ static void stack_drain(struct StackStorage *context, uint8_t index, uint32_t no
         {
             StackV.sent++;
         }
+        // The engine reads the text of a segment out of the request. The descriptor thus goes back after it.
+        if (engine != NULL && (dispatch_io->act & IDEMIP_DISPATCH_ACT_TCP) != 0u)
+        {
+            TcpEngineV.segment_args.frame = request;
+            TcpEngineV.segment_args.now_ms = now_ms;
+            TcpEngineV.segment_args.netif = index;
+            TcpEngine.segment(engine);
+        }
         dma_io->desc_args.index = descriptor;
         Dma.rx_post(context->units.dma[index]);
         Dma.rx_take(context->units.dma[index]);
@@ -488,11 +502,13 @@ void protocore_stack_tick(uint8_t *work)
     tick_io->open_args.now_ms = StackV.tick_args.now_ms;
     tick_io->open_args.rand = StackV.tick_args.random_word;
     Tick.open(context->units.tick);
+    // NULL where the plaintext arena has no room for the borrow of the engine. The stack then runs without TCP.
+    uint8_t *const engine = protocore_tcp_engine_span();
     for (uint8_t index = 0u; index < IDEMIP_NETIF_COUNT; index++)
     {
         if ((context->bound & (1u << index)) != 0u)
         {
-            stack_drain(context, index, StackV.tick_args.now_ms, StackV.tick_args.random_word);
+            stack_drain(context, index, StackV.tick_args.now_ms, StackV.tick_args.random_word, engine);
         }
     }
     // The rings are empty. The first drain step thus moves the phase on to the services.
@@ -507,11 +523,20 @@ void protocore_stack_tick(uint8_t *work)
         Tick.service(context->units.tick);
     }
     // This module opens no connection and holds no frame on ARP. No step of the flush thus hands a frame
-    // back to it.
+    // back to it. The TCP_ACK step names one connection that owes the aggregate ACK, and the engine sends it.
     Tick.flush(context->units.tick);
     while (tick_io->status == IDEMIP_OK)
     {
+        if (engine != NULL && tick_io->unit == IDEMIP_TICK_UNIT_TCP_ACK)
+        {
+            TcpEngine.acknowledge(engine);
+        }
         Tick.flush(context->units.tick);
+    }
+    if (engine != NULL)
+    {
+        TcpEngineV.service_args.now_ms = StackV.tick_args.now_ms;
+        TcpEngine.service(engine);
     }
     for (uint8_t index = 0u; index < IDEMIP_NETIF_COUNT; index++)
     {
@@ -520,6 +545,35 @@ void protocore_stack_tick(uint8_t *work)
             Dma.tx_reap(context->units.dma[index]);
         }
     }
+    StackV.ok = PROTO_TRUE;
+}
+
+void protocore_stack_transmit_hold(uint8_t *work)
+{
+    struct StackStorage *const context = STACK_CONTEXT(work);
+    const uint8_t index = StackV.transmit_args.index;
+    StackV.ok = PROTO_FALSE;
+    StackV.transmit_frame = NULL;
+    if (!context->started || index >= IDEMIP_NETIF_COUNT || (context->bound & (1u << index)) == 0u ||
+        !stack_transmit_hold(context, index))
+    {
+        return;
+    }
+    StackV.transmit_frame = context->transmit[index];
+    StackV.ok = PROTO_TRUE;
+}
+
+void protocore_stack_transmit_post(uint8_t *work)
+{
+    struct StackStorage *const context = STACK_CONTEXT(work);
+    const StackTransmitArgs *const args = &StackV.transmit_args;
+    StackV.ok = PROTO_FALSE;
+    if (!context->started || args->index >= IDEMIP_NETIF_COUNT || context->transmit[args->index] == NULL ||
+        args->len == 0u || args->len > IDEMIP_DMA_FRAME_MAX || !stack_transmit_post(context, args->index, args->len))
+    {
+        return;
+    }
+    StackV.sent++;
     StackV.ok = PROTO_TRUE;
 }
 

@@ -3820,8 +3820,30 @@
     IDEMIP_ROUND_UP(IDEMIP_TOTAL_BORROW + (PROTOCORE_STACK_CELLS * PROTOCORE_STACK_CELL_COST), MMGR_ALIGN_BYTES)
 /** @brief The share of the stack module in the plaintext arena: its context alone. */
 #define PROTOCORE_PLAINTEXT_WORK_STACK PROTOCORE_STACK_BORROW
+/**
+ * @brief The segments of the transmit ring of each TCP pool entry, a power of two. Each segment holds the
+ *        octets of one write, up to its size.
+ */
+#ifndef PROTOCORE_TCP_ENGINE_SEGMENTS
+#define PROTOCORE_TCP_ENGINE_SEGMENTS 4u
+#endif
+/** @brief The TcpEvt records that the event ring of the TCP engine holds, a power of two. */
+#ifndef PROTOCORE_TCP_ENGINE_EVENTS
+#define PROTOCORE_TCP_ENGINE_EVENTS 32u
+#endif
+/**
+ * @brief The context of the TCP engine: one row for each TCB, one record for each pool entry, and two
+ *        pointers. 64 bytes hold the state and the padding.
+ */
+#ifndef PROTOCORE_TCP_ENGINE_BORROW
+#define PROTOCORE_TCP_ENGINE_BORROW                                                                                    \
+    ((IDEMIP_TCP_PCBS * 12u) + (MAX_CONNS * ((2u * sizeof(uint8_t *)) + 24u)) + (2u * sizeof(uint8_t *)) + 64u)
+#endif
+/** @brief The share of the TCP engine in the plaintext arena: its context alone. */
+#define PROTOCORE_PLAINTEXT_WORK_TCPENGINE PROTOCORE_TCP_ENGINE_BORROW
 #else
 #define PROTOCORE_PLAINTEXT_WORK_STACK 0
+#define PROTOCORE_PLAINTEXT_WORK_TCPENGINE 0
 #endif
 
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
@@ -3848,7 +3870,7 @@
      PROTOCORE_PLAINTEXT_WORK_NTPSERVICE + PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE +                                    \
      PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE + PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +  \
      PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_MTCONNECT + PROTOCORE_PLAINTEXT_WORK_FILESERVING +    \
-     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + PROTOCORE_PLAINTEXT_WORK_STACK + 256)
+     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + PROTOCORE_PLAINTEXT_WORK_STACK + PROTOCORE_PLAINTEXT_WORK_TCPENGINE + 256)
 #endif
 
 /**

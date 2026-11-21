@@ -12,6 +12,7 @@ protocore_add_module(network_drivers/transport/tcp
 
 add_subdirectory(client)
 add_subdirectory(common)
+add_subdirectory(engine)
 add_subdirectory(evt)
 add_subdirectory(lower)
 add_subdirectory(protocol)

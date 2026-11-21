@@ -97,15 +97,30 @@ typedef struct
 } StackTickArgs;
 
 /**
+ * @brief What ::StackNs::transmit_hold and ::StackNs::transmit_post take.
+ *
+ * @var StackTransmitArgs::len   the octets of the frame that ::StackNs::transmit_post sends, 1 through
+ *                               IDEMIP_DMA_FRAME_MAX
+ * @var StackTransmitArgs::index the interface
+ */
+typedef struct
+{
+    size_t len;
+    uint8_t index;
+} StackTransmitArgs;
+
+/**
  * @brief The operands and the outcome.
  *
- * @var StackVars::start_args the secret that ::StackNs::start takes
- * @var StackVars::bind_args  the interface that ::StackNs::bind takes
- * @var StackVars::addr4_args the address that ::StackNs::set_addr4 takes
- * @var StackVars::tick_args  the clock and the random word that ::StackNs::tick takes
- * @var StackVars::ok         the outcome of the last call
- * @var StackVars::frames     the frames that the last tick drained
- * @var StackVars::sent       the frames that the last tick put on a transmit ring
+ * @var StackVars::start_args     the secret that ::StackNs::start takes
+ * @var StackVars::bind_args      the interface that ::StackNs::bind takes
+ * @var StackVars::addr4_args     the address that ::StackNs::set_addr4 takes
+ * @var StackVars::tick_args      the clock and the random word that ::StackNs::tick takes
+ * @var StackVars::transmit_args  the interface and the frame length of a transmit entry
+ * @var StackVars::transmit_frame the buffer that the last ::StackNs::transmit_hold reported, NULL for none
+ * @var StackVars::ok             the outcome of the last call
+ * @var StackVars::frames         the frames that the last tick drained
+ * @var StackVars::sent           the frames that the last tick put on a transmit ring
  */
 typedef struct
 {
@@ -113,6 +128,8 @@ typedef struct
     StackBindArgs bind_args;
     StackAddr4Args addr4_args;
     StackTickArgs tick_args;
+    StackTransmitArgs transmit_args;
+    uint8_t *transmit_frame;
     proto_bool ok;
     uint16_t frames;
     uint16_t sent;
@@ -128,6 +145,11 @@ extern StackVars StackV;
  * @var StackNs::bind      bind one interface to its link driver and its frame buffers
  * @var StackNs::set_addr4 give an interface its IPv4 address
  * @var StackNs::tick      run one pass of the stack: drain, services, flush
+ * @var StackNs::transmit_hold hold the transmit buffer of an interface, and report it in
+ *                         ::StackVars::transmit_frame. Each interface holds one buffer at a time, and each
+ *                         frame of the interface goes out in it. A driver that gives its buffers out in turn
+ *                         thus gets each one back in turn.
+ * @var StackNs::transmit_post send the frame in the buffer that the interface holds
  */
 typedef struct
 {
@@ -135,6 +157,8 @@ typedef struct
     void (*const bind)(uint8_t *work);
     void (*const set_addr4)(uint8_t *work);
     void (*const tick)(uint8_t *work);
+    void (*const transmit_hold)(uint8_t *work);
+    void (*const transmit_post)(uint8_t *work);
 } StackNs;
 
 // The functions that the table binds. The .c defines each one, and each one takes one parameter.
@@ -142,6 +166,8 @@ void protocore_stack_start(uint8_t *work);
 void protocore_stack_bind(uint8_t *work);
 void protocore_stack_set_addr4(uint8_t *work);
 void protocore_stack_tick(uint8_t *work);
+void protocore_stack_transmit_hold(uint8_t *work);
+void protocore_stack_transmit_post(uint8_t *work);
 
 /**
  * @brief The cells of the unit borrows of idemIP, the region that each unit runs in.
@@ -207,6 +233,8 @@ static const StackNs Stack __attribute__((unused)) = {
     .bind = protocore_stack_bind,
     .set_addr4 = protocore_stack_set_addr4,
     .tick = protocore_stack_tick,
+    .transmit_hold = protocore_stack_transmit_hold,
+    .transmit_post = protocore_stack_transmit_post,
 };
 
 /** @brief The borrow of this module: its context, taken once from the persistent tier. */
