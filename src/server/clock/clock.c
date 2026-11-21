@@ -25,7 +25,7 @@ struct ClockStorage
 };
 
 /**
- * @brief The installed clocks and the calls that read them - what ClockNs points at.
+ * @brief The installed clocks and the calls that read them - what ServerClockNs points at.
  *
  * @var ClockInternal::store  each installed source and the factor it divides by
  * @var ClockInternal::ns     the handle a caller sets a call's members on
@@ -33,7 +33,7 @@ struct ClockStorage
 struct ClockInternal
 {
     struct ClockStorage *store;
-    ClockNs *ns;
+    ServerClockNs *ns;
 };
 
 static struct ClockStorage s_store = {NULL, 1u, NULL, 1u};
@@ -80,9 +80,9 @@ static void clock_cycles(struct ClockInternal *ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-ClockNs Clock = {.set_ms = clock_set_ms,
-                 .millis = clock_millis,
-                 .set_us = clock_set_us,
-                 .micros = clock_micros,
-                 .cycles = clock_cycles,
-                 .internal = &s_clock};
+ServerClockNs Clock = {.set_ms = clock_set_ms,
+                       .millis = clock_millis,
+                       .set_us = clock_set_us,
+                       .micros = clock_micros,
+                       .cycles = clock_cycles,
+                       .internal = &s_clock};

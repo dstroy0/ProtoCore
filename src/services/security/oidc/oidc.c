@@ -48,9 +48,9 @@ static const char *mem_find(const char *hs, const char *he, const char *needle)
     return NULL;
 }
 
-// Locate the JSON member @p name within [s, e). On success sets *vstart/*vlen to the value extent
-// and *type to 's' (string, between the quotes), 'n' (number, including a leading '-'), or 'a'
-// (array, including the brackets).
+// Finds the JSON member @p name in [s, e). Where it finds the member, it sets *vstart and *vlen to the
+// extent of the value. The value type in *type is 's' for a string between its quotes, and 'n' for a
+// number with its leading '-'. It is 'a' for an array with its brackets.
 static proto_bool find_field(const char *s, const char *e, const char *name, const char **vstart, size_t *vlen,
                              char *type)
 {
@@ -383,12 +383,10 @@ void protocore_oidc_token_kid(uint8_t *work)
 void protocore_oidc_jwks_find(uint8_t *work)
 {
     (void)work;
-    size_t scratch = protocore_plain_guard()->temporary_buf_mark();
     OidcV.ok = PROTO_FALSE;
     OidcV.key.rsa.loaded = PROTO_FALSE;
     if (!OidcV.key.jwks)
     {
-        protocore_plain_guard()->temporary_buf_release(scratch);
         return;
     }
     const char *want_kid = OidcV.key.kid;
@@ -401,7 +399,6 @@ void protocore_oidc_jwks_find(uint8_t *work)
           : NULL;
     if (!p)
     {
-        protocore_plain_guard()->temporary_buf_release(scratch);
         return;
     }
     p++;
@@ -441,17 +438,14 @@ void protocore_oidc_jwks_find(uint8_t *work)
         if (want && parse_rsa_jwk(work, obj, end, &OidcV.key.rsa))
         {
             OidcV.ok = PROTO_TRUE;
-            protocore_plain_guard()->temporary_buf_release(scratch);
             return;
         }
         if (want && want_kid && *want_kid)
         {
-            protocore_plain_guard()->temporary_buf_release(scratch);
             return; // the `kid` matched but the JWK is unusable
         }
         p = end;
     }
-    protocore_plain_guard()->temporary_buf_release(scratch);
 }
 
 // OIDC Core sec 3.1.3.7 against the key already in ns->key.rsa: steps 6 and 7 (signature and `alg`),
@@ -477,24 +471,22 @@ void protocore_oidc_verify_with_key(uint8_t *work)
         return;
     }
 
-    // Borrow the large decode buffers from the per-dispatch scratch arena rather than the worker
-    // stack. The mark below is released on every return path. The four are live together, so
-    // PROTOCORE_PLAINTEXT_WORK_OIDC is their sum and the arena is sized to hold it.
     static_assert(PROTOCORE_PLAINTEXT_WORK_OIDC <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "OIDC scratch exceeds the arena");
-    size_t scope = protocore_plain_guard()->temporary_buf_mark();
-    uint8_t *hdr =
-        (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_HDR_LEN, protocore_plain_owner());
-    uint8_t *sig =
-        (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_RSA_BYTES, protocore_plain_owner());
-    uint8_t *pl =
-        (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_MAX_LEN, protocore_plain_owner());
-    char *iss = (char *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_OIDC_ISS_LEN, protocore_plain_owner());
-    if (!hdr || !sig || !pl || !iss)
+
+    // The four decode buffers come from the plaintext cellblock and not the worker stack. One
+    // temporary cell of PROTOCORE_PLAINTEXT_WORK_OIDC holds all four at fixed offsets, because they
+    // are live together. Every return path releases that cell.
+    uint8_t *const decode =
+        (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_PLAINTEXT_WORK_OIDC, protocore_plain_owner());
+    if (!decode)
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
         return;
     }
+    uint8_t *const hdr = decode;
+    uint8_t *const sig = hdr + PROTOCORE_OIDC_HDR_LEN;
+    uint8_t *const pl = sig + PROTOCORE_OIDC_RSA_BYTES;
+    char *const iss = (char *)(pl + PROTOCORE_OIDC_MAX_LEN);
 
     // JOSE Header: require `alg` == RS256 (RFC 7515 sec 4.1.1), which rejects alg:none and the
     // MAC-based algorithms of OIDC Core sec 3.1.3.7 step 8.
@@ -506,7 +498,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     size_t hn = Base64V.n;
     if (hn == 0)
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
@@ -516,7 +508,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alg, .other = "RS256", .cap = sizeof("RS256"),
                     .ci = PROTO_FALSE))
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_ALG;
         return;
     }
@@ -529,7 +521,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     Base64.url_decode(work);
     if (Base64V.n != PROTOCORE_OIDC_RSA_BYTES)
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
@@ -538,15 +530,13 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     // their '.' (RFC 7515 sec 2). Rsa.verify hashes it; RS256 is SHA-256. One borrow for
     // that digest, returned either way before the Claims are read.
     size_t signing_input_len = (size_t)(seg[OIDC_SEG_PAYLOAD] + seglen[OIDC_SEG_PAYLOAD] - token);
-    size_t vmark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span vws = EMBED_CALL(spat.from, SpatiumCfg,
                                .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                    PROTOCORE_SHA256_BORROW, protocore_secure_owner()),
                                .cap = PROTOCORE_SHA256_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = vws))
     {
-        protocore_secure_guard()->temporary_buf_release(vmark);
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
         return;
     }
@@ -559,10 +549,10 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
     Rsa.verify(vws.buf);
     const proto_bool verified = RsaV.ok;
-    protocore_secure_guard()->temporary_buf_release(vmark);
+    protocore_secure_guard()->persistent_buf_release(vws.buf, protocore_secure_owner());
     if (!verified)
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_SIGNATURE;
         return;
     }
@@ -576,7 +566,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     size_t pn = Base64V.n;
     if (pn == 0)
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
@@ -594,7 +584,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
             !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = iss, .other = want_iss, .cap = want_len + 1u,
                         .ci = PROTO_FALSE))
         {
-            protocore_plain_guard()->temporary_buf_release(scope);
+            protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
             OidcV.result = PROTOCORE_OIDC_ERR_ISS;
             return;
         }
@@ -605,7 +595,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     {
         if (!aud_contains(ps, pe, want_aud))
         {
-            protocore_plain_guard()->temporary_buf_release(scope);
+            protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
             OidcV.result = PROTOCORE_OIDC_ERR_AUD;
             return;
         }
@@ -617,14 +607,14 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     int64_t exp = 0;
     if (!get_int64(ps, pe, "exp", &exp) || now >= exp)
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_EXPIRED;
         return;
     }
     int64_t nbf = 0;
     if (get_int64(ps, pe, "nbf", &nbf) && now < nbf)
     {
-        protocore_plain_guard()->temporary_buf_release(scope);
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_NOT_YET;
         return;
     }
@@ -633,7 +623,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     get_str(ps, pe, "sub", OidcV.claims.sub, sizeof(OidcV.claims.sub));
     get_str(ps, pe, "email", OidcV.claims.email, sizeof(OidcV.claims.email));
     get_int64(ps, pe, "iat", &OidcV.claims.iat);
-    protocore_plain_guard()->temporary_buf_release(scope);
+    protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
     OidcV.result = PROTOCORE_OIDC_OK;
 }
 

@@ -48,17 +48,15 @@ void protocore_device_id_from_mac(uint8_t *work)
     }
 
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
-    const MaximumSecurityGuard *guard = protocore_secure_guard();
-    const size_t mark = guard->temporary_buf_mark();
+    const MaxSecurityGuard *guard = protocore_secure_guard();
     uint8_t *w = (uint8_t *)guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW, protocore_secure_owner());
     if (!w)
     {
-        guard->temporary_buf_release(mark);
         out[0] = '\0';
         return;
     }
     Sha1.hash(w, input, sizeof(input), h);
-    guard->temporary_buf_release(mark);
+    guard->persistent_buf_release(w, protocore_secure_owner());
     h[6] = (uint8_t)((h[6] & 0x0F) | 0x50); // version 5
     h[8] = (uint8_t)((h[8] & 0x3F) | 0x80); // RFC 4122 variant
 

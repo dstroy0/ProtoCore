@@ -153,7 +153,6 @@ void test_fips197_aes128_block(void)
     hx("00112233445566778899aabbccddeeff", in, sizeof(in));
     hx("69c4e0d86a7b0430d8cdb78070b4c55a", want, sizeof(want));
 
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW,
                                                                                              protocore_secure_owner()),
@@ -165,7 +164,7 @@ void test_fips197_aes128_block(void)
     Aes128GcmV.block_args.out = out;
     Aes128Gcm.block_encrypt(w.buf);
     Aes128Gcm.block_wipe(w.buf);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     TEST_ASSERT_EQUAL_MEMORY(want, out, 16);
 }
 

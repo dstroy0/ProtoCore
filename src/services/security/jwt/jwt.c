@@ -261,18 +261,16 @@ void protocore_jwt_verify_mac(uint8_t *work)
 
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
     // One borrow for this token's MAC, returned before the compare.
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                   PROTOCORE_HMAC_SHA256_BORROW, protocore_secure_owner()),
                               .cap = PROTOCORE_HMAC_SHA256_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return;
     }
     HmacSha256.mac(ws.buf, JwtV.key.secret, JwtV.key.secret_len, (const uint8_t *)jws, parts.signing_len, mac);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
 
     char computed[JWT_SIG_B64_CAP];
     // A 32-byte MAC is always 43 base64url characters, so this length test never fires.

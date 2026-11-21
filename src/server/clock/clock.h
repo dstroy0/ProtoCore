@@ -66,16 +66,16 @@ struct ClockInternal;
  * A caller sets the members a call takes, invokes it through ::Clock, and reads the outcome off the
  * same handle. The installed sources are behind @ref internal.
  *
- * @var ClockNs::src       a time source and the rate it counts at
- * @var ClockNs::ms        milliseconds since boot
- * @var ClockNs::us        microseconds since boot
- * @var ClockNs::cyc       the free-running CPU cycle count
- * @var ClockNs::set_ms    install the millisecond source
- * @var ClockNs::millis    read it, or the platform's when none is installed
- * @var ClockNs::set_us    install the microsecond source
- * @var ClockNs::micros    read it, or the platform's when none is installed
- * @var ClockNs::cycles    read the cycle counter
- * @var ClockNs::internal  the installed sources and the calls that read them
+ * @var ServerClockNs::src       a time source and the rate it counts at
+ * @var ServerClockNs::ms        milliseconds since boot
+ * @var ServerClockNs::us        microseconds since boot
+ * @var ServerClockNs::cyc       the count of CPU cycles, which never stops
+ * @var ServerClockNs::set_ms    install the millisecond source
+ * @var ServerClockNs::millis    read it, or the clock of the platform where the caller gave no source
+ * @var ServerClockNs::set_us    install the microsecond source
+ * @var ServerClockNs::micros    read it, or the clock of the platform where the caller gave no source
+ * @var ServerClockNs::cycles    read the cycle counter
+ * @var ServerClockNs::internal  the installed sources and the calls that read them
  *
  * The sources live behind the handle rather than in this header because a caller installing a clock
  * and the library reading it are different translation units and have to see the same value.
@@ -95,10 +95,10 @@ typedef struct
     void (*cycles)(struct ClockInternal *ctx);
 
     struct ClockInternal *internal;
-} ClockNs;
+} ServerClockNs;
 
 /** @brief The one symbol this module exports. */
-extern ClockNs Clock;
+extern ServerClockNs Clock;
 
 /** @brief The library's monotonic time at 1000 Hz (milliseconds). */
 

@@ -17,12 +17,56 @@
 
 #if PROTOCORE_VENDOR_ESP
 
+#include "embed_turnstile.h" // embed_word_wait, embed_word_wake, embed_clock_ns: the hooks of the turnstiles
+#include "esp_timer.h"       // esp_timer_get_time: the microsecond clock since boot
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 uintptr_t protocore_platform_context_id(void)
 {
     return (uintptr_t)xTaskGetCurrentTaskHandle();
+}
+
+// The hooks that the turnstiles of embedded_types call. FreeRTOS has no wait on an address. A wait
+// is a sleep in steps, and the waiter reads the word after each step. A step is a yield while the
+// time left is less than one tick, and a delay of one tick otherwise. A wake does nothing, because
+// each sleeper reads the word again within one tick. No call reads embed_thread_place, because the
+// build sets MMGR_CARCER_REGIONS to 0.
+
+embed_word embed_clock_ns(void)
+{
+    // Explicit cast takes the product modulo the word. The clock reports its count in that range
+    return (embed_word)((embed_u64)esp_timer_get_time() * 1000u);
+}
+
+int embed_word_wait(embed_atomic_word *word, embed_atomic_word_value old_value, embed_word nanoseconds)
+{
+    // Explicit cast widens the tick period in milliseconds to the word of the clock
+    const embed_word tick_ns = (embed_word)portTICK_PERIOD_MS * (embed_word)1000000u;
+    const embed_word start_ns = embed_clock_ns();
+    while (embed_atomic_word_load(word) == old_value)
+    {
+        // Explicit cast takes the difference modulo the word, which is correct across a roll
+        const embed_word elapsed_ns = (embed_word)(embed_clock_ns() - start_ns);
+        if ((nanoseconds != EMBED_WAIT_INFINITE) && (elapsed_ns >= nanoseconds))
+        {
+            return 0;
+        }
+        if ((nanoseconds - elapsed_ns) < tick_ns)
+        {
+            taskYIELD();
+        }
+        else
+        {
+            vTaskDelay(1);
+        }
+    }
+    return 1;
+}
+
+void embed_word_wake(embed_atomic_word *word)
+{
+    (void)word;
 }
 
 #if PROTOCORE_HAS_VENDOR_MAC

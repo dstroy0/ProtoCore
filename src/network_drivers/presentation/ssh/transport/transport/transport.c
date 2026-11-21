@@ -1382,7 +1382,6 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
 
     // The key material is staged in the arena rather than on the worker stack: this runs at the
     // deepest point of the handshake, under the curve and bignum paths.
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span n_be = EMBED_CALL(spat.from, SpatiumCfg,
                                 .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_RSA_KEY_BYTES,
                                                                                                protocore_plain_owner()),
@@ -1401,7 +1400,10 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = n_be) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = e_be) ||
         !EMBED_CALL(spat.ok, SpatiumCfg, .span = pub) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_sig))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(ec_sig.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
         return PROTO_FALSE;
     }
 
@@ -1432,7 +1434,10 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
         break;
     }
     }
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(ec_sig.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(pub.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
     return ok;
 }
 
@@ -2497,17 +2502,14 @@ static inline uint8_t km_recv_mac_mode(const SshKeyMat *km, proto_bool cli)
 
 int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len, size_t out_cap, const SshDir *dir)
 {
-    size_t comp_scope = protocore_plain_guard()->temporary_buf_mark();
     if (i >= MAX_SSH_CONNS)
     {
-        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
     // The payload was built in place at SSH_WIRE_PAYLOAD_OFF, so its message number is there.
     const uint8_t msg_no = (payload_len >= 1) ? out[SSH_WIRE_PAYLOAD_OFF] : 0u;
     if (payload_len < 1 || !ssh_may_send(i, msg_no))
     {
-        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
     // Framing our KEXINIT is what opens the sec 7.1 window; ssh_newkeys_sent() closes it.
@@ -2521,13 +2523,11 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     // Sequence overflow guard.
     if (s->seq_no_send >= SSH_SEQ_CLOSE_THRESHOLD)
     {
-        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
 
     if (!ssh_pkt_slot_storage(s))
     {
-        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
 
@@ -2554,15 +2554,16 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
         }
         if (comp_failed)
         {
-            protocore_plain_guard()->temporary_buf_release(comp_scope);
+            protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
             return -1;
         }
         if (SSH_WIRE_PAYLOAD_OFF + clen > out_cap)
         {
-            protocore_plain_guard()->temporary_buf_release(comp_scope);
+            protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
             return -1;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + SSH_WIRE_PAYLOAD_OFF, .src = cbuf, .bytes = clen);
+        protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
         payload_len = clen;
     }
 #endif
@@ -2621,7 +2622,6 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
 
     if (wire_len > out_cap)
     {
-        protocore_plain_guard()->temporary_buf_release(comp_scope);
         return -1;
     }
 
@@ -2688,7 +2688,6 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
 
     *out_len = wire_len;
     s->seq_no_send++;
-    protocore_plain_guard()->temporary_buf_release(comp_scope);
     return 0;
 }
 
@@ -2714,7 +2713,6 @@ int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t 
 //         compressed stream / decompression overflow (the caller must wipe + disconnect).
 static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payload_len, ssh_msg_handler_t handler)
 {
-    size_t inflate_scope = protocore_plain_guard()->temporary_buf_mark();
 #if PROTOCORE_ENABLE_SSH_ZLIB
     proto_bool comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), i);
     if (comp_ok)
@@ -2732,21 +2730,20 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
         }
         if (inflate_failed)
         {
-            protocore_plain_guard()->temporary_buf_release(inflate_scope);
+            protocore_plain_guard()->persistent_buf_release(dbuf, protocore_plain_owner());
             return -1; // malformed stream, or a payload that decompresses beyond the uncompressed limit
         }
         if (dlen == 0)
         {
-            protocore_plain_guard()->temporary_buf_release(inflate_scope);
+            protocore_plain_guard()->persistent_buf_release(dbuf, protocore_plain_owner());
             return 0; // the packet carried only flush bits (no message); consume it and move on
         }
         handler(i, dbuf[0], dbuf, dlen);
-        protocore_plain_guard()->temporary_buf_release(inflate_scope);
+        protocore_plain_guard()->persistent_buf_release(dbuf, protocore_plain_owner());
         return 0;
     }
 #endif
     handler(i, payload[0], payload, payload_len);
-    protocore_plain_guard()->temporary_buf_release(inflate_scope);
     return 0;
 }
 
@@ -2829,7 +2826,6 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
 
 static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_handler_t handler)
 {
-    size_t scratch_scope = protocore_plain_guard()->temporary_buf_mark();
     // aes256-gcm@openssh.com (RFC 5647): the 4-byte packet_length is sent in the clear and is
     // the AEAD's additional authenticated data; the 16-byte GCM tag is verified over
     // (length || ciphertext) BEFORE any plaintext is produced.
@@ -2840,13 +2836,11 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     {
         mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
-        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1;
     }
     size_t wire_need = 4 + pkt_len + PROTOCORE_AESGCM_TAG_LEN;
     if (s->rx_len < wire_need)
     {
-        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return 0; // incomplete packet
     }
 
@@ -2856,7 +2850,6 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     {
         mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
-        protocore_plain_guard()->temporary_buf_release(scratch_scope);
         return -1;
     }
 
@@ -2875,7 +2868,7 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
         mmgr_zero_buf(scratch, scratch_sz);
         mmgr_zero_buf(s->rx_buf, s->rx_len);
         s->rx_len = 0;
-        protocore_plain_guard()->temporary_buf_release(scratch_scope);
+        protocore_plain_guard()->persistent_buf_release(scratch, protocore_plain_owner());
         return -1; // caller must close connection
     }
     // Tag verified: advance the RFC 5647 invocation counter (recv success).
@@ -2885,7 +2878,7 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     if (s->seq_no_recv >= SSH_SEQ_CLOSE_THRESHOLD)
     {
         mmgr_zero_buf(scratch, scratch_sz);
-        protocore_plain_guard()->temporary_buf_release(scratch_scope);
+        protocore_plain_guard()->persistent_buf_release(scratch, protocore_plain_owner());
         return -1;
     }
     s->seq_no_recv++;
@@ -2894,14 +2887,14 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
     if (pad_len_byte < 4 || pad_len_byte >= pkt_len)
     {
         mmgr_zero_buf(scratch, scratch_sz);
-        protocore_plain_guard()->temporary_buf_release(scratch_scope);
+        protocore_plain_guard()->persistent_buf_release(scratch, protocore_plain_owner());
         return -1;
     }
     size_t payload_len = pkt_len - 1 - pad_len_byte;
     if (ssh_dispatch_payload(i, scratch + 1, payload_len, handler) < 0)
     {
         mmgr_zero_buf(scratch, scratch_sz);
-        protocore_plain_guard()->temporary_buf_release(scratch_scope);
+        protocore_plain_guard()->persistent_buf_release(scratch, protocore_plain_owner());
         return -1;
     }
 
@@ -2910,7 +2903,7 @@ static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_
                .bytes = s->rx_len - consumed);
     s->rx_len -= consumed;
     mmgr_zero_buf(scratch, scratch_sz);
-    protocore_plain_guard()->temporary_buf_release(scratch_scope);
+    protocore_plain_guard()->persistent_buf_release(scratch, protocore_plain_owner());
     return 1;
 }
 
@@ -3617,14 +3610,12 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     // The reply buffer is borrowed for this dispatch, not carried on the worker stack: it is the
     // single largest frame on the SSH path and the handshake below it is the deepest call chain in
     // the library. temporary_buf_alloc binds the capacity to the allocation.
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span reply = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner()),
         .cap = SSH_PKT_BUF_SIZE);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = reply))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
         return -1; // arena exhausted: fail closed, the caller drops the connection
     }
     size_t n = 0;
@@ -3634,11 +3625,11 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_IGNORE:
     case SSH_MSG_DEBUG:         // RFC 4253 sec 11.3: display or discard; never answered
     case SSH_MSG_UNIMPLEMENTED: // sec 11.4: answering it with another would loop
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0;
 
     case SSH_MSG_DISCONNECT:
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return -1; // peer is closing
 
     case SSH_MSG_KEXINIT:
@@ -3650,7 +3641,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         protocore_ssh_transport_kexinit_parse(protocore_ssh_transport_span());
         if (SshTransportV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
         // RFC 4253 sec 7.1: "a party MUST respond with its own SSH_MSG_KEXINIT message, except when
@@ -3664,10 +3655,10 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_ssh_transport_kex_generate(protocore_ssh_transport_span());
             if (SshTransportV.i32 != 0)
             {
-                protocore_plain_guard()->temporary_buf_release(mark);
+                protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
                 return -1;
             }
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return 0;
         }
         SshTransportV.slot = i;
@@ -3677,7 +3668,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         n = SshTransportV.out_args.out_len;
         if (SshTransportV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
         SshNetworkV.ssh_slot = i;
@@ -3688,10 +3679,10 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         protocore_ssh_transport_kex_generate(protocore_ssh_transport_span());
         if (SshTransportV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0;
 
     case SSH_MSG_KEXDH_INIT:
@@ -3699,7 +3690,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         PhaseMachine.admits_kexdh_init(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
         // RFC 4253 sec 7.1: the client sent this ahead of the reply on a guess that lost negotiation,
@@ -3707,7 +3698,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         if (s->drop_guessed_kex_pkt)
         {
             s->drop_guessed_kex_pkt = PROTO_FALSE;
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return 0;
         }
         SshTransportV.slot = i;
@@ -3719,7 +3710,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         n = SshTransportV.out_args.out_len;
         if (SshTransportV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
         SshNetworkV.ssh_slot = i;
@@ -3736,7 +3727,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             protocore_ssh_transport_newkeys_sent(
                 protocore_ssh_transport_span()); // ...but our outbound is encrypted from the next packet on
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0; // ssh_kexdh_handle advanced phase to NEWKEYS
 
     case SSH_MSG_NEWKEYS:
@@ -3746,7 +3737,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         protocore_ssh_transport_newkeys_complete(protocore_ssh_transport_span());
         if (SshTransportV.i32 != 0) // activate encryption; → SERVICE or OPEN
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
         // RFC 8308: with encryption now active, advertise the signature algorithms
@@ -3772,11 +3763,11 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
             SshNetworkV.msg.len = n;
             SshNetwork.emit(protocore_ssh_network_span()); // fail: EXT_INFO is ~90 bytes and buf is SSH_PKT_BUF_SIZE
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0;
 
     case SSH_MSG_EXT_INFO:
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0; // RFC 8308: a client may send its own EXT_INFO; we ignore it
 
     case SSH_MSG_SERVICE_REQUEST:
@@ -3788,7 +3779,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         PhaseMachine.admits_service_request(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
         // sec 10: "If the server rejects the service request, it SHOULD send an appropriate
@@ -3805,7 +3796,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
                 SshNetworkV.msg.len = dn;
                 SshNetwork.emit(protocore_ssh_network_span());
             }
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             return -1;
         }
         SshNetworkV.ssh_slot = i;
@@ -3814,13 +3805,13 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         SshNetwork.emit(protocore_ssh_network_span());
         PhaseMachineV.service_done_args.i = i;
         PhaseMachine.service_done(protocore_ssh_transport_span());
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0;
 
     default:
         break;
     }
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
     // 50 and above are not ours: sec 6 hands them to the authentication protocol.
     SshAuthV.slot = i;
     SshAuthV.msg_type = msg_type;
@@ -4076,7 +4067,6 @@ proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len)
                                                            .other = "\x00\x00\x00\x13"
                                                                     "ecdsa-sha2-nistp256",
                                                            .bytes = 4 + 19) == 0;
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span n_be = EMBED_CALL(spat.from, SpatiumCfg,
                                 .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_RSA_KEY_BYTES,
                                                                                                protocore_plain_owner()),
@@ -4094,7 +4084,10 @@ proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len)
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = n_be) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = e_be) ||
         !EMBED_CALL(spat.ok, SpatiumCfg, .span = ed_pub) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_pub))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(ec_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(ed_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
         return PROTO_FALSE;
     }
     proto_bool parsed = PROTO_FALSE;
@@ -4110,7 +4103,10 @@ proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len)
     {
         parsed = parse_rsa_pubkey(blob, blob_len, n_be.buf, e_be.buf);
     }
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(ec_pub.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(ed_pub.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
     return parsed;
 }
 
@@ -4134,7 +4130,6 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     // Borrowed for this dispatch rather than carried on the worker stack. This sits on the deepest
     // call chain in the library (dispatch -> auth -> ed25519 verify -> ed_add), so the key material
     // and the signature staging buffer are what drive the worker stack requirement.
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span n_be = EMBED_CALL(spat.from, SpatiumCfg,
                                 .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_RSA_KEY_BYTES,
                                                                                                protocore_plain_owner()),
@@ -4152,7 +4147,10 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = n_be) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = e_be) ||
         !EMBED_CALL(spat.ok, SpatiumCfg, .span = ed_pub) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_pub))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(ec_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(ed_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
         return PROTO_FALSE;
     }
     proto_bool parsed = PROTO_FALSE;
@@ -4170,7 +4168,10 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     }
     if (!parsed)
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(ec_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(ed_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
         return PROTO_FALSE;
     }
 
@@ -4184,7 +4185,10 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     }
     if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(ec_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(ed_pub.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+        protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
         return PROTO_FALSE;
     }
     uint8_t *work = ssh_pkt[i].crypto_work;
@@ -4202,6 +4206,7 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
                                       .cap = PROTOCORE_ECDSA_P256_SIG_LEN);
         sig_ok = EMBED_CALL(spat.ok, SpatiumCfg, .span = ec_sig) && parse_ecdsa_sig(sig, sig_len, ec_sig.buf) &&
                  Ecdsa.verify(work, ec_pub.buf, signed_data, signed_len, ec_sig.buf);
+        protocore_plain_guard()->persistent_buf_release(ec_sig.buf, protocore_plain_owner());
     }
     else
     {
@@ -4215,7 +4220,10 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
         Rsa.verify(work);
         sig_ok = RsaV.ok;
     }
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(ec_pub.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(ed_pub.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(e_be.buf, protocore_plain_owner());
+    protocore_plain_guard()->persistent_buf_release(n_be.buf, protocore_plain_owner());
     return sig_ok;
 }
 
@@ -4250,7 +4258,6 @@ void ssh_transport_key_re_exchange(uint8_t i)
     {
         return;
     }
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     uint8_t *buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_secure_owner());
     size_t n = 0;
     SshTransportV.slot = i;
@@ -4268,7 +4275,7 @@ void ssh_transport_key_re_exchange(uint8_t i)
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(buf, protocore_secure_owner());
 }
 
 // ---------------------------------------------------------------------------

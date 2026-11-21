@@ -84,7 +84,6 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -98,7 +97,7 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
         AesGcmV.seal_args.tag_out = pt + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
     return total;
 }
@@ -131,7 +130,6 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -146,7 +144,7 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
         AesGcm.open(gcm);
         ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
     if (!ok)
     {

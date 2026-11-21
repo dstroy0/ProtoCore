@@ -65,18 +65,16 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
     {
         return 0;
     }
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA1_BORROW,
                                                                                              protocore_secure_owner()),
                              .cap = PROTOCORE_SHA1_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return 0;
     }
     Sha1.hash(w.buf, in, n, out);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     return PROTOCORE_IKE_NATD_HASH_LEN;
 }
 

@@ -262,7 +262,6 @@ void protocore_audit_log_append(uint8_t *work)
     }
     {
         // One borrow for this entry's chain hash, returned before the sink runs.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
                                   .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                       PROTOCORE_SHA256_BORROW, protocore_secure_owner()),
@@ -271,7 +270,7 @@ void protocore_audit_log_append(uint8_t *work)
         {
             chain_hash(ws.buf, prev, e, e->hash);
         }
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
     }
     AUDIT_LOG_CTX(work)->count++;
 
@@ -313,14 +312,12 @@ void protocore_audit_log_verify(uint8_t *work)
     uint32_t *first_broken_seq = AuditLogV.verify_args.first_broken_seq;
 
     // One borrow for the whole walk: the chain hash re-runs per entry out of the same bytes.
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA256_BORROW,
                                                                                               protocore_secure_owner()),
                               .cap = PROTOCORE_SHA256_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         AuditLogV.ok = PROTO_FALSE;
         return;
     }
@@ -338,13 +335,13 @@ void protocore_audit_log_verify(uint8_t *work)
             {
                 *first_broken_seq = e->seq;
             }
-            protocore_secure_guard()->temporary_buf_release(mark);
+            protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
             AuditLogV.ok = PROTO_FALSE;
             return;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = expected, .src = e->hash, .bytes = PROTOCORE_AUDIT_HASH_LEN);
     }
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
     AuditLogV.ok = PROTO_TRUE;
     return;
 }

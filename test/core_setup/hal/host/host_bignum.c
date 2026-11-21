@@ -111,14 +111,12 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
 {
     bn_init();
 
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span ws = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(sizeof(BnExpmodHost), protocore_secure_owner()),
         .cap = sizeof(BnExpmodHost));
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = sizeof(*out),
                    .val = 0); // pool exhausted: a zero result fails every downstream check
         return;
@@ -152,7 +150,7 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     protocore_rsa_hw_release();
 
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->d, .src = w->acc.d, .bytes = sizeof(out->d));
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
 }
 
 PROTOCORE_END_DECLS

@@ -218,14 +218,12 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *work)
     ssh_host_pubkey.loaded = PROTO_FALSE;
 
     // The DER is a working set: borrowed for this call, wiped by the release on every path out.
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span der = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(SSH_RSA_KEY_DER_MAX, protocore_secure_owner()),
         .cap = SSH_RSA_KEY_DER_MAX);
     if (!EMBED_CALL(spat.has_storage, SpatiumCfg, .span = der))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         SshRsaV.n = -1;
         return;
     }
@@ -236,7 +234,7 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *work)
         SSH_RSA_CTX(work)->ready = PROTO_TRUE;
         ssh_host_pubkey.loaded = PROTO_TRUE;
     }
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(der.buf, protocore_secure_owner());
     if (!SSH_RSA_CTX(work)->ready)
     {
         SshRsaV.n = -1;

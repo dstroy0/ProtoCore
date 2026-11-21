@@ -90,9 +90,9 @@ LocusCarcerum(ghost_site, MMGR_MINIMUM_SECURITY(ghost_plain), MMGR_MAXIMUM_SECUR
 
 // What each worker slot borrows through. NULL is the ghost's.
 static const MinimumSecurityGuard *s_plain[PROTOCORE_WORKER_COUNT];
-static const MaximumSecurityGuard *s_secure[PROTOCORE_WORKER_COUNT];
+static const MaxSecurityGuard *s_secure[PROTOCORE_WORKER_COUNT];
 
-void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaximumSecurityGuard *secure)
+void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaxSecurityGuard *secure)
 {
     if (worker < 0 || worker >= PROTOCORE_WORKER_COUNT)
     {
@@ -112,7 +112,7 @@ const MinimumSecurityGuard *protocore_plain_guard(void)
     return &ghost_site.ghost_plain;
 }
 
-const MaximumSecurityGuard *protocore_secure_guard(void)
+const MaxSecurityGuard *protocore_secure_guard(void)
 {
     const int w = protocore_worker_self();
     if (w >= 0 && w < PROTOCORE_WORKER_COUNT && s_secure[w] != NULL)
@@ -122,28 +122,18 @@ const MaximumSecurityGuard *protocore_secure_guard(void)
     return &ghost_site.ghost_secure;
 }
 
-// The library's two owners, one per tier of secrecy. Each registers on its first take, which comes
-// before any cell can be counted to it, and a second context registering it at once is refused
-// with nothing changed.
-static CellOwner s_plain_owner = MMGR_CELL_OWNER("protocore_plain");
-static CellOwner s_secure_owner = MMGR_CELL_OWNER("protocore_secure");
+// The owner table of the program, one owner for each tier of secrecy. No owner registers at run
+// time, because the linker resolves each identity.
+MMGR_OWNERS(PROTOCORE_OWNERS)
 
-CellOwner *protocore_plain_owner(void)
+const CellOwner *protocore_plain_owner(void)
 {
-    if (!mmgr_owner_registered(&s_plain_owner))
-    {
-        (void)mmgr_owner_register(&s_plain_owner);
-    }
-    return &s_plain_owner;
+    return protocore_owner_plain;
 }
 
-CellOwner *protocore_secure_owner(void)
+const CellOwner *protocore_secure_owner(void)
 {
-    if (!mmgr_owner_registered(&s_secure_owner))
-    {
-        (void)mmgr_owner_register(&s_secure_owner);
-    }
-    return &s_secure_owner;
+    return protocore_owner_secure;
 }
 
 void *protocore_plain_persist(size_t n)

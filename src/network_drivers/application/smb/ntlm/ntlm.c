@@ -26,14 +26,12 @@ void protocore_ntlm_nt_hash(uint8_t *work, const char *password, uint8_t *nt_has
 {
     (void)work;
 
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_MD_BORROW, protocore_secure_owner()),
         .cap = PROTOCORE_MD_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return;
     }
     Md.md4_init(w.buf);
@@ -46,7 +44,7 @@ void protocore_ntlm_nt_hash(uint8_t *work, const char *password, uint8_t *nt_has
     }
     MdV.final_args.out = nt_hash;
     Md.final(w.buf);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
 }
 
 proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
@@ -79,14 +77,12 @@ proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const c
         buf[n++] = (uint8_t)*p;
         buf[n++] = 0;
     }
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_MD_BORROW, protocore_secure_owner()),
         .cap = PROTOCORE_MD_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
     MdV.hmac_args.key = nt_hash;
@@ -95,7 +91,7 @@ proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const c
     MdV.hmac_args.msg_len = n;
     MdV.hmac_args.out = owf;
     Md.hmac_md5(w.buf);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     return PROTO_TRUE;
 }
 
@@ -113,14 +109,12 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
         opad[i] = (uint8_t)(k ^ 0x5c);
     }
     uint8_t inner[16];
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_MD_BORROW, protocore_secure_owner()),
         .cap = PROTOCORE_MD_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return;
     }
     Md.md5_init(w.buf);
@@ -147,7 +141,7 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
     Md.update(w.buf);
     MdV.final_args.out = out;
     Md.final(w.buf);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
 }
 
 size_t protocore_ntlm_v2_response(uint8_t *work, const uint8_t *owf, const uint8_t *server_challenge,
@@ -186,7 +180,6 @@ size_t protocore_ntlm_v2_response(uint8_t *work, const uint8_t *owf, const uint8
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = ntproof, .bytes = 16); // out = NTProofStr || temp
     if (session_key)
     {
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                                  .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                      PROTOCORE_MD_BORROW, protocore_secure_owner()),
@@ -200,7 +193,7 @@ size_t protocore_ntlm_v2_response(uint8_t *work, const uint8_t *owf, const uint8
             MdV.hmac_args.out = session_key;
             Md.hmac_md5(w.buf);
         }
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     }
     return protocore_resp_len;
 }
@@ -287,14 +280,12 @@ void protocore_ntlm_mic(uint8_t *work, const uint8_t *session_key, const uint8_t
         ipad[i] = (uint8_t)(k ^ 0x36);
         opad[i] = (uint8_t)(k ^ 0x5c);
     }
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_MD_BORROW, protocore_secure_owner()),
         .cap = PROTOCORE_MD_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return;
     }
     uint8_t inner[16];
@@ -322,7 +313,7 @@ void protocore_ntlm_mic(uint8_t *work, const uint8_t *session_key, const uint8_t
     Md.update(w.buf);
     MdV.final_args.out = out;
     Md.final(w.buf);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
 }
 
 #endif // PROTOCORE_ENABLE_SMB

@@ -6,3 +6,4 @@
 
 add_subdirectory(physical)
 add_subdirectory(radio_power)
+add_subdirectory(wifi_link)

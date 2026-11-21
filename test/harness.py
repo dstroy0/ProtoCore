@@ -1217,6 +1217,7 @@ def _flag_split(flags):
         "-Itest/support",
         "-Isrc",
         "-Iinclude",
+        "-Iinclude/idemIP",
         "-I.",
         "-Iinclude/MMgr/include",
         "-Iinclude/MMgr/src",
@@ -1237,7 +1238,9 @@ MMGR_SOURCES = [
     "include/MMgr/src/proximus_operor/proximus_operor.c",
     "include/MMgr/src/verbum_scrutor/verbum_scrutor.c",
     "include/MMgr/src/memoria_operor/memoria_operor.c",
+    "include/MMgr/src/memoria_operor/memoria_linea.c",
     "include/MMgr/src/cellularum_laboro/cellularum_laboro.c",
+    "include/MMgr/src/cellularum_laboro/cellularum_linea.c",
     "include/MMgr/src/spatium/spatium.c",
     "include/MMgr/src/octetus_introitus_exitus/octetus_introitus_exitus.c",
     "include/MMgr/src/locus_carcerum/locus_carcerum.c",
@@ -1252,6 +1255,27 @@ MMGR_SOURCES = [
     "include/MMgr/src/verba_scribo/verba_linea.c",
     "include/MMgr/src/numeros_scribo/numeros_scribo.c",
 ]
+
+# The host hooks of the turnstiles, which include/CMakeLists.txt builds as pc_mmgr_host_hooks. Every
+# env links them beside MMgr. On Windows the hooks call into the synchronization library.
+MMGR_HOST_HOOKS = "include/MMgr/test/support/host_wait.c"
+MMGR_HOST_HOOKS_INCLUDE = "-Iinclude/MMgr/test/support"
+MMGR_HOST_LIBS = ["-lm", "-lsynchronization"] if os.name == "nt" else ["-lm"]
+# On a MinGW target, a reference to a weak name keeps the offset of the weak default in its section.
+# One section for each function and object puts every weak default at offset 0, as the CMake build does.
+WEAK_SECTION_FLAGS = ["-ffunction-sections", "-fdata-sections"] if os.name == "nt" else []
+# An env with this define builds the idemIP stack, under include/idemIP.
+IDEMIP_GATE = "-DPROTOCORE_ENABLE_IDEMIP=1"
+
+
+def idemip_sources():
+    """The sources of idemIP, from include/CMakeLists.txt, which lists them for pc_idemip.
+
+    The direct compile reads the same list, and thus builds the same idemIP as the CMake build. The
+    capabilities come from include/idemip_capabilities.h, on the include path of each build.
+    """
+    with open(os.path.join(ROOT, "include", "CMakeLists.txt"), encoding="utf-8") as f:
+        return ["include/idemIP/src/" + s for s in re.findall(r'"\$\{_pc_idemip_src\}/([^"]+\.c)"', f.read())]
 
 
 def _resolve_src(globs):
@@ -1972,6 +1996,10 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         incs.append("-I" + os.path.relpath(d, ROOT).replace("\\", "/"))
     tus = _resolve_src(e["src"])
     tus += [source for source in MMGR_SOURCES if source not in tus]
+    if IDEMIP_GATE in defs:
+        tus += [source for source in idemip_sources() if source not in tus]
+    tus.append(MMGR_HOST_HOOKS)
+    incs.append(MMGR_HOST_HOOKS_INCLUDE)
     tus.append(os.path.relpath(os.path.join(usrc, "unity.c"), ROOT).replace("\\", "/"))
     out_lines = []
     rc_total = 0
@@ -2009,6 +2037,7 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
             gc = ["-Wl,--gc-sections"]
         base = (
             [cc, "-std=c11", "-D_POSIX_C_SOURCE=200809L", "-fno-exceptions"]
+            + WEAK_SECTION_FLAGS
             + opt
             + defs
             + incs
@@ -2035,9 +2064,9 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
                 out_lines.append(failed)
                 rc_total = 1
                 continue
-            cmd = [cc, "--coverage"] + gc + objs + ["-o", exe, "-lm"]
+            cmd = [cc, "--coverage"] + gc + objs + ["-o", exe] + MMGR_HOST_LIBS
         else:
-            cmd = base + gc + srcs + ["-o", exe, "-lm"]
+            cmd = base + gc + srcs + ["-o", exe] + MMGR_HOST_LIBS
         if verbose:
             out_lines.append(" ".join(cmd))
         b = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)

@@ -77,19 +77,17 @@ static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = concat + key_len, .src = WS_MAGIC, .bytes = magic_len);
 
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA1_BORROW,
                                                                                              protocore_secure_owner()),
                              .cap = PROTOCORE_SHA1_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         out[0] = '\0';
         return PROTO_FALSE;
     }
     Sha1.hash(w.buf, (const uint8_t *)concat, key_len + magic_len, digest);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
     Base64V.encode_args.dst = out;

@@ -337,7 +337,7 @@ extension: a borrow takes the first region that fits, a free routes to the ownin
 region by address. No heap, no stdlib, all state in `LocusCarcerum` (no globals), so it is
 unit-tested on the host.
 
-`MinimumSecurityGuard` and `MaximumSecurityGuard` are **not** second allocators. Each is an access layer
+`MinimumSecurityGuard` and `MaxSecurityGuard` are **not** second allocators. Each is an access layer
 that instantiates that one mechanism over its own compile-time-sized storage and
 decides who may reach it. `server/core/worker` is the one module in `src/` that names `LocusCarcerum`.
 
@@ -345,9 +345,9 @@ decides who may reach it. `server/core/worker` is the one module in `src/` that 
 | ------------------ | ------------------------------------------ | -------------------------------------------------------------- |
 | holds              | anything whose bytes are not secret        | key material only                                              |
 | hand-out           | uninitialized                              | uninitialized                                                  |
-| reclaim            | move the offset                            | **wipe, then** move the offset                                 |
-| who reclaims       | the worker, once per dispatch              | the borrower, at its own mark/release                          |
-| long-lived storage | (none - the pool is emptied each dispatch) | `secure.persist_span()`, the end no mark walks                 |
+| reclaim            | release the cell                           | **wipe, then** release the cell                                |
+| who reclaims       | the borrower, one release per cell         | the borrower, one release per cell                             |
+| long-lived storage | the persistent tier                        | `secure.persist_span()`, the persistent tier                   |
 | per-slot size      | `PROTOCORE_PLAINTEXT_ARENA_SIZE`           | `PROTOCORE_SECURE_ARENA_SIZE`, derived from the enabled crypto |
 
 The pool is chosen by whether the contents are secret and by nothing else. Lifetime is
@@ -371,12 +371,12 @@ those workers is scheduling and stays in `server/core/worker.h`.
 
 ### Who reclaims what
 
-- **Plaintext: the worker.** `dispatch_event()` calls `protocore_plain_guard()->temporary_buf_reset()` before
-  handing an event to its protocol handler. A borrow is valid only until that
-  handler returns and a forgotten release cannot accumulate across events. Inside one
-  dispatch, `temporary_buf_mark()` / `temporary_buf_release()` nest.
-- **Secure: the borrower, and reclaiming wipes.** `protocore_secure_guard()->temporary_buf_release()` zeroes the
-  reclaimed extent **before** the position moves, so the bytes are already zero at the
+- **Plaintext: the borrower.** The function that takes a cell with `temporary_buf_alloc()` gives it
+  back with `protocore_plain_guard()->persistent_buf_release(cell, protocore_plain_owner())`. It does
+  this on each path out of the function. The order of the releases is not important. A plaintext
+  release does not set the cell to zero. Use `mmgr_zero_buf()` before the release if the cell must be zero.
+- **Secure: the borrower, and the release wipes.** `protocore_secure_guard()->persistent_buf_release()` zeroes the
+  cell **before** the cellblock takes it back. The bytes are thus already zero at the
   instant they become available again - there is no window in which the next borrow is
   handed the previous tenant's key material. The wipe is structural. A
   discipline every return path has to remember had already been

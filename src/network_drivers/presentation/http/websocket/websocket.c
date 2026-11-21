@@ -289,14 +289,15 @@ void protocore_ws_send_frame(uint8_t *work)
     // flag makes legal.
     static_assert(PROTOCORE_PLAINTEXT_WORK_WS_SEND <= PROTOCORE_PLAINTEXT_ARENA_SIZE,
                   "WS deflate scratch exceeds the arena");
-    // The compressed buffer is handed to `payload` below and read by the emit calls at the end of
-    // this function, so the borrow spans the whole function and is released at each exit.
-    size_t pt_mark = protocore_plain_guard()->temporary_buf_mark();
+    // `payload` below points at the compressed buffer, and the emit calls at the end of this function
+    // read it. Thus the borrow spans the whole function, and each exit releases it. The function
+    // releases the compressor scratch when the compressor returns.
+    uint8_t *cbuf = NULL;
     if (ws->pmd && len > 0 && len <= PROTOCORE_WS_DEFLATE_MAX && (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY))
     {
         size_t cap = (size_t)len + len / 8 + 16; // static-Huffman worst-case headroom
-        void *scr = protocore_plain_guard()->temporary_buf_alloc(DEFLATE_SCRATCH_SIZE, protocore_plain_owner());
-        uint8_t *cbuf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(cap, protocore_plain_owner());
+        void *const scr = protocore_plain_guard()->temporary_buf_alloc(DEFLATE_SCRATCH_SIZE, protocore_plain_owner());
+        cbuf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(cap, protocore_plain_owner());
         if (scr && cbuf)
         {
             size_t clen = 0;
@@ -317,6 +318,7 @@ void protocore_ws_send_frame(uint8_t *work)
                 rsv1 = 0x40;
             }
         }
+        protocore_plain_guard()->persistent_buf_release(scr, protocore_plain_owner());
     }
 #endif
 
@@ -329,7 +331,7 @@ void protocore_ws_send_frame(uint8_t *work)
     {
         proto_bool sent = ws_emit_one(slot, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
 #if PROTOCORE_ENABLE_WS_DEFLATE
-        protocore_plain_guard()->temporary_buf_release(pt_mark);
+        protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
 #endif
         WsV.ok = sent;
         return;
@@ -348,7 +350,7 @@ void protocore_ws_send_frame(uint8_t *work)
         if (!ws_emit_one(slot, b0, payload + off, chunk))
         {
 #if PROTOCORE_ENABLE_WS_DEFLATE
-            protocore_plain_guard()->temporary_buf_release(pt_mark);
+            protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
 #endif
             return;
         }
@@ -356,7 +358,7 @@ void protocore_ws_send_frame(uint8_t *work)
         first = PROTO_FALSE;
     }
 #if PROTOCORE_ENABLE_WS_DEFLATE
-    protocore_plain_guard()->temporary_buf_release(pt_mark);
+    protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
 #endif
     WsV.ok = PROTO_TRUE;
 }
@@ -448,7 +450,6 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             // bounded and cannot fail.
             static_assert(PROTOCORE_PLAINTEXT_WORK_WS_RECV <= PROTOCORE_PLAINTEXT_ARENA_SIZE,
                           "WS inflate scratch exceeds the arena");
-            size_t pt_mark = protocore_plain_guard()->temporary_buf_mark();
             size_t comp_len = ws->msg_len;
             uint8_t *in =
                 (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(comp_len + 4, protocore_plain_owner());
@@ -458,7 +459,9 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
                 (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(INFLATE_SCRATCH_SIZE, protocore_plain_owner());
             if (!in || !out || !tbl)
             {
-                protocore_plain_guard()->temporary_buf_release(pt_mark);
+                protocore_plain_guard()->persistent_buf_release(tbl, protocore_plain_owner());
+                protocore_plain_guard()->persistent_buf_release(out, protocore_plain_owner());
+                protocore_plain_guard()->persistent_buf_release(in, protocore_plain_owner());
                 WsV.conn = ws;
                 WsV.frame.code = WS_CLOSE_PROTOCOL;
                 protocore_ws_close(work); // arena exhausted: fail closed
@@ -482,7 +485,9 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             InflateResult rc = InflateV.value;
             if (rc == INFLATE_ERR_OVERFLOW)
             {
-                protocore_plain_guard()->temporary_buf_release(pt_mark);
+                protocore_plain_guard()->persistent_buf_release(tbl, protocore_plain_owner());
+                protocore_plain_guard()->persistent_buf_release(out, protocore_plain_owner());
+                protocore_plain_guard()->persistent_buf_release(in, protocore_plain_owner());
                 WsV.conn = ws;
                 WsV.frame.code = WS_CLOSE_TOO_BIG;
                 protocore_ws_close(work);
@@ -491,7 +496,9 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             }
             if (rc != INFLATE_OK)
             {
-                protocore_plain_guard()->temporary_buf_release(pt_mark);
+                protocore_plain_guard()->persistent_buf_release(tbl, protocore_plain_owner());
+                protocore_plain_guard()->persistent_buf_release(out, protocore_plain_owner());
+                protocore_plain_guard()->persistent_buf_release(in, protocore_plain_owner());
                 WsV.conn = ws;
                 WsV.frame.code = WS_CLOSE_PROTOCOL;
                 protocore_ws_close(work);
@@ -501,7 +508,9 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ws->buf, .src = out, .bytes = dlen);
             ws->msg_len = dlen;
             ws->msg_compressed = PROTO_FALSE;
-            protocore_plain_guard()->temporary_buf_release(pt_mark);
+            protocore_plain_guard()->persistent_buf_release(tbl, protocore_plain_owner());
+            protocore_plain_guard()->persistent_buf_release(out, protocore_plain_owner());
+            protocore_plain_guard()->persistent_buf_release(in, protocore_plain_owner());
         }
 #endif
         // Whole message received - surface it to the application.

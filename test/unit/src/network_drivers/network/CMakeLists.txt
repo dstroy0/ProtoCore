@@ -6,3 +6,4 @@
 
 add_subdirectory(dns)
 add_subdirectory(forward)
+add_subdirectory(stack)

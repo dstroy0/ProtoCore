@@ -218,7 +218,6 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *work, const uint8_t *odc
 
     // Empty plaintext: seal writes only the 16-byte tag.
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *rk =
             protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW, protocore_secure_owner());
         Aes128GcmV.key_args.key = RETRY_KEY;
@@ -232,7 +231,7 @@ void protocore_quic_crypto_retry_integrity_tag(uint8_t *work, const uint8_t *odc
         Aes128GcmV.seal_args.tag_out = tag;
         Aes128Gcm.seal(rk);
         Aes128Gcm.key_wipe(rk);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(rk, protocore_secure_owner());
     }
 }
 

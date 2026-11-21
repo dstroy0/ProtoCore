@@ -19,7 +19,9 @@ protocore_add_module(test/core_setup/hal/esp
     esp_crypto_hal.c
     esp_platform.c
     esp_sha_hal.c
+    esp_wifi_radio.c
   DEPS
     crypto/asymmetric/bignum
+    network_drivers/physical/wifi_link
     mmgr
 )

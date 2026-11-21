@@ -164,18 +164,16 @@ void protocore_ws_client_accept_for_key(uint8_t *work)
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = concat, .src = key, .bytes = klen);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = concat + klen, .src = WS_ACCEPT_GUID, .bytes = glen);
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA1_BORROW,
                                                                                              protocore_secure_owner()),
                              .cap = PROTOCORE_SHA1_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return;
     }
     Sha1.hash(w.buf, (const uint8_t *)concat, klen + glen, digest);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     Base64V.encode_args.src = digest;
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
     Base64V.encode_args.dst = accept;

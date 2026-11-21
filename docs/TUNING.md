@@ -42,7 +42,7 @@ one per worker, plus the ghost, the library's own.
 
 | Pool                                      | Holds                                                    | Reclaim                                                                                                               |
 | ----------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| plaintext (`server/core/worker/worker.h`) | transient bytes that are not secret                      | `protocore_plain_guard()->temporary_buf_reset()` per dispatch; `protocore_plain_guard()->temporary_buf_release(mark)` |
+| plaintext (`server/core/worker/worker.h`) | transient bytes that are not secret                      | `protocore_plain_guard()->persistent_buf_release(cell, protocore_plain_owner())`, one for each cell                   |
 | secure (`server/core/worker/worker.h`)    | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                                                             |
 
 The two differ in exactly one thing: reclaiming the secure pool zeroes the region
@@ -59,16 +59,15 @@ only question is whether the bytes are secret.
 ### Borrowing
 
 ```c
-size_t mark = protocore_secure_guard()->temporary_buf_mark();
-uint8_t *k  = protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_KEY_LEN, protocore_secure_owner());
+uint8_t *k = protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_KEY_LEN, protocore_secure_owner());
 /* ... use k ... */
-protocore_secure_guard()->temporary_buf_release(mark);          /* wipes, then reclaims */
+protocore_secure_guard()->persistent_buf_release(k, protocore_secure_owner()); /* wipes, then reclaims */
 ```
 
 The caller asks for RAM and gets a pointer, and **the RAM is guaranteed to be there**.
 There is no fail-closed branch to write at a call site, because the size was settled
-before the compiler ran. `mark` / `release` are there for lifetime and, on the secure
-side, for the wipe - not for handling a failure that cannot happen.
+before the compiler ran. The release controls the lifetime of the cell. On the secure
+side, the release also wipes the cell. The release does not handle a failure, because that failure cannot occur.
 
 The second argument is the alignment, and it is a **condition the core sets**, not a
 favor it does. The core publishes what it provides - storage of a declared span, at a
@@ -91,9 +90,9 @@ request; left an ordinary struct member it would inherit only 8, so it is declar
 `_Alignas(32)` where the storage lives - stated once. No borrow has to hope
 the base is good enough.
 
-C does not do this for you: on the secure side **every** return path must
-reach `protocore_secure_guard()->temporary_buf_release()`, including the early ones taken when a peer sends
-something malformed. That is where the wipe happens.
+C does not do this for you. On the secure side, **every** return path must
+reach `protocore_secure_guard()->persistent_buf_release()`. The early return paths for a malformed message
+from a peer must reach it too. The wipe occurs in that release.
 
 ### Every TU precomputes, and mmgr knows
 

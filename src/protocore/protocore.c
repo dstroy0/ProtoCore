@@ -839,9 +839,7 @@ static_assert(PROTOCORE_PLAINTEXT_WORK_DIAG <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "
 
 void diag(uint8_t slot_id)
 {
-    // Mark before the borrow and release on every exit: the document is transient, and the
-    // per-dispatch reset is only the backstop.
-    const size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    // Every exit releases the cell, because the document is transient.
     char *doc =
         (char *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_PLAINTEXT_WORK_DIAG, protocore_plain_owner());
     if (doc == NULL ||
@@ -897,12 +895,12 @@ void diag(uint8_t slot_id)
                                                MMGR_VU32((uint32_t)EVT_QUEUE_DEPTH)},
                    .nvals = 49) == 0)
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(doc, protocore_plain_owner());
         send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire
         return;
     }
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, doc); // reads doc, so it runs before the release
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(doc, protocore_plain_owner());
 }
 PROTOCORE_END_DECLS
 

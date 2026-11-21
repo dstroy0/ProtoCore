@@ -39,11 +39,14 @@ OWED = os.path.join(ROOT, "test", "yanked_includes.json")
 # The include dirs every env compiles with, whatever it named. -Iinclude is PlatformIO's implicit
 # include_dir, where protocore.h lives; nothing here is pio, so each one is stated. The last three are
 # MMgr's roots (include/CMakeLists.txt): mmgr.h, <module>/<module>.h, and embedded_types.
+# idemIP includes its own headers as "src/..." from the root include/idemIP. That root comes before
+# the repository root.
 BASE_INCLUDES = [
     "test/core_setup/hal/host",
     "test/support",
     "src",
     "include",
+    "include/idemIP",
     ".",
     "include/MMgr/include",
     "include/MMgr/src",
@@ -299,6 +302,12 @@ target_compile_definitions(protocore_env_base INTERFACE _POSIX_C_SOURCE=200809L)
 target_compile_options(protocore_env_base INTERFACE -fno-exceptions -O1)
 target_include_directories(protocore_env_base INTERFACE "${PROTOCORE_UNITY_DIR}")
 target_link_libraries(protocore_env_base INTERFACE m)
+# On a MinGW target, a reference to a weak name keeps the offset of the weak default in its section.
+# One section for each function and object puts every weak default at offset 0, as include/ does for
+# pc_mmgr.
+if(MINGW)
+  target_compile_options(protocore_env_base INTERFACE -ffunction-sections -fdata-sections)
+endif()
 
 # One suite: its sources, its defines, its include dirs, and the one suite it runs.
 #
@@ -306,14 +315,16 @@ target_link_libraries(protocore_env_base INTERFACE m)
 # Unity's configuration are env defines, and a shared library compiles them out of every env that
 # asked for them. The direct compile in test/harness.py puts unity.c in the same TU list.
 function(protocore_env name)
-  cmake_parse_arguments(E "" "SUITE" "SOURCES;DEFINES;INCLUDES" ${ARGN})
+  cmake_parse_arguments(E "" "SUITE" "SOURCES;DEFINES;INCLUDES;LIBS" ${ARGN})
   add_executable(${name} ${E_SOURCES} "${PROTOCORE_UNITY_DIR}/unity.c")
   target_include_directories(${name} PRIVATE ${E_INCLUDES})
   target_compile_definitions(${name} PRIVATE ${E_DEFINES})
   target_link_libraries(${name} PRIVATE protocore_env_base)
-  # MMgr is linked by every env directly, since an OBJECT library's objects reach only the target
-  # that names it and never pass through protocore_env_base.
-  target_link_libraries(${name} PRIVATE pc_mmgr)
+  # Every env links MMgr and the host hooks of its turnstiles itself. The objects of an OBJECT
+  # library reach only the target that names it, and never pass through protocore_env_base.
+  target_link_libraries(${name} PRIVATE pc_mmgr pc_mmgr_host_hooks)
+  # An env with the stack links pc_idemip. Its PUBLIC defines and include roots come with it.
+  target_link_libraries(${name} PRIVATE ${E_LIBS})
   # The suite's own files and its include path arrive through its target, and are compiled here,
   # under this env's defines - see cmake/ProtoCoreSuite.cmake for why that is an INTERFACE library.
   protocore_suite_target("${E_SUITE}" _suite)
@@ -437,6 +448,8 @@ def render(envs, warn, dropped):
                 out.append("  DEFINES\n")
                 for d in defs:
                     out.append('    "%s"\n' % cmake_escape(d))
+            if "PROTOCORE_ENABLE_IDEMIP=1" in defs:
+                out.append("  LIBS\n    pc_idemip\n")
             out.append("  INCLUDES\n")
             for i in incs + lib_incs:
                 out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(i))

@@ -3791,6 +3791,39 @@
 
 #define PROTOCORE_PLAINTEXT_WORK_PHYSICAL PROTOCORE_PHYSICAL_BORROW
 
+#if PROTOCORE_ENABLE_IDEMIP
+#include "src/ethernet/ethernet_defines.h" // IDEMIP_TOTAL_BORROW and the frame, header and address lengths
+/**
+ * @brief The cells of the stack module: 32 units that the interfaces share, and 11 units on each interface.
+ */
+#define PROTOCORE_STACK_CELLS (32u + (11u * IDEMIP_NETIF_COUNT))
+/**
+ * @brief The bytes that one cell costs beyond its payload. MMgr adds two words and rounds the payload up to
+ *        a word.
+ */
+#define PROTOCORE_STACK_CELL_COST (3u * sizeof(size_t))
+/**
+ * @brief The context of the stack module: one pointer for each cell, and the pointer and the descriptor of the
+ *        reply buffer of each interface. 64 bytes hold the state and the padding.
+ */
+#ifndef PROTOCORE_STACK_BORROW
+#define PROTOCORE_STACK_BORROW                                                                                         \
+    ((PROTOCORE_STACK_CELLS * sizeof(uint8_t *)) + (IDEMIP_NETIF_COUNT * (sizeof(uint8_t *) + 1u)) + 64u)
+#endif
+/**
+ * @brief The cellblock of the units of idemIP: each unit and the cost of its cell, in whole MMGR_ALIGN_BYTES.
+ *
+ * @note The units have a cellblock of their own, apart from the plaintext arena. On a 32-bit word, a
+ *       cellblock holds 65535 bytes at most, and the arena and the units together are larger.
+ */
+#define PROTOCORE_STACK_CELLBLOCK_BYTES                                                                                \
+    IDEMIP_ROUND_UP(IDEMIP_TOTAL_BORROW + (PROTOCORE_STACK_CELLS * PROTOCORE_STACK_CELL_COST), MMGR_ALIGN_BYTES)
+/** @brief The share of the stack module in the plaintext arena: its context alone. */
+#define PROTOCORE_PLAINTEXT_WORK_STACK PROTOCORE_STACK_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_STACK 0
+#endif
+
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
 #define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                 \
     (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY +              \
@@ -3815,7 +3848,7 @@
      PROTOCORE_PLAINTEXT_WORK_NTPSERVICE + PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE +                                    \
      PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE + PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +  \
      PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_MTCONNECT + PROTOCORE_PLAINTEXT_WORK_FILESERVING +    \
-     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + 256)
+     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + PROTOCORE_PLAINTEXT_WORK_STACK + 256)
 #endif
 
 /**

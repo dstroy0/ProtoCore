@@ -304,7 +304,11 @@ target_include_directories(pc_config INTERFACE
   "${PROTOCORE_ROOT}/test/support"
   "${PROTOCORE_ROOT}/src"
   "${PROTOCORE_ROOT}/include"
-  "${PROTOCORE_ROOT}")
+  "${PROTOCORE_ROOT}/include/idemIP"
+  "${PROTOCORE_ROOT}"
+  "${PROTOCORE_ROOT}/include/MMgr/include"
+  "${PROTOCORE_ROOT}/include/MMgr/src"
+  "${PROTOCORE_ROOT}/include/embedded_types/include")
 
 # One module. DEPS are other modules; each is PUBLIC, so a consumer that links this one also gets
 # their headers and their own dependencies without naming them.
@@ -460,11 +464,13 @@ DECL_KEYWORDS = ("SOURCES", "DEPS", "PRIVATE_DEPS", "GATE", "HEADER_ONLY", "OPT"
 
 # Directories that hold no declarations and are expensive or wrong to walk: the build output, the
 # package cache, and MMgr, which is a submodule with its own mmgr_add_module() and its own audit.
-DECL_SKIP = {".git", ".pio", "build", "node_modules", "__pycache__", "MMgr"}
+# idemIP is a submodule with its own build description, and it declares no ProtoCore module.
+DECL_SKIP = {".git", ".pio", "build", "node_modules", "__pycache__", "MMgr", "idemIP"}
 
 # A DEPS name no CMakeLists declares with protocore_add_module(): MMgr, which include/CMakeLists.txt
 # builds as the target pc_mmgr. It is a real target, and its headers belong to no ProtoCore module.
-EXTERNAL_DEPS = {"mmgr"}
+# idemIP is the same. include/CMakeLists.txt builds it as the target pc_idemip.
+EXTERNAL_DEPS = {"mmgr", "idemip"}
 
 
 def declared():

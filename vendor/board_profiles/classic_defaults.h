@@ -113,4 +113,7 @@
 #define PROTOCORE_MESH_MAX_CONNS 1 // concurrent inbound peer-serve connections
 #endif
 
+// --- The idemIP stack (PROTOCORE_ENABLE_IDEMIP) ---
+#include "vendor/board_profiles/stack_profile.h" // PROTOCORE_RX_BUFFERS, which idemIP reads as well
+
 #endif // PROTOCORE_CLASSIC_DEFAULTS_H

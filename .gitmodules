@@ -5,3 +5,7 @@
 [submodule "include/embedded_types"]
 	path = include/embedded_types
 	url = https://github.com/dstroy0/embedded_types.git
+[submodule "include/idemIP"]
+	path = include/idemIP
+	url = https://github.com/dstroy0/idemIP.git
+	branch = main

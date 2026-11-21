@@ -1576,7 +1576,6 @@ static proto_bool ike_sk_aead_seal(const uint8_t *key, const uint8_t *salt, cons
     ike_gcm_nonce(nonce, salt, iv);
     // A fresh IV per message makes the context single use: init, seal once, wipe.
     {
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -1590,7 +1589,7 @@ static proto_bool ike_sk_aead_seal(const uint8_t *key, const uint8_t *salt, cons
         AesGcmV.seal_args.tag_out = out + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
     return PROTO_TRUE;
 }
@@ -1606,7 +1605,6 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
     ike_gcm_nonce(nonce, salt, iv);
     proto_bool ok = PROTO_FALSE;
     {
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -1621,7 +1619,7 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
         AesGcm.open(gcm);
         ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
     return ok;
 }
@@ -1648,14 +1646,12 @@ void protocore_ike_sk_aead_open(uint8_t *work)
 // only their operands, so the bytes the curve runs in are this file's.
 static proto_bool ike_x25519(proto_bool base, const uint8_t *scalar, const uint8_t *point, uint8_t *out)
 {
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                  PROTOCORE_CURVE25519_BORROW, protocore_secure_owner()),
                              .cap = PROTOCORE_CURVE25519_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return PROTO_FALSE;
     }
     if (base)
@@ -1672,7 +1668,7 @@ static proto_bool ike_x25519(proto_bool base, const uint8_t *scalar, const uint8
         Curve25519.x25519(w.buf);
     }
     const proto_bool ok = Curve25519V.ok;
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     return ok;
 }
 

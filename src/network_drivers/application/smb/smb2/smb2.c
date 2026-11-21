@@ -974,12 +974,11 @@ proto_bool protocore_smb2_derive_signing_key(uint8_t *work, const uint8_t *sessi
     fixed[n++] = 0x00;
     fixed[n++] = 0x00;
     fixed[n++] = 0x80;
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     uint8_t *w =
         (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_KDF_BORROW, protocore_secure_owner());
     proto_bool kdf_ok = Kdf.ctr_hmac_sha256(w, session_key, 16, fixed, n, out_key, 16);
     const proto_bool derived = kdf_ok;
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w, protocore_secure_owner());
     return derived;
 }
 
@@ -1024,12 +1023,11 @@ static proto_bool smb3_derive_cipher_key(const uint8_t session_key[16], uint16_t
     fixed[n++] = (uint8_t)((l_bits >> 16) & 0xff);
     fixed[n++] = (uint8_t)((l_bits >> 8) & 0xff);
     fixed[n++] = (uint8_t)(l_bits & 0xff);
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     uint8_t *w =
         (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_KDF_BORROW, protocore_secure_owner());
     proto_bool kdf_ok = Kdf.ctr_hmac_sha256(w, session_key, 16, fixed, n, out_key, key_len);
     const proto_bool derived = kdf_ok;
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w, protocore_secure_owner());
     return derived;
 }
 
@@ -1084,7 +1082,6 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *g = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW,
                                                                               protocore_secure_owner());
         Aes128GcmV.key_args.key = key;
@@ -1098,7 +1095,7 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         Aes128GcmV.seal_args.tag_out = tag;
         Aes128Gcm.seal(g);
         Aes128Gcm.key_wipe(g);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(g, protocore_secure_owner());
     }
         ok = PROTO_TRUE;
         break;
@@ -1106,7 +1103,6 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -1120,18 +1116,17 @@ size_t protocore_smb2_encrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         AesGcmV.seal_args.tag_out = tag;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
         ok = PROTO_TRUE;
         break;
     case SMB2_ENCRYPTION_AES128_CCM:
     case SMB2_ENCRYPTION_AES256_CCM: {
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *c =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESCCM_BORROW, protocore_secure_owner());
         proto_bool aes_ccm_ok = AesCcm.seal(c, key, key_len, out + 20, nonce_len, aad, 32, msg, msg_len, ct, tag);
         ok = aes_ccm_ok;
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(c, protocore_secure_owner());
     }
     break;
     default:
@@ -1185,7 +1180,6 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
     case SMB2_ENCRYPTION_AES128_GCM: {
         // Per-call context: same reasoning as the AES-256 branch below - not a hot enough path to justify
         // a per-session one, and the lifecycle cost is at least visible here.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *g = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW,
                                                                               protocore_secure_owner());
         Aes128GcmV.key_args.key = key;
@@ -1200,14 +1194,13 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         Aes128Gcm.open(g);
         ok = Aes128GcmV.ok;
         Aes128Gcm.key_wipe(g);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(g, protocore_secure_owner());
     }
     break;
     case SMB2_ENCRYPTION_AES256_GCM: {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -1222,17 +1215,16 @@ size_t protocore_smb2_decrypt(uint8_t *work, uint16_t cipher, const uint8_t *key
         AesGcm.open(gcm);
         ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
     break;
     case SMB2_ENCRYPTION_AES128_CCM:
     case SMB2_ENCRYPTION_AES256_CCM: {
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *c =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESCCM_BORROW, protocore_secure_owner());
         proto_bool aes_ccm_ok = AesCcm.open(c, key, key_len, aad, nonce_len, aad, 32, ct, ct_len, tag, out);
         ok = aes_ccm_ok;
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(c, protocore_secure_owner());
     }
     break;
     default:

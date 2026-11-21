@@ -313,14 +313,12 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
         *out_len = SshAuthV.out_args.out_len;
         return SshAuthV.i32;
     }
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span signed_data = EMBED_CALL(spat.from, SpatiumCfg,
                                        .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(
                                            SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN, protocore_plain_owner()),
                                        .cap = SSH_PKT_BUF_SIZE + 4 + SSH_KEXHASH_MAX_LEN);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = signed_data))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
         SshAuthV.partial = PROTO_FALSE;
@@ -330,7 +328,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     }
     if (req->signed_prefix_len > SSH_PKT_BUF_SIZE || 4 + sid_len + req->signed_prefix_len > signed_data.cap)
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(signed_data.buf, protocore_plain_owner());
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
         SshAuthV.partial = PROTO_FALSE;
@@ -350,7 +348,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
 
     proto_bool sig_ok = ssh_pubkey_verify(i, req->pk_algo, req->pk_blob, req->pk_blob_len, req->signature,
                                           req->signature_len, signed_data.buf, sd);
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(signed_data.buf, protocore_plain_owner());
     if (sig_ok)
     {
         PhaseMachineV.auth_done_args.i = i;
@@ -872,14 +870,12 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
     // The reply buffer is borrowed for this dispatch, not carried on the worker stack: it is the
     // single largest frame on the SSH path and the handshake below it is the deepest call chain in
     // the library. temporary_buf_alloc binds the capacity to the allocation.
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span reply = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner()),
         .cap = SSH_PKT_BUF_SIZE);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = reply))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
         SshAuthV.i32 = -1;
         return; // arena exhausted: fail closed, the caller drops the connection
     }
@@ -893,7 +889,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.auth_complete(work);
         if (PhaseMachineV.ok)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = 0;
             return;
         }
@@ -901,7 +897,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.admits_userauth(work);
         if (!PhaseMachineV.ok)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = -1;
             return;
         }
@@ -914,7 +910,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         n = SshAuthV.out_args.out_len;
         if (SshAuthV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = -1;
             return;
         }
@@ -934,11 +930,11 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         // SUCCESS or the publickey PK_OK probe does not. Past the threshold, disconnect.
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE && auth_failure_over_threshold(i, reply))
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = -1;
             return; // close the connection
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshAuthV.i32 = 0;
         return;
 
@@ -955,7 +951,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.auth_complete(work);
         if (PhaseMachineV.ok)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = 0;
             return;
         }
@@ -963,7 +959,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         PhaseMachine.admits_userauth(work);
         if (!PhaseMachineV.ok)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = -1;
             return;
         }
@@ -976,7 +972,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         n = SshAuthV.out_args.out_len;
         if (SshAuthV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = -1;
             return;
         }
@@ -992,11 +988,11 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
 #endif
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE && auth_failure_over_threshold(i, reply))
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = -1;
             return;
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshAuthV.i32 = 0;
         return;
 #endif
@@ -1024,11 +1020,11 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
                 SshNetworkV.msg.len = dn;
                 SshNetwork.emit(protocore_ssh_network_span());
             }
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshAuthV.i32 = -1;
             return;
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.chan.slot = i;
         SshConnectionV.msg_type = msg_type;
         SshConnectionV.chan.payload = payload;
@@ -1048,7 +1044,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         SshNetworkV.msg.len = un;
         SshNetwork.emit(protocore_ssh_network_span());
     }
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
     SshAuthV.i32 = 0;
     return;
 }
@@ -1079,7 +1075,6 @@ void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
     {
         return;
     }
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span reply = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner()),
@@ -1108,7 +1103,7 @@ void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

@@ -185,7 +185,6 @@ void protocore_tls_record_keys_derive(uint8_t *work)
     // afterwards, so no raw key stays resident. The HKDF's own bytes are the wider suite's, since the
     // schedule under a SHA-384 connection runs HKDF-SHA384.
     const size_t key_len = cipher_key_len(out->cipher);
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span k =
         EMBED_CALL(spat.from, SpatiumCfg,
                    .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(key_len, protocore_secure_owner()),
@@ -196,7 +195,8 @@ void protocore_tls_record_keys_derive(uint8_t *work)
                               .cap = PROTOCORE_HKDF_SHA384_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = k) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+        protocore_secure_guard()->persistent_buf_release(k.buf, protocore_secure_owner());
         EMBED_CALL(memor.set, MemoriaCfg, .dst = out->iv, .bytes = sizeof(out->iv), .val = 0);
         return; // no key material: every protect/unprotect below fails closed on the unkeyed context
     }
@@ -204,7 +204,8 @@ void protocore_tls_record_keys_derive(uint8_t *work)
     expand_label(work, out->cipher, ws.buf, TlsRecordV.key.secret, "iv", out->iv, sizeof(out->iv));
     // The arm may refuse the key; without a keyed context every record operation must refuse too.
     out->ready = aead_key_init(out->cipher, out->gcm, k.buf);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+    protocore_secure_guard()->persistent_buf_release(k.buf, protocore_secure_owner());
 }
 
 void protocore_tls_record_keys_wipe(uint8_t *work)

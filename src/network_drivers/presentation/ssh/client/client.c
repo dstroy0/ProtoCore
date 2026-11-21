@@ -453,7 +453,6 @@ static proto_bool build_kex_public(void)
         // sntrup761 keypair (sk kept for Decaps; pk is embedded in sk) + an X25519 ephemeral. C_INIT
         // (pk || Q_C) is assembled at send time from sk; Q_C lives in qc[0..31]. pk is only needed
         // transiently here (sk embeds a copy), so it borrows the scratch arena.
-        size_t mark = protocore_plain_guard()->temporary_buf_mark();
         uint8_t *pk = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_SNTRUP761_PK_BYTES,
                                                                               protocore_plain_owner());
         if (!pk)
@@ -461,8 +460,8 @@ static proto_bool build_kex_public(void)
             return PROTO_FALSE;
         }
         Sntrup761.keypair(work, pk, SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk);
-        protocore_plain_guard()->temporary_buf_release(
-            mark); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
+        protocore_plain_guard()->persistent_buf_release(
+            pk, protocore_plain_owner()); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
@@ -511,7 +510,6 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
                    .src = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc, .bytes = 32);
         hs->cpub_len = (uint16_t)clen;
         const size_t plen = 1 + 4 + clen;
-        size_t mark = protocore_plain_guard()->temporary_buf_mark();
         uint8_t *out = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(plen, protocore_plain_owner());
         if (!out)
         {
@@ -524,7 +522,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         proto_bool ok =
             EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
                                                            cli_send(protocore_ssh_client_span()), SshClient.ok);
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(out, protocore_plain_owner());
         return ok;
     }
 #endif
@@ -543,7 +541,6 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
                    .src = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc, .bytes = 32);
         hs->cpub_len = (uint16_t)clen;
         const size_t plen = 1 + 4 + clen;
-        size_t mark = protocore_plain_guard()->temporary_buf_mark();
         uint8_t *out = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(plen, protocore_plain_owner());
         if (!out)
         {
@@ -556,7 +553,7 @@ static proto_bool handle_server_kexinit(const uint8_t *p, size_t len)
         proto_bool ok =
             EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
                                                            cli_send(protocore_ssh_client_span()), SshClient.ok);
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(out, protocore_plain_owner());
         return ok;
     }
 #endif

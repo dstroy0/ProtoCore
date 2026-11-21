@@ -81,19 +81,37 @@ void protocore_worker_set_self(int id);
  * @param plain  the minimum-security guard for plaintext, or NULL to leave the slot on the ghost's.
  * @param secure the maximum-security guard for key material, or NULL to leave it on the ghost's.
  */
-void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaximumSecurityGuard *secure);
+void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaxSecurityGuard *secure);
 
 /** @brief The plaintext guard the calling worker borrows through. Never NULL. */
 const MinimumSecurityGuard *protocore_plain_guard(void);
 
 /** @brief The key-material guard the calling worker borrows through. Never NULL. */
-const MaximumSecurityGuard *protocore_secure_guard(void);
+const MaxSecurityGuard *protocore_secure_guard(void);
 
-/** @brief The owner every plaintext take in the library names. Registered, and never NULL. */
-CellOwner *protocore_plain_owner(void);
+/**
+ * @brief The owners of the library, as the list that MMGR_OWNERS takes.
+ *
+ * worker.c expands MMGR_OWNERS over this list one time for the program. Each entry is an identity
+ * and the name that a reader prints.
+ */
+#if PROTOCORE_ENABLE_IDEMIP
+#include "src/idemip_owners.h" // IDEMIP_OWNERS: the owner of each unit of the stack
+#define PROTOCORE_OWNERS(owner_)                                                                                       \
+    owner_(protocore_owner_plain, "protocore_plain") owner_(protocore_owner_secure, "protocore_secure")             \
+        IDEMIP_OWNERS(owner_)
+#else
+#define PROTOCORE_OWNERS(owner_)                                                                                       \
+    owner_(protocore_owner_plain, "protocore_plain") owner_(protocore_owner_secure, "protocore_secure")
+#endif
 
-/** @brief The owner every key-material take in the library names. Registered, and never NULL. */
-CellOwner *protocore_secure_owner(void);
+PROTOCORE_OWNERS(MMGR_OWNER_EXTERN)
+
+/** @brief The owner that every plaintext take in the library names. Never NULL. */
+const CellOwner *protocore_plain_owner(void);
+
+/** @brief The owner that every key-material take in the library names. Never NULL. */
+const CellOwner *protocore_secure_owner(void);
 
 /**
  * @brief @p n persistent plaintext bytes, zeroed, or NULL if the calling worker's cellblock is full.

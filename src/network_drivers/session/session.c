@@ -189,12 +189,6 @@ static void conn_release(uint8_t slot)
 // single-queue (N=1) and per-worker-queue (N>1) drain paths below.
 static inline void dispatch_event(const TcpEvt *evt)
 {
-    // Per-dispatch reset of the calling worker's scratch arena: every handler
-    // runs with the whole arena available, and any scratch it borrows is
-    // reclaimed before the next event - the backstop that stops a forgotten
-    // release from accumulating across events.
-    protocore_plain_guard()->temporary_buf_reset();
-
     // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
     ConnPoolV.slot = evt->slot_id;

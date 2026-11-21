@@ -401,9 +401,10 @@
 // bitmap of bound slots, the reentrancy latch and the text a joined group is formatted into. Scales
 // with the listener count and the ring. No key material, so the plaintext end. Proved against
 // sizeof(struct UdpListenerStorage) by a static_assert in udp/server/server.c.
-// One mmgr_ring: MMGR_RING_WORDS machine words, stated here because this header reaches no MMgr header.
-// The static_assert behind each borrow that uses it proves it against sizeof(mmgr_ring).
-#define PROTOCORE_RING_STORAGE_BYTES (40u * sizeof(size_t))
+// One ring of MMgr: MMGR_RING_WORDS machine words. The header mmgr_settings.h gives that count to MMgr and to
+// this header. The static_assert behind each borrow that uses it proves it against the size of the ring type.
+#include "mmgr_settings.h" // MMGR_RING_WORDS: the size of one ring of MMgr
+#define PROTOCORE_RING_STORAGE_BYTES ((size_t)MMGR_RING_WORDS * sizeof(size_t))
 
 #ifndef PROTOCORE_UDP_LISTENER_BORROW
 #define PROTOCORE_UDP_LISTENER_BORROW                                                                                  \
@@ -423,9 +424,9 @@
 // TcpConn, receive ring included), the nine close-reason counters, the idle deadline and the
 // installed observer. No key material - the slot payloads live in conn_pool, not here - so the
 // plaintext end. Proved against sizeof(struct ConnPoolStorage) by a static_assert in
-// tcp/protocol/protocol.c.
+// tcp/protocol/protocol.c. The receive ring of the template is one ring of MMgr, counted at its own size.
 #ifndef PROTOCORE_CONN_POOL_BORROW
-#define PROTOCORE_CONN_POOL_BORROW ((size_t)RX_BUF_SIZE + 512u)
+#define PROTOCORE_CONN_POOL_BORROW ((size_t)RX_BUF_SIZE + PROTOCORE_RING_STORAGE_BYTES + 256u)
 #endif
 
 // The accepting side's accept-time state: the global fixed-window throttle, the per-source-address

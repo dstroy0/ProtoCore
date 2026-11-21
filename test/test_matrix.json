@@ -1623,6 +1623,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<services/net/http_client/http_client.c>",
         "+<server/web/edge_cache/edge_cache/edge_cache.c>",
@@ -1683,6 +1684,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/web/edge_cache/edge_cache/edge_cache.c>",
         "+<network_drivers/application/http_range/http_range.c>",
         "+<network_drivers/presentation/http/httpcache/httpcache.c>",
@@ -1713,6 +1715,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/storage/wal/wal/wal.c>",
         "+<services/storage/wal/wal_store/wal_store.c>",
         "+<services/storage/dbm/dbm.c>",
@@ -1742,6 +1745,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<services/net/http_client/http_client.c>",
         "+<server/web/edge_cache/edge_cache/edge_cache.c>",
@@ -1989,6 +1993,35 @@
       ],
       "tests": [
         "unit/src/network_drivers/network/forward/test_forward"
+      ]
+    },
+    "native_stack": {
+      "desc": "The idemIP stack (network_drivers/network/stack) over the fake PHY of idemIP, at 192.168.1.2/24.\nIt answers an RFC 826 REQUEST with a REPLY, and an RFC 792 Echo with an Echo Reply.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_IDEMIP=1"
+      ],
+      "src": [
+        "+<server/core/worker/worker.c>",
+        "+<network_drivers/network/stack/stack.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/network/stack/test_stack"
+      ]
+    },
+    "native_wifi_link": {
+      "desc": "The Wi-Fi link (network_drivers/physical/wifi_link) over a radio that the suite answers.\nA release frees only the buffer it names, a full ring drops and counts, and an ARP REQUEST from the radio gets its REPLY through the stack.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_IDEMIP=1"
+      ],
+      "src": [
+        "+<server/core/worker/worker.c>",
+        "+<network_drivers/network/stack/stack.c>",
+        "+<network_drivers/physical/wifi_link/wifi_link.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/physical/test_wifi_link"
       ]
     },
     "native_forwarded_trust": {
@@ -2550,6 +2583,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/net/http_client/http_client.c>",
         "+<server/clock/clock.c>",
         "+<shared/hex/hex.c>",
@@ -6268,6 +6302,7 @@
       "desc": "RSASSA-PKCS1-v1.5 over RSA-2048 (crypto/asymmetric/rsa.h) on the software modular multiply. Verify is driven onto Project Wycheproof's rsa_signature_2048_sha256 and _sha512 files at a pinned commit - 97 rows of which 78 are the encoding attacks a lax PKCS#1 parser accepts: BER-encoded padding, altered ASN.1 in the DigestInfo, a missing NULL parameter, short padding, a representative raised past the modulus. Sign is held to signatures openssl produced over a throwaway key whose primes test/vectors/openssl_rsa_2048_sign.json publishes, octet for octet, plus the sign/verify round trip.",
       "flags": [],
       "src": [
+        "+<server/core/worker/worker.c>",
         "-<*>",
         "+<crypto/asymmetric/rsa/rsa.c>",
         "+<crypto/asymmetric/bignum/bignum.c>",
@@ -6284,6 +6319,7 @@
       "desc": "RSASSA-PKCS1-v1.5 over RSA-2048 a second time with the accelerated modular multiply selected (PROTOCORE_RSA_MODMUL_HW), answered by the host RSA/MPI HAL so both arms of the multiply run natively against the same vectors.",
       "flags": ["-DPROTOCORE_RSA_MODMUL_HW=1"],
       "src": [
+        "+<server/core/worker/worker.c>",
         "-<*>",
         "+<crypto/asymmetric/rsa/rsa.c>",
         "+<crypto/asymmetric/bignum/bignum.c>",

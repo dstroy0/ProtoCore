@@ -20,7 +20,7 @@
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_sess, ssh_pkt - session and packet state
 #include "numeros_scribo/numeros_scribo.h"                                  // mmgr_fval - the log field value
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.rd_u32 / byteio.rd_str - the one length-prefixed reader
-#include "server/core/worker/worker.h" // temporary_buf_alloc / _mark / _release - the dispatch reply buffer
+#include "server/core/worker/worker.h" // temporary_buf_alloc / persistent_buf_release - the dispatch reply buffer
 #include "shared/log/log.h"            // PROTOCORE_LOGD
 
 #if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
@@ -2305,14 +2305,12 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
     // The reply buffer is borrowed for this dispatch, not carried on the worker stack: it is the
     // single largest frame on the SSH path and the handshake below it is the deepest call chain in
     // the library. temporary_buf_alloc binds the capacity to the allocation.
-    size_t mark = protocore_plain_guard()->temporary_buf_mark();
     mmgr_span reply = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(SSH_PKT_BUF_SIZE, protocore_plain_owner()),
         .cap = SSH_PKT_BUF_SIZE);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = reply))
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
         SshConnectionV.i32 = -1;
         return; // arena exhausted: fail closed, the caller drops the connection
     }
@@ -2325,7 +2323,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         // meaningful post-auth; reply REQUEST_SUCCESS/FAILURE when want_reply is set.
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2338,7 +2336,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         n = SshConnectionV.chan.out_len;
         if (SshConnectionV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2349,14 +2347,14 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
             SshNetworkV.msg.len = n;
             SshNetwork.emit(protocore_ssh_network_span());
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
     case SSH_MSG_CHANNEL_OPEN:
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2369,7 +2367,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         n = SshConnectionV.chan.out_len;
         if (SshConnectionV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2377,7 +2375,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshNetworkV.msg.payload = reply.buf;
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
@@ -2386,7 +2384,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         // the peer window and start the bridge. A stray confirm is ignored (not fatal).
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2394,7 +2392,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshConnectionV.chan.payload = payload;
         SshConnectionV.chan.len = len;
         protocore_ssh_connection_channel_handle_open_confirm(work);
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
@@ -2402,7 +2400,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         // The client refused a server-initiated forwarded-tcpip open: tear the bridge down.
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2410,14 +2408,14 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshConnectionV.chan.payload = payload;
         SshConnectionV.chan.len = len;
         protocore_ssh_connection_channel_handle_open_failure(work);
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
     case SSH_MSG_CHANNEL_REQUEST:
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2430,7 +2428,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         n = SshConnectionV.chan.out_len;
         if (SshConnectionV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2438,14 +2436,14 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshNetworkV.msg.payload = reply.buf;
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span()); // SUCCESS/FAILURE only when want_reply was set
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
     case SSH_MSG_CHANNEL_DATA:
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2458,7 +2456,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         n = SshConnectionV.chan.out_len;
         if (SshConnectionV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2466,7 +2464,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshNetworkV.msg.payload = reply.buf;
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span()); // WINDOW_ADJUST when the receive window is replenished
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
@@ -2475,7 +2473,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         // than answered with UNIMPLEMENTED.
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2488,7 +2486,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         n = SshConnectionV.chan.out_len;
         if (SshConnectionV.i32 != 0)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2496,7 +2494,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshNetworkV.msg.payload = reply.buf;
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span()); // WINDOW_ADJUST when the receive window is replenished
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
@@ -2505,7 +2503,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         // is refused before authentication, these two included.
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2513,14 +2511,14 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshConnectionV.chan.payload = payload;
         SshConnectionV.chan.len = len;
         protocore_ssh_connection_channel_handle_window_adjust(work);
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
     case SSH_MSG_CHANNEL_EOF:
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2528,7 +2526,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshConnectionV.chan.payload = payload;
         SshConnectionV.chan.len = len;
         protocore_ssh_connection_channel_handle_eof(work);
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
@@ -2536,7 +2534,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         // RFC 4254 sec 5.3: answer an inbound CLOSE with CHANNEL_CLOSE, in its own binary packet.
         if (!s->authed)
         {
-            protocore_plain_guard()->temporary_buf_release(mark);
+            protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
             SshConnectionV.i32 = -1;
             return;
         }
@@ -2554,7 +2552,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
             SshNetworkV.msg.len = 5;
             SshNetwork.emit(protocore_ssh_network_span());
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
 
@@ -2562,14 +2560,14 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         // RFC 4253 sec 11.4: an unrecognized message is answered with SSH_MSG_UNIMPLEMENTED, which
         // the transport builds - message 3 and the receive counter are both its.
         size_t un = 0;
-        if (ssh_pkt_unimplemented(i, reply.buf, &un, sizeof(reply.buf)) == 0)
+        if (ssh_pkt_unimplemented(i, reply.buf, &un, reply.cap) == 0)
         {
             SshNetworkV.ssh_slot = i;
             SshNetworkV.msg.payload = reply.buf;
             SshNetworkV.msg.len = un;
             SshNetwork.emit(protocore_ssh_network_span());
         }
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshConnectionV.i32 = 0;
         return;
     }

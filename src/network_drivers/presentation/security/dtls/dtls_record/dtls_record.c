@@ -88,7 +88,6 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     // carries the "dtls13" HKDF-Expand-Label prefix (RFC 9147 §4.2.3 / §5.9).
     // The key becomes a keyed context here and the raw bytes are wiped; nothing downstream wants them.
     // The borrow wipes on release, on every exit path.
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span k = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                  PROTOCORE_AES128GCM_KEY_LEN, protocore_secure_owner()),
@@ -104,7 +103,9 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = k) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ws) ||
         !EMBED_CALL(spat.ok, SpatiumCfg, .span = snk))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(snk.buf, protocore_secure_owner());
+        protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+        protocore_secure_guard()->persistent_buf_release(k.buf, protocore_secure_owner());
         EMBED_CALL(memor.set, MemoriaCfg, .dst = out->iv, .bytes = sizeof(out->iv), .val = 0);
         return; // unkeyed: every protect/unprotect over these keys refuses
     }
@@ -115,7 +116,9 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     expand_label(work, ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
     Aes128GcmV.block_key_args.key = snk.buf;
     Aes128Gcm.block_init(out->gcm);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(snk.buf, protocore_secure_owner());
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+    protocore_secure_guard()->persistent_buf_release(k.buf, protocore_secure_owner());
 }
 
 // ---------------------------------------------------------------------------

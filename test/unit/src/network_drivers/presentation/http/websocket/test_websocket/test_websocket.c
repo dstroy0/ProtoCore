@@ -26,8 +26,8 @@ static uint8_t tw[4096]; // the borrow every namespace call in this suite runs o
 //
 // capacity() is the arena's nominal extent and used() counts only the scratch end, but the arena
 // also carries every persistent borrow the modules took at startup - so neither figure, nor their
-// difference, is what is allocatable. Halving between a mark and its release finds the real one
-// without assuming anything about how much has been taken.
+// difference, is what is allocatable. A bisection finds the real one. Each take in it goes back at
+// once, and the bisection makes no assumption about how much the modules took.
 static size_t ws_scratch_available(void)
 {
     size_t lo = 0;
@@ -35,9 +35,8 @@ static size_t ws_scratch_available(void)
     while (lo < hi)
     {
         size_t mid = lo + (hi - lo + 1u) / 2u;
-        size_t mark = protocore_plain_guard()->temporary_buf_mark();
         void *p = protocore_plain_guard()->temporary_buf_alloc(mid, protocore_plain_owner());
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(p, protocore_plain_owner());
         if (p != NULL)
         {
             lo = mid;
@@ -1373,7 +1372,7 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
 
-    protocore_plain_guard()->temporary_buf_reset();
+    protocore_plain_guard()->persistent_buf_release(hog, protocore_plain_owner());
 }
 
 static void feed_compressed_with_arena_leaving(size_t leave)
@@ -1388,7 +1387,6 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
-    protocore_plain_guard()->temporary_buf_reset();
     void *hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available() - leave, protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
 
@@ -1399,7 +1397,7 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_ERROR, ws->parse_state);
-    protocore_plain_guard()->temporary_buf_reset();
+    protocore_plain_guard()->persistent_buf_release(hog, protocore_plain_owner());
 }
 
 void test_ws_permessage_deflate_partial_scratch_failures()
@@ -1452,7 +1450,6 @@ void test_ws_outbound_binary_and_scratch_starved()
     TEST_ASSERT_EQUAL_UINT8(0x80 | 0x40 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
 
-    protocore_plain_guard()->temporary_buf_reset();
     void *hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available(), protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
@@ -1466,7 +1463,7 @@ void test_ws_outbound_binary_and_scratch_starved()
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
 
-    protocore_plain_guard()->temporary_buf_reset();
+    protocore_plain_guard()->persistent_buf_release(hog, protocore_plain_owner());
     hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available() - (DEFLATE_SCRATCH_SIZE + 8),
                                                        protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
@@ -1480,7 +1477,7 @@ void test_ws_outbound_binary_and_scratch_starved()
     s = (const uint8_t *)tcp_captured();
     TEST_ASSERT_EQUAL_UINT8(0x80 | (uint8_t)WS_OP_BINARY, s[0]);
     tcp_capture_disable();
-    protocore_plain_guard()->temporary_buf_reset();
+    protocore_plain_guard()->persistent_buf_release(hog, protocore_plain_owner());
 }
 
 void test_ws_outbound_pmd_zero_len_and_control()
