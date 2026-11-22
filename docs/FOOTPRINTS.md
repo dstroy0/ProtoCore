@@ -23,7 +23,7 @@ from each example's `pio ci` size report and aggregated into
 | `CSRF`                                                                                                    | L7-Application/Csrf                  | 967.6 KB (75.6%)  | 112.4 KB (35.1%) |
 | `DEFLATE_RFC1951+WEBSOCKET+WS_DEFLATE`                                                                    | L6-Presentation/WebSocketCompression | 972.8 KB (76.0%)  | 114.4 KB (35.8%) |
 | `DEVICE_ID`                                                                                               | L7-Application/DeviceUuid            | 961.6 KB (75.1%)  | 111.5 KB (34.8%) |
-| `DIAG`                                                                                                    | L7-Application/Diagnostics           | 941.7 KB (73.6%)  | 71.2 KB (22.3%)  |
+| `DIAG`                                                                                                    | Foundation/Configuration             | 942.9 KB (73.7%)  | 71.2 KB (22.3%)  |
 | `DMA+PREEMPT_QUEUE+DMA_SIMULATE`                                                                          | Peripherals/DmaIngest                | 374.4 KB (29.2%)  | 52.8 KB (16.5%)  |
 | `DMA+PREEMPT_QUEUE+FORWARD+DMA_SIMULATE`                                                                  | Foundation/InterfaceForward          | 376.6 KB (29.4%)  | 53.9 KB (16.9%)  |
 | `DMA+PREEMPT_QUEUE+GATEWAY+DMA_SIMULATE`                                                                  | Drivers/RadioGateway                 | 375.9 KB (29.4%)  | 53.1 KB (16.6%)  |
@@ -42,10 +42,10 @@ from each example's `pio ci` size report and aggregated into
 | `FILE_SERVING+MNT`                                                                                        | L7-Application/FileServing           | 992.3 KB (77.5%)  | 72.0 KB (22.5%)  |
 | `GPIO_MAP`                                                                                                | L7-Application/GpioMap               | 943.1 KB (73.7%)  | 71.4 KB (22.3%)  |
 | `GRAPHQL`                                                                                                 | L7-Application/GraphQL               | 943.8 KB (73.7%)  | 76.4 KB (23.9%)  |
-| `GUARDRAILS`                                                                                              | L7-Application/Guardrails            | 940.7 KB (73.5%)  | 71.3 KB (22.3%)  |
+| `GUARDRAILS`                                                                                              | L7-Application/Guardrails            | 940.8 KB (73.5%)  | 71.3 KB (22.3%)  |
 | `HOTSWAP`                                                                                                 | L7-Application/HotSwapStorage        | 1021.0 KB (79.8%) | 72.2 KB (22.6%)  |
 | `HTTP_CLIENT+TCP_CLIENT+DNS_RESOLVER`                                                                     | L7-Application/HttpClient            | 935.6 KB (73.1%)  | 113.0 KB (35.3%) |
-| `IDEMIP`                                                                                                  | Foundation/IdemIpPing                | 843.1 KB (65.9%)  | 116.8 KB (36.5%) |
+| `IDEMIP`                                                                                                  | Foundation/IdemIpPing                | 843.2 KB (65.9%)  | 116.8 KB (36.5%) |
 | `IFACE_BRIDGE`                                                                                            | L7-Application/InterfaceBridge       | 975.1 KB (76.2%)  | 76.2 KB (23.8%)  |
 | `IKEV2`                                                                                                   | L5-Session/IKEv2                     | 920.7 KB (71.9%)  | 82.8 KB (25.9%)  |
 | `INA219`                                                                                                  | Drivers/Ina219                       | 383.7 KB (30.0%)  | 48.1 KB (15.0%)  |
@@ -66,7 +66,7 @@ from each example's `pio ci` size report and aggregated into
 | `MPR121`                                                                                                  | Drivers/Mpr121                       | 383.4 KB (30.0%)  | 48.1 KB (15.0%)  |
 | `MQTT+TCP_CLIENT+DNS_RESOLVER`                                                                            | L7-Application/MqttClient            | 933.6 KB (72.9%)  | 110.1 KB (34.4%) |
 | `MSGPACK`                                                                                                 | L6-Presentation/MsgPack              | 944.1 KB (73.8%)  | 71.3 KB (22.3%)  |
-| `MULTIPART`                                                                                               | L6-Presentation/Multipart            | 942.4 KB (73.6%)  | 71.3 KB (22.3%)  |
+| `MULTIPART`                                                                                               | L6-Presentation/Multipart            | 942.5 KB (73.6%)  | 71.3 KB (22.3%)  |
 | `NMEA0183+UBX`                                                                                            | Drivers/UbloxGnss                    | 360.2 KB (28.1%)  | 29.3 KB (9.1%)   |
 | `NRF24+GATEWAY`                                                                                           | Drivers/Nrf24Gateway                 | 378.3 KB (29.6%)  | 45.2 KB (14.1%)  |
 | `NTP+TIME_SOURCE`                                                                                         | L7-Application/TimeSourceFallback    | 965.2 KB (75.4%)  | 111.7 KB (34.9%) |
@@ -75,7 +75,7 @@ from each example's `pio ci` size report and aggregated into
 | `OPCUA+EUROMAP77`                                                                                         | L7-Application/Euromap77             | 965.4 KB (75.4%)  | 81.5 KB (25.5%)  |
 | `OPCUA+ROBOTICS`                                                                                          | L7-Application/Robotics              | 965.4 KB (75.4%)  | 81.7 KB (25.5%)  |
 | `OPCUA+UMATI`                                                                                             | L7-Application/Umati                 | 965.3 KB (75.4%)  | 81.5 KB (25.5%)  |
-| `OTA_ROLLBACK`                                                                                            | L7-Application/OtaRollback           | 940.1 KB (73.4%)  | 71.3 KB (22.3%)  |
+| `OTA_ROLLBACK`                                                                                            | L7-Application/OtaRollback           | 940.2 KB (73.4%)  | 71.3 KB (22.3%)  |
 | `PACKML`                                                                                                  | L7-Application/PackML                | 941.9 KB (73.6%)  | 71.3 KB (22.3%)  |
 | `PARTITION_MONITOR`                                                                                       | L7-Application/PartitionMonitor      | 941.1 KB (73.5%)  | 71.3 KB (22.3%)  |
 | `PCA9685`                                                                                                 | Drivers/Pca9685                      | 382.3 KB (29.9%)  | 48.1 KB (15.0%)  |
@@ -110,8 +110,8 @@ from each example's `pio ci` size report and aggregated into
 | `ZWAVE+GATEWAY`                                                                                           | Drivers/ZWaveGateway                 | 374.5 KB (29.3%)  | 45.5 KB (14.2%)  |
 | `core/Advanced`                                                                                           | Foundation/Advanced                  | 968.9 KB (75.7%)  | 111.6 KB (34.9%) |
 | `core/Basic`                                                                                              | Foundation/Basic                     | 939.8 KB (73.4%)  | 71.2 KB (22.3%)  |
-| `core/CORS`                                                                                               | L7-Application/CORS                  | 940.0 KB (73.4%)  | 71.2 KB (22.3%)  |
-| `core/ChunkedResponse`                                                                                    | L7-Application/ChunkedResponse       | 940.6 KB (73.5%)  | 71.3 KB (22.3%)  |
+| `core/CORS`                                                                                               | L7-Application/CORS                  | 940.1 KB (73.4%)  | 71.2 KB (22.3%)  |
+| `core/ChunkedResponse`                                                                                    | L7-Application/ChunkedResponse       | 940.7 KB (73.5%)  | 71.3 KB (22.3%)  |
 | `core/Expert`                                                                                             | Foundation/Expert                    | 941.5 KB (73.6%)  | 71.3 KB (22.3%)  |
 | `core/FormParams`                                                                                         | L6-Presentation/FormParams           | 941.6 KB (73.6%)  | 71.2 KB (22.3%)  |
 | `core/InterfaceFilter`                                                                                    | L7-Application/InterfaceFilter       | 941.5 KB (73.6%)  | 71.2 KB (22.3%)  |
