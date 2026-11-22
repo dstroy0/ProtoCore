@@ -41,7 +41,7 @@ static int auth_handle_info_response(uint8_t slot, const uint8_t *payload, size_
 }
 #endif // PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 
-static int auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial)
+static int auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, embed_bool partial)
 {
     SshAuthV.out_args.out = out;
     SshAuthV.out_args.cap = cap;
@@ -102,7 +102,7 @@ static void auth_set_password_change_cb(SshPasswordChangeCb cb)
     SshAuth.set_password_change_cb(protocore_ssh_auth_span());
 }
 
-static void auth_pw_change_report(uint8_t slot, proto_bool ok)
+static void auth_pw_change_report(uint8_t slot, embed_bool ok)
 {
     SshAuthV.slot = slot;
     SshAuthV.ok = ok;
@@ -125,13 +125,13 @@ static int auth_handle_request(uint8_t slot, const uint8_t *payload, size_t len,
     return SshAuthV.i32;
 }
 
-static proto_bool s_change_seen;
+static embed_bool s_change_seen;
 static uint32_t s_clock;
 
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 static char s_seen_user[SSH_AUTH_USER_MAX];
 static char s_seen_pass[SSH_AUTH_PASS_MAX];
-static proto_bool s_answer;
+static embed_bool s_answer;
 static int s_calls;
 #endif
 
@@ -185,7 +185,7 @@ static void change_cb(uint8_t slot, const char *user, const char *oldpw, const c
     (void)user;
     (void)oldpw;
     (void)newpw;
-    s_change_seen = PROTO_TRUE; // returns at once; the outcome arrives via pw_change_report()
+    s_change_seen = EMBED_TRUE; // returns at once; the outcome arrives via pw_change_report()
 }
 
 static size_t build_pw_change(uint8_t *p, const char *oldpw, const char *newpw)
@@ -201,7 +201,7 @@ static void clock_past_cooldown(void)
     s_clock += PROTOCORE_SSH_PW_CHANGE_COOLDOWN_MS + 1u;
     set_millis(s_clock);
     // auth.c judges the cooldown against Clock.ms, the stamp one read of the source leaves behind.
-    // The dispatch loop refreshes it once a pass; there is no loop here, so moving the mock counter
+    // The dispatch loop refreshes it once a pass. There is no loop here, so moving the mock counter
     // alone leaves the library reading the previous instant.
     Clock.millis(Clock.internal);
 }
@@ -219,7 +219,7 @@ static size_t blob_of(uint8_t *p, const char *type, uint32_t type_len)
 
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 
-static proto_bool pw_cb(const char *user, const char *pass)
+static embed_bool pw_cb(const char *user, const char *pass)
 {
     s_calls++;
     size_t k = 0;
@@ -298,7 +298,7 @@ void setUp(void)
     auth_set_password_cb(pw_cb);
     s_seen_user[0] = '\0';
     s_seen_pass[0] = '\0';
-    s_answer = PROTO_TRUE;
+    s_answer = EMBED_TRUE;
     s_calls = 0;
 #endif
 }
@@ -550,7 +550,7 @@ static void test_sec5_1_failure_has_type_namelist_and_partial_flag(void)
     uint8_t out[128];
     size_t len = 0;
 
-    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), EMBED_FALSE));
     TEST_ASSERT_EQUAL_UINT8(SSH_MSG_USERAUTH_FAILURE, out[0]);
 
     uint32_t nl = rd32(out + 1);
@@ -563,10 +563,10 @@ static void test_sec5_1_partial_success_flag_is_carried(void)
     uint8_t out[128];
     size_t len = 0;
 
-    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), EMBED_TRUE));
     TEST_ASSERT_EQUAL_UINT8(1u, out[len - 1u]);
 
-    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), EMBED_FALSE));
     TEST_ASSERT_EQUAL_UINT8(0u, out[len - 1u]);
 }
 
@@ -574,7 +574,7 @@ static void test_sec5_2_none_is_not_offered_in_the_continue_list(void)
 {
     uint8_t out[128];
     size_t len = 0;
-    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), EMBED_FALSE));
 
     uint32_t nl = rd32(out + 1);
     char buf[96];
@@ -592,7 +592,7 @@ static void test_sec5_2_none_is_not_offered_in_the_continue_list(void)
         if (buf[k] == ',' || buf[k] == 0)
         {
             size_t seg = (size_t)(&buf[k] - start);
-            proto_bool is_none =
+            embed_bool is_none =
                 (seg == 4u) && start[0] == 'n' && start[1] == 'o' && start[2] == 'n' && start[3] == 'e';
             TEST_ASSERT_FALSE(is_none);
             start = &buf[k + 1];
@@ -604,7 +604,7 @@ static void test_sec5_1_continue_list_is_a_well_formed_name_list(void)
 {
     uint8_t out[128];
     size_t len = 0;
-    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &len, sizeof(out), EMBED_FALSE));
 
     uint32_t nl = rd32(out + 1);
     const uint8_t *names = out + 5;
@@ -624,12 +624,12 @@ static void test_sec5_1_failure_into_an_undersized_buffer_is_refused(void)
 {
     uint8_t out[128];
     size_t full = 0;
-    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &full, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_INT(0, auth_build_failure(out, &full, sizeof(out), EMBED_FALSE));
 
     for (size_t cap = 0; cap < full; cap++)
     {
         size_t len = 0;
-        TEST_ASSERT_EQUAL_INT(-1, auth_build_failure(out, &len, cap, PROTO_FALSE));
+        TEST_ASSERT_EQUAL_INT(-1, auth_build_failure(out, &len, cap, EMBED_FALSE));
     }
 }
 
@@ -661,11 +661,11 @@ static void test_reset_clears_any_pending_password_change(void)
 static void test_outcome_for_a_slot_with_no_change_in_flight_is_ignored(void)
 {
     auth_reset(0);
-    auth_pw_change_report(0, PROTO_TRUE);
+    auth_pw_change_report(0, EMBED_TRUE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 
     auth_reset(0);
-    auth_pw_change_report(0, PROTO_FALSE);
+    auth_pw_change_report(0, EMBED_FALSE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 }
 
@@ -677,7 +677,7 @@ static void test_sec8_change_outcome_round_trip(void)
 
     auth_reset(0);
     auth_set_password_change_cb(change_cb);
-    s_change_seen = PROTO_FALSE;
+    s_change_seen = EMBED_FALSE;
     clock_past_cooldown();
 
     size_t n = build_pw_change(p, "oldpass", "newpass");
@@ -686,7 +686,7 @@ static void test_sec8_change_outcome_round_trip(void)
 
     // Now that a change is in flight the outcome is accepted, and taking it consumes it so one
     // change produces one reply rather than a reply on every poll.
-    auth_pw_change_report(0, PROTO_TRUE);
+    auth_pw_change_report(0, EMBED_TRUE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_OK, protocore_ssh_auth_pw_change_take(0));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 
@@ -707,7 +707,7 @@ static void test_sec8_change_refusal_round_trip(void)
     size_t n = build_pw_change(p, "oldpass", "newpass");
     (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
 
-    auth_pw_change_report(0, PROTO_FALSE);
+    auth_pw_change_report(0, EMBED_FALSE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_FAIL, protocore_ssh_auth_pw_change_take(0));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take(0));
 
@@ -726,15 +726,15 @@ static void test_sec8_second_change_inside_the_cooldown_is_refused(void)
     clock_past_cooldown();
 
     size_t n = build_pw_change(p, "oldpass", "newpass");
-    s_change_seen = PROTO_FALSE;
+    s_change_seen = EMBED_FALSE;
     (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_TRUE(s_change_seen);
 
     // Answer the first one so the slot is idle again, then retry without advancing the clock.
-    auth_pw_change_report(0, PROTO_TRUE);
+    auth_pw_change_report(0, EMBED_TRUE);
     (void)protocore_ssh_auth_pw_change_take(0);
 
-    s_change_seen = PROTO_FALSE;
+    s_change_seen = EMBED_FALSE;
     (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_FALSE(s_change_seen);
 
@@ -756,7 +756,7 @@ static void test_sec8_change_while_one_is_in_flight_is_refused(void)
     (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
 
     clock_past_cooldown(); // the cooldown is not what refuses this one
-    s_change_seen = PROTO_FALSE;
+    s_change_seen = EMBED_FALSE;
     (void)auth_handle_request(0, p, n, out, &out_len, sizeof(out));
     TEST_ASSERT_FALSE(s_change_seen);
 
@@ -784,7 +784,7 @@ static void test_sec8_change_without_a_callback_is_refused(void)
 static void test_out_of_range_slot_is_ignored(void)
 {
     auth_reset((uint8_t)MAX_SSH_CONNS);
-    auth_pw_change_report((uint8_t)MAX_SSH_CONNS, PROTO_TRUE);
+    auth_pw_change_report((uint8_t)MAX_SSH_CONNS, EMBED_TRUE);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_SSH_PW_CHANGE_NONE, protocore_ssh_auth_pw_change_take((uint8_t)MAX_SSH_CONNS));
 }
 
@@ -1000,7 +1000,7 @@ static void test_sec3_4_rejected_response_fails(void)
 {
     uint8_t out[128];
     (void)arm("alice", out, sizeof(out));
-    s_answer = PROTO_FALSE;
+    s_answer = EMBED_FALSE;
 
     const char *r[] = {"wrong"};
     uint8_t pkt[64];

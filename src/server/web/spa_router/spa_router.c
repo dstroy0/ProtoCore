@@ -14,7 +14,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "server/web/spa_router/spa_router.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -22,17 +22,17 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_spa_router_has_extension(uint8_t *work);
+void protocore_spa_router_has_extension(const uint8_t *work);
 void protocore_spa_router_route(uint8_t *work);
 
-void protocore_spa_router_has_extension(uint8_t *work)
+void protocore_spa_router_has_extension(const uint8_t *work)
 {
     (void)work;
     const char *path = SpaRouterV.has_extension_args.path;
 
     if (!path)
     {
-        SpaRouterV.ok = PROTO_FALSE;
+        SpaRouterV.ok = EMBED_FALSE;
         return;
     }
     // The last '/' opens the final segment, the last '.' inside it marks the extension. find runs
@@ -43,7 +43,7 @@ void protocore_spa_router_has_extension(uint8_t *work)
     for (size_t i = 0; i < n; ++i) // each hit advances seg by at least one, so n bounds the trips
     {
         const char *slash = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = seg, .cap = n - (size_t)(seg - path),
-                                       .other = "/", .other_cap = sizeof("/"), .ci = PROTO_FALSE);
+                                       .other = "/", .other_cap = sizeof("/"), .ci = EMBED_FALSE);
         if (!slash)
         {
             break;
@@ -55,7 +55,7 @@ void protocore_spa_router_has_extension(uint8_t *work)
     for (size_t i = 0; i < n; ++i)
     {
         const char *hit = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = q, .cap = n - (size_t)(q - path),
-                                     .other = ".", .other_cap = sizeof("."), .ci = PROTO_FALSE);
+                                     .other = ".", .other_cap = sizeof("."), .ci = EMBED_FALSE);
         if (!hit)
         {
             break;
@@ -81,7 +81,7 @@ void protocore_spa_router_route(uint8_t *work)
     if (api_prefix && api_prefix[0])
     {
         size_t pl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = api_prefix, .cap = MAX_PATH_LEN + 1);
-        if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = api_prefix, .cap = pl, .ci = PROTO_FALSE))
+        if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = api_prefix, .cap = pl, .ci = EMBED_FALSE))
         {
             SpaRouterV.action = PROTOCORE_SPA_PASSTHROUGH;
             return; // "/api/..." -> handlers
@@ -131,7 +131,7 @@ void protocore_spa_router_route_ex(uint8_t *work)
 // Conditional UI streaming
 // ---------------------------------------------------------------------------
 
-void protocore_spa_router_ui_stream_begin(uint8_t *work)
+void protocore_spa_router_ui_stream_begin(const uint8_t *work)
 {
     (void)work;
     protocore_ui_stream *s = SpaRouterV.ui_stream_begin_args.s;
@@ -151,7 +151,7 @@ void protocore_spa_router_ui_stream_begin(uint8_t *work)
     s->done = (s->count == 0);
 }
 
-void protocore_spa_router_ui_stream_next(uint8_t *work)
+void protocore_spa_router_ui_stream_next(const uint8_t *work)
 {
     (void)work;
     protocore_ui_stream *s = SpaRouterV.ui_stream_next_args.s;
@@ -194,12 +194,12 @@ void protocore_spa_router_ui_stream_next(uint8_t *work)
     }
     if (s->idx >= s->count)
     {
-        s->done = PROTO_TRUE;
+        s->done = EMBED_TRUE;
     }
     SpaRouterV.n = written;
 }
 
-void protocore_spa_router_ui_stream_done(uint8_t *work)
+void protocore_spa_router_ui_stream_done(const uint8_t *work)
 {
     (void)work;
     const protocore_ui_stream *s = SpaRouterV.ui_stream_done_args.s;
@@ -210,6 +210,6 @@ void protocore_spa_router_ui_stream_done(uint8_t *work)
 /** @brief The operands and the outcome. */
 SpaRouterVars SpaRouterV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SPA_ROUTER

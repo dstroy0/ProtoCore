@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_CACHE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -48,17 +48,17 @@ PROTOCORE_BEGIN_DECLS
 typedef struct protocore_cache_control
 {
     // response cacheability
-    proto_bool cc_public;        ///< `public`
-    proto_bool cc_private;       ///< `private` (field-name list not captured)
-    proto_bool no_store;         ///< `no-store`
-    proto_bool no_cache;         ///< `no-cache` (field-name list not captured)
-    proto_bool no_transform;     ///< `no-transform`
-    proto_bool must_revalidate;  ///< `must-revalidate`
-    proto_bool proxy_revalidate; ///< `proxy-revalidate`
-    proto_bool must_understand;  ///< `must-understand`
-    proto_bool cc_immutable;     ///< `immutable` (RFC 8246)
+    embed_bool cc_public;        ///< `public`
+    embed_bool cc_private;       ///< `private` (field-name list not captured)
+    embed_bool no_store;         ///< `no-store`
+    embed_bool no_cache;         ///< `no-cache` (field-name list not captured)
+    embed_bool no_transform;     ///< `no-transform`
+    embed_bool must_revalidate;  ///< `must-revalidate`
+    embed_bool proxy_revalidate; ///< `proxy-revalidate`
+    embed_bool must_understand;  ///< `must-understand`
+    embed_bool cc_immutable;     ///< `immutable` (RFC 8246)
     // request
-    proto_bool only_if_cached; ///< `only-if-cached` (request)
+    embed_bool only_if_cached; ///< `only-if-cached` (request)
     // delta-seconds (-1 = absent)
     int32_t max_age;                ///< `max-age=N`
     int32_t s_maxage;               ///< `s-maxage=N`
@@ -123,7 +123,7 @@ typedef struct
 typedef struct
 {
     const protocore_cache_control *cc;
-    proto_bool shared;       ///< true for a shared cache (honors s-maxage)
+    embed_bool shared;       ///< true for a shared cache (honors s-maxage)
     long expires_minus_date; ///< `Expires` minus `Date` in seconds, or < 0 when that pair is absent
 } HttpcacheFreshnessLifetimeArgs;
 
@@ -170,7 +170,7 @@ typedef struct
     HttpcacheNoStoreArgs no_store_args;
     HttpcacheSharedArgs shared_args;
     HttpcacheFreshnessLifetimeArgs freshness_lifetime_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     long value;
 } HttpcacheVars;
@@ -181,26 +181,26 @@ extern HttpcacheVars HttpcacheV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const control_init)(uint8_t *work);
-    void (*const control_build)(uint8_t *work);
+    void (*const control_init)(const uint8_t *work);
+    void (*const control_build)(const uint8_t *work);
     void (*const control_parse)(uint8_t *work);
     void (*const immutable_asset)(uint8_t *work);
     void (*const revalidatable)(uint8_t *work);
     void (*const no_store)(uint8_t *work);
     void (*const shared)(uint8_t *work);
-    void (*const freshness_lifetime)(uint8_t *work);
+    void (*const freshness_lifetime)(const uint8_t *work);
 } HttpcacheNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpcacheV or a region of the borrow at a fixed offset.
-void protocore_httpcache_control_init(uint8_t *work);
-void protocore_httpcache_control_build(uint8_t *work);
+void protocore_httpcache_control_init(const uint8_t *work);
+void protocore_httpcache_control_build(const uint8_t *work);
 void protocore_httpcache_control_parse(uint8_t *work);
 void protocore_httpcache_immutable_asset(uint8_t *work);
 void protocore_httpcache_revalidatable(uint8_t *work);
 void protocore_httpcache_no_store(uint8_t *work);
 void protocore_httpcache_shared(uint8_t *work);
-void protocore_httpcache_freshness_lifetime(uint8_t *work);
+void protocore_httpcache_freshness_lifetime(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -217,7 +217,7 @@ static const HttpcacheNs Httpcache __attribute__((unused)) = {
     .freshness_lifetime = protocore_httpcache_freshness_lifetime,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CACHE
 

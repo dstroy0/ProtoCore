@@ -5,7 +5,7 @@
 //
 // This is the filesystem the device runs, so a caller that walks a collection - WebDAV's PROPFIND,
 // a recursive copy, anything that opens a directory - is answered by the same code on the host as
-// on hardware. A hand-rolled tree only ever agrees with itself: it invents its own ordering, never
+// on hardware. A hand-rolled tree only ever agrees with itself. It invents its own ordering, never
 // runs out of space, and cannot disagree with the device, which is exactly the disagreement worth
 // finding. Real littlefs gives real directory semantics, real ENOSPC, and real error codes.
 //
@@ -32,9 +32,9 @@
 
 typedef struct
 {
-    proto_bool open;
-    proto_bool is_dir;
-    proto_bool held; ///< reserved by a test, with no littlefs object behind it
+    embed_bool open;
+    embed_bool is_dir;
+    embed_bool held; ///< reserved by a test, with no littlefs object behind it
     lfs_file_t file;
     lfs_dir_t dir;
 } LfsmHandle;
@@ -44,7 +44,7 @@ typedef struct
     uint8_t storage[LFSM_BLOCK_SIZE * LFSM_BLOCK_COUNT];
     lfs_t lfs;
     struct lfs_config cfg;
-    proto_bool mounted;
+    embed_bool mounted;
 
     uint8_t rbuf[LFSM_CACHE_SIZE];
     uint8_t pbuf[LFSM_CACHE_SIZE];
@@ -135,12 +135,12 @@ static inline void lfsm_format(void)
             }
         }
         lfs_unmount(&g_lfsm.lfs);
-        g_lfsm.mounted = PROTO_FALSE;
+        g_lfsm.mounted = EMBED_FALSE;
     }
     for (int i = 0; i < LFSM_HANDLES; i++)
     {
-        g_lfsm.h[i].open = PROTO_FALSE;
-        g_lfsm.h[i].held = PROTO_FALSE;
+        g_lfsm.h[i].open = EMBED_FALSE;
+        g_lfsm.h[i].held = EMBED_FALSE;
     }
     g_lfsm.prog_fail_in = 0;
     g_lfsm.read_budget = (size_t)-1;
@@ -164,7 +164,7 @@ static inline void lfsm_format(void)
     memset(g_lfsm.storage, 0xFF, sizeof(g_lfsm.storage));
     if (lfs_format(&g_lfsm.lfs, &g_lfsm.cfg) == 0 && lfs_mount(&g_lfsm.lfs, &g_lfsm.cfg) == 0)
     {
-        g_lfsm.mounted = PROTO_TRUE;
+        g_lfsm.mounted = EMBED_TRUE;
     }
 }
 
@@ -197,20 +197,20 @@ static inline void lfsm_mkdir_parents(const char *path)
 }
 
 /** @brief Write a whole file, creating the collections above it first. */
-static inline proto_bool lfsm_write_file(const char *path, const void *data, size_t len)
+static inline embed_bool lfsm_write_file(const char *path, const void *data, size_t len)
 {
     lfsm_mkdir_parents(path);
     lfs_file_t f;
     if (lfs_file_open(&g_lfsm.lfs, &f, path, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC) < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     lfs_ssize_t n = lfs_file_write(&g_lfsm.lfs, &f, data, (lfs_size_t)len);
     lfs_file_close(&g_lfsm.lfs, &f);
-    return (n == (lfs_ssize_t)len) ? PROTO_TRUE : PROTO_FALSE;
+    return (n == (lfs_ssize_t)len) ? EMBED_TRUE : EMBED_FALSE;
 }
 
-static inline proto_bool lfsm_write_text(const char *path, const char *text)
+static inline embed_bool lfsm_write_text(const char *path, const char *text)
 {
     return lfsm_write_file(path, text, strlen(text));
 }
@@ -221,22 +221,22 @@ static inline proto_bool lfsm_write_text(const char *path, const char *text)
 #define LFSM_ATTR_MTIME 'm'
 
 /** @brief Set a file's modification time. */
-static inline proto_bool lfsm_set_mtime(const char *path, uint32_t secs)
+static inline embed_bool lfsm_set_mtime(const char *path, uint32_t secs)
 {
-    return lfs_setattr(&g_lfsm.lfs, path, LFSM_ATTR_MTIME, &secs, sizeof secs) == 0 ? PROTO_TRUE : PROTO_FALSE;
+    return lfs_setattr(&g_lfsm.lfs, path, LFSM_ATTR_MTIME, &secs, sizeof secs) == 0 ? EMBED_TRUE : EMBED_FALSE;
 }
 
 /** @brief Write a whole file and date it in one call. */
-static inline proto_bool lfsm_write_text_at(const char *path, const char *text, uint32_t secs)
+static inline embed_bool lfsm_write_text_at(const char *path, const char *text, uint32_t secs)
 {
     return lfsm_write_text(path, text) && lfsm_set_mtime(path, secs);
 }
 
-static inline proto_bool lfsm_mkdir(const char *path)
+static inline embed_bool lfsm_mkdir(const char *path)
 {
     lfsm_mkdir_parents(path);
     int rc = lfs_mkdir(&g_lfsm.lfs, path);
-    return (rc == 0 || rc == LFS_ERR_EXIST) ? PROTO_TRUE : PROTO_FALSE;
+    return (rc == 0 || rc == LFS_ERR_EXIST) ? EMBED_TRUE : EMBED_FALSE;
 }
 
 // --- forcing a failure, by causing it rather than flagging it -------------------
@@ -284,9 +284,9 @@ static inline void lfsm_hold_all_handles(void)
     {
         if (!g_lfsm.h[i].open)
         {
-            g_lfsm.h[i].open = PROTO_TRUE;
-            g_lfsm.h[i].is_dir = PROTO_FALSE;
-            g_lfsm.h[i].held = PROTO_TRUE;
+            g_lfsm.h[i].open = EMBED_TRUE;
+            g_lfsm.h[i].is_dir = EMBED_FALSE;
+            g_lfsm.h[i].held = EMBED_TRUE;
         }
     }
 }
@@ -296,7 +296,7 @@ static inline void lfsm_release_handles(void)
 {
     for (int i = 0; i < LFSM_HANDLES; i++)
     {
-        g_lfsm.h[i].open = PROTO_FALSE;
+        g_lfsm.h[i].open = EMBED_FALSE;
     }
 }
 
@@ -415,8 +415,8 @@ static inline int lfsm_open(const char *path, int mode)
     {
         return -1;
     }
-    g_lfsm.h[i].open = PROTO_TRUE;
-    g_lfsm.h[i].is_dir = PROTO_FALSE;
+    g_lfsm.h[i].open = EMBED_TRUE;
+    g_lfsm.h[i].is_dir = EMBED_FALSE;
     return i;
 }
 
@@ -461,7 +461,7 @@ static inline void lfsm_close(int handle)
     }
     if (g_lfsm.h[handle].held)
     {
-        g_lfsm.h[handle].held = PROTO_FALSE; // reserved by a test; littlefs never saw it
+        g_lfsm.h[handle].held = EMBED_FALSE; // reserved by a test; littlefs never saw it
     }
     else if (g_lfsm.h[handle].is_dir)
     {
@@ -471,33 +471,33 @@ static inline void lfsm_close(int handle)
     {
         lfs_file_close(&g_lfsm.lfs, &g_lfsm.h[handle].file);
     }
-    g_lfsm.h[handle].open = PROTO_FALSE;
+    g_lfsm.h[handle].open = EMBED_FALSE;
 }
 
-static inline proto_bool lfsm_seek(int handle, uint64_t off)
+static inline embed_bool lfsm_seek(int handle, uint64_t off)
 {
     if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || g_lfsm.h[handle].is_dir ||
         g_lfsm.h[handle].held)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return lfs_file_seek(&g_lfsm.lfs, &g_lfsm.h[handle].file, (lfs_soff_t)off, LFS_SEEK_SET) >= 0 ? PROTO_TRUE
-                                                                                                  : PROTO_FALSE;
+    return lfs_file_seek(&g_lfsm.lfs, &g_lfsm.h[handle].file, (lfs_soff_t)off, LFS_SEEK_SET) >= 0 ? EMBED_TRUE
+                                                                                                  : EMBED_FALSE;
 }
 
-static inline proto_bool lfsm_stat(const char *path, protocore_mnt_stat *out)
+static inline embed_bool lfsm_stat(const char *path, protocore_mnt_stat *out)
 {
     struct lfs_info info;
     if (!g_lfsm.mounted || lfs_stat(&g_lfsm.lfs, path, &info) < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    out->is_dir = (info.type == LFS_TYPE_DIR) ? PROTO_TRUE : PROTO_FALSE;
+    out->is_dir = (info.type == LFS_TYPE_DIR) ? EMBED_TRUE : EMBED_FALSE;
     out->size = (info.type == LFS_TYPE_DIR) ? 0u : info.size;
     uint32_t secs = 0; // absent attribute reads back as no clock, which is 0
     out->mtime =
         (lfs_getattr(&g_lfsm.lfs, path, LFSM_ATTR_MTIME, &secs, sizeof secs) == (lfs_ssize_t)sizeof secs) ? secs : 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static inline long lfsm_size(const char *path)
@@ -506,30 +506,30 @@ static inline long lfsm_size(const char *path)
     return lfsm_stat(path, &st) ? (long)st.size : -1;
 }
 
-static inline proto_bool lfsm_exists(const char *path)
+static inline embed_bool lfsm_exists(const char *path)
 {
     protocore_mnt_stat st;
     return lfsm_stat(path, &st);
 }
 
-static inline proto_bool lfsm_remove(const char *path)
+static inline embed_bool lfsm_remove(const char *path)
 {
-    return lfs_remove(&g_lfsm.lfs, path) == 0 ? PROTO_TRUE : PROTO_FALSE;
+    return lfs_remove(&g_lfsm.lfs, path) == 0 ? EMBED_TRUE : EMBED_FALSE;
 }
 
-static inline proto_bool lfsm_rename(const char *from, const char *to)
+static inline embed_bool lfsm_rename(const char *from, const char *to)
 {
-    return lfs_rename(&g_lfsm.lfs, from, to) == 0 ? PROTO_TRUE : PROTO_FALSE;
+    return lfs_rename(&g_lfsm.lfs, from, to) == 0 ? EMBED_TRUE : EMBED_FALSE;
 }
 
-static inline proto_bool lfsm_mkdir_op(const char *path)
+static inline embed_bool lfsm_mkdir_op(const char *path)
 {
-    return lfs_mkdir(&g_lfsm.lfs, path) == 0 ? PROTO_TRUE : PROTO_FALSE;
+    return lfs_mkdir(&g_lfsm.lfs, path) == 0 ? EMBED_TRUE : EMBED_FALSE;
 }
 
-static inline proto_bool lfsm_rmdir(const char *path)
+static inline embed_bool lfsm_rmdir(const char *path)
 {
-    return lfs_remove(&g_lfsm.lfs, path) == 0 ? PROTO_TRUE : PROTO_FALSE; // littlefs removes either kind
+    return lfs_remove(&g_lfsm.lfs, path) == 0 ? EMBED_TRUE : EMBED_FALSE; // littlefs removes either kind
 }
 
 static inline int lfsm_opendir(const char *path)
@@ -539,16 +539,16 @@ static inline int lfsm_opendir(const char *path)
     {
         return -1;
     }
-    g_lfsm.h[i].open = PROTO_TRUE;
-    g_lfsm.h[i].is_dir = PROTO_TRUE;
+    g_lfsm.h[i].open = EMBED_TRUE;
+    g_lfsm.h[i].is_dir = EMBED_TRUE;
     return i;
 }
 
-static inline proto_bool lfsm_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
+static inline embed_bool lfsm_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     if (handle < 0 || handle >= LFSM_HANDLES || !g_lfsm.h[handle].open || !g_lfsm.h[handle].is_dir)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     struct lfs_info info;
     for (;;)
@@ -556,7 +556,7 @@ static inline proto_bool lfsm_readdir(int handle, protocore_mnt_stat *out, char 
         int rc = lfs_dir_read(&g_lfsm.lfs, &g_lfsm.h[handle].dir, &info);
         if (rc <= 0)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (strcmp(info.name, ".") == 0 || strcmp(info.name, "..") == 0)
         {
@@ -568,10 +568,10 @@ static inline proto_bool lfsm_readdir(int handle, protocore_mnt_stat *out, char 
             continue; // the caller's buffer cannot hold it - skip rather than truncate a name
         }
         memcpy(name, info.name, n + 1);
-        out->is_dir = (info.type == LFS_TYPE_DIR) ? PROTO_TRUE : PROTO_FALSE;
+        out->is_dir = (info.type == LFS_TYPE_DIR) ? EMBED_TRUE : EMBED_FALSE;
         out->size = (info.type == LFS_TYPE_DIR) ? 0u : info.size;
         out->mtime = 0;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 }
 

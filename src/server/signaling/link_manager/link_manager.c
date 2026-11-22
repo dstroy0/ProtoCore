@@ -12,7 +12,7 @@
 
 #include "server/signaling/link_manager/link_manager.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The highest-priority interface that is up, or -1. Higher priority wins; the lower index breaks a
 // tie, because best is the first entry seen at that priority.
@@ -37,13 +37,13 @@ static int select_best(const LinkManager *m)
     return best;
 }
 
-void protocore_link_select(uint8_t *work)
+void protocore_link_select(const uint8_t *work)
 {
     (void)work;
     LinkV.i32 = select_best(LinkV.args.m_ro);
 }
 
-void protocore_link_init(uint8_t *work)
+void protocore_link_init(const uint8_t *work)
 {
     (void)work;
     LinkManager *m = LinkV.args.m;
@@ -56,14 +56,14 @@ void protocore_link_init(uint8_t *work)
     m->active = select_best(m);
 }
 
-void protocore_link_active(uint8_t *work)
+void protocore_link_active(const uint8_t *work)
 {
     (void)work;
     const LinkManager *m = LinkV.args.m_ro;
     LinkV.i32 = m ? m->active : -1;
 }
 
-void protocore_link_set(uint8_t *work)
+void protocore_link_set(const uint8_t *work)
 {
     (void)work;
     LinkManager *m = LinkV.args.m;
@@ -73,7 +73,7 @@ void protocore_link_set(uint8_t *work)
     {
         LinkV.from = m ? m->active : -1;
         LinkV.to = LinkV.from;
-        LinkV.changed = PROTO_FALSE;
+        LinkV.changed = EMBED_FALSE;
         return;
     }
     int prev = m->active;
@@ -88,6 +88,6 @@ void protocore_link_set(uint8_t *work)
 /** @brief The operands and the outcome. */
 LinkVars LinkV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER

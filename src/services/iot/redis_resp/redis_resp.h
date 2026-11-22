@@ -45,26 +45,25 @@
 
 #if PROTOCORE_ENABLE_REDIS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The decoded type, named after the "RESP protocol description" table of first bytes. */
-typedef enum PROTO_ENUM_PACKED
-{
-    RESP_SIMPLE_STRING,   ///< Simple strings (+); the text in str/str_len
-    RESP_SIMPLE_ERROR,    ///< Simple errors (-); the message in str/str_len
-    RESP_INTEGER,         ///< Integers (:); the signed 64-bit value in ival
-    RESP_BULK_STRING,     ///< Bulk strings ($); the octets in str/str_len
-    RESP_ARRAY,           ///< Arrays (*); the element count in count
-    RESP_NULL,            ///< Null bulk strings ($-1), Null arrays (*-1), and RESP3 Nulls (_)
-    RESP_BOOLEAN,         ///< Booleans (#); 0 or 1 in ival
-    RESP_DOUBLE,          ///< Doubles (,); the text in str/str_len and its value in dval
-    RESP_BIG_NUMBER,      ///< Big numbers ((); the digits in str/str_len
-    RESP_BULK_ERROR,      ///< Bulk errors (!); the message in str/str_len
-    RESP_VERBATIM_STRING, ///< Verbatim strings (=); str holds the 3-octet encoding, ':' and the data
-    RESP_MAP,             ///< Maps (%); count = 2 * entries
-    RESP_SET,             ///< Sets (~); the element count in count
-    RESP_PUSH,            ///< Pushes (>); the element count in count
-} RespType;
+EMBED_ENUM_BYTE(RespType,
+                RESP_SIMPLE_STRING,   ///< Simple strings (+); the text in str/str_len
+                RESP_SIMPLE_ERROR,    ///< Simple errors (-); the message in str/str_len
+                RESP_INTEGER,         ///< Integers (:); the signed 64-bit value in ival
+                RESP_BULK_STRING,     ///< Bulk strings ($); the octets in str/str_len
+                RESP_ARRAY,           ///< Arrays (*); the element count in count
+                RESP_NULL,            ///< Null bulk strings ($-1), Null arrays (*-1), and RESP3 Nulls (_)
+                RESP_BOOLEAN,         ///< Booleans (#); 0 or 1 in ival
+                RESP_DOUBLE,          ///< Doubles (,); the text in str/str_len and its value in dval
+                RESP_BIG_NUMBER,      ///< Big numbers ((); the digits in str/str_len
+                RESP_BULK_ERROR,      ///< Bulk errors (!); the message in str/str_len
+                RESP_VERBATIM_STRING, ///< Verbatim strings (=); str holds the 3-octet encoding, ':' and the data
+                RESP_MAP,             ///< Maps (%); count = 2 * entries
+                RESP_SET,             ///< Sets (~); the element count in count
+                RESP_PUSH,            ///< Pushes (>); the element count in count
+);
 
 /** @brief One decoded value. Every string member points into the parsed octets; nothing is copied. */
 typedef struct
@@ -121,7 +120,7 @@ typedef struct
     RespCommandArgs command; ///< what a client sends
     RespOutArgs out;         ///< where the encoded command lands
     RespWireArgs wire;       ///< what a parse reads
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     RespReply reply;
 } RespVars;
@@ -132,13 +131,13 @@ extern RespVars RespV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_command)(uint8_t *work);
+    void (*const encode_command)(const uint8_t *work);
     void (*const parse_reply)(uint8_t *work);
 } RespNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in RespV or a region of the borrow at a fixed offset.
-void protocore_resp_encode_command(uint8_t *work);
+void protocore_resp_encode_command(const uint8_t *work);
 void protocore_resp_parse_reply(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -150,7 +149,7 @@ static const RespNs Resp __attribute__((unused)) = {
     .parse_reply = protocore_resp_parse_reply,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_REDIS
 

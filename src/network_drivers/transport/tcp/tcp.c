@@ -20,7 +20,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 TcpNs Tcp = {
@@ -31,6 +31,6 @@ TcpNs Tcp = {
 #endif
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TCP

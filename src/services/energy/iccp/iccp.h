@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_ICCP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief TASE.2 quality flags (DataFlags, the common bits). */
 // TASE.2 quality/state wire values + the 2-bit quality mask, so integer constants in a struct.
@@ -61,7 +61,7 @@ size_t protocore_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4
  */
 size_t protocore_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4], uint8_t *out, size_t cap);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ICCP
 

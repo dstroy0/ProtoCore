@@ -30,7 +30,7 @@ static void wr_field(uint8_t *f, uint16_t len, uint32_t off)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_ntlmssp_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap, uint32_t flags)
+size_t protocore_ntlmssp_build_negotiate(const uint8_t *work, uint8_t *buf, size_t cap, uint32_t flags)
 {
     (void)work;
 
@@ -49,18 +49,18 @@ size_t protocore_ntlmssp_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap
     return 32;
 }
 
-proto_bool protocore_ntlmssp_parse_challenge(uint8_t *work, const uint8_t *msg, size_t len, NtlmChallenge *out)
+embed_bool protocore_ntlmssp_parse_challenge(const uint8_t *work, const uint8_t *msg, size_t len, NtlmChallenge *out)
 {
     (void)work;
 
     if (!msg || !out || len < 48) // through TargetInfoFields
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = msg, .other = NTLMSSP_SIG, .bytes = 8) != 0 ||
         (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = msg + 8, .width = MMGR_ENDIAN_32) != 2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->flags = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = msg + 20, .width = MMGR_ENDIAN_32);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->server_challenge, .src = msg + 24, .bytes = 8);
@@ -70,15 +70,15 @@ proto_bool protocore_ntlmssp_parse_challenge(uint8_t *work, const uint8_t *msg, 
     {
         out->target_info = NULL;
         out->target_info_len = 0;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if ((size_t)ti_off + ti_len > len) // target info out of bounds -> fail closed
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->target_info = msg + ti_off;
     out->target_info_len = ti_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append the UTF-16LE encoding of @p s to buf[at..]; returns the byte count (2 * strlen).
@@ -108,10 +108,10 @@ static size_t utf16_len(const char *s)
     return n * 2;
 }
 
-size_t protocore_ntlmssp_build_authenticate(uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
+size_t protocore_ntlmssp_build_authenticate(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
                                             size_t lm_len, const uint8_t *nt_resp, size_t nt_len, const char *domain,
                                             const char *user, const char *workstation, uint32_t flags,
-                                            proto_bool with_mic)
+                                            embed_bool with_mic)
 {
     (void)work;
 

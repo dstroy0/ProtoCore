@@ -33,16 +33,16 @@ static AtcFieldIo g_io;
 static void build_map(void)
 {
     g_points[0].name = "det.1";
-    g_points[0].is_output = PROTO_FALSE;
+    g_points[0].is_output = EMBED_FALSE;
     g_points[0].value = 1;
     g_points[1].name = "phase.2.green";
-    g_points[1].is_output = PROTO_TRUE;
+    g_points[1].is_output = EMBED_TRUE;
     g_points[1].value = 0;
     g_points[2].name = "det.2";
-    g_points[2].is_output = PROTO_FALSE;
+    g_points[2].is_output = EMBED_FALSE;
     g_points[2].value = 0;
     g_points[3].name = "phase.4.red";
-    g_points[3].is_output = PROTO_TRUE;
+    g_points[3].is_output = EMBED_TRUE;
     g_points[3].value = 255;
     g_io.points = g_points;
     g_io.count = 4;
@@ -79,7 +79,7 @@ void test_snapshot_of_one_direction(void)
 {
     AtcPoint only[1];
     only[0].name = "det.1";
-    only[0].is_output = PROTO_FALSE;
+    only[0].is_output = EMBED_FALSE;
     only[0].value = 7;
     AtcFieldIo io = {only, 1};
     (void)protocore_atc_snapshot_json(&io, g_out, sizeof(g_out));
@@ -93,7 +93,7 @@ void test_point_names_are_json_escaped(void)
 {
     AtcPoint p[1];
     p[0].name = "a\"b\\c";
-    p[0].is_output = PROTO_FALSE;
+    p[0].is_output = EMBED_FALSE;
     p[0].value = 0;
     AtcFieldIo io = {p, 1};
     (void)protocore_atc_snapshot_json(&io, g_out, sizeof(g_out));
@@ -109,7 +109,7 @@ void test_value_range(void)
     {
         AtcPoint p[1];
         p[0].name = "v";
-        p[0].is_output = PROTO_FALSE;
+        p[0].is_output = EMBED_FALSE;
         p[0].value = V[i];
         AtcFieldIo io = {p, 1};
         (void)protocore_atc_snapshot_json(&io, g_out, sizeof(g_out));
@@ -168,7 +168,7 @@ void test_snapshot_buffer_boundary(void)
 void test_set_output_then_get(void)
 {
     build_map();
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
 
     TEST_ASSERT_EQUAL_UINT8(0u, protocore_atc_get(&g_io, "phase.2.green", &found));
     TEST_ASSERT_TRUE(found);
@@ -191,7 +191,7 @@ void test_set_output_refuses_an_input(void)
     build_map();
     TEST_ASSERT_FALSE(protocore_atc_set_output(&g_io, "det.1", 0));
 
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     TEST_ASSERT_EQUAL_UINT8(1u, protocore_atc_get(&g_io, "det.1", &found)); // unchanged
     TEST_ASSERT_TRUE(found);
 }
@@ -201,14 +201,14 @@ void test_set_output_refuses_an_input(void)
 void test_unknown_point(void)
 {
     build_map();
-    proto_bool found = PROTO_TRUE;
+    embed_bool found = EMBED_TRUE;
     TEST_ASSERT_EQUAL_UINT8(0u, protocore_atc_get(&g_io, "nope", &found));
     TEST_ASSERT_FALSE(found);
 
     TEST_ASSERT_FALSE(protocore_atc_set_output(&g_io, "nope", 1));
 
     // A point whose value really is zero is found.
-    found = PROTO_FALSE;
+    found = EMBED_FALSE;
     TEST_ASSERT_EQUAL_UINT8(0u, protocore_atc_get(&g_io, "det.2", &found));
     TEST_ASSERT_TRUE(found);
 }
@@ -217,15 +217,15 @@ void test_unknown_point(void)
 void test_names_match_whole(void)
 {
     build_map();
-    proto_bool found = PROTO_TRUE;
+    embed_bool found = EMBED_TRUE;
     (void)protocore_atc_get(&g_io, "det", &found);
     TEST_ASSERT_FALSE(found);
 
-    found = PROTO_TRUE;
+    found = EMBED_TRUE;
     (void)protocore_atc_get(&g_io, "det.1.extra", &found);
     TEST_ASSERT_FALSE(found);
 
-    found = PROTO_TRUE;
+    found = EMBED_TRUE;
     (void)protocore_atc_get(&g_io, "DET.1", &found);
     TEST_ASSERT_FALSE(found);
 }
@@ -242,11 +242,11 @@ void test_get_without_the_found_flag(void)
 void test_accessors_refuse_missing_arguments(void)
 {
     build_map();
-    proto_bool found = PROTO_TRUE;
+    embed_bool found = EMBED_TRUE;
     TEST_ASSERT_EQUAL_UINT8(0u, protocore_atc_get(NULL, "det.1", &found));
     TEST_ASSERT_FALSE(found);
 
-    found = PROTO_TRUE;
+    found = EMBED_TRUE;
     TEST_ASSERT_EQUAL_UINT8(0u, protocore_atc_get(&g_io, NULL, &found));
     TEST_ASSERT_FALSE(found);
 

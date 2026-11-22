@@ -12,7 +12,7 @@
 
 #include "services/machine_tool/dnc/dnc/dnc.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // EIA RS-244 punched-tape code. One source of truth for both translation directions.
 // Each EIA byte is the 8-track hole pattern (bit 0 = channel 1 .. bit 7 = channel 8) with
@@ -118,22 +118,22 @@ uint8_t protocore_dnc_iso_add_parity(uint8_t ascii7)
 
 void protocore_dnc_flow_init(DncFlow *f)
 {
-    f->paused = PROTO_FALSE;
+    f->paused = EMBED_FALSE;
 }
 
-proto_bool protocore_dnc_flow_feed(DncFlow *f, uint8_t rx)
+embed_bool protocore_dnc_flow_feed(DncFlow *f, uint8_t rx)
 {
     if (rx == (uint8_t)DNC_XOFF)
     {
-        f->paused = PROTO_TRUE;
-        return PROTO_TRUE;
+        f->paused = EMBED_TRUE;
+        return EMBED_TRUE;
     }
     if (rx == (uint8_t)DNC_XON)
     {
-        f->paused = PROTO_FALSE;
-        return PROTO_TRUE;
+        f->paused = EMBED_FALSE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Append one End-of-Block to out[n..]; returns the new count or 0 on overflow.
@@ -239,9 +239,9 @@ void protocore_dnc_decode_init(DncDecoder *d, DncCode code)
 {
     d->code = code;
     d->len = 0;
-    d->overflow = PROTO_FALSE;
-    d->in_program = PROTO_FALSE;
-    d->line_ready = PROTO_FALSE;
+    d->overflow = EMBED_FALSE;
+    d->in_program = EMBED_FALSE;
+    d->line_ready = EMBED_FALSE;
     d->line[0] = 0;
 }
 
@@ -250,7 +250,7 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     // The line delivered by the previous call is now consumed; start fresh.
     if (d->line_ready)
     {
-        d->line_ready = PROTO_FALSE;
+        d->line_ready = EMBED_FALSE;
         d->len = 0;
         d->line[0] = 0;
     }
@@ -258,19 +258,19 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     // Note: XON/XOFF are NOT filtered here. Flow control rides the reverse channel
     // (controller -> sender), handled by protocore_dnc_flow_feed; this decodes the forward program
     // stream, where 0x13 is the EIA data character '3', not DC3.
-    proto_bool is_eob = PROTO_FALSE;
-    proto_bool is_marker = PROTO_FALSE;
+    embed_bool is_eob = EMBED_FALSE;
+    embed_bool is_marker = EMBED_FALSE;
     uint8_t ascii = 0;
 
     if (d->code == DNC_CODE_EIA)
     {
         if (wire == (uint8_t)DNC_EIA_EOB)
         {
-            is_eob = PROTO_TRUE;
+            is_eob = EMBED_TRUE;
         }
         else if (wire == (uint8_t)DNC_EIA_EOR)
         {
-            is_marker = PROTO_TRUE;
+            is_marker = EMBED_TRUE;
         }
         else
         {
@@ -282,11 +282,11 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
         uint8_t v = wire & 0x7F; // strip even parity
         if (v == '\n')
         {
-            is_eob = PROTO_TRUE;
+            is_eob = EMBED_TRUE;
         }
         else if (v == '%')
         {
-            is_marker = PROTO_TRUE;
+            is_marker = EMBED_TRUE;
         }
         else if (v == '\r' || v == 0x00 || v == (uint8_t)DNC_EIA_DEL)
         {
@@ -301,14 +301,14 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     if (is_marker)
     {
         d->len = 0; // a marker stands alone; discard any partial block
-        d->overflow = PROTO_FALSE;
+        d->overflow = EMBED_FALSE;
         d->line[0] = 0;
         if (!d->in_program)
         {
-            d->in_program = PROTO_TRUE;
+            d->in_program = EMBED_TRUE;
             return DNC_EV_PROG_START;
         }
-        d->in_program = PROTO_FALSE;
+        d->in_program = EMBED_FALSE;
         return DNC_EV_PROG_END;
     }
 
@@ -316,7 +316,7 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     {
         if (d->overflow)
         {
-            d->overflow = PROTO_FALSE;
+            d->overflow = EMBED_FALSE;
             d->len = 0;
             d->line[0] = 0;
             return DNC_EV_OVERFLOW;
@@ -326,7 +326,7 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
             return DNC_EV_NONE; // blank block (leader / CR LF pair) - nothing to report
         }
         d->line[d->len] = 0;
-        d->line_ready = PROTO_TRUE; // keep line/len valid for the caller until the next feed
+        d->line_ready = EMBED_TRUE; // keep line/len valid for the caller until the next feed
         return DNC_EV_LINE;
     }
 
@@ -341,13 +341,13 @@ DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire)
     }
     if (d->len >= PROTOCORE_DNC_LINE_MAX)
     {
-        d->overflow = PROTO_TRUE;
+        d->overflow = EMBED_TRUE;
         return DNC_EV_NONE;
     }
     d->line[d->len++] = (char)ascii;
     return DNC_EV_NONE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNC

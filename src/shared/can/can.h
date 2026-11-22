@@ -7,7 +7,7 @@
  *
  * CANopen, J1939, DeviceNet, and NMEA 2000 all ride classic CAN frames (an 11-bit or
  * 29-bit identifier plus up to 8 data octets). They share this one frame struct so the
- * frame shape lives in a single place; each codec only builds and parses the id + data,
+ * frame shape lives in a single place. Each codec only builds and parses the id + data,
  * never the wire bus itself.
  *
  * The physical CAN controller is the application's: the ESP32's built-in TWAI peripheral
@@ -43,8 +43,8 @@
 typedef struct
 {
     uint32_t id;
-    proto_bool extended;
-    proto_bool rtr;
+    embed_bool extended;
+    embed_bool rtr;
     uint8_t dlc;
     uint8_t data[PROTOCORE_CAN_MAX_DLC];
 } CanFrame;

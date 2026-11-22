@@ -480,7 +480,7 @@ static void h_bench(uint8_t id, HttpReq *)
     (void)sln;
 
     // ntp_server_build_response: parse a 48-octet client request + stamp the mode-4 server reply (RFC 5905
-    // server mode) - the per-query hot op of the UDP/123 NTP server (pure; no clock/socket).
+    // server mode) - the per-query hot op of the UDP/123 NTP server (pure. No clock/socket).
     static const uint8_t nreq[NTP_PACKET_LEN] = {0x23}; // LI 0, VN 4, mode 3 (client); rest zero
     static uint8_t nrsp[NTP_PACKET_LEN];
     volatile size_t nn = 0;
@@ -859,7 +859,7 @@ static int32_t opcua_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint3
 // MQTT device-as-client probe: connect OUT to the broker named in the query (?host=&port=), subscribe +
 // publish, then pump mqtt_loop() to receive whatever the broker sends. This drives the CLIENT parser
 // (mqtt_parse_connack/publish/suback) against a broker run by pc_pentest.py - possibly a malicious one.
-// mqtt_connect blocks up to 8 s (bounded); the whole probe returns to keep the server responsive.
+// mqtt_connect blocks up to 8 s (bounded). The whole probe returns to keep the server responsive.
 static volatile int g_mqtt_rx = 0;
 static void mqtt_msg_cb(const char *, const uint8_t *, size_t)
 {
@@ -1493,7 +1493,7 @@ static void h_smtp_probe(uint8_t id, HttpReq *r)
     server.send(id, 200, "application/json", b);
 }
 
-// Percent-decode @p src into @p out (models an app that logs attacker-controlled bytes); lets the syslog
+// Percent-decode @p src into @p out (models an app that logs attacker-controlled bytes). Lets the syslog
 // injection attack carry raw CR/LF/control bytes through a query param. Copies verbatim otherwise.
 static void url_decode(const char *src, char *out, size_t cap)
 {
@@ -2307,7 +2307,7 @@ static void h_openadr_report(uint8_t id, HttpReq *)
 // StatsD device-as-client probe: push one metric OUT to a StatsD collector (?host=&port=&name=&value=&type=)
 // via the UDP StatsD client. Drives statsd_begin + the emit helper -> protocore_udp_sendto against a real collector
 // (interop) - and, with a percent-encoded name, exercises the metric-line-injection surface (embedded newline
-// forges extra metrics; embedded :/| corrupt the line - StatsD line hygiene is the caller's job).
+// forges extra metrics. Embedded :/| corrupt the line - StatsD line hygiene is the caller's job).
 static void h_statsd_probe(uint8_t id, HttpReq *r)
 {
     const char *host = http_get_query(r, "host");
@@ -2532,7 +2532,7 @@ void setup()
     }
 
     // Authoritative DNS server (RFC 1035) on UDP/53 - resolve a few local names for an offline LAN. It is
-    // authoritative-only (NXDOMAIN for anything not in this table), so it cannot be abused as an open
+    // authoritative-only (NXDOMAIN for anything not in this table). So it cannot be abused as an open
     // resolver/reflector; the dns_server_abuse attack verifies that + the no-amplification property.
     dns_server_add("rig.lan", 192, 168, 1, 29);
     dns_server_add("printer.lan", 192, 168, 1, 5);

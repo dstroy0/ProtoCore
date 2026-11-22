@@ -44,7 +44,7 @@ static void expect(const char *want)
     TEST_ASSERT_EQUAL_MEMORY_MESSAGE(want, g_out, strlen(want), want);
 }
 
-static proto_bool parse(const char *wire, size_t len)
+static embed_bool parse(const char *wire, size_t len)
 {
     NatsV.in.buf = wire;
     NatsV.in.len = len;
@@ -157,13 +157,13 @@ void test_published_unsub_examples(void)
 {
     bind_out();
     NatsV.subscription.sid = "1";
-    NatsV.subscription.with_max = PROTO_FALSE;
+    NatsV.subscription.with_max = EMBED_FALSE;
     NatsV.subscription.max_msgs = 5; // ignored while with_max is clear
     Nats.unsub(nats_work);
     expect("UNSUB 1\r\n");
 
     bind_out();
-    NatsV.subscription.with_max = PROTO_TRUE;
+    NatsV.subscription.with_max = EMBED_TRUE;
     Nats.unsub(nats_work);
     expect("UNSUB 1 5\r\n");
 }

@@ -108,7 +108,7 @@ int main()
     SmbResult smb_client_value3 =
         SmbClient.smb_read(protocore_smb_client_span(), &h, 0, buf, sizeof(buf), &got, sock_send, sock_recv, &fd);
     r = smb_client_value3;
-    proto_bool match = (got == plen) && (memcmp(buf, payload, plen) == 0);
+    embed_bool match = (got == plen) && (memcmp(buf, payload, plen) == 0);
     printf("smb_read -> %d (%zu bytes) match=%s\n", (int)r, got, match ? "YES" : "NO");
 
     SmbClient.smb_close(protocore_smb_client_span(), &h, sock_send, sock_recv, &fd);

@@ -38,7 +38,7 @@
 #ifndef PROTOCORE_ESP_CRYPTO_HAL_H
 #define PROTOCORE_ESP_CRYPTO_HAL_H
 
-#include "protocore_config.h" // the entry point: proto_bool and the widths this HAL is written in
+#include "protocore_config.h" // the entry point: embed_bool and the widths this HAL is written in
 
 #ifdef ARDUINO
 #include "sdkconfig.h" // CONFIG_IDF_TARGET_* : which die we build for (the build target, not a register header)
@@ -189,12 +189,12 @@
  * @note  Bracket every batch of @ref protocore_rsa_modmul with acquire/release. Implemented in esp_crypto_hal.cpp
  *        (the exclusivity mutex must be one global instance, so it cannot live in this header). Poll-only.
  */
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 void protocore_rsa_hw_acquire(void);
 
 /** @brief Release the RSA accelerator (drop the PC lock). */
 void protocore_rsa_hw_release(void);
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 /**
  * @brief `z = x*y mod m` (@p words limbs) on the RSA accelerator. Requires @ref protocore_rsa_hw_acquire first.

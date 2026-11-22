@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -37,7 +37,7 @@ typedef struct
     uint8_t subtype;    ///< esp_partition subtype.
     uint32_t address;   ///< flash offset (bytes).
     uint32_t size;      ///< partition size (bytes).
-    proto_bool running; ///< true for the currently-running app partition.
+    embed_bool running; ///< true for the currently-running app partition.
 } protocore_partition_info;
 
 /** @brief What kind takes: type, subtype. */
@@ -104,7 +104,7 @@ typedef struct
     PartitionMonitorJsonArgs json_args;
     PartitionMonitorCollectArgs collect_args;
     PartitionMonitorBeginArgs begin_args;
-    proto_bool ok;
+    embed_bool ok;
     const char *text;
     int32_t n;
     uint8_t u8;
@@ -116,18 +116,18 @@ extern PartitionMonitorVars PartitionMonitorV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const kind)(uint8_t *work);
+    void (*const kind)(const uint8_t *work);
     void (*const json)(uint8_t *work);
-    void (*const collect)(uint8_t *work);
-    void (*const begin)(uint8_t *work);
+    void (*const collect)(const uint8_t *work);
+    void (*const begin)(const uint8_t *work);
 } PartitionMonitorNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PartitionMonitorV or a region of the borrow at a fixed offset.
-void protocore_partition_monitor_kind(uint8_t *work);
+void protocore_partition_monitor_kind(const uint8_t *work);
 void protocore_partition_monitor_json(uint8_t *work);
-void protocore_partition_monitor_collect(uint8_t *work);
-void protocore_partition_monitor_begin(uint8_t *work);
+void protocore_partition_monitor_collect(const uint8_t *work);
+void protocore_partition_monitor_begin(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -140,7 +140,7 @@ static const PartitionMonitorNs PartitionMonitor __attribute__((unused)) = {
     .begin = protocore_partition_monitor_begin,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PARTITION_MONITOR
 

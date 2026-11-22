@@ -3,7 +3,7 @@
 //
 // On-device CCOUNT microbenchmark for the SQLite file-format reader primitives (services/storage/sqlite):
 // the record varint decode/encode and the serial-type size lookup - the per-cell hot ops when
-// walking a b-tree page. Pure byte math; no filesystem (the full page-reader is exercised in the
+// walking a b-tree page. Pure byte math. No filesystem (the full page-reader is exercised in the
 // host bench with a real DB fixture that is not synced to this build).
 //
 // Build/flash:  idf.py -C test/performance_benching/sqlite -t upload --upload-port COM7

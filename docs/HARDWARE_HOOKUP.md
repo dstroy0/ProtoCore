@@ -449,7 +449,7 @@ The codec is the framing + record layer:
   `protocore_mbus_build_req_ud2(buf, cap, addr, fcb)` to request data (toggle `fcb` each
   poll).
 - Parse the reply: `protocore_mbus_parse()` validates the frame and gives you C / A / CI +
-  the user data; then walk the values with `protocore_mbus_record_next()` (each record's
+  the user data. Then walk the values with `protocore_mbus_record_next()` (each record's
   DIF gives the data type/length, the VIF the unit).
 
 A natural **wireless meter gateway**: poll meters over the M-Bus and publish the
@@ -519,10 +519,10 @@ or an NMEA-0183-to-NMEA-2000 bridge with the codec next door). See
 
 `PROTOCORE_ENABLE_IOLINK`. IO-Link (SDCI) is the point-to-point link to modern smart
 sensors and actuators - a single device per port over a 3-wire cable (L+, L-, and
-the C/Q data line). The data line is **not** plain UART levels: it swings to the
+the C/Q data line). The data line is **not** plain UART levels. It swings to the
 24 V supply, so you need a dedicated **IO-Link master transceiver** (a `MAX14819`
 or `L6360`-class chip) between an ESP32 UART and the port. The transceiver also
-generates the wake-up pulse and handles the line driving; the UART runs at one of
+generates the wake-up pulse and handles the line driving. The UART runs at one of
 the three SDCI rates (**COM1 4.8 / COM2 38.4 / COM3 230.4 kbit/s**).
 
 This codec is the data-link **message** layer - in particular the SDCI checksum,
@@ -591,7 +591,7 @@ kbit/s**. The codec packs and unpacks the id (priority / PGN / source /
 destination) and handles multi-packet messages:
 
 - Decode a received frame: `protocore_j1939_decode_id(frame.id, &id)` gives you the PGN,
-  source, and destination; the 8 data octets are the parameter group's signals
+  source, and destination. The 8 data octets are the parameter group's signals
   (SPNs), which you scale per the PGN definition.
 - Ask a device for a PGN: `protocore_j1939_build_request(&frame, my_addr, dest, pgn)`.
 - Announce your address: `protocore_j1939_build_address_claim(&frame, my_addr,
@@ -634,7 +634,7 @@ Bridge a DeviceNet segment onto Wi-Fi the same way as the other CAN buses. See
 `PROTOCORE_ENABLE_NMEA2000`. The marine instrumentation backbone (GPS, wind, depth,
 AIS, engine data) - electrically it is CAN at **250 kbit/s**, and protocol-wise
 it is J1939, so the wiring is the same transceiver setup. A real N2K backbone
-uses a powered trunk with drop "tees"; tap a drop with your transceiver (it only
+uses a powered trunk with drop "tees". Tap a drop with your transceiver (it only
 needs CAN_H / CAN_L / GND - leave the N2K power to the backbone).
 
 NMEA 2000 carries most data either in a single 8-octet frame or via **Fast
@@ -737,7 +737,7 @@ the ESP32's built-in Wi-Fi supplies the link.
 - **Hardware:** Wi-Fi/Ethernet to an Omron PLC. (FINS also has a serial sibling;
   for serial use [Host Link](#host-link-omron).)
 - **Settings:** **FINS/UDP, port 9600** by default. Addressing is a
-  **network / node / unit** triple for both source and destination; the node
+  **network / node / unit** triple for both source and destination. The node
   number usually matches the last octet of the PLC's IP by convention.
 - **Codec:** `protocore_fins_build_command` / `protocore_fins_build_memory_area_read` /
   `protocore_fins_parse_response`, carried over this library's UDP transport
@@ -864,7 +864,7 @@ already include the small pull-up resistors I2C needs. If two boards share an ad
 (the PCA9685 and INA219 both default to 0x40), change one with its address solder pads.
 
 All the I2C drivers bring the bus up and address it through one shared owner
-(`server/peripherals/i2c.h`), so there is a single place to move the pins:
+(`server/peripherals/i2c.h`). So there is a single place to move the pins:
 **`PROTOCORE_I2C_SDA_PIN` / `PROTOCORE_I2C_SCL_PIN`** (default `-1` = the platform default 21 /
 22). Set both to free GPIOs to relocate the whole bus.
 
@@ -950,7 +950,7 @@ needs are simply that transport's.
   `src/services/iot/lwm2m/`.
 - **Protobuf, CBOR, MessagePack, gRPC-Web, NATS, STOMP, Redis, WAMP, AMQP,
   CloudEvents, flow export, Proxy protocol**: pure data/format codecs over Wi-Fi
-  sockets or as building blocks; no special hardware beyond the network.
+  sockets or as building blocks. No special hardware beyond the network.
 
 ## Electrical safety and reliability
 
@@ -1084,7 +1084,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `hmmd` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HMMD` |
 | `pmbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PMBUS` |
 | `rcwl0516` | caller-supplied link | `protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms, uint32_t now)` | `PROTOCORE_ENABLE_RCWL0516` |
-| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
+| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
 | `smbus` | caller-supplied link | `protocore_smbus_begin(uint8_t *work)` | `PROTOCORE_ENABLE_SMBUS` |
 | `gpib` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_GPIB` |
 | `hislip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HISLIP` |

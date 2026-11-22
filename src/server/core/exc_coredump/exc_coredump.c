@@ -21,9 +21,9 @@
 
 #if PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
-void protocore_exc_present(uint8_t *work)
+void protocore_exc_present(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -32,7 +32,7 @@ void protocore_exc_present(uint8_t *work)
     // The seam reports what is stored only once it verifies, so a torn write from a crash mid-dump
     // is reported as absent rather than handed on as a valid image.
     uint32_t size = protocore_platform_crashdump_size();
-    ExcV.ok = PROTO_FALSE;
+    ExcV.ok = EMBED_FALSE;
     if (size == 0)
     {
         return;
@@ -42,16 +42,16 @@ void protocore_exc_present(uint8_t *work)
         out->addr = 0; // the image's location is the platform's, and does not cross the seam
         out->size = size;
     }
-    ExcV.ok = PROTO_TRUE;
+    ExcV.ok = EMBED_TRUE;
 }
 
-void protocore_exc_summary(uint8_t *work)
+void protocore_exc_summary(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     ExcInfo *out = ExcV.parse_args.info;
 
-    ExcV.ok = PROTO_FALSE;
+    ExcV.ok = EMBED_FALSE;
     if (!out)
     {
         return;
@@ -71,7 +71,7 @@ void protocore_exc_summary(uint8_t *work)
     EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = out->cause, .src = s.task, .cap = sizeof(out->cause));
 
     out->excvaddr = s.fault_addr;
-    out->has_excvaddr = s.has_fault_addr ? PROTO_TRUE : PROTO_FALSE;
+    out->has_excvaddr = s.has_fault_addr ? EMBED_TRUE : EMBED_FALSE;
 
     // A part that stores a stack dump rather than a walkable backtrace reports no frames, and none
     // are invented here: unwinding one needs debug information that lives off the device.
@@ -86,40 +86,40 @@ void protocore_exc_summary(uint8_t *work)
         out->frames[i].sp = 0; // not part of the summary
     }
     out->frame_count = depth;
-    ExcV.ok = PROTO_TRUE;
+    ExcV.ok = EMBED_TRUE;
 }
 
-void protocore_exc_read(uint8_t *work)
+void protocore_exc_read(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     void *buf = ExcV.dump.buf;
     const size_t len = ExcV.dump.len;
 
-    ExcV.ok = PROTO_FALSE;
+    ExcV.ok = EMBED_FALSE;
     if (!buf)
     {
         return;
     }
     if (len == 0)
     {
-        ExcV.ok = PROTO_TRUE;
+        ExcV.ok = EMBED_TRUE;
         return;
     }
     // The seam refuses a range that runs past the image rather than returning whatever follows it.
     ExcV.ok = protocore_platform_crashdump_read((uint32_t)ExcV.dump.offset, (uint8_t *)buf, (uint32_t)len)
-                  ? PROTO_TRUE
-                  : PROTO_FALSE;
+                  ? EMBED_TRUE
+                  : EMBED_FALSE;
 }
 
-void protocore_exc_save(uint8_t *work)
+void protocore_exc_save(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     const protocore_mnt_backend *file_sys = ExcV.dump.file_sys;
     const char *path = ExcV.dump.path;
 
-    ExcV.ok = PROTO_FALSE;
+    ExcV.ok = EMBED_FALSE;
     if (!file_sys || !path || path[0] == '\0')
     {
         return;
@@ -140,13 +140,13 @@ void protocore_exc_save(uint8_t *work)
     // Streamed in fixed chunks: a dump can be tens of KB and must never need to fit RAM at once.
     uint8_t buf[PROTOCORE_EXC_COREDUMP_CHUNK];
     uint32_t off = 0;
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     while (off < size)
     {
         uint32_t n = (size - off < sizeof(buf)) ? size - off : (uint32_t)sizeof(buf);
         if (!protocore_platform_crashdump_read(off, buf, n) || file_sys->write(fh, buf, n) != (int)n)
         {
-            ok = PROTO_FALSE;
+            ok = EMBED_FALSE;
             break;
         }
         off += n;
@@ -159,13 +159,13 @@ void protocore_exc_save(uint8_t *work)
     ExcV.ok = ok;
 }
 
-void protocore_exc_erase(uint8_t *work)
+void protocore_exc_erase(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
-    ExcV.ok = protocore_platform_crashdump_erase() ? PROTO_TRUE : PROTO_FALSE;
+    ExcV.ok = protocore_platform_crashdump_erase() ? EMBED_TRUE : EMBED_FALSE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP

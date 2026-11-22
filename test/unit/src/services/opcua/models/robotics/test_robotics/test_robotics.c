@@ -23,7 +23,7 @@
 // published numbers.
 
 // The .c, so the Read and Browse resolvers are reachable: they answer the OPC UA server's
-// handler contract (Part 4 sec 5.9.2 / sec 5.11.2), so they are internal to the module and the
+// handler contract (Part 4 sec 5.9.2 / sec 5.11.2). So they are internal to the module and the
 // env does not build this .c itself.
 #include "services/opcua/models/robotics/robotics.c"
 #include "services/opcua/opcua.h"
@@ -52,8 +52,8 @@ void setUp(void)
     g_mds.device.product_code = "PC-6";
     g_mds.device.serial_number = "SN-6";
     g_mds.device.category = ROBOTICS_CAT_ARTICULATED_ROBOT;
-    g_mds.device.on_path = PROTO_TRUE;
-    g_mds.device.in_control = PROTO_TRUE;
+    g_mds.device.on_path = EMBED_TRUE;
+    g_mds.device.in_control = EMBED_TRUE;
     g_mds.device.speed_override = 75.0;
     g_mds.device.axis_count = 3;
     for (uint32_t k = 0; k < 3; k++)
@@ -71,8 +71,8 @@ void setUp(void)
     g_mds.controller.sw_model = "RobotOS";
     g_mds.controller.sw_revision = "3.4.5";
     g_mds.safety.operational_mode = ROBOTICS_MODE_AUTOMATIC;
-    g_mds.safety.emergency_stop = PROTO_FALSE;
-    g_mds.safety.protective_stop = PROTO_TRUE;
+    g_mds.safety.emergency_stop = EMBED_FALSE;
+    g_mds.safety.protective_stop = EMBED_TRUE;
     Robotics.bind(protocore_robotics_span(), &g_mds);
 }
 

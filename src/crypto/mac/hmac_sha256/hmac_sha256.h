@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file hmac_sha256.h
@@ -40,10 +40,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*init)(uint8_t *, const uint8_t *, size_t);
-    proto_bool (*update)(uint8_t *, const uint8_t *, size_t);
-    proto_bool (*final)(uint8_t *, uint8_t *);
-    proto_bool (*mac)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
+    embed_bool (*init)(uint8_t *, const uint8_t *, size_t);
+    embed_bool (*update)(uint8_t *, const uint8_t *, size_t);
+    embed_bool (*final)(uint8_t *, uint8_t *);
+    embed_bool (*mac)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
 } HmacSha256Ns;
 PROTOCORE_NS_LAYOUT(HmacSha256Ns, init, update, final, mac);
 
@@ -52,24 +52,24 @@ PROTOCORE_NS_LAYOUT(HmacSha256Ns, init, update, final, mac);
  * @param work PROTOCORE_HMAC_SHA256_BORROW bytes the caller took. Not held past the call.
  * @param key MAC key bytes
  * @param key_len key length; > 64 is pre-hashed (RFC 2104), shorter is zero-padded to the block
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hmac_sha256_init(uint8_t *work, const uint8_t *key, size_t key_len);
+embed_bool protocore_hmac_sha256_init(uint8_t *work, const uint8_t *key, size_t key_len);
 /**
  * @brief Feed the running MAC a chunk.
  * @param work PROTOCORE_HMAC_SHA256_BORROW bytes the caller took. Not held past the call.
  * @param data the bytes
  * @param len how many
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hmac_sha256_update(uint8_t *work, const uint8_t *data, size_t len);
+embed_bool protocore_hmac_sha256_update(uint8_t *work, const uint8_t *data, size_t len);
 /**
  * @brief Finish, writing the 32 bytes out.
  * @param work PROTOCORE_HMAC_SHA256_BORROW bytes the caller took. Not held past the call.
  * @param out PROTOCORE_HMAC_SHA256_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hmac_sha256_final(uint8_t *work, uint8_t *out);
+embed_bool protocore_hmac_sha256_final(uint8_t *work, uint8_t *out);
 /**
  * @brief Init, update and final in one call, for a message already whole.
  * @param work PROTOCORE_HMAC_SHA256_BORROW bytes the caller took. Not held past the call.
@@ -78,9 +78,9 @@ proto_bool protocore_hmac_sha256_final(uint8_t *work, uint8_t *out);
  * @param data the message
  * @param len its length
  * @param out PROTOCORE_HMAC_SHA256_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hmac_sha256_mac(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
+embed_bool protocore_hmac_sha256_mac(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
                                      uint8_t *out);
 
 /** @brief Module namespace. */
@@ -89,6 +89,6 @@ PROTOCORE_NS HmacSha256Ns HmacSha256 PROTOCORE_UNUSED = {.init = protocore_hmac_
                                                          .final = protocore_hmac_sha256_final,
                                                          .mac = protocore_hmac_sha256_mac};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HMAC_SHA256_H

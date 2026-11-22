@@ -12,7 +12,7 @@ case: RSA/ECC square-and-multiply, where a "multiply" step runs only for a 1-bit
 0-bit), the presence or **absence** of that step's characteristic burst is the secret, visible
 directly in the trace's shape - no statistics, no key hypothesis, sometimes no averaging at
 all. This is the original attack Kocher's 1996 "Differential Power Analysis" paper describes
-before it gets to DPA proper, and it is exactly why constant-time implementations exist: SPA
+before it gets to DPA proper. It is exactly why constant-time implementations exist: SPA
 is what a naive fixed/branching implementation is trading away.
 
 ## Techniques implemented
@@ -124,7 +124,7 @@ def decode_periodic_bursts(segments, period_samples: int, n_periods: int, start_
 
 def counts_to_bits(counts, baseline: int = 1):
     """bit=1 where MORE than `baseline` bursts occurred in a period (an extra operation
-    appeared alongside the always-present one); bit=0 where only the baseline ran - the
+    appeared alongside the always-present one). Bit=0 where only the baseline ran - the
     *absence* of the extra burst is what encodes the 0. baseline=1 is the classic
     square-(optional multiply) case."""
     return [1 if c > baseline else 0 for c in counts]

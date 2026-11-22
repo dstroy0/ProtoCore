@@ -4,10 +4,10 @@
 // Real-network HTTP/3 interop harness (Linux / POSIX). Runs the library's quic_server as an actual
 // networked HTTP/3 server over a UDP socket, so a third-party client (curl --http3, ngtcp2, quiche)
 // can complete a full QUIC + TLS 1.3 + HTTP/3 exchange against the real code. It is NOT firmware and
-// NOT a unit test: it drives quic_server through the same host seam the unit tests use
+// NOT a unit test. It drives quic_server through the same host seam the unit tests use
 // (quic_server_ingest + the output sink), wired to a real socket. See tools/interop/README.md.
 //
-// On ESP32 the same quic_server binds UDP through protocore_udp; this harness is the Linux stand-in that
+// On ESP32 the same quic_server binds UDP through protocore_udp. This harness is the Linux stand-in that
 // lets a real client validate the wire without flashing a board.
 
 #include "network_drivers/presentation/http/http3/quic_server/quic_server.h"

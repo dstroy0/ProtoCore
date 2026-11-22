@@ -8,7 +8,7 @@ SCPI (Standard Commands for Programmable Instruments) is the text command langua
 nearly every modern bench instrument speaks - DMMs, oscilloscopes, power supplies,
 function/arbitrary generators, SMUs, spectrum/network analyzers, electronic loads -
 over a raw TCP socket on **port 5025** (`PROTOCORE_SCPI_PORT`). `services/scpi` is a pure,
-transport-agnostic codec: it builds command lines and parses replies; the sketch owns
+transport-agnostic codec: it builds command lines and parses replies. The sketch owns
 the socket (a plain `WiFiClient`) and runs a small session against a real instrument.
 
 `protocore_scpi_build` joins a `:`-hierarchy header with comma-separated parameters and the
@@ -74,6 +74,6 @@ IP: 192.168.1.42
 ## Annotated source
 
 The complete sketch is [Scpi.ino](Scpi.ino). The codec itself is in
-[src/services/instrumentation/scpi/scpi.h](../../../src/services/instrumentation/scpi/scpi.h); the register bits, error-number
+[src/services/instrumentation/scpi/scpi.h](../../../src/services/instrumentation/scpi/scpi.h). The register bits, error-number
 classes, and exact standard error strings are verified against the SCPI-1999 standard and
 IEEE 488.2-1992.

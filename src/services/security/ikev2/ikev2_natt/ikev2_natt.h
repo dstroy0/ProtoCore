@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/security/ikev2/ikev2/ikev2.h" // IkePayloadType: the Next Payload a detection Notify carries
 // ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ typedef struct
     IkeNattDigestArgs digest; ///< where a digest lands and the one a compare judges
     IkeNattOutArgs out;       ///< where a Notify payload is written (sec 3.10)
     IkeNattPktArgs pkt;       ///< the UDP payload the demux judges (RFC 3948 sec 2)
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } IkeNattVars;
 
@@ -139,26 +139,26 @@ extern IkeNattVars IkeNattV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const hash)(uint8_t *work);
+    void (*const hash)(const uint8_t *work);
     void (*const source_build)(uint8_t *work);
     void (*const dest_build)(uint8_t *work);
     void (*const match)(uint8_t *work);
     void (*const peer_behind_nat)(uint8_t *work);
     void (*const self_behind_nat)(uint8_t *work);
-    void (*const is_keepalive)(uint8_t *work);
-    void (*const is_ike)(uint8_t *work);
+    void (*const is_keepalive)(const uint8_t *work);
+    void (*const is_ike)(const uint8_t *work);
 } IkeNattNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IkeNattV or a region of the borrow at a fixed offset.
-void protocore_ike_natt_hash(uint8_t *work);
+void protocore_ike_natt_hash(const uint8_t *work);
 void protocore_ike_natt_source_build(uint8_t *work);
 void protocore_ike_natt_dest_build(uint8_t *work);
 void protocore_ike_natt_match(uint8_t *work);
 void protocore_ike_natt_peer_behind_nat(uint8_t *work);
 void protocore_ike_natt_self_behind_nat(uint8_t *work);
-void protocore_ike_natt_is_keepalive(uint8_t *work);
-void protocore_ike_natt_is_ike(uint8_t *work);
+void protocore_ike_natt_is_keepalive(const uint8_t *work);
+void protocore_ike_natt_is_ike(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -175,7 +175,7 @@ static const IkeNattNs IkeNatt __attribute__((unused)) = {
     .is_ike = protocore_ike_natt_is_ike,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2
 

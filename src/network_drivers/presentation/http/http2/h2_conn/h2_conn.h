@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define PROTOCORE_H2_FRAME_HDR_CAP 16u
 /** @brief The widest frame a received frame provokes us to send: a header plus 8 opaque bytes. */
@@ -54,9 +54,9 @@ typedef struct
      * @brief The request header block for @p stream_id is complete. @p end_stream: no body.
      * @return false if the request is malformed; the engine resets the stream (RFC 9113 sec 8.1.1).
      */
-    proto_bool (*on_headers_end)(void *app, uint32_t stream_id, proto_bool end_stream);
+    embed_bool (*on_headers_end)(void *app, uint32_t stream_id, embed_bool end_stream);
     /** @brief Request body bytes on @p stream_id (@p end_stream marks the last). */
-    void (*on_data)(void *app, uint32_t stream_id, const uint8_t *data, size_t len, proto_bool end_stream);
+    void (*on_data)(void *app, uint32_t stream_id, const uint8_t *data, size_t len, embed_bool end_stream);
     void *io;  ///< opaque, passed to write()
     void *app; ///< opaque, passed to the on_* callbacks
 } H2Callbacks;
@@ -115,7 +115,7 @@ typedef struct
     H2ConnRecvArgs recv_args;       ///< the members ::H2ConnNs::recv takes
     H2ConnRespondArgs respond_args; ///< the members ::H2ConnNs::respond takes
     H2ConnGoawayArgs goaway_args;   ///< the members ::H2ConnNs::goaway takes
-    proto_bool ok;                  ///< a call's true/false outcome
+    embed_bool ok;                  ///< a call's true/false outcome
 } H2ConnVars;
 
 /** @brief The operands and the outcome. */
@@ -148,7 +148,7 @@ static const H2ConnNs H2Conn __attribute__((unused)) = {
     .goaway = protocore_h2_conn_goaway,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2
 

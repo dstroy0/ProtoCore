@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_LINK_MANAGER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Interface kind (informational; selection is by priority). Stored in a uint8_t field and
  *  compared, so integer constants in a namespacing struct - cast-free. */
@@ -38,7 +38,7 @@ typedef struct
 {
     uint8_t kind;     ///< LINK_KIND_*.
     uint8_t priority; ///< higher wins when up (ties break to the lower index).
-    proto_bool up;    ///< link currently up.
+    embed_bool up;    ///< link currently up.
 } LinkIface;
 
 /** @brief The link-manager state over a caller-owned interface table. */
@@ -57,7 +57,7 @@ typedef struct
     LinkIface *ifaces;       ///< the interface table a bind installs
     size_t n;                ///< how many entries it has
     size_t idx;              ///< the interface whose state a set changes
-    proto_bool up;           ///< that interface's new carrier state
+    embed_bool up;           ///< that interface's new carrier state
 } LinkArgs;
 
 /**
@@ -85,7 +85,7 @@ typedef struct
     int i32;
     int from;
     int to;
-    proto_bool changed;
+    embed_bool changed;
 } LinkVars;
 
 /** @brief The operands and the outcome. */
@@ -94,18 +94,18 @@ extern LinkVars LinkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *work);
-    void (*const select)(uint8_t *work);
-    void (*const active)(uint8_t *work);
-    void (*const set)(uint8_t *work);
+    void (*const init)(const uint8_t *work);
+    void (*const select)(const uint8_t *work);
+    void (*const active)(const uint8_t *work);
+    void (*const set)(const uint8_t *work);
 } LinkManagerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in LinkV or a region of the borrow at a fixed offset.
-void protocore_link_init(uint8_t *work);
-void protocore_link_select(uint8_t *work);
-void protocore_link_active(uint8_t *work);
-void protocore_link_set(uint8_t *work);
+void protocore_link_init(const uint8_t *work);
+void protocore_link_select(const uint8_t *work);
+void protocore_link_active(const uint8_t *work);
+void protocore_link_set(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -118,7 +118,7 @@ static const LinkManagerNs Link __attribute__((unused)) = {
     .set = protocore_link_set,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER
 

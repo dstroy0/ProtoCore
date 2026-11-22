@@ -159,7 +159,7 @@ void test_the_text_form(void)
     static const int DASH[4] = {8, 13, 18, 23};
     for (int i = 0; i < 36; i++)
     {
-        proto_bool is_dash = PROTO_FALSE;
+        embed_bool is_dash = EMBED_FALSE;
         for (int d = 0; d < 4; d++)
         {
             is_dash = is_dash || (i == DASH[d]);

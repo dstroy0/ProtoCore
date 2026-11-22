@@ -21,7 +21,7 @@ protocore_ssh_conn_setup();   // one-time wiring of the SSH dispatcher's outboun
 ```
 
 **The host key lives in NVS, not in RAM.** `protocore_ssh_rsa_load_pubkey()` loads only the
-public half at startup; the private key is read per-signature into a stack buffer
+public half at startup. The private key is read per-signature into a stack buffer
 and wiped, so it is never held in static RAM. You must provision the DER key once
 per device (namespace `ssh_host_key`, key `priv_der`) - see `docs/SSH.md`:
 

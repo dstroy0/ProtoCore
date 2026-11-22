@@ -228,7 +228,7 @@ void test_malformed_tokens(void)
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, OidcV.result);
 
     // No key loaded is a format refusal before anything is read.
-    OidcV.key.rsa.loaded = PROTO_FALSE;
+    OidcV.key.rsa.loaded = EMBED_FALSE;
     OidcV.token = RFC7515_A2;
     OidcV.token_len = strlen(RFC7515_A2);
     Oidc.verify_with_key(oidc_work);
@@ -266,7 +266,7 @@ void test_expiry(void)
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_EXPIRED, verify_a2(RFC7515_A2, "joe", NULL, 1300819381u));
 }
 
-// The Claims are reported only once every check has passed, and the buffers are cleared before each
+// The Claims are reported only once every check passed, and the buffers are cleared before each
 // validation so a refused token cannot leave a previous token's `sub` behind.
 void test_claims_are_cleared_before_each_validation(void)
 {

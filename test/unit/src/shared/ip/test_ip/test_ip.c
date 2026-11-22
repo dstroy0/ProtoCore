@@ -27,7 +27,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool parse(const char *s, protocore_ip *out)
+static embed_bool parse(const char *s, protocore_ip *out)
 {
     IpV.args.text = s;
     IpV.args.out = out;

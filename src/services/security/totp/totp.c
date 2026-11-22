@@ -21,7 +21,7 @@
 #include "crypto/hash/sha1/sha1.h"
 #include "server/core/worker/worker.h" // the cellblock guards the temporary borrows go through
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief B: the block length HMAC pads K out to for SHA-1 (RFC 2104 sec 2). */
 #define PROTOCORE_TOTP_HMAC_B 64
@@ -43,14 +43,13 @@ static uint32_t pow10u(uint8_t n)
 // One SHA-1 over the caller's bytes, out of a pool borrow taken and released per digest.
 static void sha1_of(const uint8_t *data, size_t len, uint8_t out[PROTOCORE_SHA1_DIGEST_LEN])
 {
-    const MaximumSecurityGuard *const secure_guard = protocore_secure_guard();
-    const size_t mark = secure_guard->temporary_buf_mark();
+    const MaxSecurityGuard *const secure_guard = protocore_secure_guard();
     uint8_t *w = (uint8_t *)secure_guard->temporary_buf_alloc(PROTOCORE_SHA1_BORROW, protocore_secure_owner());
     if (w)
     {
         Sha1.hash(w, data, len, out);
     }
-    secure_guard->temporary_buf_release(mark);
+    secure_guard->persistent_buf_release(w, protocore_secure_owner());
 }
 
 // RFC 2104 sec 2 H(K XOR opad, H(K XOR ipad, text)) with text the 8-byte counter C: K is zero-padded
@@ -147,7 +146,7 @@ void protocore_totp_totp(uint8_t *work)
 // and backward of it. Steps below the epoch are skipped; a negative drift matches nothing.
 void protocore_totp_verify(uint8_t *work)
 {
-    TotpV.ok = PROTO_FALSE;
+    TotpV.ok = EMBED_FALSE;
     const int32_t drift = TotpV.check.drift;
     if (drift < 0)
     {
@@ -164,7 +163,7 @@ void protocore_totp_verify(uint8_t *work)
         }
         if (hotp_value(TotpV.k, TotpV.keylen, (uint64_t)c, digit) == TotpV.check.otp)
         {
-            TotpV.ok = PROTO_TRUE;
+            TotpV.ok = EMBED_TRUE;
             return;
         }
     }
@@ -174,7 +173,7 @@ void protocore_totp_verify(uint8_t *work)
 // and 2-7 carry 26..31; lowercase carries the same values as uppercase, and '=', ' ' and '-' are
 // skipped rather than rejected under RFC 4648 sec 3.3. Any other character, or a byte past cap,
 // ends the decode at -1.
-void protocore_totp_base32_decode(uint8_t *work)
+void protocore_totp_base32_decode(const uint8_t *work)
 {
     (void)work;
     const char *b32 = TotpV.secret.b32;
@@ -232,6 +231,6 @@ void protocore_totp_base32_decode(uint8_t *work)
 /** @brief The operands and the outcome. */
 TotpVars TotpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TOTP

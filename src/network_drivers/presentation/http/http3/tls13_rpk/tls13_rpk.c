@@ -19,7 +19,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *pub)
+size_t protocore_tls13_rpk_ed25519_spki(const uint8_t *work, uint8_t *out, size_t cap, const uint8_t *pub)
 {
     (void)work;
 
@@ -35,7 +35,8 @@ size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap,
     return PROTOCORE_TLS13_ED25519_SPKI_LEN;
 }
 
-proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *spki, size_t len, const uint8_t **pub)
+embed_bool protocore_tls13_rpk_ed25519_from_spki(const uint8_t *work, const uint8_t *spki, size_t len,
+                                                 const uint8_t **pub)
 {
     (void)work;
 
@@ -43,10 +44,10 @@ proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *s
     if (len != PROTOCORE_TLS13_ED25519_SPKI_LEN ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = spki, .other = PREFIX, .bytes = sizeof(PREFIX)) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *pub = spki + sizeof(PREFIX);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_tls13_rpk_build_certificate(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *ed25519_pub)

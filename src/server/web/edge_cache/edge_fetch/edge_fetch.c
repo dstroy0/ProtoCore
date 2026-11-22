@@ -33,31 +33,31 @@ static size_t head_end(const uint8_t *b, size_t n)
     return 0;
 }
 
-static proto_bool hex_val(uint8_t c, int *v)
+static embed_bool hex_val(uint8_t c, int *v)
 {
     if (c >= '0' && c <= '9')
     {
         *v = c - '0';
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     c |= 0x20;
     if (c >= 'a' && c <= 'f')
     {
         *v = c - 'a' + 10;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // After the final zero-length chunk's size line (offset j), true once the trailer section reaches the
-// empty line (CRLF) that ends the message; false while the buffer is still short.
-static proto_bool chunked_trailer_complete(const uint8_t *b, size_t n, size_t j)
+// empty line (CRLF) that ends the message. False while the buffer is still short.
+static embed_bool chunked_trailer_complete(const uint8_t *b, size_t n, size_t j)
 {
     for (;;)
     {
         if (j + 1 < n && b[j] == '\r' && b[j + 1] == '\n')
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         size_t k = j;
         while (k < n && b[k] != '\n')
@@ -66,31 +66,31 @@ static proto_bool chunked_trailer_complete(const uint8_t *b, size_t n, size_t j)
         }
         if (k >= n)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         j = k + 1;
     }
 }
 
 // True if the chunked body @p b[0..n) reaches its terminating zero-length chunk + trailer CRLF.
-static proto_bool chunked_complete(const uint8_t *b, size_t n)
+static embed_bool chunked_complete(const uint8_t *b, size_t n)
 {
     size_t i = 0;
     for (;;)
     {
         size_t sz = 0;
         size_t j = i;
-        proto_bool any = PROTO_FALSE;
+        embed_bool any = EMBED_FALSE;
         int v = 0;
         while (j < n && hex_val(b[j], &v))
         {
             sz = sz * 16 + (size_t)v;
             j++;
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
         if (!any)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         while (j < n && b[j] != '\n') // skip chunk extensions to the size-line LF
         {
@@ -98,7 +98,7 @@ static proto_bool chunked_complete(const uint8_t *b, size_t n)
         }
         if (j >= n)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         j++; // past LF
         if (sz == 0)
@@ -108,14 +108,14 @@ static proto_bool chunked_complete(const uint8_t *b, size_t n)
         size_t next = j + sz + 2; // chunk data + trailing CRLF
         if (next > n)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         i = next;
     }
 }
 
 // Case-insensitive "does @p s contain 'chunked'".
-static proto_bool has_chunked(const char *s)
+static embed_bool has_chunked(const char *s)
 {
     char low[40];
     size_t i = 0;
@@ -129,7 +129,7 @@ static proto_bool has_chunked(const char *s)
     }
     low[i] = '\0';
     return EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = low, .cap = sizeof(low), .other = "chunked",
-                      .other_cap = sizeof("chunked"), .ci = PROTO_FALSE);
+                      .other_cap = sizeof("chunked"), .ci = EMBED_FALSE);
 }
 
 // The entries this file calls before reaching their definitions.
@@ -138,8 +138,8 @@ static proto_bool has_chunked(const char *s)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
-                                                     proto_bool conn_closed, size_t *head_len)
+embed_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
+                                                     embed_bool conn_closed, size_t *head_len)
 {
     size_t h = head_end(buf, len);
     *head_len = h;
@@ -157,11 +157,11 @@ proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_
     if (EdgeCacheV.ok)
     {
         size_t cl = 0;
-        proto_bool any = PROTO_FALSE;
+        embed_bool any = EMBED_FALSE;
         for (const char *p = v; *p >= '0' && *p <= '9'; p++)
         {
             cl = cl * 10 + (size_t)(*p - '0');
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
         if (any)
         {
@@ -182,7 +182,7 @@ proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_
     return conn_closed; // close-delimited body
 }
 
-void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
+void protocore_edge_fetcher_begin(const uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
                                   uint16_t port, const void *request, size_t req_len, uint32_t now_ms)
 {
     (void)work;
@@ -202,7 +202,7 @@ void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTr
         f->st = EDGE_FETCH_STATUS_FAILED;
         return;
     }
-    // The connection is not up yet. Nothing has arrived to occupy the response buffer, so the
+    // The connection is not up yet. Nothing arrived to occupy the response buffer, so the
     // request waits at the head of it until the pump finds the transport connected.
     EMBED_CALL(proxim.read, ProximusCfg, .dst = f->buf, .at = request, .size = req_len);
     f->req_len = (uint32_t)req_len;
@@ -235,7 +235,7 @@ EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const E
             f->st = EDGE_FETCH_STATUS_FAILED;
             return f->st;
         }
-        f->sent = PROTO_TRUE;
+        f->sent = EMBED_TRUE;
         f->got = 0; // the buffer goes back to taking the response
     }
 
@@ -248,10 +248,10 @@ EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const E
         }
         f->got += n;
     }
-    proto_bool closed = t->closed(t->ctx, f->cid);
+    embed_bool closed = t->closed(t->ctx, f->cid);
 
     size_t hl = 0;
-    proto_bool edge_fetcher_ok = EdgeFetcher.edge_resp_complete(work, f->buf, f->got, closed, &hl);
+    embed_bool edge_fetcher_ok = EdgeFetcher.edge_resp_complete(work, f->buf, f->got, closed, &hl);
     if (edge_fetcher_ok)
     {
         HttpClientV.message.buf = f->buf;
@@ -289,7 +289,7 @@ EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const E
     return EDGE_FETCH_STATUS_PENDING;
 }
 
-void protocore_edge_fetcher_end(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t)
+void protocore_edge_fetcher_end(const uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t)
 {
     (void)work;
 

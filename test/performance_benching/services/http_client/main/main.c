@@ -10,7 +10,7 @@
 // test/test_http_client. The lwIP/mbedTLS transport (http_get/http_post, protocore_client_*, the TLS BIO)
 // is ESP32-only and deliberately OUT OF SCOPE: this rig has no network up, so no real DNS/TCP/TLS
 // transaction is ever issued - only the CPU-side codec is timed. (Enabling PROTOCORE_ENABLE_HTTP_CLIENT
-// still compiles + links that transport TU via the Library Dependency Finder; we simply never call
+// still compiles + links that transport TU via the Library Dependency Finder. We simply never call
 // into it, exactly as bench_modbus/bench_coap keep the wire half stubbed/untouched.)
 //
 // The chunked-decode parse rewrites its input buffer in place, so that block refreshes a scratch
@@ -80,7 +80,7 @@ void dbench_run(void)
         DBENCH_OP("parse_response ContentLength", 100000,
                   sinks += http_client_parse_response(clbuf, cl_len, &body_off, &body_len));
         // 6) Response parse: chunked transfer-decode. The decode rewrites the body in place, so a
-        //    fresh copy is staged each iteration; the small memcpy is part of the measured op.
+        //    fresh copy is staged each iteration. The small memcpy is part of the measured op.
         DBENCH_OP("parse_response chunked(+copy)", 50000,
                   (memcpy(chkbuf, RESP_CHUNKED, chk_len),
                    sinks += http_client_parse_response(chkbuf, chk_len, &body_off, &body_len)));

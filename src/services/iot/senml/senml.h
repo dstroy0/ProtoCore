@@ -43,19 +43,18 @@
 
 #include "network_drivers/presentation/codec/codec.h" // protocore_codec: the binary encoding is an argument
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Longest resolved Name (Base Name concatenated with Name), the NUL included. */
 #define PROTOCORE_SENML_RESOLVED_NAME_MAX 96
 
 /** @brief Which value field a Record carries (RFC 8428 sec 4.2). */
-typedef enum PROTO_ENUM_PACKED
-{
-    SENML_VALUE_NONE,    ///< no value field, as in a Base-Fields-only Record
-    SENML_VALUE_NUMBER,  ///< Value (v), a Number; emitted as an integer when integral
-    SENML_VALUE_STRING,  ///< String Value (vs)
-    SENML_VALUE_BOOLEAN, ///< Boolean Value (vb)
-} SenmlValueKind;
+EMBED_ENUM_BYTE(SenmlValueKind,
+                SENML_VALUE_NONE,    ///< no value field, as in a Base-Fields-only Record
+                SENML_VALUE_NUMBER,  ///< Value (v), a Number; emitted as an integer when integral
+                SENML_VALUE_STRING,  ///< String Value (vs)
+                SENML_VALUE_BOOLEAN, ///< Boolean Value (vb)
+);
 
 /**
  * @brief One SenML Record (RFC 8428 sec 3): its Base Fields (sec 4.1) and Regular Fields (sec 4.2).
@@ -65,15 +64,15 @@ typedef enum PROTO_ENUM_PACKED
 typedef struct
 {
     const char *base_name;     ///< Base Name (bn), prepended to the Names that follow
-    proto_bool has_base_time;  ///< a Base Time is present
+    embed_bool has_base_time;  ///< a Base Time is present
     double base_time;          ///< Base Time (bt), added to the Times that follow
     const char *name;          ///< Name (n)
     const char *unit;          ///< Unit (u)
     SenmlValueKind value_kind; ///< which of the three value fields below this Record carries
     double value;              ///< Value (v)
     const char *string_value;  ///< String Value (vs)
-    proto_bool boolean_value;  ///< Boolean Value (vb)
-    proto_bool has_time;       ///< a Time is present
+    embed_bool boolean_value;  ///< Boolean Value (vb)
+    embed_bool has_time;       ///< a Time is present
     double time;               ///< Time (t)
 } SenmlRecord;
 
@@ -87,8 +86,8 @@ typedef struct
     SenmlValueKind value_kind;                    ///< which value field this Record carries
     double value;                                 ///< Value (v)
     const char *string_value;                     ///< String Value (vs)
-    proto_bool boolean_value;                     ///< Boolean Value (vb)
-    proto_bool has_time;                          ///< a Time is present
+    embed_bool boolean_value;                     ///< Boolean Value (vb)
+    embed_bool has_time;                          ///< a Time is present
     double time;                                  ///< Time (t): the Base Time added to the Time
 } SenmlResolved;
 
@@ -148,7 +147,7 @@ typedef struct
     SenmlJsonArgs json;         ///< where the text Pack lands
     SenmlBinaryArgs binary;     ///< which encoding, and where the encoded Pack lands
     SenmlResolvedArgs resolved; ///< where the resolved Records land
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } SenmlVars;
 
@@ -159,15 +158,15 @@ extern SenmlVars SenmlV;
 typedef struct
 {
     void (*const json_build)(uint8_t *work);
-    void (*const binary_build)(uint8_t *work);
-    void (*const resolve)(uint8_t *work);
+    void (*const binary_build)(const uint8_t *work);
+    void (*const resolve)(const uint8_t *work);
 } SenmlNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SenmlV or a region of the borrow at a fixed offset.
 void protocore_senml_json_build(uint8_t *work);
-void protocore_senml_binary_build(uint8_t *work);
-void protocore_senml_resolve(uint8_t *work);
+void protocore_senml_binary_build(const uint8_t *work);
+void protocore_senml_resolve(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -179,7 +178,7 @@ static const SenmlNs Senml __attribute__((unused)) = {
     .resolve = protocore_senml_resolve,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SENML
 

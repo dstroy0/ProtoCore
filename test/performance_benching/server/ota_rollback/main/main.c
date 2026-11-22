@@ -25,7 +25,7 @@
 static uint8_t ota_rollback_work[16]; // the borrow an entry takes; OtaRollback never reads it
 
 /** @brief WAIT / COMMIT / ROLLBACK for an image in @p img_state at @p ms_since_boot. */
-static protocore_ota_action ota_decide(uint8_t img_state, proto_bool self_test_ok, uint32_t ms_since_boot,
+static protocore_ota_action ota_decide(uint8_t img_state, embed_bool self_test_ok, uint32_t ms_since_boot,
                                        uint32_t window_ms)
 {
     OtaRollbackV.decide_args.img_state = img_state;
@@ -50,19 +50,19 @@ void dbench_run(void)
 
         // Non-pending image (normal boot): nothing to do -> WAIT (the common per-tick case).
         DBENCH_OP("OtaRollback.decide not-pending WAIT", 200000,
-                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_VALID, PROTO_FALSE, 999999, window_ms));
+                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_VALID, EMBED_FALSE, 999999, window_ms));
 
         // Pending + self-test passed -> COMMIT (mark valid).
         DBENCH_OP("OtaRollback.decide pending COMMIT", 200000,
-                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 1000, window_ms));
+                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_TRUE, 1000, window_ms));
 
         // Pending, self-test not yet passed, still inside the confirm window -> WAIT.
         DBENCH_OP("OtaRollback.decide pending in-window", 200000,
-                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 5000, window_ms));
+                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 5000, window_ms));
 
         // Pending, never confirmed, window elapsed -> ROLLBACK (self-heal decision).
         DBENCH_OP("OtaRollback.decide pending ROLLBACK", 200000,
-                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 40000, window_ms));
+                  sink += (uint8_t)ota_decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 40000, window_ms));
 
         (void)sink;
         DBENCH_DONE();

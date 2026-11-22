@@ -6,7 +6,7 @@
 // command 0x0401, 24-bit head device + device code) into a caller buffer, and Melsec.parse_response
 // validates a 0xD000 response subheader/length/end-code and returns a view onto the read payload - both
 // pure (no sockets, no heap). Like performance_benching/device/modbus, this is a pure protocol codec with no hardware
-// involved, so every call here exercises the real production code path; the TCP/UDP send half is the
+// involved, so every call here exercises the real production code path. The TCP/UDP send half is the
 // application's and is deliberately out of scope on this peripheral-less rig.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

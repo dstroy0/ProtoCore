@@ -10,7 +10,7 @@ not agree, and the disagreements were the bugs:
 * Two incompatible answers to the prettier collision. prettier reformats markdown
   AFTER a generator runs, so a byte comparison in --check reports STALE forever.
   Three generators solved it by wrapping output in prettier-ignore fences (exact
-  compare, still detects real drift); three others collapsed whitespace before
+  compare, still detects real drift). Three others collapsed whitespace before
   comparing, which makes --check blind to the drift it exists to catch. Fences win,
   so that is what `Region` emits.
 

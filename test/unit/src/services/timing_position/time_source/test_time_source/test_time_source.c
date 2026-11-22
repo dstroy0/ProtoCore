@@ -61,7 +61,7 @@ void test_lowest_priority_value_is_queried_first(void)
 // A source with no valid time reports 0, and the scan continues down the priority order.
 void test_a_source_with_no_time_falls_through(void)
 {
-    g_epoch_a = 0u; // GNSS has lost its fix
+    g_epoch_a = 0u; // GNSS lost its fix
     g_epoch_b = 0u; // NTP has never synchronized
     g_epoch_c = 4242u;
     TEST_ASSERT_TRUE(protocore_time_source_add("gnss", 0, src_a));

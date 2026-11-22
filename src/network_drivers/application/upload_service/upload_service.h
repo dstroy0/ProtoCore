@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file upload_service.h
@@ -62,6 +62,6 @@ uint8_t *protocore_upload_service_span(void);
 PROTOCORE_NS UploadServiceNs UploadService PROTOCORE_UNUSED = {.begin = protocore_upload_service_begin,
                                                                .last_size = protocore_upload_service_last_size};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_UPLOAD_SERVICE_H

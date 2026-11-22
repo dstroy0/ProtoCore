@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_FAILSAFE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One monitored lifeline. */
 typedef struct
@@ -32,8 +32,8 @@ typedef struct
     const char *name;      ///< label (for the breach callback + JSON); not copied.
     uint32_t deadline_ms;  ///< max interval between feeds before it is considered stuck.
     uint32_t last_feed_ms; ///< time of the last check-in (protocore_millis units).
-    proto_bool armed;      ///< slot in use.
-    proto_bool breached;   ///< currently in breach (so the callback fires once per episode).
+    embed_bool armed;      ///< slot in use.
+    embed_bool breached;   ///< currently in breach (so the callback fires once per episode).
 } protocore_lifeline;
 
 /** @brief Breach callback: invoked once when @p id (named @p name) misses its deadline. */
@@ -49,9 +49,9 @@ typedef void (*protocore_failsafe_cb)(int id, const char *name, void *arg);
  * Wrap-safe: the unsigned delta `now - last_feed` is correct across a millis() rollover as long as the
  * true gap is under 2^32 ms (~49 days), which any real deadline is.
  */
-static inline proto_bool protocore_lifeline_overdue(uint32_t now, uint32_t last_feed_ms, uint32_t deadline_ms)
+static inline embed_bool protocore_lifeline_overdue(uint32_t now, uint32_t last_feed_ms, uint32_t deadline_ms)
 {
-    return (uint32_t)(now - last_feed_ms) > deadline_ms;
+    return (now - last_feed_ms) > deadline_ms;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ typedef struct
 {
     FailsafeArgs args;
     FailsafeOutArgs out_args;
-    proto_bool ok;
+    embed_bool ok;
     int i32;
     uint32_t breached;
     int n;
@@ -155,7 +155,7 @@ static const FailsafeNs Failsafe __attribute__((unused)) = {
  */
 uint8_t *protocore_failsafe_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FAILSAFE
 

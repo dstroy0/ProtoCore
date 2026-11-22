@@ -58,7 +58,7 @@ static uint8_t channel(void)
     return PhysicalV.u8;
 }
 
-static proto_bool join(const char *ssid)
+static embed_bool join(const char *ssid)
 {
     PhysicalV.wifi.ssid = ssid;
     PhysicalV.wifi.password = "passphrase";
@@ -80,7 +80,7 @@ static protocore_phy_ps ps_mode(void)
     return Radio.mode;
 }
 
-static proto_bool ps_set(protocore_phy_ps mode)
+static embed_bool ps_set(protocore_phy_ps mode)
 {
     Radio.ps.mode = mode;
     Radio.ps_set(protocore_radio_power_span());

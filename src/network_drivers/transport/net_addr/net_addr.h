@@ -16,7 +16,7 @@
  * module states them in and the family-tagged form every layer above reads.
  *
  * The address bytes are read out of the vendor value byte by byte rather than shifted out of it. A
- * shift reads the value's arithmetic, which is the host's byte order; the stack holds the address in
+ * shift reads the value's arithmetic, which is the host's byte order. The stack holds the address in
  * network order, so the bytes are the address and the number is not.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -31,7 +31,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Inbound: the stack's address, and the library address it lands in. */
 typedef struct
@@ -70,10 +70,10 @@ typedef struct
     NetAddrInArgs in;   ///< what a read carries across
     NetAddrOutArgs out; ///< what a write carries across
 
-    proto_bool ok;
+    embed_bool ok;
 
-    void (*const to_ip)(uint8_t *work);
-    void (*const from_ip)(uint8_t *work);
+    void (*const to_ip)(const uint8_t *work);
+    void (*const from_ip)(const uint8_t *work);
 } NetAddrNs;
 
 /** @brief The one symbol this module exports. */
@@ -83,8 +83,8 @@ extern NetAddrNs NetAddr;
 void protocore_net_addr_to_ip(const protocore_net_ip *a, protocore_ip *out);
 
 /** @brief Write @p a into the stack's own address type; false when it cannot be represented. */
-proto_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *out);
+embed_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NET_ADDR_H

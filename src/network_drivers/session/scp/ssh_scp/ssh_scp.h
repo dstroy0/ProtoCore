@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ssh_scp.h
@@ -19,7 +19,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * Storage is reached through the filesystem accessor (server/storage/filesystem.h), so this file
  * names no vendor type and holds no mount, no root, and no path buffer. Mount the backend and set
- * the root once with protocore_mnt_mount() + protocore_fs_begin(); every server over that storage then answers
+ * the root once with protocore_mnt_mount() + protocore_fs_begin(). Every server over that storage then answers
  * from the same root by construction rather than by each being told the same string.
  *
  * Streamed writes, fixed buffers, no heap. Call protocore_ssh_scp_begin() once after protocore_ssh_conn_setup().
@@ -58,6 +58,6 @@ uint8_t *protocore_ssh_scp_span(void);
 /** @brief Module namespace. */
 PROTOCORE_NS SshScpNs SshScp PROTOCORE_UNUSED = {.begin = protocore_ssh_scp_begin};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SSH_SCP_H

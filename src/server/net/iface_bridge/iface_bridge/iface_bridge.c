@@ -10,7 +10,7 @@
 #include "server/net/iface_bridge/iface_bridge/iface_bridge.h"
 #include "shared/ip/ip.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /// The one owned mutable: the address:port -> bus rule table.
 typedef struct
@@ -36,7 +36,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define IFACE_BRIDGE_CTX(w) ((BridgeCtx *)(void *)((w) + IFACE_BRIDGE_OFF_CTX))
+#define IFACE_BRIDGE_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const BridgeCtx *)(const void *)((w) + IFACE_BRIDGE_OFF_CTX),                                \
+        default: (BridgeCtx *)(void *)((w) + IFACE_BRIDGE_OFF_CTX))
 
 // The entries this file calls before reaching their definitions.
 void protocore_iface_bridge_find(uint8_t *work);
@@ -66,7 +69,7 @@ void protocore_iface_bridge_clear(uint8_t *work)
 
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
-        IFACE_BRIDGE_CTX(work)->rules[i].used = PROTO_FALSE;
+        IFACE_BRIDGE_CTX(work)->rules[i].used = EMBED_FALSE;
     }
     IFACE_BRIDGE_CTX(work)->count = 0;
 }
@@ -77,7 +80,7 @@ void protocore_iface_bridge_add(uint8_t *work)
 
     if (!rule)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridgeV.ok = EMBED_FALSE;
         return;
     }
     IfaceBridgeV.find_args.port = rule->listen_port;
@@ -85,7 +88,7 @@ void protocore_iface_bridge_add(uint8_t *work)
     protocore_iface_bridge_find(work);
     if (IfaceBridgeV.rule)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridgeV.ok = EMBED_FALSE;
         return; // a rule already binds this port+proto
     }
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
@@ -93,13 +96,13 @@ void protocore_iface_bridge_add(uint8_t *work)
         if (!IFACE_BRIDGE_CTX(work)->rules[i].used)
         {
             IFACE_BRIDGE_CTX(work)->rules[i] = *rule;
-            IFACE_BRIDGE_CTX(work)->rules[i].used = PROTO_TRUE;
+            IFACE_BRIDGE_CTX(work)->rules[i].used = EMBED_TRUE;
             IFACE_BRIDGE_CTX(work)->count++;
-            IfaceBridgeV.ok = PROTO_TRUE;
+            IfaceBridgeV.ok = EMBED_TRUE;
             return;
         }
     }
-    IfaceBridgeV.ok = PROTO_FALSE;
+    IfaceBridgeV.ok = EMBED_FALSE;
     return; // table full
 }
 
@@ -113,7 +116,7 @@ void protocore_iface_bridge_map(uint8_t *work)
 
     if (!target)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridgeV.ok = EMBED_FALSE;
         return;
     }
     BridgeRule r;
@@ -126,7 +129,7 @@ void protocore_iface_bridge_map(uint8_t *work)
         Ip.parse(work);
         if (!IpV.ok)
         {
-            IfaceBridgeV.ok = PROTO_FALSE;
+            IfaceBridgeV.ok = EMBED_FALSE;
             return; // malformed bind address
         }
     }
@@ -135,6 +138,7 @@ void protocore_iface_bridge_map(uint8_t *work)
     r.target = *target;
     IfaceBridgeV.add_args.rule = &r;
     protocore_iface_bridge_add(work);
+    IfaceBridgeV.add_args.rule = NULL;
 }
 
 void protocore_iface_bridge_find(uint8_t *work)
@@ -160,7 +164,7 @@ void protocore_iface_bridge_count(uint8_t *work)
     IfaceBridgeV.u8 = IFACE_BRIDGE_CTX(work)->count;
 }
 
-void protocore_iface_bridge_txn_parse(uint8_t *work)
+void protocore_iface_bridge_txn_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = IfaceBridgeV.txn_parse_args.buf;
@@ -196,7 +200,7 @@ void protocore_iface_bridge_txn_parse(uint8_t *work)
     IfaceBridgeV.n = (size_t)PROTOCORE_BRIDGE_TXN_HDR + wl;
 }
 
-void protocore_iface_bridge_txn_build(uint8_t *work)
+void protocore_iface_bridge_txn_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = IfaceBridgeV.txn_build_args.out;
@@ -225,6 +229,6 @@ void protocore_iface_bridge_txn_build(uint8_t *work)
 /** @brief The operands and the outcome. */
 IfaceBridgeVars IfaceBridgeV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IFACE_BRIDGE

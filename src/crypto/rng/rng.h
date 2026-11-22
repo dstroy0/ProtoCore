@@ -43,7 +43,7 @@
 
 #if PROTOCORE_ENABLE_RNG
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The seed: a ChaCha20 key. */
 #define PROTOCORE_RAND_SEED_LEN 32
@@ -96,7 +96,7 @@ typedef struct
 typedef struct
 {
     RngFillArgs fill_args;
-    proto_bool ok;
+    embed_bool ok;
 } RngVars;
 
 /** @brief The operands and the outcome. */
@@ -134,7 +134,7 @@ static const RngNs Rng __attribute__((unused)) = {
  */
 uint8_t *protocore_rng_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RNG
 

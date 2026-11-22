@@ -51,7 +51,7 @@
 
 #if PROTOCORE_ENABLE_GRPC_WEB
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Compressed-Flag set in the frame byte: the Message uses the Message-Encoding. */
 #define PROTOCORE_GRPCWEB_COMPRESSED 0x01
@@ -64,8 +64,8 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     uint8_t flags;         ///< the 1st gRPC frame byte as it arrived
-    proto_bool compressed; ///< its Compressed-Flag, bit 0
-    proto_bool trailers;   ///< its 8th (MSB) bit: the body is a trailer-section
+    embed_bool compressed; ///< its Compressed-Flag, bit 0
+    embed_bool trailers;   ///< its 8th (MSB) bit: the body is a trailer-section
     const uint8_t *body;   ///< the Message, or the trailer-section when @c trailers is set
     size_t body_len;       ///< Message-Length, the octets @c body spans
 } GrpcWebFrame;
@@ -83,7 +83,7 @@ typedef struct
     const uint8_t *body;   ///< Message, the octets Message-Length measures
     size_t body_len;       ///< Message-Length, capped at what a 4-byte big-endian field expresses
     uint8_t flags;         ///< the whole 1st gRPC frame byte, when a caller sets it outright
-    proto_bool compressed; ///< Compressed-Flag, the bit a frame_message sets in @c flags
+    embed_bool compressed; ///< Compressed-Flag, the bit a frame_message sets in @c flags
 } GrpcWebMessageArgs;
 
 /** @brief The trailer-section a trailers frame carries (PROTOCOL-HTTP2.md "Responses"). */
@@ -131,7 +131,7 @@ typedef struct
     GrpcWebMessageArgs msg;       ///< what a data frame carries
     GrpcWebTrailersArgs trailers; ///< what a trailers frame carries
     GrpcWebInArgs in;             ///< what a read consumes
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     GrpcWebFrame parsed;
     int32_t i32;
@@ -145,22 +145,22 @@ extern GrpcWebVars GrpcWebV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const frame)(uint8_t *work);
+    void (*const frame)(const uint8_t *work);
     void (*const frame_message)(uint8_t *work);
-    void (*const frame_trailers)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
-    void (*const trailers_status)(uint8_t *work);
-    void (*const trailers_message)(uint8_t *work);
+    void (*const frame_trailers)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const trailers_status)(const uint8_t *work);
+    void (*const trailers_message)(const uint8_t *work);
 } GrpcWebNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in GrpcWebV or a region of the borrow at a fixed offset.
-void protocore_grpc_web_frame(uint8_t *work);
+void protocore_grpc_web_frame(const uint8_t *work);
 void protocore_grpc_web_frame_message(uint8_t *work);
-void protocore_grpc_web_frame_trailers(uint8_t *work);
-void protocore_grpc_web_parse(uint8_t *work);
-void protocore_grpc_web_trailers_status(uint8_t *work);
-void protocore_grpc_web_trailers_message(uint8_t *work);
+void protocore_grpc_web_frame_trailers(const uint8_t *work);
+void protocore_grpc_web_parse(const uint8_t *work);
+void protocore_grpc_web_trailers_status(const uint8_t *work);
+void protocore_grpc_web_trailers_message(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -175,7 +175,7 @@ static const GrpcWebNs GrpcWeb __attribute__((unused)) = {
     .trailers_message = protocore_grpc_web_trailers_message,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GRPC_WEB
 

@@ -52,7 +52,7 @@ void tearDown(void)
 // RFC 5861 sec 3.1: "Cache-Control: max-age=600, stale-while-revalidate=30 ... indicates that it is
 // fresh for 600 seconds, and it may continue to be served stale for up to an additional 30 seconds".
 // Below 600 every reading agrees the response is fresh; at 600 the two readings disagree and only
-// "not past both windows" is asserted; from 601 it is stale, and the last servable second is
+// "not past both windows" is asserted. From 601 it is stale, and the last servable second is
 // 600 + 30 = 630, so 631 is the first that must revalidate before serving.
 void test_rfc5861_worked_example(void)
 {
@@ -220,7 +220,7 @@ void test_verdict_is_monotonic_in_age(void)
     TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, prev);
 }
 
-// max-age + window is a sum of two 32-bit delta-seconds and can leave the range; if it were folded
+// max-age + window is a sum of two 32-bit delta-seconds and can leave the range. If it were folded
 // back into 32 bits the total would collapse to a small number and both of these would read EXPIRED.
 void test_the_window_sum_does_not_wrap(void)
 {

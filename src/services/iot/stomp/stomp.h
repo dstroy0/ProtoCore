@@ -55,7 +55,7 @@
 
 #if PROTOCORE_ENABLE_STOMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One header entry (sec 9 `header = header-name ":" header-value`), sliced from the source. */
 typedef struct
@@ -134,7 +134,7 @@ typedef struct
     StompBufArgs buf;          ///< the caller buffer a codec runs over
     StompBuildArgs build_args; ///< what a build emits
     StompLookupArgs lookup;    ///< what a lookup matches
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     size_t consumed;
     const char *value;
@@ -147,18 +147,18 @@ extern StompVars StompV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
-    void (*const header)(uint8_t *work);
-    void (*const unescape)(uint8_t *work);
+    void (*const build)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const header)(const uint8_t *work);
+    void (*const unescape)(const uint8_t *work);
 } StompNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in StompV or a region of the borrow at a fixed offset.
-void protocore_stomp_build(uint8_t *work);
-void protocore_stomp_parse(uint8_t *work);
-void protocore_stomp_header(uint8_t *work);
-void protocore_stomp_unescape(uint8_t *work);
+void protocore_stomp_build(const uint8_t *work);
+void protocore_stomp_parse(const uint8_t *work);
+void protocore_stomp_header(const uint8_t *work);
+void protocore_stomp_unescape(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -171,7 +171,7 @@ static const StompNs Stomp __attribute__((unused)) = {
     .unescape = protocore_stomp_unescape,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_STOMP
 

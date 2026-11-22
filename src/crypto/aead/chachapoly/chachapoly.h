@@ -24,11 +24,11 @@
 #ifndef PROTOCORE_CHACHAPOLY_H
 #define PROTOCORE_CHACHAPOLY_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for proto_bool and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for embed_bool and the widths
 
 #if PROTOCORE_ENABLE_CHACHAPOLY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define PROTOCORE_CHACHAPOLY_KEY_LEN 64 ///< two 256-bit ChaCha20 keys
 #define PROTOCORE_CHACHAPOLY_TAG_LEN 16 ///< Poly1305 tag
@@ -101,7 +101,7 @@ typedef struct
     ChachaPolyLengthArgs length_args;
     ChachaPolyEncryptArgs encrypt_args;
     ChachaPolyDecryptArgs decrypt_args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t length;
 } ChachaPolyVars;
 
@@ -132,7 +132,7 @@ static const ChachaPolyNs ChachaPoly __attribute__((unused)) = {
     .decrypt = protocore_chacha_poly_decrypt,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CHACHAPOLY
 

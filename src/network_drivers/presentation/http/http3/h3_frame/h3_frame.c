@@ -20,26 +20,26 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out)
+embed_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out)
 {
     size_t c1 = 0;
     size_t c2 = 0;
     uint64_t type = 0;
     uint64_t length = 0;
-    proto_bool quic_varint_ok = QuicVarint.decode(work, buf, len, &type, &c1);
+    embed_bool quic_varint_ok = QuicVarint.decode(work, buf, len, &type, &c1);
     if (!quic_varint_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     quic_varint_ok = QuicVarint.decode(work, buf + c1, len - c1, &length, &c2);
     if (!quic_varint_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->type = type;
     out->length = length;
     out->header_len = c1 + c2;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, uint64_t type, uint64_t length)
@@ -59,7 +59,7 @@ size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, 
     return n + m;
 }
 
-proto_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type)
+embed_bool protocore_h3_frame_type_reserved(const uint8_t *work, uint64_t type)
 {
     (void)work;
 
@@ -67,7 +67,7 @@ proto_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type)
     return type == 0x02 || type == 0x06 || type == 0x08 || type == 0x09;
 }
 
-void protocore_h3_frame_settings_defaults(uint8_t *work, H3Settings *s)
+void protocore_h3_frame_settings_defaults(const uint8_t *work, H3Settings *s)
 {
     (void)work;
 
@@ -76,9 +76,9 @@ void protocore_h3_frame_settings_defaults(uint8_t *work, H3Settings *s)
     s->qpack_blocked_streams = 0;
 }
 
-proto_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s)
+embed_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
 
     size_t off = 0;
     while (off < len)
@@ -87,16 +87,16 @@ proto_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *paylo
         size_t c2 = 0;
         uint64_t id = 0;
         uint64_t val = 0;
-        proto_bool quic_varint_ok = QuicVarint.decode(work, payload + off, len - off, &id, &c1);
+        embed_bool quic_varint_ok = QuicVarint.decode(work, payload + off, len - off, &id, &c1);
         if (!quic_varint_ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off += c1;
         quic_varint_ok = QuicVarint.decode(work, payload + off, len - off, &val, &c2);
         if (!quic_varint_ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off += c2;
         switch (id)
@@ -114,13 +114,13 @@ proto_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *paylo
         case 0x03:
         case 0x04:
         case 0x05:
-            ok = PROTO_FALSE; // reserved HTTP/2 settings identifiers (RFC 9114 sec 7.2.4.1)
+            ok = EMBED_FALSE; // reserved HTTP/2 settings identifiers (RFC 9114 sec 7.2.4.1)
             return ok;
         default:
             break; // unknown / greased settings are ignored
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_h3_frame_build_data(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *data, size_t len)

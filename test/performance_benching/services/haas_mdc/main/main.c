@@ -40,7 +40,7 @@ void dbench_run(void)
 
     static char qbuf[32]; // query-builder scratch
 
-    // Pre-parse the response frames once; the typed decoders (parse_status / parse_macro) are benched
+    // Pre-parse the response frames once. The typed decoders (parse_status / parse_macro) are benched
     // against these already-split field views so each op times only its own decode work.
     static HaasMdcResp r_status;
     static HaasMdcResp r_macro;

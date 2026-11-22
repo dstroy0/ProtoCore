@@ -781,7 +781,7 @@ void loop()
     server.handle();
 #ifdef PROTOCORE_SSH_KEX_BENCH
     // Print each completed KEX's device-side compute spans (performance_benching/FEATURE_PERFORMANCE wall-clock item).
-    // ssh_transport records the numbers; the firmware owns the (USB-CDC) serial, so it prints them here.
+    // ssh_transport records the numbers; the firmware owns the (USB-CDC) serial. So it prints them here.
     static unsigned seen_kex = 0;
     if (protocore_ssh_kex_bench.kex_count != seen_kex)
     {

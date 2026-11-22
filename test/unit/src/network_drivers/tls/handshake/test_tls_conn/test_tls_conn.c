@@ -9,7 +9,7 @@
 // RFC 8032 sec 7.1 TEST 1. So the server's key_share and the secret the test client recovers are
 // compared with numbers the documents publish, not with a second run of the same code. The message
 // field offsets come from RFC 8446 sec 4.1.3 / 4.2.8 / 4.4.2 / 4.4.3 / 4.4.4 and are cross-checked
-// against the 90-octet ServerHello dump in RFC 8448 sec 3; the 44-octet RawPublicKey credential is
+// against the 90-octet ServerHello dump in RFC 8448 sec 3. The 44-octet RawPublicKey credential is
 // DER derived from RFC 8410 sec 3 and sec 4 in the comment that carries it.
 //
 // The alert cases are anchored on RFC 8446 sec 6 and sec 6.2, which name the alert for each fault
@@ -137,7 +137,7 @@ static size_t be24(const uint8_t *p)
 
 // Walk an extension block of RFC 8446 sec 4.2 Extension records - extension_type(2),
 // extension_data<0..2^16-1> - and report whether @p type appears carrying exactly @p body.
-static proto_bool ext_carries(const uint8_t *ext, size_t ext_len, uint16_t type, const uint8_t *body, size_t body_len)
+static embed_bool ext_carries(const uint8_t *ext, size_t ext_len, uint16_t type, const uint8_t *body, size_t body_len)
 {
     size_t i = 0;
     while (i + 4 <= ext_len)
@@ -146,23 +146,23 @@ static proto_bool ext_carries(const uint8_t *ext, size_t ext_len, uint16_t type,
         const size_t n = be16(ext + i + 2);
         if (i + 4 + n > ext_len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (t == type)
         {
-            return (proto_bool)(n == body_len && memcmp(ext + i + 4, body, body_len) == 0);
+            return (embed_bool)(n == body_len && memcmp(ext + i + 4, body, body_len) == 0);
         }
         i += 4 + n;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Build a ClientHello per RFC 8446 sec 4.1.2: legacy_version 0x0303, Random(32),
 // legacy_session_id<0..32>, cipher_suites<2..2^16-2>, legacy_compression_methods<1..2^8-1>,
 // extensions<8..2^16-1>. The extension code points are the sec 4.2 table:
 // supported_groups(10), signature_algorithms(13), supported_versions(43), key_share(51).
-static size_t build_client_hello(uint8_t *out, proto_bool with_x25519_group, proto_bool with_share,
-                                 proto_bool with_ed25519, uint16_t suite)
+static size_t build_client_hello(uint8_t *out, embed_bool with_x25519_group, embed_bool with_share,
+                                 embed_bool with_ed25519, uint16_t suite)
 {
     size_t i = 0;
     out[i++] = TLS_HS_CLIENT_HELLO;
@@ -289,7 +289,7 @@ static uint8_t server_alert(void)
     return TlsConnectionV.u8;
 }
 
-static proto_bool server_established(void)
+static embed_bool server_established(void)
 {
     TlsConnectionV.conn = &g_conn;
     TlsConnection.established(NULL);
@@ -330,7 +330,7 @@ void test_rfc8446_cert_verify_content_worked_example(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(out);
     Tls13MsgV.cert_verify_content_args.transcript_hash = hash;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(130u, Tls13MsgV.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
@@ -342,7 +342,7 @@ void test_rfc8446_cert_verify_content_worked_example(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(out);
     Tls13MsgV.cert_verify_content_args.transcript_hash = hash;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_FALSE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_FALSE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(130u, Tls13MsgV.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
@@ -373,7 +373,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
     g_cli_transcript = g_cli_hash_work;
     Sha256.init(g_cli_transcript);
 
-    size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    size_t ch_len = build_client_hello(ch, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
     Sha256.update(g_cli_transcript, ch, ch_len);
 
     int wrote = feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec));
@@ -541,11 +541,11 @@ void test_full_handshake_on_rfc8448_key_material(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
     Tls13MsgV.cert_verify_content_args.transcript_hash = cert_verify_hash;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
     TEST_ASSERT_EQUAL_UINT(130u, clen);
-    proto_bool ed25519_ok = Ed25519.verify(g_sign_work, peer_pub, content, clen, cv_sig);
+    embed_bool ed25519_ok = Ed25519.verify(g_sign_work, peer_pub, content, clen, cv_sig);
     TEST_ASSERT_TRUE_MESSAGE(ed25519_ok, "the server's CertificateVerify did not verify under the key it presented");
 
     uint8_t ch_sfin_hash[32];
@@ -643,21 +643,21 @@ void test_no_overlapping_parameters_is_a_handshake_failure(void)
 
     struct
     {
-        proto_bool group;
-        proto_bool ed;
+        embed_bool group;
+        embed_bool ed;
         uint16_t suite;
         const char *why;
     } static const CASES[] = {
-        {PROTO_FALSE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, "no x25519 in supported_groups"},
-        {PROTO_TRUE, PROTO_FALSE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, "no ed25519 in signature_algorithms"},
-        {PROTO_TRUE, PROTO_TRUE, 0x1302, "a cipher suite this stack does not implement"},
+        {EMBED_FALSE, EMBED_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, "no x25519 in supported_groups"},
+        {EMBED_TRUE, EMBED_FALSE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, "no ed25519 in signature_algorithms"},
+        {EMBED_TRUE, EMBED_TRUE, 0x1302, "a cipher suite this stack does not implement"},
     };
 
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         setUp();
         init_server();
-        size_t ch_len = build_client_hello(ch, CASES[i].group, PROTO_TRUE, CASES[i].ed, CASES[i].suite);
+        size_t ch_len = build_client_hello(ch, CASES[i].group, EMBED_TRUE, CASES[i].ed, CASES[i].suite);
         TEST_ASSERT_EQUAL_INT_MESSAGE(-1, feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec)),
                                       CASES[i].why);
         const uint8_t a = server_alert();
@@ -678,7 +678,7 @@ void test_a_missing_key_share_owes_a_hello_retry_request(void)
     uint8_t rec[1024];
 
     init_server();
-    size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_FALSE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    size_t ch_len = build_client_hello(ch, EMBED_TRUE, EMBED_FALSE, EMBED_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
     int wrote = feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec));
     TEST_ASSERT_TRUE_MESSAGE(wrote > 0, "RFC 8446 sec 4.1.1 MUST: a missing key_share owes a HelloRetryRequest");
 
@@ -704,7 +704,7 @@ void test_a_length_past_the_message_boundary_is_a_decode_error(void)
     uint8_t rec[1024];
 
     init_server();
-    size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    size_t ch_len = build_client_hello(ch, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
     ch[3] = (uint8_t)(ch[3] + 4);
     TEST_ASSERT_EQUAL_INT(-1, feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec)));
     TEST_ASSERT_EQUAL_UINT8(ALERT_DECODE_ERROR, server_alert());
@@ -751,7 +751,7 @@ void test_a_middlebox_change_cipher_spec_is_dropped(void)
     static const uint8_t CCS[1] = {0x01};
 
     init_server();
-    size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    size_t ch_len = build_client_hello(ch, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
     TEST_ASSERT_TRUE(feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec)) > 0);
 
     TEST_ASSERT_EQUAL_INT(0, feed_plaintext(PROTOCORE_TLS_CT_CHANGE_CIPHER_SPEC, CCS, sizeof(CCS), rec, sizeof(rec)));
@@ -770,7 +770,7 @@ void test_a_wrong_client_finished_is_decrypt_error(void)
     init_server();
     g_cli_transcript = g_cli_hash_work;
     Sha256.init(g_cli_transcript);
-    size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    size_t ch_len = build_client_hello(ch, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
     Sha256.update(g_cli_transcript, ch, ch_len);
     int wrote = feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec));
     TEST_ASSERT_TRUE(wrote > 0);
@@ -1098,7 +1098,7 @@ void test_a_client_refuses_the_wrong_peer_key(void)
     const size_t flight = feed_records(&g_conn, g_cli_out, ch, g_srv_out, sizeof(g_srv_out));
 
     // The flight is fed record by record until one is refused; the Certificate is that one.
-    proto_bool refused = PROTO_FALSE;
+    embed_bool refused = EMBED_FALSE;
     for (size_t off = 0; off < flight;)
     {
         const size_t rn = record_len(g_srv_out + off, flight - off);
@@ -1111,7 +1111,7 @@ void test_a_client_refuses_the_wrong_peer_key(void)
         TlsConnection.process(NULL);
         if (TlsConnectionV.i32 < 0)
         {
-            refused = PROTO_TRUE;
+            refused = EMBED_TRUE;
             break;
         }
         off += rn;
@@ -1133,7 +1133,7 @@ void test_a_client_refuses_the_wrong_peer_key(void)
 // ---------------------------------------------------------------------------
 
 // Drive one full handshake with the two configurations given. Returns the client's state.
-static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
+static embed_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
 {
     TlsConnectionV.conn = &g_cli_conn;
     TlsConnectionV.init_args.role = TLS_ROLE_CLIENT;
@@ -1141,7 +1141,7 @@ static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
     TlsConnection.init(NULL);
     if (!TlsConnectionV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     TlsConnectionV.conn = &g_conn;
     TlsConnectionV.init_args.role = TLS_ROLE_SERVER;
@@ -1149,7 +1149,7 @@ static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
     TlsConnection.init(NULL);
     if (!TlsConnectionV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     TlsConnectionV.conn = &g_cli_conn;
@@ -1159,13 +1159,13 @@ static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
     const size_t ch = TlsConnectionV.n;
     if (ch == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     const size_t flight = feed_records(&g_conn, g_cli_out, ch, g_srv_out, sizeof(g_srv_out));
     if (flight == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Fed record by record so a refusal stops here rather than tripping feed_records' assertion.
@@ -1175,7 +1175,7 @@ static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
         const size_t rn = record_len(g_srv_out + off, flight - off);
         if (rn == 0)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         TlsConnectionV.conn = &g_cli_conn;
         memcpy(g_cli_conn.rx, g_srv_out + off, rn);
@@ -1185,7 +1185,7 @@ static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
         TlsConnection.process(NULL);
         if (TlsConnectionV.i32 < 0)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         back += (size_t)TlsConnectionV.i32; // the client's Finished, once the flight is closed
         off += rn;
@@ -1194,11 +1194,11 @@ static proto_bool run_handshake(TlsConnConfig *cli_cfg, TlsConnConfig *srv_cfg)
     TlsConnection.established(NULL);
     if (!TlsConnectionV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The server has to accept that Finished for the handshake to be complete at both ends.
     (void)feed_records(&g_conn, g_cli_out, back, g_srv_out, sizeof(g_srv_out));
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The certificate the fixture's Ed25519 leaf is, presented and validated for real.

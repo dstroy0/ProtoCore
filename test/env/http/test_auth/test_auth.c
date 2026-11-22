@@ -13,13 +13,13 @@
 
 static uint8_t tw[4096];
 
-static proto_bool handler_called = PROTO_FALSE;
+static embed_bool handler_called = EMBED_FALSE;
 static uint8_t handler_slot = 0xFF;
 
 static void handle_ok(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = PROTO_TRUE;
+    handler_called = EMBED_TRUE;
     handler_slot = slot_id;
     send_text(slot_id, 200, "text/plain", "OK");
 }
@@ -27,14 +27,15 @@ static void handle_ok(uint8_t slot_id, HttpReq *req)
 void setUp()
 {
     protocore_server_reset();
-    handler_called = PROTO_FALSE;
+    handler_called = EMBED_FALSE;
     handler_slot = 0xFF;
 
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -68,7 +69,7 @@ void test_unprotected_route_fires_handler()
 
 void test_protected_route_no_header_returns_401()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_TRUE(strstr(tcp_captured(), "401 Unauthorized") != NULL);
@@ -76,7 +77,7 @@ void test_protected_route_no_header_returns_401()
 
 void test_protected_route_wrong_password_returns_401()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic dXNlcjp3cm9uZw==\r\n\r\n");
@@ -86,7 +87,7 @@ void test_protected_route_wrong_password_returns_401()
 
 void test_protected_route_wrong_username_returns_401()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic YWRtaW46cGFzcw==\r\n\r\n");
@@ -96,7 +97,7 @@ void test_protected_route_wrong_username_returns_401()
 
 void test_protected_route_valid_credentials_fires_handler()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic dXNlcjpwYXNz\r\n\r\n");
@@ -106,14 +107,14 @@ void test_protected_route_valid_credentials_fires_handler()
 
 void test_401_includes_www_authenticate_header()
 {
-    on_http_auth("/secret", HTTP_GET, handle_ok, "MyRealm", "u", "p", PROTO_FALSE);
+    on_http_auth("/secret", HTTP_GET, handle_ok, "MyRealm", "u", "p", EMBED_FALSE);
     feed_and_handle(0, "GET /secret HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "WWW-Authenticate: Basic realm=\"MyRealm\""));
 }
 
 void test_non_basic_scheme_returns_401()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Bearer some_token\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
@@ -122,7 +123,7 @@ void test_non_basic_scheme_returns_401()
 
 void test_credentials_without_colon_returns_401()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic bm9jb2xvbg==\r\n\r\n");
@@ -133,12 +134,12 @@ void test_credentials_without_colon_returns_401()
 void test_protected_and_unprotected_routes_coexist()
 {
     on_http("/public", HTTP_GET, handle_ok);
-    on_http_auth("/private", HTTP_GET, handle_ok, "Priv", "u", "p", PROTO_FALSE);
+    on_http_auth("/private", HTTP_GET, handle_ok, "Priv", "u", "p", EMBED_FALSE);
 
     feed_and_handle(0, "GET /public HTTP/1.1\r\n\r\n");
     TEST_ASSERT_TRUE(handler_called);
-    handler_called = PROTO_FALSE;
-    conn_pool[1].state = CONN_ACTIVE;
+    handler_called = EMBED_FALSE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[1].state, .value = CONN_ACTIVE);
     conn_pool[1].proto = PROTO_HTTP;
     conn_pool[1].pcb = protocore_net_host_pcb();
     HttpConnV.slot = 1;
@@ -152,7 +153,7 @@ void test_protected_and_unprotected_routes_coexist()
 
 void test_auth_route_returns_404_for_wrong_path()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
     feed_and_handle(0, "GET /other HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_TRUE(strstr(tcp_captured(), "404") != NULL);
@@ -161,7 +162,7 @@ void test_auth_route_returns_404_for_wrong_path()
 void test_auth_checked_per_method()
 {
 
-    on_http_auth("/upload", HTTP_POST, handle_ok, "Upload", "u", "p", PROTO_FALSE);
+    on_http_auth("/upload", HTTP_POST, handle_ok, "Upload", "u", "p", EMBED_FALSE);
     feed_and_handle(0, "GET /upload HTTP/1.1\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405"));
@@ -171,7 +172,7 @@ void test_auth_checked_per_method()
 
 void stress_auth_50_valid_requests()
 {
-    on_http_auth("/s", HTTP_GET, handle_ok, "R", "u", "p", PROTO_FALSE);
+    on_http_auth("/s", HTTP_GET, handle_ok, "R", "u", "p", EMBED_FALSE);
 
     const char *req = "GET /s HTTP/1.1\r\n"
                       "Authorization: Basic dTpw\r\n\r\n";
@@ -181,13 +182,14 @@ void stress_auth_50_valid_requests()
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
         conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
-        conn_pool[slot].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+                   .value = CONN_ACTIVE);
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConnV.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
 
-        handler_called = PROTO_FALSE;
+        handler_called = EMBED_FALSE;
         push_str(slot, req);
         HttpConnV.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
@@ -198,7 +200,7 @@ void stress_auth_50_valid_requests()
 
 void stress_auth_50_invalid_requests()
 {
-    on_http_auth("/s", HTTP_GET, handle_ok, "R", "u", "p", PROTO_FALSE);
+    on_http_auth("/s", HTTP_GET, handle_ok, "R", "u", "p", EMBED_FALSE);
     const char *req = "GET /s HTTP/1.1\r\n"
                       "Authorization: Basic d3Jvbmc6Y3JlZHM=\r\n\r\n";
 
@@ -207,13 +209,14 @@ void stress_auth_50_invalid_requests()
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
         conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
-        conn_pool[slot].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+                   .value = CONN_ACTIVE);
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConnV.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
 
-        handler_called = PROTO_FALSE;
+        handler_called = EMBED_FALSE;
         push_str(slot, req);
         HttpConnV.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
@@ -226,7 +229,8 @@ static void rearm(uint8_t slot)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    conn_pool[slot].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+               .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConnV.slot = slot;
@@ -236,7 +240,7 @@ static void rearm(uint8_t slot)
 
 void test_basic_auth_same_length_wrong_credentials()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic eHNlcjpwYXNz\r\n\r\n");
@@ -252,7 +256,7 @@ void test_basic_auth_same_length_wrong_credentials()
 
 void test_basic_auth_invalid_base64_rejected()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n"
                        "Authorization: Basic ****\r\n\r\n");
     TEST_ASSERT_FALSE(handler_called);
@@ -262,7 +266,7 @@ void test_basic_auth_invalid_base64_rejected()
 void test_unauth_challenge_cors_and_head()
 {
     set_cors("*");
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
 
     feed_and_handle(0, "GET /admin HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "401"));
@@ -278,7 +282,7 @@ void test_unauth_challenge_cors_and_head()
 
 void test_unauth_challenge_on_dead_connection()
 {
-    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", PROTO_FALSE);
+    on_http_auth("/admin", HTTP_GET, handle_ok, "Admin", "user", "pass", EMBED_FALSE);
     push_str(0, "GET /admin HTTP/1.1\r\n\r\n");
     HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
@@ -307,18 +311,18 @@ static void sha256_hex_str(const char *s, char out[65])
     out[64] = '\0';
 }
 
-static proto_bool grab_nonce(const char *resp, char *out, size_t n)
+static embed_bool grab_nonce(const char *resp, char *out, size_t n)
 {
     const char *p = strstr(resp, "nonce=\"");
     if (!p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p += 7;
     const char *e = strchr(p, '"');
     if (!e)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t len = (size_t)(e - p);
     if (len > n - 1)
@@ -327,7 +331,7 @@ static proto_bool grab_nonce(const char *resp, char *out, size_t n)
     }
     memcpy(out, p, len);
     out[len] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void digest_response(const char *uri, const char *nonce, char out[65])
@@ -352,7 +356,7 @@ static void digest_challenge(char *nonce, size_t n)
 
 void test_digest_field_parser_boundaries()
 {
-    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
+    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, EMBED_TRUE);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -383,7 +387,7 @@ void test_digest_field_parser_boundaries()
 
 void test_digest_token_values_and_truncation()
 {
-    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
+    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, EMBED_TRUE);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -412,7 +416,7 @@ void test_digest_token_values_and_truncation()
 
 void test_digest_nonce_shape_and_mac()
 {
-    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
+    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, EMBED_TRUE);
 
     static const char *bad_nonces[] = {
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -436,7 +440,7 @@ void test_digest_nonce_shape_and_mac()
 
 void test_digest_missing_field_rejected()
 {
-    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
+    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, EMBED_TRUE);
     char nonce[48];
     digest_challenge(nonce, sizeof(nonce));
 
@@ -447,7 +451,7 @@ void test_digest_missing_field_rejected()
         int n = snprintf(hdr, sizeof(hdr), "GET /d HTTP/1.1\r\nHost: x\r\nAuthorization: Digest ");
         const char *fields[7][2] = {{"username", kDUser}, {"nonce", nonce},  {"uri", "/d"},     {"qop", "auth"},
                                     {"nc", "00000001"},   {"cnonce", "abc"}, {"response", "00"}};
-        proto_bool first = PROTO_TRUE;
+        embed_bool first = EMBED_TRUE;
         for (size_t f = 0; f < 7; f++)
         {
             if (strcmp(fields[f][0], omit[i]) == 0)
@@ -456,7 +460,7 @@ void test_digest_missing_field_rejected()
             }
             n += snprintf(hdr + n, sizeof(hdr) - (size_t)n, "%s%s=\"%s\"", first ? "" : ", ", fields[f][0],
                           fields[f][1]);
-            first = PROTO_FALSE;
+            first = EMBED_FALSE;
         }
         snprintf(hdr + n, sizeof(hdr) - (size_t)n, "\r\n\r\n");
 
@@ -469,7 +473,7 @@ void test_digest_missing_field_rejected()
 
 void test_digest_uri_includes_query_string()
 {
-    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, PROTO_TRUE);
+    on_http_auth("/d", HTTP_GET, handle_ok, kDRealm, kDUser, kDPass, EMBED_TRUE);
     char nonce[48];
     rearm(0);
     feed_and_handle(0, "GET /d?a=1 HTTP/1.1\r\nHost: x\r\n\r\n");

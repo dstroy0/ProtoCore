@@ -12,7 +12,7 @@
 static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
 
 // The PDU dispatcher, reached through the agent's namespace.
-static size_t snmp_dispatch_pdu(const uint8_t *req, size_t req_len, proto_bool allow_write, proto_bool v2c,
+static size_t snmp_dispatch_pdu(const uint8_t *req, size_t req_len, embed_bool allow_write, embed_bool v2c,
                                 uint8_t *out, size_t out_cap)
 {
     SnmpAgentV.pdu.req = req;
@@ -104,7 +104,7 @@ static void ber_put_integer(BerEnc *e, long ival)
     SnmpBer.put_integer(snmp_ber_work);
 }
 
-static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
+static embed_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
 {
     SnmpBerV.dec = d;
     SnmpBer.read_header(snmp_ber_work);
@@ -119,7 +119,7 @@ static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
     return SnmpBerV.ok;
 }
 
-static proto_bool ber_read_integer(BerDec *d, long *out)
+static embed_bool ber_read_integer(BerDec *d, long *out)
 {
     SnmpBerV.dec = d;
     SnmpBer.read_integer(snmp_ber_work);
@@ -130,7 +130,7 @@ static proto_bool ber_read_integer(BerDec *d, long *out)
     return SnmpBerV.ok;
 }
 
-static proto_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, size_t *count)
+static embed_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, size_t *count)
 {
     SnmpBerV.dec = d;
     SnmpBerV.read_args.arc_out = arc_out;
@@ -143,7 +143,7 @@ static proto_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, siz
     return SnmpBerV.ok;
 }
 
-static proto_bool ber_skip(BerDec *d, size_t len)
+static embed_bool ber_skip(BerDec *d, size_t len)
 {
     SnmpBerV.dec = d;
     SnmpBerV.read_args.skip = len;
@@ -176,7 +176,7 @@ static void snmp_set_system(const char *descr, const char *contact, const char *
     SnmpAgent.set_system(protocore_snmp_agent_span());
 }
 
-static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
+static embed_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
 {
     SnmpAgentV.object.oid = oid;
     SnmpAgentV.object.oid_len = oid_len;
@@ -186,7 +186,7 @@ static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long iva
     return SnmpAgentV.ok;
 }
 
-static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const char *text, SnmpSetFn setter)
+static embed_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const char *text, SnmpSetFn setter)
 {
     SnmpAgentV.object.oid = oid;
     SnmpAgentV.object.oid_len = oid_len;
@@ -196,7 +196,7 @@ static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const cha
     return SnmpAgentV.ok;
 }
 
-static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
+static embed_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
 {
     SnmpAgentV.object.oid = oid;
     SnmpAgentV.object.oid_len = oid_len;
@@ -207,7 +207,7 @@ static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t 
     return SnmpAgentV.ok;
 }
 
-static proto_bool snmp_listen(uint16_t port)
+static embed_bool snmp_listen(uint16_t port)
 {
     SnmpAgentV.port = port;
     SnmpAgent.listen(protocore_snmp_agent_span());
@@ -237,25 +237,25 @@ static const uint32_t OID_SYSDESCR_BADINST[] = {1, 3, 6, 1, 2, 1, 1, 1, 5};
 
 static const char *SYSDESCR_VAL = "PC test agent";
 
-static proto_bool g_set_called = PROTO_FALSE;
+static embed_bool g_set_called = EMBED_FALSE;
 static long g_set_value = 0;
 
-static proto_bool rw_setter(const SnmpValue *in)
+static embed_bool rw_setter(const SnmpValue *in)
 {
-    g_set_called = PROTO_TRUE;
+    g_set_called = EMBED_TRUE;
     if (in->type != (uint8_t)SNMP_TAG_BER_INTEGER)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     g_set_value = in->ival;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool ctr_getter(SnmpValue *out)
+static embed_bool ctr_getter(SnmpValue *out)
 {
     out->type = (uint8_t)SNMP_TAG_SNMP_COUNTER32;
     out->uval = 12345u;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void setUp()
@@ -266,7 +266,7 @@ void setUp()
     snmp_add_integer(OID_RW, 9, 42, rw_setter);
     snmp_add_integer(OID_RO, 9, 7, NULL);
     snmp_add_dynamic(OID_CTR, 9, (uint8_t)SNMP_TAG_SNMP_COUNTER32, ctr_getter);
-    g_set_called = PROTO_FALSE;
+    g_set_called = EMBED_FALSE;
     g_set_value = 0;
 }
 
@@ -427,7 +427,7 @@ typedef struct
     size_t str_len;
 } RespView;
 
-static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
+static embed_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
 {
     memset(rv, 0, sizeof(*rv));
     BerDec d;
@@ -436,57 +436,57 @@ static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
     size_t l;
     if (!ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!ber_read_integer(&d, &rv->version))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t ctag;
     size_t cl;
     if (!ber_read_header(&d, &ctag, &cl))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     d.pos += cl;
     if (!ber_read_header(&d, &rv->pdu_tag, &l))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!ber_read_integer(&d, &rv->request_id) || !ber_read_integer(&d, &rv->err_status) ||
         !ber_read_integer(&d, &rv->err_index))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t vt;
     size_t vl;
     if (!ber_read_header(&d, &vt, &vl) || vt != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t vend = d.pos + vl;
-    proto_bool first = PROTO_TRUE;
+    embed_bool first = EMBED_TRUE;
     while (d.pos < vend && d.ok)
     {
         uint8_t st;
         size_t sl;
         if (!ber_read_header(&d, &st, &sl) || st != (uint8_t)SNMP_TAG_BER_SEQUENCE)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         size_t vbend = d.pos + sl;
         uint32_t oid[SNMP_MAX_OID_LEN];
         size_t on;
         if (!ber_read_oid(&d, oid, SNMP_MAX_OID_LEN, &on))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         size_t save = d.pos;
         uint8_t valtag;
         size_t vallen;
         if (!ber_read_header(&d, &valtag, &vallen))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (first)
         {
@@ -516,7 +516,7 @@ static proto_bool parse_resp(const uint8_t *buf, size_t len, RespView *rv)
                 }
                 rv->uval = a;
             }
-            first = PROTO_FALSE;
+            first = EMBED_FALSE;
         }
         d.pos = vbend;
         rv->nvb++;
@@ -714,11 +714,11 @@ void test_v3_message_dropped()
 }
 
 static const uint32_t OID_IP[] = {1, 3, 6, 1, 4, 1, 49374, 4, 0};
-static proto_bool ip_getter(SnmpValue *out)
+static embed_bool ip_getter(SnmpValue *out)
 {
     out->type = (uint8_t)SNMP_TAG_SNMP_IPADDRESS;
     out->uval = 0xC0A80101u;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void test_registration_and_rw_edges()
@@ -847,18 +847,18 @@ void test_dispatch_value_types_and_malformed()
     uint8_t pdu[128], out[256];
 
     size_t g = build_pdu_with_value(pdu, sizeof(pdu), (uint8_t)SNMP_TAG_SNMP_PDU_GET, 1);
-    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, g, PROTO_FALSE, PROTO_TRUE, out, sizeof(out)) > 0);
+    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, g, EMBED_FALSE, EMBED_TRUE, out, sizeof(out)) > 0);
     size_t o = build_pdu_with_value(pdu, sizeof(pdu), (uint8_t)SNMP_TAG_SNMP_PDU_GET, 2);
-    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, o, PROTO_FALSE, PROTO_TRUE, out, sizeof(out)) > 0);
+    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, o, EMBED_FALSE, EMBED_TRUE, out, sizeof(out)) > 0);
 
     size_t t = build_pdu_with_value(pdu, sizeof(pdu), (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, 0);
-    TEST_ASSERT_EQUAL_UINT(0, snmp_dispatch_pdu(pdu, t, PROTO_FALSE, PROTO_TRUE, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_UINT(0, snmp_dispatch_pdu(pdu, t, EMBED_FALSE, EMBED_TRUE, out, sizeof(out)));
 
     size_t full = build_pdu_with_value(pdu, sizeof(pdu), (uint8_t)SNMP_TAG_SNMP_PDU_GET, 0);
-    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, full, PROTO_FALSE, PROTO_TRUE, out, sizeof(out)) > 0);
+    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, full, EMBED_FALSE, EMBED_TRUE, out, sizeof(out)) > 0);
     for (size_t l = 0; l < full; l++)
     {
-        TEST_ASSERT_EQUAL_UINT(0, snmp_dispatch_pdu(pdu, l, PROTO_FALSE, PROTO_TRUE, out, sizeof(out)));
+        TEST_ASSERT_EQUAL_UINT(0, snmp_dispatch_pdu(pdu, l, EMBED_FALSE, EMBED_TRUE, out, sizeof(out)));
     }
 }
 
@@ -927,10 +927,10 @@ void test_dispatch_malformed_pdu()
     uint8_t resp[128];
 
     uint8_t junk[3] = {0xA0, 0x01, 0x05};
-    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(junk, sizeof(junk), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(junk, sizeof(junk), EMBED_FALSE, EMBED_TRUE, resp, sizeof(resp)));
 
     uint8_t bare[1] = {0xA0};
-    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(bare, sizeof(bare), PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
+    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(bare, sizeof(bare), EMBED_FALSE, EMBED_TRUE, resp, sizeof(resp)));
 }
 
 static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
@@ -981,15 +981,15 @@ void test_snmp_dispatch_varbind_guards()
     {
         size_t n = build_pdu(pdu, sizeof(pdu), reject[i]);
         TEST_ASSERT_TRUE(n > 0);
-        TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdu, n, PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)));
+        TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdu, n, EMBED_FALSE, EMBED_TRUE, resp, sizeof(resp)));
     }
     size_t n = build_pdu(pdu, sizeof(pdu), VB_OID_VALUE);
     TEST_ASSERT_TRUE(n > 0);
-    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, n, PROTO_FALSE, PROTO_TRUE, resp, sizeof(resp)) > 0);
+    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, n, EMBED_FALSE, EMBED_TRUE, resp, sizeof(resp)) > 0);
 
     n = build_pdu(pdu, sizeof(pdu), VB_VALID);
     uint8_t tiny[24];
-    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, n, PROTO_FALSE, PROTO_TRUE, tiny, sizeof(tiny)) > 0);
+    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, n, EMBED_FALSE, EMBED_TRUE, tiny, sizeof(tiny)) > 0);
 }
 
 void test_snmp_oid_cmp_request_longer()
@@ -1130,10 +1130,10 @@ void test_set_v1_error_variants()
     TEST_ASSERT_EQUAL_INT(1, rv.err_index);
 }
 
-static proto_bool failing_getter(SnmpValue *out)
+static embed_bool failing_getter(SnmpValue *out)
 {
     (void)out;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void test_get_failing_getter_is_nosuchinstance()
@@ -1223,7 +1223,7 @@ void test_dispatch_truncated_pdu_fields()
     const size_t lens[] = {sizeof(no_field2), sizeof(no_field3), sizeof(no_vbl), sizeof(stub_vb)};
     for (unsigned i = 0; i < 4; i++)
     {
-        TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdus[i], lens[i], PROTO_FALSE, PROTO_TRUE, out, sizeof(out)));
+        TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdus[i], lens[i], EMBED_FALSE, EMBED_TRUE, out, sizeof(out)));
     }
 }
 
@@ -1248,9 +1248,9 @@ void test_dispatch_empty_varbind_list_tiny_buffer()
     TEST_ASSERT_TRUE(e.ok);
 
     uint8_t big[128];
-    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, e.len, PROTO_FALSE, PROTO_TRUE, big, sizeof(big)) > 0);
+    TEST_ASSERT_TRUE(snmp_dispatch_pdu(pdu, e.len, EMBED_FALSE, EMBED_TRUE, big, sizeof(big)) > 0);
     uint8_t tiny[8];
-    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdu, e.len, PROTO_FALSE, PROTO_TRUE, tiny, sizeof(tiny)));
+    TEST_ASSERT_EQUAL_size_t(0, snmp_dispatch_pdu(pdu, e.len, EMBED_FALSE, EMBED_TRUE, tiny, sizeof(tiny)));
 }
 
 void test_message_truncated_before_community()

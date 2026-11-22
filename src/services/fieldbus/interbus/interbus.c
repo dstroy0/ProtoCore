@@ -14,7 +14,7 @@
 
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -83,23 +83,23 @@ void protocore_interbus_parse(uint8_t *work)
 
     if (!frame || !out_words || !out_count || len < 4) // loopback + FCS minimum
     {
-        InterbusV.ok = PROTO_FALSE;
+        InterbusV.ok = EMBED_FALSE;
         return;
     }
     if (((frame[0] << 8) | frame[1]) != PROTOCORE_INTERBUS_LOOPBACK)
     {
-        InterbusV.ok = PROTO_FALSE;
+        InterbusV.ok = EMBED_FALSE;
         return;
     }
     if ((len - 4) % 2 != 0) // the words region must be whole 16-bit words
     {
-        InterbusV.ok = PROTO_FALSE;
+        InterbusV.ok = EMBED_FALSE;
         return;
     }
     size_t word_count = (len - 4) / 2;
     if (word_count > max_words)
     {
-        InterbusV.ok = PROTO_FALSE;
+        InterbusV.ok = EMBED_FALSE;
         return;
     }
     InterbusV.fcs_args.bytes = frame;
@@ -109,7 +109,7 @@ void protocore_interbus_parse(uint8_t *work)
     uint16_t got = (uint16_t)((frame[len - 2] << 8) | frame[len - 1]);
     if (want != got)
     {
-        InterbusV.ok = PROTO_FALSE;
+        InterbusV.ok = EMBED_FALSE;
         return;
     }
     for (size_t w = 0; w < word_count; w++)
@@ -117,12 +117,12 @@ void protocore_interbus_parse(uint8_t *work)
         out_words[w] = (uint16_t)((frame[2 + w * 2] << 8) | frame[2 + w * 2 + 1]);
     }
     *out_count = word_count;
-    InterbusV.ok = PROTO_TRUE;
+    InterbusV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 InterbusVars InterbusV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_INTERBUS

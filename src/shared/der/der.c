@@ -10,30 +10,30 @@
 
 #include "memoria_operor/memoria_operor.h" // memor.cmp: the OID comparison
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Days from 1970-01-01 to the first of the given month, in a non-leap year.
 static const uint16_t MONTH_DAYS[12] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
 
 // One value's identifier and length octets. Reports the content's offset and length, or false when
 // the encoding is not the definite short-or-long form DER allows (X.690 sec 10.1).
-static proto_bool tlv_at(const uint8_t *buf, size_t len, size_t pos, uint8_t *tag, size_t *content, size_t *clen)
+static embed_bool tlv_at(const uint8_t *buf, size_t len, size_t pos, uint8_t *tag, size_t *content, size_t *clen)
 {
     if (buf == NULL || pos >= len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t id = buf[pos];
     // X.690 sec 8.1.2.4: tag number 31 begins a multi-octet form. No field this profile reads uses
     // one, so it is refused rather than skipped past.
     if ((id & 0x1Fu) == 0x1Fu)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t p = pos + 1;
     if (p >= len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t n = buf[p];
     p++;
@@ -43,11 +43,11 @@ static proto_bool tlv_at(const uint8_t *buf, size_t len, size_t pos, uint8_t *ta
         // X.690 sec 8.1.3.6 indefinite length: BER only, and sec 10.1 forbids it in DER.
         if (count == 0u || count > sizeof(size_t))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (p + count > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         n = 0;
         for (size_t i = 0; i < count; i++)
@@ -59,20 +59,20 @@ static proto_bool tlv_at(const uint8_t *buf, size_t len, size_t pos, uint8_t *ta
         // leading zero octet, is a second encoding of the same value and is refused.
         if (n < 0x80u || buf[pos + 2] == 0x00u)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     if (n > len - p) // subtraction, not p + n: the sum could wrap
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *tag = id;
     *content = p;
     *clen = n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-void protocore_der_read(uint8_t *work)
+void protocore_der_read(const uint8_t *work)
 {
     (void)work;
     size_t content = 0;
@@ -99,12 +99,12 @@ void protocore_der_enter(uint8_t *work)
     // X.690 sec 8.1.2.5: only a constructed value holds other values.
     if ((DerV.tlv.tag & PROTOCORE_DER_CONSTRUCTED) == 0u)
     {
-        DerV.ok = PROTO_FALSE;
+        DerV.ok = EMBED_FALSE;
         return;
     }
     if (DerV.tlv.len == 0u)
     {
-        DerV.ok = PROTO_FALSE; // nothing inside to step to
+        DerV.ok = EMBED_FALSE; // nothing inside to step to
         return;
     }
     const size_t inner = (size_t)(DerV.tlv.content - DerV.read_args.buf);
@@ -121,7 +121,7 @@ void protocore_der_uint(uint8_t *work)
     }
     if (DerV.tlv.tag != PROTOCORE_DER_INTEGER || DerV.tlv.len == 0u)
     {
-        DerV.ok = PROTO_FALSE;
+        DerV.ok = EMBED_FALSE;
         return;
     }
     const uint8_t *v = DerV.tlv.content;
@@ -137,7 +137,7 @@ void protocore_der_uint(uint8_t *work)
         }
         if ((v[1] & 0x80u) == 0u)
         {
-            DerV.ok = PROTO_FALSE;
+            DerV.ok = EMBED_FALSE;
             return;
         }
         v++;
@@ -145,12 +145,12 @@ void protocore_der_uint(uint8_t *work)
     }
     else if (v[0] & 0x80u)
     {
-        DerV.ok = PROTO_FALSE; // negative; no field this profile reads is
+        DerV.ok = EMBED_FALSE; // negative; no field this profile reads is
         return;
     }
     if (n > 8u)
     {
-        DerV.ok = PROTO_FALSE; // wider than the value this reports
+        DerV.ok = EMBED_FALSE; // wider than the value this reports
         return;
     }
     uint64_t out = 0;
@@ -170,14 +170,14 @@ void protocore_der_bitstring(uint8_t *work)
     }
     if (DerV.tlv.tag != PROTOCORE_DER_BIT_STRING || DerV.tlv.len == 0u)
     {
-        DerV.ok = PROTO_FALSE;
+        DerV.ok = EMBED_FALSE;
         return;
     }
     // X.690 sec 8.6.2.2: the first content octet is the count of unused bits in the last one. A key
     // and a signature are whole octets, so any count but zero is refused rather than shifted out.
     if (DerV.tlv.content[0] != 0x00u)
     {
-        DerV.ok = PROTO_FALSE;
+        DerV.ok = EMBED_FALSE;
         return;
     }
     DerV.tlv.content++;
@@ -193,7 +193,7 @@ void protocore_der_oid_eq(uint8_t *work)
     }
     if (DerV.tlv.tag != PROTOCORE_DER_OID || DerV.oid_args.oid == NULL)
     {
-        DerV.ok = PROTO_FALSE;
+        DerV.ok = EMBED_FALSE;
         return;
     }
     DerV.ok = (DerV.tlv.len == DerV.oid_args.oid_len) &&
@@ -250,13 +250,13 @@ void protocore_der_time(uint8_t *work)
         // RFC 5280 sec 4.1.2.5.1: YYMMDDHHMMSSZ, seconds always present, Zulu always.
         if (DerV.tlv.len != 13u || v[12] != 'Z')
         {
-            DerV.ok = PROTO_FALSE;
+            DerV.ok = EMBED_FALSE;
             return;
         }
         const int32_t yy = digits(v, 2);
         if (yy < 0)
         {
-            DerV.ok = PROTO_FALSE;
+            DerV.ok = EMBED_FALSE;
             return;
         }
         year = (yy >= 50) ? (1900 + yy) : (2000 + yy); // sec 4.1.2.5.1: the pivot is 50
@@ -267,20 +267,20 @@ void protocore_der_time(uint8_t *work)
         // RFC 5280 sec 4.1.2.5.2: YYYYMMDDHHMMSSZ, seconds always present, no fractional part.
         if (DerV.tlv.len != 15u || v[14] != 'Z')
         {
-            DerV.ok = PROTO_FALSE;
+            DerV.ok = EMBED_FALSE;
             return;
         }
         year = digits(v, 4);
         if (year < 0)
         {
-            DerV.ok = PROTO_FALSE;
+            DerV.ok = EMBED_FALSE;
             return;
         }
         at = 4;
     }
     else
     {
-        DerV.ok = PROTO_FALSE;
+        DerV.ok = EMBED_FALSE;
         return;
     }
 
@@ -292,7 +292,7 @@ void protocore_der_time(uint8_t *work)
     if (mon < 1 || mon > 12 || day < 1 || day > 31 || hh < 0 || hh > 23 || mm < 0 || mm > 59 || ss < 0 || ss > 60 ||
         year < 1970)
     {
-        DerV.ok = PROTO_FALSE; // ss 60 is a leap second, which X.690 permits and the epoch folds
+        DerV.ok = EMBED_FALSE; // ss 60 is a leap second, which X.690 permits and the epoch folds
         return;
     }
     DerV.u64 = epoch_of(year, mon, day, hh, mm, (ss == 60) ? 59 : ss);
@@ -302,4 +302,4 @@ void protocore_der_time(uint8_t *work)
 /** @brief The operands and the outcome. */
 DerVars DerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS

@@ -28,7 +28,7 @@
 #include "protocore_config.h"              // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
 #include "verbum_scrutor/verbum_scrutor.h" // the lane math; the classification below is base64's own
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -38,9 +38,9 @@ static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_base64_encode(uint8_t *work);
+void protocore_base64_encode(const uint8_t *work);
 
-void protocore_base64_encode(uint8_t *work)
+void protocore_base64_encode(const uint8_t *work)
 {
     (void)work;
     const uint8_t *src = Base64V.encode_args.src;
@@ -139,7 +139,7 @@ static inline uint32_t ct_b64_val_plus1(uint32_t c, int urlsafe)
 // ---------------------------------------------------------------------------
 
 // A base64 quad is four characters by definition of the encoding, so this path wants at least four
-// lanes. The quad rides in the low four; any lane above them holds zero, matches no range, and is
+// lanes. The quad rides in the low four. Any lane above them holds zero, matches no range, and is
 // dropped when the result is narrowed back to 32 bits.
 static_assert(MMGR_SWAR_BYTES >= 4, "base64 SWAR decodes one four-character quad per word");
 
@@ -168,7 +168,7 @@ static inline uint32_t swar_quad(uint32_t quad, uint32_t *ok)
     return (uint32_t)val;
 }
 
-void protocore_base64_decode(uint8_t *work)
+void protocore_base64_decode(const uint8_t *work)
 {
     (void)work;
     const char *src = Base64V.decode_args.src;
@@ -242,7 +242,7 @@ void protocore_base64_decode(uint8_t *work)
     Base64V.n = out;
 }
 #else
-void protocore_base64_decode(uint8_t *work)
+void protocore_base64_decode(const uint8_t *work)
 {
     (void)work;
     const char *src = Base64V.decode_args.src;
@@ -377,7 +377,7 @@ void protocore_base64_url_encode(uint8_t *work)
 // secret path, so it shares the branchless classifier above (the standard '+'/'/' are rejected here). The
 // only difference from protocore_base64_decode is framing: base64url carries no padding, and the final group may
 // be 2 or 3 characters (an unbounded streaming decode rather than whole quads).
-void protocore_base64_url_decode(uint8_t *work)
+void protocore_base64_url_decode(const uint8_t *work)
 {
     (void)work;
     const char *src = Base64V.url_decode_args.src;
@@ -423,8 +423,8 @@ void protocore_base64_url_decode(uint8_t *work)
 /** @brief The operands and the outcome. */
 Base64Vars Base64V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BASE64

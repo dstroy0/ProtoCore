@@ -62,14 +62,14 @@ static SshKdfInputs first_exchange(void)
                        .session_id = s_H,
                        .h_len = sizeof(s_H),
                        .sid_len = sizeof(s_H),
-                       .k_is_string = PROTO_FALSE,
-                       .is512 = PROTO_FALSE};
+                       .k_is_string = EMBED_FALSE,
+                       .is512 = EMBED_FALSE};
     return in;
 }
 
 static size_t frame(const uint8_t *payload, size_t len)
 {
-    SshDir dir = {PROTO_FALSE, 0}; // no cipher, no MAC: "Initially, the MAC algorithm MUST be none"
+    SshDir dir = {EMBED_FALSE, 0}; // no cipher, no MAC: "Initially, the MAC algorithm MUST be none"
     size_t wlen = 0;
     TEST_ASSERT_EQUAL_INT(0, ssh_pkt_send(0, payload, len, s_wire, &wlen, sizeof(s_wire), &dir));
     return wlen;
@@ -208,7 +208,7 @@ void test_sec6_1_reassembly_holds_a_full_payload(void)
 
 void test_sec6_1_oversized_payload_is_refused(void)
 {
-    SshDir dir = {PROTO_FALSE, 0};
+    SshDir dir = {EMBED_FALSE, 0};
     size_t wlen = 0;
     static uint8_t big[SSH_WIRE_CAP];
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_send(0, big, sizeof(big), s_wire, &wlen, sizeof(s_wire), &dir));
@@ -217,7 +217,7 @@ void test_sec6_1_oversized_payload_is_refused(void)
 void test_sec6_undersized_wire_is_refused(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE, 1, 2, 3};
-    SshDir dir = {PROTO_FALSE, 0};
+    SshDir dir = {EMBED_FALSE, 0};
     size_t wlen = 0;
     uint8_t small[8]; // a conforming packet is at least 16
     TEST_ASSERT_EQUAL_INT(-1, ssh_pkt_send(0, payload, sizeof(payload), small, &wlen, sizeof(small), &dir));
@@ -256,7 +256,7 @@ void test_sec6_4_counters_are_per_slot(void)
 void test_slot_past_the_pool_is_refused(void)
 {
     const uint8_t payload[] = {SSH_MSG_IGNORE};
-    SshDir dir = {PROTO_FALSE, 0};
+    SshDir dir = {EMBED_FALSE, 0};
     size_t wlen = 0;
     TEST_ASSERT_EQUAL_INT(-1,
                           ssh_pkt_send(MAX_SSH_CONNS, payload, sizeof(payload), s_wire, &wlen, sizeof(s_wire), &dir));
@@ -323,12 +323,12 @@ void test_sec7_2_the_six_labels_give_six_distinct_keys(void)
     {
         for (int b = a + 1; b < 6; b++)
         {
-            proto_bool same = PROTO_TRUE;
+            embed_bool same = EMBED_TRUE;
             for (int n = 0; n < 32; n++)
             {
                 if (keys[a][n] != keys[b][n])
                 {
-                    same = PROTO_FALSE;
+                    same = EMBED_FALSE;
                     break;
                 }
             }
@@ -404,12 +404,12 @@ void test_sec7_2_rekey_keys_differ_from_the_first_exchange(void)
     uint8_t k2[32];
     ssh_kdf_derive(&second, 'C', k2, sizeof(k2));
 
-    proto_bool same = PROTO_TRUE;
+    embed_bool same = EMBED_TRUE;
     for (int n = 0; n < 32; n++)
     {
         if (k1[n] != k2[n])
         {
-            same = PROTO_FALSE;
+            same = EMBED_FALSE;
             break;
         }
     }

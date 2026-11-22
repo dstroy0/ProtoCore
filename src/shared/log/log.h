@@ -30,7 +30,7 @@
 #include "numeros_scribo/numeros_scribo.h"
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Receives an emitted line, already formatted. @p level is a PROTOCORE_LOG_LEVEL_* value. */
 typedef void (*protocore_log_sink_fn)(uint8_t level, const char *line);
@@ -87,13 +87,13 @@ extern LogVars LogV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const emit)(uint8_t *work);
+    void (*const emit)(const uint8_t *work);
     void (*const set_sink)(uint8_t *work);
 } LogNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in LogV or a region of the borrow at a fixed offset.
-void protocore_log_emit(uint8_t *work);
+void protocore_log_emit(const uint8_t *work);
 void protocore_log_set_sink(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -151,6 +151,6 @@ uint8_t *protocore_log_span(void);
 #define PROTOCORE_LOGE(spec, v, nv) PROTOCORE_LOG_DISCARD((spec), (v), (nv))
 #endif
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_LOG_H

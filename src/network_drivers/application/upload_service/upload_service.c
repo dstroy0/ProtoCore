@@ -31,8 +31,8 @@ typedef struct
     const char *path;
     const char *dest;
     int handle;        ///< Open destination handle from the mount; only read while `active`.
-    proto_bool active; ///< Destination file opened for the current upload.
-    proto_bool error;  ///< A write failed during the current upload.
+    embed_bool active; ///< Destination file opened for the current upload.
+    embed_bool error;  ///< A write failed during the current upload.
     size_t written;    ///< Bytes written so far / in the last upload.
 } UploadCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -53,7 +53,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define UPLOAD_SERVICE_CTX(w) ((UploadCtx *)(void *)((w) + UPLOAD_SERVICE_OFF_CTX))
+#define UPLOAD_SERVICE_CTX(w)                                                                                          \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const UploadCtx *)(const void *)((w) + UPLOAD_SERVICE_OFF_CTX),                              \
+        default: (UploadCtx *)(void *)((w) + UPLOAD_SERVICE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -76,16 +79,16 @@ uint8_t *protocore_upload_service_span(void)
 }
 
 /// @brief Stream-begin hook: accept POST @p UPLOAD_SERVICE_CTX(work)->path and open the destination file.
-static proto_bool upload_stream_begin(HttpReq *req)
+static embed_bool upload_stream_begin(HttpReq *req) // NOSONAR(c:S995): the stream hook type fixes it
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *work = protocore_upload_service_span();
 
     if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "POST", .cap = sizeof("POST"),
-                    .ci = PROTO_FALSE))
+                    .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The `!UPLOAD_SERVICE_CTX(work)->path` half is unreachable: UPLOAD_SERVICE_CTX(work)->path is only ever set by
     // protocore_upload_begin(), which immediately hands that same pointer to on_http() -> fill_route_base(), whose
@@ -96,13 +99,13 @@ static proto_bool upload_stream_begin(HttpReq *req)
                     .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = UPLOAD_SERVICE_CTX(work)->path,
                                       .cap = MAX_PATH_LEN - 1u) +
                            1u,
-                    .ci = PROTO_FALSE))
+                    .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
-    UPLOAD_SERVICE_CTX(work)->active = PROTO_FALSE;
-    UPLOAD_SERVICE_CTX(work)->error = PROTO_FALSE;
+    UPLOAD_SERVICE_CTX(work)->active = EMBED_FALSE;
+    UPLOAD_SERVICE_CTX(work)->error = EMBED_FALSE;
     UPLOAD_SERVICE_CTX(work)->written = 0;
     UPLOAD_SERVICE_CTX(work)->handle = -1;
     // The seam fails closed when nothing is mounted, so a cold mount answers "upload failed"
@@ -114,23 +117,23 @@ static proto_bool upload_stream_begin(HttpReq *req)
         UPLOAD_SERVICE_CTX(work)->handle = mnt->open(UPLOAD_SERVICE_CTX(work)->dest, PROTOCORE_MNT_WRITE);
         if (UPLOAD_SERVICE_CTX(work)->handle >= 0)
         {
-            UPLOAD_SERVICE_CTX(work)->active = PROTO_TRUE;
+            UPLOAD_SERVICE_CTX(work)->active = EMBED_TRUE;
         }
         else
         {
-            UPLOAD_SERVICE_CTX(work)->error = PROTO_TRUE;
+            UPLOAD_SERVICE_CTX(work)->error = EMBED_TRUE;
         }
     }
     else
     {
-        UPLOAD_SERVICE_CTX(work)->error = PROTO_TRUE;
+        UPLOAD_SERVICE_CTX(work)->error = EMBED_TRUE;
     }
     // Stream regardless so the body is consumed and the route handler can reply.
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /// @brief Stream-data hook: write one body chunk to the destination file.
-static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
+static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len) // NOSONAR(c:S995): hook type
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
@@ -143,7 +146,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
         const protocore_mnt_backend *mnt = MntV.backend;
         if (!mnt || mnt->write(UPLOAD_SERVICE_CTX(work)->handle, data, len) != (int)len)
         {
-            UPLOAD_SERVICE_CTX(work)->error = PROTO_TRUE;
+            UPLOAD_SERVICE_CTX(work)->error = EMBED_TRUE;
         }
         else
         {

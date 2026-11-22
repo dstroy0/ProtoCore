@@ -5,7 +5,7 @@
  * @file sha512.c
  * @brief SHA-512 implementation (FIPS 180-4).
  *
- * One context and one set of entries; only the block compression has two arms - the accelerator where
+ * One context and one set of entries. Only the block compression has two arms - the accelerator where
  * the part carries one, the FIPS 180-4 rounds below where it does not. Shared by SSH
  * (Ed25519 / kex), PQC, and SMB 3.1.1 preauth integrity.
  *
@@ -59,10 +59,16 @@ static_assert(SHA512_OFF_STATE % _Alignof(uint64_t) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define SHA512_CTX(w) ((Sha512Ctx *)(void *)((w) + SHA512_OFF_CTX))
+#define SHA512_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Sha512Ctx *)(const void *)((w) + SHA512_OFF_CTX),                                      \
+        default: (Sha512Ctx *)(void *)((w) + SHA512_OFF_CTX))
 #define SHA512_RX(w) ((w) + SHA512_OFF_RX)
 #define SHA512_TX(w) ((w) + SHA512_OFF_TX)
-#define SHA512_FS(w) ((uint64_t *)(void *)((w) + SHA512_OFF_STATE))
+#define SHA512_FS(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const uint64_t *)(const void *)((w) + SHA512_OFF_STATE),                                     \
+        default: (uint64_t *)(void *)((w) + SHA512_OFF_STATE))
 
 // ---------------------------------------------------------------------------
 // SHA-512 (FIPS 180-4).
@@ -103,7 +109,7 @@ static const uint64_t H0[8] = {
 static void sha512_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA512_BLOCK_LEN])
 {
     protocore_sha_hw_block(PROTOCORE_SHA_MODE_512, (uint32_t *)(void *)h, 16u, (const uint32_t *)(const void *)blk, 32u,
-                           PROTO_FALSE);
+                           EMBED_FALSE);
 }
 #endif
 
@@ -379,39 +385,39 @@ static void sha512_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA512_DIGEST_
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_sha512_init(uint8_t *work)
+embed_bool protocore_sha512_init(uint8_t *work)
 {
     sha512_state_init(work);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sha512_update(uint8_t *work, const uint8_t *data, size_t len)
+embed_bool protocore_sha512_update(uint8_t *work, const uint8_t *data, size_t len)
 {
     sha512_absorb(work, data, len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sha512_final(uint8_t *work, uint8_t *out)
+embed_bool protocore_sha512_final(uint8_t *work, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sha512_finish(work, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-proto_bool protocore_sha512_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
+embed_bool protocore_sha512_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sha512_state_init(work);
     sha512_absorb(work, data, len);
     sha512_finish(work, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_SHA512

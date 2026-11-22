@@ -13,14 +13,14 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/profinet/profinet.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_profinet_dcp_header(uint8_t *work)
+void protocore_profinet_dcp_header(const uint8_t *work)
 {
     (void)work;
     uint16_t frame_id = ProfinetV.dcp_header_args.frame_id;
@@ -52,7 +52,7 @@ void protocore_profinet_dcp_header(uint8_t *work)
     ProfinetV.n = PN_DCP_HDR_LEN;
 }
 
-void protocore_profinet_dcp_block(uint8_t *work)
+void protocore_profinet_dcp_block(const uint8_t *work)
 {
     (void)work;
     uint8_t option = ProfinetV.dcp_block_args.option;
@@ -67,7 +67,7 @@ void protocore_profinet_dcp_block(uint8_t *work)
         ProfinetV.n = 0;
         return;
     }
-    proto_bool pad = (value_len & 1) != 0; // pad to an even total length
+    embed_bool pad = (value_len & 1) != 0; // pad to an even total length
     size_t n = 4 + value_len + (pad ? 1 : 0);
     if (n > cap)
     {
@@ -89,7 +89,7 @@ void protocore_profinet_dcp_block(uint8_t *work)
     ProfinetV.n = n;
 }
 
-void protocore_profinet_dcp_parse_header(uint8_t *work)
+void protocore_profinet_dcp_parse_header(const uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = ProfinetV.dcp_parse_header_args.frame;
@@ -98,7 +98,7 @@ void protocore_profinet_dcp_parse_header(uint8_t *work)
 
     if (!frame || !out || len < PN_DCP_HDR_LEN)
     {
-        ProfinetV.ok = PROTO_FALSE;
+        ProfinetV.ok = EMBED_FALSE;
         return;
     }
     out->frame_id = (uint16_t)((frame[0] << 8) | frame[1]);
@@ -107,10 +107,10 @@ void protocore_profinet_dcp_parse_header(uint8_t *work)
     out->xid = ((uint32_t)frame[4] << 24) | ((uint32_t)frame[5] << 16) | ((uint32_t)frame[6] << 8) | frame[7];
     out->response_delay = (uint16_t)((frame[8] << 8) | frame[9]);
     out->data_length = (uint16_t)((frame[10] << 8) | frame[11]);
-    ProfinetV.ok = PROTO_TRUE;
+    ProfinetV.ok = EMBED_TRUE;
 }
 
-void protocore_profinet_dcp_walk(uint8_t *work)
+void protocore_profinet_dcp_walk(const uint8_t *work)
 {
     (void)work;
     const uint8_t *blocks = ProfinetV.dcp_walk_args.blocks;
@@ -126,7 +126,7 @@ void protocore_profinet_dcp_walk(uint8_t *work)
         uint16_t blen = (uint16_t)((blocks[off + 2] << 8) | blocks[off + 3]);
         if (off + 4 + blen > len)
         {
-            ProfinetV.ok = PROTO_FALSE;
+            ProfinetV.ok = EMBED_FALSE;
             return;
         }
         if (cb)
@@ -136,12 +136,12 @@ void protocore_profinet_dcp_walk(uint8_t *work)
         size_t adv = 4 + blen + ((blen & 1) ? 1 : 0); // skip the even-pad filler
         off += adv;
     }
-    ProfinetV.ok = PROTO_TRUE;
+    ProfinetV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 ProfinetVars ProfinetV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROFINET

@@ -25,7 +25,7 @@
 // the PROTOCORE_HAS_NET_STACK guard below.
 #include "server/core/proto_handler/proto_handler.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Built-in type codec
@@ -40,7 +40,7 @@ static void w_bytes(UaWriter *w, const void *src, size_t n)
 {
     if (!w->ok || w->n + n > w->cap)
     {
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->o + w->n, .src = src,
@@ -87,7 +87,7 @@ void protocore_ua_w_f64(UaWriter *w, double v)
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &u, .src = &v, .bytes = 8);
     protocore_ua_w_u64(w, u);
 }
-void protocore_ua_w_bool(UaWriter *w, proto_bool v)
+void protocore_ua_w_bool(UaWriter *w, embed_bool v)
 {
     protocore_ua_w_u8(w, v ? 1 : 0);
 }
@@ -100,16 +100,16 @@ void protocore_ua_w_string(UaWriter *w, const char *s, int32_t len)
     }
 }
 
-static proto_bool r_take(UaReader *r, void *dst, size_t n)
+static embed_bool r_take(UaReader *r, void *dst, size_t n)
 {
     if (r->err || r->off + n > r->len)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = r->p + r->off, .bytes = n);
     r->off += n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 uint8_t protocore_ua_r_u8(UaReader *r)
@@ -162,16 +162,16 @@ double protocore_ua_r_f64(UaReader *r)
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &v, .src = &u, .bytes = 8);
     return v;
 }
-proto_bool protocore_ua_r_bool(UaReader *r)
+embed_bool protocore_ua_r_bool(UaReader *r)
 {
     return protocore_ua_r_u8(r) != 0;
 }
-proto_bool protocore_ua_r_string(UaReader *r, char *out, size_t cap, int32_t *out_len)
+embed_bool protocore_ua_r_string(UaReader *r, char *out, size_t cap, int32_t *out_len)
 {
     int32_t len = protocore_ua_r_i32(r);
     if (r->err)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (out_len)
     {
@@ -183,24 +183,24 @@ proto_bool protocore_ua_r_string(UaReader *r, char *out, size_t cap, int32_t *ou
         {
             out[0] = '\0';
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if ((size_t)len + 1 > cap || r->off + (size_t)len > r->len)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = r->p + r->off, .bytes = (size_t)len);
     out[len] = '\0';
     r->off += (size_t)len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void r_skip(UaReader *r, size_t n)
 {
     if (r->err || r->off + n > r->len)
     {
-        r->err = PROTO_TRUE;
+        r->err = EMBED_TRUE;
         return;
     }
     r->off += n;
@@ -230,13 +230,13 @@ void protocore_ua_w_nodeid_numeric(UaWriter *w, uint16_t ns, uint32_t id)
     }
 }
 
-proto_bool protocore_ua_r_nodeid(UaReader *r, UaNodeId *out)
+embed_bool protocore_ua_r_nodeid(UaReader *r, UaNodeId *out)
 {
     uint8_t enc = protocore_ua_r_u8(r);
     uint8_t kind = enc & 0x0F; // strip the NamespaceUri (0x80) / ServerIndex (0x40) flags
     out->ns = 0;
     out->id = 0;
-    out->numeric = PROTO_TRUE;
+    out->numeric = EMBED_TRUE;
     switch (kind)
     {
     case 0x00: // TwoByte
@@ -254,7 +254,7 @@ proto_bool protocore_ua_r_nodeid(UaReader *r, UaNodeId *out)
     case 0x05: // ByteString
     {
         out->ns = protocore_ua_r_u16(r);
-        out->numeric = PROTO_FALSE;
+        out->numeric = EMBED_FALSE;
         int32_t l = protocore_ua_r_i32(r);
         if (l > 0)
         {
@@ -264,12 +264,12 @@ proto_bool protocore_ua_r_nodeid(UaReader *r, UaNodeId *out)
     }
     case 0x04: // Guid
         out->ns = protocore_ua_r_u16(r);
-        out->numeric = PROTO_FALSE;
+        out->numeric = EMBED_FALSE;
         r_skip(r, 16);
         break;
     default:
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     if (enc & 0x80) // NamespaceUri (String)
     {
@@ -287,12 +287,12 @@ proto_bool protocore_ua_r_nodeid(UaReader *r, UaNodeId *out)
 }
 
 // Skip an ExtensionObject: NodeId TypeId + encoding byte (+ ByteString/XML body).
-static proto_bool r_ext_object_skip(UaReader *r)
+static embed_bool r_ext_object_skip(UaReader *r)
 {
     UaNodeId tid;
     if (!protocore_ua_r_nodeid(r, &tid))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t body_enc = protocore_ua_r_u8(r);
     if (body_enc == 0x00) // no body
@@ -310,7 +310,7 @@ static proto_bool r_ext_object_skip(UaReader *r)
 // Read a RequestHeader (the prefix of every service request), capturing the
 // RequestHandle. The AuthenticationToken / Timestamp / diagnostics / audit id /
 // timeout / AdditionalHeader are consumed and discarded.
-static proto_bool r_request_header(UaReader *r, uint32_t *request_handle)
+static embed_bool r_request_header(UaReader *r, uint32_t *request_handle)
 {
     UaNodeId auth;
     protocore_ua_r_nodeid(r, &auth);     // AuthenticationToken
@@ -332,20 +332,20 @@ static proto_bool r_request_header(UaReader *r, uint32_t *request_handle)
 
 // Parse a MSG-envelope preamble: security + sequence headers, body TypeId, and the RequestHeader.
 // On success r is positioned at the service body and m is filled; false on a malformed frame.
-static proto_bool r_msg_preamble(const uint8_t *msg, size_t len, UaReader *r, OpcUaMsg *m)
+static embed_bool r_msg_preamble(const uint8_t *msg, size_t len, UaReader *r, OpcUaMsg *m)
 {
     UaMsgHeader h;
     if (!protocore_opcua_parse_header(msg, len, &h) ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "MSG", .bytes = 3) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h.size != len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
-    UaReader rr = {msg + 8, len - 8, 0, PROTO_FALSE};
+    UaReader rr = {msg + 8, len - 8, 0, EMBED_FALSE};
     *r = rr;
     m->secure_channel_id = protocore_ua_r_u32(r); // SecureChannelId
     m->token_id = protocore_ua_r_u32(r);
@@ -355,7 +355,7 @@ static proto_bool r_msg_preamble(const uint8_t *msg, size_t len, UaReader *r, Op
     UaNodeId tid;
     if (!protocore_ua_r_nodeid(r, &tid)) // body TypeId
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     m->type_id = tid.numeric ? tid.id : 0;
     return r_request_header(r, &m->request_handle);
@@ -373,33 +373,33 @@ int64_t protocore_opcua_filetime_from_unix(int64_t unix_seconds)
 // ---------------------------------------------------------------------------
 // UACP framing + handshake
 // ---------------------------------------------------------------------------
-proto_bool protocore_opcua_parse_header(const uint8_t *buf, size_t len, UaMsgHeader *h)
+embed_bool protocore_opcua_parse_header(const uint8_t *buf, size_t len, UaMsgHeader *h)
 {
     if (!buf || len < 8 || !h)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     h->type[0] = (char)buf[0];
     h->type[1] = (char)buf[1];
     h->type[2] = (char)buf[2];
     h->chunk = (char)buf[3];
     h->size = (uint32_t)buf[4] | ((uint32_t)buf[5] << 8) | ((uint32_t)buf[6] << 16) | ((uint32_t)buf[7] << 24);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_opcua_parse_hello(const uint8_t *msg, size_t len, OpcUaHello *out)
+embed_bool protocore_opcua_parse_hello(const uint8_t *msg, size_t len, OpcUaHello *out)
 {
     UaMsgHeader h;
     if (!protocore_opcua_parse_header(msg, len, &h) ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "HEL", .bytes = 3) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h.size != len || h.size < 8 + 20) // 8-byte header + at least the five sizes
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    UaReader r = {msg + 8, len - 8, 0, PROTO_FALSE};
+    UaReader r = {msg + 8, len - 8, 0, EMBED_FALSE};
     out->protocol_version = protocore_ua_r_u32(&r);
     out->recv_buf_size = protocore_ua_r_u32(&r);
     out->send_buf_size = protocore_ua_r_u32(&r);
@@ -424,7 +424,7 @@ size_t protocore_opcua_build_ack(const OpcUaHello *hello, uint8_t *out, size_t c
         return 0;
     }
     const uint32_t total = 8 + 20; // header + 5 x UInt32
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     protocore_ua_w_u8(&w, 'A');
     protocore_ua_w_u8(&w, 'C');
     protocore_ua_w_u8(&w, 'K');
@@ -448,7 +448,7 @@ size_t protocore_opcua_build_error(uint32_t error_code, const char *reason, uint
     // the wire layout is the four type octets, the total-size UInt32, the error-code UInt32, then the reason
     // string carried as an int32 length followed by its bytes
     const uint32_t total = 8 + 4 + 4 + (rlen > 0 ? (uint32_t)rlen : 0);
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     protocore_ua_w_u8(&w, 'E');
     protocore_ua_w_u8(&w, 'R');
     protocore_ua_w_u8(&w, 'R');
@@ -462,20 +462,20 @@ size_t protocore_opcua_build_error(uint32_t error_code, const char *reason, uint
 // ---------------------------------------------------------------------------
 // SecureChannel - OpenSecureChannel (OPN), SecurityPolicy None
 // ---------------------------------------------------------------------------
-proto_bool protocore_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenChannel *out)
+embed_bool protocore_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenChannel *out)
 {
     UaMsgHeader h;
     if (!protocore_opcua_parse_header(msg, len, &h) ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "OPN", .bytes = 3) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h.size != len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
-    UaReader r = {msg + 8, len - 8, 0, PROTO_FALSE};
+    UaReader r = {msg + 8, len - 8, 0, EMBED_FALSE};
 
     // Asymmetric security header (SecurityPolicy None -> no certs).
     out->secure_channel_id = protocore_ua_r_u32(&r);
@@ -503,17 +503,17 @@ proto_bool protocore_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenC
     UaNodeId tid;
     if (!protocore_ua_r_nodeid(&r, &tid))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!(tid.numeric && tid.ns == 0 && tid.id == OPCUA_ID_OPEN_REQ))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // RequestHeader.
     if (!r_request_header(&r, &out->request_handle))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // OpenSecureChannelRequest body.
@@ -537,7 +537,7 @@ size_t protocore_opcua_build_open_response(const OpcUaOpenChannel *req, uint32_t
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
 
     // Message header (size patched after).
     protocore_ua_w_u8(&w, 'O');
@@ -632,20 +632,20 @@ static void w_response_header(UaWriter *w, int64_t now_ft, uint32_t request_hand
     protocore_ua_w_u8(w, 0x00);              // ... + ExtensionObject "no body"
 }
 
-proto_bool protocore_opcua_parse_msg(const uint8_t *msg, size_t len, OpcUaMsg *out)
+embed_bool protocore_opcua_parse_msg(const uint8_t *msg, size_t len, OpcUaMsg *out)
 {
     UaMsgHeader h;
     if (!protocore_opcua_parse_header(msg, len, &h) ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "MSG", .bytes = 3) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h.size != len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
-    UaReader r = {msg + 8, len - 8, 0, PROTO_FALSE};
+    UaReader r = {msg + 8, len - 8, 0, EMBED_FALSE};
     out->secure_channel_id = protocore_ua_r_u32(&r); // SecureChannelId
     out->token_id = protocore_ua_r_u32(&r);          // SymmetricSecurityHeader.TokenId
     out->sequence_number = protocore_ua_r_u32(&r);   // SequenceHeader.SequenceNumber
@@ -654,7 +654,7 @@ proto_bool protocore_opcua_parse_msg(const uint8_t *msg, size_t len, OpcUaMsg *o
     UaNodeId tid;
     if (!protocore_ua_r_nodeid(&r, &tid)) // body TypeId
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->type_id = tid.numeric ? tid.id : 0;
 
@@ -667,7 +667,7 @@ static const char OPCUA_TRANSPORT_URI[] =
     "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary"; // NOSONAR
 
 // The server-identity defaults (PROTOCORE_PROTOCORE_OPCUA_DEFAULT_ENDPOINT / _APP_URI / _APP_NAME) live in
-// protocore_config.h under PROTOCORE_ENABLE_OPCUA so a deployment can override them; used here for both
+// protocore_config.h under PROTOCORE_ENABLE_OPCUA so a deployment can override them. Used here for both
 // the struct default and the builder fallback so the two cannot drift apart.
 
 // All OPC UA agent state, owned by one instance (internal linkage): the advertised server
@@ -730,7 +730,7 @@ uint16_t protocore_opcua_namespace_index(const char *uri)
     for (uint16_t i = 1; i < s_opcua.ns_n; i++)
     {
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s_opcua.ns_uri[i], .other = uri,
-                       .cap = PROTOCORE_OPCUA_NS_URI_MAX, .ci = PROTO_FALSE))
+                       .cap = PROTOCORE_OPCUA_NS_URI_MAX, .ci = EMBED_FALSE))
         {
             return i;
         }
@@ -794,7 +794,7 @@ size_t protocore_opcua_build_create_session_response(const OpcUaMsg *req, uint32
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->secure_channel_id, req->token_id, seq, req->request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_CREATE_SESSION_RESP);
     w_response_header(&w, now_ft, req->request_handle, 0);
@@ -820,7 +820,7 @@ size_t protocore_opcua_build_get_endpoints_response(const OpcUaMsg *req, const O
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->secure_channel_id, req->token_id, seq, req->request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_GET_ENDPOINTS_RESP);
     w_response_header(&w, now_ft, req->request_handle, 0);
@@ -836,7 +836,7 @@ size_t protocore_opcua_build_service_fault(const OpcUaMsg *req, uint32_t service
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->secure_channel_id, req->token_id, seq, req->request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_SERVICE_FAULT);
     w_response_header(&w, now_ft, req->request_handle, service_result); // ServiceFault = ResponseHeader only
@@ -850,7 +850,7 @@ size_t protocore_opcua_build_activate_session_response(const OpcUaMsg *req, uint
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->secure_channel_id, req->token_id, seq, req->request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_ACTIVATE_SESSION_RESP);
     w_response_header(&w, now_ft, req->request_handle, 0);
@@ -899,14 +899,14 @@ void protocore_ua_w_variant(UaWriter *w, const OpcUaVariant *v)
         protocore_ua_w_string(w, v->str, v->str_len);
         break;
     default:
-        w->ok = PROTO_FALSE; // unsupported type id: fail closed
+        w->ok = EMBED_FALSE; // unsupported type id: fail closed
         break;
     }
 }
 
 void protocore_ua_w_datavalue(UaWriter *w, const OpcUaVariant *v, uint32_t status)
 {
-    proto_bool has_value = v && v->type != OPCUA_VAR_NULL;
+    embed_bool has_value = v && v->type != OPCUA_VAR_NULL;
     uint8_t mask = 0;
     if (has_value)
     {
@@ -927,14 +927,14 @@ void protocore_ua_w_datavalue(UaWriter *w, const OpcUaVariant *v, uint32_t statu
     }
 }
 
-proto_bool protocore_ua_r_variant(UaReader *r, OpcUaVariant *out)
+embed_bool protocore_ua_r_variant(UaReader *r, OpcUaVariant *out)
 {
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     uint8_t enc = protocore_ua_r_u8(r);
     if (enc & 0x80) // array bit set: arrays are not supported by this scalar decoder
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     out->type = (OpcUaVariantType)(enc & 0x3F); // built-in type id (mask off array dimension flags)
     switch (out->type)
@@ -969,8 +969,8 @@ proto_bool protocore_ua_r_variant(UaReader *r, OpcUaVariant *out)
         {
             if (r->off + (size_t)sl > r->len)
             {
-                r->err = PROTO_TRUE;
-                return PROTO_FALSE;
+                r->err = EMBED_TRUE;
+                return EMBED_FALSE;
             }
             out->str = (const char *)(r->p + r->off); // points into the source buffer
             r->off += (size_t)sl;
@@ -978,13 +978,13 @@ proto_bool protocore_ua_r_variant(UaReader *r, OpcUaVariant *out)
         break;
     }
     default:
-        r->err = PROTO_TRUE; // unsupported built-in type
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE; // unsupported built-in type
+        return EMBED_FALSE;
     }
     return !r->err;
 }
 
-proto_bool protocore_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32_t *out_status)
+embed_bool protocore_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32_t *out_status)
 {
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out_value, .val = 0, .bytes = sizeof(*out_value));
     if (out_status)
@@ -996,7 +996,7 @@ proto_bool protocore_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32
     {
         if (!protocore_ua_r_variant(r, out_value))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     if (mask & 0x02) // StatusCode
@@ -1026,12 +1026,12 @@ proto_bool protocore_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32
     return !r->err;
 }
 
-proto_bool protocore_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadRequest *out)
+embed_bool protocore_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadRequest *out)
 {
     UaReader r;
     if (!r_msg_preamble(msg, len, &r, &out->msg))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // ReadRequest body.
@@ -1045,7 +1045,7 @@ proto_bool protocore_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadR
         UaNodeId nid;
         if (!protocore_ua_r_nodeid(&r, &nid)) // ReadValueId.NodeId
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint32_t attr = protocore_ua_r_u32(&r); // AttributeId
         int32_t ir = protocore_ua_r_i32(&r);    // IndexRange (String)
@@ -1079,7 +1079,7 @@ size_t protocore_opcua_build_read_response(const OpcUaReadRequest *req, const Op
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->msg.secure_channel_id, req->msg.token_id, seq, req->msg.request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_READ_RESP);
     w_response_header(&w, now_ft, req->msg.request_handle, 0);
@@ -1107,12 +1107,12 @@ OpcUaReadHandler protocore_opcua_read_handler(void)
 // ---------------------------------------------------------------------------
 // Write service - WriteRequest/WriteResponse
 // ---------------------------------------------------------------------------
-proto_bool protocore_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWriteRequest *out)
+embed_bool protocore_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWriteRequest *out)
 {
     UaReader r;
     if (!r_msg_preamble(msg, len, &r, &out->msg))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     int32_t cnt = protocore_ua_r_i32(&r); // NodesToWrite array length
@@ -1123,7 +1123,7 @@ proto_bool protocore_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWrit
         UaNodeId nid;
         if (!protocore_ua_r_nodeid(&r, &nid)) // WriteValue.NodeId
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint32_t attr = protocore_ua_r_u32(&r); // AttributeId
         int32_t ir = protocore_ua_r_i32(&r);    // IndexRange (String)
@@ -1134,7 +1134,7 @@ proto_bool protocore_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWrit
         OpcUaVariant val;
         if (!protocore_ua_r_datavalue(&r, &val, NULL)) // Value (DataValue)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (out->count < PROTOCORE_OPCUA_WRITE_MAX)
         {
@@ -1156,7 +1156,7 @@ size_t protocore_opcua_build_write_response(const OpcUaWriteRequest *req, const 
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->msg.secure_channel_id, req->msg.token_id, seq, req->msg.request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_WRITE_RESP);
     w_response_header(&w, now_ft, req->msg.request_handle, 0);
@@ -1213,7 +1213,7 @@ void protocore_ua_w_reference(UaWriter *w, const OpcUaReference *ref)
 {
     if (!ref)
     {
-        w->ok = PROTO_FALSE; // a lost reference fails the frame closed rather than being serialized
+        w->ok = EMBED_FALSE; // a lost reference fails the frame closed rather than being serialized
         return;
     }
     protocore_ua_w_nodeid_numeric(w, 0, ref->ref_type_id);            // ReferenceTypeId
@@ -1227,12 +1227,12 @@ void protocore_ua_w_reference(UaWriter *w, const OpcUaReference *ref)
     protocore_ua_w_nodeid_numeric(w, ref->type_def_ns, ref->type_def_id);
 }
 
-proto_bool protocore_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBrowseRequest *out)
+embed_bool protocore_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBrowseRequest *out)
 {
     UaReader r;
     if (!r_msg_preamble(msg, len, &r, &out->msg))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // BrowseRequest body: View (ViewDescription) + RequestedMaxReferencesPerNode + NodesToBrowse.
@@ -1250,7 +1250,7 @@ proto_bool protocore_opcua_parse_browse(const uint8_t *msg, size_t len, OpcUaBro
         UaNodeId nid;
         if (!protocore_ua_r_nodeid(&r, &nid)) // BrowseDescription.NodeId
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         (void)protocore_ua_r_u32(&r); // BrowseDirection
         UaNodeId rt;
@@ -1276,7 +1276,7 @@ size_t protocore_opcua_build_browse_response(const OpcUaBrowseRequest *req, OpcU
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->msg.secure_channel_id, req->msg.token_id, seq, req->msg.request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_BROWSE_RESP);
     w_response_header(&w, now_ft, req->msg.request_handle, 0);
@@ -1309,7 +1309,7 @@ size_t protocore_opcua_build_close_session_response(const OpcUaMsg *req, uint32_
     {
         return 0;
     }
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     w_msg_prefix(&w, req->secure_channel_id, req->token_id, seq, req->request_id);
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_CLOSE_SESSION_RESP);
     w_response_header(&w, now_ft, req->request_handle, 0); // ResponseHeader only
@@ -1348,7 +1348,7 @@ static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
     ConnPoolV.io.count = n;
     ConnPool.peek(protocore_conn_pool_span());
 }
-static void ring_consume(TcpConn *c, size_t n)
+static void ring_consume(const TcpConn *c, size_t n)
 {
     ConnPoolV.slot = c->id;
     ConnPoolV.io.count = n;
@@ -1364,7 +1364,7 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     }
     ConnPoolV.slot = slot;
     ConnPoolV.io.data = data;
-    ConnPoolV.io.len = (proto_u16)n;
+    ConnPoolV.io.len = (embed_u16)n;
     ConnPool.send(protocore_conn_pool_span());
     ConnPoolV.slot = slot;
     ConnPool.flush(protocore_conn_pool_span());
@@ -1492,7 +1492,7 @@ void protocore_opcua_rx(uint8_t slot)
                 for (uint32_t i = 0; i < rr.count; i++)
                 {
                     EMBED_CALL(memor.set, MemoriaCfg, .dst = &vals[i], .val = 0, .bytes = sizeof(vals[i]));
-                    proto_bool ok = s_opcua.read_handler && s_opcua.read_handler(rr.items[i].ns, rr.items[i].id,
+                    embed_bool ok = s_opcua.read_handler && s_opcua.read_handler(rr.items[i].ns, rr.items[i].id,
                                                                                  rr.items[i].attribute, &vals[i]);
                     sts[i] = ok ? OPCUA_STATUS_GOOD : OPCUA_STATUS_BAD_NODE_ID_UNKNOWN;
                 }
@@ -1548,7 +1548,7 @@ void protocore_opcua_rx(uint8_t slot)
     }
 }
 
-// The OPC UA ProtoHandler (Layer 5 dispatch seam) - only a data handler; the handshake reads from
+// The OPC UA ProtoHandler (Layer 5 dispatch seam) - only a data handler. The handshake reads from
 // the rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no
 // session dependency); Session.proto->register_builtins() installs it.
 // Designated, so a member's position in the struct does not decide what it binds to. Only the data
@@ -1572,6 +1572,6 @@ const ProtoHandler *protocore_opcua_protocore_handler(void)
 
 #endif // PROTOCORE_HAS_NET_STACK
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OPCUA

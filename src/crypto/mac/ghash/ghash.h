@@ -22,7 +22,7 @@
 
 #if PROTOCORE_ENABLE_GHASH
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief GHASH subkey length in bytes. */
 #define PROTOCORE_GHASH_KEY_LEN 16
@@ -93,7 +93,7 @@ typedef struct
     GhashKeyArgs key_args;
     GhashMulArgs mul_args;
     GhashUpdateArgs update_args;
-    proto_bool ok;
+    embed_bool ok;
 } GhashVars;
 
 /** @brief The operands and the outcome. */
@@ -123,7 +123,7 @@ static const GhashNs Ghash __attribute__((unused)) = {
     .update = protocore_ghash_update,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GHASH
 

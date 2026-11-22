@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for services/upload_service. NOTE: upload_service is a thin
 // *server + filesystem binding* - protocore_upload_begin() registers a route that streams an HTTP multipart
 // upload straight to a file. The actual per-byte parsing work is done by the multipart presentation
-// codec (benched at performance_benching/host_microbench / the multipart path) and the streaming body hook; this
+// codec (benched at performance_benching/host_microbench / the multipart path) and the streaming body hook. This
 // service adds only the route wiring and a byte counter. There is no standalone pure hot-path to
 // time, so this sketch benches only the last-size getter, for suite completeness (not a throughput
 // number).

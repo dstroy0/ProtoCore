@@ -29,7 +29,7 @@ void tearDown(void)
 {
 }
 
-static protocore_ota_action decide(uint8_t img_state, proto_bool self_test_ok, uint32_t ms_since_boot,
+static protocore_ota_action decide(uint8_t img_state, embed_bool self_test_ok, uint32_t ms_since_boot,
                                    uint32_t window_ms)
 {
     OtaRollbackV.decide_args.img_state = img_state;
@@ -43,33 +43,33 @@ static protocore_ota_action decide(uint8_t img_state, proto_bool self_test_ok, u
 // An image that has confirmed itself is committed, so the update sticks across the next boot.
 void test_a_confirmed_image_commits(void)
 {
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 0u, 30000u));
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 29999u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_TRUE, 0u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_TRUE, 29999u, 30000u));
 }
 
 // The window is measured from boot and closes at its own length: one millisecond short of it the
 // image is still waiting, and at it the rollback fires. Past it the answer does not change back.
 void test_the_confirm_window_closes_at_its_own_length(void)
 {
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 29999u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 29999u, 30000u));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK,
-                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 30000u, 30000u));
+                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 30000u, 30000u));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK,
-                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 30001u, 30000u));
+                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 30001u, 30000u));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK,
-                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 4294967295u, 30000u));
+                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 4294967295u, 30000u));
 
     // A window of zero has already closed at boot, so an image that has to confirm and has not
     // rolls back on the first tick.
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 0u, 0u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 0u, 0u));
 }
 
 // A passed self-test is read before the window, so an image that confirms late still commits rather
 // than rolling back a build that has proved itself healthy.
 void test_a_late_confirmation_still_commits(void)
 {
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 60000u, 30000u));
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 5u, 0u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_TRUE, 60000u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_TRUE, 5u, 0u));
 }
 
 // Only a freshly-updated image is pending confirmation. Every other image state is already settled,
@@ -81,14 +81,14 @@ void test_only_a_pending_image_is_ever_acted_on(void)
                                       PROTOCORE_OTA_IMG_ABORTED, PROTOCORE_OTA_IMG_UNDEFINED};
     for (size_t i = 0; i < sizeof(SETTLED) / sizeof(SETTLED[0]); i++)
     {
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], PROTO_FALSE, 0u, 30000u));
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], PROTO_TRUE, 0u, 30000u));
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], PROTO_FALSE, 999999u, 30000u));
-        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], PROTO_TRUE, 999999u, 30000u));
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], EMBED_FALSE, 0u, 30000u));
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], EMBED_TRUE, 0u, 30000u));
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], EMBED_FALSE, 999999u, 30000u));
+        TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(SETTLED[i], EMBED_TRUE, 999999u, 30000u));
     }
 
     // A state outside the defined set is not pending either, so it is left alone as well.
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(0x7Fu, PROTO_FALSE, 999999u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(0x7Fu, EMBED_FALSE, 999999u, 30000u));
 }
 
 // The decision reads its arguments and nothing else, so asking twice gives the same answer and no
@@ -96,11 +96,11 @@ void test_only_a_pending_image_is_ever_acted_on(void)
 void test_the_decision_carries_nothing_between_calls(void)
 {
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK,
-                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 30000u, 30000u));
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 10u, 30000u));
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 10u, 30000u));
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_TRUE, 10u, 30000u));
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, PROTO_FALSE, 10u, 30000u));
+                          decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 30000u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 10u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 10u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_TRUE, 10u, 30000u));
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, decide(PROTOCORE_OTA_IMG_PENDING_VERIFY, EMBED_FALSE, 10u, 30000u));
 }
 
 // The three image states the enum names as distinct really are distinct values, so a comparison
@@ -138,7 +138,7 @@ void test_a_tick_commits_a_confirmed_image_through_the_seam(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
     Clock.ms = 0u;
-    OtaRollbackV.self_test_ok = PROTO_TRUE;
+    OtaRollbackV.self_test_ok = EMBED_TRUE;
     OtaRollbackV.action = PROTOCORE_OTA_ROLLBACK; // a value the tick has to overwrite
 
     OtaRollback.tick(ota_rollback_work);
@@ -148,12 +148,12 @@ void test_a_tick_commits_a_confirmed_image_through_the_seam(void)
     TEST_ASSERT_FALSE(protocore_host_img_rolled_back());
 }
 
-// An image that never confirms itself is rolled back through the seam once the window has closed.
+// An image that never confirms itself is rolled back through the seam once the window closed.
 void test_a_tick_rolls_back_an_unconfirmed_image_through_the_seam(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
     Clock.ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
-    OtaRollbackV.self_test_ok = PROTO_FALSE;
+    OtaRollbackV.self_test_ok = EMBED_FALSE;
 
     OtaRollback.tick(ota_rollback_work);
 
@@ -167,7 +167,7 @@ void test_a_tick_leaves_a_settled_image_alone_at_the_seam(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_VALID);
     Clock.ms = 999999u;
-    OtaRollbackV.self_test_ok = PROTO_FALSE;
+    OtaRollbackV.self_test_ok = EMBED_FALSE;
     OtaRollbackV.action = PROTOCORE_OTA_ROLLBACK;
 
     OtaRollback.tick(ota_rollback_work);

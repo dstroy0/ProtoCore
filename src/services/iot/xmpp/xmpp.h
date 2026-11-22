@@ -46,7 +46,7 @@
 
 #if PROTOCORE_ENABLE_XMPP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Where a call writes its octets. */
 typedef struct
@@ -130,7 +130,7 @@ typedef struct
     XmppCommonArgs common; ///< what a stanza's start-tag says
     XmppChildArgs child;   ///< what a stanza carries below it
     XmppStanzaArgs stanza; ///< what a read walks
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } XmppVars;
 
@@ -173,7 +173,7 @@ static const XmppNs Xmpp __attribute__((unused)) = {
     .attr = protocore_xmpp_attr,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_XMPP
 

@@ -15,7 +15,7 @@
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define PROTOCORE_MAXBITS 15
 #define PROTOCORE_MAXLCODES 288
@@ -52,7 +52,7 @@ typedef struct
     size_t n1;
     size_t bitpos; // current bit offset into the logical stream
     size_t nbits;  // total bits available
-    proto_bool underflow;
+    embed_bool underflow;
 } BitIn;
 
 static inline uint8_t logical_byte(const uint8_t *seg0, size_t n0, const uint8_t *seg1, size_t i)
@@ -68,7 +68,7 @@ static int getbits(BitIn *b, int need)
     {
         if (b->bitpos >= b->nbits)
         {
-            b->underflow = PROTO_TRUE;
+            b->underflow = EMBED_TRUE;
             return v;
         }
         size_t byte = b->bitpos >> 3;
@@ -153,14 +153,14 @@ typedef struct
     size_t cap;
     size_t cnt;
     SshInflate *z;
-    proto_bool overflow;
+    embed_bool overflow;
 } OutCtx;
 
 static void put_byte(OutCtx *o, uint8_t byte)
 {
     if (o->cnt >= o->cap)
     {
-        o->overflow = PROTO_TRUE;
+        o->overflow = EMBED_TRUE;
         return;
     }
     o->dst[o->cnt++] = byte;
@@ -447,7 +447,7 @@ void protocore_inflate_init(uint8_t *work)
     z->whist = 0;
     z->carry_len = 0;
     z->bit_off = 0;
-    z->header_seen = PROTO_FALSE;
+    z->header_seen = EMBED_FALSE;
 }
 
 void protocore_inflate_packet(uint8_t *work)
@@ -473,14 +473,14 @@ void protocore_inflate_packet(uint8_t *work)
     b.n1 = src_len;
     b.nbits = ((size_t)z->carry_len + src_len) * 8u;
     b.bitpos = z->bit_off;
-    b.underflow = PROTO_FALSE;
+    b.underflow = EMBED_FALSE;
 
     OutCtx o;
     o.dst = dst;
     o.cap = dst_cap;
     o.cnt = 0;
     o.z = z;
-    o.overflow = PROTO_FALSE;
+    o.overflow = EMBED_FALSE;
 
     // RFC 1950 zlib header, once per stream: CM=8 (deflate) + the mod-31 check. CINFO (the peer's
     // window size) is not enforced - we always carry the full 32 KB window, which covers any CINFO.
@@ -524,7 +524,7 @@ void protocore_inflate_packet(uint8_t *work)
             InflateV.n = -1; // a preset dictionary (FDICT) is not used by SSH
             return;
         }
-        z->header_seen = PROTO_TRUE;
+        z->header_seen = EMBED_TRUE;
     }
 
     Tables tbl;
@@ -586,6 +586,6 @@ void protocore_inflate_packet(uint8_t *work)
 /** @brief The operands and the outcome. */
 InflateVars InflateV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_ZLIB

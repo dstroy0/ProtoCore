@@ -22,17 +22,17 @@ typedef struct
     int prog_start, prog_end;
     size_t bytes_sent;
 
-    proto_bool xoff_pending;
+    embed_bool xoff_pending;
     size_t xoff_threshold;
     int xon_countdown;
-    proto_bool paused_seen;
-    proto_bool fail_send;
-    proto_bool never_xon;
-    proto_bool fail_recv_after_xoff;
+    embed_bool paused_seen;
+    embed_bool fail_send;
+    embed_bool never_xon;
+    embed_bool fail_recv_after_xoff;
     int send_calls;
     int fail_send_at;
     long recv_calls;
-    proto_bool fail_recv;
+    embed_bool fail_recv;
 } MockCtrl;
 
 static void mock_init(MockCtrl *m, DncCode code)
@@ -84,8 +84,8 @@ static int mock_recv(void *c, uint8_t *buf, size_t cap)
     }
     if (m->xoff_pending && m->bytes_sent >= m->xoff_threshold)
     {
-        m->xoff_pending = PROTO_FALSE;
-        m->paused_seen = PROTO_TRUE;
+        m->xoff_pending = EMBED_FALSE;
+        m->paused_seen = EMBED_TRUE;
         if (!m->never_xon)
         {
             m->xon_countdown = 3;
@@ -150,8 +150,8 @@ void test_crlf_and_parity()
     MockCtrl m;
     mock_init(&m, DNC_CODE_ISO);
     DncCfg cfg = iso_cfg();
-    cfg.crlf = PROTO_TRUE;
-    cfg.even_parity = PROTO_TRUE;
+    cfg.crlf = EMBED_TRUE;
+    cfg.even_parity = EMBED_TRUE;
     const char *prog = "G90\nG0 X0";
 
     TEST_ASSERT_EQUAL_INT(DNC_STREAM_OK, dnc_stream(&cfg, prog, strlen(prog), mock_send, mock_recv, &m));
@@ -164,7 +164,7 @@ void test_xoff_pacing()
 {
     MockCtrl m;
     mock_init(&m, DNC_CODE_ISO);
-    m.xoff_pending = PROTO_TRUE;
+    m.xoff_pending = EMBED_TRUE;
     m.xoff_threshold = 8;
     DncCfg cfg = iso_cfg();
     const char *prog = "N10 G0 X1\nN20 G1 X2\nN30 M30";
@@ -216,7 +216,7 @@ void test_io_error_and_args()
 {
     MockCtrl m;
     mock_init(&m, DNC_CODE_ISO);
-    m.fail_send = PROTO_TRUE;
+    m.fail_send = EMBED_TRUE;
     DncCfg cfg = iso_cfg();
     TEST_ASSERT_EQUAL_INT(DNC_STREAM_ERR_IO, dnc_stream(&cfg, "M30", 3, mock_send, mock_recv, &m));
 
@@ -240,7 +240,7 @@ void test_reverse_channel_error_fails_the_stream()
 
     MockCtrl m;
     mock_init(&m, DNC_CODE_ISO);
-    m.fail_recv = PROTO_TRUE;
+    m.fail_recv = EMBED_TRUE;
     DncCfg cfg = iso_cfg();
     TEST_ASSERT_EQUAL_INT(DNC_STREAM_ERR_IO, dnc_stream(&cfg, "M30", 3, mock_send, mock_recv, &m));
     TEST_ASSERT_EQUAL_INT(0, m.send_calls);
@@ -251,9 +251,9 @@ void test_xoff_never_released_gives_up()
 
     MockCtrl m;
     mock_init(&m, DNC_CODE_ISO);
-    m.xoff_pending = PROTO_TRUE;
+    m.xoff_pending = EMBED_TRUE;
     m.xoff_threshold = 0;
-    m.never_xon = PROTO_TRUE;
+    m.never_xon = EMBED_TRUE;
     DncCfg cfg = iso_cfg();
     TEST_ASSERT_EQUAL_INT(DNC_STREAM_ERR_IO, dnc_stream(&cfg, "M30", 3, mock_send, mock_recv, &m));
     TEST_ASSERT_TRUE(m.paused_seen);
@@ -265,10 +265,10 @@ void test_reverse_channel_error_while_paused()
 
     MockCtrl m;
     mock_init(&m, DNC_CODE_ISO);
-    m.xoff_pending = PROTO_TRUE;
+    m.xoff_pending = EMBED_TRUE;
     m.xoff_threshold = 0;
-    m.never_xon = PROTO_TRUE;
-    m.fail_recv_after_xoff = PROTO_TRUE;
+    m.never_xon = EMBED_TRUE;
+    m.fail_recv_after_xoff = EMBED_TRUE;
     DncCfg cfg = iso_cfg();
     TEST_ASSERT_EQUAL_INT(DNC_STREAM_ERR_IO, dnc_stream(&cfg, "M30", 3, mock_send, mock_recv, &m));
     TEST_ASSERT_TRUE(m.paused_seen);

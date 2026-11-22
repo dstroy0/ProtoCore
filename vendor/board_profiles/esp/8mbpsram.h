@@ -6,7 +6,7 @@
  * @brief 8 MB PSRAM profile - scale the RAM-backed pools up past the chip's internal SRAM.
  *
  * Included before the chip profile, so these win for the memory-bound sizes. Note: growing
- * the L1 slot count only pays off once the cache actually lives in PSRAM; until an edge-cache
+ * the L1 slot count only pays off once the cache actually lives in PSRAM. Until an edge-cache
  * PSRAM-resident placement lands, the internal DRAM budget still bounds these, so the bumps
  * here stay conservative. `#ifndef`-guarded, so your -D overrides still win.
  */

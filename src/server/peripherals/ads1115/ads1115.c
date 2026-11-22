@@ -22,7 +22,7 @@
 #include "server/peripherals/ads1115/ads1115.h"
 #include "server/peripherals/i2c/i2c.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Config-register field values (per the ADS1115 datasheet).
 static const uint16_t OS_SINGLE = 0x8000;   // start a single conversion
@@ -56,11 +56,11 @@ uint8_t *protocore_ads1115_span(void)
     return s_own.span;
 }
 
-void protocore_ads1115_config_single(uint8_t *work);
-void protocore_ads1115_raw_to_uv(uint8_t *work);
+void protocore_ads1115_config_single(const uint8_t *work);
+void protocore_ads1115_raw_to_uv(const uint8_t *work);
 void protocore_ads1115_read_raw(uint8_t *work);
 
-void protocore_ads1115_config_single(uint8_t *work)
+void protocore_ads1115_config_single(const uint8_t *work)
 {
     (void)work;
     uint8_t channel = Ads1115V.config_single_args.channel;
@@ -92,7 +92,7 @@ void protocore_ads1115_config_single(uint8_t *work)
     Ads1115V.word = cfg;
 }
 
-void protocore_ads1115_raw_to_uv(uint8_t *work)
+void protocore_ads1115_raw_to_uv(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ads1115V.raw_to_uv_args.raw;
@@ -135,7 +135,10 @@ static_assert(ADS1115_OFF_CTX % _Alignof(Ads1115Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define ADS1115_CTX(w) ((Ads1115Ctx *)(void *)((w) + ADS1115_OFF_CTX))
+#define ADS1115_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ads1115Ctx *)(const void *)((w) + ADS1115_OFF_CTX),                                    \
+        default: (Ads1115Ctx *)(void *)((w) + ADS1115_OFF_CTX))
 
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
@@ -145,7 +148,7 @@ static uint8_t dev_addr(uint8_t *work)
     return ADS1115_CTX(work)->addr ? ADS1115_CTX(work)->addr : (uint8_t)PROTOCORE_ADS1115_I2C_ADDR;
 }
 
-static proto_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
+static embed_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
 {
     ADS1115_CTX(work)->frame[0] = reg;
     (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = &ADS1115_CTX(work)->frame[1], .val = v,
@@ -153,14 +156,14 @@ static proto_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
     return protocore_i2c_write(dev_addr(work), ADS1115_CTX(work)->frame, sizeof(ADS1115_CTX(work)->frame));
 }
 
-static proto_bool rd16(uint8_t *work, uint8_t reg, uint16_t *v)
+static embed_bool rd16(uint8_t *work, uint8_t reg, uint16_t *v)
 {
     if (!protocore_i2c_write_read(dev_addr(work), &reg, 1, ADS1115_CTX(work)->frame, 2))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *v = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = ADS1115_CTX(work)->frame, .width = MMGR_ENDIAN_16);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_ads1115_begin(uint8_t *work)
@@ -169,7 +172,7 @@ void protocore_ads1115_begin(uint8_t *work)
 
     ADS1115_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_ADS1115_I2C_ADDR;
     protocore_i2c_begin();
-    Ads1115V.ok = PROTO_TRUE;
+    Ads1115V.ok = EMBED_TRUE;
 }
 
 void protocore_ads1115_read_raw(uint8_t *work)
@@ -181,7 +184,7 @@ void protocore_ads1115_read_raw(uint8_t *work)
 
     if (!raw)
     {
-        Ads1115V.ok = PROTO_FALSE;
+        Ads1115V.ok = EMBED_FALSE;
         return;
     }
     uint8_t dr = (uint8_t)PROTOCORE_ADS1115_DR;
@@ -195,7 +198,7 @@ void protocore_ads1115_read_raw(uint8_t *work)
     protocore_ads1115_config_single(work);
     if (!wr16(work, ADS1115_REG_CONFIG, Ads1115V.word))
     {
-        Ads1115V.ok = PROTO_FALSE;
+        Ads1115V.ok = EMBED_FALSE;
         return;
     }
     // Single-shot conversion time tracks the data rate (~1000/SPS ms); wait it out plus a 1 ms margin.
@@ -204,11 +207,11 @@ void protocore_ads1115_read_raw(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, ADS1115_REG_CONVERSION, &v))
     {
-        Ads1115V.ok = PROTO_FALSE;
+        Ads1115V.ok = EMBED_FALSE;
         return;
     }
     *raw = (int16_t)v;
-    Ads1115V.ok = PROTO_TRUE;
+    Ads1115V.ok = EMBED_TRUE;
 }
 
 void protocore_ads1115_read_uv(uint8_t *work)
@@ -225,7 +228,7 @@ void protocore_ads1115_read_uv(uint8_t *work)
     protocore_ads1115_read_raw(work);
     if (!Ads1115V.ok)
     {
-        Ads1115V.ok = PROTO_FALSE;
+        Ads1115V.ok = EMBED_FALSE;
         return;
     }
     if (microvolts)
@@ -235,12 +238,12 @@ void protocore_ads1115_read_uv(uint8_t *work)
         protocore_ads1115_raw_to_uv(work);
         *microvolts = Ads1115V.uv;
     }
-    Ads1115V.ok = PROTO_TRUE;
+    Ads1115V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Ads1115Vars Ads1115V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ADS1115

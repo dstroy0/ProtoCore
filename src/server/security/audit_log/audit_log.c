@@ -27,7 +27,7 @@
 #include "server/clock/clock.h"
 #include "server/core/worker/worker.h" // the chain hash's working set, wiped on release
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // All audit-log state, owned by one instance (internal linkage): the record ring, its
 // head/count/seq cursors, the moving chain anchor, and the sink, grouped so it is one
@@ -58,7 +58,10 @@ static_assert(AUDIT_LOG_OFF_CTX % _Alignof(AuditCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define AUDIT_LOG_CTX(w) ((AuditCtx *)(void *)((w) + AUDIT_LOG_OFF_CTX))
+#define AUDIT_LOG_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const AuditCtx *)(const void *)((w) + AUDIT_LOG_OFF_CTX),                                    \
+        default: (AuditCtx *)(void *)((w) + AUDIT_LOG_OFF_CTX))
 
 static inline uint16_t idx(const AuditCtx *c, uint16_t i)
 {
@@ -98,7 +101,7 @@ static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LE
 static char hex_digit(uint8_t nibble)
 {
     HexV.args.nibble = nibble;
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     Hex.digit(protocore_audit_log_span());
     return HexV.ch;
 }
@@ -115,31 +118,40 @@ static size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
         size_t n;
         if (ch == '"')
         {
-            esc = "\\\"", n = 2;
+            esc = "\\\"";
+            n = 2;
         }
         else if (ch == '\\')
         {
-            esc = "\\\\", n = 2;
+            esc = "\\\\";
+            n = 2;
         }
         else if (ch == '\n')
         {
-            esc = "\\n", n = 2;
+            esc = "\\n";
+            n = 2;
         }
         else if (ch == '\r')
         {
-            esc = "\\r", n = 2;
+            esc = "\\r";
+            n = 2;
         }
         else if (ch == '\t')
         {
-            esc = "\\t", n = 2;
+            esc = "\\t";
+            n = 2;
         }
         else if (ch < 0x20)
         {
-            ub[0] = '\\', ub[1] = 'u', ub[2] = '0', ub[3] = '0';
+            ub[0] = '\\';
+            ub[1] = 'u';
+            ub[2] = '0';
+            ub[3] = '0';
             ub[4] = hex_digit((uint8_t)((ch >> 4) & 0xF));
             ub[5] = hex_digit((uint8_t)(ch & 0xF));
             ub[6] = '\0';
-            esc = ub, n = 6;
+            esc = ub;
+            n = 6;
         }
         else
         {
@@ -262,7 +274,6 @@ void protocore_audit_log_append(uint8_t *work)
     }
     {
         // One borrow for this entry's chain hash, returned before the sink runs.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
                                   .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                       PROTOCORE_SHA256_BORROW, protocore_secure_owner()),
@@ -271,7 +282,7 @@ void protocore_audit_log_append(uint8_t *work)
         {
             chain_hash(ws.buf, prev, e, e->hash);
         }
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
     }
     AUDIT_LOG_CTX(work)->count++;
 
@@ -313,15 +324,13 @@ void protocore_audit_log_verify(uint8_t *work)
     uint32_t *first_broken_seq = AuditLogV.verify_args.first_broken_seq;
 
     // One borrow for the whole walk: the chain hash re-runs per entry out of the same bytes.
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA256_BORROW,
                                                                                               protocore_secure_owner()),
                               .cap = PROTOCORE_SHA256_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
-        AuditLogV.ok = PROTO_FALSE;
+        AuditLogV.ok = EMBED_FALSE;
         return;
     }
     uint8_t expected[PROTOCORE_AUDIT_HASH_LEN];
@@ -338,18 +347,18 @@ void protocore_audit_log_verify(uint8_t *work)
             {
                 *first_broken_seq = e->seq;
             }
-            protocore_secure_guard()->temporary_buf_release(mark);
-            AuditLogV.ok = PROTO_FALSE;
+            protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+            AuditLogV.ok = EMBED_FALSE;
             return;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = expected, .src = e->hash, .bytes = PROTOCORE_AUDIT_HASH_LEN);
     }
-    protocore_secure_guard()->temporary_buf_release(mark);
-    AuditLogV.ok = PROTO_TRUE;
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+    AuditLogV.ok = EMBED_TRUE;
     return;
 }
 
-void protocore_audit_log_cat_name(uint8_t *work)
+void protocore_audit_log_cat_name(const uint8_t *work)
 {
     (void)work;
     AuditLogV.text = 0;
@@ -471,7 +480,7 @@ void protocore_audit_log_dump_json(uint8_t *work)
     uint32_t broken = 0;
     AuditLogV.verify_args.first_broken_seq = &broken;
     protocore_audit_log_verify(work);
-    proto_bool intact = AuditLogV.ok;
+    embed_bool intact = AuditLogV.ok;
 
     int head;
     if (intact)
@@ -557,6 +566,6 @@ void protocore_audit_log_dump_json(uint8_t *work)
 /** @brief The operands and the outcome. */
 AuditLogVars AuditLogV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUDIT_LOG

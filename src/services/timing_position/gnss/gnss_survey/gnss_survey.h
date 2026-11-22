@@ -7,14 +7,14 @@
  *
  * An RTK / DGPS base must advertise its own antenna position precisely. A stationary receiver's
  * single-epoch fixes scatter by meters, so the base "surveys in": it averages many fixes into one mean
- * position and only trusts it once enough observations have landed and their spread is small enough. That
+ * position and only trusts it once enough observations landed and their spread is small enough. That
  * mean position, in ECEF, is what the caster puts in an RTCM3 1005/1006 message (see rtcm3.h).
  *
  * This is the pure, zero-heap, host-tested core:
  *  - the exact closed-form WGS84 geodetic (lat/lon/ellipsoidal-height) -> ECEF transform and an iterative
  *    inverse (for read-back), matched against pyproj (EPSG:4979 -> EPSG:4978);
  *  - an incremental survey accumulator that keeps a running mean ECEF and a 3-D spread (standard
- *    deviation) using a shifted-origin sum / sum-of-squares, so it is numerically stable at the
+ *    deviation) using a shifted-origin sum / sum-of-squares. So it is numerically stable at the
  *    ~6.4e6 m magnitude of ECEF coordinates and needs no history buffer;
  *  - a helper to fold a GGA fix straight into the survey (built only when PROTOCORE_ENABLE_NMEA0183 is on).
  *
@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/timing_position/nmea0183/nmea0183.h" // Nmea0183 - the sentence a fix is read out of
 /** @brief A WGS84 geodetic position: latitude/longitude in degrees, ellipsoidal height in metres. */
@@ -66,7 +66,7 @@ int64_t protocore_gnss_ecef_m_to_01mm(double metres);
  */
 typedef struct
 {
-    proto_bool has_origin; ///< the first fix has been recorded as the shift origin
+    embed_bool has_origin; ///< the first fix has been recorded as the shift origin
     double ox;             ///< origin ECEF (metres) - the first fix
     double oy;
     double oz;
@@ -92,7 +92,7 @@ void protocore_gnss_survey_add_geodetic(GnssSurvey *s, const GnssGeodetic *g);
 uint32_t protocore_gnss_survey_count(const GnssSurvey *s);
 
 /** @brief Mean ECEF position. @return false (and leaves @p out untouched) if no fixes yet. */
-proto_bool protocore_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out);
+embed_bool protocore_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out);
 
 /**
  * @brief 3-D standard deviation of the accumulated fixes, in metres (sqrt of the summed per-axis
@@ -101,10 +101,10 @@ proto_bool protocore_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out);
 double protocore_gnss_survey_accuracy_m(const GnssSurvey *s);
 
 /**
- * @brief Whether the survey has converged: at least @p min_obs fixes and a 3-D spread within
+ * @brief Whether the survey converged: at least @p min_obs fixes and a 3-D spread within
  *        @p acc_limit_m metres. Mirrors a u-blox TMODE3 survey-in's min-observations / accuracy-limit gate.
  */
-proto_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m);
+embed_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m);
 
 #if PROTOCORE_ENABLE_NMEA0183
 struct Nmea0183;
@@ -114,13 +114,13 @@ struct Nmea0183;
  *        separation). @return false if @p m is not a GGA, the fix quality is 0 (no fix), or a field is
  *        missing / malformed.
  */
-proto_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out);
+embed_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out);
 
 /** @brief Parse a GGA and, if it carries a valid fix, fold it into the survey. @return true if added. */
-proto_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m);
+embed_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m);
 #endif
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER
 

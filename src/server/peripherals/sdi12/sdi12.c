@@ -16,7 +16,7 @@
 #include "cellularum_laboro/cellularum_laboro.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -24,11 +24,11 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_sdi12_build(uint8_t *work);
+void protocore_sdi12_build(const uint8_t *work);
 void protocore_sdi12_crc16(uint8_t *work);
-void protocore_sdi12_crc_encode(uint8_t *work);
+void protocore_sdi12_crc_encode(const uint8_t *work);
 
-void protocore_sdi12_build(uint8_t *work)
+void protocore_sdi12_build(const uint8_t *work)
 {
     (void)work;
     char *buf = Sdi12V.build_args.buf;
@@ -89,7 +89,7 @@ void protocore_sdi12_build_measure(uint8_t *work)
     char *buf = Sdi12V.build_measure_args.buf;
     size_t cap = Sdi12V.build_measure_args.cap;
     char addr = Sdi12V.build_measure_args.addr;
-    proto_bool with_crc = Sdi12V.build_measure_args.with_crc;
+    embed_bool with_crc = Sdi12V.build_measure_args.with_crc;
 
     Sdi12V.build_args.buf = buf;
     Sdi12V.build_args.cap = cap;
@@ -104,7 +104,7 @@ void protocore_sdi12_build_concurrent(uint8_t *work)
     char *buf = Sdi12V.build_concurrent_args.buf;
     size_t cap = Sdi12V.build_concurrent_args.cap;
     char addr = Sdi12V.build_concurrent_args.addr;
-    proto_bool with_crc = Sdi12V.build_concurrent_args.with_crc;
+    embed_bool with_crc = Sdi12V.build_concurrent_args.with_crc;
 
     Sdi12V.build_args.buf = buf;
     Sdi12V.build_args.cap = cap;
@@ -120,7 +120,7 @@ void protocore_sdi12_build_measure_additional(uint8_t *work)
     size_t cap = Sdi12V.build_measure_additional_args.cap;
     char addr = Sdi12V.build_measure_additional_args.addr;
     uint8_t m_index = Sdi12V.build_measure_additional_args.m_index;
-    proto_bool with_crc = Sdi12V.build_measure_additional_args.with_crc;
+    embed_bool with_crc = Sdi12V.build_measure_additional_args.with_crc;
 
     if (m_index < 1 || m_index > 9)
     {
@@ -141,6 +141,7 @@ void protocore_sdi12_build_measure_additional(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_concurrent_additional(uint8_t *work)
@@ -150,7 +151,7 @@ void protocore_sdi12_build_concurrent_additional(uint8_t *work)
     size_t cap = Sdi12V.build_concurrent_additional_args.cap;
     char addr = Sdi12V.build_concurrent_additional_args.addr;
     uint8_t c_index = Sdi12V.build_concurrent_additional_args.c_index;
-    proto_bool with_crc = Sdi12V.build_concurrent_additional_args.with_crc;
+    embed_bool with_crc = Sdi12V.build_concurrent_additional_args.with_crc;
 
     if (c_index < 1 || c_index > 9)
     {
@@ -171,6 +172,7 @@ void protocore_sdi12_build_concurrent_additional(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_continuous(uint8_t *work)
@@ -180,7 +182,7 @@ void protocore_sdi12_build_continuous(uint8_t *work)
     size_t cap = Sdi12V.build_continuous_args.cap;
     char addr = Sdi12V.build_continuous_args.addr;
     uint8_t r_index = Sdi12V.build_continuous_args.r_index;
-    proto_bool with_crc = Sdi12V.build_continuous_args.with_crc;
+    embed_bool with_crc = Sdi12V.build_continuous_args.with_crc;
 
     if (r_index > 9)
     {
@@ -201,6 +203,7 @@ void protocore_sdi12_build_continuous(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_verify(uint8_t *work)
@@ -236,6 +239,7 @@ void protocore_sdi12_build_data(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_change_address(uint8_t *work)
@@ -252,6 +256,7 @@ void protocore_sdi12_build_change_address(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_query_address(uint8_t *work)
@@ -267,7 +272,7 @@ void protocore_sdi12_build_query_address(uint8_t *work)
     protocore_sdi12_build(work);
 }
 
-void protocore_sdi12_parse_measure(uint8_t *work)
+void protocore_sdi12_parse_measure(const uint8_t *work)
 {
     (void)work;
     const char *resp = Sdi12V.parse_measure_args.resp;
@@ -278,20 +283,20 @@ void protocore_sdi12_parse_measure(uint8_t *work)
 
     if (!resp || len < 5) // a<ttt><n> is at least 5 octets
     {
-        Sdi12V.ok = PROTO_FALSE;
+        Sdi12V.ok = EMBED_FALSE;
         return;
     }
     for (int i = 1; i <= 3; i++)
     {
         if (!EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = resp, .at = i))
         {
-            Sdi12V.ok = PROTO_FALSE;
+            Sdi12V.ok = EMBED_FALSE;
             return;
         }
     }
     if (!EMBED_CALL(cellul.digit, CatenaFinitaCfg, .src = resp, .at = 4))
     {
-        Sdi12V.ok = PROTO_FALSE;
+        Sdi12V.ok = EMBED_FALSE;
         return;
     }
     if (addr)
@@ -312,10 +317,10 @@ void protocore_sdi12_parse_measure(uint8_t *work)
     {
         *num_values = (uint8_t)count;
     }
-    Sdi12V.ok = PROTO_TRUE;
+    Sdi12V.ok = EMBED_TRUE;
 }
 
-void protocore_sdi12_parse_values(uint8_t *work)
+void protocore_sdi12_parse_values(const uint8_t *work)
 {
     (void)work;
     const char *resp = Sdi12V.parse_values_args.resp;
@@ -326,7 +331,7 @@ void protocore_sdi12_parse_values(uint8_t *work)
 
     if (!resp || !out || !n)
     {
-        Sdi12V.ok = PROTO_FALSE;
+        Sdi12V.ok = EMBED_FALSE;
         return;
     }
     size_t cnt = 0;
@@ -359,10 +364,10 @@ void protocore_sdi12_parse_values(uint8_t *work)
         }
     }
     *n = cnt;
-    Sdi12V.ok = PROTO_TRUE;
+    Sdi12V.ok = EMBED_TRUE;
 }
 
-void protocore_sdi12_parse_identify(uint8_t *work)
+void protocore_sdi12_parse_identify(const uint8_t *work)
 {
     (void)work;
     const char *resp = Sdi12V.parse_identify_args.resp;
@@ -371,7 +376,7 @@ void protocore_sdi12_parse_identify(uint8_t *work)
 
     if (!resp || !out || len < 20) // addr(1) + version(2) + vendor(8) + model(6) + sensor version(3)
     {
-        Sdi12V.ok = PROTO_FALSE;
+        Sdi12V.ok = EMBED_FALSE;
         return;
     }
     out->addr = resp[0];
@@ -383,7 +388,7 @@ void protocore_sdi12_parse_identify(uint8_t *work)
     out->model[6] = '\0';
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->sensor_version, .src = resp + 17, .bytes = 3);
     out->sensor_version[3] = '\0';
-    Sdi12V.ok = PROTO_TRUE;
+    Sdi12V.ok = EMBED_TRUE;
 }
 
 void protocore_sdi12_crc16(uint8_t *work)
@@ -401,7 +406,7 @@ void protocore_sdi12_crc16(uint8_t *work)
     Sdi12V.crc = (uint16_t)CrcV.value;
 }
 
-void protocore_sdi12_crc_encode(uint8_t *work)
+void protocore_sdi12_crc_encode(const uint8_t *work)
 {
     (void)work;
     uint16_t crc = Sdi12V.crc_encode_args.crc;
@@ -420,7 +425,7 @@ void protocore_sdi12_check_crc(uint8_t *work)
 
     if (!resp)
     {
-        Sdi12V.ok = PROTO_FALSE;
+        Sdi12V.ok = EMBED_FALSE;
         return;
     }
     // Trim a trailing <CR><LF> if present.
@@ -430,7 +435,7 @@ void protocore_sdi12_check_crc(uint8_t *work)
     }
     if (len < SDI12_CRC_CHARS + 1) // need at least 1 data octet + the 3 CRC octets
     {
-        Sdi12V.ok = PROTO_FALSE;
+        Sdi12V.ok = EMBED_FALSE;
         return;
     }
     size_t data_len = len - SDI12_CRC_CHARS;
@@ -450,6 +455,6 @@ void protocore_sdi12_check_crc(uint8_t *work)
 /** @brief The operands and the outcome. */
 Sdi12Vars Sdi12V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SDI12

@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file lora.h
@@ -79,14 +79,15 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*frame_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_lora_header *, const uint8_t **,
+    embed_bool (*frame_parse)(const uint8_t *, const uint8_t *, uint16_t, protocore_lora_header *, const uint8_t **,
                               uint16_t *);
-    uint16_t (*frame_build)(uint8_t *, const protocore_lora_header *, const uint8_t *, uint16_t, uint8_t *, uint16_t);
-    proto_bool (*init)(uint8_t *, const protocore_lora_bus *, const protocore_lora_config *);
-    proto_bool (*send)(uint8_t *, const protocore_lora_bus *, const uint8_t *, uint8_t);
-    proto_bool (*tx_done)(uint8_t *, const protocore_lora_bus *);
-    void (*set_rx)(uint8_t *, const protocore_lora_bus *);
-    int (*recv)(uint8_t *, const protocore_lora_bus *, uint8_t *, uint8_t, int16_t *);
+    uint16_t (*frame_build)(const uint8_t *, const protocore_lora_header *, const uint8_t *, uint16_t, uint8_t *,
+                            uint16_t);
+    embed_bool (*init)(const uint8_t *, const protocore_lora_bus *, const protocore_lora_config *);
+    embed_bool (*send)(const uint8_t *, const protocore_lora_bus *, const uint8_t *, uint8_t);
+    embed_bool (*tx_done)(const uint8_t *, const protocore_lora_bus *);
+    void (*set_rx)(const uint8_t *, const protocore_lora_bus *);
+    int (*recv)(const uint8_t *, const protocore_lora_bus *, uint8_t *, uint8_t, int16_t *);
 } LoraNs;
 PROTOCORE_NS_LAYOUT(LoraNs, frame_parse, frame_build, init, send, tx_done, set_rx, recv);
 
@@ -98,9 +99,9 @@ PROTOCORE_NS_LAYOUT(LoraNs, frame_parse, frame_build, init, send, tx_done, set_r
  * @param hdr Hdr
  * @param payload Payload
  * @param payload_len Payload len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_lora_frame_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
+embed_bool protocore_lora_frame_parse(const uint8_t *work, const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
                                       const uint8_t **payload, uint16_t *payload_len);
 /**
  * @brief Build a frame (header + payload) into out.
@@ -112,38 +113,38 @@ proto_bool protocore_lora_frame_parse(uint8_t *work, const uint8_t *raw, uint16_
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_lora_frame_build(uint8_t *work, const protocore_lora_header *hdr, const uint8_t *payload,
+uint16_t protocore_lora_frame_build(const uint8_t *work, const protocore_lora_header *hdr, const uint8_t *payload,
                                     uint16_t len, uint8_t *out, uint16_t cap);
 /**
  * @brief Initialize the SX127x: verify the chip, switch to LoRa mode, and .
  * @param work PROTOCORE_LORA_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param cfg Cfg
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_lora_init(uint8_t *work, const protocore_lora_bus *bus, const protocore_lora_config *cfg);
+embed_bool protocore_lora_init(const uint8_t *work, const protocore_lora_bus *bus, const protocore_lora_config *cfg);
 /**
  * @brief Load frame into the FIFO and start a transmit (the radio returns to .
  * @param work PROTOCORE_LORA_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param frame Frame
  * @param len Len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_lora_send(uint8_t *work, const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len);
+embed_bool protocore_lora_send(const uint8_t *work, const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len);
 /**
- * @brief True once a transmit has finished (RegIrqFlags TxDone); clears the .
+ * @brief True once a transmit finished (RegIrqFlags TxDone); clears the .
  * @param work PROTOCORE_LORA_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_lora_tx_done(uint8_t *work, const protocore_lora_bus *bus);
+embed_bool protocore_lora_tx_done(const uint8_t *work, const protocore_lora_bus *bus);
 /**
  * @brief Put the radio in continuous-receive mode (call once, then poll .
  * @param work PROTOCORE_LORA_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  */
-void protocore_lora_set_rx(uint8_t *work, const protocore_lora_bus *bus);
+void protocore_lora_set_rx(const uint8_t *work, const protocore_lora_bus *bus);
 /**
  * @brief If a frame has been received, copy it into buf and report its RSSI.
  * @param work PROTOCORE_LORA_BORROW bytes the caller took. Not held past the call.
@@ -153,7 +154,7 @@ void protocore_lora_set_rx(uint8_t *work, const protocore_lora_bus *bus);
  * @param rssi Rssi
  * @return The int.
  */
-int protocore_lora_recv(uint8_t *work, const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi);
+int protocore_lora_recv(const uint8_t *work, const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi);
 
 /** @brief Read one SX127x register (@p reg is the bare 7-bit address). */
 typedef uint8_t (*protocore_lora_reg_read_fn)(uint8_t reg, void *ctx);
@@ -169,6 +170,6 @@ PROTOCORE_NS LoraNs Lora PROTOCORE_UNUSED = {.frame_parse = protocore_lora_frame
                                              .set_rx = protocore_lora_set_rx,
                                              .recv = protocore_lora_recv};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_LORA_H

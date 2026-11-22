@@ -28,7 +28,7 @@
 #include "network_drivers/network/forward/forward.h" // ForwardNs: carried below as network.forward
 #endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The internet layer (RFC 1122 sec 3), and the modules it carries.
@@ -45,7 +45,7 @@ PROTOCORE_BEGIN_DECLS
  * @var NetworkNs::init      bring the layer up. It runs no work: the platform stack holds the route
  *                           table and selects the path (RFC 791 sec 1.4 "Operation")
  *
- * Each carried module is named by pointer; one behind a feature flag is declared under that flag,
+ * Each carried module is named by pointer. One behind a feature flag is declared under that flag,
  * so the layer names only what the image already contains.
  *
  * No argument members: init reads nothing. No result members: init reports nothing.
@@ -59,7 +59,7 @@ typedef struct
 #if PROTOCORE_ENABLE_FORWARD
     ForwardNs *forward; ///< the forwarding plane (RFC 1812 sec 5)
 #endif
-    IpNs *ip; ///< an internet address as a value (RFC 791, RFC 8200)
+    const IpNs *ip; ///< an internet address as a value (RFC 791, RFC 8200)
 } networkVars;
 
 /** @brief The operands and the outcome. */
@@ -68,12 +68,12 @@ extern networkVars networkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *work);
+    void (*const init)(const uint8_t *work);
 } NetworkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in networkV or a region of the borrow at a fixed offset.
-void protocore_network_init(uint8_t *work);
+void protocore_network_init(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -83,6 +83,6 @@ static const NetworkNs network __attribute__((unused)) = {
     .init = protocore_network_init,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif

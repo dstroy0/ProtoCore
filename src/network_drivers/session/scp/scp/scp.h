@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file scp.h
@@ -37,19 +37,17 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_SCP_ACK_ERROR 2 ///< fatal error: followed by a message + '\n'
 
 /** @brief The role of an `scp` invocation, parsed from the exec command. */
-typedef enum PROTO_ENUM_PACKED
-{
-    SCP_MODE_INVALID = 0,
-    SCP_MODE_SINK,  ///< `scp -t <path>`: the client sends a file TO the device (device receives)
-    SCP_MODE_SOURCE ///< `scp -f <path>`: the client fetches a file FROM the device (device sends)
-} ScpMode;
+EMBED_ENUM_BYTE(ScpMode, SCP_MODE_INVALID = 0,
+                SCP_MODE_SINK,  ///< `scp -t <path>`: the client sends a file TO the device (device receives)
+                SCP_MODE_SOURCE ///< `scp -f <path>`: the client fetches a file FROM the device (device sends)
+);
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    ScpMode (*parse_cmd)(uint8_t *, const char *, size_t, char *, size_t);
-    proto_bool (*parse_cline)(uint8_t *, const char *, size_t, uint32_t *, uint64_t *, char *, size_t);
-    size_t (*build_cline)(uint8_t *, uint32_t, uint64_t, const char *, char *, size_t);
+    ScpMode (*parse_cmd)(const uint8_t *, const char *, size_t, char *, size_t);
+    embed_bool (*parse_cline)(const uint8_t *, const char *, size_t, uint32_t *, uint64_t *, char *, size_t);
+    size_t (*build_cline)(const uint8_t *, uint32_t, uint64_t, const char *, char *, size_t);
 } ScpNs;
 PROTOCORE_NS_LAYOUT(ScpNs, parse_cmd, parse_cline, build_cline);
 
@@ -62,7 +60,7 @@ PROTOCORE_NS_LAYOUT(ScpNs, parse_cmd, parse_cline, build_cline);
  * @param path_cap Path cap
  * @return The ScpMode.
  */
-ScpMode protocore_scp_parse_cmd(uint8_t *work, const char *cmd, size_t cmd_len, char *path_out, size_t path_cap);
+ScpMode protocore_scp_parse_cmd(const uint8_t *work, const char *cmd, size_t cmd_len, char *path_out, size_t path_cap);
 /**
  * @brief Parse a control line `C<mode> <size> <name>` (a trailing '\n' .
  * @param work PROTOCORE_SCP_BORROW bytes the caller took. Not held past the call.
@@ -72,9 +70,9 @@ ScpMode protocore_scp_parse_cmd(uint8_t *work, const char *cmd, size_t cmd_len, 
  * @param size_out Size out
  * @param name_out Name out
  * @param name_cap Name cap
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len, uint32_t *mode_out,
+embed_bool protocore_scp_parse_cline(const uint8_t *work, const char *line, size_t len, uint32_t *mode_out,
                                      uint64_t *size_out, char *name_out, size_t name_cap);
 /**
  * @brief Build a control line `C<mode> <size> <name>\n` for a source .
@@ -86,13 +84,14 @@ proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_scp_build_cline(uint8_t *work, uint32_t mode, uint64_t size, const char *name, char *out, size_t cap);
+size_t protocore_scp_build_cline(const uint8_t *work, uint32_t mode, uint64_t size, const char *name, char *out,
+                                 size_t cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS ScpNs Scp PROTOCORE_UNUSED = {.parse_cmd = protocore_scp_parse_cmd,
                                            .parse_cline = protocore_scp_parse_cline,
                                            .build_cline = protocore_scp_build_cline};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SCP_H

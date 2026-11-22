@@ -263,7 +263,7 @@ void test_non_positive_dt_is_not_a_step(void)
 }
 
 // The fixed-rate entry point is the same law with the cached period, and it refuses to run before
-// pid_set_rate has supplied one.
+// pid_set_rate supplied one.
 void test_fixed_rate_matches_the_variable_rate_law(void)
 {
     Pid fixed;
@@ -575,7 +575,7 @@ void test_log_record_layout(void)
     ControlV.pid_log_record_args.setpoint = 4.0f;
     ControlV.pid_log_record_args.measurement = -1.5f;
     ControlV.pid_log_record_args.output = 2.25f;
-    ControlV.pid_log_record_args.saturated = PROTO_TRUE;
+    ControlV.pid_log_record_args.saturated = EMBED_TRUE;
     Control.pid_log_record(control_work);
     TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN, (uint32_t)ControlV.n);
     TEST_ASSERT_EQUAL_UINT32(16u, (uint32_t)PID_LOG_RECORD_LEN);
@@ -591,7 +591,7 @@ void test_log_record_layout(void)
     ControlV.pid_log_record_args.setpoint = 4.0f;
     ControlV.pid_log_record_args.measurement = -1.5f;
     ControlV.pid_log_record_args.output = 2.25f;
-    ControlV.pid_log_record_args.saturated = PROTO_FALSE;
+    ControlV.pid_log_record_args.saturated = EMBED_FALSE;
     Control.pid_log_record(control_work);
     TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN, (uint32_t)ControlV.n);
     TEST_ASSERT_EQUAL_HEX32(0u, u32le(buf + 12));
@@ -602,7 +602,7 @@ void test_log_record_layout(void)
     ControlV.pid_log_record_args.setpoint = 0.0f;
     ControlV.pid_log_record_args.measurement = 0.0f;
     ControlV.pid_log_record_args.output = 0.0f;
-    ControlV.pid_log_record_args.saturated = PROTO_FALSE;
+    ControlV.pid_log_record_args.saturated = EMBED_FALSE;
     Control.pid_log_record(control_work);
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)ControlV.n);
     TEST_ASSERT_EQUAL_UINT8(0xAA, buf[0]);
@@ -611,7 +611,7 @@ void test_log_record_layout(void)
     ControlV.pid_log_record_args.setpoint = 0.0f;
     ControlV.pid_log_record_args.measurement = 0.0f;
     ControlV.pid_log_record_args.output = 0.0f;
-    ControlV.pid_log_record_args.saturated = PROTO_FALSE;
+    ControlV.pid_log_record_args.saturated = EMBED_FALSE;
     Control.pid_log_record(control_work);
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)ControlV.n);
 }

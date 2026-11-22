@@ -17,7 +17,7 @@
 
 #include "endian/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -25,9 +25,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cia402_controlword(uint8_t *work);
+void protocore_cia402_controlword(const uint8_t *work);
 
-void protocore_cia402_state(uint8_t *work)
+void protocore_cia402_state(const uint8_t *work)
 {
     (void)work;
     uint16_t sw = Cia402V.state_args.statusword;
@@ -76,7 +76,7 @@ void protocore_cia402_state(uint8_t *work)
     Cia402V.value = CIA402_STATE_UNKNOWN;
 }
 
-void protocore_cia402_controlword(uint8_t *work)
+void protocore_cia402_controlword(const uint8_t *work)
 {
     (void)work;
     Cia402Command cmd = Cia402V.controlword_args.cmd;
@@ -250,7 +250,7 @@ void protocore_cia402_sdo_read(uint8_t *work)
 
 // Validate an expedited SDO upload response and copy its inline payload into @p out (>= need
 // octets). No shared state - the parsed response lives on this call's stack.
-static proto_bool sdo_upload_bytes(uint8_t *work, const CanFrame *f, uint16_t want_index, uint8_t need, uint8_t *out)
+static embed_bool sdo_upload_bytes(uint8_t *work, const CanFrame *f, uint16_t want_index, uint8_t need, uint8_t *out)
 {
     CanopenSdoResponse resp;
     CanopenV.parse_sdo_response_args.f = f;
@@ -258,18 +258,18 @@ static proto_bool sdo_upload_bytes(uint8_t *work, const CanFrame *f, uint16_t wa
     Canopen.parse_sdo_response(work);
     if (!CanopenV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (resp.is_abort || !resp.is_upload || !resp.expedited || resp.len < need)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (want_index != 0 && resp.index != want_index)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = resp.data, .bytes = need);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_cia402_sdo_get_u16(uint8_t *work)
@@ -282,11 +282,11 @@ void protocore_cia402_sdo_get_u16(uint8_t *work)
     uint8_t d[2];
     if (!value || !sdo_upload_bytes(work, f, want_index, 2, d))
     {
-        Cia402V.ok = PROTO_FALSE;
+        Cia402V.ok = EMBED_FALSE;
         return;
     }
     *value = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d, .width = MMGR_ENDIAN_16);
-    Cia402V.ok = PROTO_TRUE;
+    Cia402V.ok = EMBED_TRUE;
 }
 
 void protocore_cia402_sdo_get_i32(uint8_t *work)
@@ -299,14 +299,14 @@ void protocore_cia402_sdo_get_i32(uint8_t *work)
     uint8_t d[4];
     if (!value || !sdo_upload_bytes(work, f, want_index, 4, d))
     {
-        Cia402V.ok = PROTO_FALSE;
+        Cia402V.ok = EMBED_FALSE;
         return;
     }
     *value = (int32_t)(uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = d, .width = MMGR_ENDIAN_32);
-    Cia402V.ok = PROTO_TRUE;
+    Cia402V.ok = EMBED_TRUE;
 }
 
-void protocore_cia402_pack_command(uint8_t *work)
+void protocore_cia402_pack_command(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Cia402V.pack_command_args.buf;
@@ -324,7 +324,7 @@ void protocore_cia402_pack_command(uint8_t *work)
     Cia402V.n = p; // 6
 }
 
-void protocore_cia402_unpack_status(uint8_t *work)
+void protocore_cia402_unpack_status(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = Cia402V.unpack_status_args.buf;
@@ -334,17 +334,17 @@ void protocore_cia402_unpack_status(uint8_t *work)
 
     if (!buf || !statusword || !actual || len < 6)
     {
-        Cia402V.ok = PROTO_FALSE;
+        Cia402V.ok = EMBED_FALSE;
         return;
     }
     *statusword = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf, .width = MMGR_ENDIAN_16);
     *actual = (int32_t)(uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 2, .width = MMGR_ENDIAN_32);
-    Cia402V.ok = PROTO_TRUE;
+    Cia402V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Cia402Vars Cia402V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CIA402

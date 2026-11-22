@@ -11,7 +11,7 @@
 
 #include "network_drivers/presentation/ssh/common/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 struct ProtoHandler;
 
@@ -23,11 +23,10 @@ struct ProtoHandler;
  * initiating role's is one it dialled. They are separate pools with separate handle spaces, so the
  * handle alone does not say which array it indexes.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    SSH_STREAM_ACCEPTED = 0, ///< inbound: the handle indexes conn_pool[]
-    SSH_STREAM_DIALED        ///< outbound: the handle indexes the client transport's own pool
-} SshStreamKind;
+EMBED_ENUM_BYTE(SshStreamKind,
+                SSH_STREAM_ACCEPTED = 0, ///< inbound: the handle indexes conn_pool[]
+                SSH_STREAM_DIALED        ///< outbound: the handle indexes the client transport's own pool
+);
 
 /** @brief RFC 4254 sec 5: which pool a handle indexes, and the channel it carries. */
 typedef struct
@@ -64,7 +63,7 @@ typedef struct
  * @brief The binding between an SSH slot and the byte stream underneath it.
  *
  * RFC 4253 sec 4: "SSH works over any 8-bit clean, binary-transparent transport." Nothing here is
- * one of the three components of RFC 4251 sec 1; this is the stream they run on, and the roles that
+ * one of the three components of RFC 4251 sec 1. This is the stream they run on, and the roles that
  * drive them (server sec 4.1, client sec 4) live above it.
  *
  * A caller sets the members a call takes, invokes it through ::SshNetwork, and reads the outcome off
@@ -103,7 +102,7 @@ typedef struct
     SshNetMsgArgs msg;         ///< the message bytes an emit or a write carries
     SshChanDialArgs dial;      ///< where a bridged channel dials
     SshChanReadArgs read_args; ///< where a channel read writes
-    proto_bool ok;
+    embed_bool ok;
     int i32;
     uint8_t u8;
     size_t n;
@@ -120,15 +119,15 @@ extern SshNetworkVars SshNetworkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const claim)(uint8_t *work);
-    void (*const release)(uint8_t *work);
-    void (*const slot_free)(uint8_t *work);
-    void (*const owns)(uint8_t *work);
-    void (*const tx_drain)(uint8_t *work);
-    void (*const emit)(uint8_t *work);
-    void (*const write_msg)(uint8_t *work);
-    void (*const payload_region)(uint8_t *work);
-    void (*const write_msg_at)(uint8_t *work);
+    void (*const claim)(const uint8_t *work);
+    void (*const release)(const uint8_t *work);
+    void (*const slot_free)(const uint8_t *work);
+    void (*const owns)(const uint8_t *work);
+    void (*const tx_drain)(const uint8_t *work);
+    void (*const emit)(const uint8_t *work);
+    void (*const write_msg)(const uint8_t *work);
+    void (*const payload_region)(const uint8_t *work);
+    void (*const write_msg_at)(const uint8_t *work);
     void (*const chan_open)(uint8_t *work);
     void (*const chan_adopt)(uint8_t *work);
     void (*const chan_by_cid)(uint8_t *work);
@@ -142,15 +141,15 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshNetworkV or a region of the borrow at a fixed offset.
-void protocore_ssh_network_claim(uint8_t *work);
-void protocore_ssh_network_release(uint8_t *work);
-void protocore_ssh_network_slot_free(uint8_t *work);
-void protocore_ssh_network_owns(uint8_t *work);
-void protocore_ssh_network_tx_drain(uint8_t *work);
-void protocore_ssh_network_emit(uint8_t *work);
-void protocore_ssh_network_write_msg(uint8_t *work);
-void protocore_ssh_network_payload_region(uint8_t *work);
-void protocore_ssh_network_write_msg_at(uint8_t *work);
+void protocore_ssh_network_claim(const uint8_t *work);
+void protocore_ssh_network_release(const uint8_t *work);
+void protocore_ssh_network_slot_free(const uint8_t *work);
+void protocore_ssh_network_owns(const uint8_t *work);
+void protocore_ssh_network_tx_drain(const uint8_t *work);
+void protocore_ssh_network_emit(const uint8_t *work);
+void protocore_ssh_network_write_msg(const uint8_t *work);
+void protocore_ssh_network_payload_region(const uint8_t *work);
+void protocore_ssh_network_write_msg_at(const uint8_t *work);
 void protocore_ssh_network_chan_open(uint8_t *work);
 void protocore_ssh_network_chan_adopt(uint8_t *work);
 void protocore_ssh_network_chan_by_cid(uint8_t *work);
@@ -200,6 +199,6 @@ uint8_t *protocore_ssh_network_span(void);
 /** @brief Put the server identification string on the wire, raw, before any binary packet. */
 void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NETWORK_NETWORK_H

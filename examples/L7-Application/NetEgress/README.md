@@ -7,7 +7,7 @@
 A device with both WiFi and Ethernet has a "default route" the OS picks for
 outbound traffic, and it can flip on a cable pull. `Physical.link->egress()` reports the
 live egress interface and `protocore_physical_egress_ipv4()` its IP, queried on demand - no
-manager and no polling loop. The OS (`esp_netif`) does the failover; this just
+manager and no polling loop. The OS (`esp_netif`) does the failover. This just
 reports the current state, useful for logging, telemetry tags, or an "online via
 Ethernet / WiFi" badge in a UI.
 

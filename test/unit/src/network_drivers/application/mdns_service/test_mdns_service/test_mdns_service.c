@@ -158,11 +158,11 @@ static uint16_t answer_count(const protocore_net_host_dgram *d)
 }
 
 // Decode answer @p want of the captured response; false when there is no such record.
-static proto_bool answer_at(const protocore_net_host_dgram *d, int want, Rec *r)
+static embed_bool answer_at(const protocore_net_host_dgram *d, int want, Rec *r)
 {
     if (want >= (int)answer_count(d))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t off = 12;
     for (int i = 0;; i++)
@@ -176,7 +176,7 @@ static proto_bool answer_at(const protocore_net_host_dgram *d, int want, Rec *r)
         r->rdata = &d->data[off + 10];
         if (i == want)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         off += (size_t)10 + r->rdlen;
     }
@@ -434,7 +434,7 @@ void test_a_name_this_host_does_not_own_draws_silence(void)
     ask("myhost.local", T_SRV); // the host name owns an A record, not an SRV
     TEST_ASSERT_EQUAL_size_t(0u, protocore_net_host_udp_sent());
 
-    // The A record is the egress address, and there is none on a host with no link up, so the name
+    // The A record is the egress address. There is none on a host with no link up, so the name
     // this responder does own is still answered with silence rather than with 0.0.0.0.
     ask("myhost.local", T_A);
     TEST_ASSERT_EQUAL_size_t(0u, protocore_net_host_udp_sent());

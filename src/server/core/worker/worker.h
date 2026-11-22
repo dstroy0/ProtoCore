@@ -31,8 +31,11 @@
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 #include "server/core/preempt_queue/preempt_queue.h" // carried below as Session.workers->queue
 #endif
+#if PROTOCORE_ENABLE_IDEMIP
+#include "src/idemip_owners.h" // IDEMIP_OWNERS: the owner of each unit of the stack
+#endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Worker identity
@@ -49,7 +52,7 @@ int protocore_worker_count(void);
  * multi-worker lookup is paid only where there is more than one worker to tell apart.
  */
 #if PROTOCORE_WORKER_COUNT == 1
-PROTOCORE_INLINE int protocore_worker_self(void)
+EMBED_INLINE int protocore_worker_self(void)
 {
     return 0;
 }
@@ -69,7 +72,7 @@ void protocore_worker_set_self(int id);
 // are zeroed on release. A slot has exactly one accessor, the worker that owns it, so a borrow is a
 // plain bump with no lock.
 //
-// The worker slots are the application's: it declares the pools and the LocusCarcerum over them in
+// The worker slots are the application's. It declares the pools and the LocusCarcerum over them in
 // its own translation unit and hands the guards in through protocore_cellblocks_bind(). The ghost
 // slot (PROTOCORE_GHOST_WORKER_SLOT) is the library's own, declared in worker.c. A slot nothing was
 // bound to, and any context outside [0, PROTOCORE_WORKER_COUNT), borrows from the ghost.
@@ -81,19 +84,36 @@ void protocore_worker_set_self(int id);
  * @param plain  the minimum-security guard for plaintext, or NULL to leave the slot on the ghost's.
  * @param secure the maximum-security guard for key material, or NULL to leave it on the ghost's.
  */
-void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaximumSecurityGuard *secure);
+void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaxSecurityGuard *secure);
 
 /** @brief The plaintext guard the calling worker borrows through. Never NULL. */
 const MinimumSecurityGuard *protocore_plain_guard(void);
 
 /** @brief The key-material guard the calling worker borrows through. Never NULL. */
-const MaximumSecurityGuard *protocore_secure_guard(void);
+const MaxSecurityGuard *protocore_secure_guard(void);
 
-/** @brief The owner every plaintext take in the library names. Registered, and never NULL. */
-CellOwner *protocore_plain_owner(void);
+/**
+ * @brief The owners of the library, as the list that MMGR_OWNERS takes.
+ *
+ * worker.c expands MMGR_OWNERS over this list one time for the program. Each entry is an identity
+ * and the name that a reader prints.
+ */
+#if PROTOCORE_ENABLE_IDEMIP
+#define PROTOCORE_OWNERS(owner_)                                                                                       \
+    owner_(protocore_owner_plain, "protocore_plain") owner_(protocore_owner_secure, "protocore_secure")                \
+        IDEMIP_OWNERS(owner_)
+#else
+#define PROTOCORE_OWNERS(owner_)                                                                                       \
+    owner_(protocore_owner_plain, "protocore_plain") owner_(protocore_owner_secure, "protocore_secure")
+#endif
 
-/** @brief The owner every key-material take in the library names. Registered, and never NULL. */
-CellOwner *protocore_secure_owner(void);
+PROTOCORE_OWNERS(MMGR_OWNER_EXTERN)
+
+/** @brief The owner that every plaintext take in the library names. Never NULL. */
+const CellOwner *protocore_plain_owner(void);
+
+/** @brief The owner that every key-material take in the library names. Never NULL. */
+const CellOwner *protocore_secure_owner(void);
 
 /**
  * @brief @p n persistent plaintext bytes, zeroed, or NULL if the calling worker's cellblock is full.
@@ -171,10 +191,10 @@ typedef struct
     int worker_id;                 ///< the worker every call names
     protocore_worker_pump_fn pump; ///< what a started worker runs each time it wakes
     WorkerDeferArgs defer_args;    ///< the call handed to a worker to run in its own context
-    proto_bool ok;
+    embed_bool ok;
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
     // The lane the workers jump. They run without it; it only changes what runs first.
-    PreemptQueueNs *queue;
+    const PreemptQueueNs *queue;
 #endif
 } WorkersVars;
 
@@ -229,6 +249,6 @@ static const WorkerNs Workers __attribute__((unused)) = {
  */
 uint8_t *protocore_worker_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_WORKER_H

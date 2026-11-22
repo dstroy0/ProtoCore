@@ -154,6 +154,12 @@ jobs:
           cp -r "include/MMgr/src/verba_scribo" "$STAGE/src/"
           cp -r "include/MMgr/src/verbum_scrutor" "$STAGE/src/"
           find "$STAGE/src/impensa_ancorae_acus" -name "impensa_ancorae_acus_*.c" ! -name "*_generic.c" -delete
+          # idemIP includes its own headers as "src/...", and the src/ of the stage is the include
+          # path. The tree of idemIP thus goes to src/src/. Its build puts a pseudo_v*_off.c in for
+          # an IP version that is off. Both versions are on here, and those two files go.
+          mkdir -p "$STAGE/src/src"
+          cp -r include/idemIP/src/. "$STAGE/src/src/"
+          rm -f "$STAGE/src/src/ip/pseudo_v4_off.c" "$STAGE/src/src/ip/pseudo_v6_off.c"
           echo "PROTOCORE_LIB=$STAGE" >> "$GITHUB_ENV"
       - name: Compile ${{ matrix.example.name }} (Arduino IDE, esp32 3.x)
         # No --build-property / build_flags: the example's build_opt.h supplies the feature

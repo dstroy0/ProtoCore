@@ -42,7 +42,7 @@
  * payload (sec 4.2.7).
  *
  * The arguments in a method payload and the property list in a content header are the
- * application's octets; this module frames them and validates the framing.
+ * application's octets. This module frames them and validates the framing.
  *
  * The module exports one symbol, @ref Amqp. Everything in amqp.c has internal linkage.
  *
@@ -57,7 +57,7 @@
 
 #if PROTOCORE_ENABLE_AMQP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Frame types, octet 0 of a frame (sec 4.2.3).
 #define AMQP_FRAME_METHOD 1    ///< method frame
@@ -151,7 +151,7 @@ typedef struct
     AmqpPayloadArgs payload; ///< the framed octets
     AmqpMethodArgs method;   ///< a method payload's fields
     AmqpContentArgs content; ///< a content header payload's fields
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     size_t consumed;
 } AmqpVars;
@@ -162,24 +162,24 @@ extern AmqpVars AmqpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const protocol_header)(uint8_t *work);
-    void (*const build_frame)(uint8_t *work);
-    void (*const build_method)(uint8_t *work);
-    void (*const build_content_header)(uint8_t *work);
-    void (*const build_heartbeat)(uint8_t *work);
-    void (*const parse_frame)(uint8_t *work);
-    void (*const parse_method)(uint8_t *work);
+    void (*const protocol_header)(const uint8_t *work);
+    void (*const build_frame)(const uint8_t *work);
+    void (*const build_method)(const uint8_t *work);
+    void (*const build_content_header)(const uint8_t *work);
+    void (*const build_heartbeat)(const uint8_t *work);
+    void (*const parse_frame)(const uint8_t *work);
+    void (*const parse_method)(const uint8_t *work);
 } AmqpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in AmqpV or a region of the borrow at a fixed offset.
-void protocore_amqp_protocol_header(uint8_t *work);
-void protocore_amqp_build_frame(uint8_t *work);
-void protocore_amqp_build_method(uint8_t *work);
-void protocore_amqp_build_content_header(uint8_t *work);
-void protocore_amqp_build_heartbeat(uint8_t *work);
-void protocore_amqp_parse_frame(uint8_t *work);
-void protocore_amqp_parse_method(uint8_t *work);
+void protocore_amqp_protocol_header(const uint8_t *work);
+void protocore_amqp_build_frame(const uint8_t *work);
+void protocore_amqp_build_method(const uint8_t *work);
+void protocore_amqp_build_content_header(const uint8_t *work);
+void protocore_amqp_build_heartbeat(const uint8_t *work);
+void protocore_amqp_parse_frame(const uint8_t *work);
+void protocore_amqp_parse_method(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -195,7 +195,7 @@ static const AmqpNs Amqp __attribute__((unused)) = {
     .parse_method = protocore_amqp_parse_method,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AMQP
 

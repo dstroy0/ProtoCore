@@ -22,7 +22,7 @@
 
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the bound port datagrams arrive on
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The pool (QuicConn + H3Conn per slot) and the ingest ring are large, so on a PSRAM board they can
 // be moved to external RAM (like the HTTP/2 pool). Default is internal DRAM; a build that overflows
@@ -65,7 +65,7 @@ typedef struct
 // One pool slot: a QUIC connection, its HTTP/3 engine, and the peer to reply to.
 typedef struct
 {
-    proto_bool used;
+    embed_bool used;
     uint32_t id;  ///< stable handle for protocore_quic_server_respond()
     uint8_t *qc;  ///< PROTOCORE_QUIC_CONN_CTX_BORROW secure bytes: the QUIC connection
     uint8_t *qcb; ///< PROTOCORE_QUIC_CONN_BORROW plaintext bytes it owes its streams
@@ -89,13 +89,13 @@ typedef struct
  */
 typedef struct
 {
-    _Atomic size_t ring_head;
-    _Atomic size_t ring_tail;
+    embed_atomic_usize ring_head;
+    embed_atomic_usize ring_tail;
     QuicServerConfig cfg;
     QuicServerRequestFn on_request;
     void *app;
     uint16_t port;
-    proto_bool running;
+    embed_bool running;
     uint32_t next_id;
 } QuicServerCtx;
 
@@ -124,9 +124,18 @@ static_assert(QSRV_OFF_RING % _Alignof(QuicIngest) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define QSRV_CTX(w) ((QuicServerCtx *)(void *)((w) + QSRV_OFF_CTX))
-#define QSRV_POOL(w) ((QuicSlot *)(void *)((w) + QSRV_OFF_POOL))
-#define QSRV_RING(w) ((QuicIngest *)(void *)((w) + QSRV_OFF_RING))
+#define QSRV_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const QuicServerCtx *)(const void *)((w) + QSRV_OFF_CTX),                                    \
+        default: (QuicServerCtx *)(void *)((w) + QSRV_OFF_CTX))
+#define QSRV_POOL(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const QuicSlot *)(const void *)((w) + QSRV_OFF_POOL),                                        \
+        default: (QuicSlot *)(void *)((w) + QSRV_OFF_POOL))
+#define QSRV_RING(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const QuicIngest *)(const void *)((w) + QSRV_OFF_RING),                                      \
+        default: (QuicIngest *)(void *)((w) + QSRV_OFF_RING))
 
 // The one owned instance, private to this TU: the pointer to the bytes this server took for
 // itself. The two callbacks below carry the transport's signature and reach it through here.
@@ -154,7 +163,7 @@ static void copy_str(char *dst, size_t cap, const char *src)
     dst[n] = 0;
 }
 
-static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8_t blen)
+static embed_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8_t blen)
 {
     return alen == blen && EMBED_CALL(memor.cmp, MemoriaCfg, .src = a, .other = b, .bytes = alen) == 0;
 }
@@ -177,37 +186,43 @@ static void server_send(uint8_t *work, const char *ip, uint16_t port, const uint
 }
 
 // --- ingest ring (SPSC: one producer fills, protocore_quic_server_poll consumes) ------------------------
-static proto_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+static embed_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
     if (len == 0 || len > PROTOCORE_QUIC_MAX_DATAGRAM)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    size_t head = QSRV_CTX(work)->ring_head;
+    size_t head =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_head);
     size_t next = (head + 1) % PROTOCORE_QUIC_INGEST_RING;
-    if (next == (size_t)QSRV_CTX(work)->ring_tail)
+    if (next ==
+        (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_tail))
     {
-        return PROTO_FALSE; // ring full: drop (QUIC recovers via retransmission)
+        return EMBED_FALSE; // ring full: drop (QUIC recovers via retransmission)
     }
     QuicIngest *e = &QSRV_RING(work)[head];
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->data, .src = dg, .bytes = len);
     e->len = (uint16_t)len;
     copy_str(e->ip, sizeof e->ip, ip);
     e->port = port;
-    QSRV_CTX(work)->ring_head = next; // publish after the record is fully written
-    return PROTO_TRUE;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head,
+               .value = next); // publish after the record is fully written
+    return EMBED_TRUE;
 }
 
-static proto_bool ring_pop(uint8_t *work, QuicIngest *out)
+static embed_bool ring_pop(uint8_t *work, QuicIngest *out)
 {
-    size_t tail = QSRV_CTX(work)->ring_tail;
-    if (tail == (size_t)QSRV_CTX(work)->ring_head)
+    size_t tail =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_tail);
+    if (tail ==
+        (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_head))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = QSRV_RING(work)[tail];
-    QSRV_CTX(work)->ring_tail = (tail + 1) % PROTOCORE_QUIC_INGEST_RING;
-    return PROTO_TRUE;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail,
+               .value = (tail + 1) % PROTOCORE_QUIC_INGEST_RING);
+    return EMBED_TRUE;
 }
 
 // --- slot pool --------------------------------------------------------------------------------
@@ -217,7 +232,7 @@ static QuicSlot *slot_by_id(uint8_t *work, uint32_t id)
     {
         if (QSRV_POOL(work)[i].used && QSRV_POOL(work)[i].id == id)
         {
-            return &QSRV_POOL(work)[i];
+            return &QSRV_POOL(work)[i]; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
         }
     }
     return NULL;
@@ -240,7 +255,7 @@ static QuicSlot *alloc_slot(uint8_t *work)
             s->qc = qc_ctx;
             s->qcb = qc_bytes;
             s->h3 = h3_bytes;
-            s->used = PROTO_TRUE;
+            s->used = EMBED_TRUE;
             s->id = QSRV_CTX(work)->next_id++;
             if (QSRV_CTX(work)->next_id == 0)
             // true branch (wrap) is unreachable - it needs 2^32 allocations in
@@ -249,13 +264,13 @@ static QuicSlot *alloc_slot(uint8_t *work)
             {
                 QSRV_CTX(work)->next_id = 1;
             }
-            return s;
+            return s; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
         }
     }
     return NULL;
 }
 
-// The HTTP/3 engine surfaces a completed request here; forward it to the application by conn id.
+// The HTTP/3 engine surfaces a completed request here. Forward it to the application by conn id.
 static void protocore_h3_on_request(void *app, uint8_t * /*h3*/, uint64_t stream_id, const char *method,
                                     const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
@@ -349,9 +364,9 @@ static QuicSlot *open_conn(uint8_t *work, const QuicLongHeader *lh, const char *
 
 // HttpRoute a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
 // unmatched Initial (the caller opens a new connection) and copies the parsed long header out.
-static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
+static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, embed_bool *is_initial, QuicLongHeader *lh_out)
 {
-    *is_initial = PROTO_FALSE;
+    *is_initial = EMBED_FALSE;
     if (len < 1)
     // only the true branch is unreachable - route(work)'s sole call site is
     // protocore_quic_server_poll, fed by ring_pop(work) from a ring that ring_push(work) (both
@@ -359,11 +374,11 @@ static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, proto_bool 
     {
         return NULL;
     }
-    proto_bool quic_packet_ok = QuicPacket.is_long_header(work, dg[0]);
+    embed_bool quic_packet_ok = QuicPacket.is_long_header(work, dg[0]);
     if (quic_packet_ok)
     {
-        proto_bool quic_packet_ok = QuicPacket.parse_long_header(work, dg, len, lh_out);
-        if (!quic_packet_ok)
+        const embed_bool quic_long_ok = QuicPacket.parse_long_header(work, dg, len, lh_out);
+        if (!quic_long_ok)
         {
             return NULL;
         }
@@ -379,12 +394,12 @@ static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, proto_bool 
             QuicConn.owns(s->qc);
             if (QuicConnV.ok)
             {
-                return s;
+                return s; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
             }
         }
         if (lh_out->version == QUIC_VERSION_1 && lh_out->type == QUIC_LP_INITIAL)
         {
-            *is_initial = PROTO_TRUE;
+            *is_initial = EMBED_TRUE;
         }
         return NULL;
     }
@@ -406,7 +421,7 @@ static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, proto_bool 
         QuicConn.owns(s->qc);
         if (QuicConnV.ok)
         {
-            return s;
+            return s; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
         }
     }
     return NULL;
@@ -440,9 +455,9 @@ static void flush_and_reap(uint8_t *work, uint32_t now_ms)
         // Reap a closed connection, or one idle past the timeout (wrap-safe delta) so a client that
         // never closes cannot leak the fixed pool.
         QuicConn.is_closed(s->qc);
-        if (QuicConnV.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
+        if (QuicConnV.closed || (now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
         {
-            s->used = PROTO_FALSE;
+            s->used = EMBED_FALSE;
         }
     }
 }
@@ -467,7 +482,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
 static void begin(uint8_t *work)
 {
     const QuicServerConfig *cfg = QuicServer.begin_args.cfg;
-    QuicServer.ok = PROTO_FALSE;
+    QuicServer.ok = EMBED_FALSE;
     if (!cfg || !cfg->rng)
     {
         return;
@@ -478,12 +493,14 @@ static void begin(uint8_t *work)
     QSRV_CTX(work)->port = QuicServer.begin_args.port ? QuicServer.begin_args.port : PROTOCORE_HTTP3_PORT;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        QSRV_POOL(work)[i].used = PROTO_FALSE;
+        QSRV_POOL(work)[i].used = EMBED_FALSE;
     }
-    QSRV_CTX(work)->ring_head = 0;
-    QSRV_CTX(work)->ring_tail = 0;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail,
+               .value = 0);
     QSRV_CTX(work)->next_id = 1;
-    QSRV_CTX(work)->running = PROTO_TRUE;
+    QSRV_CTX(work)->running = EMBED_TRUE;
     UdpListenerV.port = QSRV_CTX(work)->port;
     UdpListenerV.bind.handler = udp_ingest_cb;
     UdpListenerV.bind.handler_ctx = NULL;
@@ -501,7 +518,7 @@ static void poll(uint8_t *work)
     QuicIngest ig;
     while (ring_pop(work, &ig))
     {
-        proto_bool is_initial = PROTO_FALSE;
+        embed_bool is_initial = EMBED_FALSE;
         QuicLongHeader lh;
         QuicSlot *s = route(work, ig.data, ig.len, &is_initial, &lh);
         if (!s && is_initial)
@@ -526,7 +543,7 @@ static void respond(uint8_t *work)
     QuicSlot *s = slot_by_id(work, QuicServer.stream.conn_id);
     if (!s)
     {
-        QuicServer.ok = PROTO_FALSE;
+        QuicServer.ok = EMBED_FALSE;
         return;
     }
     H3ConnV.bind.qc = s->qc;
@@ -556,17 +573,19 @@ static void stop(uint8_t *work)
 {
     UdpListenerV.port = QSRV_CTX(work)->port;
     UdpListener.close(protocore_udp_listener_span()); // drop the bind first: nothing more reaches the ring
-    QSRV_CTX(work)->running = PROTO_FALSE;
+    QSRV_CTX(work)->running = EMBED_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        QSRV_POOL(work)[i].used = PROTO_FALSE;
+        QSRV_POOL(work)[i].used = EMBED_FALSE;
     }
-    QSRV_CTX(work)->ring_head = 0;
-    QSRV_CTX(work)->ring_tail = 0;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail,
+               .value = 0);
 }
 
 // The HTTP/3 bridge installs this; its shape is the seam's, not this module's.
-proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
+embed_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
                                          const uint8_t *body, size_t body_len)
 {
     QuicServer.stream.conn_id = conn_id;
@@ -583,6 +602,6 @@ proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, i
 QuicServerNs QuicServer = {
     .begin = begin, .poll = poll, .respond = respond, .active_conns = active_conns, .stop = stop};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3

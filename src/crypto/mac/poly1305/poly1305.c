@@ -5,7 +5,7 @@
  * @file poly1305.c
  * @brief Poly1305 (RFC 8439) - implementation. See poly1305.h.
  *
- * poly1305-donna 32-bit: the accumulator h and key part r are held as five 26-bit limbs; each
+ * poly1305-donna 32-bit: the accumulator h and key part r are held as five 26-bit limbs. Each
  * 16-byte block adds the message limb (with the 2^128 high bit), multiplies by r, and reduces
  * modulo 2^130 - 5. The final value is fully reduced, conditionally has p subtracted in constant
  * time, and s is added modulo 2^128.
@@ -22,7 +22,7 @@
 #include "memoria_operor/memoria_operor.h"
 
 // Poly1305 is a hot, pure-integer MAC (the other half of chacha20-poly1305). Like ChaCha it has no vector
-// path on the S3 and runs materially faster than the framework -Os; it is constant-time by structure
+// path on the S3 and runs materially faster than the framework -Os. It is constant-time by structure
 // (the final reduction is branchless), so a higher level for this TU is side-channel safe. Byte-exact.
 // See the ChaCha note in protocore_chacha20.cpp.
 // Only what is not derivable: the buffer the padded final block is composed in lives at a fixed offset
@@ -50,7 +50,10 @@ static_assert(POLY1305_OFF_CTX % _Alignof(Poly1305Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define POLY1305_CTX(w) ((Poly1305Ctx *)(void *)((w) + POLY1305_OFF_CTX))
+#define POLY1305_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Poly1305Ctx *)(const void *)((w) + POLY1305_OFF_CTX),                                  \
+        default: (Poly1305Ctx *)(void *)((w) + POLY1305_OFF_CTX))
 #define POLY1305_BUF(w) ((w) + POLY1305_OFF_BUF)
 
 // ---------------------------------------------------------------------------
@@ -73,7 +76,10 @@ static void wr_le32(uint8_t *p, uint32_t v)
 // block (the implicit high 1 bit at position 128) or 0 for the padded final block.
 static void poly_block(uint32_t h[5], const uint32_t r[5], const uint32_t sr[5], const uint8_t blk[16], uint32_t hibit)
 {
-    uint32_t t0 = rd_le32(blk + 0), t1 = rd_le32(blk + 4), t2 = rd_le32(blk + 8), t3 = rd_le32(blk + 12);
+    uint32_t t0 = rd_le32(blk + 0);
+    uint32_t t1 = rd_le32(blk + 4);
+    uint32_t t2 = rd_le32(blk + 8);
+    uint32_t t3 = rd_le32(blk + 12);
     h[0] += t0 & 0x3ffffff;
     h[1] += ((t0 >> 26) | (t1 << 6)) & 0x3ffffff;
     h[2] += ((t1 >> 20) | (t2 << 12)) & 0x3ffffff;
@@ -121,7 +127,10 @@ static void poly1305_state_init(uint8_t *work, const uint8_t *key)
     uint32_t *r = ctx->r;
     uint32_t *sr = ctx->sr;
     uint32_t *h = ctx->h;
-    uint32_t t0 = rd_le32(key + 0), t1 = rd_le32(key + 4), t2 = rd_le32(key + 8), t3 = rd_le32(key + 12);
+    uint32_t t0 = rd_le32(key + 0);
+    uint32_t t1 = rd_le32(key + 4);
+    uint32_t t2 = rd_le32(key + 8);
+    uint32_t t3 = rd_le32(key + 12);
     // Clamp r (RFC 8439 sec 2.5) folded into the limb split.
     r[0] = t0 & 0x3ffffff;
     r[1] = ((t0 >> 26) | (t1 << 6)) & 0x3ffff03;
@@ -243,16 +252,16 @@ static void poly1305_finish(uint8_t *work, const uint8_t *key, uint8_t tag[PROTO
 // --- the entries -----------------------------------------------------------
 
 // One-shot over the members already set: split the key, absorb the message, reduce and add s.
-proto_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out)
+embed_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out)
 {
     if (!key || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     poly1305_state_init(work, key);
     poly1305_absorb(work, msg, len);
     poly1305_finish(work, key, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_POLY1305

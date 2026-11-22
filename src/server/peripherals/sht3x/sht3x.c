@@ -23,7 +23,7 @@
 #include "server/peripherals/sht3x/sht3x.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC8_NRSC5
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -49,8 +49,8 @@ uint8_t *protocore_sht3x_span(void)
 
 void protocore_sht3x_crc8(uint8_t *work);
 void protocore_sht3x_parse(uint8_t *work);
-void protocore_sht3x_rh_mpct(uint8_t *work);
-void protocore_sht3x_temp_mc(uint8_t *work);
+void protocore_sht3x_rh_mpct(const uint8_t *work);
+void protocore_sht3x_temp_mc(const uint8_t *work);
 
 void protocore_sht3x_crc8(uint8_t *work)
 {
@@ -66,7 +66,7 @@ void protocore_sht3x_crc8(uint8_t *work)
     Sht3xV.crc = (uint8_t)CrcV.value;
 }
 
-void protocore_sht3x_temp_mc(uint8_t *work)
+void protocore_sht3x_temp_mc(const uint8_t *work)
 {
     (void)work;
     uint16_t raw = Sht3xV.temp_mc_args.raw;
@@ -75,7 +75,7 @@ void protocore_sht3x_temp_mc(uint8_t *work)
     Sht3xV.milli = (int32_t)(-45000 + (int64_t)175000 * raw / 65535);
 }
 
-void protocore_sht3x_rh_mpct(uint8_t *work)
+void protocore_sht3x_rh_mpct(const uint8_t *work)
 {
     (void)work;
     uint16_t raw = Sht3xV.rh_mpct_args.raw;
@@ -93,7 +93,7 @@ void protocore_sht3x_parse(uint8_t *work)
 
     if (!resp)
     {
-        Sht3xV.ok = PROTO_FALSE;
+        Sht3xV.ok = EMBED_FALSE;
         return;
     }
     // Each checksum is captured before the next runs: both report through the one namespace, so
@@ -108,7 +108,7 @@ void protocore_sht3x_parse(uint8_t *work)
     const uint8_t crc_h = Sht3xV.crc;
     if (crc_t != resp[2] || crc_h != resp[5])
     {
-        Sht3xV.ok = PROTO_FALSE;
+        Sht3xV.ok = EMBED_FALSE;
         return;
     }
     uint16_t traw = (uint16_t)(((uint16_t)resp[0] << 8) | resp[1]);
@@ -125,7 +125,7 @@ void protocore_sht3x_parse(uint8_t *work)
         protocore_sht3x_rh_mpct(work);
         *rh_mpct = Sht3xV.milli;
     }
-    Sht3xV.ok = PROTO_TRUE;
+    Sht3xV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +158,10 @@ static_assert(SHT3X_OFF_CTX % _Alignof(Sht3xCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SHT3X_CTX(w) ((Sht3xCtx *)(void *)((w) + SHT3X_OFF_CTX))
+#define SHT3X_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Sht3xCtx *)(const void *)((w) + SHT3X_OFF_CTX),                                        \
+        default: (Sht3xCtx *)(void *)((w) + SHT3X_OFF_CTX))
 
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
@@ -169,7 +172,7 @@ static uint8_t dev_addr(uint8_t *work)
 }
 
 // A command is a bare 16-bit word, big-endian, with no register byte in front of it.
-static proto_bool send_cmd(uint8_t *work, uint16_t cmd)
+static embed_bool send_cmd(uint8_t *work, uint16_t cmd)
 {
     (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = SHT3X_CTX(work)->frame, .val = cmd,
                      .width = MMGR_ENDIAN_16);
@@ -182,7 +185,7 @@ void protocore_sht3x_begin(uint8_t *work)
 
     SHT3X_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_SHT3X_I2C_ADDR;
     protocore_i2c_begin();
-    proto_bool ok = send_cmd(work, SHT3X_CMD_SOFT_RESET);
+    embed_bool ok = send_cmd(work, SHT3X_CMD_SOFT_RESET);
     pcdelay(2); // soft reset completes in < 1.5 ms
     Sht3xV.ok = ok;
 }
@@ -194,13 +197,13 @@ void protocore_sht3x_read(uint8_t *work)
 
     if (!send_cmd(work, SHT3X_CMD_SINGLE_HIGH))
     {
-        Sht3xV.ok = PROTO_FALSE;
+        Sht3xV.ok = EMBED_FALSE;
         return;
     }
     pcdelay(20); // a high-repeatability measurement completes in < 15 ms
     if (!protocore_i2c_read(dev_addr(work), SHT3X_CTX(work)->frame, sizeof(SHT3X_CTX(work)->frame)))
     {
-        Sht3xV.ok = PROTO_FALSE;
+        Sht3xV.ok = EMBED_FALSE;
         return;
     }
     Sht3xV.parse_args.resp = SHT3X_CTX(work)->frame;
@@ -212,6 +215,6 @@ void protocore_sht3x_read(uint8_t *work)
 /** @brief The operands and the outcome. */
 Sht3xVars Sht3xV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SHT3X

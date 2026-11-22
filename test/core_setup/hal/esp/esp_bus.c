@@ -46,7 +46,7 @@
 // the pins it was brought up on, and the device the transactions run against. One named owner.
 typedef struct
 {
-    proto_bool up;
+    embed_bool up;
     int mosi;
     int miso;
     int sclk;
@@ -54,14 +54,14 @@ typedef struct
     uint32_t hz; ///< clock the attached device was configured at; re-attach when it changes
     uint8_t mode;
     uint8_t bit_order;
-    proto_bool half_duplex; ///< dual and quad lane widths need the device in half duplex
+    embed_bool half_duplex; ///< dual and quad lane widths need the device in half duplex
 } EspSpiHost;
 
 // Whether each port is installed, the pins it came up on, the clock it is running, and the buffer
 // its command links are built in. One named owner, internal linkage.
 typedef struct
 {
-    proto_bool up;
+    embed_bool up;
     int sda;
     int scl;
     uint32_t hz;
@@ -100,7 +100,7 @@ int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int
     EspSpiHost *h = &s_bus.spi[host];
     if (h->up)
     {
-        // Already up on different pins: the caller is describing a second bus, which one host does
+        // Already up on different pins: the caller describes a second bus, which one host does
         // not carry. Fail rather than silently drive the first one.
         return (h->mosi == mosi && h->miso == miso && h->sclk == sclk) ? 1 : 0;
     }
@@ -115,7 +115,7 @@ int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int
     {
         return 0;
     }
-    h->up = PROTO_TRUE;
+    h->up = EMBED_TRUE;
     h->mosi = mosi;
     h->miso = miso;
     h->sclk = sclk;
@@ -124,12 +124,12 @@ int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int
 
 // Attach (or re-attach) the shared device at the requested clock, mode, bit order and duplex. CS is
 // driven by the caller through the GPIO seam, so the device is registered with no CS pin of its own.
-static proto_bool spi_device_for(EspSpiHost *h, uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
-                                 proto_bool half_duplex)
+static embed_bool spi_device_for(EspSpiHost *h, uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
+                                 embed_bool half_duplex)
 {
     if (h->dev != NULL && h->hz == hz && h->mode == mode && h->bit_order == bit_order && h->half_duplex == half_duplex)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (h->dev != NULL)
     {
@@ -149,13 +149,13 @@ static proto_bool spi_device_for(EspSpiHost *h, uint8_t host, uint32_t hz, uint8
     if (spi_bus_add_device(spi_host_id(host), &d, &h->dev) != ESP_OK)
     {
         h->dev = NULL;
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     h->hz = hz;
     h->mode = mode;
     h->bit_order = bit_order;
     h->half_duplex = half_duplex;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 int protocore_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
@@ -166,7 +166,7 @@ int protocore_platform_spi_txn(uint8_t host, uint32_t hz, uint8_t bit_order, uin
         return 0;
     }
     EspSpiHost *h = &s_bus.spi[host];
-    if (!h->up || len == 0 || !spi_device_for(h, host, hz, bit_order, mode, PROTO_FALSE))
+    if (!h->up || len == 0 || !spi_device_for(h, host, hz, bit_order, mode, EMBED_FALSE))
     {
         return 0;
     }
@@ -189,7 +189,7 @@ int protocore_platform_spi_txn_ext(uint8_t host, uint32_t hz, uint8_t bit_order,
     // Two and four lanes share one set of pins between the directions, so the device runs half
     // duplex. A dummy phase also has no meaning to a full-duplex device, which clocks both ways at
     // once, so it selects half duplex as well.
-    proto_bool half = (lanes > PROTOCORE_SPI_LANES_1 || dummy_bits > 0) ? PROTO_TRUE : PROTO_FALSE;
+    embed_bool half = (lanes > PROTOCORE_SPI_LANES_1 || dummy_bits > 0) ? EMBED_TRUE : EMBED_FALSE;
     if (!h->up || !spi_device_for(h, host, hz, bit_order, mode, half))
     {
         return 0;
@@ -242,14 +242,14 @@ static esp_err_t i2c_addr_w(i2c_cmd_handle_t cmd, uint16_t addr)
     if ((addr & PROTOCORE_I2C_ADDR_10BIT) != 0)
     {
         uint16_t a = (uint16_t)(addr & PROTOCORE_I2C_ADDR_MASK);
-        esp_err_t e = i2c_master_write_byte(cmd, (uint8_t)(0xF0u | ((a >> 7) & 0x06u)), PROTO_TRUE);
+        esp_err_t e = i2c_master_write_byte(cmd, (uint8_t)(0xF0u | ((a >> 7) & 0x06u)), EMBED_TRUE);
         if (e != ESP_OK)
         {
             return e;
         }
-        return i2c_master_write_byte(cmd, (uint8_t)(a & 0xFFu), PROTO_TRUE);
+        return i2c_master_write_byte(cmd, (uint8_t)(a & 0xFFu), EMBED_TRUE);
     }
-    return i2c_master_write_byte(cmd, (uint8_t)(((addr & 0x7Fu) << 1) | 0u), PROTO_TRUE);
+    return i2c_master_write_byte(cmd, (uint8_t)(((addr & 0x7Fu) << 1) | 0u), EMBED_TRUE);
 }
 
 // Put the address on the bus in the read direction. A 10-bit read repeats only the prefix byte,
@@ -259,9 +259,9 @@ static esp_err_t i2c_addr_r(i2c_cmd_handle_t cmd, uint16_t addr)
     if ((addr & PROTOCORE_I2C_ADDR_10BIT) != 0)
     {
         uint16_t a = (uint16_t)(addr & PROTOCORE_I2C_ADDR_MASK);
-        return i2c_master_write_byte(cmd, (uint8_t)(0xF0u | ((a >> 7) & 0x06u) | 1u), PROTO_TRUE);
+        return i2c_master_write_byte(cmd, (uint8_t)(0xF0u | ((a >> 7) & 0x06u) | 1u), EMBED_TRUE);
     }
-    return i2c_master_write_byte(cmd, (uint8_t)(((addr & 0x7Fu) << 1) | 1u), PROTO_TRUE);
+    return i2c_master_write_byte(cmd, (uint8_t)(((addr & 0x7Fu) << 1) | 1u), EMBED_TRUE);
 }
 
 int protocore_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
@@ -288,14 +288,14 @@ int protocore_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
     {
         return 0;
     }
-    // A sketch that already called Wire.begin() installed this port; treat that as ours rather
+    // A sketch that already called Wire.begin() installed this port. Treat that as ours rather
     // than failing, since both drive the same controller through the same driver.
     esp_err_t e = i2c_driver_install(i2c_port_id(bus), I2C_MODE_MASTER, 0, 0, 0);
     if (e != ESP_OK && e != ESP_ERR_INVALID_STATE)
     {
         return 0;
     }
-    b->up = PROTO_TRUE;
+    b->up = EMBED_TRUE;
     b->sda = sda;
     b->scl = scl;
     b->hz = hz;
@@ -355,7 +355,7 @@ int protocore_platform_i2c_write(uint8_t bus, uint16_t addr, const uint8_t *buf,
     }
     if (e == ESP_OK)
     {
-        e = i2c_master_write(cmd, buf, len, PROTO_TRUE);
+        e = i2c_master_write(cmd, buf, len, EMBED_TRUE);
     }
     if (e == ESP_OK)
     {
@@ -442,7 +442,7 @@ int protocore_platform_i2c_write_read(uint8_t bus, uint16_t addr, const uint8_t 
     }
     if (e == ESP_OK)
     {
-        e = i2c_master_write(cmd, w, wlen, PROTO_TRUE);
+        e = i2c_master_write(cmd, w, wlen, EMBED_TRUE);
     }
     if (e == ESP_OK)
     {
@@ -519,7 +519,7 @@ int protocore_platform_i2c_recover(uint8_t bus, int sda, int scl)
     if (b->up)
     {
         i2c_driver_delete(i2c_port_id(bus));
-        b->up = PROTO_FALSE;
+        b->up = EMBED_FALSE;
     }
     // Drive SCL and let SDA float: a device holding the line low is the only thing pulling it down,
     // so it reads high the moment that device lets go.
@@ -542,7 +542,7 @@ int protocore_platform_i2c_recover(uint8_t bus, int sda, int scl)
     esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
     protocore_platform_gpio_mode((uint8_t)sda, PROTOCORE_GPIO_IN_PULLUP);
     esp_rom_delay_us(PROTOCORE_I2C_RECOVER_HALF_US);
-    proto_bool freed = protocore_platform_gpio_read((uint8_t)sda) != 0;
+    embed_bool freed = protocore_platform_gpio_read((uint8_t)sda) != 0;
     return (protocore_platform_i2c_begin(bus, sda, scl, hz) != 0 && freed) ? 1 : 0;
 }
 

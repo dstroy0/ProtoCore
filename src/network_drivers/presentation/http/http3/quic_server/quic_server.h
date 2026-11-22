@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http3/h3_conn/h3_conn.h"
 #include "network_drivers/presentation/http/http3/quic_conn/quic_conn.h"
@@ -117,7 +117,7 @@ typedef struct
     QuicStreamRef stream;     ///< the connection and stream a response names
     QuicRespArgs resp;        ///< what that response carries
 
-    proto_bool ok;
+    embed_bool ok;
     uint8_t u8;
 
     void (*const begin)(uint8_t *work);
@@ -144,10 +144,10 @@ uint8_t *protocore_quic_server_span(void);
 /**
  * @brief The response sink the HTTP/3 bridge installs; its shape is the seam's, not this module's.
  */
-proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
+embed_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
                                          const uint8_t *body, size_t body_len);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

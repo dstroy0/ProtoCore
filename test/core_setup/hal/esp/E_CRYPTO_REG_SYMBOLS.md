@@ -9,7 +9,7 @@ ESPRESSIF ESP32-E (ECO V3): CRYPTOGRAPHIC REGISTRAR ARCHITECTURE SPECIFICATION
 ---
 
 The ESP32-E retains the single-block hardware engine. Unlike the P4/C6,
-it features zero DMA master capabilities for this block—the CPU must copy all words.
+it features zero DMA master capabilities for this block - the CPU must copy all words.
 
 | Offset | Register Name      | R/W | Field/Bit Configuration [Details]                                      |
 | ------ | ------------------ | --- | ---------------------------------------------------------------------- |

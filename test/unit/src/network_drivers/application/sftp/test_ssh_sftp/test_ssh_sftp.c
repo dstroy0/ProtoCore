@@ -681,14 +681,14 @@ void test_longname_permission_column(void)
 {
     struct
     {
-        proto_bool dir;
+        embed_bool dir;
         uint32_t perms;
         const char *want;
     } static const CASES[] = {
-        {PROTO_FALSE, 0755, "-rwxr-xr-x"}, // the draft's own sample line
-        {PROTO_FALSE, 0644, "-rw-r--r--"}, {PROTO_FALSE, 0000, "----------"}, {PROTO_FALSE, 0777, "-rwxrwxrwx"},
-        {PROTO_FALSE, 0400, "-r--------"}, {PROTO_FALSE, 0001, "---------x"}, {PROTO_TRUE, 0755, "drwxr-xr-x"},
-        {PROTO_TRUE, 0000, "d---------"},
+        {EMBED_FALSE, 0755, "-rwxr-xr-x"}, // the draft's own sample line
+        {EMBED_FALSE, 0644, "-rw-r--r--"}, {EMBED_FALSE, 0000, "----------"}, {EMBED_FALSE, 0777, "-rwxrwxrwx"},
+        {EMBED_FALSE, 0400, "-r--------"}, {EMBED_FALSE, 0001, "---------x"}, {EMBED_TRUE, 0755, "drwxr-xr-x"},
+        {EMBED_TRUE, 0000, "d---------"},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -714,7 +714,7 @@ void test_longname_ignores_the_file_type_bits(void)
 {
     char reg[128];
     char dir[128];
-    SftpV.format_longname_args.is_dir = PROTO_FALSE;
+    SftpV.format_longname_args.is_dir = EMBED_FALSE;
     SftpV.format_longname_args.perms = PROTOCORE_SFTP_S_IFREG | 0644u;
     SftpV.format_longname_args.size = 0;
     SftpV.format_longname_args.mtime = 0;
@@ -722,7 +722,7 @@ void test_longname_ignores_the_file_type_bits(void)
     SftpV.format_longname_args.out = reg;
     SftpV.format_longname_args.cap = sizeof(reg);
     Sftp.format_longname(sftp_work);
-    SftpV.format_longname_args.is_dir = PROTO_TRUE;
+    SftpV.format_longname_args.is_dir = EMBED_TRUE;
     SftpV.format_longname_args.perms = PROTOCORE_SFTP_S_IFDIR | 0755u;
     SftpV.format_longname_args.size = 0;
     SftpV.format_longname_args.mtime = 0;
@@ -742,7 +742,7 @@ void test_longname_ignores_the_file_type_bits(void)
 void test_longname_carries_the_size_and_ends_with_the_name(void)
 {
     char out[128];
-    SftpV.format_longname_args.is_dir = PROTO_FALSE;
+    SftpV.format_longname_args.is_dir = EMBED_FALSE;
     SftpV.format_longname_args.perms = 0644;
     SftpV.format_longname_args.size = 348911;
     SftpV.format_longname_args.mtime = 0;
@@ -764,7 +764,7 @@ void test_longname_clips_to_the_buffer(void)
 {
     char out[8];
     memset(out, 0x7F, sizeof(out));
-    SftpV.format_longname_args.is_dir = PROTO_FALSE;
+    SftpV.format_longname_args.is_dir = EMBED_FALSE;
     SftpV.format_longname_args.perms = 0644;
     SftpV.format_longname_args.size = 1234;
     SftpV.format_longname_args.mtime = 0;

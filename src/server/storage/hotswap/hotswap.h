@@ -40,19 +40,18 @@
 
 #if PROTOCORE_ENABLE_HOTSWAP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_HOTSWAP_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
 // are carved is this module's and is never named here.
 
 /** @brief Where a removable volume currently stands. */
-typedef enum PROTO_ENUM_PACKED
-{
-    STORAGE_STATE_ABSENT = 0,  ///< nothing mounted; no filesystem call is safe.
-    STORAGE_STATE_READY = 1,   ///< mounted and healthy.
-    STORAGE_STATE_FAULTED = 2, ///< was mounted, I/O is failing; unmounted and awaiting a remount probe.
-} StorageState;
+EMBED_ENUM_BYTE(StorageState,
+                STORAGE_STATE_ABSENT = 0,  ///< nothing mounted; no filesystem call is safe.
+                STORAGE_STATE_READY = 1,   ///< mounted and healthy.
+                STORAGE_STATE_FAULTED = 2, ///< was mounted, I/O is failing; unmounted and awaiting a remount probe.
+);
 
 /** @brief The whole state machine. Pure: it decides, the binding acts. */
 typedef struct
@@ -67,13 +66,13 @@ typedef struct
 } HotswapCore;
 
 /** @brief Mount the volume. @return true on success. */
-typedef proto_bool (*protocore_hotswap_mount)(void *ctx);
+typedef embed_bool (*protocore_hotswap_mount)(void *ctx);
 
 /** @brief Drop the mount and any handles it owns. Must tolerate being called when not mounted. */
 typedef void (*protocore_hotswap_unmount)(void *ctx);
 
 /** @brief Optional card-detect probe. nullptr means "assume present and let the mount decide". */
-typedef proto_bool (*protocore_hotswap_present)(void *ctx);
+typedef embed_bool (*protocore_hotswap_present)(void *ctx);
 
 /** @brief Fired on every state change, so an app can log it or light an LED. */
 typedef void (*protocore_hotswap_event)(StorageState from, StorageState to, void *ctx);
@@ -92,7 +91,7 @@ typedef struct
 typedef struct
 {
     HotswapCore *c;
-    proto_bool ok;
+    embed_bool ok;
 } HotswapCoreIoArgs;
 
 /** @brief What core_due takes: c, now. */
@@ -106,8 +105,8 @@ typedef struct
 typedef struct
 {
     HotswapCore *c;
-    proto_bool present; ///< true if a medium appears to be there (card-detect, or "assume yes" without one)
-    proto_bool mounted; ///< true if the mount actually succeeded. Present-but-unmountable stays ABSENT rather than ...
+    embed_bool present; ///< true if a medium appears to be there (card-detect, or "assume yes" without one)
+    embed_bool mounted; ///< true if the mount actually succeeded. Present-but-unmountable stays ABSENT rather than ...
     uint32_t now;
 } HotswapCoreProbeArgs;
 
@@ -135,7 +134,7 @@ typedef struct
 /** @brief What io takes: ok. */
 typedef struct
 {
-    proto_bool ok;
+    embed_bool ok;
 } HotswapIoArgs;
 
 /** @brief What state_name takes: s. */
@@ -206,7 +205,7 @@ typedef struct
     HotswapIoArgs io_args;
     HotswapStateNameArgs state_name_args;
     HotswapJsonArgs json_args;
-    proto_bool ok;
+    embed_bool ok;
     StorageState value;
     const char *text;
     size_t n;
@@ -218,10 +217,10 @@ extern HotswapVars HotswapV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const core_init)(uint8_t *work);
-    void (*const core_io)(uint8_t *work);
-    void (*const core_due)(uint8_t *work);
-    void (*const core_probe)(uint8_t *work);
+    void (*const core_init)(const uint8_t *work);
+    void (*const core_io)(const uint8_t *work);
+    void (*const core_due)(const uint8_t *work);
+    void (*const core_probe)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const set_event_cb)(uint8_t *work);
     void (*const poll)(uint8_t *work);
@@ -229,16 +228,16 @@ typedef struct
     void (*const ready)(uint8_t *work);
     void (*const io)(uint8_t *work);
     void (*const state)(uint8_t *work);
-    void (*const state_name)(uint8_t *work);
+    void (*const state_name)(const uint8_t *work);
     void (*const json)(uint8_t *work);
 } HotswapNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HotswapV or a region of the borrow at a fixed offset.
-void protocore_hotswap_core_init(uint8_t *work);
-void protocore_hotswap_core_io(uint8_t *work);
-void protocore_hotswap_core_due(uint8_t *work);
-void protocore_hotswap_core_probe(uint8_t *work);
+void protocore_hotswap_core_init(const uint8_t *work);
+void protocore_hotswap_core_io(const uint8_t *work);
+void protocore_hotswap_core_due(const uint8_t *work);
+void protocore_hotswap_core_probe(const uint8_t *work);
 void protocore_hotswap_begin(uint8_t *work);
 void protocore_hotswap_set_event_cb(uint8_t *work);
 void protocore_hotswap_poll(uint8_t *work);
@@ -246,7 +245,7 @@ void protocore_hotswap_poll_at(uint8_t *work);
 void protocore_hotswap_ready(uint8_t *work);
 void protocore_hotswap_io(uint8_t *work);
 void protocore_hotswap_state(uint8_t *work);
-void protocore_hotswap_state_name(uint8_t *work);
+void protocore_hotswap_state_name(const uint8_t *work);
 void protocore_hotswap_json(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -280,7 +279,7 @@ static const HotswapNs Hotswap __attribute__((unused)) = {
  */
 uint8_t *protocore_hotswap_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HOTSWAP
 

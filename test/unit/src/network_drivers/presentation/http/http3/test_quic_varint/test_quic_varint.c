@@ -39,14 +39,14 @@ static void vector(uint64_t value, const uint8_t *bytes, size_t n)
     TEST_ASSERT_EQUAL_UINT(n, quic_varint_n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(bytes, out, n);
 
-    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, bytes, n, &v, &consumed);
+    embed_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, bytes, n, &v, &consumed);
     TEST_ASSERT_TRUE(quic_varint_ok);
     TEST_ASSERT_EQUAL_UINT(n, consumed);
     TEST_ASSERT_EQUAL_UINT64(value, v);
 }
 
 // RFC 9000 Appendix A.1: "the eight-byte sequence 0xc2197c5eff14e88c decodes to the decimal value
-// 151,288,809,941,952,652; the four-byte sequence 0x9d7f3e7d decodes to 494,878,333; the two-byte
+// 151,288,809,941,952,652; the four-byte sequence 0x9d7f3e7d decodes to 494,878,333. The two-byte
 // sequence 0x7bbd decodes to 15,293; and the single byte 0x25 decodes to 37".
 void test_rfc9000_appendix_a1_vectors(void)
 {
@@ -68,7 +68,7 @@ void test_non_minimal_encoding_decodes(void)
     static const uint8_t NM[2] = {0x40, 0x25};
     uint64_t v = 0;
     size_t consumed = 0;
-    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, NM, sizeof(NM), &v, &consumed);
+    embed_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, NM, sizeof(NM), &v, &consumed);
     TEST_ASSERT_TRUE(quic_varint_ok);
     TEST_ASSERT_EQUAL_UINT(2u, consumed);
     TEST_ASSERT_EQUAL_UINT64(37u, v);
@@ -179,7 +179,7 @@ void test_decode_refuses_a_truncated_input(void)
     uint64_t v = 0xDEADBEEFu;
     size_t consumed = 99u;
 
-    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, TRUNC4, sizeof(TRUNC4), &v, &consumed);
+    embed_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, TRUNC4, sizeof(TRUNC4), &v, &consumed);
     TEST_ASSERT_FALSE(quic_varint_ok);
     quic_varint_ok = QuicVarint.decode(quic_varint_work, TRUNC8, sizeof(TRUNC8), &v, &consumed);
     TEST_ASSERT_FALSE(quic_varint_ok);
@@ -214,7 +214,7 @@ void test_round_trip_over_every_length_class(void)
         size_t quic_varint_n = QuicVarint.encode(quic_varint_work, buf, sizeof(buf), VALUES[i]);
         size_t n = quic_varint_n;
         TEST_ASSERT_TRUE(n == 1u || n == 2u || n == 4u || n == 8u);
-        proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, buf, n, &v, &consumed);
+        embed_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, buf, n, &v, &consumed);
         TEST_ASSERT_TRUE(quic_varint_ok);
         TEST_ASSERT_EQUAL_UINT(n, consumed);
         TEST_ASSERT_EQUAL_UINT64(VALUES[i], v);

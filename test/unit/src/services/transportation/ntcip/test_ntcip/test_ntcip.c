@@ -72,14 +72,14 @@ void test_every_root_is_distinct(void)
         TEST_ASSERT_TRUE(LEN[a] > 0);
         for (size_t b = a + 1; b < 5; b++)
         {
-            proto_bool same = (LEN[a] == LEN[b]) ? PROTO_TRUE : PROTO_FALSE;
+            embed_bool same = (LEN[a] == LEN[b]) ? EMBED_TRUE : EMBED_FALSE;
             if (same)
             {
                 for (size_t i = 0; i < LEN[a]; i++)
                 {
                     if (ROOT[a][i] != ROOT[b][i])
                     {
-                        same = PROTO_FALSE;
+                        same = EMBED_FALSE;
                         break;
                     }
                 }

@@ -21,7 +21,7 @@ static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads
 #include "shared/mime/mime.h"
 #include <Update.h>
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // All OTA-service state, owned by one instance (internal linkage): the server handle, the
 // route path, the Basic-auth credentials, and the per-upload flags (one upload at a time on
@@ -31,20 +31,20 @@ typedef struct
     const char *path;
     char user[MAX_AUTH_LEN];
     char pass[MAX_AUTH_LEN];
-    proto_bool authed; ///< Credentials validated for the current upload.
-    proto_bool active; ///< Update.begin() succeeded for the current upload.
-    proto_bool error;  ///< A write failed during the current upload.
+    embed_bool authed; ///< Credentials validated for the current upload.
+    embed_bool active; ///< Update.begin() succeeded for the current upload.
+    embed_bool error;  ///< A write failed during the current upload.
 } OtaCtx;
 static OtaCtx s_ota;
 
 /// @brief Validate the request's HTTP Basic credentials against s_ota.user/s_ota.pass.
-static proto_bool ota_check_auth(HttpReq *req)
+static embed_bool ota_check_auth(HttpReq *req)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Authorization");
     const char *h = http_parser_text;
-    if (!h || !EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = h, .other = "Basic ", .cap = 6, .ci = PROTO_FALSE))
+    if (!h || !EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = h, .other = "Basic ", .cap = 6, .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
@@ -55,7 +55,7 @@ static proto_bool ota_check_auth(HttpReq *req)
     size_t n = Base64V.n;
     if (n == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     decoded[n] = '\0';
 
@@ -63,47 +63,47 @@ static proto_bool ota_check_auth(HttpReq *req)
         (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = decoded, .bytes = n, .val = (uint8_t)':');
     if (!colon)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t ulen = (size_t)(colon - (const char *)decoded);
     const char *pass = colon + 1;
     return (ulen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s_ota.user, .cap = sizeof(s_ota.user))) &&
            (EMBED_CALL(memor.cmp, MemoriaCfg, .src = decoded, .other = s_ota.user, .bytes = ulen) == 0) &&
            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pass, .other = s_ota.pass, .cap = sizeof(s_ota.pass),
-                      .ci = PROTO_FALSE);
+                      .ci = EMBED_FALSE);
 }
 
 /// @brief Stream-begin hook: accept POST @p s_ota.path; begin Update if authorized.
-static proto_bool ota_stream_begin(HttpReq *req)
+static embed_bool ota_stream_begin(HttpReq *req)
 {
     if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "POST", .cap = sizeof("POST"),
-                    .ci = PROTO_FALSE))
+                    .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!s_ota.path || !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->path, .other = s_ota.path,
-                                   .cap = MAX_PATH_LEN, .ci = PROTO_FALSE))
+                                   .cap = MAX_PATH_LEN, .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     s_ota.authed = ota_check_auth(req);
-    s_ota.active = PROTO_FALSE;
-    s_ota.error = PROTO_FALSE;
+    s_ota.active = EMBED_FALSE;
+    s_ota.error = EMBED_FALSE;
     if (s_ota.authed)
     {
         if (Update.begin(UPDATE_SIZE_UNKNOWN))
         {
-            s_ota.active = PROTO_TRUE;
+            s_ota.active = EMBED_TRUE;
         }
         else
         {
-            s_ota.error = PROTO_TRUE;
+            s_ota.error = EMBED_TRUE;
         }
     }
     // Stream regardless so the body is consumed and the route handler can reply;
     // when unauthorized/!active the data hook simply discards.
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /// @brief Stream-data hook: write one chunk of the image to Update.
@@ -114,7 +114,7 @@ static void ota_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     {
         if (Update.write((uint8_t *)data, len) != len)
         {
-            s_ota.error = PROTO_TRUE;
+            s_ota.error = EMBED_TRUE;
         }
     }
 }
@@ -132,7 +132,7 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
         send_text(slot_id, 401, PROTOCORE_MIME_TEXT_PLAIN, "Unauthorized");
         return;
     }
-    proto_bool ok = s_ota.active && !s_ota.error && Update.end(PROTO_TRUE);
+    embed_bool ok = s_ota.active && !s_ota.error && Update.end(EMBED_TRUE);
     if (!ok)
     {
         if (s_ota.active)
@@ -167,6 +167,6 @@ void protocore_ota_service_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 OtaServiceVars OtaServiceV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

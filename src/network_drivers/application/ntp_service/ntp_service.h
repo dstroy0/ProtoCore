@@ -21,13 +21,13 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #if PROTOCORE_ENABLE_NTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_NTP_SERVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -83,7 +83,7 @@ typedef struct
 {
     NtpServiceBeginArgs begin_args;
     NtpServiceSetTestEpochArgs set_test_epoch_args;
-    proto_bool ok;
+    embed_bool ok;
     time_t value;
     uint32_t ms;
 } NtpServiceVars;
@@ -132,7 +132,7 @@ static const NtpServiceNs NtpService __attribute__((unused)) = {
  */
 uint8_t *protocore_ntp_service_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTP
 

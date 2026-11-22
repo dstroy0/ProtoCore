@@ -38,7 +38,7 @@
 #include "crypto/asymmetric/fe25519/fe25519.h"
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition, both arms, private to this TU. It sits at CURVE25519_OFF_CTX in the caller's
 // borrow, so its size never leaves this file and no consumer can name it.
@@ -101,7 +101,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define CURVE25519_CTX(w) ((Curve25519Ctx *)(void *)((w) + CURVE25519_OFF_CTX))
+#define CURVE25519_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Curve25519Ctx *)(const void *)((w) + CURVE25519_OFF_CTX),                              \
+        default: (Curve25519Ctx *)(void *)((w) + CURVE25519_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Field arithmetic (GF(2^255-19), radix-2^16). Shared with Ed25519.
@@ -323,7 +326,7 @@ static void gf_inv_sw(protocore_gf out, const protocore_gf a)
 
 #if PROTOCORE_FE25519_MPI_HW
 // out = a^-1 mod p through the canonical field layer, whose multiply is one 256-bit MODMULT on the
-// RSA/MPI accelerator. Only the inversion is offloaded; the 255-round Montgomery ladder multiply stays
+// RSA/MPI accelerator. Only the inversion is offloaded. The 255-round Montgomery ladder multiply stays
 // in the software radix-2^16 core, where per-multiply marshalling to the peripheral would cost more
 // than it saves. The base is packed to its canonical residue first.
 void protocore_gf_inv(protocore_gf out, const protocore_gf a)
@@ -562,7 +565,7 @@ static void x25519_mult(uint8_t *work, uint8_t out[32], const uint8_t scalar[32]
 
 void protocore_curve25519_x25519(uint8_t *work)
 {
-    Curve25519V.ok = PROTO_FALSE;
+    Curve25519V.ok = EMBED_FALSE;
     if (!Curve25519V.x25519_args.out || !Curve25519V.x25519_args.scalar || !Curve25519V.x25519_args.point)
     {
         return;
@@ -586,7 +589,7 @@ void protocore_curve25519_x25519(uint8_t *work)
 // zero (RFC 7748 §5).
 void protocore_curve25519_x25519_base(uint8_t *work)
 {
-    Curve25519V.ok = PROTO_FALSE;
+    Curve25519V.ok = EMBED_FALSE;
     if (!Curve25519V.x25519_base_args.out || !Curve25519V.x25519_base_args.scalar)
     {
         return;
@@ -595,12 +598,12 @@ void protocore_curve25519_x25519_base(uint8_t *work)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = ctx->base, .bytes = 32, .val = 0);
     ctx->base[0] = 9;
     x25519_mult(work, Curve25519V.x25519_base_args.out, Curve25519V.x25519_base_args.scalar, ctx->base);
-    Curve25519V.ok = PROTO_TRUE;
+    Curve25519V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Curve25519Vars Curve25519V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CURVE25519

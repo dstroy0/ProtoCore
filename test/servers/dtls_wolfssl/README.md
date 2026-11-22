@@ -2,10 +2,10 @@
 
 Real-peer conformance test for the library's DTLS 1.3 server (`network_drivers/presentation/dtls`).
 [`dtls_interop_server.c`](dtls_interop_server.c) wraps the transport-neutral `protocore_dtls_conn` state
-machine in a tiny UDP server; the [wolfSSL](https://github.com/wolfSSL/wolfssl) DTLS 1.3 example
+machine in a tiny UDP server. The [wolfSSL](https://github.com/wolfSSL/wolfssl) DTLS 1.3 example
 client drives a full handshake **and** an application-data round trip against it.
 
-This is the strongest evidence the wire format is correct — a from-scratch handshake against the
+This is the strongest evidence the wire format is correct - a from-scratch handshake against the
 reference implementation, not just our own round trip. It caught three real DTLS-vs-TLS conformance
 bugs the self-consistent host tests could not (see below).
 
@@ -55,7 +55,7 @@ make -j"$(nproc)"
 ```
 
 The client flags used: `-u` (DTLS over UDP), `-v 4` (DTLS 1.3), `-d` (skip cert-chain verification of
-the throwaway self-signed cert; the CertificateVerify signature is still checked against the cert's
+the throwaway self-signed cert. The CertificateVerify signature is still checked against the cert's
 public key). `-t` (offer an X25519 key_share up front) is used only for the second, one-round-trip
 run; the first run omits it so wolfSSL leads with its default group and the server renegotiates to
 X25519 with a HelloRetryRequest (RFC 9147 §5.1).
@@ -66,12 +66,12 @@ The record + handshake host KATs were pinned to an _independent Python reconstru
 primitives_, which is self-consistent but shares the implementer's assumptions. Interop against a
 real peer surfaced three DTLS-vs-TLS differences those KATs could not:
 
-1. **ClientHello `legacy_cookie`** (RFC 9147 §5.3) — the DTLS ClientHello carries an extra
+1. **ClientHello `legacy_cookie`** (RFC 9147 §5.3) - the DTLS ClientHello carries an extra
    `legacy_cookie` field between `legacy_session_id` and `cipher_suites` that the TLS ClientHello
    does not; the shared parser read `cipher_suites` at the wrong offset.
-2. **Version codepoints** (RFC 9147 §5.3) — DTLS 1.3 advertises `0xFEFC` in `supported_versions`
+2. **Version codepoints** (RFC 9147 §5.3) - DTLS 1.3 advertises `0xFEFC` in `supported_versions`
    (not `0x0304`) and uses `legacy_version` `0xFEFD` in the ServerHello.
-3. **HKDF-Expand-Label prefix** (RFC 9147 §5.9) — DTLS 1.3 uses the label prefix **`dtls13`**, not
+3. **HKDF-Expand-Label prefix** (RFC 9147 §5.9) - DTLS 1.3 uses the label prefix **`dtls13`**, not
    `tls13 `. This affected every derived secret **and** the record `key`/`iv`/`sn`. Diagnosed by
    comparing our handshake-traffic secret to wolfSSL's `SSLKEYLOGFILE` and bisecting the transcript
    vs. the key schedule.

@@ -7,7 +7,7 @@
 // host-testable half of the service - no sockets, no heap, no TLS - so every call here exercises the
 // exact production code path, just like the modbus worked example. Deliberately out of scope: the
 // ESP32-only transport half (pc_mqtt_connect / publish / subscribe / loop), which drives a real
-// lwIP/mbedTLS broker session; this rig has no network peer, so the QoS state machine and socket I/O
+// lwIP/mbedTLS broker session. This rig has no network peer, so the QoS state machine and socket I/O
 // are never invoked - only the deterministic CPU-side codec is benched.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

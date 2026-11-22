@@ -18,7 +18,7 @@
 #include "mdns_service.h"
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Both backends' includes, ahead of either backend's code: what a translation unit reaches for is
 // stated once at its top, whichever arm the capability selects.
@@ -66,22 +66,22 @@ void protocore_mdns_service_begin(uint8_t *work)
 
     if (hostname == NULL || hostname[0] == '\0')
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     if (mdns_init() != ESP_OK)
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     if (mdns_hostname_set(hostname) != ESP_OK)
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     // Advertise an HTTP service so browsers / DNS-SD tools discover the device.
     mdns_service_add(NULL, "_http", "_tcp", http_port, NULL, 0);
-    MdnsServiceV.ok = PROTO_TRUE;
+    MdnsServiceV.ok = EMBED_TRUE;
 }
 
 void protocore_mdns_service_txt(uint8_t *work)
@@ -92,7 +92,7 @@ void protocore_mdns_service_txt(uint8_t *work)
 
     if (key == NULL || value == NULL)
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     // Attach a TXT key/value to the _http._tcp service (Bonjour browsers show it).
@@ -108,7 +108,7 @@ void protocore_mdns_service_add_service(uint8_t *work)
 
     if (service_type == NULL || proto == NULL)
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     // Advertise an additional service, e.g. ("_https", "_tcp", 443).
@@ -151,7 +151,7 @@ typedef struct
     char type[PROTOCORE_MDNS_LABEL_MAX];  ///< "_http"
     char proto[PROTOCORE_MDNS_LABEL_MAX]; ///< "_tcp" / "_udp"
     uint16_t port;
-    proto_bool used;
+    embed_bool used;
 } MdnsSvc;
 
 // All mDNS responder state, owned by one instance (internal linkage): the borrows the responder
@@ -170,7 +170,7 @@ typedef struct
     mmgr_span qname;     ///< the question being answered
     mmgr_span svc_name;  ///< "<type>.<proto>.local"
     mmgr_span inst_name; ///< "<host>.<type>.<proto>.local"
-    proto_bool running;
+    embed_bool running;
 } MdnsCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -190,16 +190,19 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define MDNS_SERVICE_CTX(w) ((MdnsCtx *)(void *)((w) + MDNS_SERVICE_OFF_CTX))
+#define MDNS_SERVICE_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const MdnsCtx *)(const void *)((w) + MDNS_SERVICE_OFF_CTX),                                  \
+        default: (MdnsCtx *)(void *)((w) + MDNS_SERVICE_OFF_CTX))
 
 // Take every borrow once and hold it for the life of the program. A responder answers for the names
 // the device is reached by, so its table and the replies it composes come from the secure pool,
 // whose release wipes. False when the pool cannot cover them; begin() fails closed on that.
-static proto_bool mdns_mem_bind(uint8_t *work)
+static embed_bool mdns_mem_bind(uint8_t *work)
 {
     if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = MDNS_SERVICE_CTX(work)->tx))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     MDNS_SERVICE_CTX(work)->host =
         EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_MDNS_LABEL_MAX),
@@ -285,7 +288,7 @@ static size_t name_append(char *out, size_t cap, size_t n, const char *s)
 }
 
 // Compose "<a>.<b>.<c>.local" into @p out, skipping a null part. False when it does not fit.
-static proto_bool name_of(char *out, size_t cap, const char *a, const char *b, const char *c)
+static embed_bool name_of(char *out, size_t cap, const char *a, const char *b, const char *c)
 {
     size_t n = 0;
     out[0] = '\0';
@@ -298,13 +301,13 @@ static proto_bool name_of(char *out, size_t cap, const char *a, const char *b, c
 
 // Write one resource record: the owner name, then type / class / ttl / rdlength / rdata. False when
 // the record does not fit what is left of the stage.
-static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner, uint16_t type, uint16_t cls,
+static embed_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner, uint16_t type, uint16_t cls,
                          uint32_t ttl, const uint8_t *rdata, size_t rdlen)
 {
     size_t p = *n;
     if (p >= cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     DnsWireV.text.dotted = owner;
     DnsWireV.text.out = out + p;
@@ -313,12 +316,12 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
     size_t w = DnsWireV.n;
     if (w == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p += w;
     if (p + 10 + rdlen > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[p] = (uint8_t)(type >> 8);
     p++;
@@ -346,7 +349,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
         p += rdlen;
     }
     *n = p;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The A record for this host, when the interface has an address to advertise. A responder with no
@@ -440,7 +443,7 @@ static uint16_t put_ptr(uint8_t *work, const char *owner, const char *target, si
 }
 
 // True when a question of @p qtype is asking for @p want.
-static proto_bool wants(uint16_t qtype, uint16_t want)
+static embed_bool wants(uint16_t qtype, uint16_t want)
 {
     return qtype == want || qtype == PROTOCORE_MDNS_T_ANY;
 }
@@ -548,7 +551,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
         DnsWireV.msg.off = off;
         DnsWireV.msg.out = mdns_str(MDNS_SERVICE_CTX(work)->qname);
         DnsWireV.msg.out_cap = MDNS_SERVICE_CTX(work)->qname.cap;
-        DnsWireV.msg.allow_ptr = PROTO_TRUE;
+        DnsWireV.msg.allow_ptr = EMBED_TRUE;
         DnsWire.decode(protocore_mdns_service_span());
         if (!DnsWireV.ok)
         {
@@ -587,16 +590,16 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
 
 // Copy @p src into @p dst, bounded by @p cap. False when it does not fit whole: a truncated service
 // type would advertise a name nothing resolves.
-static proto_bool label_set(char *dst, size_t cap, const char *src)
+static embed_bool label_set(char *dst, size_t cap, const char *src)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = cap);
     if (n == 0 || n >= cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(proxim.read, ProximusCfg, .dst = dst, .at = src, .size = n);
     dst[n] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_mdns_service_add_service(uint8_t *work)
@@ -607,7 +610,7 @@ void protocore_mdns_service_add_service(uint8_t *work)
 
     if (service_type == NULL || proto == NULL || !mdns_mem_bind(work))
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     for (size_t i = 0; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
@@ -619,15 +622,15 @@ void protocore_mdns_service_add_service(uint8_t *work)
         }
         if (!label_set(s->type, sizeof s->type, service_type) || !label_set(s->proto, sizeof s->proto, proto))
         {
-            MdnsServiceV.ok = PROTO_FALSE;
+            MdnsServiceV.ok = EMBED_FALSE;
             return;
         }
         s->port = port;
-        s->used = PROTO_TRUE;
-        MdnsServiceV.ok = PROTO_TRUE;
+        s->used = EMBED_TRUE;
+        MdnsServiceV.ok = EMBED_TRUE;
         return;
     }
-    MdnsServiceV.ok = PROTO_FALSE; // the table is full
+    MdnsServiceV.ok = EMBED_FALSE; // the table is full
 }
 
 void protocore_mdns_service_txt(uint8_t *work)
@@ -637,7 +640,7 @@ void protocore_mdns_service_txt(uint8_t *work)
 
     if (key == NULL || value == NULL || !mdns_mem_bind(work))
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     uint8_t *txt = MDNS_SERVICE_CTX(work)->txt.buf;
@@ -646,7 +649,7 @@ void protocore_mdns_service_txt(uint8_t *work)
     size_t entry = kl + 1 + vl; // "key=value"
     if (kl == 0 || entry > 255 || MDNS_SERVICE_CTX(work)->txt_len + 1 + entry > MDNS_SERVICE_CTX(work)->txt.cap)
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     size_t n = MDNS_SERVICE_CTX(work)->txt_len;
@@ -659,7 +662,7 @@ void protocore_mdns_service_txt(uint8_t *work)
     EMBED_CALL(proxim.read, ProximusCfg, .dst = txt + n, .at = value, .size = vl);
     n += vl;
     MDNS_SERVICE_CTX(work)->txt_len = n;
-    MdnsServiceV.ok = PROTO_TRUE;
+    MdnsServiceV.ok = EMBED_TRUE;
 }
 
 void protocore_mdns_service_begin(uint8_t *work)
@@ -669,23 +672,23 @@ void protocore_mdns_service_begin(uint8_t *work)
 
     if (hostname == NULL || hostname[0] == '\0' || !mdns_mem_bind(work))
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     if (!label_set(mdns_str(MDNS_SERVICE_CTX(work)->host), MDNS_SERVICE_CTX(work)->host.cap, hostname))
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     if (!name_of(mdns_str(MDNS_SERVICE_CTX(work)->fqdn), MDNS_SERVICE_CTX(work)->fqdn.cap,
                  mdns_str(MDNS_SERVICE_CTX(work)->host), NULL, NULL))
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     for (size_t i = 0; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
     {
-        mdns_svc(work, i)->used = PROTO_FALSE;
+        mdns_svc(work, i)->used = EMBED_FALSE;
     }
     MDNS_SERVICE_CTX(work)->txt_len = 0;
     MdnsServiceV.add_service_args.service_type = "_http";
@@ -694,7 +697,7 @@ void protocore_mdns_service_begin(uint8_t *work)
     protocore_mdns_service_add_service(work);
     if (!MdnsServiceV.ok)
     {
-        MdnsServiceV.ok = PROTO_FALSE;
+        MdnsServiceV.ok = EMBED_FALSE;
         return;
     }
     UdpListenerV.port = PROTOCORE_MDNS_PORT;
@@ -711,6 +714,6 @@ void protocore_mdns_service_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 MdnsServiceVars MdnsServiceV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MDNS

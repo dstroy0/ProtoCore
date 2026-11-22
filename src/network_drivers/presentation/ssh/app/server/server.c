@@ -6,8 +6,12 @@
  * @brief RFC 4254 sec 6: the subsystem and exec requests that name a file-transfer service.
  */
 
-#include "network_drivers/presentation/ssh/app/server/server.h"
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "memoria_operor/memoria_operor.h"
+#include "network_drivers/presentation/ssh/app/server/server.h"
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.rd_str: the RFC 4251 sec 5 string reader
 #include "spatium/spatium.h"                                   // spat.cfrom: the request payload as a read span
 
@@ -16,7 +20,7 @@
 // matching open callback when it does; @p off points at the request-specific arg and may be advanced. Flips
 // *accept true for an accepted SFTP subsystem (exec is already in the base accept set).
 
-void protocore_ssh_app_server_classify(uint8_t *work)
+void protocore_ssh_app_server_classify(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshAppServerV.slot;
@@ -27,11 +31,9 @@ void protocore_ssh_app_server_classify(uint8_t *work)
     mmgr_cspan req =
         EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = SshAppServerV.req.payload, .cap = SshAppServerV.req.len);
     req.pos = SshAppServerV.req.off;
-    proto_bool *accept = &SshAppServerV.accept;
-#if !PROTOCORE_ENABLE_SSH_SFTP
-    (void)accept; // only the SFTP subsystem path flips acceptance; scp exec is already accepted
-#endif
 #if PROTOCORE_ENABLE_SSH_SFTP
+    // Only the SFTP subsystem path flips acceptance. The base set already accepts the exec of scp.
+    embed_bool *const accept = &SshAppServerV.accept;
     // subsystem "sftp": not in the base accept set, so accept it here and tag the channel for the SFTP binding.
     if (rtype_len == 9 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = rtype, .other = "subsystem", .bytes = 9) == 0)
     {
@@ -40,7 +42,7 @@ void protocore_ssh_app_server_classify(uint8_t *work)
         if (EMBED_CALL(byteio.rd_str, OctetusCfg, .read_span = &req, .blob = &arg, .blob_bytes = &arg_len) &&
             arg_len == 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = arg, .other = "sftp", .bytes = 4) == 0)
         {
-            *accept = PROTO_TRUE;
+            *accept = EMBED_TRUE;
             SshConnectionV.chan.slot = i;
             SshConnectionV.chan.channel = channel;
             SshConnectionV.chan.service = SSH_CHAN_SERVICE_SFTP;
@@ -79,7 +81,7 @@ void protocore_ssh_app_server_classify(uint8_t *work)
 
 #else
 
-void protocore_ssh_app_server_classify(uint8_t *work)
+void protocore_ssh_app_server_classify(const uint8_t *work)
 {
     (void)work;
 }
@@ -89,3 +91,5 @@ void protocore_ssh_app_server_classify(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshAppServerVars SshAppServerV;
+
+#endif // PROTOCORE_ENABLE_SSH

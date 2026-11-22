@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file zigbee.h
@@ -95,6 +95,6 @@ PROTOCORE_NS ZigbeeNs Zigbee PROTOCORE_UNUSED = {.ash_crc16 = protocore_zigbee_a
                                                  .ash_frame_encode = protocore_zigbee_ash_frame_encode,
                                                  .ash_frame_decode = protocore_zigbee_ash_frame_decode};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ZIGBEE_H

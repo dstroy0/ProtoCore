@@ -10,7 +10,7 @@
  * `%` rewind-stop at the start and end, and drip-fed over an RS-232 link with XON/XOFF
  * software flow control so the sender pauses when the controller's small input buffer
  * fills. This codec is the transport-agnostic framing + tape-code layer only - the same
- * bytes ride RS-232, a raw TCP socket, or a WebSocket; the app owns the wire.
+ * bytes ride RS-232, a raw TCP socket, or a WebSocket. The app owns the wire.
  *
  * Two tape codes are supported (the historical split every DNC package still carries):
  *  - **ISO** (::DNC_CODE_ISO): ISO 7-bit / ASCII, End-of-Block = LF, program marker = `%`.
@@ -38,29 +38,26 @@
 
 #if PROTOCORE_ENABLE_DNC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Which punched-tape character code the wire stream uses. */
-typedef enum PROTO_ENUM_PACKED
-{
-    DNC_CODE_ISO = 0, ///< ISO 7-bit / ASCII (RS-358), EOB = LF, marker = '%'.
-    DNC_CODE_EIA = 1, ///< EIA RS-244 odd-parity tape code, EOB = 0x80, marker = EOR 0x0B.
-} DncCode;
+EMBED_ENUM_BYTE(DncCode,
+                DNC_CODE_ISO = 0, ///< ISO 7-bit / ASCII (RS-358), EOB = LF, marker = '%'.
+                DNC_CODE_EIA = 1, ///< EIA RS-244 odd-parity tape code, EOB = 0x80, marker = EOR 0x0B.
+);
 
 /** @brief Software flow-control bytes (both tape codes; these are the raw ASCII controls). */
-typedef enum PROTO_ENUM_PACKED
-{
-    DNC_XON = 0x11,  ///< DC1 - resume sending.
-    DNC_XOFF = 0x13, ///< DC3 - pause sending.
-} DncFlowByte;
+EMBED_ENUM_BYTE(DncFlowByte,
+                DNC_XON = 0x11,  ///< DC1 - resume sending.
+                DNC_XOFF = 0x13, ///< DC3 - pause sending.
+);
 
 /** @brief EIA RS-244 special codes (not general text characters). */
-typedef enum PROTO_ENUM_PACKED
-{
-    DNC_EIA_EOB = 0x80, ///< EIA End-of-Block (channel 8 only; the ISO LF equivalent).
-    DNC_EIA_EOR = 0x0B, ///< EIA End-of-Record (the ISO '%' rewind-stop equivalent).
-    DNC_EIA_DEL = 0x7F, ///< EIA Delete / rubout (leader/trailer runout; skipped on read).
-} DncEiaCode;
+EMBED_ENUM_BYTE(DncEiaCode,
+                DNC_EIA_EOB = 0x80, ///< EIA End-of-Block (channel 8 only; the ISO LF equivalent).
+                DNC_EIA_EOR = 0x0B, ///< EIA End-of-Record (the ISO '%' rewind-stop equivalent).
+                DNC_EIA_DEL = 0x7F, ///< EIA Delete / rubout (leader/trailer runout; skipped on read).
+);
 
 /**
  * @brief Translate one ISO/ASCII character to its EIA RS-244 byte.
@@ -92,7 +89,7 @@ uint8_t protocore_dnc_iso_add_parity(uint8_t ascii7);
 /** @brief XON/XOFF software flow-control state for the send side. */
 typedef struct
 {
-    proto_bool paused; ///< true after XOFF (DC3), cleared by XON (DC1).
+    embed_bool paused; ///< true after XOFF (DC3), cleared by XON (DC1).
 } DncFlow;
 
 /** @brief Reset flow state to "clear to send". */
@@ -100,13 +97,13 @@ void protocore_dnc_flow_init(DncFlow *f);
 
 /**
  * @brief Feed one received byte to the flow-control state machine.
- * @return true if @p rx was a flow-control byte (XON/XOFF) and was consumed; false otherwise
+ * @return true if @p rx was a flow-control byte (XON/XOFF) and was consumed. False otherwise
  *         (the byte is ordinary inbound data the caller still owns).
  */
-proto_bool protocore_dnc_flow_feed(DncFlow *f, uint8_t rx);
+embed_bool protocore_dnc_flow_feed(DncFlow *f, uint8_t rx);
 
 /** @brief Whether the send pump may transmit (i.e. not paused by an XOFF). */
-static inline proto_bool protocore_dnc_flow_can_send(const DncFlow *f)
+static inline embed_bool protocore_dnc_flow_can_send(const DncFlow *f)
 {
     return !f->paused;
 }
@@ -115,8 +112,8 @@ static inline proto_bool protocore_dnc_flow_can_send(const DncFlow *f)
 typedef struct
 {
     DncCode code;           ///< ISO or EIA.
-    proto_bool even_parity; ///< ISO only: emit even parity in bit 7 (ignored for EIA, which is always odd).
-    proto_bool crlf;        ///< ISO only: emit CR before the LF End-of-Block (some controllers want CR LF).
+    embed_bool even_parity; ///< ISO only: emit even parity in bit 7 (ignored for EIA, which is always odd).
+    embed_bool crlf;        ///< ISO only: emit CR before the LF End-of-Block (some controllers want CR LF).
     uint16_t leader_len;    ///< leader/trailer runout length in bytes (::protocore_dnc_encode_leader / _trailer).
 } DncCfg;
 
@@ -149,14 +146,13 @@ size_t protocore_dnc_encode_marker(const DncCfg *cfg, uint8_t *out, size_t out_c
 size_t protocore_dnc_encode_leader(const DncCfg *cfg, uint8_t *out, size_t out_cap);
 
 /** @brief What ::protocore_dnc_decode_feed produced for the byte just fed. */
-typedef enum PROTO_ENUM_PACKED
-{
-    DNC_EV_NONE = 0,   ///< byte absorbed (mid-block, runout, or flow/ignored); nothing to report.
-    DNC_EV_LINE,       ///< a complete non-empty block is ready in DncDecoder::line (NUL-terminated).
-    DNC_EV_PROG_START, ///< the first `%` / EOR was seen (program start).
-    DNC_EV_PROG_END,   ///< a later `%` / EOR was seen (program end).
-    DNC_EV_OVERFLOW,   ///< the current block exceeded PROTOCORE_DNC_LINE_MAX; it was dropped.
-} DncEvent;
+EMBED_ENUM_BYTE(DncEvent,
+                DNC_EV_NONE = 0,   ///< byte absorbed (mid-block, runout, or flow/ignored); nothing to report.
+                DNC_EV_LINE,       ///< a complete non-empty block is ready in DncDecoder::line (NUL-terminated).
+                DNC_EV_PROG_START, ///< the first `%` / EOR was seen (program start).
+                DNC_EV_PROG_END,   ///< a later `%` / EOR was seen (program end).
+                DNC_EV_OVERFLOW,   ///< the current block exceeded PROTOCORE_DNC_LINE_MAX; it was dropped.
+);
 
 /** @brief Streaming block reassembler: wire bytes in, ASCII G-code lines out. */
 typedef struct
@@ -164,9 +160,9 @@ typedef struct
     DncCode code;                          ///< the tape code being decoded.
     char line[PROTOCORE_DNC_LINE_MAX + 1]; ///< the current block, NUL-terminated when DNC_EV_LINE fires.
     uint16_t len;                          ///< bytes accumulated in @ref line so far (the line length on DNC_EV_LINE).
-    proto_bool overflow;                   ///< the current block overran; drop until the next End-of-Block.
-    proto_bool in_program;                 ///< a program-start `%` has been seen (so the next `%` is the end).
-    proto_bool line_ready;                 ///< internal: the previous feed delivered a line; reset on the next feed.
+    embed_bool overflow;                   ///< the current block overran; drop until the next End-of-Block.
+    embed_bool in_program;                 ///< a program-start `%` has been seen (so the next `%` is the end).
+    embed_bool line_ready;                 ///< internal: the previous feed delivered a line; reset on the next feed.
 } DncDecoder;
 
 /** @brief Reset a decoder for a given tape code. */
@@ -186,7 +182,7 @@ void protocore_dnc_decode_init(DncDecoder *d, DncCode code);
  */
 DncEvent protocore_dnc_decode_feed(DncDecoder *d, uint8_t wire);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNC
 

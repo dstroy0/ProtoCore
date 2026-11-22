@@ -31,7 +31,7 @@
  *
  * The module's GPIO OUT pin is a bare active-high presence line with no protocol at all. Feed it to
  * @ref PresenceCore from `services/rcwl0516` (the shared one-GPIO presence facade) to get the same
- * debounced, hold-extended presence the RCWL-0516 gets; that is an application-level wiring choice,
+ * debounced, hold-extended presence the RCWL-0516 gets. That is an application-level wiring choice,
  * so this service deliberately does not depend on that one.
  *
  * Framing, the report payload layout, the command words, and the open/close command-mode encoding
@@ -50,7 +50,7 @@
 
 #if PROTOCORE_ENABLE_HMMD
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_HMMD_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -268,25 +268,25 @@ typedef struct
     HmmdAckMatchesArgs ack_matches_args;
     HmmdBeginArgs begin_args;
 
-    proto_bool ok;
+    embed_bool ok;
     uint16_t cm;
     size_t n;
     const HmmdReport *report;
 
-    void (*const parse_report)(uint8_t *work);
-    void (*const stream_reset)(uint8_t *work);
+    void (*const parse_report)(const uint8_t *work);
+    void (*const stream_reset)(const uint8_t *work);
     void (*const stream_push)(uint8_t *work);
-    void (*const present)(uint8_t *work);
-    void (*const distance_cm)(uint8_t *work);
-    void (*const cmd_build)(uint8_t *work);
+    void (*const present)(const uint8_t *work);
+    void (*const distance_cm)(const uint8_t *work);
+    void (*const cmd_build)(const uint8_t *work);
     void (*const cmd_open)(uint8_t *work);
     void (*const cmd_close)(uint8_t *work);
     void (*const cmd_read_firmware)(uint8_t *work);
     void (*const cmd_read_serial)(uint8_t *work);
     void (*const cmd_read_config)(uint8_t *work);
     void (*const cmd_read_register)(uint8_t *work);
-    void (*const parse_ack)(uint8_t *work);
-    void (*const ack_matches)(uint8_t *work);
+    void (*const parse_ack)(const uint8_t *work);
+    void (*const ack_matches)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const poll)(uint8_t *work);
     void (*const last)(uint8_t *work);
@@ -306,7 +306,7 @@ extern HmmdNs Hmmd;
  */
 uint8_t *protocore_hmmd_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HMMD
 

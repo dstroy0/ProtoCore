@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/s7comm/s7comm.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static size_t put16(uint8_t *p, uint16_t v)
 {
@@ -45,7 +45,7 @@ static size_t write_job_header(uint8_t *buf, uint16_t pdu_ref, uint16_t param_le
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_s7comm_build_setup(uint8_t *work)
+void protocore_s7comm_build_setup(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = S7commV.build_setup_args.buf;
@@ -76,7 +76,7 @@ void protocore_s7comm_build_setup(uint8_t *work)
     S7commV.n = p;
 }
 
-void protocore_s7comm_build_read_request(uint8_t *work)
+void protocore_s7comm_build_read_request(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = S7commV.build_read_request_args.buf;
@@ -129,7 +129,7 @@ static uint16_t s7_data_wire_len(uint8_t data_transport_size, uint16_t data_len)
     return data_len;
 }
 
-void protocore_s7comm_build_write_request(uint8_t *work)
+void protocore_s7comm_build_write_request(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = S7commV.build_write_request_args.buf;
@@ -209,7 +209,7 @@ void protocore_s7comm_build_write_request(uint8_t *work)
     S7commV.n = p;
 }
 
-void protocore_s7comm_parse_header(uint8_t *work)
+void protocore_s7comm_parse_header(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = S7commV.parse_header_args.buf;
@@ -218,12 +218,12 @@ void protocore_s7comm_parse_header(uint8_t *work)
 
     if (!buf || !out || len < 10)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7commV.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != S7_PROTOCOL_ID)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7commV.ok = EMBED_FALSE;
         return;
     }
     out->rosctr = buf[1];
@@ -238,7 +238,7 @@ void protocore_s7comm_parse_header(uint8_t *work)
     {
         if (len < 12)
         {
-            S7commV.ok = PROTO_FALSE;
+            S7commV.ok = EMBED_FALSE;
             return;
         }
         out->error_class = buf[10];
@@ -246,15 +246,15 @@ void protocore_s7comm_parse_header(uint8_t *work)
     }
     if (out->header_len + (size_t)out->param_len + (size_t)out->data_len > len)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7commV.ok = EMBED_FALSE;
         return; // not fully buffered
     }
     out->param = buf + out->header_len;
     out->data = out->param + out->param_len;
-    S7commV.ok = PROTO_TRUE;
+    S7commV.ok = EMBED_TRUE;
 }
 
-void protocore_s7comm_read_next_item(uint8_t *work)
+void protocore_s7comm_read_next_item(const uint8_t *work)
 {
     (void)work;
     const uint8_t *data = S7commV.read_next_item_args.data;
@@ -264,13 +264,13 @@ void protocore_s7comm_read_next_item(uint8_t *work)
 
     if (!data || !offset || !out)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7commV.ok = EMBED_FALSE;
         return;
     }
     size_t o = *offset;
     if (o + 4 > data_len) // return code + transport size + 2-octet length
     {
-        S7commV.ok = PROTO_FALSE;
+        S7commV.ok = EMBED_FALSE;
         return;
     }
     out->return_code = data[o];
@@ -290,7 +290,7 @@ void protocore_s7comm_read_next_item(uint8_t *work)
 
     if (o + 4 + bytes > data_len)
     {
-        S7commV.ok = PROTO_FALSE;
+        S7commV.ok = EMBED_FALSE;
         return;
     }
     out->data = data + o + 4;
@@ -303,12 +303,12 @@ void protocore_s7comm_read_next_item(uint8_t *work)
         o++;
     }
     *offset = o;
-    S7commV.ok = PROTO_TRUE;
+    S7commV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 S7commVars S7commV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_S7COMM

@@ -6,7 +6,7 @@
 // CloudEvents.read_binary() (the binary-mode ce-* header reader). Both are pure - no heap,
 // no sockets - so, like performance_benching/device/modbus, every call here exercises the real production code
 // path. The binary-mode reader operates on an HttpReq already parsed by the (equally pure)
-// standalone HTTP parser; feeding the request bytes happens once outside the timed loop so the
+// standalone HTTP parser. Feeding the request bytes happens once outside the timed loop so the
 // benched call is CloudEvents.read_binary() itself, not the unrelated byte-at-a-time parser.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

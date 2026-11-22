@@ -31,16 +31,16 @@ void tearDown(void)
 // both - so these two mirror what the transport does either side of the phase advance.
 static void begin_exchange(void)
 {
-    ssh_sess[0].kex_active = PROTO_TRUE;
+    ssh_sess[0].kex_active = EMBED_TRUE;
 }
 static void newkeys_crossed(void)
 {
-    ssh_sess[0].kex_active = PROTO_FALSE;
+    ssh_sess[0].kex_active = EMBED_FALSE;
     PhaseMachineV.newkeys_done_args.i = 0;
     PhaseMachine.newkeys_done(phase_machine_work);
 }
 
-// Drive a slot to the point where authentication has completed, which is where sec 9 says a
+// Drive a slot to the point where authentication completed, which is where sec 9 says a
 // re-exchange must leave the connection undisturbed.
 static void run_to_open(void)
 {
@@ -172,7 +172,7 @@ void test_sec10_newkeys_opens_the_service_request(void)
 }
 
 // RFC 4252: the authentication protocol "runs over the transport layer protocol", once its service
-// has started.
+// started.
 void test_rfc4252_service_opens_authentication(void)
 {
     PhaseMachineV.ident_done_args.i = 0;
@@ -411,7 +411,7 @@ void test_sec7_1_a_kexinit_that_was_a_reply_is_not_answered(void)
 {
     PhaseMachineV.ident_done_args.i = 0;
     PhaseMachine.ident_done(phase_machine_work);
-    ssh_sess[0].kexinit_sent = PROTO_TRUE; // ours is already out, so the peer's is the reply
+    ssh_sess[0].kexinit_sent = EMBED_TRUE; // ours is already out, so the peer's is the reply
     PhaseMachineV.kexinit_needs_reply_args.i = 0;
     PhaseMachine.kexinit_needs_reply(phase_machine_work);
     TEST_ASSERT_FALSE(PhaseMachineV.ok);

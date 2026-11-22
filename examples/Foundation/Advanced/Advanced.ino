@@ -257,7 +257,7 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
     strncpy(sensor_db[empty_slot].name, name, sizeof(sensor_db[empty_slot].name) - 1);
     sensor_db[empty_slot].temperature = temp;
     sensor_db[empty_slot].active = active;
-    sensor_db[empty_slot].in_use = true;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &sensor_db[empty_slot].in_use, .value = true);
 
     char response_buf[192];
     snprintf(response_buf, sizeof(response_buf), "{\"id\":%d,\"name\":\"%s\",\"status\":\"created\"}", empty_slot,
@@ -336,7 +336,7 @@ void handle_delete_sensor(uint8_t slot_id, HttpReq *req)
         return;
     }
 
-    sensor_db[id].in_use = false;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &sensor_db[id].in_use, .value = false);
     send_empty(slot_id, 204); // 204 No Content carries no body
 }
 

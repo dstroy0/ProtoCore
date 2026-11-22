@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_DSHOT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -61,20 +61,19 @@ PROTOCORE_BEGIN_DECLS
 #define DSHOT_VALUE_MAX 2047 ///< widest value the 11-bit field holds.
 
 /** @brief The legacy analog-PWM ESC protocols (pulse width carries the throttle), for protocore_esc_pwm_ns. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_ESC_PWM,        ///< standard servo PWM: 1000-2000 us.
-    PROTOCORE_ESC_ONESHOT125, ///< OneShot125: 125-250 us.
-    PROTOCORE_ESC_ONESHOT42,  ///< OneShot42: 42-84 us.
-    PROTOCORE_ESC_MULTISHOT,  ///< Multishot: 5-25 us.
-} protocore_esc_pwm;
+EMBED_ENUM_BYTE(protocore_esc_pwm,
+                PROTOCORE_ESC_PWM,        ///< standard servo PWM: 1000-2000 us.
+                PROTOCORE_ESC_ONESHOT125, ///< OneShot125: 125-250 us.
+                PROTOCORE_ESC_ONESHOT42,  ///< OneShot42: 42-84 us.
+                PROTOCORE_ESC_MULTISHOT,  ///< Multishot: 5-25 us.
+);
 
 /** @brief What encode takes: value11, telemetry, bidirectional. */
 typedef struct
 {
     uint16_t value11;         ///< the 11-bit value (0..2047): a throttle (48..2047) or a special command (0..47)
-    proto_bool telemetry;     ///< request telemetry on this frame
-    proto_bool bidirectional; ///< bidirectional/extended DShot (the CRC is inverted)
+    embed_bool telemetry;     ///< request telemetry on this frame
+    embed_bool bidirectional; ///< bidirectional/extended DShot (the CRC is inverted)
 } DshotEncodeArgs;
 
 /** @brief What decode takes: frame, value11, telemetry, bidirectional. */
@@ -82,15 +81,15 @@ typedef struct
 {
     uint16_t frame;           ///< the received 16-bit frame
     uint16_t *value11;        ///< out: the 11-bit value (may be null)
-    proto_bool *telemetry;    ///< out: the telemetry-request bit (may be null)
-    proto_bool bidirectional; ///< interpret the CRC as the inverted (bidirectional) form
+    embed_bool *telemetry;    ///< out: the telemetry-request bit (may be null)
+    embed_bool bidirectional; ///< interpret the CRC as the inverted (bidirectional) form
 } DshotDecodeArgs;
 
 /** @brief What bit_ns takes: rate_kbit, bit. */
 typedef struct
 {
     uint16_t rate_kbit; ///< one of 150, 300, 600, 1200. Others return 0
-    proto_bool bit;     ///< the bit value (false = 0, true = 1)
+    embed_bool bit;     ///< the bit value (false = 0, true = 1)
 } DshotBitNsArgs;
 
 /** @brief What esc_pwm_ns takes: throttle_1000, mode. */
@@ -134,7 +133,7 @@ typedef struct
     DshotDecodeArgs decode_args;
     DshotBitNsArgs bit_ns_args;
     DshotEscPwmNsArgs esc_pwm_ns_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t frame;
     uint32_t ns;
 } DshotVars;
@@ -145,18 +144,18 @@ extern DshotVars DshotV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode)(uint8_t *work);
-    void (*const decode)(uint8_t *work);
-    void (*const bit_ns)(uint8_t *work);
-    void (*const esc_pwm_ns)(uint8_t *work);
+    void (*const encode)(const uint8_t *work);
+    void (*const decode)(const uint8_t *work);
+    void (*const bit_ns)(const uint8_t *work);
+    void (*const esc_pwm_ns)(const uint8_t *work);
 } DshotNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DshotV or a region of the borrow at a fixed offset.
-void protocore_dshot_encode(uint8_t *work);
-void protocore_dshot_decode(uint8_t *work);
-void protocore_dshot_bit_ns(uint8_t *work);
-void protocore_dshot_esc_pwm_ns(uint8_t *work);
+void protocore_dshot_encode(const uint8_t *work);
+void protocore_dshot_decode(const uint8_t *work);
+void protocore_dshot_bit_ns(const uint8_t *work);
+void protocore_dshot_esc_pwm_ns(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -169,7 +168,7 @@ static const DshotNs Dshot __attribute__((unused)) = {
     .esc_pwm_ns = protocore_dshot_esc_pwm_ns,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DSHOT
 

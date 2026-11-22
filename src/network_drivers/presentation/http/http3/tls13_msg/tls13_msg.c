@@ -18,7 +18,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // TLS extension types used here (RFC 8446 sec 4.2 + RFC 9001).
 #define TLS_EXT_SERVER_NAME 0x0000
@@ -40,7 +40,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     size_t pos;
-    proto_bool ok;
+    embed_bool ok;
 } Writer;
 
 static void w_u8(Writer *w, uint8_t v)
@@ -49,7 +49,7 @@ static void w_u8(Writer *w, uint8_t v)
     // comparison is written to avoid a size_t addition that could wrap (cpp:S3519).
     if (w->pos >= w->cap)
     {
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     w->buf[w->pos++] = v;
@@ -76,7 +76,7 @@ static void w_bytes(Writer *w, const uint8_t *b, size_t n)
     // cap - pos (guarded by pos <= cap) and no pos + n wrap (never formed).
     if (w->pos > w->cap || n > w->cap - w->pos)
     { // is an invariant and the first arm can never be taken
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = b, .bytes = n);
@@ -121,65 +121,65 @@ typedef struct
     size_t len;
     size_t pos;
 } Reader;
-static proto_bool r_u8(Reader *r, uint8_t *v)
+static embed_bool r_u8(Reader *r, uint8_t *v)
 {
     if (r->pos + 1 > r->len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *v = r->buf[r->pos++];
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
-static proto_bool r_u16(Reader *r, uint16_t *v)
+static embed_bool r_u16(Reader *r, uint16_t *v)
 {
     if (r->pos + 2 > r->len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *v = (uint16_t)((r->buf[r->pos] << 8) | r->buf[r->pos + 1]);
     r->pos += 2;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
-static proto_bool r_u24(Reader *r, uint32_t *v)
+static embed_bool r_u24(Reader *r, uint32_t *v)
 {
     if (r->pos + 3 > r->len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *v = (uint32_t)((r->buf[r->pos] << 16) | (r->buf[r->pos + 1] << 8) | r->buf[r->pos + 2]);
     r->pos += 3;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 // Take a view of the next n bytes.
-static proto_bool r_take(Reader *r, size_t n, const uint8_t **out)
+static embed_bool r_take(Reader *r, size_t n, const uint8_t **out)
 {
     if (r->pos + n > r->len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = r->buf + r->pos;
     r->pos += n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // ClientHello parsing
 // ---------------------------------------------------------------------------
 // Scan a list of 2-byte values for a target (used for versions/groups/sig algs).
-static proto_bool list16_contains(const uint8_t *body, size_t body_len, size_t list_len, uint16_t target)
+static embed_bool list16_contains(const uint8_t *body, size_t body_len, size_t list_len, uint16_t target)
 {
     if (list_len > body_len || (list_len % 2) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i + 1 < list_len; i += 2)
     {
         if (((body[i] << 8) | body[i + 1]) == target)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // KEY_SHARE (RFC 8446 §4.2.8): 2-byte client_shares length, then KeyShareEntry { group(2), key_exchange<2> }.
@@ -208,7 +208,7 @@ static void parse_key_share(const uint8_t *body, size_t blen, Tls13ClientHello *
         if (group == TLS_GROUP_X25519 && klen == 32)
         {
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->client_x25519, .src = body + i, .bytes = 32);
-            out->has_key_share = PROTO_TRUE;
+            out->has_key_share = EMBED_TRUE;
         }
 #if PROTOCORE_ENABLE_PQC_KEX
         else if (group == TLS_GROUP_X25519MLKEM768 && klen == MLKEM768_EK_BYTES + 32)
@@ -216,7 +216,7 @@ static void parse_key_share(const uint8_t *body, size_t blen, Tls13ClientHello *
             out->client_mlkem_ek = body + i; // ML-KEM-768 ek (first)
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->client_x25519, .src = body + i + MLKEM768_EK_BYTES,
                        .bytes = 32); // X25519 (second)
-            out->has_hybrid_share = PROTO_TRUE;
+            out->has_hybrid_share = EMBED_TRUE;
         }
 #endif
         i += klen;
@@ -246,7 +246,7 @@ static void parse_alpn(const uint8_t *body, size_t blen, Tls13ClientHello *out)
         }
         if (nl == 2 && body[i] == 'h' && body[i + 1] == '3')
         {
-            out->offers_h3_alpn = PROTO_TRUE;
+            out->offers_h3_alpn = EMBED_TRUE;
         }
         // The whole ProtocolNameList, kept so a server can select from it (RFC 7301 sec 3.1).
         out->alpn_list = body;
@@ -283,7 +283,7 @@ static void parse_server_name(const uint8_t *body, size_t blen, Tls13ClientHello
     }
 }
 
-static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls13ClientHello *out, proto_bool dtls)
+static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls13ClientHello *out, embed_bool dtls)
 {
     switch (type)
     {
@@ -338,17 +338,17 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         {
             return;
         }
-        out->has_server_cert_type = PROTO_TRUE;
+        out->has_server_cert_type = EMBED_TRUE;
         for (size_t i = 0; i < ll; i++)
         {
             if (body[1 + i] == TLS_CERT_TYPE_X509)
             {
-                out->offers_x509_server_cert = PROTO_TRUE;
+                out->offers_x509_server_cert = EMBED_TRUE;
             }
 #if PROTOCORE_ENABLE_TLS_RPK
             if (body[1 + i] == TLS_CERT_TYPE_RAW_PUBLIC_KEY)
             {
-                out->offers_rpk_server_cert = PROTO_TRUE;
+                out->offers_rpk_server_cert = EMBED_TRUE;
             }
 #endif
         }
@@ -385,7 +385,7 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
         {
             return;
         }
-        out->has_conn_id = PROTO_TRUE;
+        out->has_conn_id = EMBED_TRUE;
         out->conn_id = body + 1;
         out->conn_id_len = cl;
         break;
@@ -404,15 +404,15 @@ static void parse_extension(uint16_t type, const uint8_t *body, size_t blen, Tls
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_tls13_msg_cert_verify_content(uint8_t *work);
+void protocore_tls13_msg_cert_verify_content(const uint8_t *work);
 
-void protocore_tls13_msg_parse_client_hello(uint8_t *work)
+void protocore_tls13_msg_parse_client_hello(const uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_client_hello_args.msg;
     size_t len = Tls13MsgV.parse_client_hello_args.len;
     Tls13ClientHello *out = Tls13MsgV.parse_client_hello_args.out;
-    proto_bool dtls = Tls13MsgV.parse_client_hello_args.dtls;
+    embed_bool dtls = Tls13MsgV.parse_client_hello_args.dtls;
 
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = sizeof(*out), .val = 0);
 
@@ -421,13 +421,13 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
     uint32_t body_len = 0;
     if (!r_u8(&r, &type) || type != TLS_HS_CLIENT_HELLO || !r_u24(&r, &body_len))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     // The handshake body must fit; trailing bytes past it are not part of this message.
     if (r.pos + body_len > len)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     r.len = r.pos + body_len;
@@ -436,19 +436,19 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
     const uint8_t *random = NULL;
     if (!r_u16(&r, &legacy_version) || !r_take(&r, 32, &random))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
 
     uint8_t sid_len = 0;
     if (!r_u8(&r, &sid_len) || sid_len > 32)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     if (!r_take(&r, sid_len, &out->session_id))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     out->session_id_len = sid_len;
@@ -461,7 +461,7 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
         const uint8_t *cookie = NULL;
         if (!r_u8(&r, &cookie_len) || !r_take(&r, cookie_len, &cookie))
         {
-            Tls13MsgV.ok = PROTO_FALSE;
+            Tls13MsgV.ok = EMBED_FALSE;
             return;
         }
         // sec 5.3: "A DTLS 1.3-only client MUST set the legacy_cookie field to zero length. If a
@@ -469,7 +469,7 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
         // abort the handshake with an illegal_parameter alert." The cookie rides the extension.
         if (cookie_len != 0)
         {
-            Tls13MsgV.ok = PROTO_FALSE;
+            Tls13MsgV.ok = EMBED_FALSE;
             return;
         }
     }
@@ -478,7 +478,7 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
     const uint8_t *cs = NULL;
     if (!r_u16(&r, &cs_len) || (cs_len % 2) != 0 || !r_take(&r, cs_len, &cs))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     // RFC 8446 sec 4.1.3: the server selects its suite "from the list in ClientHello.cipher_suites",
@@ -490,14 +490,14 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
     const uint8_t *comp = NULL;
     if (!r_u8(&r, &comp_len) || !r_take(&r, comp_len, &comp))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     // sec 4.1.2: legacy_compression_methods "MUST contain exactly one byte, set to zero", and a
     // TLS 1.3 server aborts on anything else.
     if (comp_len != 1 || comp[0] != 0)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
 
@@ -505,13 +505,13 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
     uint16_t ext_total = 0;
     if (!r_u16(&r, &ext_total))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     size_t ext_end = r.pos + ext_total;
     if (ext_end > r.len)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     while (r.pos < ext_end)
@@ -521,18 +521,18 @@ void protocore_tls13_msg_parse_client_hello(uint8_t *work)
         const uint8_t *ebody = NULL;
         if (!r_u16(&r, &etype) || !r_u16(&r, &elen) || !r_take(&r, elen, &ebody))
         {
-            Tls13MsgV.ok = PROTO_FALSE;
+            Tls13MsgV.ok = EMBED_FALSE;
             return;
         }
         parse_extension(etype, ebody, elen, out, dtls);
     }
-    Tls13MsgV.ok = PROTO_TRUE;
+    Tls13MsgV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // Builders
 // ---------------------------------------------------------------------------
-void protocore_tls13_msg_build_server_hello(uint8_t *work)
+void protocore_tls13_msg_build_server_hello(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_server_hello_args.out;
@@ -544,11 +544,11 @@ void protocore_tls13_msg_build_server_hello(uint8_t *work)
     size_t share_len = Tls13MsgV.build_server_hello_args.share_len;
     uint16_t group = Tls13MsgV.build_server_hello_args.group;
     uint16_t suite = Tls13MsgV.build_server_hello_args.suite;
-    proto_bool dtls = Tls13MsgV.build_server_hello_args.dtls;
+    embed_bool dtls = Tls13MsgV.build_server_hello_args.dtls;
     const uint8_t *conn_id = Tls13MsgV.build_server_hello_args.conn_id;
     size_t conn_id_len = Tls13MsgV.build_server_hello_args.conn_id_len;
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_SERVER_HELLO);
     size_t hs_len = w_mark(&w, 3);
 
@@ -587,7 +587,7 @@ void protocore_tls13_msg_build_server_hello(uint8_t *work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_client_hello(uint8_t *work)
+void protocore_tls13_msg_build_client_hello(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_client_hello_args.out;
@@ -603,10 +603,10 @@ void protocore_tls13_msg_build_client_hello(uint8_t *work)
     const char *alpn = Tls13MsgV.build_client_hello_args.alpn;
     const uint8_t *cookie = Tls13MsgV.build_client_hello_args.cookie;
     size_t cookie_len = Tls13MsgV.build_client_hello_args.cookie_len;
-    proto_bool rpk_server_cert = Tls13MsgV.build_client_hello_args.rpk_server_cert;
-    proto_bool dtls = Tls13MsgV.build_client_hello_args.dtls;
+    embed_bool rpk_server_cert = Tls13MsgV.build_client_hello_args.rpk_server_cert;
+    embed_bool dtls = Tls13MsgV.build_client_hello_args.dtls;
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_CLIENT_HELLO);
     size_t hs_len = w_mark(&w, 3);
 
@@ -693,7 +693,7 @@ void protocore_tls13_msg_build_client_hello(uint8_t *work)
 
 // The handshake header of a message of the expected type, with the body framed exactly. Every
 // parser below starts here, so a length that does not frame its own message is refused once.
-static proto_bool hs_body(const uint8_t *msg, size_t len, uint8_t want, Reader *r)
+static embed_bool hs_body(const uint8_t *msg, size_t len, uint8_t want, Reader *r)
 {
     uint8_t type = 0;
     uint32_t body_len = 0;
@@ -702,16 +702,16 @@ static proto_bool hs_body(const uint8_t *msg, size_t len, uint8_t want, Reader *
     r->pos = 0;
     if (!r_u8(r, &type) || type != want || !r_u24(r, &body_len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (r->pos + body_len != len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-void protocore_tls13_msg_parse_certificate(uint8_t *work)
+void protocore_tls13_msg_parse_certificate(const uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_certificate_args.msg;
@@ -722,27 +722,27 @@ void protocore_tls13_msg_parse_certificate(uint8_t *work)
     Reader r;
     if (!hs_body(msg, len, TLS_HS_CERTIFICATE, &r))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     uint8_t ctx_len = 0;
     const uint8_t *ctx = NULL;
     if (!r_u8(&r, &ctx_len) || !r_take(&r, ctx_len, &ctx))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     uint32_t list_len = 0;
     if (!r_u24(&r, &list_len) || r.pos + list_len != r.len)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     // The end-entity certificate is the first CertificateEntry (sec 4.4.2).
     uint32_t entry_len = 0;
     if (!r_u24(&r, &entry_len) || entry_len == 0 || !r_take(&r, entry_len, cert))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     *cert_len = entry_len;
@@ -750,13 +750,13 @@ void protocore_tls13_msg_parse_certificate(uint8_t *work)
     const uint8_t *ext = NULL;
     if (!r_u16(&r, &ext_len) || !r_take(&r, ext_len, &ext))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
-    Tls13MsgV.ok = PROTO_TRUE;
+    Tls13MsgV.ok = EMBED_TRUE;
 }
 
-void protocore_tls13_msg_parse_cert_verify(uint8_t *work)
+void protocore_tls13_msg_parse_cert_verify(const uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_cert_verify_args.msg;
@@ -768,20 +768,20 @@ void protocore_tls13_msg_parse_cert_verify(uint8_t *work)
     Reader r;
     if (!hs_body(msg, len, TLS_HS_CERTIFICATE_VERIFY, &r))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     uint16_t slen = 0;
     if (!r_u16(&r, scheme) || !r_u16(&r, &slen) || !r_take(&r, slen, sig) || r.pos != r.len)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     *sig_len = slen;
-    Tls13MsgV.ok = PROTO_TRUE;
+    Tls13MsgV.ok = EMBED_TRUE;
 }
 
-void protocore_tls13_msg_parse_finished(uint8_t *work)
+void protocore_tls13_msg_parse_finished(const uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_finished_args.msg;
@@ -792,20 +792,20 @@ void protocore_tls13_msg_parse_finished(uint8_t *work)
     Reader r;
     if (!hs_body(msg, len, TLS_HS_FINISHED, &r))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     // sec 4.4.4: verify_data is Hash.length octets, and the body is exactly that.
     Tls13MsgV.ok = r_take(&r, verify_len, vd) && r.pos == r.len;
 }
 
-void protocore_tls13_msg_parse_server_hello(uint8_t *work)
+void protocore_tls13_msg_parse_server_hello(const uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = Tls13MsgV.parse_server_hello_args.msg;
     size_t len = Tls13MsgV.parse_server_hello_args.len;
     Tls13ServerHello *out = Tls13MsgV.parse_server_hello_args.out;
-    proto_bool dtls = Tls13MsgV.parse_server_hello_args.dtls;
+    embed_bool dtls = Tls13MsgV.parse_server_hello_args.dtls;
 
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = sizeof(*out), .val = 0);
 
@@ -814,12 +814,12 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
     uint32_t body_len = 0;
     if (!r_u8(&r, &type) || type != TLS_HS_SERVER_HELLO || !r_u24(&r, &body_len))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     if (r.pos + body_len > len)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     r.len = r.pos + body_len;
@@ -827,7 +827,7 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
     uint16_t legacy_version = 0;
     if (!r_u16(&r, &legacy_version) || !r_take(&r, 32, &out->random))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     // sec 4.1.3: a ServerHello carrying this Random is a HelloRetryRequest, not a real one.
@@ -837,7 +837,7 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
     uint8_t sid_len = 0;
     if (!r_u8(&r, &sid_len) || sid_len > 32 || !r_take(&r, sid_len, &out->session_id))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     out->session_id_len = sid_len;
@@ -845,13 +845,13 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
     uint8_t comp = 0;
     if (!r_u16(&r, &out->cipher_suite) || !r_u8(&r, &comp))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     // sec 4.1.3: legacy_compression_method is a single byte and "MUST be 0".
     if (comp != 0)
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
 
@@ -859,7 +859,7 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
     const uint8_t *exts = NULL;
     if (!r_u16(&r, &exts_len) || !r_take(&r, exts_len, &exts))
     {
-        Tls13MsgV.ok = PROTO_FALSE;
+        Tls13MsgV.ok = EMBED_FALSE;
         return;
     }
     const uint16_t want_version = dtls ? PROTOCORE_TLS_VERSION_DTLS_1_3 : TLS_VERSION_1_3;
@@ -870,7 +870,7 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
         const uint8_t *body = exts + off + 4;
         if (off + 4 + blen > exts_len)
         {
-            Tls13MsgV.ok = PROTO_FALSE;
+            Tls13MsgV.ok = EMBED_FALSE;
             return;
         }
         off += 4 + blen;
@@ -880,17 +880,17 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
             // The ServerHello form is one selected_version, not a list (sec 4.2.1).
             if (blen == 2 && ((body[0] << 8) | body[1]) == want_version)
             {
-                out->selected_tls13 = PROTO_TRUE;
+                out->selected_tls13 = EMBED_TRUE;
             }
             break;
         case TLS_EXT_KEY_SHARE:
-            out->has_key_share = PROTO_TRUE;
+            out->has_key_share = EMBED_TRUE;
             if (out->is_hrr)
             {
                 // KeyShareHelloRetryRequest is the selected_group alone (sec 4.2.8).
                 if (blen != 2)
                 {
-                    Tls13MsgV.ok = PROTO_FALSE;
+                    Tls13MsgV.ok = EMBED_FALSE;
                     return;
                 }
                 out->group = (uint16_t)((body[0] << 8) | body[1]);
@@ -898,14 +898,14 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
             }
             if (blen < 4)
             {
-                Tls13MsgV.ok = PROTO_FALSE;
+                Tls13MsgV.ok = EMBED_FALSE;
                 return;
             }
             out->group = (uint16_t)((body[0] << 8) | body[1]);
             out->share_len = (size_t)((body[2] << 8) | body[3]);
             if (4 + out->share_len != blen)
             {
-                Tls13MsgV.ok = PROTO_FALSE;
+                Tls13MsgV.ok = EMBED_FALSE;
                 return;
             }
             out->share = body + 4;
@@ -913,13 +913,13 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
         case TLS_EXT_COOKIE:
             if (blen < 2)
             {
-                Tls13MsgV.ok = PROTO_FALSE;
+                Tls13MsgV.ok = EMBED_FALSE;
                 return;
             }
             out->cookie_len = (size_t)((body[0] << 8) | body[1]);
             if (2 + out->cookie_len != blen)
             {
-                Tls13MsgV.ok = PROTO_FALSE;
+                Tls13MsgV.ok = EMBED_FALSE;
                 return;
             }
             out->cookie = body + 2;
@@ -927,10 +927,10 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
         case TLS_EXT_CONNECTION_ID:
             if (blen < 1 || (size_t)body[0] + 1 != blen)
             {
-                Tls13MsgV.ok = PROTO_FALSE;
+                Tls13MsgV.ok = EMBED_FALSE;
                 return;
             }
-            out->has_conn_id = PROTO_TRUE;
+            out->has_conn_id = EMBED_TRUE;
             out->conn_id_len = body[0];
             out->conn_id = body + 1;
             break;
@@ -938,7 +938,7 @@ void protocore_tls13_msg_parse_server_hello(uint8_t *work)
             break; // unknown extensions are read past
         }
     }
-    Tls13MsgV.ok = PROTO_TRUE;
+    Tls13MsgV.ok = EMBED_TRUE;
 }
 
 // SHA-256("HelloRetryRequest") - RFC 8446 §4.1.3. A ServerHello with this random is a HelloRetryRequest.
@@ -946,7 +946,7 @@ const uint8_t protocore_tls13_hrr_random[32] = {0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x
                                                 0x02, 0x1E, 0x65, 0xB8, 0x91, 0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB,
                                                 0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C};
 
-void protocore_tls13_msg_build_hello_retry_request(uint8_t *work)
+void protocore_tls13_msg_build_hello_retry_request(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_hello_retry_request_args.out;
@@ -957,14 +957,14 @@ void protocore_tls13_msg_build_hello_retry_request(uint8_t *work)
     uint16_t suite = Tls13MsgV.build_hello_retry_request_args.suite;
     const uint8_t *cookie = Tls13MsgV.build_hello_retry_request_args.cookie;
     size_t cookie_len = Tls13MsgV.build_hello_retry_request_args.cookie_len;
-    proto_bool dtls = Tls13MsgV.build_hello_retry_request_args.dtls;
+    embed_bool dtls = Tls13MsgV.build_hello_retry_request_args.dtls;
 
     if (cookie_len > 0xFFFD)
     {
         Tls13MsgV.n = 0; // cookie extension body (cookie_len + 2) must fit a uint16
         return;
     }
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_SERVER_HELLO);
     size_t hs_len = w_mark(&w, 3);
 
@@ -1011,15 +1011,15 @@ static void w_server_cert_type_rpk(Writer *w)
 }
 #endif
 
-void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *work)
+void protocore_tls13_msg_build_encrypted_extensions_empty(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_encrypted_extensions_empty_args.out;
     size_t cap = Tls13MsgV.build_encrypted_extensions_empty_args.cap;
-    proto_bool rpk_server_cert = Tls13MsgV.build_encrypted_extensions_empty_args.rpk_server_cert;
+    embed_bool rpk_server_cert = Tls13MsgV.build_encrypted_extensions_empty_args.rpk_server_cert;
     const char *alpn = Tls13MsgV.build_encrypted_extensions_empty_args.alpn;
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
     size_t hs_len = w_mark(&w, 3);
     // No transport params here; the extensions this can carry are the negotiated
@@ -1049,30 +1049,30 @@ void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_message_hash(uint8_t *work)
+void protocore_tls13_msg_build_message_hash(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_message_hash_args.out;
     size_t cap = Tls13MsgV.build_message_hash_args.cap;
     const uint8_t *ch1_hash = Tls13MsgV.build_message_hash_args.ch1_hash;
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, 254); // message_hash synthetic handshake type (RFC 8446 §4.4.1)
     w_u24(&w, 32); // Hash.length for SHA-256
     w_bytes(&w, ch1_hash, 32);
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_encrypted_extensions(uint8_t *work)
+void protocore_tls13_msg_build_encrypted_extensions(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_encrypted_extensions_args.out;
     size_t cap = Tls13MsgV.build_encrypted_extensions_args.cap;
     const uint8_t *quic_tp = Tls13MsgV.build_encrypted_extensions_args.quic_tp;
     size_t quic_tp_len = Tls13MsgV.build_encrypted_extensions_args.quic_tp_len;
-    proto_bool rpk_server_cert = Tls13MsgV.build_encrypted_extensions_args.rpk_server_cert;
+    embed_bool rpk_server_cert = Tls13MsgV.build_encrypted_extensions_args.rpk_server_cert;
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
     size_t hs_len = w_mark(&w, 3);
 
@@ -1102,7 +1102,7 @@ void protocore_tls13_msg_build_encrypted_extensions(uint8_t *work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_certificate(uint8_t *work)
+void protocore_tls13_msg_build_certificate(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_certificate_args.out;
@@ -1110,7 +1110,7 @@ void protocore_tls13_msg_build_certificate(uint8_t *work)
     const uint8_t *cert_der = Tls13MsgV.build_certificate_args.cert_der;
     size_t cert_len = Tls13MsgV.build_certificate_args.cert_len;
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_CERTIFICATE);
     size_t hs_len = w_mark(&w, 3);
 
@@ -1125,14 +1125,14 @@ void protocore_tls13_msg_build_certificate(uint8_t *work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_cert_verify_content(uint8_t *work)
+void protocore_tls13_msg_cert_verify_content(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.cert_verify_content_args.out;
     size_t cap = Tls13MsgV.cert_verify_content_args.cap;
     const uint8_t *transcript_hash = Tls13MsgV.cert_verify_content_args.transcript_hash;
     size_t hash_len = Tls13MsgV.cert_verify_content_args.hash_len;
-    proto_bool is_server = Tls13MsgV.cert_verify_content_args.is_server;
+    embed_bool is_server = Tls13MsgV.cert_verify_content_args.is_server;
 
     // RFC 8446 sec 4.4.3: 64 spaces || context string || 0x00 || transcript hash.
     static const char SRV[] = "TLS 1.3, server CertificateVerify";
@@ -1171,8 +1171,9 @@ void protocore_tls13_msg_build_cert_verify(uint8_t *work)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
     Tls13MsgV.cert_verify_content_args.transcript_hash = transcript_hash;
     Tls13MsgV.cert_verify_content_args.hash_len = hash_len;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     protocore_tls13_msg_cert_verify_content(work);
+    Tls13MsgV.cert_verify_content_args.out = NULL;
     size_t clen = Tls13MsgV.n;
     if (!clen)
     {
@@ -1182,7 +1183,7 @@ void protocore_tls13_msg_build_cert_verify(uint8_t *work)
     uint8_t sig[PROTOCORE_ED25519_SIG_LEN];
     Ed25519.sign(sign_work, seed, content, clen, sig);
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_CERTIFICATE_VERIFY);
     size_t hs_len = w_mark(&w, 3);
     w_u16(&w, TLS_SIG_ED25519);
@@ -1192,7 +1193,7 @@ void protocore_tls13_msg_build_cert_verify(uint8_t *work)
     Tls13MsgV.n = w.ok ? w.pos : 0;
 }
 
-void protocore_tls13_msg_build_finished(uint8_t *work)
+void protocore_tls13_msg_build_finished(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Tls13MsgV.build_finished_args.out;
@@ -1200,7 +1201,7 @@ void protocore_tls13_msg_build_finished(uint8_t *work)
     const uint8_t *verify_data = Tls13MsgV.build_finished_args.verify_data;
     size_t verify_len = Tls13MsgV.build_finished_args.verify_len;
 
-    Writer w = {out, cap, 0, PROTO_TRUE};
+    Writer w = {out, cap, 0, EMBED_TRUE};
     w_u8(&w, TLS_HS_FINISHED);
     size_t hs_len = w_mark(&w, 3);
     w_bytes(&w, verify_data, verify_len);
@@ -1211,6 +1212,6 @@ void protocore_tls13_msg_build_finished(uint8_t *work)
 /** @brief The operands and the outcome. */
 Tls13MsgVars Tls13MsgV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS

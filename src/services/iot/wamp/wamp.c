@@ -18,7 +18,7 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer a build emits through
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Emit a uint64 as a JSON number: digits generated low end first, then reversed into the writer.
 static void emit_uint(uint8_t *work, protocore_json_writer *w, uint64_t v)
@@ -64,7 +64,7 @@ static void begin_msg(uint8_t *work, protocore_json_writer *w, int code)
 }
 
 // Close out a build: the byte count in ns->n, 0 unless the writer stayed inside the buffer.
-static void finish(uint8_t *work, protocore_json_writer *w)
+static void finish(const uint8_t *work, protocore_json_writer *w)
 {
     JsonV.end_array_args.w = w;
     Json.end_array(work);
@@ -98,7 +98,7 @@ static void emit_args(uint8_t *work, protocore_json_writer *w)
 // [HELLO, Realm|uri, Details|dict] (WAMP sec 3.4.1.1).
 void protocore_wamp_build_hello(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf || !WampV.uri.realm)
     {
@@ -118,7 +118,7 @@ void protocore_wamp_build_hello(uint8_t *work)
 // [GOODBYE, Details|dict, Reason|uri] (WAMP sec 3.4.1.4).
 void protocore_wamp_build_goodbye(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf || !WampV.uri.reason)
     {
@@ -138,7 +138,7 @@ void protocore_wamp_build_goodbye(uint8_t *work)
 // [SUBSCRIBE, Request|id, Options|dict, Topic|uri] (WAMP sec 3.4.2.3).
 void protocore_wamp_build_subscribe(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf || !WampV.uri.topic)
     {
@@ -159,7 +159,7 @@ void protocore_wamp_build_subscribe(uint8_t *work)
 // [UNSUBSCRIBE, Request|id, SUBSCRIBED.Subscription|id] (WAMP sec 3.4.2.5).
 void protocore_wamp_build_unsubscribe(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf)
     {
@@ -175,7 +175,7 @@ void protocore_wamp_build_unsubscribe(uint8_t *work)
 // [PUBLISH, Request|id, Options|dict, Topic|uri] and its payload tail (WAMP sec 3.4.2.1).
 void protocore_wamp_build_publish(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf || !WampV.uri.topic)
     {
@@ -197,7 +197,7 @@ void protocore_wamp_build_publish(uint8_t *work)
 // [CALL, Request|id, Options|dict, Procedure|uri] and its payload tail (WAMP sec 3.4.3.1).
 void protocore_wamp_build_call(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf || !WampV.uri.procedure)
     {
@@ -219,7 +219,7 @@ void protocore_wamp_build_call(uint8_t *work)
 // [REGISTER, Request|id, Options|dict, Procedure|uri] (WAMP sec 3.4.3.3).
 void protocore_wamp_build_register(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf || !WampV.uri.procedure)
     {
@@ -240,7 +240,7 @@ void protocore_wamp_build_register(uint8_t *work)
 // [UNREGISTER, Request|id, REGISTERED.Registration|id] (WAMP sec 3.4.3.5).
 void protocore_wamp_build_unregister(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf)
     {
@@ -256,7 +256,7 @@ void protocore_wamp_build_unregister(uint8_t *work)
 // [YIELD, INVOCATION.Request|id, Options|dict] and its payload tail (WAMP sec 3.4.3.8).
 void protocore_wamp_build_yield(uint8_t *work)
 {
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.n = 0;
     if (!WampV.out.buf)
     {
@@ -316,7 +316,8 @@ static size_t scan_value(const char *s, size_t i)
     }
     if (s[i] == '{' || s[i] == '[')
     {
-        char open = s[i], close = (open == '{') ? '}' : ']';
+        char open = s[i];
+        char close = (open == '{') ? '}' : ']';
         int depth = 0;
         while (s[i])
         {
@@ -358,10 +359,10 @@ static size_t scan_value(const char *s, size_t i)
 
 // Slice the raw element at ns->parse.index out of the received list (WAMP sec 3.3) into ns->text
 // and ns->n.
-void protocore_wamp_element(uint8_t *work)
+void protocore_wamp_element(const uint8_t *work)
 {
     (void)work;
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     WampV.text = NULL;
     WampV.n = 0;
     const char *msg = WampV.parse.msg;
@@ -392,7 +393,7 @@ void protocore_wamp_element(uint8_t *work)
         {
             WampV.text = msg + s;
             WampV.n = e - s;
-            WampV.ok = PROTO_TRUE;
+            WampV.ok = EMBED_TRUE;
             return;
         }
         i = skip_ws(msg, e);
@@ -413,7 +414,7 @@ void protocore_wamp_get_id(uint8_t *work)
     // an index strictly past where it started, so a sliced element is never empty.
     if (!WampV.ok || WampV.n == 0)
     {
-        WampV.ok = PROTO_FALSE;
+        WampV.ok = EMBED_FALSE;
         return;
     }
     uint64_t v = 0;
@@ -422,7 +423,7 @@ void protocore_wamp_get_id(uint8_t *work)
         const char c = WampV.text[i];
         if (c < '0' || c > '9')
         {
-            WampV.ok = PROTO_FALSE;
+            WampV.ok = EMBED_FALSE;
             return;
         }
         v = v * 10 + (uint64_t)(c - '0');
@@ -450,7 +451,7 @@ void protocore_wamp_get_uri(uint8_t *work)
     const size_t cap = WampV.parse.uri_cap;
     if (!out || cap == 0)
     {
-        WampV.ok = PROTO_FALSE;
+        WampV.ok = EMBED_FALSE;
         return;
     }
     protocore_wamp_element(work);
@@ -458,7 +459,7 @@ void protocore_wamp_get_uri(uint8_t *work)
     {
         return;
     }
-    WampV.ok = PROTO_FALSE;
+    WampV.ok = EMBED_FALSE;
     const char *s = WampV.text;
     const size_t n = WampV.n;
     // The trailing-quote arm is defensive only: an element that starts with '"' was scanned by
@@ -478,13 +479,13 @@ void protocore_wamp_get_uri(uint8_t *work)
         out[i] = s[i + 1];
     }
     out[body] = '\0';
-    WampV.ok = PROTO_TRUE;
+    WampV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 WampVars WampV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAMP

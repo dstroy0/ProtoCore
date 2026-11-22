@@ -15,7 +15,7 @@
  * embedded-v4 `::ffff:a.b.c.d` tail); the formatter emits the RFC 5952 canonical form
  * (lower-case, no leading zeros, the longest zero run compressed to `::`, v4-mapped shown as
  * dotted). ESP32 dual-stack bring-up (enabling IPv6 on the netif) lives in the physical layer
- * behind PROTOCORE_ENABLE_IPV6; the TCP/UDP listeners already bind IPADDR_TYPE_ANY, so the server
+ * behind PROTOCORE_ENABLE_IPV6. The TCP/UDP listeners already bind IPADDR_TYPE_ANY, so the server
  * accepts v6 connections the moment the interface has a v6 address.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -25,31 +25,29 @@
 #ifndef PROTOCORE_IP_H
 #define PROTOCORE_IP_H
 
-#include "protocore_config.h" // the entry point; it sets the widths and reaches protocore_types.h for proto_bool
+#include "protocore_config.h" // the entry point; it sets the widths and reaches protocore_types.h for embed_bool
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Address family tag. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_IP_NONE = 0, ///< empty / unparsed
-    PROTOCORE_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
-    PROTOCORE_IP_V6 = 6,   ///< IPv6 (bytes[0..15])
-} protocore_ip_family;
-static_assert(sizeof(protocore_ip_family) == 1, "protocore_ip_family must stay one byte (PROTO_ENUM_PACKED); "
+EMBED_ENUM_BYTE(protocore_ip_family,
+                PROTOCORE_IP_NONE = 0, ///< empty / unparsed
+                PROTOCORE_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
+                PROTOCORE_IP_V6 = 6,   ///< IPv6 (bytes[0..15])
+);
+static_assert(sizeof(protocore_ip_family) == 1, "protocore_ip_family must stay one byte (EMBED_ENUM_BYTE); "
                                                 "protocore_ip is embedded wherever an address is stored");
 
 /** @brief Address scope, in rough order of reachability (used for allow/deny policy + logging). */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_IP_SCOPE_UNSPECIFIED = 0, ///< 0.0.0.0 / ::
-    PROTOCORE_IP_SCOPE_LOOPBACK,        ///< 127.0.0.0/8 / ::1
-    PROTOCORE_IP_SCOPE_LINK_LOCAL,      ///< 169.254.0.0/16 / fe80::/10
-    PROTOCORE_IP_SCOPE_PRIVATE,         ///< RFC1918 (10/8, 172.16/12, 192.168/16) / ULA fc00::/7
-    PROTOCORE_IP_SCOPE_MULTICAST,       ///< 224.0.0.0/4 / ff00::/8
-    PROTOCORE_IP_SCOPE_GLOBAL,          ///< globally routable unicast
-} protocore_ip_scope;
-static_assert(sizeof(protocore_ip_scope) == 1, "protocore_ip_scope must stay one byte (PROTO_ENUM_PACKED)");
+EMBED_ENUM_BYTE(protocore_ip_scope,
+                PROTOCORE_IP_SCOPE_UNSPECIFIED = 0, ///< 0.0.0.0 / ::
+                PROTOCORE_IP_SCOPE_LOOPBACK,        ///< 127.0.0.0/8 / ::1
+                PROTOCORE_IP_SCOPE_LINK_LOCAL,      ///< 169.254.0.0/16 / fe80::/10
+                PROTOCORE_IP_SCOPE_PRIVATE,         ///< RFC1918 (10/8, 172.16/12, 192.168/16) / ULA fc00::/7
+                PROTOCORE_IP_SCOPE_MULTICAST,       ///< 224.0.0.0/4 / ff00::/8
+                PROTOCORE_IP_SCOPE_GLOBAL,          ///< globally routable unicast
+);
+static_assert(sizeof(protocore_ip_scope) == 1, "protocore_ip_scope must stay one byte (EMBED_ENUM_BYTE)");
 
 /** @brief A v4 or v6 address in network (big-endian) byte order. */
 typedef struct protocore_ip
@@ -77,7 +75,7 @@ typedef struct protocore_ip
 /** @brief True if @p a and @p b are the same family and address. */
 
 /** @brief True if @p ip is an IPv4-mapped IPv6 address (::ffff:a.b.c.d, RFC 4291 §2.5.5.2). */
-proto_bool protocore_ip_is_v4_mapped(const protocore_ip *ip);
+embed_bool protocore_ip_is_v4_mapped(const protocore_ip *ip);
 
 /**
  * @brief Build a v4 ::protocore_ip from four octets (a.b.c.d).
@@ -100,7 +98,7 @@ uint32_t protocore_ip_to_v4_be(const protocore_ip *ip);
 /**
  * @brief CIDR containment: is @p addr inside the @p net / @p prefix_len block?
  *
- * The two must be the same family. @p prefix_len is 0..32 for v4, 0..128 for v6; the top
+ * The two must be the same family. @p prefix_len is 0..32 for v4, 0..128 for v6. The top
  * @p prefix_len bits of the address bytes must match @p net (a prefix of 0 matches everything).
  * This is the standard v4/v6 allowlist match.
  * @return true if @p addr is covered; false on a family mismatch or an out-of-range prefix.
@@ -135,7 +133,7 @@ typedef struct
 typedef struct
 {
     IpArgs args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     protocore_ip_scope scope;
 } IpVars;
@@ -146,22 +144,22 @@ extern IpVars IpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse)(uint8_t *work);
-    void (*const format)(uint8_t *work);
-    void (*const classify)(uint8_t *work);
-    void (*const equal)(uint8_t *work);
-    void (*const is_unspecified)(uint8_t *work);
-    void (*const prefix_match)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const format)(const uint8_t *work);
+    void (*const classify)(const uint8_t *work);
+    void (*const equal)(const uint8_t *work);
+    void (*const is_unspecified)(const uint8_t *work);
+    void (*const prefix_match)(const uint8_t *work);
 } IpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IpV or a region of the borrow at a fixed offset.
-void protocore_ip_parse(uint8_t *work);
-void protocore_ip_format(uint8_t *work);
-void protocore_ip_classify(uint8_t *work);
-void protocore_ip_equal(uint8_t *work);
-void protocore_ip_is_unspecified(uint8_t *work);
-void protocore_ip_prefix_match(uint8_t *work);
+void protocore_ip_parse(const uint8_t *work);
+void protocore_ip_format(const uint8_t *work);
+void protocore_ip_classify(const uint8_t *work);
+void protocore_ip_equal(const uint8_t *work);
+void protocore_ip_is_unspecified(const uint8_t *work);
+void protocore_ip_prefix_match(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -176,6 +174,6 @@ static const IpNs Ip __attribute__((unused)) = {
     .prefix_match = protocore_ip_prefix_match,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IP_H

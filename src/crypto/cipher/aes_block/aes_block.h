@@ -8,7 +8,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file aes_block.h
@@ -37,20 +37,20 @@ PROTOCORE_BEGIN_DECLS
  */
 
 /** @brief GF(2^8) multiply-by-2 (xtime) for the AES MixColumns step. */
-PROTOCORE_INLINE uint8_t protocore_aes_xtime(uint8_t a)
+EMBED_INLINE uint8_t protocore_aes_xtime(uint8_t a)
 {
     return (uint8_t)((a << 1) ^ ((a >> 7) ? 0x1bu : 0x00u));
 }
 
 /** @brief AES SubWord (FIPS 197 sec 5.2): apply the S-box to each of the four bytes of a 32-bit word. */
-PROTOCORE_INLINE uint32_t protocore_aes_sub_word(uint32_t w)
+EMBED_INLINE uint32_t protocore_aes_sub_word(uint32_t w)
 {
     return ((uint32_t)PROTOCORE_AES_SBOX[w >> 24] << 24) | ((uint32_t)PROTOCORE_AES_SBOX[(w >> 16) & 0xff] << 16) |
            ((uint32_t)PROTOCORE_AES_SBOX[(w >> 8) & 0xff] << 8) | (uint32_t)PROTOCORE_AES_SBOX[w & 0xff];
 }
 
 /** @brief AES RotWord (FIPS 197 sec 5.2): cyclically rotate a 32-bit word one byte left. */
-PROTOCORE_INLINE uint32_t protocore_aes_rot_word(uint32_t w)
+EMBED_INLINE uint32_t protocore_aes_rot_word(uint32_t w)
 {
     return (w << 8) | (w >> 24);
 }
@@ -59,7 +59,7 @@ PROTOCORE_INLINE uint32_t protocore_aes_rot_word(uint32_t w)
  * @brief AES key expansion (FIPS 197 sec 5.2). @p nk key words (4=AES-128, 8=AES-256); @p rk receives
  *        4*(@p nk + 7) round-key words (44 for AES-128, 60 for AES-256).
  */
-PROTOCORE_INLINE void protocore_aes_key_expand(const uint8_t *key, int nk, uint32_t *rk)
+EMBED_INLINE void protocore_aes_key_expand(const uint8_t *key, int nk, uint32_t *rk)
 {
     // Rcon[1..10] (index 0 unused); AES-128 uses up to [10], AES-256 up to [7].
     static const uint8_t RCON[11] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
@@ -89,7 +89,7 @@ PROTOCORE_INLINE void protocore_aes_key_expand(const uint8_t *key, int nk, uint3
  * @brief AES single-block encrypt (FIPS 197 sec 5.1), @p nr rounds (10=AES-128, 14=AES-256). State is
  *        column-major: s[col*4 + row]. @p rk is the schedule from protocore_aes_key_expand.
  */
-PROTOCORE_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, const uint8_t in[16], uint8_t out[16])
+EMBED_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, const uint8_t in[16], uint8_t out[16])
 {
     uint8_t s[16];
     for (int i = 0; i < 16; i++)
@@ -175,8 +175,8 @@ PROTOCORE_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, co
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*key_expand)(uint8_t *, const uint8_t *, int, uint32_t *);
-    proto_bool (*encrypt_block)(uint8_t *, const uint32_t *, int, const uint8_t *, uint8_t *);
+    embed_bool (*key_expand)(const uint8_t *, const uint8_t *, int, uint32_t *);
+    embed_bool (*encrypt_block)(const uint8_t *, const uint32_t *, int, const uint8_t *, uint8_t *);
 } AesBlockNs;
 PROTOCORE_NS_LAYOUT(AesBlockNs, key_expand, encrypt_block);
 
@@ -186,9 +186,9 @@ PROTOCORE_NS_LAYOUT(AesBlockNs, key_expand, encrypt_block);
  * @param key 4 * nk key bytes
  * @param nk key words: 4 for AES-128, 8 for AES-256
  * @param rk 4 * (nk + 7) round-key words
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int nk, uint32_t *rk);
+embed_bool protocore_aes_block_key_expand(const uint8_t *work, const uint8_t *key, int nk, uint32_t *rk);
 /**
  * @brief Encrypt one 16-byte block under that schedule.
  * @param work PROTOCORE_AES_BLOCK_BORROW bytes the caller took. Not held past the call.
@@ -196,15 +196,15 @@ proto_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int
  * @param nr rounds: 10 for AES-128, 14 for AES-256
  * @param in 16 input bytes
  * @param out 16 output bytes; may alias in
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_aes_block_encrypt_block(uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in,
+embed_bool protocore_aes_block_encrypt_block(const uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in,
                                              uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS AesBlockNs AesBlock PROTOCORE_UNUSED = {.key_expand = protocore_aes_block_key_expand,
                                                      .encrypt_block = protocore_aes_block_encrypt_block};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_AES_BLOCK_H

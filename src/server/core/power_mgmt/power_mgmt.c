@@ -18,16 +18,16 @@
 // Pure decision
 // ---------------------------------------------------------------------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The governor's compile-time storage: what it latched about this boot.
  */
 struct PowerMgmtStorage
 {
-    proto_bool brownout_latched;
-    proto_bool boot_checked;
-    proto_bool bt_released;
+    embed_bool brownout_latched;
+    embed_bool boot_checked;
+    embed_bool bt_released;
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -39,7 +39,10 @@ static_assert(POWER_MGMT_OFF_CTX + sizeof(struct PowerMgmtStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define POWER_MGMT_CTX(w) ((struct PowerMgmtStorage *)(void *)((w) + POWER_MGMT_OFF_CTX))
+#define POWER_MGMT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct PowerMgmtStorage *)(const void *)((w) + POWER_MGMT_OFF_CTX),                    \
+        default: (struct PowerMgmtStorage *)(void *)((w) + POWER_MGMT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -61,7 +64,7 @@ uint8_t *protocore_power_mgmt_span(void)
     return s_own.span;
 }
 
-void protocore_power_defaults(uint8_t *work)
+void protocore_power_defaults(const uint8_t *work)
 {
     (void)work;
     PowerCfg *cfg = PowerV.cfg_out;
@@ -77,20 +80,20 @@ void protocore_power_defaults(uint8_t *work)
     cfg->recover_ms = PROTOCORE_POWER_RECOVER_MS;
 }
 
-void protocore_power_decide(uint8_t *work)
+void protocore_power_decide(const uint8_t *work)
 {
     (void)work;
     const PowerCfg *cfg = PowerV.plan_args.cfg;
     uint8_t load_pct = PowerV.plan_args.load_pct;
     const int16_t temp_c = PowerV.plan_args.temp_c;
-    const proto_bool brownout_boot = PowerV.plan_args.brownout_boot;
+    const embed_bool brownout_boot = PowerV.plan_args.brownout_boot;
     const uint32_t since_boot_ms = PowerV.plan_args.since_boot_ms;
-    const proto_bool was_throttled = PowerV.plan_args.was_throttled;
+    const embed_bool was_throttled = PowerV.plan_args.was_throttled;
 
     PowerPlan p;
     p.cpu_mhz = 0;
-    p.throttled = PROTO_FALSE;
-    p.recovering = PROTO_FALSE;
+    p.throttled = EMBED_FALSE;
+    p.recovering = EMBED_FALSE;
     if (!cfg)
     {
         PowerV.plan = p;
@@ -100,7 +103,7 @@ void protocore_power_decide(uint8_t *work)
     // Hysteresis: once throttled, hold it until the die drops to the *cool* threshold. With one
     // threshold a part sitting at the limit would flap between ceiling and floor every tick.
     // INT16_MIN means "no sensor on this part", which must not read as ice-cold and un-throttle.
-    proto_bool have_temp = temp_c != INT16_MIN;
+    embed_bool have_temp = temp_c != INT16_MIN;
     if (have_temp)
     {
         p.throttled = was_throttled ? (temp_c > cfg->temp_cool_c) : (temp_c >= cfg->temp_hot_c);
@@ -185,30 +188,30 @@ void protocore_power_brownout(uint8_t *work)
     // caller polling it every tick through the recovery window.
     if (!POWER_MGMT_CTX(work)->boot_checked)
     {
-        POWER_MGMT_CTX(work)->brownout_latched = protocore_platform_reset_was_brownout() ? PROTO_TRUE : PROTO_FALSE;
-        POWER_MGMT_CTX(work)->boot_checked = PROTO_TRUE;
+        POWER_MGMT_CTX(work)->brownout_latched = protocore_platform_reset_was_brownout() ? EMBED_TRUE : EMBED_FALSE;
+        POWER_MGMT_CTX(work)->boot_checked = EMBED_TRUE;
     }
     PowerV.ok = POWER_MGMT_CTX(work)->brownout_latched;
 }
 
-void protocore_power_die_temp(uint8_t *work)
+void protocore_power_die_temp(const uint8_t *work)
 {
     (void)work;
     PowerV.temp_c = protocore_platform_die_temp_c();
 }
 
-void protocore_power_cpu_mhz(uint8_t *work)
+void protocore_power_cpu_mhz(const uint8_t *work)
 {
     (void)work;
     PowerV.mhz = protocore_platform_cpu_mhz();
 }
 
-void protocore_power_apply(uint8_t *work)
+void protocore_power_apply(const uint8_t *work)
 {
     (void)work;
     const PowerPlan *plan = PowerV.out_args.plan;
 
-    PowerV.ok = PROTO_FALSE;
+    PowerV.ok = EMBED_FALSE;
     if (!plan || plan->cpu_mhz == 0)
     {
         return;
@@ -217,7 +220,7 @@ void protocore_power_apply(uint8_t *work)
     {
         return; // already there; re-setting the clock is not free
     }
-    PowerV.ok = protocore_platform_set_cpu_mhz((uint32_t)plan->cpu_mhz) ? PROTO_TRUE : PROTO_FALSE;
+    PowerV.ok = protocore_platform_set_cpu_mhz((uint32_t)plan->cpu_mhz) ? EMBED_TRUE : EMBED_FALSE;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_PM
@@ -225,12 +228,12 @@ void protocore_power_apply(uint8_t *work)
 #if PROTOCORE_HAS_VENDOR_BT
 void protocore_power_gate_bt(uint8_t *work)
 {
-    PowerV.ok = PROTO_FALSE;
+    PowerV.ok = EMBED_FALSE;
     if (POWER_MGMT_CTX(work)->bt_released)
     {
         return; // already handed back, so this call released nothing
     }
-    proto_bool ok = protocore_platform_bt_release() ? PROTO_TRUE : PROTO_FALSE;
+    embed_bool ok = protocore_platform_bt_release() ? EMBED_TRUE : EMBED_FALSE;
     POWER_MGMT_CTX(work)->bt_released = ok;
     PowerV.ok = ok;
 }
@@ -240,6 +243,6 @@ void protocore_power_gate_bt(uint8_t *work)
 /** @brief The operands and the outcome. */
 PowerVars PowerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_POWER_MGMT

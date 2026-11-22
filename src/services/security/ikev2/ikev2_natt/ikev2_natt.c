@@ -19,7 +19,7 @@
 // Literals
 // ---------------------------------------------------------------------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // SPIi(8) | SPIr(8) | IP(4 or 16) | Port(2): the largest detection digest input (RFC 7296 sec 2.23).
 #define PROTOCORE_NATD_INPUT_MAX (PROTOCORE_IKE_SPI_LEN + PROTOCORE_IKE_SPI_LEN + 16 + 2)
@@ -65,18 +65,16 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
     {
         return 0;
     }
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_SHA1_BORROW,
                                                                                              protocore_secure_owner()),
                              .cap = PROTOCORE_SHA1_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return 0;
     }
     Sha1.hash(w.buf, in, n, out);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     return PROTOCORE_IKE_NATD_HASH_LEN;
 }
 
@@ -97,23 +95,23 @@ static size_t natd_notify_build(uint8_t *work, uint16_t notify_type, const uint8
 }
 
 // The digest matches when nothing on that axis was translated.
-static proto_bool natd_match(uint8_t *work)
+static embed_bool natd_match(void)
 {
     if (!IkeNattV.digest.received)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t expect[PROTOCORE_IKE_NATD_HASH_LEN];
     if (natd_hash(IkeNattV.spi.init_spi, IkeNattV.spi.resp_spi, IkeNattV.addr.ip, IkeNattV.addr.ip_len,
                   IkeNattV.addr.port, expect) == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return EMBED_CALL(memor.cmp, MemoriaCfg, .src = expect, .other = IkeNattV.digest.received,
                       .bytes = PROTOCORE_IKE_NATD_HASH_LEN) == 0;
 }
 
-void protocore_ike_natt_hash(uint8_t *work)
+void protocore_ike_natt_hash(const uint8_t *work)
 {
     (void)work;
     IkeNattV.n = natd_hash(IkeNattV.spi.init_spi, IkeNattV.spi.resp_spi, IkeNattV.addr.ip, IkeNattV.addr.ip_len,
@@ -148,26 +146,29 @@ void protocore_ike_natt_dest_build(uint8_t *work)
 
 void protocore_ike_natt_match(uint8_t *work)
 {
-    IkeNattV.ok = natd_match(work);
+    (void)work;
+    IkeNattV.ok = natd_match();
 }
 
 // No match against the source the packet was observed to come from: someone on the route rewrote it.
 void protocore_ike_natt_peer_behind_nat(uint8_t *work)
 {
-    IkeNattV.ok = !natd_match(work);
+    (void)work;
+    IkeNattV.ok = !natd_match();
 }
 
 // No match against our own address: the peer sent to a translated destination.
 void protocore_ike_natt_self_behind_nat(uint8_t *work)
 {
-    IkeNattV.ok = !natd_match(work);
+    (void)work;
+    IkeNattV.ok = !natd_match();
 }
 
 // ---------------------------------------------------------------------------
 // UDP encapsulation demux on port 4500 (RFC 3948 sec 2)
 // ---------------------------------------------------------------------------
 
-void protocore_ike_natt_is_keepalive(uint8_t *work)
+void protocore_ike_natt_is_keepalive(const uint8_t *work)
 {
     (void)work;
     IkeNattV.ok = IkeNattV.pkt.p && IkeNattV.pkt.len == 1 && IkeNattV.pkt.p[0] == PROTOCORE_NATT_KEEPALIVE_BYTE;
@@ -175,11 +176,11 @@ void protocore_ike_natt_is_keepalive(uint8_t *work)
 
 // The Non-ESP Marker is four zero octets aligned with the ESP SPI, and that SPI is never zero
 // (RFC 3948 sec 2.1, sec 2.2), so a leading zero word means the datagram carries IKE.
-void protocore_ike_natt_is_ike(uint8_t *work)
+void protocore_ike_natt_is_ike(const uint8_t *work)
 {
     (void)work;
     const uint8_t *p = IkeNattV.pkt.p;
-    IkeNattV.ok = PROTO_FALSE;
+    IkeNattV.ok = EMBED_FALSE;
     if (!p || IkeNattV.pkt.len < PROTOCORE_NATT_NON_ESP_MARKER_LEN)
     {
         return;
@@ -191,6 +192,6 @@ void protocore_ike_natt_is_ike(uint8_t *work)
 /** @brief The operands and the outcome. */
 IkeNattVars IkeNattV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2

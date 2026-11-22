@@ -21,11 +21,11 @@
 #ifndef PROTOCORE_CURVE25519_H
 #define PROTOCORE_CURVE25519_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_CURVE25519
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- Field arithmetic (shared with protocore_ed25519) ----------------------------
 //
@@ -103,7 +103,7 @@ typedef struct
 {
     Curve25519X25519Args x25519_args;
     Curve25519X25519BaseArgs x25519_base_args;
-    proto_bool ok;
+    embed_bool ok;
 } Curve25519Vars;
 
 /** @brief The operands and the outcome. */
@@ -130,7 +130,7 @@ static const Curve25519Ns Curve25519 __attribute__((unused)) = {
     .x25519_base = protocore_curve25519_x25519_base,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CURVE25519
 

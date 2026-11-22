@@ -30,7 +30,7 @@
  * CREATE_CHILD_SA (sec 1.3) exchanges over the established SA.
  *
  * The PRF is HMAC-SHA2-256, PRF transform id 5 (RFC 4868 sec 4), whose preferred key length fixes
- * SK_d, SK_pi and SK_pr (sec 2.13); the integrity transform, when one is negotiated, is
+ * SK_d, SK_pi and SK_pr (sec 2.13). The integrity transform, when one is negotiated, is
  * AUTH_HMAC_SHA2_256_128, id 12 (RFC 4868 sec 4), keyed with the 32-octet hash output
  * (RFC 4868 sec 2.1.1). An AEAD cipher carries its own integrity, so SK_ai and SK_ar are then zero
  * octets (RFC 5282 sec 7.1).
@@ -49,7 +49,7 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -154,103 +154,78 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief Exchange Type (RFC 7296 sec 3.1). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_SA_INIT = 34,
-    IKE_AUTH = 35,
-    IKE_CREATE_CHILD_SA = 36,
-    IKE_INFORMATIONAL = 37,
-} IkeExchange;
+EMBED_ENUM_BYTE(IkeExchange, IKE_SA_INIT = 34, IKE_AUTH = 35, IKE_CREATE_CHILD_SA = 36, IKE_INFORMATIONAL = 37, );
 
 /** @brief Next Payload / payload types; zero ends the chain (RFC 7296 sec 3.2). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_PL_NONE = 0,
-    IKE_PL_SA = 33,      ///< Security Association, SA
-    IKE_PL_KE = 34,      ///< Key Exchange, KE
-    IKE_PL_IDI = 35,     ///< Identification - Initiator, IDi
-    IKE_PL_IDR = 36,     ///< Identification - Responder, IDr
-    IKE_PL_CERT = 37,    ///< Certificate, CERT
-    IKE_PL_CERTREQ = 38, ///< Certificate Request, CERTREQ
-    IKE_PL_AUTH = 39,    ///< Authentication, AUTH
-    IKE_PL_NONCE = 40,   ///< Nonce, Ni or Nr
-    IKE_PL_NOTIFY = 41,  ///< Notify, N
-    IKE_PL_DELETE = 42,  ///< Delete, D
-    IKE_PL_VENDOR = 43,  ///< Vendor ID, V
-    IKE_PL_TSI = 44,     ///< Traffic Selector - Initiator, TSi
-    IKE_PL_TSR = 45,     ///< Traffic Selector - Responder, TSr
-    IKE_PL_SK = 46,      ///< Encrypted and Authenticated, SK
-    IKE_PL_CP = 47,      ///< Configuration, CP
-    IKE_PL_EAP = 48,     ///< Extensible Authentication, EAP
-    IKE_PL_SKF = 53,     ///< Encrypted and Authenticated Fragment, SKF (RFC 7383 sec 2.5)
-} IkePayloadType;
+EMBED_ENUM_BYTE(IkePayloadType, IKE_PL_NONE = 0,
+                IKE_PL_SA = 33,      ///< Security Association, SA
+                IKE_PL_KE = 34,      ///< Key Exchange, KE
+                IKE_PL_IDI = 35,     ///< Identification - Initiator, IDi
+                IKE_PL_IDR = 36,     ///< Identification - Responder, IDr
+                IKE_PL_CERT = 37,    ///< Certificate, CERT
+                IKE_PL_CERTREQ = 38, ///< Certificate Request, CERTREQ
+                IKE_PL_AUTH = 39,    ///< Authentication, AUTH
+                IKE_PL_NONCE = 40,   ///< Nonce, Ni or Nr
+                IKE_PL_NOTIFY = 41,  ///< Notify, N
+                IKE_PL_DELETE = 42,  ///< Delete, D
+                IKE_PL_VENDOR = 43,  ///< Vendor ID, V
+                IKE_PL_TSI = 44,     ///< Traffic Selector - Initiator, TSi
+                IKE_PL_TSR = 45,     ///< Traffic Selector - Responder, TSr
+                IKE_PL_SK = 46,      ///< Encrypted and Authenticated, SK
+                IKE_PL_CP = 47,      ///< Configuration, CP
+                IKE_PL_EAP = 48,     ///< Extensible Authentication, EAP
+                IKE_PL_SKF = 53,     ///< Encrypted and Authenticated Fragment, SKF (RFC 7383 sec 2.5)
+);
 
 /** @brief Transform Type (RFC 7296 sec 3.3.2). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_TRANSFORM_ENCR = 1,  ///< Encryption Algorithm
-    IKE_TRANSFORM_PRF = 2,   ///< Pseudorandom Function
-    IKE_TRANSFORM_INTEG = 3, ///< Integrity Algorithm
-    IKE_TRANSFORM_DH = 4,    ///< Diffie-Hellman Group
-    IKE_TRANSFORM_ESN = 5,   ///< Extended Sequence Numbers
-} IkeTransformType;
+EMBED_ENUM_BYTE(IkeTransformType,
+                IKE_TRANSFORM_ENCR = 1,  ///< Encryption Algorithm
+                IKE_TRANSFORM_PRF = 2,   ///< Pseudorandom Function
+                IKE_TRANSFORM_INTEG = 3, ///< Integrity Algorithm
+                IKE_TRANSFORM_DH = 4,    ///< Diffie-Hellman Group
+                IKE_TRANSFORM_ESN = 5,   ///< Extended Sequence Numbers
+);
 
 /** @brief Protocol ID (RFC 7296 sec 3.3.1, sec 3.10, sec 3.11). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_PROTO_NONE = 0, ///< the notification concerns no existing SA and the SPI field is empty
-    IKE_PROTO_IKE = 1,
-    IKE_PROTO_AH = 2,
-    IKE_PROTO_ESP = 3,
-} IkeProtocol;
+EMBED_ENUM_BYTE(IkeProtocol,
+                IKE_PROTO_NONE = 0, ///< the notification concerns no existing SA and the SPI field is empty
+                IKE_PROTO_IKE = 1, IKE_PROTO_AH = 2, IKE_PROTO_ESP = 3, );
 
 /** @brief ID Type (RFC 7296 sec 3.5). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_ID_RESERVED = 0, ///< reserved; the value an out member holds before a parse succeeds
-    IKE_ID_IPV4_ADDR = 1,
-    IKE_ID_FQDN = 2,
-    IKE_ID_RFC822_ADDR = 3,
-    IKE_ID_IPV6_ADDR = 5,
-    IKE_ID_KEY_ID = 11,
-} IkeIdType;
+EMBED_ENUM_BYTE(IkeIdType,
+                IKE_ID_RESERVED = 0, ///< reserved; the value an out member holds before a parse succeeds
+                IKE_ID_IPV4_ADDR = 1, IKE_ID_FQDN = 2, IKE_ID_RFC822_ADDR = 3, IKE_ID_IPV6_ADDR = 5,
+                IKE_ID_KEY_ID = 11, );
 
 /** @brief Auth Method (RFC 7296 sec 3.8). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_AUTH_RESERVED = 0,    ///< reserved; the value an out member holds before a parse succeeds
-    IKE_AUTH_RSA_SIG = 1,     ///< RSA Digital Signature
-    IKE_AUTH_PSK = 2,         ///< Shared Key Message Integrity Code
-    IKE_AUTH_DSS_SIG = 3,     ///< DSS Digital Signature
-    IKE_AUTH_DIGITAL_SIG = 14 ///< Digital Signature (RFC 7427 sec 3)
-} IkeAuthMethod;
+EMBED_ENUM_BYTE(IkeAuthMethod,
+                IKE_AUTH_RESERVED = 0,    ///< reserved; the value an out member holds before a parse succeeds
+                IKE_AUTH_RSA_SIG = 1,     ///< RSA Digital Signature
+                IKE_AUTH_PSK = 2,         ///< Shared Key Message Integrity Code
+                IKE_AUTH_DSS_SIG = 3,     ///< DSS Digital Signature
+                IKE_AUTH_DIGITAL_SIG = 14 ///< Digital Signature (RFC 7427 sec 3)
+);
 
 /** @brief TS Type (RFC 7296 sec 3.13.1). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_TS_IPV4_ADDR_RANGE = 7,
-    IKE_TS_IPV6_ADDR_RANGE = 8,
-} IkeTsType;
+EMBED_ENUM_BYTE(IkeTsType, IKE_TS_IPV4_ADDR_RANGE = 7, IKE_TS_IPV6_ADDR_RANGE = 8, );
 
 /** @brief CFG Type (RFC 7296 sec 3.15.1). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_CFG_REQUEST = 1, ///< CFG_REQUEST
-    IKE_CFG_REPLY = 2,   ///< CFG_REPLY
-    IKE_CFG_SET = 3,     ///< CFG_SET
-    IKE_CFG_ACK = 4,     ///< CFG_ACK
-} IkeCfgType;
+EMBED_ENUM_BYTE(IkeCfgType,
+                IKE_CFG_REQUEST = 1, ///< CFG_REQUEST
+                IKE_CFG_REPLY = 2,   ///< CFG_REPLY
+                IKE_CFG_SET = 3,     ///< CFG_SET
+                IKE_CFG_ACK = 4,     ///< CFG_ACK
+);
 
 /** @brief Handshake progress across IKE_SA_INIT and IKE_AUTH (RFC 7296 sec 1.2). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IKE_ST_INIT = 0,     ///< nothing sent yet
-    IKE_ST_SA_INIT_SENT, ///< IKE_SA_INIT emitted, awaiting the response
-    IKE_ST_SA_INIT_DONE, ///< the peer's IKE_SA_INIT consumed and the SK_* keys derived
-    IKE_ST_AUTH_SENT,    ///< IKE_AUTH request emitted, awaiting the response
-    IKE_ST_ESTABLISHED,  ///< the peer's AUTH verified; the IKE SA is up
-    IKE_ST_FAILED,       ///< a received message was rejected
-} IkeState;
+EMBED_ENUM_BYTE(IkeState,
+                IKE_ST_INIT = 0,     ///< nothing sent yet
+                IKE_ST_SA_INIT_SENT, ///< IKE_SA_INIT emitted, awaiting the response
+                IKE_ST_SA_INIT_DONE, ///< the peer's IKE_SA_INIT consumed and the SK_* keys derived
+                IKE_ST_AUTH_SENT,    ///< IKE_AUTH request emitted, awaiting the response
+                IKE_ST_ESTABLISHED,  ///< the peer's AUTH verified; the IKE SA is up
+                IKE_ST_FAILED,       ///< a received message was rejected
+);
 
 /** @brief The IKE header, decoded or to be encoded (RFC 7296 sec 3.1). */
 typedef struct
@@ -270,7 +245,7 @@ typedef struct
 {
     IkePayloadType type;         ///< this payload's type, taken from the chain
     IkePayloadType next_payload; ///< Next Payload; IKE_PL_NONE ends the chain
-    proto_bool critical;         ///< the Critical bit
+    embed_bool critical;         ///< the Critical bit
     const uint8_t *body;         ///< the octets after the generic payload header
     size_t body_len;
 } IkePayload;
@@ -298,7 +273,7 @@ typedef struct
     IkeTransformType type; ///< Transform Type
     uint16_t id;           ///< Transform ID
     int32_t key_length;    ///< decoded Key Length attribute, or below zero when absent
-    proto_bool last;       ///< Last Substruc was 0: no transform follows
+    embed_bool last;       ///< Last Substruc was 0: no transform follows
 } IkeTransformRef;
 
 /** @brief One decoded Proposal Substructure (RFC 7296 sec 3.3.1). */
@@ -311,7 +286,7 @@ typedef struct
     const uint8_t *spi;      ///< SPI, @c spi_size octets, or nullptr when SPI Size is zero
     const uint8_t *transforms;
     size_t transforms_len;
-    proto_bool last; ///< Last Substruc was 0: no proposal follows
+    embed_bool last; ///< Last Substruc was 0: no proposal follows
 } IkeProposalRef;
 
 /** @brief Walk of the Transform Substructures inside one proposal (RFC 7296 sec 3.3.2). */
@@ -360,7 +335,7 @@ typedef struct
 {
     uint16_t total;                             ///< Total Fragments; zero until the first fragment sets it
     uint16_t count;                             ///< distinct fragments stored
-    proto_bool present[PROTOCORE_IKE_FRAG_MAX]; ///< present[i] holds fragment (i+1)
+    embed_bool present[PROTOCORE_IKE_FRAG_MAX]; ///< present[i] holds fragment (i+1)
     size_t off[PROTOCORE_IKE_FRAG_MAX];         ///< pool offset of fragment (i+1)
     size_t len[PROTOCORE_IKE_FRAG_MAX];         ///< length of fragment (i+1)
     uint8_t *pool;                              ///< caller-owned staging buffer
@@ -408,7 +383,7 @@ typedef struct
 {
     uint8_t init_spi[PROTOCORE_IKE_SPI_LEN]; ///< IKE SA Initiator's SPI
     uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN]; ///< IKE SA Responder's SPI
-    proto_bool is_initiator;                 ///< this side is the original initiator
+    embed_bool is_initiator;                 ///< this side is the original initiator
     IkeSuite suite;                          ///< the negotiated transforms
     IkeKeyMaterial keys;                     ///< SK_d, SK_ai, SK_ar, SK_ei, SK_er, SK_pi, SK_pr
     // The cookie hash, the prf+ chain, the AUTH MAC and the signature run in sequence, so one region
@@ -421,7 +396,7 @@ typedef struct
 {
     uint8_t init_spi[PROTOCORE_IKE_SPI_LEN];
     uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN];
-    proto_bool is_response;  ///< the R flag was set
+    embed_bool is_response;  ///< the R flag was set
     IkeProposalRef proposal; ///< the first proposal of SAi1 or SAr1
     uint16_t dh_group;       ///< Diffie-Hellman Group Num from the KE payload
     const uint8_t *ke_data;  ///< Key Exchange Data
@@ -535,7 +510,7 @@ typedef struct
 typedef struct
 {
     IkePayloadType next_payload; ///< Next Payload: the type of the payload that follows this one
-    proto_bool critical;         ///< the Critical bit
+    embed_bool critical;         ///< the Critical bit
     const uint8_t *data;         ///< this payload's variable field, named per payload by each call
     size_t data_len;
 } IkePayloadArgs;
@@ -684,7 +659,7 @@ typedef struct
     const uint8_t *init_spi;         ///< IKE SA Initiator's SPI
     const uint8_t *resp_spi;         ///< IKE SA Responder's SPI
     uint32_t message_id;             ///< Message ID
-    proto_bool is_response;          ///< set the R flag rather than the I flag
+    embed_bool is_response;          ///< set the R flag rather than the I flag
     uint32_t length;                 ///< the Length a patch writes into an already-built header
     IkePayloadType first_inner_type; ///< the Encrypted payload's Next Payload
     const uint8_t *inner;            ///< the chained inner payloads to encrypt
@@ -846,7 +821,7 @@ typedef struct
     IkeMsgArgs msg;       ///< whole-message assembly (sec 3.1, 3.14)
     IkeWalkArgs walk;     ///< the caller-owned walks (sec 3.2)
     IkeSessionArgs sess;  ///< the SA or handshake a call acts on (sec 1.2)
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint8_t u8;
     IkePayload payload;
@@ -871,146 +846,146 @@ extern IkeVars IkeV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const hdr_build)(uint8_t *work);
-    void (*const hdr_parse)(uint8_t *work);
-    void (*const set_length)(uint8_t *work);
-    void (*const payload_iter_init)(uint8_t *work);
-    void (*const payload_next)(uint8_t *work);
-    void (*const payload_build)(uint8_t *work);
-    void (*const sa_build)(uint8_t *work);
-    void (*const ke_build)(uint8_t *work);
-    void (*const nonce_build)(uint8_t *work);
-    void (*const id_build)(uint8_t *work);
-    void (*const auth_build)(uint8_t *work);
-    void (*const cert_build)(uint8_t *work);
-    void (*const notify_build)(uint8_t *work);
-    void (*const delete_build)(uint8_t *work);
-    void (*const ts_build)(uint8_t *work);
-    void (*const cp_build)(uint8_t *work);
-    void (*const sk_build)(uint8_t *work);
-    void (*const skf_build)(uint8_t *work);
-    void (*const skf_parse)(uint8_t *work);
-    void (*const frag_reasm_init)(uint8_t *work);
-    void (*const frag_reasm_add)(uint8_t *work);
-    void (*const frag_reasm_complete)(uint8_t *work);
-    void (*const frag_reasm_assemble)(uint8_t *work);
-    void (*const cookie_compute)(uint8_t *work);
-    void (*const cookie_verify)(uint8_t *work);
-    void (*const cookie_notify_build)(uint8_t *work);
-    void (*const ke_parse)(uint8_t *work);
-    void (*const id_parse)(uint8_t *work);
-    void (*const auth_parse)(uint8_t *work);
-    void (*const notify_parse)(uint8_t *work);
-    void (*const delete_parse)(uint8_t *work);
-    void (*const sk_parse)(uint8_t *work);
-    void (*const sa_first_proposal)(uint8_t *work);
-    void (*const transform_iter_init)(uint8_t *work);
-    void (*const transform_next)(uint8_t *work);
-    void (*const ts_count)(uint8_t *work);
-    void (*const ts_get)(uint8_t *work);
-    void (*const cp_parse)(uint8_t *work);
-    void (*const cp_attr_iter_init)(uint8_t *work);
-    void (*const cp_attr_next)(uint8_t *work);
-    void (*const prf_plus)(uint8_t *work);
-    void (*const derive_keys)(uint8_t *work);
-    void (*const rekey_derive_keys)(uint8_t *work);
-    void (*const child_keymat)(uint8_t *work);
-    void (*const suite_keylengths)(uint8_t *work);
-    void (*const sa_keys_from_init)(uint8_t *work);
-    void (*const sk_aead_seal)(uint8_t *work);
-    void (*const sk_aead_open)(uint8_t *work);
-    void (*const dh_public)(uint8_t *work);
-    void (*const dh_compute)(uint8_t *work);
-    void (*const auth_psk)(uint8_t *work);
-    void (*const signed_octets)(uint8_t *work);
-    void (*const auth_sign_ecdsa_p256)(uint8_t *work);
-    void (*const auth_verify_ecdsa_p256)(uint8_t *work);
-    void (*const auth_verify_rsa_sha256)(uint8_t *work);
-    void (*const sa_init_build)(uint8_t *work);
-    void (*const sa_init_parse)(uint8_t *work);
-    void (*const auth_msg_build)(uint8_t *work);
-    void (*const auth_msg_open)(uint8_t *work);
-    void (*const initiator_start)(uint8_t *work);
-    void (*const initiator_on_sa_init)(uint8_t *work);
-    void (*const initiator_build_auth_psk)(uint8_t *work);
-    void (*const initiator_on_auth_psk)(uint8_t *work);
-    void (*const responder_on_sa_init)(uint8_t *work);
-    void (*const responder_on_auth_psk)(uint8_t *work);
-    void (*const informational_build)(uint8_t *work);
-    void (*const informational_open)(uint8_t *work);
-    void (*const create_child_sa_build)(uint8_t *work);
+    void (*const hdr_build)(const uint8_t *work);
+    void (*const hdr_parse)(const uint8_t *work);
+    void (*const set_length)(const uint8_t *work);
+    void (*const payload_iter_init)(const uint8_t *work);
+    void (*const payload_next)(const uint8_t *work);
+    void (*const payload_build)(const uint8_t *work);
+    void (*const sa_build)(const uint8_t *work);
+    void (*const ke_build)(const uint8_t *work);
+    void (*const nonce_build)(const uint8_t *work);
+    void (*const id_build)(const uint8_t *work);
+    void (*const auth_build)(const uint8_t *work);
+    void (*const cert_build)(const uint8_t *work);
+    void (*const notify_build)(const uint8_t *work);
+    void (*const delete_build)(const uint8_t *work);
+    void (*const ts_build)(const uint8_t *work);
+    void (*const cp_build)(const uint8_t *work);
+    void (*const sk_build)(const uint8_t *work);
+    void (*const skf_build)(const uint8_t *work);
+    void (*const skf_parse)(const uint8_t *work);
+    void (*const frag_reasm_init)(const uint8_t *work);
+    void (*const frag_reasm_add)(const uint8_t *work);
+    void (*const frag_reasm_complete)(const uint8_t *work);
+    void (*const frag_reasm_assemble)(const uint8_t *work);
+    void (*const cookie_compute)(const uint8_t *work);
+    void (*const cookie_verify)(const uint8_t *work);
+    void (*const cookie_notify_build)(const uint8_t *work);
+    void (*const ke_parse)(const uint8_t *work);
+    void (*const id_parse)(const uint8_t *work);
+    void (*const auth_parse)(const uint8_t *work);
+    void (*const notify_parse)(const uint8_t *work);
+    void (*const delete_parse)(const uint8_t *work);
+    void (*const sk_parse)(const uint8_t *work);
+    void (*const sa_first_proposal)(const uint8_t *work);
+    void (*const transform_iter_init)(const uint8_t *work);
+    void (*const transform_next)(const uint8_t *work);
+    void (*const ts_count)(const uint8_t *work);
+    void (*const ts_get)(const uint8_t *work);
+    void (*const cp_parse)(const uint8_t *work);
+    void (*const cp_attr_iter_init)(const uint8_t *work);
+    void (*const cp_attr_next)(const uint8_t *work);
+    void (*const prf_plus)(const uint8_t *work);
+    void (*const derive_keys)(const uint8_t *work);
+    void (*const rekey_derive_keys)(const uint8_t *work);
+    void (*const child_keymat)(const uint8_t *work);
+    void (*const suite_keylengths)(const uint8_t *work);
+    void (*const sa_keys_from_init)(const uint8_t *work);
+    void (*const sk_aead_seal)(const uint8_t *work);
+    void (*const sk_aead_open)(const uint8_t *work);
+    void (*const dh_public)(const uint8_t *work);
+    void (*const dh_compute)(const uint8_t *work);
+    void (*const auth_psk)(const uint8_t *work);
+    void (*const signed_octets)(const uint8_t *work);
+    void (*const auth_sign_ecdsa_p256)(const uint8_t *work);
+    void (*const auth_verify_ecdsa_p256)(const uint8_t *work);
+    void (*const auth_verify_rsa_sha256)(const uint8_t *work);
+    void (*const sa_init_build)(const uint8_t *work);
+    void (*const sa_init_parse)(const uint8_t *work);
+    void (*const auth_msg_build)(const uint8_t *work);
+    void (*const auth_msg_open)(const uint8_t *work);
+    void (*const initiator_start)(const uint8_t *work);
+    void (*const initiator_on_sa_init)(const uint8_t *work);
+    void (*const initiator_build_auth_psk)(const uint8_t *work);
+    void (*const initiator_on_auth_psk)(const uint8_t *work);
+    void (*const responder_on_sa_init)(const uint8_t *work);
+    void (*const responder_on_auth_psk)(const uint8_t *work);
+    void (*const informational_build)(const uint8_t *work);
+    void (*const informational_open)(const uint8_t *work);
+    void (*const create_child_sa_build)(const uint8_t *work);
 } IkeNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IkeV or a region of the borrow at a fixed offset.
-void protocore_ike_hdr_build(uint8_t *work);
-void protocore_ike_hdr_parse(uint8_t *work);
-void protocore_ike_set_length(uint8_t *work);
-void protocore_ike_payload_iter_init(uint8_t *work);
-void protocore_ike_payload_next(uint8_t *work);
-void protocore_ike_payload_build(uint8_t *work);
-void protocore_ike_sa_build(uint8_t *work);
-void protocore_ike_ke_build(uint8_t *work);
-void protocore_ike_nonce_build(uint8_t *work);
-void protocore_ike_id_build(uint8_t *work);
-void protocore_ike_auth_build(uint8_t *work);
-void protocore_ike_cert_build(uint8_t *work);
-void protocore_ike_notify_build(uint8_t *work);
-void protocore_ike_delete_build(uint8_t *work);
-void protocore_ike_ts_build(uint8_t *work);
-void protocore_ike_cp_build(uint8_t *work);
-void protocore_ike_sk_build(uint8_t *work);
-void protocore_ike_skf_build(uint8_t *work);
-void protocore_ike_skf_parse(uint8_t *work);
-void protocore_ike_frag_reasm_init(uint8_t *work);
-void protocore_ike_frag_reasm_add(uint8_t *work);
-void protocore_ike_frag_reasm_complete(uint8_t *work);
-void protocore_ike_frag_reasm_assemble(uint8_t *work);
-void protocore_ike_cookie_compute(uint8_t *work);
-void protocore_ike_cookie_verify(uint8_t *work);
-void protocore_ike_cookie_notify_build(uint8_t *work);
-void protocore_ike_ke_parse(uint8_t *work);
-void protocore_ike_id_parse(uint8_t *work);
-void protocore_ike_auth_parse(uint8_t *work);
-void protocore_ike_notify_parse(uint8_t *work);
-void protocore_ike_delete_parse(uint8_t *work);
-void protocore_ike_sk_parse(uint8_t *work);
-void protocore_ike_sa_first_proposal(uint8_t *work);
-void protocore_ike_transform_iter_init(uint8_t *work);
-void protocore_ike_transform_next(uint8_t *work);
-void protocore_ike_ts_count(uint8_t *work);
-void protocore_ike_ts_get(uint8_t *work);
-void protocore_ike_cp_parse(uint8_t *work);
-void protocore_ike_cp_attr_iter_init(uint8_t *work);
-void protocore_ike_cp_attr_next(uint8_t *work);
-void protocore_ike_prf_plus(uint8_t *work);
-void protocore_ike_derive_keys(uint8_t *work);
-void protocore_ike_rekey_derive_keys(uint8_t *work);
-void protocore_ike_child_keymat(uint8_t *work);
-void protocore_ike_suite_keylengths(uint8_t *work);
-void protocore_ike_sa_keys_from_init(uint8_t *work);
-void protocore_ike_sk_aead_seal(uint8_t *work);
-void protocore_ike_sk_aead_open(uint8_t *work);
-void protocore_ike_dh_public(uint8_t *work);
-void protocore_ike_dh_compute(uint8_t *work);
-void protocore_ike_auth_psk(uint8_t *work);
-void protocore_ike_signed_octets(uint8_t *work);
-void protocore_ike_auth_sign_ecdsa_p256(uint8_t *work);
-void protocore_ike_auth_verify_ecdsa_p256(uint8_t *work);
-void protocore_ike_auth_verify_rsa_sha256(uint8_t *work);
-void protocore_ike_sa_init_build(uint8_t *work);
-void protocore_ike_sa_init_parse(uint8_t *work);
-void protocore_ike_auth_msg_build(uint8_t *work);
-void protocore_ike_auth_msg_open(uint8_t *work);
-void protocore_ike_initiator_start(uint8_t *work);
-void protocore_ike_initiator_on_sa_init(uint8_t *work);
-void protocore_ike_initiator_build_auth_psk(uint8_t *work);
-void protocore_ike_initiator_on_auth_psk(uint8_t *work);
-void protocore_ike_responder_on_sa_init(uint8_t *work);
-void protocore_ike_responder_on_auth_psk(uint8_t *work);
-void protocore_ike_informational_build(uint8_t *work);
-void protocore_ike_informational_open(uint8_t *work);
-void protocore_ike_create_child_sa_build(uint8_t *work);
+void protocore_ike_hdr_build(const uint8_t *work);
+void protocore_ike_hdr_parse(const uint8_t *work);
+void protocore_ike_set_length(const uint8_t *work);
+void protocore_ike_payload_iter_init(const uint8_t *work);
+void protocore_ike_payload_next(const uint8_t *work);
+void protocore_ike_payload_build(const uint8_t *work);
+void protocore_ike_sa_build(const uint8_t *work);
+void protocore_ike_ke_build(const uint8_t *work);
+void protocore_ike_nonce_build(const uint8_t *work);
+void protocore_ike_id_build(const uint8_t *work);
+void protocore_ike_auth_build(const uint8_t *work);
+void protocore_ike_cert_build(const uint8_t *work);
+void protocore_ike_notify_build(const uint8_t *work);
+void protocore_ike_delete_build(const uint8_t *work);
+void protocore_ike_ts_build(const uint8_t *work);
+void protocore_ike_cp_build(const uint8_t *work);
+void protocore_ike_sk_build(const uint8_t *work);
+void protocore_ike_skf_build(const uint8_t *work);
+void protocore_ike_skf_parse(const uint8_t *work);
+void protocore_ike_frag_reasm_init(const uint8_t *work);
+void protocore_ike_frag_reasm_add(const uint8_t *work);
+void protocore_ike_frag_reasm_complete(const uint8_t *work);
+void protocore_ike_frag_reasm_assemble(const uint8_t *work);
+void protocore_ike_cookie_compute(const uint8_t *work);
+void protocore_ike_cookie_verify(const uint8_t *work);
+void protocore_ike_cookie_notify_build(const uint8_t *work);
+void protocore_ike_ke_parse(const uint8_t *work);
+void protocore_ike_id_parse(const uint8_t *work);
+void protocore_ike_auth_parse(const uint8_t *work);
+void protocore_ike_notify_parse(const uint8_t *work);
+void protocore_ike_delete_parse(const uint8_t *work);
+void protocore_ike_sk_parse(const uint8_t *work);
+void protocore_ike_sa_first_proposal(const uint8_t *work);
+void protocore_ike_transform_iter_init(const uint8_t *work);
+void protocore_ike_transform_next(const uint8_t *work);
+void protocore_ike_ts_count(const uint8_t *work);
+void protocore_ike_ts_get(const uint8_t *work);
+void protocore_ike_cp_parse(const uint8_t *work);
+void protocore_ike_cp_attr_iter_init(const uint8_t *work);
+void protocore_ike_cp_attr_next(const uint8_t *work);
+void protocore_ike_prf_plus(const uint8_t *work);
+void protocore_ike_derive_keys(const uint8_t *work);
+void protocore_ike_rekey_derive_keys(const uint8_t *work);
+void protocore_ike_child_keymat(const uint8_t *work);
+void protocore_ike_suite_keylengths(const uint8_t *work);
+void protocore_ike_sa_keys_from_init(const uint8_t *work);
+void protocore_ike_sk_aead_seal(const uint8_t *work);
+void protocore_ike_sk_aead_open(const uint8_t *work);
+void protocore_ike_dh_public(const uint8_t *work);
+void protocore_ike_dh_compute(const uint8_t *work);
+void protocore_ike_auth_psk(const uint8_t *work);
+void protocore_ike_signed_octets(const uint8_t *work);
+void protocore_ike_auth_sign_ecdsa_p256(const uint8_t *work);
+void protocore_ike_auth_verify_ecdsa_p256(const uint8_t *work);
+void protocore_ike_auth_verify_rsa_sha256(const uint8_t *work);
+void protocore_ike_sa_init_build(const uint8_t *work);
+void protocore_ike_sa_init_parse(const uint8_t *work);
+void protocore_ike_auth_msg_build(const uint8_t *work);
+void protocore_ike_auth_msg_open(const uint8_t *work);
+void protocore_ike_initiator_start(const uint8_t *work);
+void protocore_ike_initiator_on_sa_init(const uint8_t *work);
+void protocore_ike_initiator_build_auth_psk(const uint8_t *work);
+void protocore_ike_initiator_on_auth_psk(const uint8_t *work);
+void protocore_ike_responder_on_sa_init(const uint8_t *work);
+void protocore_ike_responder_on_auth_psk(const uint8_t *work);
+void protocore_ike_informational_build(const uint8_t *work);
+void protocore_ike_informational_open(const uint8_t *work);
+void protocore_ike_create_child_sa_build(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -1087,7 +1062,7 @@ static const IkeNs Ike __attribute__((unused)) = {
     .create_child_sa_build = protocore_ike_create_child_sa_build,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2
 

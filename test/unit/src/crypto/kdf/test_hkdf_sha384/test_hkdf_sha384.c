@@ -11,7 +11,7 @@
 // A.1 and the RFC 8448 sec 3 "derived" secret at SHA-256 (tools/harness.py crypto hkdf384 --check).
 //
 // A.2's 82-octet request is the row that matters for Expand: at a 48-octet block that is two T(i)
-// blocks and a partial third, so it runs the chain rather than one HMAC.
+// blocks and a partial third. So it runs the chain rather than one HMAC.
 //
 // The Expand-Label rows are the TLS 1.3 labels the schedule actually derives under, at the widths
 // the SHA-384 suites use, so the HkdfLabel encoding (RFC 8446 sec 7.1) is checked against openssl's

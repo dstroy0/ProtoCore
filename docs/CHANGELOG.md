@@ -120,6 +120,9 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`04f72dc`](https://github.com/dstroy0/ProtoCore/commit/04f72dc0413f0a65674e66000725e15eef5525ba))
+- update CHANGELOG.md [skip ci] ([`885a62a`](https://github.com/dstroy0/ProtoCore/commit/885a62a4cf8167030e2c879f20ec795ef9d922c1))
+- update CHANGELOG.md [skip ci] ([`3342c52`](https://github.com/dstroy0/ProtoCore/commit/3342c52c4d6146a90950638e5f9c514066e931e3))
 - update CHANGELOG.md [skip ci] ([`2e6ebf2`](https://github.com/dstroy0/ProtoCore/commit/2e6ebf27d7283b4d88c646b64ef4b7700cd676cd))
 - update CHANGELOG.md [skip ci] ([`5fd58a8`](https://github.com/dstroy0/ProtoCore/commit/5fd58a8effd3c4255c91c1dc4893b5e7bdb74407))
 - update CHANGELOG.md [skip ci] ([`3882125`](https://github.com/dstroy0/ProtoCore/commit/3882125a7d8e1e5b3148e5598fb9311a169366ee))
@@ -469,6 +472,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Every read-only borrow is const down to its context, the operand records drop each dead pointer, and the prose and ASD-STE100 ratchets gate each commit over a list of common engineering words. ([`2de01bf`](https://github.com/dstroy0/ProtoCore/commit/2de01bf050aa96104a189abdebaddffeef51de1a))
+- CI scans a coverage report fitted to the checkout, the core keeps the TCP transport and the HTTP parser, and the tree passes clang-format and Prettier. ([`e47bf0c`](https://github.com/dstroy0/ProtoCore/commit/e47bf0c4ae638c823a79fea3ca0df4d89737ac8a))
+- ProtoCore runs on embedded_types, MMgr and idemIP in place of its own types, libc and lwIP, and the classic ESP32 profile turns each feature off that a build does not ask for. ([`92c7e6e`](https://github.com/dstroy0/ProtoCore/commit/92c7e6e319051766f5e6f83bf926f1c08b38d9a9))
+- The TCP engine resends what the peer does not acknowledge, with the RFC 6298 timer and RFC 5681 fast retransmit, probes a closed window, and ends a connection after R2 or a silent FIN-WAIT-2. ([`783ae11`](https://github.com/dstroy0/ProtoCore/commit/783ae119d9391303de41aecfd77f9f55421f6578))
+- The TCP engine acts on each TCP decision of idemIP over the pool entries, and the stack holds one transmit buffer for each interface that the engine sends through. ([`8d539c0`](https://github.com/dstroy0/ProtoCore/commit/8d539c0324b053965a5c1b794dbe49efc68175cf))
+- ProtoCore carries idemIP behind PROTOCORE_ENABLE_IDEMIP, with a stack module over its units, a Wi-Fi link driver on an MMgr ring, and the settings headers that size both. ([`425eaeb`](https://github.com/dstroy0/ProtoCore/commit/425eaeb17888b1ce9234471c8639f241b94c1e6b))
 - Port the remaining driver, service and storage sketches onto their handles, stop counting the TCP client borrow in builds without it, and bind or restore the library entries the sketch builds found unlinked or returning nothing. ([`6aa2349`](https://github.com/dstroy0/ProtoCore/commit/6aa23491586a594da60ccc2537efa419d8a533a5))
 - Port the remaining service sketches onto their handles, size the ghost cellblocks and the CoAP borrow to what they hold, restore the RTC time source's TimeSourceFn shape, order header designators for C++, and render the footprint table from the main each bot commit lands on. ([`16ed177`](https://github.com/dstroy0/ProtoCore/commit/16ed177364eafb127adce4f4ffd6ef9c0b86351d))
 - Port the NTP, CoAP, mDNS, IPv6, file serving, HTTP client, OIDC, radio power, SPA, delivery and DiffServ sketches onto their handles and add the feature flags their examples need. ([`cf1d425`](https://github.com/dstroy0/ProtoCore/commit/cf1d4252b71d3eb5562bdef2c0f78a85b0509e33))
@@ -900,6 +909,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`ea27317`](https://github.com/dstroy0/ProtoCore/commit/ea27317591cae922993fcb2c8fba8c86b79ea9f3))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`17bea8d`](https://github.com/dstroy0/ProtoCore/commit/17bea8d69f30db5e7679b58d590fbcb99dcda13e))
+- update ESP32 build footprints [skip ci] ([`c4421fd`](https://github.com/dstroy0/ProtoCore/commit/c4421fdd849b5175bb4a77b2966c6ffc518f896d))
+- update ESP32 build footprints [skip ci] ([`a7213fa`](https://github.com/dstroy0/ProtoCore/commit/a7213fa119defb3eeb1307c611261849861ee820))
+- update ESP32 build footprints [skip ci] ([`b08a7ae`](https://github.com/dstroy0/ProtoCore/commit/b08a7aeee7a3671208364a8d3eaf7bcd849e2877))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0fc0f4d`](https://github.com/dstroy0/ProtoCore/commit/0fc0f4d07919941ea4e97add3c8b737da06574e3))
 - update ESP32 build footprints [skip ci] ([`6d470aa`](https://github.com/dstroy0/ProtoCore/commit/6d470aa26badf16d1b56fa8079e8164ca1d066e9))
 - update ESP32 build footprints [skip ci] ([`12deb0e`](https://github.com/dstroy0/ProtoCore/commit/12deb0e8ff2265ab2cb427c2f92efaebed307e21))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`a0f5ba8`](https://github.com/dstroy0/ProtoCore/commit/a0f5ba8ecbce0e31178c64e56aa3b440a210126f))

@@ -14,14 +14,14 @@
 #include "services/fieldbus/rawl2/rawl2.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC32_ISO_HDLC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_rawl2_build(uint8_t *work)
+void protocore_rawl2_build(const uint8_t *work)
 {
     (void)work;
     const uint8_t *dst = Rawl2V.build_args.dst;
@@ -54,13 +54,13 @@ void protocore_rawl2_build(uint8_t *work)
     Rawl2V.n = n;
 }
 
-void protocore_rawl2_build_vlan(uint8_t *work)
+void protocore_rawl2_build_vlan(const uint8_t *work)
 {
     (void)work;
     const uint8_t *dst = Rawl2V.build_vlan_args.dst;
     const uint8_t *src = Rawl2V.build_vlan_args.src;
     uint8_t pcp = Rawl2V.build_vlan_args.pcp;
-    proto_bool dei = Rawl2V.build_vlan_args.dei;
+    embed_bool dei = Rawl2V.build_vlan_args.dei;
     uint16_t vid = Rawl2V.build_vlan_args.vid;
     uint16_t ethertype = Rawl2V.build_vlan_args.ethertype;
     const uint8_t *payload = Rawl2V.build_vlan_args.payload;
@@ -95,7 +95,7 @@ void protocore_rawl2_build_vlan(uint8_t *work)
     Rawl2V.n = n;
 }
 
-void protocore_rawl2_parse(uint8_t *work)
+void protocore_rawl2_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = Rawl2V.parse_args.frame;
@@ -104,7 +104,7 @@ void protocore_rawl2_parse(uint8_t *work)
 
     if (!frame || !out || len < ETH_HDR_LEN)
     {
-        Rawl2V.ok = PROTO_FALSE;
+        Rawl2V.ok = EMBED_FALSE;
         return;
     }
     out->dst = frame;
@@ -114,11 +114,11 @@ void protocore_rawl2_parse(uint8_t *work)
     {
         if (len < ETH_VLAN_HDR_LEN)
         {
-            Rawl2V.ok = PROTO_FALSE;
+            Rawl2V.ok = EMBED_FALSE;
             return;
         }
         uint16_t tci = (uint16_t)((frame[14] << 8) | frame[15]);
-        out->vlan = PROTO_TRUE;
+        out->vlan = EMBED_TRUE;
         out->pcp = (uint8_t)((tci >> 13) & 0x7);
         out->vid = (uint16_t)(tci & 0x0FFF);
         out->ethertype = (uint16_t)((frame[16] << 8) | frame[17]);
@@ -127,14 +127,14 @@ void protocore_rawl2_parse(uint8_t *work)
     }
     else
     {
-        out->vlan = PROTO_FALSE;
+        out->vlan = EMBED_FALSE;
         out->pcp = 0;
         out->vid = 0;
         out->ethertype = et;
         out->payload = frame + ETH_HDR_LEN;
         out->payload_len = len - ETH_HDR_LEN;
     }
-    Rawl2V.ok = PROTO_TRUE;
+    Rawl2V.ok = EMBED_TRUE;
 }
 
 void protocore_rawl2_fcs(uint8_t *work)
@@ -154,6 +154,6 @@ void protocore_rawl2_fcs(uint8_t *work)
 /** @brief The operands and the outcome. */
 Rawl2Vars Rawl2V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RAWL2

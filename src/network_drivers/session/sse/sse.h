@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_SSE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Opening and closing one event stream.
@@ -39,7 +39,7 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-    proto_bool ok; ///< whether the stream opened, or whether a close had one to release
+    embed_bool ok; ///< whether the stream opened, or whether a close had one to release
 } SessionSseVars;
 
 /** @brief The operands and the outcome. */
@@ -66,7 +66,7 @@ static const SessionSseNs SessionSse __attribute__((unused)) = {
     .close = protocore_session_sse_close,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSE
 

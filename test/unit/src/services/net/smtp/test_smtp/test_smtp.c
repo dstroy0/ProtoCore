@@ -17,17 +17,17 @@ typedef struct
     size_t idx;
     char sent[SENT_MAX];
     size_t sent_len;
-    proto_bool dribble;
+    embed_bool dribble;
     size_t dribble_pos;
     const char *fail_send_prefix;
     int upgrades;
-    proto_bool upgrade_ok;
+    embed_bool upgrade_ok;
 } Mock;
 
 static void mock_init(Mock *m)
 {
     memset(m, 0, sizeof *m);
-    m->upgrade_ok = PROTO_TRUE;
+    m->upgrade_ok = EMBED_TRUE;
 }
 
 static void mock_replies(Mock *m, const char *const *r, size_t n)
@@ -40,7 +40,7 @@ static void mock_replies(Mock *m, const char *const *r, size_t n)
     m->reply_n = n;
 }
 
-static proto_bool mock_starttls(void *c)
+static embed_bool mock_starttls(void *c)
 {
     Mock *m = (Mock *)c;
     m->upgrades++;
@@ -323,7 +323,7 @@ void test_partial_reads_dribble(void)
 {
     Mock m;
     mock_happy(&m);
-    m.dribble = PROTO_TRUE;
+    m.dribble = EMBED_TRUE;
     SmtpConfig c = base_cfg();
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
@@ -489,7 +489,7 @@ void test_build_message_boundary_overflows(void)
     static const char *const to_data[] = {"220 x\r\n", "250 OK\r\n", "250 Ok\r\n", "250 Ok\r\n", "354 go\r\n"};
     static const char *const suffixes[] = {"", "\n", "\n."};
     static char body[2070];
-    proto_bool saw_overflow = PROTO_FALSE;
+    embed_bool saw_overflow = EMBED_FALSE;
     for (size_t L = 1850; L <= 2060; L++)
     {
         for (unsigned s = 0; s < sizeof suffixes / sizeof suffixes[0]; s++)
@@ -505,7 +505,7 @@ void test_build_message_boundary_overflows(void)
             TEST_ASSERT_NOT_EQUAL(SMTP_OK, r);
             if (r == SMTP_ERR_OVERFLOW)
             {
-                saw_overflow = PROTO_TRUE;
+                saw_overflow = EMBED_TRUE;
             }
         }
     }
@@ -620,7 +620,7 @@ void test_starttls_handshake_failure_aborts(void)
 {
     Mock m;
     starttls_mock(&m);
-    m.upgrade_ok = PROTO_FALSE;
+    m.upgrade_ok = EMBED_FALSE;
     SmtpConfig c = base_cfg();
     c.port = 587;
     c.security = SMTP_STARTTLS;

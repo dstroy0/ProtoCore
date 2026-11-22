@@ -12,7 +12,7 @@
 #ifndef PROTOCORE_HW_CAPS_EN_H
 #define PROTOCORE_HW_CAPS_EN_H
 
-// A vendor answers these by defining them before this file is reached; anything it did not
+// A vendor answers these by defining them before this file is reached. Anything it did not
 // answer is 0, which is what "the part has no such seam" means. The PROTOCORE_HAS_* questions
 // in hw_caps_en_error.h read them, so this file settles them first.
 

@@ -13,11 +13,12 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/ubx/ubx.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 void protocore_ubx_checksum(const uint8_t *body, size_t len, uint8_t *ck_a, uint8_t *ck_b)
 {
-    uint8_t a = 0, b = 0;
+    uint8_t a = 0;
+    uint8_t b = 0;
     for (size_t i = 0; i < len; i++)
     {
         a = (uint8_t)(a + body[i]);
@@ -55,7 +56,8 @@ size_t protocore_ubx_build(uint8_t *buf, size_t cap, uint8_t cls, uint8_t id, co
     {
         buf[p++] = payload[i];
     }
-    uint8_t a = 0, b = 0;
+    uint8_t a = 0;
+    uint8_t b = 0;
     protocore_ubx_checksum(buf + 2, (size_t)len + 4u, &a, &b); // class..payload end
     buf[p++] = a;
     buf[p++] = b;
@@ -67,32 +69,33 @@ size_t protocore_ubx_build_poll(uint8_t *buf, size_t cap, uint8_t cls, uint8_t i
     return protocore_ubx_build(buf, cap, cls, id, NULL, 0);
 }
 
-proto_bool protocore_ubx_parse(const uint8_t *s, size_t len, protocore_ubx *out)
+embed_bool protocore_ubx_parse(const uint8_t *s, size_t len, protocore_ubx *out)
 {
     if (!s || !out || len < 8)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (s[0] != PROTOCORE_UBX_SYNC1 || s[1] != PROTOCORE_UBX_SYNC2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint16_t plen = (uint16_t)(s[4] | ((uint16_t)s[5] << 8));
     if (len < 8u + (size_t)plen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    uint8_t a = 0, b = 0;
+    uint8_t a = 0;
+    uint8_t b = 0;
     protocore_ubx_checksum(s + 2, (size_t)plen + 4u, &a, &b);
     if (a != s[6 + plen] || b != s[7 + plen])
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->cls = s[2];
     out->id = s[3];
     out->len = plen;
     out->payload = s + 6;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 int protocore_ubx_ack(const protocore_ubx *m, uint8_t *acked_cls, uint8_t *acked_id)
@@ -136,15 +139,15 @@ int32_t protocore_ubx_i32(const uint8_t *p, size_t off)
     return (int32_t)protocore_ubx_u32(p, off);
 }
 
-proto_bool protocore_ubx_parse_nav_pvt(const protocore_ubx *m, protocore_ubx_nav_pvt *out)
+embed_bool protocore_ubx_parse_nav_pvt(const protocore_ubx *m, protocore_ubx_nav_pvt *out)
 {
     if (!m || !out || !m->payload)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m->cls != PROTOCORE_UBX_CLASS_NAV || m->id != PROTOCORE_UBX_NAV_PVT || m->len < PROTOCORE_UBX_NAV_PVT_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *p = m->payload;
     out->itow_ms = protocore_ubx_u32(p, 0);
@@ -174,51 +177,51 @@ proto_bool protocore_ubx_parse_nav_pvt(const protocore_ubx *m, protocore_ubx_nav
     out->s_acc_mm_s = protocore_ubx_u32(p, 68);
     out->head_acc_1e5 = protocore_ubx_u32(p, 72);
     out->pdop_1e2 = protocore_ubx_u16(p, 76);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // True iff m is a NAV-SAT frame whose declared length holds the fixed header + numSvs blocks.
-static proto_bool ubx_nav_sat_ok(const protocore_ubx *m, uint8_t *num_svs_out)
+static embed_bool ubx_nav_sat_ok(const protocore_ubx *m, uint8_t *num_svs_out)
 {
     if (!m || !m->payload || m->cls != PROTOCORE_UBX_CLASS_NAV || m->id != PROTOCORE_UBX_NAV_SAT)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m->len < PROTOCORE_UBX_NAV_SAT_HDR_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t num = m->payload[5]; // numSvs
     if ((size_t)m->len < (size_t)PROTOCORE_UBX_NAV_SAT_HDR_LEN + (size_t)num * PROTOCORE_UBX_NAV_SAT_ENTRY_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (num_svs_out)
     {
         *num_svs_out = num;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ubx_parse_nav_sat(const protocore_ubx *m, protocore_ubx_nav_sat_hdr *out)
+embed_bool protocore_ubx_parse_nav_sat(const protocore_ubx *m, protocore_ubx_nav_sat_hdr *out)
 {
     uint8_t num = 0;
     if (!out || !ubx_nav_sat_ok(m, &num))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->itow_ms = protocore_ubx_u32(m->payload, 0);
     out->version = m->payload[4];
     out->num_svs = num;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ubx_nav_sat_get(const protocore_ubx *m, uint8_t index, protocore_ubx_sat *out)
+embed_bool protocore_ubx_nav_sat_get(const protocore_ubx *m, uint8_t index, protocore_ubx_sat *out)
 {
     uint8_t num = 0;
     if (!out || !ubx_nav_sat_ok(m, &num) || index >= num)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *p = m->payload + PROTOCORE_UBX_NAV_SAT_HDR_LEN + (size_t)index * PROTOCORE_UBX_NAV_SAT_ENTRY_LEN;
     out->gnss_id = p[0];
@@ -228,19 +231,19 @@ proto_bool protocore_ubx_nav_sat_get(const protocore_ubx *m, uint8_t index, prot
     out->azim_deg = protocore_ubx_i16(p, 4);
     out->pr_res_01m = protocore_ubx_i16(p, 6);
     out->flags = protocore_ubx_u32(p, 8);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ubx_parse_nav_timeutc(const protocore_ubx *m, protocore_ubx_nav_time_utc *out)
+embed_bool protocore_ubx_parse_nav_timeutc(const protocore_ubx *m, protocore_ubx_nav_time_utc *out)
 {
     if (!m || !out || !m->payload)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m->cls != PROTOCORE_UBX_CLASS_NAV || m->id != PROTOCORE_UBX_NAV_TIMEUTC ||
         m->len < PROTOCORE_UBX_NAV_TIMEUTC_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *p = m->payload;
     out->itow_ms = protocore_ubx_u32(p, 0);
@@ -254,7 +257,7 @@ proto_bool protocore_ubx_parse_nav_timeutc(const protocore_ubx *m, protocore_ubx
     out->second = p[18];
     out->valid = p[19];
     out->utc_valid = (p[19] & PROTOCORE_UBX_TIMEUTC_VALID_UTC) != 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_ubx_build_cfg_msg(uint8_t *buf, size_t cap, uint8_t cls, uint8_t id, uint8_t rate)
@@ -419,6 +422,6 @@ int protocore_ubx_stream_feed(protocore_ubx_stream *st, uint8_t b, protocore_ubx
     }
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UBX

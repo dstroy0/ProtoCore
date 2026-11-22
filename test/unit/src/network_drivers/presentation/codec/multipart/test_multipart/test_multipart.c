@@ -18,7 +18,8 @@ static void reset_slot(uint8_t slot)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    conn_pool[slot].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+               .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConnV.slot = slot;
@@ -107,8 +108,8 @@ void test_no_content_type_returns_false()
     HttpConn.parse(protocore_http_conn_span());
 
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, &http_pool[0], &mp);
-    proto_bool ok = multipart_ok;
+    embed_bool multipart_ok = Multipart.parse(multipart_work, &http_pool[0], &mp);
+    embed_bool ok = multipart_ok;
     TEST_ASSERT_FALSE(ok);
 }
 
@@ -129,7 +130,7 @@ void test_no_boundary_in_content_type_returns_false()
     HttpConn.parse(protocore_http_conn_span());
 
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, &http_pool[0], &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, &http_pool[0], &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -140,7 +141,7 @@ void test_body_missing_delimiter_returns_false()
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
 
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -155,7 +156,7 @@ void test_single_text_field_parsed()
 
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_NOT_NULL(mp.parts[0].name);
@@ -179,7 +180,7 @@ void test_two_text_fields_parsed()
 
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(2, mp.part_count);
 
@@ -209,7 +210,7 @@ void test_three_text_fields_parsed()
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(3, mp.part_count);
     TEST_ASSERT_EQUAL_STRING("AAA", mp.parts[0].data);
@@ -229,7 +230,7 @@ void test_file_upload_part()
 
     HttpReq *req = build_multipart_req(0, "BOUND", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
 
@@ -259,7 +260,7 @@ void test_file_upload_with_text_field()
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(2, mp.part_count);
 
@@ -349,7 +350,7 @@ void test_data_len_is_correct()
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_UINT(strlen(data_str), mp.parts[0].data_len);
 }
@@ -373,7 +374,7 @@ void test_max_parts_captured()
     char buf[2048];
     HttpReq *req = build_multipart_req(0, "BND", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(MAX_MULTIPART_PARTS, mp.part_count);
 }
@@ -389,7 +390,7 @@ void test_empty_field_value()
 
     HttpReq *req = build_multipart_req(0, "B", body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_EQUAL_UINT(0, mp.parts[0].data_len);
@@ -443,7 +444,7 @@ void test_long_boundary_string()
     char buf[512];
     HttpReq *req = build_multipart_req(0, boundary, body, buf, sizeof(buf));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_STRING("long_boundary_test", mp.parts[0].data);
 }
@@ -468,7 +469,7 @@ void stress_parse_100_requests()
         char buf[256];
         HttpReq *req = build_multipart_req(slot, "B", body, buf, sizeof(buf));
         MultipartBody mp;
-        proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+        embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
         TEST_ASSERT_TRUE_MESSAGE(multipart_ok, "parse failed");
         TEST_ASSERT_EQUAL_STRING_MESSAGE(val, mp.parts[0].data, "value mismatch");
     }
@@ -518,7 +519,7 @@ void test_binary_part_not_truncated()
 
     HttpReq *req = build_multipart_req_bin(0, "BND", body, n);
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_EQUAL_size_t(plen, mp.parts[0].data_len);
@@ -533,7 +534,7 @@ void test_quoted_boundary()
     const char *body = "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nval\r\n--BND--\r\n";
     HttpReq *req = build_multipart_req(0, "\"BND\"", body, bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_EQUAL_STRING("val", mp.parts[0].data);
@@ -544,7 +545,7 @@ void test_empty_boundary_returns_false()
     char bb[128];
     HttpReq *req = build_multipart_req(0, "\"\"", "--\r\n\r\n", bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -555,7 +556,7 @@ void test_malformed_disposition_values()
 
     const char *b1 = "--BND\r\nContent-Disposition: form-data; name=nq\r\n\r\nx\r\n--BND--\r\n";
     HttpReq *r1 = build_multipart_req(0, "BND", b1, bb, sizeof(bb));
-    proto_bool multipart_ok = Multipart.parse(multipart_work, r1, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, r1, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_NULL(mp.parts[0].name);
@@ -572,7 +573,7 @@ void test_body_shorter_than_delimiter()
     char bb[64];
     HttpReq *req = build_multipart_req(0, "BND", "--B", bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -581,7 +582,7 @@ void test_truncated_part_fails_closed()
     char bb[256];
     MultipartBody mp;
     HttpReq *r1 = build_multipart_req(0, "BND", "--BND\r\nContent-Disposition: form-data; name=\"f\"", bb, sizeof(bb));
-    proto_bool multipart_ok = Multipart.parse(multipart_work, r1, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, r1, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
     HttpReq *r2 = build_multipart_req(
         0, "BND", "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\ndata-no-end", bb, sizeof(bb));
@@ -595,7 +596,7 @@ void test_boundary_stops_at_semicolon_or_space()
     MultipartBody mp;
     const char *b1 = "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\nv1\r\n--BND--\r\n";
     HttpReq *r1 = build_multipart_req(0, "BND;charset=utf-8", b1, bb, sizeof(bb));
-    proto_bool multipart_ok = Multipart.parse(multipart_work, r1, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, r1, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_STRING("v1", mp.parts[0].data);
 
@@ -611,7 +612,7 @@ void test_empty_multipart_body_has_no_parts()
     char bb[64];
     HttpReq *req = build_multipart_req(0, "BND", "--BND--\r\n", bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(0, mp.part_count);
 }
@@ -621,7 +622,7 @@ void test_lone_cr_after_delimiter_fails_closed()
     char bb[64];
     HttpReq *req = build_multipart_req(0, "BND", "--BND\rzzz", bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -631,7 +632,7 @@ void test_unrecognized_header_line_yields_null_name()
     const char *body = "--BND\r\n-X\r\n\r\ndata\r\n--BND--\r\n";
     HttpReq *req = build_multipart_req(0, "BND", body, bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_INT(1, mp.part_count);
     TEST_ASSERT_NULL(mp.parts[0].name);
@@ -646,7 +647,7 @@ void test_part_data_ends_exactly_at_buffer_end()
     HttpReq *req = build_multipart_req(
         0, "BND", "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\ndata\r\n--BND", bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -655,7 +656,7 @@ void test_delimiter_with_nothing_after_it()
     char bb[32];
     HttpReq *req = build_multipart_req(0, "BND", "--BND", bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -665,7 +666,7 @@ void test_lone_cr_after_data_delimiter_fails_closed()
     const char *body = "--BND\r\nContent-Disposition: form-data; name=\"f\"\r\n\r\ndata\r\n--BND\rZ";
     HttpReq *req = build_multipart_req(0, "BND", body, bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_FALSE(multipart_ok);
 }
 
@@ -675,7 +676,7 @@ void test_content_disposition_no_space_after_colon()
     const char *body = "--BND\r\nContent-Disposition:form-data; name=\"f\"\r\n\r\nval\r\n--BND--\r\n";
     HttpReq *req = build_multipart_req(0, "BND", body, bb, sizeof(bb));
     MultipartBody mp;
-    proto_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
+    embed_bool multipart_ok = Multipart.parse(multipart_work, req, &mp);
     TEST_ASSERT_TRUE(multipart_ok);
     TEST_ASSERT_EQUAL_STRING("f", mp.parts[0].name);
     TEST_ASSERT_EQUAL_STRING("val", mp.parts[0].data);

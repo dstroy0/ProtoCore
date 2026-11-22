@@ -112,7 +112,7 @@ void test_listen_set_dscp_override_and_sentinel()
     TcpListenerV.idx = 0;
     TcpListenerV.bind.port = 8080;
     TcpListenerV.bind.proto = PROTO_HTTP;
-    TcpListenerV.bind.tls = PROTO_FALSE;
+    TcpListenerV.bind.tls = EMBED_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DSCP_UNSET, listener_pool[0].dscp);
@@ -151,7 +151,7 @@ void test_accept_cb_applies_per_listener_dscp_override()
     TcpListenerV.idx = 0;
     TcpListenerV.bind.port = 8080;
     TcpListenerV.bind.proto = PROTO_HTTP;
-    TcpListenerV.bind.tls = PROTO_FALSE;
+    TcpListenerV.bind.tls = EMBED_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
     TcpListenerV.bind.dscp = PROTOCORE_DSCP_EF;
@@ -173,7 +173,7 @@ void test_accept_cb_falls_back_to_server_default_dscp()
     TcpListenerV.idx = 0;
     TcpListenerV.bind.port = 8080;
     TcpListenerV.bind.proto = PROTO_HTTP;
-    TcpListenerV.bind.tls = PROTO_FALSE;
+    TcpListenerV.bind.tls = EMBED_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
     DiffServV.dscp = PROTOCORE_DSCP_AF41;
@@ -194,7 +194,7 @@ void test_accept_cb_skips_tos_write_at_best_effort()
     TcpListenerV.idx = 0;
     TcpListenerV.bind.port = 8080;
     TcpListenerV.bind.proto = PROTO_HTTP;
-    TcpListenerV.bind.tls = PROTO_FALSE;
+    TcpListenerV.bind.tls = EMBED_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL(1, TcpListenerV.i32);
 
@@ -213,7 +213,7 @@ void test_dynamic_listener_inherits_default_dscp()
     TcpListenerV.idx = 1;
     TcpListenerV.bind.port = 2222;
     TcpListenerV.bind.proto = PROTO_HTTP;
-    TcpListenerV.bind.tls = PROTO_FALSE;
+    TcpListenerV.bind.tls = EMBED_FALSE;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DSCP_UNSET, listener_pool[1].dscp);

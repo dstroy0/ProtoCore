@@ -37,7 +37,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Open modes.
@@ -46,13 +46,12 @@ PROTOCORE_BEGIN_DECLS
  * at end-of-file whatever the position says, which is what O_APPEND means on a real filesystem, so a
  * caller that overwrites in place has to ask for RDWR and a backend that cannot offer it answers -1.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_MNT_READ = 0,   ///< Read existing file (fails if absent).
-    PROTOCORE_MNT_WRITE = 1,  ///< Create/truncate for writing.
-    PROTOCORE_MNT_APPEND = 2, ///< Create/open for appending at end.
-    PROTOCORE_MNT_RDWR = 3,   ///< Open existing for random read+write, no truncation (fails if absent).
-} protocore_mnt_mode;
+EMBED_ENUM_BYTE(protocore_mnt_mode,
+                PROTOCORE_MNT_READ = 0,   ///< Read existing file (fails if absent).
+                PROTOCORE_MNT_WRITE = 1,  ///< Create/truncate for writing.
+                PROTOCORE_MNT_APPEND = 2, ///< Create/open for appending at end.
+                PROTOCORE_MNT_RDWR = 3,   ///< Open existing for random read+write, no truncation (fails if absent).
+);
 
 /**
  * @brief What a stat and a directory entry both answer: the facts about one file, and no name.
@@ -69,7 +68,7 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    proto_bool is_dir;
+    embed_bool is_dir;
     uint64_t size;  ///< 0 for a directory
     uint32_t mtime; ///< unix epoch seconds, 0 if the backend keeps no timestamp
 } protocore_mnt_stat;
@@ -90,17 +89,17 @@ typedef struct protocore_mnt_backend
     int (*read)(int handle, void *buf, size_t n);                  ///< bytes read, or -1.
     int (*write)(int handle, const void *buf, size_t n);           ///< bytes written, or -1.
     void (*close)(int handle);                                     ///< release a file OR directory handle.
-    proto_bool (*seek)(int handle, uint64_t off);                  ///< absolute seek; false if unsupported.
+    embed_bool (*seek)(int handle, uint64_t off);                  ///< absolute seek; false if unsupported.
     long (*size)(const char *path);                                ///< file size, or -1 if absent.
-    proto_bool (*exists)(const char *path);                        ///< true if the path exists.
-    proto_bool (*remove)(const char *path);                        ///< delete a file; true on success.
-    proto_bool (*rename)(const char *from, const char *to);        ///< rename; true on success.
-    proto_bool (*mkdir)(const char *path);                         ///< create a directory; true on success.
-    proto_bool (*rmdir)(const char *path);                         ///< remove an empty directory; true on success.
-    proto_bool (*stat)(const char *path, protocore_mnt_stat *out); ///< fill @p out for @p path; false if absent.
+    embed_bool (*exists)(const char *path);                        ///< true if the path exists.
+    embed_bool (*remove)(const char *path);                        ///< delete a file; true on success.
+    embed_bool (*rename)(const char *from, const char *to);        ///< rename; true on success.
+    embed_bool (*mkdir)(const char *path);                         ///< create a directory; true on success.
+    embed_bool (*rmdir)(const char *path);                         ///< remove an empty directory; true on success.
+    embed_bool (*stat)(const char *path, protocore_mnt_stat *out); ///< fill @p out for @p path; false if absent.
     int (*opendir)(const char *path);                              ///< -> directory handle (>=0) or -1.
     /** @brief Next entry: facts into @p out, name into @p name (NUL-terminated). False at end. */
-    proto_bool (*readdir)(int handle, protocore_mnt_stat *out, char *name, size_t name_cap);
+    embed_bool (*readdir)(int handle, protocore_mnt_stat *out, char *name, size_t name_cap);
     /**
      * @brief Push everything written to @p handle past the backend's own buffering, and report
      *        whether it got there. May be NULL when the backend cannot promise it.
@@ -111,7 +110,7 @@ typedef struct protocore_mnt_backend
      * mount rather than running as though it had one. Returning true without doing anything would
      * make an unsafe store indistinguishable from a safe one.
      */
-    proto_bool (*sync)(int handle);
+    embed_bool (*sync)(int handle);
 } protocore_mnt_backend;
 
 // Everything above and the two calls below are the HAL: the shape of a store, and which one is
@@ -161,22 +160,22 @@ extern MntVars MntV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const point_add)(uint8_t *work);
-    void (*const point_of)(uint8_t *work);
-    void (*const root_of)(uint8_t *work);
-    void (*const reset)(uint8_t *work);
-    void (*const mount)(uint8_t *work);
-    void (*const active)(uint8_t *work);
+    void (*const point_add)(const uint8_t *work);
+    void (*const point_of)(const uint8_t *work);
+    void (*const root_of)(const uint8_t *work);
+    void (*const reset)(const uint8_t *work);
+    void (*const mount)(const uint8_t *work);
+    void (*const active)(const uint8_t *work);
 } MntNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MntV or a region of the borrow at a fixed offset.
-void protocore_mnt_point_add(uint8_t *work);
-void protocore_mnt_point_of(uint8_t *work);
-void protocore_mnt_root_of(uint8_t *work);
-void protocore_mnt_reset(uint8_t *work);
-void protocore_mnt_mount(uint8_t *work);
-void protocore_mnt_active(uint8_t *work);
+void protocore_mnt_point_add(const uint8_t *work);
+void protocore_mnt_point_of(const uint8_t *work);
+void protocore_mnt_root_of(const uint8_t *work);
+void protocore_mnt_reset(const uint8_t *work);
+void protocore_mnt_mount(const uint8_t *work);
+void protocore_mnt_active(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -191,6 +190,6 @@ static const MntNs Mnt __attribute__((unused)) = {
     .active = protocore_mnt_active,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_MNT_H

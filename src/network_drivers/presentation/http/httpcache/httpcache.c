@@ -14,7 +14,7 @@
 #include "httpcache.h"
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const size_t CC_SENT = (size_t)-1; // overflow sentinel threaded through the emitters
 
@@ -24,23 +24,23 @@ static const size_t CC_SENT = (size_t)-1; // overflow sentinel threaded through 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_httpcache_control_init(uint8_t *work);
+void protocore_httpcache_control_init(const uint8_t *work);
 
-void protocore_httpcache_control_init(uint8_t *work)
+void protocore_httpcache_control_init(const uint8_t *work)
 {
     (void)work;
     protocore_cache_control *cc = HttpcacheV.control_init_args.cc;
 
-    cc->cc_public = PROTO_FALSE;
-    cc->cc_private = PROTO_FALSE;
-    cc->no_store = PROTO_FALSE;
-    cc->no_cache = PROTO_FALSE;
-    cc->no_transform = PROTO_FALSE;
-    cc->must_revalidate = PROTO_FALSE;
-    cc->proxy_revalidate = PROTO_FALSE;
-    cc->must_understand = PROTO_FALSE;
-    cc->cc_immutable = PROTO_FALSE;
-    cc->only_if_cached = PROTO_FALSE;
+    cc->cc_public = EMBED_FALSE;
+    cc->cc_private = EMBED_FALSE;
+    cc->no_store = EMBED_FALSE;
+    cc->no_cache = EMBED_FALSE;
+    cc->no_transform = EMBED_FALSE;
+    cc->must_revalidate = EMBED_FALSE;
+    cc->proxy_revalidate = EMBED_FALSE;
+    cc->must_understand = EMBED_FALSE;
+    cc->cc_immutable = EMBED_FALSE;
+    cc->only_if_cached = EMBED_FALSE;
     cc->max_age = -1;
     cc->s_maxage = -1;
     cc->stale_while_revalidate = -1;
@@ -79,7 +79,7 @@ static size_t cc_emit_uint(char *buf, size_t cap, size_t n, unsigned v)
 }
 
 // Emit one bare token (with the ", " separator before all but the first).
-static size_t cc_tok(char *buf, size_t cap, size_t n, proto_bool *first, const char *tok)
+static size_t cc_tok(char *buf, size_t cap, size_t n, embed_bool *first, const char *tok)
 {
     if (n == CC_SENT)
     {
@@ -97,12 +97,12 @@ static size_t cc_tok(char *buf, size_t cap, size_t n, proto_bool *first, const c
         buf[n++] = ' ';
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + n, .src = tok, .bytes = tlen);
-    *first = PROTO_FALSE;
+    *first = EMBED_FALSE;
     return n + tlen;
 }
 
 // Emit "key=value".
-static size_t cc_kv(char *buf, size_t cap, size_t n, proto_bool *first, const char *key, long v)
+static size_t cc_kv(char *buf, size_t cap, size_t n, embed_bool *first, const char *key, long v)
 {
     n = cc_tok(buf, cap, n, first, key);
     if (n == CC_SENT || n >= cap)
@@ -113,7 +113,7 @@ static size_t cc_kv(char *buf, size_t cap, size_t n, proto_bool *first, const ch
     return cc_emit_uint(buf, cap, n, (unsigned)v);
 }
 
-void protocore_httpcache_control_build(uint8_t *work)
+void protocore_httpcache_control_build(const uint8_t *work)
 {
     (void)work;
     char *buf = HttpcacheV.control_build_args.buf;
@@ -126,7 +126,7 @@ void protocore_httpcache_control_build(uint8_t *work)
         return;
     }
     size_t n = 0;
-    proto_bool first = PROTO_TRUE;
+    embed_bool first = EMBED_TRUE;
 
     if (cc->cc_public)
     {
@@ -209,7 +209,7 @@ void protocore_httpcache_control_build(uint8_t *work)
 // --- parse -----------------------------------------------------------------
 
 // Case-insensitive compare of [s,s+len) to the (lowercase) NUL-terminated @p target.
-static proto_bool cc_ci_eq(const char *s, size_t len, const char *target)
+static embed_bool cc_ci_eq(const char *s, size_t len, const char *target)
 {
     size_t i = 0;
     for (; i < len && target[i]; i++)
@@ -221,7 +221,7 @@ static proto_bool cc_ci_eq(const char *s, size_t len, const char *target)
         }
         if (c != target[i])
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     return i == len && target[i] == 0;
@@ -244,13 +244,13 @@ static int32_t cc_parse_delta(const char *v, size_t vlen)
     // before the clamp below could ever observe a value above INT32_MAX. Clamping every iteration keeps
     // val <= INT32_MAX, so the next multiply-add stays far inside int64_t no matter how many digits arrive.
     int64_t val = -1;
-    proto_bool any = PROTO_FALSE;
+    embed_bool any = EMBED_FALSE;
     while (i < vlen && v[i] >= '0' && v[i] <= '9')
     {
         if (!any)
         {
             val = 0;
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
         val = val * 10 + (v[i] - '0');
         if (val > 2147483647)
@@ -262,47 +262,47 @@ static int32_t cc_parse_delta(const char *v, size_t vlen)
     return any ? (int32_t)val : -1;
 }
 
-static proto_bool cc_match(protocore_cache_control *cc, const char *name, size_t nlen, const char *val, size_t vlen)
+static embed_bool cc_match(protocore_cache_control *cc, const char *name, size_t nlen, const char *val, size_t vlen)
 {
     if (cc_ci_eq(name, nlen, "public"))
     {
-        cc->cc_public = PROTO_TRUE;
+        cc->cc_public = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "private"))
     {
-        cc->cc_private = PROTO_TRUE;
+        cc->cc_private = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "no-store"))
     {
-        cc->no_store = PROTO_TRUE;
+        cc->no_store = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "no-cache"))
     {
-        cc->no_cache = PROTO_TRUE;
+        cc->no_cache = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "no-transform"))
     {
-        cc->no_transform = PROTO_TRUE;
+        cc->no_transform = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "must-revalidate"))
     {
-        cc->must_revalidate = PROTO_TRUE;
+        cc->must_revalidate = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "proxy-revalidate"))
     {
-        cc->proxy_revalidate = PROTO_TRUE;
+        cc->proxy_revalidate = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "must-understand"))
     {
-        cc->must_understand = PROTO_TRUE;
+        cc->must_understand = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "immutable"))
     {
-        cc->cc_immutable = PROTO_TRUE;
+        cc->cc_immutable = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "only-if-cached"))
     {
-        cc->only_if_cached = PROTO_TRUE;
+        cc->only_if_cached = EMBED_TRUE;
     }
     else if (cc_ci_eq(name, nlen, "max-age"))
     {
@@ -330,14 +330,14 @@ static proto_bool cc_match(protocore_cache_control *cc, const char *name, size_t
     }
     else
     {
-        return PROTO_FALSE; // unknown directive - ignored
+        return EMBED_FALSE; // unknown directive - ignored
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Parse one comma-separated directive starting at *i (advancing past it) and apply it; returns true
 // if a known directive matched.
-static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i, protocore_cache_control *cc)
+static embed_bool cache_parse_one_directive(const char *s, size_t len, size_t *i, protocore_cache_control *cc)
 {
     while (*i < len && (s[*i] == ',' || s[*i] == ' ' || s[*i] == '\t'))
     {
@@ -345,7 +345,7 @@ static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i
     }
     if (*i >= len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t start = *i;
     while (*i < len && s[*i] != ',')
@@ -386,16 +386,16 @@ void protocore_httpcache_control_parse(uint8_t *work)
     protocore_httpcache_control_init(work);
     if (!s)
     {
-        HttpcacheV.ok = PROTO_FALSE;
+        HttpcacheV.ok = EMBED_FALSE;
         return;
     }
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     size_t i = 0;
     while (i < len)
     {
         if (cache_parse_one_directive(s, len, &i, cc))
         {
-            found = PROTO_TRUE;
+            found = EMBED_TRUE;
         }
     }
     HttpcacheV.ok = found;
@@ -410,9 +410,9 @@ void protocore_httpcache_immutable_asset(uint8_t *work)
 
     HttpcacheV.control_init_args.cc = cc;
     protocore_httpcache_control_init(work);
-    cc->cc_public = PROTO_TRUE;
+    cc->cc_public = EMBED_TRUE;
     cc->max_age = (int32_t)(max_age > 2147483647u ? 2147483647u : max_age);
-    cc->cc_immutable = PROTO_TRUE;
+    cc->cc_immutable = EMBED_TRUE;
 }
 
 void protocore_httpcache_revalidatable(uint8_t *work)
@@ -423,7 +423,7 @@ void protocore_httpcache_revalidatable(uint8_t *work)
 
     HttpcacheV.control_init_args.cc = cc;
     protocore_httpcache_control_init(work);
-    cc->cc_public = PROTO_TRUE;
+    cc->cc_public = EMBED_TRUE;
     cc->max_age = (int32_t)(max_age > 2147483647u ? 2147483647u : max_age);
     if (stale_while_revalidate >= 0)
     {
@@ -437,7 +437,7 @@ void protocore_httpcache_no_store(uint8_t *work)
 
     HttpcacheV.control_init_args.cc = cc;
     protocore_httpcache_control_init(work);
-    cc->no_store = PROTO_TRUE;
+    cc->no_store = EMBED_TRUE;
 }
 
 void protocore_httpcache_shared(uint8_t *work)
@@ -448,16 +448,16 @@ void protocore_httpcache_shared(uint8_t *work)
 
     HttpcacheV.control_init_args.cc = cc;
     protocore_httpcache_control_init(work);
-    cc->cc_public = PROTO_TRUE;
+    cc->cc_public = EMBED_TRUE;
     cc->max_age = (int32_t)(max_age > 2147483647u ? 2147483647u : max_age);
     cc->s_maxage = (int32_t)(s_maxage > 2147483647u ? 2147483647u : s_maxage);
 }
 
-void protocore_httpcache_freshness_lifetime(uint8_t *work)
+void protocore_httpcache_freshness_lifetime(const uint8_t *work)
 {
     (void)work;
     const protocore_cache_control *cc = HttpcacheV.freshness_lifetime_args.cc;
-    proto_bool shared = HttpcacheV.freshness_lifetime_args.shared;
+    embed_bool shared = HttpcacheV.freshness_lifetime_args.shared;
     long expires_minus_date = HttpcacheV.freshness_lifetime_args.expires_minus_date;
 
     if (shared && cc->s_maxage >= 0)
@@ -481,6 +481,6 @@ void protocore_httpcache_freshness_lifetime(uint8_t *work)
 /** @brief The operands and the outcome. */
 HttpcacheVars HttpcacheV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CACHE

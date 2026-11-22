@@ -15,7 +15,7 @@
 
 // memcpy / memcmp / memset (framing + parsing are hand-rolled)
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Write the fixed 8-byte header (big-endian payload length + 4-char mnemonic) once the payload is in
 // place, and return the total telegram length. Callers guarantee the buffer holds header + payload.
@@ -31,24 +31,24 @@ static size_t finalize(uint8_t *buf, const char *mnemonic, size_t payload_len)
 
 // Append the bytes of NUL-terminated src plus one trailing NUL into buf at *pos, bounded by cap.
 // Returns false on overflow (leaving *pos partially advanced - the caller fails the whole build).
-static proto_bool append_cstr_nul(uint8_t *buf, size_t cap, size_t *pos, const char *src)
+static embed_bool append_cstr_nul(uint8_t *buf, size_t cap, size_t *pos, const char *src)
 {
     size_t p = *pos;
     for (const char *s = src; *s != '\0'; ++s)
     {
         if (p >= cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         buf[p++] = (uint8_t)*s;
     }
     if (p >= cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     buf[p++] = 0x00;
     *pos = p;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, const uint8_t *payload, size_t payload_len)
@@ -76,11 +76,11 @@ size_t protocore_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, cons
     return finalize(buf, mnemonic, payload_len);
 }
 
-proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed)
+embed_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out->mnemonic, .val = 0, .bytes = PROTOCORE_LSV2_MNEMONIC_LEN);
     out->payload = NULL;
@@ -88,14 +88,14 @@ proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *ou
 
     if (!buf || len < PROTOCORE_LSV2_HEADER_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint32_t plen = ((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | (uint32_t)buf[3];
     size_t total = (size_t)PROTOCORE_LSV2_HEADER_LEN + plen;
     if (len < total)
     {
-        return PROTO_FALSE; // incomplete - caller accumulates more
+        return EMBED_FALSE; // incomplete - caller accumulates more
     }
 
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->mnemonic, .src = buf + 4, .bytes = PROTOCORE_LSV2_MNEMONIC_LEN);
@@ -105,10 +105,10 @@ proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *ou
     {
         *consumed = total;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4)
+embed_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4)
 {
     return t && mnemonic4 &&
            EMBED_CALL(memor.cmp, MemoriaCfg, .src = t->mnemonic, .other = mnemonic4,
@@ -172,21 +172,21 @@ size_t protocore_lsv2_build_run_info(uint8_t *buf, size_t cap, uint16_t info_cod
     return finalize(buf, PROTOCORE_LSV2_CMD_RUN_INFO, 2);
 }
 
-proto_bool protocore_lsv2_is_ok(const Lsv2Telegram *t)
+embed_bool protocore_lsv2_is_ok(const Lsv2Telegram *t)
 {
     return protocore_lsv2_is(t, PROTOCORE_LSV2_RSP_OK);
 }
 
-proto_bool protocore_lsv2_is_error(const Lsv2Telegram *t)
+embed_bool protocore_lsv2_is_error(const Lsv2Telegram *t)
 {
     return protocore_lsv2_is(t, PROTOCORE_LSV2_RSP_ERROR) || protocore_lsv2_is(t, PROTOCORE_LSV2_RSP_XFER_ERR);
 }
 
-proto_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code)
+embed_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code)
 {
     if (!protocore_lsv2_is_error(t) || t->payload_len != 2 || !t->payload)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (err_class)
     {
@@ -196,9 +196,9 @@ proto_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8
     {
         *err_code = t->payload[1];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LSV2

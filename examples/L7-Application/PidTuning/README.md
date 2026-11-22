@@ -8,7 +8,7 @@
 hand on hardware is slow and risky, so this example shows the **offline** workflow:
 the device runs the loop and records it, you pull the run down as a CSV, and
 [`tools/pid_tune.py`](../../../tools/pid_tune.py) identifies the plant, simulates
-candidate gains, and hands you better `Kp/Ki/Kd` — no trial-and-error on the motor.
+candidate gains, and hands you better `Kp/Ki/Kd` - no trial-and-error on the motor.
 
 **The control loop** runs at a fixed rate and records each step:
 
@@ -21,7 +21,7 @@ plant_write(u, dt);                // your actuator (PWM, dshot, CiA 402 target,
 
 So it runs on **any ESP32 with no extra hardware**, `plant_read()`/`plant_write()`
 here are a simulated first-order process. To tune a real loop, replace those two
-functions with your sensor read and actuator write — nothing else changes.
+functions with your sensor read and actuator write - nothing else changes.
 
 **The run is served as a self-describing CSV** at `GET /log.csv`: a `# pid ...`
 metadata line (the gains + limits + rate the run used, so the tuner needs no flags),

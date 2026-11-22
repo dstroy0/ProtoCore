@@ -10,7 +10,7 @@
 // I/O (starts the responder, joins the multicast group, transmits DNS-SD records). The only pure
 // CPU-side logic in the module is a couple of trivial null / empty-string argument guards - not a
 // separable codec, checksum, or packer worth timing. Per the performance_benching/device NOTE-4 policy we do NOT
-// fabricate a benchmark for such a service; this sketch exists only to compile-verify the real
+// fabricate a benchmark for such a service. This sketch exists only to compile-verify the real
 // production mdns_service.cpp on-device (built with -DPROTOCORE_ENABLE_MDNS=1) and prints an explanatory
 // banner. This rig has no network attached, so none of the protocore_mdns_* transport functions are ever
 // called here.

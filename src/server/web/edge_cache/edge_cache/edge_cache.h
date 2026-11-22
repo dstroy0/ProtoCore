@@ -21,7 +21,7 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -34,7 +34,7 @@ typedef const char *(*EdgeHdrLookup)(void *ctx, const char *name);
 
 typedef struct EdgeEntry
 {
-    proto_bool used;
+    embed_bool used;
     char key[PROTOCORE_EDGE_KEY_MAX];               ///< canonical key (collision-safe exact compare)
     uint8_t digest[32];                             ///< sha256.hash(key) - the L2 dbm key
     char vary_names[PROTOCORE_EDGE_VARY_MAX];       ///< the response Vary header value (field-name list), "" if none
@@ -123,7 +123,7 @@ typedef struct
 typedef struct
 {
     const struct protocore_cache_control *cc;
-    proto_bool shared;
+    embed_bool shared;
     int64_t date_epoch;
     int64_t expires_epoch;
 } EdgeCacheFreshnessLifetimeArgs;
@@ -165,7 +165,7 @@ typedef struct
     const char *host;
     const char *path;
     const char *query;
-    proto_bool include_query;
+    embed_bool include_query;
     char *out;
     size_t out_cap;
 } EdgeCacheKeyCanonArgs;
@@ -227,7 +227,7 @@ typedef struct
 {
     EdgeEntry *e;
     const struct protocore_cache_control *cc;
-    proto_bool shared;
+    embed_bool shared;
     int64_t date_epoch;
     int64_t expires_epoch;
     int64_t last_modified_epoch;
@@ -404,7 +404,7 @@ typedef struct
     EdgeCacheIsStoreableArgs is_storeable_args;
     EdgeCacheBuildConditionalArgs build_conditional_args;
     EdgeCacheApply304Args apply_304_args;
-    proto_bool ok;
+    embed_bool ok;
     int64_t epoch;
     long secs;
     size_t n;
@@ -418,57 +418,57 @@ extern EdgeCacheVars EdgeCacheV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const header_value)(uint8_t *work);
-    void (*const parse_http_date)(uint8_t *work);
+    void (*const header_value)(const uint8_t *work);
+    void (*const parse_http_date)(const uint8_t *work);
     void (*const freshness_lifetime)(uint8_t *work);
-    void (*const heuristic_lifetime)(uint8_t *work);
-    void (*const initial_age)(uint8_t *work);
-    void (*const current_age)(uint8_t *work);
-    void (*const is_fresh_at)(uint8_t *work);
-    void (*const key_canon)(uint8_t *work);
-    void (*const key_digest)(uint8_t *work);
-    void (*const vary_serialize)(uint8_t *work);
-    void (*const store_init)(uint8_t *work);
+    void (*const heuristic_lifetime)(const uint8_t *work);
+    void (*const initial_age)(const uint8_t *work);
+    void (*const current_age)(const uint8_t *work);
+    void (*const is_fresh_at)(const uint8_t *work);
+    void (*const key_canon)(const uint8_t *work);
+    void (*const key_digest)(const uint8_t *work);
+    void (*const vary_serialize)(const uint8_t *work);
+    void (*const store_init)(const uint8_t *work);
     void (*const store_alloc)(uint8_t *work);
-    void (*const store_lookup)(uint8_t *work);
+    void (*const store_lookup)(const uint8_t *work);
     void (*const store_find)(uint8_t *work);
     void (*const entry_set_freshness)(uint8_t *work);
-    void (*const entry_has_validator)(uint8_t *work);
+    void (*const entry_has_validator)(const uint8_t *work);
     void (*const entry_fresh)(uint8_t *work);
     void (*const store_sweep)(uint8_t *work);
-    void (*const store_purge)(uint8_t *work);
-    void (*const store_purge_prefix)(uint8_t *work);
-    void (*const store_free_entry)(uint8_t *work);
-    void (*const is_storeable)(uint8_t *work);
-    void (*const build_conditional)(uint8_t *work);
+    void (*const store_purge)(const uint8_t *work);
+    void (*const store_purge_prefix)(const uint8_t *work);
+    void (*const store_free_entry)(const uint8_t *work);
+    void (*const is_storeable)(const uint8_t *work);
+    void (*const build_conditional)(const uint8_t *work);
     void (*const apply_304)(uint8_t *work);
 } EdgeCacheNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in EdgeCacheV or a region of the borrow at a fixed offset.
-void protocore_edge_cache_header_value(uint8_t *work);
-void protocore_edge_cache_parse_http_date(uint8_t *work);
+void protocore_edge_cache_header_value(const uint8_t *work);
+void protocore_edge_cache_parse_http_date(const uint8_t *work);
 void protocore_edge_cache_freshness_lifetime(uint8_t *work);
-void protocore_edge_cache_heuristic_lifetime(uint8_t *work);
-void protocore_edge_cache_initial_age(uint8_t *work);
-void protocore_edge_cache_current_age(uint8_t *work);
-void protocore_edge_cache_is_fresh_at(uint8_t *work);
-void protocore_edge_cache_key_canon(uint8_t *work);
-void protocore_edge_cache_key_digest(uint8_t *work);
-void protocore_edge_cache_vary_serialize(uint8_t *work);
-void protocore_edge_cache_store_init(uint8_t *work);
+void protocore_edge_cache_heuristic_lifetime(const uint8_t *work);
+void protocore_edge_cache_initial_age(const uint8_t *work);
+void protocore_edge_cache_current_age(const uint8_t *work);
+void protocore_edge_cache_is_fresh_at(const uint8_t *work);
+void protocore_edge_cache_key_canon(const uint8_t *work);
+void protocore_edge_cache_key_digest(const uint8_t *work);
+void protocore_edge_cache_vary_serialize(const uint8_t *work);
+void protocore_edge_cache_store_init(const uint8_t *work);
 void protocore_edge_cache_store_alloc(uint8_t *work);
-void protocore_edge_cache_store_lookup(uint8_t *work);
+void protocore_edge_cache_store_lookup(const uint8_t *work);
 void protocore_edge_cache_store_find(uint8_t *work);
 void protocore_edge_cache_entry_set_freshness(uint8_t *work);
-void protocore_edge_cache_entry_has_validator(uint8_t *work);
+void protocore_edge_cache_entry_has_validator(const uint8_t *work);
 void protocore_edge_cache_entry_fresh(uint8_t *work);
 void protocore_edge_cache_store_sweep(uint8_t *work);
-void protocore_edge_cache_store_purge(uint8_t *work);
-void protocore_edge_cache_store_purge_prefix(uint8_t *work);
-void protocore_edge_cache_store_free_entry(uint8_t *work);
-void protocore_edge_cache_is_storeable(uint8_t *work);
-void protocore_edge_cache_build_conditional(uint8_t *work);
+void protocore_edge_cache_store_purge(const uint8_t *work);
+void protocore_edge_cache_store_purge_prefix(const uint8_t *work);
+void protocore_edge_cache_store_free_entry(const uint8_t *work);
+void protocore_edge_cache_is_storeable(const uint8_t *work);
+void protocore_edge_cache_build_conditional(const uint8_t *work);
 void protocore_edge_cache_apply_304(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -502,7 +502,7 @@ static const EdgeCacheNs EdgeCache __attribute__((unused)) = {
     .apply_304 = protocore_edge_cache_apply_304,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE
 

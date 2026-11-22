@@ -80,7 +80,7 @@ The **slim** rigs are current with the `pc_` API rename (7.0.0) and the crypto c
 green on the stock core: **`rig_s3_ssh`** (SSH server; also carries the `PROTOCORE_SSH_KEX_BENCH` wall-clock probe),
 **`rig_s3_tls`** (HTTPS), **`rig_s3_smb`** (SMB2 client). Two mains still use pre-`pc_`/pre-consolidation
 symbols and are **not migrated**: the full **`rig_s3`** (`main.cpp`, ~45 `protocore_client_*`/`protocore_hex_*`/`PROTOCORE_`
-call sites; also needs the PSRAM arena + a rebuilt arduino-cli core, so it does not build on the stock
+call sites; also needs the PSRAM arena + a rebuilt arduino-cli core. So it does not build on the stock
 toolchain here) and **`rig_s3_cryptobench`** (`main_cryptobench.cpp`, ~8 renamed crypto symbols such as
 `quic_hkdf_*`/`mlkem768_encaps`/`dtls_*` and the moved `ssh_sha512.h`). Both are a separate, HW-verified
 migration pass; the crypto-sweep numbers already in `docs/FEATURE_PERFORMANCE.md` came from the last good

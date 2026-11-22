@@ -37,7 +37,7 @@ typedef struct
 
 typedef struct
 {
-    proto_bool open;
+    embed_bool open;
     int entry; ///< index into files[], or -1 for the legacy single file
     size_t pos;
 } MockMntHandle;
@@ -51,7 +51,7 @@ typedef struct
     // these bytes. Several tests only care about the body, not about which name produced it.
     const uint8_t *one_data;
     size_t one_size;
-    proto_bool one_valid;
+    embed_bool one_valid;
 
     size_t read_limit;          ///< cap on one read(), so a caller has to loop
     const char *open_fail_path; ///< opening exactly this path returns -1
@@ -111,7 +111,7 @@ static inline void mock_mnt_set(const uint8_t *data, size_t size)
 {
     g_mock_mnt.one_data = data;
     g_mock_mnt.one_size = size;
-    g_mock_mnt.one_valid = PROTO_TRUE;
+    g_mock_mnt.one_valid = EMBED_TRUE;
 }
 
 static inline void mock_mnt_set_text(const char *text)
@@ -123,7 +123,7 @@ static inline void mock_mnt_clear(void)
 {
     g_mock_mnt.one_data = NULL;
     g_mock_mnt.one_size = 0;
-    g_mock_mnt.one_valid = PROTO_FALSE;
+    g_mock_mnt.one_valid = EMBED_FALSE;
 }
 
 static inline void mock_mnt_reset(void)
@@ -135,7 +135,7 @@ static inline void mock_mnt_reset(void)
     g_mock_mnt.wlen = 0;
     for (int i = 0; i < MOCK_MNT_HANDLES; i++)
     {
-        g_mock_mnt.h[i].open = PROTO_FALSE;
+        g_mock_mnt.h[i].open = EMBED_FALSE;
     }
 }
 
@@ -170,7 +170,7 @@ static inline int mock_mnt_open(const char *path, int mode)
     {
         if (!g_mock_mnt.h[i].open)
         {
-            g_mock_mnt.h[i].open = PROTO_TRUE;
+            g_mock_mnt.h[i].open = EMBED_TRUE;
             g_mock_mnt.h[i].entry = e;
             g_mock_mnt.h[i].pos = 0;
             return i;
@@ -232,7 +232,7 @@ static inline int mock_mnt_write(int handle, const void *buf, size_t n)
     return (int)n;
 }
 
-/** @brief Bytes a writer has sent since the last reset. */
+/** @brief Bytes a writer sent since the last reset. */
 static inline size_t mock_mnt_written(void)
 {
     return g_mock_mnt.wlen;
@@ -259,18 +259,18 @@ static inline void mock_mnt_close(int handle)
 {
     if (handle >= 0 && handle < MOCK_MNT_HANDLES)
     {
-        g_mock_mnt.h[handle].open = PROTO_FALSE;
+        g_mock_mnt.h[handle].open = EMBED_FALSE;
     }
 }
 
-static inline proto_bool mock_mnt_seek(int handle, uint64_t off)
+static inline embed_bool mock_mnt_seek(int handle, uint64_t off)
 {
     if (handle < 0 || handle >= MOCK_MNT_HANDLES || !g_mock_mnt.h[handle].open)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     g_mock_mnt.h[handle].pos = (size_t)off;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static inline long mock_mnt_size(const char *path)
@@ -287,42 +287,42 @@ static inline long mock_mnt_size(const char *path)
     return -1;
 }
 
-static inline proto_bool mock_mnt_exists(const char *path)
+static inline embed_bool mock_mnt_exists(const char *path)
 {
-    return mock_mnt_size(path) >= 0 ? PROTO_TRUE : PROTO_FALSE;
+    return mock_mnt_size(path) >= 0 ? EMBED_TRUE : EMBED_FALSE;
 }
 
-static inline proto_bool mock_mnt_stat(const char *path, protocore_mnt_stat *out)
+static inline embed_bool mock_mnt_stat(const char *path, protocore_mnt_stat *out)
 {
     int e = mock_mnt_find(path);
     if (e >= 0)
     {
-        out->is_dir = PROTO_FALSE;
+        out->is_dir = EMBED_FALSE;
         out->size = g_mock_mnt.files[e].size;
         out->mtime = g_mock_mnt.files[e].mtime;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (g_mock_mnt.count == 0 && g_mock_mnt.one_valid)
     {
-        out->is_dir = PROTO_FALSE;
+        out->is_dir = EMBED_FALSE;
         out->size = g_mock_mnt.one_size;
         out->mtime = 0;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-static inline proto_bool mock_mnt_no_path(const char *path)
+static inline embed_bool mock_mnt_no_path(const char *path)
 {
     (void)path;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-static inline proto_bool mock_mnt_no_rename(const char *from, const char *to)
+static inline embed_bool mock_mnt_no_rename(const char *from, const char *to)
 {
     (void)from;
     (void)to;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static inline int mock_mnt_opendir(const char *path)
@@ -331,13 +331,13 @@ static inline int mock_mnt_opendir(const char *path)
     return -1;
 }
 
-static inline proto_bool mock_mnt_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
+static inline embed_bool mock_mnt_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     (void)handle;
     (void)out;
     (void)name;
     (void)name_cap;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 PROTOCORE_HOST_SHARED const protocore_mnt_backend g_mock_mnt_backend = {

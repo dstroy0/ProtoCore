@@ -424,7 +424,7 @@ void test_snoscz5_the_low_half_is_latched_by_reading_the_high_half(void)
     TEST_ASSERT_TRUE(protocore_platform_i2c_write_read(0u, (uint16_t)PROTOCORE_FDC2214_I2C_ADDR, &reg, 1u, r, 2u, 10u));
     TEST_ASSERT_EQUAL_HEX16(0x1234u, (uint16_t)(((uint16_t)r[0] << 8) | r[1]));
 
-    // the channel moves, but nothing has read the high half since, so the low half still holds the
+    // the channel moves, but nothing read the high half since, so the low half still holds the
     // moment that was latched
     s_part.ch0 = 0x01115678u;
     reg = 0x01u;

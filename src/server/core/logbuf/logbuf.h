@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_LOGBUF
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Severity levels (ordered low -> high). Compared (level >= threshold) and passed through the
  *  uint8_t trap-callback ABI, so integer constants in a namespacing struct - cast-free. */
@@ -135,7 +135,7 @@ static const LogbufNs Logbuf __attribute__((unused)) = {
  */
 uint8_t *protocore_logbuf_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LOGBUF
 

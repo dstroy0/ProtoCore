@@ -16,7 +16,7 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The request methods a route binds to. */
 typedef enum
@@ -45,7 +45,7 @@ typedef struct
 typedef struct
 {
     const char *route;      ///< the route path a match tests
-    proto_bool is_wildcard; ///< that route ends in a trailing star
+    embed_bool is_wildcard; ///< that route ends in a trailing star
     const char *path;       ///< the request path a match tests against
     HttpReq *req;           ///< the request a param capture writes into
 } HttpRouteArgs;
@@ -96,9 +96,9 @@ typedef struct
     HttpRouteArgs route_args;   ///< the target a route is matched against
     HttpAllowArgs allow;        ///< the Allow list an append builds
 #if PROTOCORE_ENABLE_EDGE_CACHE
-    proto_bool (*edge_poll)(uint8_t slot);
+    embed_bool (*edge_poll)(uint8_t slot);
 #endif
-    proto_bool ok;
+    embed_bool ok;
     const char *text;
     HttpMethod method_of;
 #if PROTOCORE_ENABLE_EDGE_CACHE
@@ -111,13 +111,13 @@ extern HttpVars HttpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const status_text)(uint8_t *work);
-    void (*const parse_method)(uint8_t *work);
-    void (*const method_name)(uint8_t *work);
-    void (*const path_matches)(uint8_t *work);
-    void (*const match_path_params)(uint8_t *work);
-    void (*const req_is_head)(uint8_t *work);
-    void (*const allow_append)(uint8_t *work);
+    void (*const status_text)(const uint8_t *work);
+    void (*const parse_method)(const uint8_t *work);
+    void (*const method_name)(const uint8_t *work);
+    void (*const path_matches)(const uint8_t *work);
+    void (*const match_path_params)(const uint8_t *work);
+    void (*const req_is_head)(const uint8_t *work);
+    void (*const allow_append)(const uint8_t *work);
     void (*const match_and_execute)(uint8_t *work);
     void (*const set_not_found)(uint8_t *work);
     void (*const poll_slot)(uint8_t *work);
@@ -127,13 +127,13 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpV or a region of the borrow at a fixed offset.
-void protocore_http_status_text(uint8_t *work);
-void protocore_http_parse_method(uint8_t *work);
-void protocore_http_method_name(uint8_t *work);
-void protocore_http_path_matches(uint8_t *work);
-void protocore_http_match_path_params(uint8_t *work);
-void protocore_http_req_is_head(uint8_t *work);
-void protocore_http_allow_append(uint8_t *work);
+void protocore_http_status_text(const uint8_t *work);
+void protocore_http_parse_method(const uint8_t *work);
+void protocore_http_method_name(const uint8_t *work);
+void protocore_http_path_matches(const uint8_t *work);
+void protocore_http_match_path_params(const uint8_t *work);
+void protocore_http_req_is_head(const uint8_t *work);
+void protocore_http_allow_append(const uint8_t *work);
 void protocore_http_match_and_execute(uint8_t *work);
 void protocore_http_set_not_found(uint8_t *work);
 void protocore_http_poll_slot(uint8_t *work);
@@ -170,6 +170,6 @@ static const HttpNs Http __attribute__((unused)) = {
  */
 uint8_t *protocore_http_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HTTP_H

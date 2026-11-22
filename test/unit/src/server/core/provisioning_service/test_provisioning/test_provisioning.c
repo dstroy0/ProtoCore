@@ -35,7 +35,7 @@ static char g_val[64];
 // Read @p key out of @p body and return the decoded value, so each case reads as one assertion.
 static const char *field(const char *body, const char *key)
 {
-    proto_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), body, key, g_val, sizeof(g_val));
+    embed_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), body, key, g_val, sizeof(g_val));
     TEST_ASSERT_TRUE_MESSAGE(prov_ok, key);
     return g_val;
 }
@@ -93,10 +93,10 @@ void test_pairs_are_separated_by_ampersand(void)
 void test_an_empty_value_is_still_a_present_field(void)
 {
     char v[8];
-    proto_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), "ssid=&psk=x", "ssid", v, sizeof(v));
+    embed_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), "ssid=&psk=x", "ssid", v, sizeof(v));
     TEST_ASSERT_TRUE(prov_ok);
     TEST_ASSERT_EQUAL_STRING("", v);
-    proto_bool prov_ok2 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", "psk", v, sizeof(v));
+    embed_bool prov_ok2 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", "psk", v, sizeof(v));
     TEST_ASSERT_FALSE(prov_ok2);
     TEST_ASSERT_EQUAL_STRING("", v);
 }
@@ -125,13 +125,13 @@ void test_an_incomplete_triplet_is_not_decoded(void)
 void test_the_value_is_bounded_and_terminated(void)
 {
     char v[4];
-    proto_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), "ssid=abcdef", "ssid", v, sizeof(v));
+    embed_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), "ssid=abcdef", "ssid", v, sizeof(v));
     TEST_ASSERT_TRUE(prov_ok);
     TEST_ASSERT_EQUAL_STRING("abc", v);
     TEST_ASSERT_EQUAL_size_t(3u, strlen(v));
 
     char one[1];
-    proto_bool prov_ok2 =
+    embed_bool prov_ok2 =
         Prov.form_field(protocore_provisioning_service_span(), "ssid=abcdef", "ssid", one, sizeof(one));
     TEST_ASSERT_TRUE(prov_ok2);
     TEST_ASSERT_EQUAL_STRING("", one);
@@ -141,15 +141,15 @@ void test_null_arguments_and_zero_capacity_are_refused(void)
 {
     char v[8];
     v[0] = 'x';
-    proto_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), NULL, "ssid", v, sizeof(v));
+    embed_bool prov_ok = Prov.form_field(protocore_provisioning_service_span(), NULL, "ssid", v, sizeof(v));
     TEST_ASSERT_FALSE(prov_ok);
     TEST_ASSERT_EQUAL_STRING("", v);
-    proto_bool prov_ok2 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", NULL, v, sizeof(v));
+    embed_bool prov_ok2 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", NULL, v, sizeof(v));
     TEST_ASSERT_FALSE(prov_ok2);
-    proto_bool prov_ok3 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", "ssid", NULL, sizeof(v));
+    embed_bool prov_ok3 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", "ssid", NULL, sizeof(v));
     TEST_ASSERT_FALSE(prov_ok3);
     v[0] = 'x';
-    proto_bool prov_ok4 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", "ssid", v, 0);
+    embed_bool prov_ok4 = Prov.form_field(protocore_provisioning_service_span(), "ssid=x", "ssid", v, 0);
     TEST_ASSERT_FALSE(prov_ok4);
     TEST_ASSERT_EQUAL_CHAR('x', v[0]); // zero capacity writes nothing, not even a terminator
 }
@@ -161,7 +161,7 @@ void test_an_empty_credential_store_reports_nothing(void)
     Prov.clear(protocore_provisioning_service_span());
     char ssid[8] = "x";
     char psk[8] = "y";
-    proto_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk));
+    embed_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk));
     TEST_ASSERT_FALSE(prov_ok);
     TEST_ASSERT_EQUAL_STRING("", ssid);
     TEST_ASSERT_EQUAL_STRING("", psk);
@@ -172,12 +172,12 @@ void test_an_empty_credential_store_reports_nothing(void)
 void test_load_writes_only_the_destinations_it_was_given(void)
 {
     char psk[8] = "y";
-    proto_bool prov_ok = Prov.load(protocore_provisioning_service_span(), NULL, 8, psk, 0);
+    embed_bool prov_ok = Prov.load(protocore_provisioning_service_span(), NULL, 8, psk, 0);
     TEST_ASSERT_FALSE(prov_ok);
     TEST_ASSERT_EQUAL_STRING("y", psk);
 
     char ssid[8] = "z";
-    proto_bool prov_ok2 = Prov.load(protocore_provisioning_service_span(), ssid, 0, NULL, 8);
+    embed_bool prov_ok2 = Prov.load(protocore_provisioning_service_span(), ssid, 0, NULL, 8);
     TEST_ASSERT_FALSE(prov_ok2);
     TEST_ASSERT_EQUAL_STRING("z", ssid);
 }
@@ -201,7 +201,7 @@ void test_saved_credentials_load_back(void)
 
     char ssid[33] = {0};
     char psk[64] = {0};
-    proto_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk));
+    embed_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk));
     TEST_ASSERT_TRUE(prov_ok);
     TEST_ASSERT_EQUAL_STRING("some-network", ssid);
     TEST_ASSERT_EQUAL_STRING("a secret", psk);
@@ -216,7 +216,7 @@ void test_an_ssid_without_a_passphrase_still_loads(void)
 
     char ssid[33] = {0};
     char psk[64] = "leftover";
-    proto_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk));
+    embed_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), psk, sizeof(psk));
     TEST_ASSERT_TRUE(prov_ok);
     TEST_ASSERT_EQUAL_STRING("open-ap", ssid);
     TEST_ASSERT_EQUAL_STRING("", psk);
@@ -228,11 +228,11 @@ void test_clear_takes_the_credentials_away(void)
 {
     TEST_ASSERT_TRUE(protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, "some-network"));
     char ssid[33] = {0};
-    proto_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), NULL, 0);
+    embed_bool prov_ok = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), NULL, 0);
     TEST_ASSERT_TRUE(prov_ok);
 
     Prov.clear(protocore_provisioning_service_span());
-    proto_bool prov_ok2 = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), NULL, 0);
+    embed_bool prov_ok2 = Prov.load(protocore_provisioning_service_span(), ssid, sizeof(ssid), NULL, 0);
     TEST_ASSERT_FALSE(prov_ok2);
     TEST_ASSERT_EQUAL_STRING("", ssid);
 }

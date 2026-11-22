@@ -7,7 +7,7 @@
 #include "protocore_config.h"       // the entry point: protocore_types.h for the widths
 #include "server/storage/mnt/mnt.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file mnt_ram.h
@@ -44,8 +44,8 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const protocore_mnt_backend *(*backend)(uint8_t *);
-    void (*format)(uint8_t *);
+    const protocore_mnt_backend *(*backend)(const uint8_t *);
+    void (*format)(const uint8_t *);
 } MntRamNs;
 PROTOCORE_NS_LAYOUT(MntRamNs, backend, format);
 
@@ -54,17 +54,17 @@ PROTOCORE_NS_LAYOUT(MntRamNs, backend, format);
  * @param work PROTOCORE_MNT_RAM_BORROW bytes the caller took. Not held past the call.
  * @return The const protocore_mnt_backend *.
  */
-const protocore_mnt_backend *protocore_mnt_ram_backend(uint8_t *work);
+const protocore_mnt_backend *protocore_mnt_ram_backend(const uint8_t *work);
 /**
  * @brief Empty the pool and close every handle.
  * @param work PROTOCORE_MNT_RAM_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_mnt_ram_format(uint8_t *work);
+void protocore_mnt_ram_format(const uint8_t *work);
 
 /** @brief Module namespace. */
 PROTOCORE_NS MntRamNs MntRam PROTOCORE_UNUSED = {.backend = protocore_mnt_ram_backend,
                                                  .format = protocore_mnt_ram_format};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_MNT_RAM_H

@@ -95,8 +95,8 @@ void test_spec_first_byte_table(void)
     ENC(MsgPack.put_map(&w_, 16), "\xde\x00\x10");
 
     ENC(MsgPack.put_null(&w_), "\xc0");
-    ENC(MsgPack.put_bool(&w_, PROTO_FALSE), "\xc2");
-    ENC(MsgPack.put_bool(&w_, PROTO_TRUE), "\xc3");
+    ENC(MsgPack.put_bool(&w_, EMBED_FALSE), "\xc2");
+    ENC(MsgPack.put_bool(&w_, EMBED_TRUE), "\xc3");
 }
 
 // float 32 stores an IEEE 754 single, big-endian, behind 0xca.
@@ -248,7 +248,7 @@ void test_str_and_bin_families_do_not_cross(void)
 // nil, the two booleans and float 32 decode to what their one byte stands for.
 void test_decode_nil_bool_float(void)
 {
-    proto_bool b = PROTO_TRUE;
+    embed_bool b = EMBED_TRUE;
     float f = 0.0f;
     mmgr_cspan r = RD("\xc0");
     TEST_ASSERT_TRUE(MsgPack.get_null(&r));
@@ -278,7 +278,7 @@ void test_map_round_trip(void)
     MsgPack.put_str(&w, "id");
     MsgPack.put_uint(&w, 4294967295ULL);
     MsgPack.put_str(&w, "on");
-    MsgPack.put_bool(&w, PROTO_TRUE);
+    MsgPack.put_bool(&w, EMBED_TRUE);
     TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = w));
 
     mmgr_cspan r = EMBED_CALL(spat.produced, SpatiumCfg, .span = w);
@@ -286,7 +286,7 @@ void test_map_round_trip(void)
     const char *k = NULL;
     size_t klen = 0;
     uint64_t v = 0;
-    proto_bool on = PROTO_FALSE;
+    embed_bool on = EMBED_FALSE;
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_CODEC_MAP, MsgPack.peek(&r));
     TEST_ASSERT_TRUE(MsgPack.get_map(&r, &count));
@@ -364,7 +364,7 @@ void test_error_is_sticky(void)
     TEST_ASSERT_FALSE(MsgPack.get_uint(&r, &u));
     TEST_ASSERT_FALSE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r));
 
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
     TEST_ASSERT_FALSE(MsgPack.get_bool(&r, &b));
     TEST_ASSERT_TRUE(MsgPack.peek(&r) == PROTOCORE_CODEC_INVALID);
 }

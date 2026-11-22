@@ -31,7 +31,7 @@ static HalAesCtx s_aes = {NULL, portMUX_INITIALIZER_UNLOCKED};
 
 // Is the accelerator already clocked? Reads clock-domain registers only, which are always accessible
 // even when the AES block itself is unclocked.
-static proto_bool aes_is_up(void)
+static embed_bool aes_is_up(void)
 {
     return (PROTOCORE_HW_RD(PROTOCORE_AES_CLK_REG) & PROTOCORE_AES_CLK_BIT) != 0u;
 }

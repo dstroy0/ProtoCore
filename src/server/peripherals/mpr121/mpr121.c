@@ -26,7 +26,7 @@
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/mpr121/mpr121.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -50,11 +50,11 @@ uint8_t *protocore_mpr121_span(void)
     return s_own.span;
 }
 
-void protocore_mpr121_build_init(uint8_t *work);
-void protocore_mpr121_touched(uint8_t *work);
-void protocore_mpr121_word10(uint8_t *work);
+void protocore_mpr121_build_init(const uint8_t *work);
+void protocore_mpr121_touched(const uint8_t *work);
+void protocore_mpr121_word10(const uint8_t *work);
 
-void protocore_mpr121_touched(uint8_t *work)
+void protocore_mpr121_touched(const uint8_t *work)
 {
     (void)work;
     uint8_t status_lo = Mpr121V.touched_args.status_lo;
@@ -63,7 +63,7 @@ void protocore_mpr121_touched(uint8_t *work)
     Mpr121V.value = (uint16_t)(((uint16_t)status_lo | ((uint16_t)status_hi << 8)) & 0x0FFF);
 }
 
-void protocore_mpr121_is_touched(uint8_t *work)
+void protocore_mpr121_is_touched(const uint8_t *work)
 {
     (void)work;
     uint16_t mask = Mpr121V.is_touched_args.mask;
@@ -72,7 +72,7 @@ void protocore_mpr121_is_touched(uint8_t *work)
     Mpr121V.ok = e < MPR121_ELECTRODES && (mask & (uint16_t)(1u << e)) != 0;
 }
 
-void protocore_mpr121_proximity(uint8_t *work)
+void protocore_mpr121_proximity(const uint8_t *work)
 {
     (void)work;
     uint8_t status_hi = Mpr121V.proximity_args.status_hi;
@@ -80,7 +80,7 @@ void protocore_mpr121_proximity(uint8_t *work)
     Mpr121V.ok = (status_hi & 0x10) != 0; // status bit 12
 }
 
-void protocore_mpr121_overcurrent(uint8_t *work)
+void protocore_mpr121_overcurrent(const uint8_t *work)
 {
     (void)work;
     uint8_t status_hi = Mpr121V.overcurrent_args.status_hi;
@@ -88,7 +88,7 @@ void protocore_mpr121_overcurrent(uint8_t *work)
     Mpr121V.ok = (status_hi & 0x80) != 0; // status bit 15
 }
 
-void protocore_mpr121_word10(uint8_t *work)
+void protocore_mpr121_word10(const uint8_t *work)
 {
     (void)work;
     uint8_t lsb = Mpr121V.word10_args.lsb;
@@ -97,7 +97,7 @@ void protocore_mpr121_word10(uint8_t *work)
     Mpr121V.value = (uint16_t)(((uint16_t)lsb | ((uint16_t)msb << 8)) & 0x03FF);
 }
 
-void protocore_mpr121_build_init(uint8_t *work)
+void protocore_mpr121_build_init(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Mpr121V.build_init_args.buf;
@@ -180,7 +180,10 @@ static_assert(MPR121_OFF_CTX % _Alignof(Mpr121Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define MPR121_CTX(w) ((Mpr121Ctx *)(void *)((w) + MPR121_OFF_CTX))
+#define MPR121_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Mpr121Ctx *)(const void *)((w) + MPR121_OFF_CTX),                                      \
+        default: (Mpr121Ctx *)(void *)((w) + MPR121_OFF_CTX))
 
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
@@ -190,14 +193,14 @@ static uint8_t dev_addr(uint8_t *work)
     return MPR121_CTX(work)->addr ? MPR121_CTX(work)->addr : (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
 }
 
-static proto_bool wr(uint8_t *work, uint8_t reg, uint8_t val)
+static embed_bool wr(uint8_t *work, uint8_t reg, uint8_t val)
 {
     MPR121_CTX(work)->frame[0] = reg;
     MPR121_CTX(work)->frame[1] = val;
     return protocore_i2c_write(dev_addr(work), MPR121_CTX(work)->frame, sizeof(MPR121_CTX(work)->frame));
 }
 
-static proto_bool rd(uint8_t *work, uint8_t reg, uint8_t *out, uint8_t n)
+static embed_bool rd(uint8_t *work, uint8_t reg, uint8_t *out, uint8_t n)
 {
     return protocore_i2c_write_read(dev_addr(work), &reg, 1, out, n);
 }
@@ -217,12 +220,12 @@ void protocore_mpr121_begin(uint8_t *work)
     size_t n = Mpr121V.n;
     if (n == 0)
     {
-        Mpr121V.ok = PROTO_FALSE;
+        Mpr121V.ok = EMBED_FALSE;
         return;
     }
     if (!wr(work, MPR121_CTX(work)->init[0], MPR121_CTX(work)->init[1])) // soft reset first; then let the chip settle
     {
-        Mpr121V.ok = PROTO_FALSE;
+        Mpr121V.ok = EMBED_FALSE;
         return;
     }
     pcdelay(1);
@@ -230,11 +233,11 @@ void protocore_mpr121_begin(uint8_t *work)
     {
         if (!wr(work, MPR121_CTX(work)->init[i], MPR121_CTX(work)->init[i + 1]))
         {
-            Mpr121V.ok = PROTO_FALSE;
+            Mpr121V.ok = EMBED_FALSE;
             return;
         }
     }
-    Mpr121V.ok = PROTO_TRUE;
+    Mpr121V.ok = EMBED_TRUE;
 }
 
 void protocore_mpr121_read_touched(uint8_t *work)
@@ -272,6 +275,6 @@ void protocore_mpr121_read_filtered(uint8_t *work)
 /** @brief The operands and the outcome. */
 Mpr121Vars Mpr121V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MPR121

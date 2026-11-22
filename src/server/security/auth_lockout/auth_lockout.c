@@ -20,7 +20,7 @@
 #include "server/security/auth_lockout/auth_lockout.h"
 #include "shared/ip/ip.h" // protocore_ip: the address a bucket is keyed on
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 typedef struct
 {
@@ -53,10 +53,13 @@ static_assert(LOCKOUT_OFF_CTX % _Alignof(LockoutCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define LOCKOUT_CTX(w) ((LockoutCtx *)(void *)((w) + LOCKOUT_OFF_CTX))
+#define LOCKOUT_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const LockoutCtx *)(const void *)((w) + LOCKOUT_OFF_CTX),                                    \
+        default: (LockoutCtx *)(void *)((w) + LOCKOUT_OFF_CTX))
 
 // Whether @p a and @p b are the same family and address.
-static proto_bool ip_same(const protocore_ip *a, const protocore_ip *b)
+static embed_bool ip_same(const protocore_ip *a, const protocore_ip *b)
 {
     IpV.args.ip = a;
     IpV.args.b = b;
@@ -65,7 +68,7 @@ static proto_bool ip_same(const protocore_ip *a, const protocore_ip *b)
 }
 
 // Whether @p ip names nothing: no family, or the all-zero address.
-static proto_bool ip_none(const protocore_ip *ip)
+static embed_bool ip_none(const protocore_ip *ip)
 {
     IpV.args.ip = ip;
     Ip.is_unspecified(protocore_auth_lockout_span());
@@ -85,10 +88,10 @@ LockoutBucket *find_bucket(LockoutCtx *c, const protocore_ip *ip)
     return NULL;
 }
 
-proto_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
+embed_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
 {
     // Unsigned subtraction wraps correctly across the millis() rollover.
-    return b->lock_ms != 0 && (uint32_t)(now_ms - b->lock_start_ms) < b->lock_ms;
+    return b->lock_ms != 0 && (now_ms - b->lock_start_ms) < b->lock_ms;
 }
 
 // --- the program's shared table, beside the namespace not on it -------------
@@ -113,7 +116,7 @@ uint8_t *protocore_auth_lockout_span(void)
 
 void protocore_auth_lockout_remaining(uint8_t *work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
+    AuthLockoutV.ok = EMBED_FALSE;
     AuthLockoutV.ms = 0;
     const protocore_ip *ip = AuthLockoutV.args.ip;
     if (ip_none(ip))
@@ -121,7 +124,7 @@ void protocore_auth_lockout_remaining(uint8_t *work)
         return; // untrackable source -> never reported as locked
     }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockoutV.ok = EMBED_TRUE;
     LockoutBucket *b = find_bucket(s_lock, ip);
     if (!b || b->lock_ms == 0)
     {
@@ -130,14 +133,14 @@ void protocore_auth_lockout_remaining(uint8_t *work)
     uint32_t elapsed = AuthLockoutV.args.now_ms - b->lock_start_ms; // wraps correctly across rollover
     if (elapsed >= b->lock_ms)
     {
-        return; // the lockout window has passed
+        return; // the lockout window passed
     }
     AuthLockoutV.ms = b->lock_ms - elapsed;
 }
 
 void protocore_auth_lockout_fail(uint8_t *work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
+    AuthLockoutV.ok = EMBED_FALSE;
     const protocore_ip *ip = AuthLockoutV.args.ip;
     const uint32_t now_ms = AuthLockoutV.args.now_ms;
     if (ip_none(ip))
@@ -145,7 +148,7 @@ void protocore_auth_lockout_fail(uint8_t *work)
         return; // untrackable source
     }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockoutV.ok = EMBED_TRUE;
 
     LockoutBucket *b = find_bucket(s_lock, ip);
     if (!b)
@@ -163,13 +166,13 @@ void protocore_auth_lockout_fail(uint8_t *work)
                 slot = i;
                 break;
             }
-            if ((uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (uint32_t)(now_ms - s_lock->buckets[lru].last_ms))
+            if ((uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[lru].last_ms))
             {
                 lru = i;
             }
             if (!bucket_locked(&s_lock->buckets[i], now_ms) &&
                 (slot < 0 ||
-                 (uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (uint32_t)(now_ms - s_lock->buckets[slot].last_ms)))
+                 (uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[slot].last_ms)))
             {
                 slot = i;
             }
@@ -218,14 +221,14 @@ void protocore_auth_lockout_fail(uint8_t *work)
 
 void protocore_auth_lockout_succeed(uint8_t *work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
+    AuthLockoutV.ok = EMBED_FALSE;
     const protocore_ip *ip = AuthLockoutV.args.ip;
     if (ip_none(ip))
     {
         return;
     }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockoutV.ok = EMBED_TRUE;
     LockoutBucket *b = find_bucket(s_lock, ip);
     if (b)
     {
@@ -239,9 +242,9 @@ void protocore_auth_lockout_succeed(uint8_t *work)
 
 void protocore_auth_lockout_reset(uint8_t *work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
+    AuthLockoutV.ok = EMBED_FALSE;
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockoutV.ok = EMBED_TRUE;
     for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
         s_lock->buckets[i].addr.family = PROTOCORE_IP_NONE;
@@ -255,6 +258,6 @@ void protocore_auth_lockout_reset(uint8_t *work)
 /** @brief The operands and the outcome. */
 AuthLockoutVars AuthLockoutV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUTH_LOCKOUT

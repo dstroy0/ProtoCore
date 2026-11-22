@@ -7,7 +7,7 @@
 // predefined entities and their expansions, and RFC 6120 sec 11.1 makes those five the only entity
 // references an XMPP stream may carry. An unescaped '<' inside a body ends the stanza early on the
 // peer, so reproducing all five is what makes this codec safe to feed user text to. The stream
-// header case pins the three fixed values RFC 6120 requires on it; the stanza cases pin the element
+// header case pins the three fixed values RFC 6120 requires on it. The stanza cases pin the element
 // names of sec 8.2 and the common attribute names of sec 8.1.
 
 #include "services/iot/xmpp/xmpp.h"

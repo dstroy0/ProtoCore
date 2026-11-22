@@ -26,7 +26,7 @@
 #include "crypto/hash/sha512/sha512.h"
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition of RsaCtx - private to this TU, and the same members on both arms. The
 // accelerator multiplies two residues; it does not raise one to a power, encode a block, or hash a
@@ -78,7 +78,10 @@ static_assert(RSA_OFF_CTX % _Alignof(RsaCtx) == 0,
 #define RSA_SHA256(w) ((w) + RSA_OFF_SHA256)
 #define RSA_SHA512(w) ((w) + RSA_OFF_SHA512)
 #define RSA_BIGNUM(w) ((w) + RSA_OFF_BIGNUM)
-#define RSA_CTX(w) ((RsaCtx *)(void *)((w) + RSA_OFF_CTX))
+#define RSA_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RsaCtx *)(const void *)((w) + RSA_OFF_CTX),                                            \
+        default: (RsaCtx *)(void *)((w) + RSA_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // DigestInfo for SHA-256 / SHA-512 (PKCS#1 v1.5, RFC 8017 sec 9.2, RFC 5754)
@@ -167,7 +170,7 @@ static void rsa_modmul(uint8_t *work)
     protocore_rsa_modmul(ctx->z, ctx->x, ctx->y, ctx->n.d, ctx->mprime, ctx->rr.d, PROTOCORE_BN_LIMBS);
 }
 
-static void rsa_modmul_end(uint8_t *work)
+static void rsa_modmul_end(const uint8_t *work)
 {
     (void)work;
     protocore_rsa_hw_release();
@@ -193,7 +196,7 @@ static void bn_mul_full(const uint32_t *a, const uint32_t *b, uint32_t *p)
         }
         int k = i + PROTOCORE_BN_LIMBS;
         // a and b are both PROTOCORE_BN_LIMBS limbs, so their full product is bounded by
-        // 2*PROTOCORE_BN_LIMBS limbs; carry propagation out of the top half can never still be pending
+        // 2*PROTOCORE_BN_LIMBS limbs. Carry propagation out of the top half can never still be pending
         // when k reaches 2*PROTOCORE_BN_LIMBS. The "k < 2*PROTOCORE_BN_LIMBS" half of this guard is
         // defensive and provably unreachable.
         while (carry && k < 2 * PROTOCORE_BN_LIMBS)
@@ -226,7 +229,7 @@ static void bn_reduce_full(const uint32_t *p, const uint32_t *m, uint32_t *out)
         }
         r[0] |= (p[bit >> 5] >> (bit & 31)) & 1u;
 
-        proto_bool ge = r[PROTOCORE_BN_LIMBS] != 0;
+        embed_bool ge = r[PROTOCORE_BN_LIMBS] != 0;
         if (!ge)
         {
             ge = bn_cmp_raw(r, m, PROTOCORE_BN_LIMBS) >= 0;
@@ -261,7 +264,7 @@ static void rsa_modmul(uint8_t *work)
     bn_reduce_full(ctx->prod, ctx->n.d, ctx->z);
 }
 
-static void rsa_modmul_end(uint8_t *work)
+static void rsa_modmul_end(const uint8_t *work)
 {
     (void)work;
 }
@@ -375,7 +378,7 @@ static void mgf1_sha256(uint8_t *work, const uint8_t *seed, size_t seed_len, uin
 // RFC 8017 sec 9.1.2 EMSA-PSS-VERIFY, with SHA-256, MGF1-SHA-256 and a salt as long as the digest -
 // which is what rsa_pss_rsae_sha256 names (RFC 8446 sec 4.2.3). emBits is modBits - 1 = 2047, so
 // emLen is the modulus length and exactly one leading bit must be zero.
-static proto_bool rsa_pss_consistent(uint8_t *work)
+static embed_bool rsa_pss_consistent(uint8_t *work)
 {
     RsaCtx *ctx = RSA_CTX(work);
     const size_t hlen = PROTOCORE_SHA256_DIGEST_LEN;
@@ -389,13 +392,13 @@ static proto_bool rsa_pss_consistent(uint8_t *work)
     // steps 3 and 4
     if (emlen < hlen + slen + 2u || em[emlen - 1u] != 0xBCu)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // steps 5 and 6
     const size_t dblen = emlen - hlen - 1u;
     if ((em[0] & 0x80u) != 0u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *h = em + dblen;
 
@@ -414,12 +417,12 @@ static proto_bool rsa_pss_consistent(uint8_t *work)
     {
         if (db[i] != 0u)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     if (db[ps] != 0x01u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // steps 11, 12 and 13: M' is eight zero octets, the message digest, then the recovered salt.
@@ -438,7 +441,7 @@ static proto_bool rsa_pss_consistent(uint8_t *work)
 
 void protocore_rsa_verify(uint8_t *work)
 {
-    RsaV.ok = PROTO_FALSE;
+    RsaV.ok = EMBED_FALSE;
     if (!RsaV.verify_args.n || !RsaV.verify_args.e || !RsaV.verify_args.sig ||
         RsaV.verify_args.sig_len != PROTOCORE_RSA_KEY_BYTES)
     {
@@ -491,13 +494,13 @@ void protocore_rsa_verify(uint8_t *work)
     rsa_encode(work);
     if (protocore_ct_eq(ctx->recovered, ctx->em, PROTOCORE_RSA_KEY_BYTES))
     {
-        RsaV.ok = PROTO_TRUE;
+        RsaV.ok = EMBED_TRUE;
     }
 }
 
 void protocore_rsa_sign(uint8_t *work)
 {
-    RsaV.ok = PROTO_FALSE;
+    RsaV.ok = EMBED_FALSE;
     if (!RsaV.sign_args.n || !RsaV.sign_args.d || !RsaV.sign_args.sig)
     {
         return;
@@ -538,12 +541,12 @@ void protocore_rsa_sign(uint8_t *work)
     BignumV.to_bytes_args.bytes = RsaV.sign_args.sig;
     BignumV.to_bytes_args.in = &ctx->acc;
     Bignum.to_bytes(RSA_BIGNUM(work));
-    RsaV.ok = PROTO_TRUE;
+    RsaV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 RsaVars RsaV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RSA

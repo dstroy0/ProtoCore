@@ -515,7 +515,7 @@ void test_rfc4301_sad_is_keyed_by_spi(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *out = IpsecDbV.sa;
     TEST_ASSERT_NOT_NULL(out);
@@ -533,7 +533,7 @@ void test_rfc4301_sad_is_keyed_by_spi(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_TRUE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *in = IpsecDbV.sa;
     TEST_ASSERT_NOT_NULL(in);
@@ -560,7 +560,7 @@ void test_rfc4301_sad_is_keyed_by_spi(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_TRUE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     TEST_ASSERT_NULL(IpsecDbV.sa);
     TEST_ASSERT_EQUAL_UINT32(2, (uint32_t)sad.count);
@@ -580,7 +580,7 @@ void test_sad_remove(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     TEST_ASSERT_NOT_NULL(IpsecDbV.sa);
     IpsecDbV.protocore_ipsec_sad_add_args.sad = &sad;
@@ -589,7 +589,7 @@ void test_sad_remove(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_TRUE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     TEST_ASSERT_NOT_NULL(IpsecDbV.sa);
 
@@ -621,7 +621,7 @@ void test_sad_remove(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_TRUE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     TEST_ASSERT_NOT_NULL(IpsecDbV.sa);
     IpsecDbV.protocore_ipsec_sad_find_args.sad = &sad;
@@ -646,7 +646,7 @@ void test_sad_is_bounded(void)
         IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
         IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
         IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-        IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+        IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
         IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
         TEST_ASSERT_NOT_NULL(IpsecDbV.sa);
     }
@@ -656,7 +656,7 @@ void test_sad_is_bounded(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     TEST_ASSERT_NULL(IpsecDbV.sa);
     // Every SPI installed is still reachable.
@@ -685,7 +685,7 @@ void test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *sa = IpsecDbV.sa;
     TEST_ASSERT_NOT_NULL(sa);
@@ -705,7 +705,7 @@ void test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles(void)
         TEST_ASSERT_EQUAL_HEX32(expect, seq);
     }
 
-    // One short of the wrap issues the last legal number; the next call refuses and the counter is
+    // One short of the wrap issues the last legal number. The next call refuses and the counter is
     // left where it was, so a repeated sequence number can never reach the wire.
     sa->seq = 0xFFFFFFFEu;
     IpsecDbV.protocore_ipsec_sad_next_seq_args.sa = sa;
@@ -740,7 +740,7 @@ void test_sequence_numbers_are_per_sa(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *a = IpsecDbV.sa;
     IpsecDbV.protocore_ipsec_sad_add_args.sad = &sad;
@@ -749,7 +749,7 @@ void test_sequence_numbers_are_per_sa(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *b = IpsecDbV.sa;
 
@@ -785,12 +785,12 @@ void test_inbound_sa_carries_its_replay_window(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_TRUE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *sa = IpsecDbV.sa;
     TEST_ASSERT_NOT_NULL(sa);
 
-    proto_bool esp_ok = Esp.replay_check(esp_work, &sa->replay, 1u);
+    embed_bool esp_ok = Esp.replay_check(esp_work, &sa->replay, 1u);
     TEST_ASSERT_TRUE(esp_ok);
     esp_ok = Esp.replay_check(esp_work, &sa->replay, 1u);
     TEST_ASSERT_FALSE(esp_ok);
@@ -804,7 +804,7 @@ void test_inbound_sa_carries_its_replay_window(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_TRUE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     IpsecSaEntry *other = IpsecDbV.sa;
     TEST_ASSERT_NOT_NULL(other);
@@ -859,7 +859,7 @@ void test_null_arguments_are_refused(void)
     IpsecDbV.protocore_ipsec_sad_add_args.addr_len = 4;
     IpsecDbV.protocore_ipsec_sad_add_args.key = SA_KEY;
     IpsecDbV.protocore_ipsec_sad_add_args.salt = SA_SALT;
-    IpsecDbV.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDbV.protocore_ipsec_sad_add_args.inbound = EMBED_FALSE;
     IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
     TEST_ASSERT_NULL(IpsecDbV.sa);
     IpsecDbV.protocore_ipsec_sad_find_args.sad = NULL;

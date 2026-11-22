@@ -351,19 +351,19 @@ void test_spinel_value_wire_layout(void)
     uint32_t u32 = 0;
     int8_t i8 = 0;
     int16_t i16 = 0;
-    proto_bool thread_ok = Thread.spinel_get_u16(thread_work, &r, &u16);
+    embed_bool thread_ok = Thread.spinel_get_u16(thread_work, &r, &u16);
     TEST_ASSERT_TRUE(thread_ok);
-    proto_bool thread_ok2 = Thread.spinel_get_u32(thread_work, &r, &u32);
+    embed_bool thread_ok2 = Thread.spinel_get_u32(thread_work, &r, &u32);
     TEST_ASSERT_TRUE(thread_ok2);
-    proto_bool thread_ok3 = Thread.spinel_get_i8(thread_work, &r, &i8);
+    embed_bool thread_ok3 = Thread.spinel_get_i8(thread_work, &r, &i8);
     TEST_ASSERT_TRUE(thread_ok3);
-    proto_bool thread_ok4 = Thread.spinel_get_i16(thread_work, &r, &i16);
+    embed_bool thread_ok4 = Thread.spinel_get_i16(thread_work, &r, &i16);
     TEST_ASSERT_TRUE(thread_ok4);
     TEST_ASSERT_EQUAL_HEX16(0x1234, u16);
     TEST_ASSERT_EQUAL_HEX32(0x89ABCDEFu, u32);
     TEST_ASSERT_EQUAL_INT8(-1, i8);
     TEST_ASSERT_EQUAL_INT16(-2, i16);
-    proto_bool thread_ok5 = Thread.spinel_reader_ok(thread_work, &r);
+    embed_bool thread_ok5 = Thread.spinel_reader_ok(thread_work, &r);
     TEST_ASSERT_TRUE(thread_ok5);
 }
 
@@ -377,7 +377,7 @@ void test_spinel_value_round_trip(void)
     uint8_t buf[96];
     SpinelWriter w;
     Thread.spinel_writer_init(thread_work, &w, buf, sizeof(buf));
-    Thread.spinel_put_bool(thread_work, &w, PROTO_TRUE);
+    Thread.spinel_put_bool(thread_work, &w, EMBED_TRUE);
     Thread.spinel_put_uint(thread_work, &w, 1337u);
     Thread.spinel_put_eui64(thread_work, &w, EUI);
     Thread.spinel_put_ipv6(thread_work, &w, LL);
@@ -390,7 +390,7 @@ void test_spinel_value_round_trip(void)
 
     SpinelReader r;
     Thread.spinel_reader_init(thread_work, &r, buf, n);
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
     uint32_t packed = 0;
     const uint8_t *eui = NULL;
     const uint8_t *ip6 = NULL;
@@ -400,19 +400,19 @@ void test_spinel_value_round_trip(void)
     uint16_t d1len = 0;
     const uint8_t *d2 = NULL;
     uint16_t d2len = 0;
-    proto_bool thread_ok = Thread.spinel_get_bool(thread_work, &r, &b);
+    embed_bool thread_ok = Thread.spinel_get_bool(thread_work, &r, &b);
     TEST_ASSERT_TRUE(thread_ok);
-    proto_bool thread_ok2 = Thread.spinel_get_uint(thread_work, &r, &packed);
+    embed_bool thread_ok2 = Thread.spinel_get_uint(thread_work, &r, &packed);
     TEST_ASSERT_TRUE(thread_ok2);
-    proto_bool thread_ok3 = Thread.spinel_get_eui64(thread_work, &r, &eui);
+    embed_bool thread_ok3 = Thread.spinel_get_eui64(thread_work, &r, &eui);
     TEST_ASSERT_TRUE(thread_ok3);
-    proto_bool thread_ok4 = Thread.spinel_get_ipv6(thread_work, &r, &ip6);
+    embed_bool thread_ok4 = Thread.spinel_get_ipv6(thread_work, &r, &ip6);
     TEST_ASSERT_TRUE(thread_ok4);
-    proto_bool thread_ok5 = Thread.spinel_get_utf8(thread_work, &r, &s, &slen);
+    embed_bool thread_ok5 = Thread.spinel_get_utf8(thread_work, &r, &s, &slen);
     TEST_ASSERT_TRUE(thread_ok5);
-    proto_bool thread_ok6 = Thread.spinel_get_data_wlen(thread_work, &r, &d1, &d1len);
+    embed_bool thread_ok6 = Thread.spinel_get_data_wlen(thread_work, &r, &d1, &d1len);
     TEST_ASSERT_TRUE(thread_ok6);
-    proto_bool thread_ok7 = Thread.spinel_get_data(thread_work, &r, &d2, &d2len);
+    embed_bool thread_ok7 = Thread.spinel_get_data(thread_work, &r, &d2, &d2len);
     TEST_ASSERT_TRUE(thread_ok7);
 
     TEST_ASSERT_TRUE(b);
@@ -425,7 +425,7 @@ void test_spinel_value_round_trip(void)
     TEST_ASSERT_EQUAL_MEMORY(RAW, d1, sizeof(RAW));
     TEST_ASSERT_EQUAL_UINT16(sizeof(RAW), d2len);
     TEST_ASSERT_EQUAL_MEMORY(RAW, d2, sizeof(RAW));
-    proto_bool thread_ok8 = Thread.spinel_reader_ok(thread_work, &r);
+    embed_bool thread_ok8 = Thread.spinel_reader_ok(thread_work, &r);
     TEST_ASSERT_TRUE(thread_ok8);
 }
 
@@ -437,14 +437,14 @@ void test_spinel_cursor_bounds_latch(void)
     SpinelReader r;
     Thread.spinel_reader_init(thread_work, &r, VALUE, sizeof(VALUE));
     uint32_t u32 = 0;
-    proto_bool thread_ok = Thread.spinel_get_u32(thread_work, &r, &u32);
+    embed_bool thread_ok = Thread.spinel_get_u32(thread_work, &r, &u32);
     TEST_ASSERT_FALSE(thread_ok); // 4 bytes wanted, 3 present
-    proto_bool thread_ok2 = Thread.spinel_reader_ok(thread_work, &r);
+    embed_bool thread_ok2 = Thread.spinel_reader_ok(thread_work, &r);
     TEST_ASSERT_FALSE(thread_ok2);
     uint8_t u8 = 0;
-    proto_bool thread_ok3 = Thread.spinel_get_u8(thread_work, &r, &u8);
+    embed_bool thread_ok3 = Thread.spinel_get_u8(thread_work, &r, &u8);
     TEST_ASSERT_FALSE(thread_ok3); // stays latched
-    proto_bool thread_ok4 = Thread.spinel_reader_ok(thread_work, &r);
+    embed_bool thread_ok4 = Thread.spinel_reader_ok(thread_work, &r);
     TEST_ASSERT_FALSE(thread_ok4);
 
     // A value with no NUL is not a UTF8 field.
@@ -452,17 +452,17 @@ void test_spinel_cursor_bounds_latch(void)
     Thread.spinel_reader_init(thread_work, &s, (const uint8_t *)"abc", 3);
     const char *str = NULL;
     uint16_t slen = 0;
-    proto_bool thread_ok5 = Thread.spinel_get_utf8(thread_work, &s, &str, &slen);
+    embed_bool thread_ok5 = Thread.spinel_get_utf8(thread_work, &s, &str, &slen);
     TEST_ASSERT_FALSE(thread_ok5);
-    proto_bool thread_ok6 = Thread.spinel_reader_ok(thread_work, &s);
+    embed_bool thread_ok6 = Thread.spinel_reader_ok(thread_work, &s);
     TEST_ASSERT_FALSE(thread_ok6);
 
     uint8_t small[3];
     SpinelWriter w;
     Thread.spinel_writer_init(thread_work, &w, small, sizeof(small));
-    proto_bool thread_ok7 = Thread.spinel_put_u16(thread_work, &w, 0xBEEF);
+    embed_bool thread_ok7 = Thread.spinel_put_u16(thread_work, &w, 0xBEEF);
     TEST_ASSERT_TRUE(thread_ok7);
-    proto_bool thread_ok8 = Thread.spinel_put_u32(thread_work, &w, 0);
+    embed_bool thread_ok8 = Thread.spinel_put_u32(thread_work, &w, 0);
     TEST_ASSERT_FALSE(thread_ok8); // 4 more, 1 left
     uint16_t thread_value = Thread.spinel_writer_len(thread_work, &w);
     TEST_ASSERT_EQUAL_UINT16(0, thread_value);
@@ -555,7 +555,7 @@ void test_spinel_last_status_decode(void)
     SpinelReader r;
     Thread.spinel_reader_init(thread_work, &r, val, val_len);
     uint32_t status = 0;
-    proto_bool thread_ok = Thread.spinel_get_uint(thread_work, &r, &status);
+    embed_bool thread_ok = Thread.spinel_get_uint(thread_work, &r, &status);
     TEST_ASSERT_TRUE(thread_ok);
     TEST_ASSERT_EQUAL_UINT32(SPINEL_STATUS_RESET_POWER_ON, status);
     const char *thread_text = Thread.spinel_status_name(thread_work, status);

@@ -61,7 +61,7 @@ void test_ieee80211_address_fields_by_ds_bits(void)
 
     // To DS 0, From DS 0 (IBSS or management): A1 = DA, A2 = SA, A3 = BSSID.
     header(f, 0x08, 0x00, 0); // Type 2 (Data), Subtype 0
-    proto_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
+    embed_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
     TEST_ASSERT_TRUE(promisc_ok);
     TEST_ASSERT_EQUAL_PTR(f + 4, w.dst);
     TEST_ASSERT_EQUAL_PTR(f + 10, w.src);
@@ -105,7 +105,7 @@ void test_ieee80211_frame_control_type_and_subtype(void)
     WifiFrameInfo w;
 
     header(f, 0x80, 0x00, 0); // Subtype 8, Type 0
-    proto_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
+    embed_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
     TEST_ASSERT_TRUE(promisc_ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_MGMT, w.type);
     TEST_ASSERT_EQUAL_UINT8(8, w.subtype);
@@ -144,7 +144,7 @@ void test_ieee80211_sequence_number(void)
 
     // Field value 0x1237: fragment 7, sequence number 0x123.
     header(f, 0x08, 0x00, 0x1237);
-    proto_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
+    embed_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
     TEST_ASSERT_TRUE(promisc_ok);
     TEST_ASSERT_EQUAL_HEX16(0x123, w.seq);
 
@@ -169,7 +169,7 @@ void test_ieee80211_header_length(void)
     WifiFrameInfo w;
 
     header(f, 0x08, 0x00, 0); // Data, not QoS
-    proto_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
+    embed_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
     TEST_ASSERT_TRUE(promisc_ok);
     TEST_ASSERT_EQUAL_UINT16(24, w.hdr_len);
     TEST_ASSERT_FALSE(w.is_qos);
@@ -204,7 +204,7 @@ void test_ieee80211_control_frame(void)
     uint8_t f[32];
     WifiFrameInfo w;
     header(f, 0xD4, 0x00, 0); // Type 1 (Control), Subtype 13 (Acknowledgment)
-    proto_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 10, &w);
+    embed_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 10, &w);
     TEST_ASSERT_TRUE(promisc_ok);
     TEST_ASSERT_EQUAL_INT(WIFI_FT_CTRL, w.type);
     TEST_ASSERT_EQUAL_UINT8(13, w.subtype);
@@ -220,7 +220,7 @@ void test_ieee80211_protected_frame_bit(void)
     uint8_t f[32];
     WifiFrameInfo w;
     header(f, 0x08, 0x40, 0);
-    proto_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
+    embed_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 24, &w);
     TEST_ASSERT_TRUE(promisc_ok);
     TEST_ASSERT_TRUE(w.protected_frame);
 
@@ -237,7 +237,7 @@ void test_parse_refuses_a_short_frame(void)
     WifiFrameInfo w;
 
     header(f, 0x08, 0x00, 0);
-    proto_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 9, &w);
+    embed_bool promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 9, &w);
     TEST_ASSERT_FALSE(promisc_ok); // shorter than Frame Control + Duration + A1
     promisc_ok = Promisc.wifi_frame_parse(protocore_promisc_span(), f, 23, &w);
     TEST_ASSERT_FALSE(promisc_ok); // a 3-address header needs 24
@@ -331,7 +331,7 @@ void test_pcap_headers_fail_closed(void)
 // A sink with nowhere to deliver is a caller bug, so bring-up refuses it.
 void test_capture_refuses_a_null_sink(void)
 {
-    proto_bool promisc_ok = Promisc.begin(protocore_promisc_span(), 6, NULL);
+    embed_bool promisc_ok = Promisc.begin(protocore_promisc_span(), 6, NULL);
     TEST_ASSERT_FALSE(promisc_ok);
 }
 
@@ -358,7 +358,7 @@ void test_capture_delivers_frames_through_the_radio(void)
     static const uint8_t beacon[] = {0x80, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x02, 0x00,
                                      0x00, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00};
     g_seen_count = 0;
-    proto_bool promisc_ok = Promisc.begin(protocore_promisc_span(), 6, capture_sink);
+    embed_bool promisc_ok = Promisc.begin(protocore_promisc_span(), 6, capture_sink);
     TEST_ASSERT_TRUE(promisc_ok);
 
     TEST_ASSERT_TRUE(protocore_phy_mock_deliver(beacon, (uint16_t)sizeof(beacon), -42, 6));

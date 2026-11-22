@@ -15,7 +15,7 @@
 //
 // test_the_two_keys_are_not_interchangeable then gives the two halves different keys, so that the
 // length field and the payload draw from two DIFFERENT published keystreams and a swapped split
-// cannot pass. The Poly1305 tag itself has no published value reachable this way, so it is held to
+// cannot pass. The Poly1305 tag itself has no published value reachable this way. So it is held to
 // properties instead: it verifies what it covers and refuses every change to it.
 
 #include "crypto/aead/chachapoly/chachapoly.h"
@@ -45,7 +45,7 @@ static void cp_encrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const 
     ChachaPoly.encrypt(g_ws);
 }
 
-static proto_bool cp_decrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src,
+static embed_bool cp_decrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src,
                              uint32_t payload_len)
 {
     ChachaPolyV.decrypt_args.key = key;
@@ -280,7 +280,7 @@ void test_in_place_encrypt_and_decrypt(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pt, buf, 4 + n);
 }
 
-// The length field is recoverable before the body has arrived, which is the whole reason it has its
+// The length field is recoverable before the body arrived, which is the whole reason it has its
 // own key: a receiver reads four octets, sizes the packet, and only then reads the rest.
 void test_length_is_readable_before_the_body(void)
 {

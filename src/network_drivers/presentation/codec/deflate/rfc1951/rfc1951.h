@@ -22,7 +22,7 @@
 
 #include "bitorum_introitus_exitus/bitorum_introitus_exitus.h" // mmgr_bitor - what the emitters write through
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -114,18 +114,18 @@ extern Rfc1951Vars Rfc1951V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const reverse_bits)(uint8_t *work);
+    void (*const reverse_bits)(const uint8_t *work);
     void (*const build_fixed)(uint8_t *work);
-    void (*const emit_literal)(uint8_t *work);
-    void (*const emit_match)(uint8_t *work);
+    void (*const emit_literal)(const uint8_t *work);
+    void (*const emit_match)(const uint8_t *work);
 } Rfc1951Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Rfc1951V or a region of the borrow at a fixed offset.
-void protocore_rfc1951_reverse_bits(uint8_t *work);
+void protocore_rfc1951_reverse_bits(const uint8_t *work);
 void protocore_rfc1951_build_fixed(uint8_t *work);
-void protocore_rfc1951_emit_literal(uint8_t *work);
-void protocore_rfc1951_emit_match(uint8_t *work);
+void protocore_rfc1951_emit_literal(const uint8_t *work);
+void protocore_rfc1951_emit_match(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -138,7 +138,7 @@ static const Rfc1951Ns Rfc1951 __attribute__((unused)) = {
     .emit_match = protocore_rfc1951_emit_match,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEFLATE_RFC1951
 

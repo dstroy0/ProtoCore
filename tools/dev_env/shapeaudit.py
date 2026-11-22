@@ -8,7 +8,7 @@ it, and no axis list in this file can go stale against the module it claims to d
   shapeaudit.py diff   <module.h> ...    where it diverges from the golden's
   shapeaudit.py families [root ...]      every module grouped by the divergence it shares
 
-WHY A SEQUENCE AND NOT A CHECKLIST. A checklist says an element is present; it cannot say the
+WHY A SEQUENCE AND NOT A CHECKLIST. A checklist says an element is present. It cannot say the
 config include sits above the enable gate, which is the whole point of the gate. So a design is the
 ORDERED run of top-level constructs, each labelled with a kind the reader can name without knowing
 which module it is reading, plus the traits that survive being renamed.
@@ -776,7 +776,7 @@ def traits(design, which):
     # protocore_http_client_span())` is what a null argument at that site was replaced with. The
     # golden has none because sha256's caller supplies the borrow; 114 modules that own an arena
     # region do, and counting those as flat declarations routed them at `convert gen`, which would
-    # have tried to fold a function of the wrong shape into the table.
+    # tried to fold a function of the wrong shape into the table.
     t["borrow_accessors"] = sorted(
         d["name"]
         for d in design
@@ -1383,7 +1383,7 @@ def main():
         return 0
 
     if cmd == "selfcheck":
-        # A check the golden fails is a bug in the check, and it would mark all 400 modules
+        # A check the golden fails is a bug in the check. It would mark all 400 modules
         # divergent on a question the target of the conversion does not itself answer yes to.
         gid, gh, gc = golden_designs()
         bad = [(n, q) for (n, ans, _), (_, q, _, _) in zip(answers(gh, gc, gh, gc), CHECKS) if ans is not True]

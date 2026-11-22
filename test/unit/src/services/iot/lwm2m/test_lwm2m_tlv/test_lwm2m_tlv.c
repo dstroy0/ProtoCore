@@ -405,10 +405,10 @@ void test_boolean_is_one_octet(void)
     open_sink(sizeof(g_buf));
     Lwm2mTlvV.hdr.id_type = LWM2M_TLV_RESOURCE_WITH_VALUE;
     Lwm2mTlvV.hdr.id = 0x0B;
-    Lwm2mTlvV.val.boolean_value = PROTO_TRUE;
+    Lwm2mTlvV.val.boolean_value = EMBED_TRUE;
     Lwm2mTlv.write_boolean(protocore_lwm2m_tlv_span());
     Lwm2mTlvV.hdr.id = 0x0C;
-    Lwm2mTlvV.val.boolean_value = PROTO_FALSE;
+    Lwm2mTlvV.val.boolean_value = EMBED_FALSE;
     Lwm2mTlv.write_boolean(protocore_lwm2m_tlv_span());
     TEST_ASSERT_EQUAL_UINT(6u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC1\x0B\x01\xC1\x0C\x00", g_buf, 6);

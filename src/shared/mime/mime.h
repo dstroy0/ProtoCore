@@ -11,7 +11,7 @@
  *
  * Header-only like hex.h - no .cpp to wire into every test
  * env's src filter. Each is a `const char *const` to a string literal: the literal
- * lives in the linker's mergeable string section, so there is one copy in flash no
+ * lives in the linker's mergeable string section. So there is one copy in flash no
  * matter how many translation units reference it, and an unused one costs nothing.
  *
  * @author  Douglas Quigg (dstroy0)

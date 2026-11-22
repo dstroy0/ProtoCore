@@ -49,7 +49,7 @@ void test_only_the_four_named_octets_are_escaped(void)
         uint8_t src = (uint8_t)v;
         uint8_t buf[8];
         size_t n = protocore_gpib_build_data(buf, sizeof(buf), &src, 1);
-        proto_bool named = (v == 13 || v == 10 || v == 27 || v == 43);
+        embed_bool named = (v == 13 || v == 10 || v == 27 || v == 43);
         TEST_ASSERT_EQUAL_UINT(named ? 3u : 2u, n);
         if (named)
         {

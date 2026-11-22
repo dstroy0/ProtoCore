@@ -10,7 +10,7 @@ file in place. Where a repository has a tool worth sharing, it is promoted here 
 
     fetch(cfg)        toolkit -> repository. Copies the sets the repository asked for, stamps each
                       file, writes repotools.lock.
-    check(cfg)        reports a fetched file edited in the repository, and one the toolkit has moved
+    check(cfg)        reports a fetched file edited in the repository, and one the toolkit moved
                       past. The first refuses. The second is a note saying a fetch is due.
     adopt(path)       repository -> toolkit. Brings one file in, records where it came from, and
                       reports what still carries that repository's name.
@@ -239,7 +239,7 @@ def check(cfg, report):
     one repository and is lost the next time anything fetches. Where the edit is worth keeping, it
     is promoted with `adopt` and flows back out to every repository.
 
-    A file the toolkit has changed since the fetch is a note. It says a fetch is due, and it refuses
+    A file the toolkit changed since the fetch is a note. It says a fetch is due, and it refuses
     nothing, because a repository is entitled to sit on a known version until it chooses to move.
     """
     toolkit = boot.toolkit_root()

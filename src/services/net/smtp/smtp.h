@@ -34,29 +34,27 @@
 
 #if PROTOCORE_ENABLE_SMTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief How one session ended. 0 is a delivered message; every failure is a distinct code. */
-typedef enum PROTO_ENUM_PACKED
-{
-    SMTP_OK = 0,
-    SMTP_ERR_ARG = -1,         ///< host, reverse-path or forward-path was null or empty
-    SMTP_ERR_CONNECT = -2,     ///< the transport never came up (name lookup or connect)
-    SMTP_ERR_TLS = -3,         ///< the TLS handshake did not complete
-    SMTP_ERR_IO = -4,          ///< a send or a recv failed, or a reply never arrived
-    SMTP_ERR_PROTOCOL = -5,    ///< the reply code was not the one the step requires (RFC 5321 sec 4.2)
-    SMTP_ERR_AUTH = -6,        ///< the AUTH exchange was rejected (RFC 4954 sec 6: 535)
-    SMTP_ERR_OVERFLOW = -7,    ///< a command line or the message content outgrew its fixed buffer
-    SMTP_ERR_NO_STARTTLS = -8, ///< the EHLO reply carried no STARTTLS keyword (RFC 3207 sec 3)
-} SmtpResult;
+EMBED_ENUM_BYTE(SmtpResult, SMTP_OK = 0,
+                SMTP_ERR_ARG = -1,         ///< host, reverse-path or forward-path was null or empty
+                SMTP_ERR_CONNECT = -2,     ///< the transport never came up (name lookup or connect)
+                SMTP_ERR_TLS = -3,         ///< the TLS handshake did not complete
+                SMTP_ERR_IO = -4,          ///< a send or a recv failed, or a reply never arrived
+                SMTP_ERR_PROTOCOL = -5,    ///< the reply code was not the one the step requires (RFC 5321 sec 4.2)
+                SMTP_ERR_AUTH = -6,        ///< the AUTH exchange was rejected (RFC 4954 sec 6: 535)
+                SMTP_ERR_OVERFLOW = -7,    ///< a command line or the message content outgrew its fixed buffer
+                SMTP_ERR_NO_STARTTLS = -8, ///< the EHLO reply carried no STARTTLS keyword (RFC 3207 sec 3)
+);
 
 /** @brief How the channel is secured. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(
+    SmtpSecurity,
     SMTP_PLAIN = 0,    ///< no TLS; credentials and content travel in the clear (port 25)
     SMTP_TLS = 1,      ///< implicit TLS from the first byte: the submissions service (RFC 8314 sec 3.3)
     SMTP_STARTTLS = 2, ///< clear connect, then the in-band upgrade (RFC 3207 sec 4) on submission (RFC 6409 sec 3.1)
-} SmtpSecurity;
+);
 
 /**
  * @brief The byte seam the dialogue rides. Every octet leaves and arrives through these two, so the
@@ -76,7 +74,7 @@ typedef int (*SmtpRecvFn)(void *ctx, uint8_t *buf, size_t cap);
  * the switch belongs to the transport and the engine keeps the one pair of function pointers.
  * @return true when the handshake completed.
  */
-typedef proto_bool (*SmtpStartTlsFn)(void *ctx);
+typedef embed_bool (*SmtpStartTlsFn)(void *ctx);
 
 /** @brief RFC 5321 sec 3.1: the server a session is opened with, and how it is secured. */
 typedef struct
@@ -149,7 +147,7 @@ typedef struct
     SmtpEnvelopeArgs envelope;   ///< the two paths of one mail transaction
     SmtpContentArgs content;     ///< the message DATA carries
     SmtpTransportArgs transport; ///< the seam the octets move through
-    proto_bool ok;
+    embed_bool ok;
     SmtpResult result;
     int16_t code;
 } SmtpVars;
@@ -189,7 +187,7 @@ static const SmtpNs Smtp __attribute__((unused)) = {
  */
 uint8_t *protocore_smtp_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SMTP
 

@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file cc1101.h
@@ -64,12 +64,12 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*init)(uint8_t *, const protocore_cc1101_bus *, const protocore_cc1101_config *);
-    proto_bool (*send)(uint8_t *, const protocore_cc1101_bus *, const uint8_t *, uint8_t);
-    proto_bool (*tx_done)(uint8_t *, const protocore_cc1101_bus *);
-    void (*set_rx)(uint8_t *, const protocore_cc1101_bus *);
+    embed_bool (*init)(const uint8_t *, const protocore_cc1101_bus *, const protocore_cc1101_config *);
+    embed_bool (*send)(const uint8_t *, const protocore_cc1101_bus *, const uint8_t *, uint8_t);
+    embed_bool (*tx_done)(const uint8_t *, const protocore_cc1101_bus *);
+    void (*set_rx)(const uint8_t *, const protocore_cc1101_bus *);
     int (*recv)(uint8_t *, const protocore_cc1101_bus *, uint8_t *, uint8_t, int16_t *);
-    int16_t (*rssi_dbm)(uint8_t *, uint8_t);
+    int16_t (*rssi_dbm)(const uint8_t *, uint8_t);
 } Cc1101Ns;
 PROTOCORE_NS_LAYOUT(Cc1101Ns, init, send, tx_done, set_rx, recv, rssi_dbm);
 
@@ -78,31 +78,33 @@ PROTOCORE_NS_LAYOUT(Cc1101Ns, init, send, tx_done, set_rx, recv, rssi_dbm);
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param cfg Cfg
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_cc1101_init(uint8_t *work, const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg);
+embed_bool protocore_cc1101_init(const uint8_t *work, const protocore_cc1101_bus *bus,
+                                 const protocore_cc1101_config *cfg);
 /**
  * @brief Transmit len bytes as a variable-length packet (leading length .
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param data Data
  * @param len Len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_cc1101_send(uint8_t *work, const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len);
+embed_bool protocore_cc1101_send(const uint8_t *work, const protocore_cc1101_bus *bus, const uint8_t *data,
+                                 uint8_t len);
 /**
- * @brief True once the state machine has returned to IDLE after a transmit.
+ * @brief True once the state machine returned to IDLE after a transmit.
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_cc1101_tx_done(uint8_t *work, const protocore_cc1101_bus *bus);
+embed_bool protocore_cc1101_tx_done(const uint8_t *work, const protocore_cc1101_bus *bus);
 /**
  * @brief Flush RX and enter receive mode (strobe RX). Then poll .
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  */
-void protocore_cc1101_set_rx(uint8_t *work, const protocore_cc1101_bus *bus);
+void protocore_cc1101_set_rx(const uint8_t *work, const protocore_cc1101_bus *bus);
 /**
  * @brief If a packet is waiting, read it (length byte + payload + appended .
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
@@ -119,7 +121,7 @@ int protocore_cc1101_recv(uint8_t *work, const protocore_cc1101_bus *bus, uint8_
  * @param raw Raw
  * @return The int16_t.
  */
-int16_t protocore_cc1101_rssi_dbm(uint8_t *work, uint8_t raw);
+int16_t protocore_cc1101_rssi_dbm(const uint8_t *work, uint8_t raw);
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*protocore_cc1101_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
@@ -132,6 +134,6 @@ PROTOCORE_NS Cc1101Ns Cc1101 PROTOCORE_UNUSED = {.init = protocore_cc1101_init,
                                                  .recv = protocore_cc1101_recv,
                                                  .rssi_dbm = protocore_cc1101_rssi_dbm};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CC1101_H

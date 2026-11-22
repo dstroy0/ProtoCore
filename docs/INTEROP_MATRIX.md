@@ -104,7 +104,7 @@ but the ratio is the honest measure of how much is judged by something other tha
 1. ~~**SSE interop peer** + connection-exhaustion attack~~ **DONE** (2026-07-11) - WHATWG EventSource peer
    (HW 8/8), `protocore_sse_format` host+device bench, exhaustion+churn attacks. The exhaustion attack **found a real
    permanent-DoS bug** (SSE `protocore_sse_pool` slot leak wedging the whole server), root-caused over JTAG and fixed
-   (`http_release_upgrade_bindings`); see docs/BUGS.md.
+   (`http_release_upgrade_bindings`). See docs/BUGS.md.
    1b. ~~**WebDAV** peer + bench + attacks~~ **DONE** (2026-07-11) - stdlib RFC 4918 client peer (17/17 HW, full
    OPTIONS/PROPFIND/PUT/GET/MKCOL/COPY/MOVE/DELETE round trip), `protocore_webdav_ms_entry` host+device bench, 5 advanced
    attacks (Depth:infinity amplification, XXE + billion-laughs, Destination/URI traversal, PROPPATCH bomb, LOCK

@@ -19,12 +19,12 @@ typedef struct
 {
     uint8_t in[4096];
     size_t in_len, in_pos;
-    proto_bool in_eof;
+    embed_bool in_eof;
     uint8_t out[4096];
     size_t out_len;
     size_t send_cap;
-    proto_bool fail_send;
-    proto_bool shutdown_called;
+    embed_bool fail_send;
+    embed_bool shutdown_called;
 } MockSock;
 
 static int msock_recv(void *c, uint8_t *buf, size_t cap)
@@ -67,10 +67,10 @@ static int msock_send(void *c, const uint8_t *buf, size_t len)
 
 static void msock_shutdown(void *c)
 {
-    ((MockSock *)c)->shutdown_called = PROTO_TRUE;
+    ((MockSock *)c)->shutdown_called = EMBED_TRUE;
 }
 
-static void sock_init(MockSock *s, const void *in, size_t in_len, proto_bool eof)
+static void sock_init(MockSock *s, const void *in, size_t in_len, embed_bool eof)
 {
     memset(s, 0, sizeof(*s));
     if (in_len)
@@ -109,8 +109,8 @@ static protocore_relay_status run_relay(protocore_relay *r, int max_steps)
 void test_bidirectional()
 {
     MockSock a, b;
-    sock_init(&a, "hello from client", 17, PROTO_TRUE);
-    sock_init(&b, "hi from origin", 14, PROTO_TRUE);
+    sock_init(&a, "hello from client", 17, EMBED_TRUE);
+    sock_init(&b, "hi from origin", 14, EMBED_TRUE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
     RelayV.init_args.r = &r;
@@ -135,8 +135,8 @@ void test_backpressure()
         data[i] = (uint8_t)(i * 37 + 11);
     }
     MockSock a, b;
-    sock_init(&a, data, sizeof(data), PROTO_TRUE);
-    sock_init(&b, NULL, 0, PROTO_TRUE);
+    sock_init(&a, data, sizeof(data), EMBED_TRUE);
+    sock_init(&b, NULL, 0, EMBED_TRUE);
     b.send_cap = 7;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
@@ -158,8 +158,8 @@ void test_half_close_shutdown()
         resp[i] = (uint8_t)(i ^ 0x3C);
     }
     MockSock a, b;
-    sock_init(&a, "req", 3, PROTO_TRUE);
-    sock_init(&b, resp, sizeof(resp), PROTO_TRUE);
+    sock_init(&a, "req", 3, EMBED_TRUE);
+    sock_init(&b, resp, sizeof(resp), EMBED_TRUE);
     a.send_cap = 64;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
@@ -190,9 +190,9 @@ void test_half_close_shutdown()
 void test_send_error()
 {
     MockSock a, b;
-    sock_init(&a, "data", 4, PROTO_TRUE);
-    sock_init(&b, NULL, 0, PROTO_TRUE);
-    b.fail_send = PROTO_TRUE;
+    sock_init(&a, "data", 4, EMBED_TRUE);
+    sock_init(&b, NULL, 0, EMBED_TRUE);
+    b.fail_send = EMBED_TRUE;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
     RelayV.init_args.r = &r;
@@ -214,8 +214,8 @@ void test_one_way_idle_then_close()
 {
 
     MockSock a, b;
-    sock_init(&a, "GET / HTTP/1.0\r\n\r\n", 18, PROTO_TRUE);
-    sock_init(&b, NULL, 0, PROTO_TRUE);
+    sock_init(&a, "GET / HTTP/1.0\r\n\r\n", 18, EMBED_TRUE);
+    sock_init(&b, NULL, 0, EMBED_TRUE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
     RelayV.init_args.r = &r;
@@ -231,8 +231,8 @@ void test_one_way_idle_then_close()
 void test_note_eof_out_of_band()
 {
     MockSock a, b;
-    sock_init(&a, "hello", 5, PROTO_FALSE);
-    sock_init(&b, "world", 5, PROTO_FALSE);
+    sock_init(&a, "hello", 5, EMBED_FALSE);
+    sock_init(&b, "world", 5, EMBED_FALSE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
     RelayV.init_args.r = &r;
@@ -247,10 +247,10 @@ void test_note_eof_out_of_band()
     TEST_ASSERT_EQUAL_MEMORY("world", a.out, 5);
 
     RelayV.note_eof_args.r = &r;
-    RelayV.note_eof_args.origin = PROTO_FALSE;
+    RelayV.note_eof_args.origin = EMBED_FALSE;
     Relay.note_eof(relay_work);
     RelayV.note_eof_args.r = &r;
-    RelayV.note_eof_args.origin = PROTO_TRUE;
+    RelayV.note_eof_args.origin = EMBED_TRUE;
     Relay.note_eof(relay_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 8));
     TEST_ASSERT_TRUE(a.shutdown_called);
@@ -260,8 +260,8 @@ void test_note_eof_out_of_band()
 void test_zero_length_read_no_progress()
 {
     MockSock a, b;
-    sock_init(&a, NULL, 0, PROTO_FALSE);
-    sock_init(&b, NULL, 0, PROTO_FALSE);
+    sock_init(&a, NULL, 0, EMBED_FALSE);
+    sock_init(&b, NULL, 0, EMBED_FALSE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
     RelayV.init_args.r = &r;
@@ -281,10 +281,10 @@ void test_zero_length_read_no_progress()
     TEST_ASSERT_EQUAL_size_t(0, b.out_len);
 
     RelayV.note_eof_args.r = &r;
-    RelayV.note_eof_args.origin = PROTO_FALSE;
+    RelayV.note_eof_args.origin = EMBED_FALSE;
     Relay.note_eof(relay_work);
     RelayV.note_eof_args.r = &r;
-    RelayV.note_eof_args.origin = PROTO_TRUE;
+    RelayV.note_eof_args.origin = EMBED_TRUE;
     Relay.note_eof(relay_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_DONE, run_relay(&r, 8));
 }
@@ -297,8 +297,8 @@ void test_flush_send_error()
         data[i] = (uint8_t)(i + 1);
     }
     MockSock a, b;
-    sock_init(&a, data, sizeof(data), PROTO_TRUE);
-    sock_init(&b, NULL, 0, PROTO_TRUE);
+    sock_init(&a, data, sizeof(data), EMBED_TRUE);
+    sock_init(&b, NULL, 0, EMBED_TRUE);
     b.send_cap = 10;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
@@ -312,7 +312,7 @@ void test_flush_send_error()
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_RUNNING, RelayV.status);
     TEST_ASSERT_TRUE(r.a2b_off < r.a2b_len);
 
-    b.fail_send = PROTO_TRUE;
+    b.fail_send = EMBED_TRUE;
     RelayV.step_args.r = &r;
     Relay.step(relay_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, RelayV.status);
@@ -321,9 +321,9 @@ void test_flush_send_error()
 void test_send_error_reverse_direction()
 {
     MockSock a, b;
-    sock_init(&a, NULL, 0, PROTO_TRUE);
-    sock_init(&b, "resp", 4, PROTO_TRUE);
-    a.fail_send = PROTO_TRUE;
+    sock_init(&a, NULL, 0, EMBED_TRUE);
+    sock_init(&b, "resp", 4, EMBED_TRUE);
+    a.fail_send = EMBED_TRUE;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
     RelayV.init_args.r = &r;
@@ -339,8 +339,8 @@ void test_send_error_reverse_direction()
 void test_null_argument_guards()
 {
     MockSock a, b;
-    sock_init(&a, NULL, 0, PROTO_TRUE);
-    sock_init(&b, NULL, 0, PROTO_TRUE);
+    sock_init(&a, NULL, 0, EMBED_TRUE);
+    sock_init(&b, NULL, 0, EMBED_TRUE);
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
 
@@ -362,15 +362,15 @@ void test_null_argument_guards()
     TEST_ASSERT_EQUAL_INT(PROTOCORE_RELAY_ERROR, RelayV.status);
 
     RelayV.note_eof_args.r = NULL;
-    RelayV.note_eof_args.origin = PROTO_FALSE;
+    RelayV.note_eof_args.origin = EMBED_FALSE;
     Relay.note_eof(relay_work);
 }
 
 void test_shutdown_null_seam()
 {
     MockSock a, b;
-    sock_init(&a, "hi", 2, PROTO_TRUE);
-    sock_init(&b, NULL, 0, PROTO_TRUE);
+    sock_init(&a, "hi", 2, EMBED_TRUE);
+    sock_init(&b, NULL, 0, EMBED_TRUE);
     protocore_relay_end ea = end_of(&a);
     protocore_relay_end eb = end_of(&b);
     eb.shutdown = NULL;
@@ -395,8 +395,8 @@ void test_note_eof_with_backlog_pending()
         data[i] = (uint8_t)(i + 100);
     }
     MockSock a, b;
-    sock_init(&a, data, sizeof(data), PROTO_FALSE);
-    sock_init(&b, NULL, 0, PROTO_TRUE);
+    sock_init(&a, data, sizeof(data), EMBED_FALSE);
+    sock_init(&b, NULL, 0, EMBED_TRUE);
     b.send_cap = 5;
     protocore_relay_end ea = end_of(&a), eb = end_of(&b);
     protocore_relay r;
@@ -412,7 +412,7 @@ void test_note_eof_with_backlog_pending()
     TEST_ASSERT_EQUAL_size_t(20, r.a2b_len);
 
     RelayV.note_eof_args.r = &r;
-    RelayV.note_eof_args.origin = PROTO_FALSE;
+    RelayV.note_eof_args.origin = EMBED_FALSE;
     Relay.note_eof(relay_work);
     TEST_ASSERT_FALSE(r.a2b_done);
 

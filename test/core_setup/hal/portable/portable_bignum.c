@@ -28,7 +28,7 @@ typedef struct
 {
     protocore_bignum r1; // R mod p = 2^2048 - p (two's complement of p in 2048 bits)
     protocore_bignum r2; // R^2 mod p = 2^4096 mod p (bn_init() via repeated doubling)
-    proto_bool initialized;
+    embed_bool initialized;
 } Group14Ctx;
 static Group14Ctx s_g14 = {0};
 
@@ -105,7 +105,7 @@ static void bn_init(void)
         }
     }
 
-    s_g14.initialized = PROTO_TRUE;
+    s_g14.initialized = EMBED_TRUE;
 }
 
 // bn_expmod_group14's working set, borrowed whole. Both paths hold the DH private exponent and the
@@ -147,7 +147,7 @@ static void bn_monpro(protocore_bignum *out, const protocore_bignum *a, const pr
             carry = uv >> 32;
         }
         // The multiply's last carry lands in t[i+64], and that add carries out again whenever
-        // t[i+64] is near the top of its word, so it goes on into t[i+65] the same way the
+        // t[i+64] is near the top of its word. So it goes on into t[i+65] the same way the
         // reduction's does. i+65 is at most 128, the accumulator's last limb.
         uint64_t mul_hi = (uint64_t)t[i + PROTOCORE_BN_LIMBS] + carry;
         t[i + PROTOCORE_BN_LIMBS] = (uint32_t)mul_hi;
@@ -194,14 +194,12 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
 
     // The whole working set in one borrow. These are the same bytes the fixed layout carved by hand;
     // as struct members they cannot drift from a layout documented somewhere else.
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span ws = EMBED_CALL(
         spat.from, SpatiumCfg,
         .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(sizeof(BnExpmodWork), protocore_secure_owner()),
         .cap = sizeof(BnExpmodWork));
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
         return;
     }
@@ -241,7 +239,7 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     memset(one.d, 0, sizeof(protocore_bignum));
     one.d[0] = 1u;
     bn_monpro(out, result, &one, w->t);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
 }
 
 #endif // !PROTOCORE_HAS_HW_BIGNUM

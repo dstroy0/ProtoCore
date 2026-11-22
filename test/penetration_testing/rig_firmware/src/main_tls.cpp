@@ -203,7 +203,7 @@ void loop()
     server.handle();
 #ifdef PROTOCORE_TLS_HS_BENCH
     // Print each completed TLS handshake's device-CPU time (summed over the pumped mbedtls_ssl_handshake
-    // calls) vs its wall time (incl. network waits), so we can split the handshake into compute vs link.
+    // calls) vs its wall time (incl. network waits). So we can split the handshake into compute vs link.
     static unsigned seen_hs = 0;
     if (protocore_tls_hs_bench.count != seen_hs)
     {

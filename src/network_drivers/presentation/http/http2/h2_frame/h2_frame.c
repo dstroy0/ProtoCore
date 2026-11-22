@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static void wr32(uint8_t *p, uint32_t v)
 {
@@ -27,18 +27,18 @@ static uint32_t rd32(const uint8_t *p)
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
 }
 
-static proto_bool h2_parse_header_run(const uint8_t *buf, size_t len, H2FrameHeader *out)
+static embed_bool h2_parse_header_run(const uint8_t *buf, size_t len, H2FrameHeader *out)
 {
     if (len < H2_FRAME_HEADER_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->length = ((uint32_t)buf[0] << 16) | ((uint32_t)buf[1] << 8) | buf[2];
     out->type = buf[3];
     out->flags = buf[4];
     out->stream_id = ((uint32_t)(buf[5] & 0x7f) << 24) | ((uint32_t)buf[6] << 16) | ((uint32_t)buf[7] << 8) |
                      buf[8]; // clear the reserved bit
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static size_t h2_write_header_run(uint8_t *out, size_t cap, uint32_t length, uint8_t type, uint8_t flags,
@@ -70,11 +70,11 @@ static void h2_settings_defaults_run(H2Settings *s)
     s->max_header_list_size = 0xFFFFFFFFu;
 }
 
-static proto_bool h2_parse_settings_run(const uint8_t *payload, size_t len, H2Settings *s)
+static embed_bool h2_parse_settings_run(const uint8_t *payload, size_t len, H2Settings *s)
 {
     if (len % 6 != 0) // each entry is 2-byte id + 4-byte value
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < len; i += 6)
     {
@@ -88,7 +88,7 @@ static proto_bool h2_parse_settings_run(const uint8_t *payload, size_t len, H2Se
         case H2_SETTINGS_ENABLE_PUSH:
             if (val > 1)
             {
-                return PROTO_FALSE; // RFC 9113 sec 6.5.2: must be 0 or 1
+                return EMBED_FALSE; // RFC 9113 sec 6.5.2: must be 0 or 1
             }
             s->enable_push = val;
             break;
@@ -98,14 +98,14 @@ static proto_bool h2_parse_settings_run(const uint8_t *payload, size_t len, H2Se
         case H2_SETTINGS_INITIAL_WINDOW_SIZE:
             if (val > 0x7FFFFFFF)
             {
-                return PROTO_FALSE; // must not exceed 2^31-1
+                return EMBED_FALSE; // must not exceed 2^31-1
             }
             s->initial_window_size = val;
             break;
         case H2_SETTINGS_MAX_FRAME_SIZE:
             if (val < 16384 || val > 16777215)
             {
-                return PROTO_FALSE; // must be in [2^14, 2^24-1]
+                return EMBED_FALSE; // must be in [2^14, 2^24-1]
             }
             s->max_frame_size = val;
             break;
@@ -116,7 +116,7 @@ static proto_bool h2_parse_settings_run(const uint8_t *payload, size_t len, H2Se
             break; // unknown settings are ignored
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static size_t h2_build_settings_run(uint8_t *out, size_t cap, const uint16_t *ids, const uint32_t *vals, size_t n)
@@ -189,7 +189,7 @@ static size_t h2_build_ping_ack_run(uint8_t *out, size_t cap, const uint8_t opaq
 }
 
 static size_t h2_build_headers_run(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *block, size_t block_len,
-                                   proto_bool end_stream)
+                                   embed_bool end_stream)
 {
     if (cap < H2_FRAME_HEADER_LEN + block_len)
     {
@@ -202,7 +202,7 @@ static size_t h2_build_headers_run(uint8_t *out, size_t cap, uint32_t stream_id,
 }
 
 static size_t h2_build_data_run(uint8_t *out, size_t cap, uint32_t stream_id, const uint8_t *data, size_t data_len,
-                                proto_bool end_stream)
+                                embed_bool end_stream)
 {
     if (cap < H2_FRAME_HEADER_LEN + data_len)
     {
@@ -218,13 +218,13 @@ static size_t h2_build_data_run(uint8_t *out, size_t cap, uint32_t stream_id, co
 
 // --- the entries ---
 
-void protocore_h2_frame_parse_header(uint8_t *work)
+void protocore_h2_frame_parse_header(const uint8_t *work)
 {
     (void)work;
     H2FrameV.ok = h2_parse_header_run(H2FrameV.parse_args.buf, H2FrameV.parse_args.len, &H2FrameV.header);
 }
 
-void protocore_h2_frame_write_header(uint8_t *work)
+void protocore_h2_frame_write_header(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n =
@@ -232,20 +232,20 @@ void protocore_h2_frame_write_header(uint8_t *work)
                             H2FrameV.write_args.type, H2FrameV.write_args.flags, H2FrameV.write_args.stream_id);
 }
 
-void protocore_h2_frame_settings_defaults(uint8_t *work)
+void protocore_h2_frame_settings_defaults(const uint8_t *work)
 {
     (void)work;
     h2_settings_defaults_run(H2FrameV.settings_args.s);
 }
 
-void protocore_h2_frame_parse_settings(uint8_t *work)
+void protocore_h2_frame_parse_settings(const uint8_t *work)
 {
     (void)work;
     H2FrameV.ok =
         h2_parse_settings_run(H2FrameV.settings_args.payload, H2FrameV.settings_args.len, H2FrameV.settings_args.s);
 }
 
-void protocore_h2_frame_build_settings(uint8_t *work)
+void protocore_h2_frame_build_settings(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_settings_run(H2FrameV.build_settings_args.buf, H2FrameV.build_settings_args.cap,
@@ -253,40 +253,40 @@ void protocore_h2_frame_build_settings(uint8_t *work)
                                        H2FrameV.build_settings_args.n);
 }
 
-void protocore_h2_frame_build_settings_ack(uint8_t *work)
+void protocore_h2_frame_build_settings_ack(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_settings_ack_run(H2FrameV.ack_args.buf, H2FrameV.ack_args.cap);
 }
 
-void protocore_h2_frame_build_window_update(uint8_t *work)
+void protocore_h2_frame_build_window_update(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_window_update_run(H2FrameV.window_args.buf, H2FrameV.window_args.cap,
                                             H2FrameV.window_args.stream_id, H2FrameV.window_args.increment);
 }
 
-void protocore_h2_frame_build_rst_stream(uint8_t *work)
+void protocore_h2_frame_build_rst_stream(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_rst_stream_run(H2FrameV.rst_args.buf, H2FrameV.rst_args.cap, H2FrameV.rst_args.stream_id,
                                          H2FrameV.rst_args.error);
 }
 
-void protocore_h2_frame_build_goaway(uint8_t *work)
+void protocore_h2_frame_build_goaway(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_goaway_run(H2FrameV.goaway_args.buf, H2FrameV.goaway_args.cap,
                                      H2FrameV.goaway_args.last_stream_id, H2FrameV.goaway_args.error);
 }
 
-void protocore_h2_frame_build_ping_ack(uint8_t *work)
+void protocore_h2_frame_build_ping_ack(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_ping_ack_run(H2FrameV.ping_args.buf, H2FrameV.ping_args.cap, H2FrameV.ping_args.opaque);
 }
 
-void protocore_h2_frame_build_headers(uint8_t *work)
+void protocore_h2_frame_build_headers(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_headers_run(H2FrameV.headers_args.buf, H2FrameV.headers_args.cap,
@@ -294,7 +294,7 @@ void protocore_h2_frame_build_headers(uint8_t *work)
                                       H2FrameV.headers_args.block_len, H2FrameV.headers_args.end_stream);
 }
 
-void protocore_h2_frame_build_data(uint8_t *work)
+void protocore_h2_frame_build_data(const uint8_t *work)
 {
     (void)work;
     H2FrameV.n = h2_build_data_run(H2FrameV.data_args.buf, H2FrameV.data_args.cap, H2FrameV.data_args.stream_id,
@@ -305,6 +305,6 @@ void protocore_h2_frame_build_data(uint8_t *work)
 /** @brief The operands and the outcome. */
 H2FrameVars H2FrameV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2

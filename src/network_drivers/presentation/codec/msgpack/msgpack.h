@@ -35,7 +35,7 @@
 #include "network_drivers/presentation/codec/codec.h" // protocore_codec_type - one item vocabulary
 #include "spatium/spatium.h"                          // mmgr_span / mmgr_cspan - the region, bound with spat.from()
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The encoder writes into a mmgr_span and the decoder reads from a mmgr_cspan. Bind with
 // spat.from(), check with spat.ok(), and take the encoded length from the span's pos.
@@ -48,7 +48,7 @@ PROTOCORE_BEGIN_DECLS
  */
 extern const protocore_codec MsgPack;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MSGPACK
 

@@ -14,7 +14,7 @@
  *
  * Three value types: null-terminated strings, `uint32_t`, and raw blobs - each
  * with a default returned when the key is absent. On ESP32 the backend is the
- * Arduino `Preferences` NVS wrapper; on host builds it is a fixed in-memory table
+ * Arduino `Preferences` NVS wrapper. On host builds it is a fixed in-memory table
  * (`PROTOCORE_CONFIG_MAX_ENTRIES` x `PROTOCORE_CONFIG_VAL_MAX`) so the typed contract is
  * unit-testable without flash.
  *
@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_CONFIG_STORE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_CONFIG_STORE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums it
 // into its arena. A caller takes them once and passes the pointer to every call. How they are
@@ -105,7 +105,7 @@ typedef struct
     ConfigStoreSetBlobArgs set_blob_args;
     ConfigStoreGetBlobArgs get_blob_args;
     ConfigStoreEraseArgs erase_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
     uint32_t ms;
 } ConfigStoreVars;
@@ -166,7 +166,7 @@ static const ConfigStoreNs ConfigStore __attribute__((unused)) = {
  */
 uint8_t *protocore_config_store_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CONFIG_STORE
 

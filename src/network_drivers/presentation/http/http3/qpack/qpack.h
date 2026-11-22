@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file qpack.h
@@ -36,14 +36,14 @@ PROTOCORE_BEGIN_DECLS
 // combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
-typedef proto_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
+typedef embed_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*encode_prefix)(uint8_t *, uint8_t *, size_t);
+    size_t (*encode_prefix)(const uint8_t *, uint8_t *, size_t);
     size_t (*encode_header)(uint8_t *, uint8_t *, size_t, const char *, size_t, const char *, size_t);
-    proto_bool (*decode)(uint8_t *, const uint8_t *, size_t, char *, size_t, QpackEmitFn, void *);
+    embed_bool (*decode)(uint8_t *, const uint8_t *, size_t, char *, size_t, QpackEmitFn, void *);
 } QpackNs;
 PROTOCORE_NS_LAYOUT(QpackNs, encode_prefix, encode_header, decode);
 
@@ -54,7 +54,7 @@ PROTOCORE_NS_LAYOUT(QpackNs, encode_prefix, encode_header, decode);
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_qpack_encode_prefix(uint8_t *work, uint8_t *out, size_t cap);
+size_t protocore_qpack_encode_prefix(const uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief Encode one header field (server side): a full static match -> .
  * @param work PROTOCORE_QPACK_BORROW bytes the caller took. Not held past the call.
@@ -77,19 +77,19 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
  * @param scratch_cap Scratch cap
  * @param emit Emit
  * @param ctx Ctx
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
+embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
                                   QpackEmitFn emit, void *ctx);
 
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
-typedef proto_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
+typedef embed_bool (*QpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
 
 /** @brief Module namespace. */
 PROTOCORE_NS QpackNs Qpack PROTOCORE_UNUSED = {.encode_prefix = protocore_qpack_encode_prefix,
                                                .encode_header = protocore_qpack_encode_header,
                                                .decode = protocore_qpack_decode};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_QPACK_H

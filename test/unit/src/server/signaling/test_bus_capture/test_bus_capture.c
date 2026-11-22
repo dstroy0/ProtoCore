@@ -28,7 +28,7 @@ void tearDown(void)
 }
 
 // A frame with @p n data octets counting up from 1.
-static CanFrame frame_of(uint32_t id, proto_bool extended, proto_bool rtr, uint8_t n)
+static CanFrame frame_of(uint32_t id, embed_bool extended, embed_bool rtr, uint8_t n)
 {
     CanFrame f;
     memset(&f, 0, sizeof(f));
@@ -104,7 +104,7 @@ void test_the_identifier_width_and_the_extended_flag(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
 
-    CanFrame std = frame_of(0x7FF, PROTO_FALSE, PROTO_FALSE, 0);
+    CanFrame std = frame_of(0x7FF, EMBED_FALSE, EMBED_FALSE, 0);
     BusCaptureV.can_to_socketcan_args.f = &std;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -112,7 +112,7 @@ void test_the_identifier_width_and_the_extended_flag(void)
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_SOCKETCAN_FRAME_LEN, BusCaptureV.n);
     TEST_ASSERT_EQUAL_HEX32(0x000007FFu, id_word(out));
 
-    CanFrame ext = frame_of(0x1FFFFFFFu, PROTO_TRUE, PROTO_FALSE, 0);
+    CanFrame ext = frame_of(0x1FFFFFFFu, EMBED_TRUE, EMBED_FALSE, 0);
     BusCaptureV.can_to_socketcan_args.f = &ext;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -121,7 +121,7 @@ void test_the_identifier_width_and_the_extended_flag(void)
     TEST_ASSERT_EQUAL_HEX32(PROTOCORE_CAN_EFF_FLAG | 0x1FFFFFFFu, id_word(out));
 
     // an 11-bit frame carrying a wider id keeps only the 11 bits, and sets no flag
-    CanFrame wide_std = frame_of(0x1FFFFFFFu, PROTO_FALSE, PROTO_FALSE, 0);
+    CanFrame wide_std = frame_of(0x1FFFFFFFu, EMBED_FALSE, EMBED_FALSE, 0);
     BusCaptureV.can_to_socketcan_args.f = &wide_std;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -130,7 +130,7 @@ void test_the_identifier_width_and_the_extended_flag(void)
     TEST_ASSERT_EQUAL_HEX32(0x000007FFu, id_word(out));
 
     // a 29-bit frame carrying a wider id keeps only the 29 bits under the flag
-    CanFrame wide_ext = frame_of(0xFFFFFFFFu, PROTO_TRUE, PROTO_FALSE, 0);
+    CanFrame wide_ext = frame_of(0xFFFFFFFFu, EMBED_TRUE, EMBED_FALSE, 0);
     BusCaptureV.can_to_socketcan_args.f = &wide_ext;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -144,7 +144,7 @@ void test_the_identifier_width_and_the_extended_flag(void)
 void test_a_remote_frame_sets_its_flag_and_carries_no_data(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
-    CanFrame rtr = frame_of(0x100, PROTO_FALSE, PROTO_TRUE, 8);
+    CanFrame rtr = frame_of(0x100, EMBED_FALSE, EMBED_TRUE, 8);
     BusCaptureV.can_to_socketcan_args.f = &rtr;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -159,7 +159,7 @@ void test_a_remote_frame_sets_its_flag_and_carries_no_data(void)
     }
 
     // both flags together, on an extended remote frame
-    CanFrame both = frame_of(0x1ABCDEFu, PROTO_TRUE, PROTO_TRUE, 4);
+    CanFrame both = frame_of(0x1ABCDEFu, EMBED_TRUE, EMBED_TRUE, 4);
     BusCaptureV.can_to_socketcan_args.f = &both;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -175,7 +175,7 @@ void test_the_length_is_clamped_to_eight(void)
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     for (uint8_t n = 0; n <= 20u; n++)
     {
-        CanFrame f = frame_of(0x200, PROTO_FALSE, PROTO_FALSE, n);
+        CanFrame f = frame_of(0x200, EMBED_FALSE, EMBED_FALSE, n);
         BusCaptureV.can_to_socketcan_args.f = &f;
         BusCaptureV.can_to_socketcan_args.out = out;
         BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -197,7 +197,7 @@ void test_the_reserved_octets_are_zeroed(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
     memset(out, 0xFF, sizeof(out));
-    CanFrame f = frame_of(0x321, PROTO_TRUE, PROTO_FALSE, 8);
+    CanFrame f = frame_of(0x321, EMBED_TRUE, EMBED_FALSE, 8);
     BusCaptureV.can_to_socketcan_args.f = &f;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -213,7 +213,7 @@ void test_the_reserved_octets_are_zeroed(void)
 void test_the_identifier_is_big_endian(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
-    CanFrame f = frame_of(0x0A0B0C0Du & PROTOCORE_CAN_EXT_ID_MASK, PROTO_TRUE, PROTO_FALSE, 0);
+    CanFrame f = frame_of(0x0A0B0C0Du & PROTOCORE_CAN_EXT_ID_MASK, EMBED_TRUE, EMBED_FALSE, 0);
     BusCaptureV.can_to_socketcan_args.f = &f;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -230,7 +230,7 @@ void test_the_identifier_is_big_endian(void)
 // a PCAP file corrupts every record after it.
 void test_a_short_buffer_writes_nothing(void)
 {
-    CanFrame f = frame_of(0x123, PROTO_FALSE, PROTO_FALSE, 3);
+    CanFrame f = frame_of(0x123, EMBED_FALSE, EMBED_FALSE, 3);
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
 
     for (size_t cap = 0; cap < PROTOCORE_SOCKETCAN_FRAME_LEN; cap++)
@@ -257,7 +257,7 @@ void test_a_short_buffer_writes_nothing(void)
 void test_null_arguments_are_refused(void)
 {
     uint8_t out[PROTOCORE_SOCKETCAN_FRAME_LEN];
-    CanFrame f = frame_of(0x123, PROTO_FALSE, PROTO_FALSE, 3);
+    CanFrame f = frame_of(0x123, EMBED_FALSE, EMBED_FALSE, 3);
     BusCaptureV.can_to_socketcan_args.f = NULL;
     BusCaptureV.can_to_socketcan_args.out = out;
     BusCaptureV.can_to_socketcan_args.cap = sizeof(out);
@@ -278,8 +278,8 @@ void test_the_framer_holds_nothing(void)
     uint8_t b[PROTOCORE_SOCKETCAN_FRAME_LEN];
     uint8_t other[PROTOCORE_SOCKETCAN_FRAME_LEN];
 
-    CanFrame f = frame_of(0x123, PROTO_FALSE, PROTO_FALSE, 3);
-    CanFrame g = frame_of(0x1FFFFFFFu, PROTO_TRUE, PROTO_TRUE, 8);
+    CanFrame f = frame_of(0x123, EMBED_FALSE, EMBED_FALSE, 3);
+    CanFrame g = frame_of(0x1FFFFFFFu, EMBED_TRUE, EMBED_TRUE, 8);
 
     BusCaptureV.can_to_socketcan_args.f = &f;
     BusCaptureV.can_to_socketcan_args.out = a;
@@ -320,18 +320,18 @@ static void records_differ(const CanFrame *x, const CanFrame *y)
 
 void test_every_frame_field_reaches_the_record(void)
 {
-    const CanFrame base = frame_of(0x123, PROTO_FALSE, PROTO_FALSE, 4);
+    const CanFrame base = frame_of(0x123, EMBED_FALSE, EMBED_FALSE, 4);
 
     CanFrame other_id = base;
     other_id.id = 0x124;
     records_differ(&base, &other_id);
 
     CanFrame extended = base;
-    extended.extended = PROTO_TRUE;
+    extended.extended = EMBED_TRUE;
     records_differ(&base, &extended);
 
     CanFrame remote = base;
-    remote.rtr = PROTO_TRUE;
+    remote.rtr = EMBED_TRUE;
     records_differ(&base, &remote);
 
     CanFrame shorter = base;

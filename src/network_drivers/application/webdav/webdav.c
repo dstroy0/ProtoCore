@@ -22,7 +22,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-WebDavMethod protocore_webdav_method(uint8_t *work, const char *m)
+WebDavMethod protocore_webdav_method(const uint8_t *work, const char *m)
 {
     (void)work;
 
@@ -31,60 +31,60 @@ WebDavMethod protocore_webdav_method(uint8_t *work, const char *m)
         return DAV_M_UNSUPPORTED;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "OPTIONS", .cap = sizeof("OPTIONS"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return DAV_M_OPTIONS;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "GET", .cap = sizeof("GET"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "GET", .cap = sizeof("GET"), .ci = EMBED_FALSE))
     {
         return DAV_M_GET;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "HEAD", .cap = sizeof("HEAD"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "HEAD", .cap = sizeof("HEAD"), .ci = EMBED_FALSE))
     {
         return DAV_M_HEAD;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PUT", .cap = sizeof("PUT"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PUT", .cap = sizeof("PUT"), .ci = EMBED_FALSE))
     {
         return DAV_M_PUT;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "DELETE", .cap = sizeof("DELETE"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "DELETE", .cap = sizeof("DELETE"), .ci = EMBED_FALSE))
     {
         return DAV_M_DELETE;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PROPFIND", .cap = sizeof("PROPFIND"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return DAV_M_PROPFIND;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PROPPATCH", .cap = sizeof("PROPPATCH"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return DAV_M_PROPPATCH;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "MKCOL", .cap = sizeof("MKCOL"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "MKCOL", .cap = sizeof("MKCOL"), .ci = EMBED_FALSE))
     {
         return DAV_M_MKCOL;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "COPY", .cap = sizeof("COPY"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "COPY", .cap = sizeof("COPY"), .ci = EMBED_FALSE))
     {
         return DAV_M_COPY;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "MOVE", .cap = sizeof("MOVE"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "MOVE", .cap = sizeof("MOVE"), .ci = EMBED_FALSE))
     {
         return DAV_M_MOVE;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "LOCK", .cap = sizeof("LOCK"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "LOCK", .cap = sizeof("LOCK"), .ci = EMBED_FALSE))
     {
         return DAV_M_LOCK;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "UNLOCK", .cap = sizeof("UNLOCK"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "UNLOCK", .cap = sizeof("UNLOCK"), .ci = EMBED_FALSE))
     {
         return DAV_M_UNLOCK;
     }
     return DAV_M_UNSUPPORTED;
 }
 
-int protocore_webdav_depth(uint8_t *work, const char *depth_hdr, int dflt)
+int protocore_webdav_depth(const uint8_t *work, const char *depth_hdr, int dflt)
 {
     (void)work;
 
@@ -92,16 +92,16 @@ int protocore_webdav_depth(uint8_t *work, const char *depth_hdr, int dflt)
     {
         return dflt;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "0", .cap = sizeof("0"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "0", .cap = sizeof("0"), .ci = EMBED_FALSE))
     {
         return 0;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "1", .cap = sizeof("1"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "1", .cap = sizeof("1"), .ci = EMBED_FALSE))
     {
         return 1;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = depth_hdr, .other = "infinity", .cap = sizeof("infinity"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return PROTOCORE_DAV_DEPTH_INFINITY;
     }
@@ -110,20 +110,20 @@ int protocore_webdav_depth(uint8_t *work, const char *depth_hdr, int dflt)
 
 // Append a NUL-terminated string if it fits; returns false (leaving *len and the
 // NUL terminator intact) when it would overflow.
-static proto_bool app(char *buf, size_t cap, size_t *len, const char *s)
+static embed_bool app(char *buf, size_t cap, size_t *len, const char *s)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap + 1);
     if (*len + n + 1 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *len, .src = s, .bytes = n);
     *len += n;
     buf[*len] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-size_t protocore_webdav_xml_escape(uint8_t *work, char *dst, size_t cap, const char *src)
+size_t protocore_webdav_xml_escape(const uint8_t *work, char *dst, size_t cap, const char *src)
 {
     (void)work;
 
@@ -178,20 +178,20 @@ size_t protocore_webdav_xml_escape(uint8_t *work, char *dst, size_t cap, const c
     return o;
 }
 
-proto_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, char *out, size_t cap)
+embed_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, char *out, size_t cap)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
 
     if (!destination || !out || cap == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Skip an absolute-URI scheme + authority: after "://", advance to the first
     // '/' (the path). An abs-path value ("/p/q") is used as-is.
     const char *p = destination;
     const char *scheme = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = destination, .cap = MAX_VAL_LEN,
-                                    .other = "://", .other_cap = sizeof("://"), .ci = PROTO_FALSE);
+                                    .other = "://", .other_cap = sizeof("://"), .ci = EMBED_FALSE);
     if (scheme)
     {
         p = scheme + 3;
@@ -201,13 +201,13 @@ proto_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, ch
         }
         if (*p != '/')
         {
-            ok = PROTO_FALSE; // authority with no path
+            ok = EMBED_FALSE; // authority with no path
             return ok;
         }
     }
     else if (*p != '/')
     {
-        ok = PROTO_FALSE; // not an absolute path
+        ok = EMBED_FALSE; // not an absolute path
         return ok;
     }
 
@@ -231,7 +231,7 @@ proto_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, ch
             }
             if (hi < 0 || lo < 0)
             {
-                ok = PROTO_FALSE; // malformed escape
+                ok = EMBED_FALSE; // malformed escape
                 return ok;
             }
             c = (char)((hi << 4) | lo);
@@ -239,17 +239,17 @@ proto_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, ch
         }
         if (o + 1 >= cap)
         {
-            ok = PROTO_FALSE; // no room for char + NUL
+            ok = EMBED_FALSE; // no room for char + NUL
             return ok;
         }
         out[o++] = c;
         p++;
     }
     out[o] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-size_t protocore_webdav_ms_begin(uint8_t *work, char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_begin(const uint8_t *work, char *buf, size_t cap, size_t len)
 {
     (void)work;
 
@@ -258,7 +258,7 @@ size_t protocore_webdav_ms_begin(uint8_t *work, char *buf, size_t cap, size_t le
 }
 
 size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t len, const char *href,
-                                 proto_bool is_collection, uint32_t size, const char *rfc1123_mtime,
+                                 embed_bool is_collection, uint32_t size, const char *rfc1123_mtime,
                                  const char *content_type)
 {
     // Build the whole <response> in a temp first so the append is atomic: a
@@ -306,7 +306,7 @@ size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t le
         num[ni] = '\0';
         // The href block above tops out at <=381 bytes (<=348 plus the optional
         // <D:collection/> + </D:resourcetype> close, though this branch only runs for
-        // !is_collection so it's really <=366); this fixed getcontentlength markup + a
+        // !is_collection so it's really <=366). This fixed getcontentlength markup + a
         // 10-digit uint32_t max add <=60 more, so the running total never nears tmp[512]
         // and these atomic-append guards cannot fire.
         if (!app(tmp, sizeof(tmp), &t, "        <D:getcontentlength>") || !app(tmp, sizeof(tmp), &t, num) ||
@@ -347,7 +347,7 @@ size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t le
     return len;
 }
 
-size_t protocore_webdav_ms_end(uint8_t *work, char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_end(const uint8_t *work, char *buf, size_t cap, size_t len)
 {
     (void)work;
 
@@ -356,10 +356,10 @@ size_t protocore_webdav_ms_end(uint8_t *work, char *buf, size_t cap, size_t len)
 }
 
 // True for a byte that ends an XML element name (whitespace, '/', '>').
-static proto_bool name_end_char(char c)
+static embed_bool name_end_char(char c)
 {
     // The only caller scans a name span bounded by the '>' index (its tag-end loop stops there),
-    // so this helper never sees '>'; that leg is a defensive, host-unreachable arm. gcov attributes
+    // so this helper never sees '>'. That leg is a defensive, host-unreachable arm. gcov attributes
     // every operand's branch to this one line, so BR_LINE also drops the (exercised) ws/'/' arms.
     return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>';
 }
@@ -387,7 +387,7 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
     // (propertyupdate / set / remove / prop) are skipped; only the properties are
     // reflected, each refused 403 below.
     int emitted = 0;
-    proto_bool in_prop = PROTO_FALSE;
+    embed_bool in_prop = EMBED_FALSE;
     size_t i = 0;
     while (i < body_len && emitted < PROTOCORE_WEBDAV_MAX_PROPS)
     {
@@ -406,7 +406,7 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
             i++;
             continue;
         }
-        proto_bool closing = (start < body_len && body[start] == '/');
+        embed_bool closing = (start < body_len && body[start] == '/');
         if (closing)
         {
             start++;
@@ -420,7 +420,7 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
         {
             break; // unterminated tag
         }
-        proto_bool self_closed = (end > start && body[end - 1] == '/');
+        embed_bool self_closed = (end > start && body[end - 1] == '/');
         size_t name_end = start;
         while (name_end < end && !name_end_char(body[name_end]))
         {
@@ -434,14 +434,14 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
                 local = k + 1;
             }
         }
-        proto_bool is_prop = (name_end - local) == 4 && EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = &body[local],
-                                                                   .other = "prop", .cap = 4, .ci = PROTO_FALSE) == 4;
+        embed_bool is_prop = (name_end - local) == 4 && EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = &body[local],
+                                                                   .other = "prop", .cap = 4, .ci = EMBED_FALSE) == 4;
 
         if (closing)
         {
             if (is_prop)
             {
-                in_prop = PROTO_FALSE;
+                in_prop = EMBED_FALSE;
             }
             i = end + 1;
             continue;
@@ -450,7 +450,7 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
         {
             if (!self_closed) // <prop> opens a block; <prop/> is an empty block
             {
-                in_prop = PROTO_TRUE;
+                in_prop = EMBED_TRUE;
             }
             i = end + 1;
             continue;
@@ -466,12 +466,12 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
             {
                 copy_end--;
             }
-            proto_bool ok = copy_end > start;
+            embed_bool ok = copy_end > start;
             for (size_t k = start; k < copy_end && ok; k++)
             {
                 if (body[k] == '<')
                 {
-                    ok = PROTO_FALSE;
+                    ok = EMBED_FALSE;
                 }
             }
             char tag[256];
@@ -520,19 +520,19 @@ size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const
 // ── lock manager (RFC 4918 §6-7) ───────────────────────────────────────────────────────────────
 
 // Copy src into dst[cap], NUL-terminated; false if it does not fit.
-static proto_bool dav_lock_copy(char *dst, size_t cap, const char *src)
+static embed_bool dav_lock_copy(char *dst, size_t cap, const char *src)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = cap);
     if (n + 1 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = src, .bytes = n + 1);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Normalize a path into dst, stripping trailing '/' (but keeping a lone root "/"). false on overflow.
-static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
+static embed_bool dav_lock_norm(char *dst, size_t cap, const char *path)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = path, .cap = cap);
     while (n > 1 && path[n - 1] == '/') // drop trailing slashes so "/a/" and "/a" are one resource
@@ -541,62 +541,62 @@ static proto_bool dav_lock_norm(char *dst, size_t cap, const char *path)
     }
     if (n + 1 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = path, .bytes = n);
     dst[n] = 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // True if `child` equals `parent` or lies (at a segment boundary) under it. Both trailing-slash-normalized.
-static proto_bool dav_lock_same_or_under(const char *parent, const char *child)
+static embed_bool dav_lock_same_or_under(const char *parent, const char *child)
 {
     size_t pn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = parent, .cap = PROTOCORE_DAV_LOCK_PATH_MAX);
-    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = parent, .other = child, .cap = pn, .ci = PROTO_FALSE) != pn)
+    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = parent, .other = child, .cap = pn, .ci = EMBED_FALSE) != pn)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (child[pn] == 0) // exactly equal
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (pn == 1 && parent[0] == '/') // root covers everything below it
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     return child[pn] == '/'; // only a real path-segment boundary, so "/a" does not cover "/ab"
 }
 
 // Do two lock scopes overlap? A Depth-infinity lock's scope is its whole subtree.
-static proto_bool dav_lock_overlap(const char *pa, proto_bool ia, const char *pb, proto_bool ib)
+static embed_bool dav_lock_overlap(const char *pa, embed_bool ia, const char *pb, embed_bool ib)
 {
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = pa, .other = pb, .cap = PROTOCORE_DAV_LOCK_PATH_MAX,
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (ia && dav_lock_same_or_under(pa, pb)) // pb sits under the infinity lock pa
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (ib && dav_lock_same_or_under(pb, pa)) // pa sits under the infinity lock pb
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Does an active lock's scope cover the normalized query path?
-static proto_bool dav_lock_covers(const DavLock *l, const char *np)
+static embed_bool dav_lock_covers(const DavLock *l, const char *np)
 {
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = l->path, .other = np, .cap = sizeof(l->path), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = l->path, .other = np, .cap = sizeof(l->path), .ci = EMBED_FALSE))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     return l->depth_infinity && dav_lock_same_or_under(l->path, np);
 }
 
-void protocore_webdav_lock_init(uint8_t *work, DavLockTable *t)
+void protocore_webdav_lock_init(const uint8_t *work, DavLockTable *t)
 {
     (void)work;
 
@@ -606,12 +606,12 @@ void protocore_webdav_lock_init(uint8_t *work, DavLockTable *t)
     }
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
-        t->locks[i].active = PROTO_FALSE;
+        t->locks[i].active = EMBED_FALSE;
     }
 }
 
-const DavLock *protocore_webdav_lock_acquire(uint8_t *work, DavLockTable *t, const char *path, const char *token,
-                                             proto_bool exclusive, proto_bool depth_infinity, uint32_t expiry_s)
+const DavLock *protocore_webdav_lock_acquire(const uint8_t *work, DavLockTable *t, const char *path, const char *token,
+                                             embed_bool exclusive, embed_bool depth_infinity, uint32_t expiry_s)
 {
     const DavLock *ptr = 0;
     (void)work;
@@ -655,14 +655,14 @@ const DavLock *protocore_webdav_lock_acquire(uint8_t *work, DavLockTable *t, con
         l->exclusive = exclusive;
         l->depth_infinity = depth_infinity;
         l->expiry_s = expiry_s;
-        l->active = PROTO_TRUE;
+        l->active = EMBED_TRUE;
         return l;
     }
     ptr = NULL; // table full
     return ptr;
 }
 
-size_t protocore_webdav_lock_sweep(uint8_t *work, DavLockTable *t, uint32_t now_s)
+size_t protocore_webdav_lock_sweep(const uint8_t *work, DavLockTable *t, uint32_t now_s)
 {
     (void)work;
 
@@ -676,14 +676,15 @@ size_t protocore_webdav_lock_sweep(uint8_t *work, DavLockTable *t, uint32_t now_
         DavLock *l = &t->locks[i];
         if (l->active && l->expiry_s != 0 && l->expiry_s <= now_s) // 0 = never expires
         {
-            l->active = PROTO_FALSE;
+            l->active = EMBED_FALSE;
             dropped++;
         }
     }
     return dropped;
 }
 
-const DavLock *protocore_webdav_lock_refresh(uint8_t *work, DavLockTable *t, const char *token, uint32_t new_expiry_s)
+const DavLock *protocore_webdav_lock_refresh(const uint8_t *work, DavLockTable *t, const char *token,
+                                             uint32_t new_expiry_s)
 {
     (void)work;
 
@@ -695,7 +696,7 @@ const DavLock *protocore_webdav_lock_refresh(uint8_t *work, DavLockTable *t, con
     {
         DavLock *l = &t->locks[i];
         if (l->active && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = l->token, .other = token,
-                                    .cap = sizeof(l->token), .ci = PROTO_FALSE))
+                                    .cap = sizeof(l->token), .ci = EMBED_FALSE))
         {
             l->expiry_s = new_expiry_s;
             return l;
@@ -704,7 +705,7 @@ const DavLock *protocore_webdav_lock_refresh(uint8_t *work, DavLockTable *t, con
     return NULL;
 }
 
-const DavLock *protocore_webdav_lock_find(uint8_t *work, const DavLockTable *t, const char *path)
+const DavLock *protocore_webdav_lock_find(const uint8_t *work, const DavLockTable *t, const char *path)
 {
     (void)work;
 
@@ -727,48 +728,48 @@ const DavLock *protocore_webdav_lock_find(uint8_t *work, const DavLockTable *t, 
     return NULL;
 }
 
-proto_bool protocore_webdav_lock_release(uint8_t *work, DavLockTable *t, const char *token)
+embed_bool protocore_webdav_lock_release(const uint8_t *work, DavLockTable *t, const char *token)
 {
     (void)work;
 
     if (!t || !token)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         if (t->locks[i].active && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = t->locks[i].token, .other = token,
-                                             .cap = sizeof(t->locks[i].token), .ci = PROTO_FALSE))
+                                             .cap = sizeof(t->locks[i].token), .ci = EMBED_FALSE))
         {
-            t->locks[i].active = PROTO_FALSE;
-            return PROTO_TRUE;
+            t->locks[i].active = EMBED_FALSE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-proto_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t, const char *path,
+embed_bool protocore_webdav_lock_can_write(const uint8_t *work, const DavLockTable *t, const char *path,
                                            const char *presented_token)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     (void)work;
 
     if (!t)
     {
-        ok = PROTO_TRUE; // no table => nothing is locked
+        ok = EMBED_TRUE; // no table => nothing is locked
         return ok;
     }
     if (!path)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     char np[PROTOCORE_DAV_LOCK_PATH_MAX];
     if (!dav_lock_norm(np, sizeof(np), path))
     {
-        ok = PROTO_TRUE; // an unparseable path is not something the lock table can guard
+        ok = EMBED_TRUE; // an unparseable path is not something the lock table can guard
         return ok;
     }
-    proto_bool covered = PROTO_FALSE;
+    embed_bool covered = EMBED_FALSE;
     for (size_t i = 0; i < PROTOCORE_DAV_LOCK_MAX; i++)
     {
         const DavLock *l = &t->locks[i];
@@ -776,11 +777,11 @@ proto_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t,
         {
             continue;
         }
-        covered = PROTO_TRUE;
+        covered = EMBED_TRUE;
         if (presented_token && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = l->token, .other = presented_token,
-                                          .cap = sizeof(l->token), .ci = PROTO_FALSE))
+                                          .cap = sizeof(l->token), .ci = EMBED_FALSE))
         {
-            ok = PROTO_TRUE; // the request holds a covering lock's token
+            ok = EMBED_TRUE; // the request holds a covering lock's token
             return ok;
         }
     }
@@ -788,13 +789,13 @@ proto_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t,
     return ok;
 }
 
-proto_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char *out, size_t cap)
+embed_bool protocore_webdav_if_token(const uint8_t *work, const char *if_header, char *out, size_t cap)
 {
     (void)work;
 
     if (!if_header || !out || cap == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The state tokens live inside a condition list "( ... )"; take the first Coded-URL "<...>" within it
     // (which also skips the tagged-list resource URL that precedes the '(').
@@ -802,31 +803,31 @@ proto_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char 
     // at each marker a readable extent rather than an assumption about the caller's buffer.
     const size_t if_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = if_header, .cap = SIZE_MAX);
     const char *lp = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = if_header, .cap = if_len, .other = "(",
-                                .other_cap = sizeof("("), .ci = PROTO_FALSE);
+                                .other_cap = sizeof("("), .ci = EMBED_FALSE);
     if (!lp)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *lt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = lp, .cap = if_len - (size_t)(lp - if_header),
-                                .other = "<", .other_cap = sizeof("<"), .ci = PROTO_FALSE);
+                                .other = "<", .other_cap = sizeof("<"), .ci = EMBED_FALSE);
     if (!lt)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *gt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = lt, .cap = if_len - (size_t)(lt - if_header),
-                                .other = ">", .other_cap = sizeof(">"), .ci = PROTO_FALSE);
+                                .other = ">", .other_cap = sizeof(">"), .ci = EMBED_FALSE);
     if (!gt)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t n = (size_t)(gt - lt - 1);
     if (n + 1 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = lt + 1, .bytes = n);
     out[n] = 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_WEBDAV

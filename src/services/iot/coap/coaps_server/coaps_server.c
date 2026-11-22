@@ -43,7 +43,7 @@ uint8_t *protocore_coaps_server_span(void)
     return s_own.span;
 }
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The largest inbound datagram buffered: a ClientHello, a client Finished, or one CoAP application
 // record (a CoAP message fits one datagram, RFC 7252 sec 4.6). An outbound flight is larger but goes
@@ -78,7 +78,7 @@ typedef struct
  */
 typedef struct
 {
-    proto_bool used;
+    embed_bool used;
     DtlsConn conn;
     DtlsServerConfig cfg; ///< this slot's configuration
     uint8_t eph[32];      ///< the X25519 ephemeral private key of this handshake
@@ -98,8 +98,8 @@ struct CoapsServerStorage
     CoapsSlot pool[PROTOCORE_COAPS_MAX_CONNS];     ///< the connections
     CoapsIngest ring[PROTOCORE_COAPS_INGEST_RING]; ///< the datagrams waiting for a poll
 
-    _Atomic size_t ring_head; ///< the receive path advances it
-    _Atomic size_t ring_tail; ///< the poll advances it
+    embed_atomic_usize ring_head; ///< the receive path advances it
+    embed_atomic_usize ring_tail; ///< the poll advances it
 
     const uint8_t *cert_der;               ///< the leaf certificate, referenced
     size_t cert_len;                       ///< its length
@@ -107,7 +107,7 @@ struct CoapsServerStorage
     uint8_t cookie_key[32];                ///< the cookie secret, copied in (RFC 9147 sec 5.1)
     void (*rng)(uint8_t *out, size_t len); ///< the CSPRNG each handshake draws from
     uint16_t port;                         ///< the bound port
-    proto_bool running;                    ///< a begin succeeded and a stop has not run
+    embed_bool running;                    ///< a begin succeeded and a stop has not run
 #if !PROTOCORE_HAS_NET_STACK
     CoapsServerOutFn out_sink; ///< where an outbound datagram goes
     void *out_ctx;             ///< the context that sink is given back
@@ -123,7 +123,10 @@ static_assert(COAPS_SERVER_OFF_CTX + sizeof(struct CoapsServerStorage) <= PROTOC
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define COAPS_SERVER_CTX(w) ((struct CoapsServerStorage *)(void *)((w) + COAPS_SERVER_OFF_CTX))
+#define COAPS_SERVER_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct CoapsServerStorage *)(const void *)((w) + COAPS_SERVER_OFF_CTX),                \
+        default: (struct CoapsServerStorage *)(void *)((w) + COAPS_SERVER_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Pure helpers: they read what they are given and hold nothing
@@ -132,7 +135,7 @@ static_assert(COAPS_SERVER_OFF_CTX + sizeof(struct CoapsServerStorage) <= PROTOC
 // Serialize a dotted-quad address and a port into the six octets the HelloRetryRequest cookie is
 // bound to, so a cookie minted for one peer is worthless to another (RFC 9147 sec 5.1). False on a
 // malformed address, which leaves no address bound and simply denies that peer the retry path.
-static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PROTOCORE_COAPS_PEER_SER])
+static embed_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PROTOCORE_COAPS_PEER_SER])
 {
     uint32_t oct = 0;
     int octets = 0;
@@ -146,14 +149,14 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PROT
             ndig++;
             if (oct > 255 || ndig > 3)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         else if (*p == '.' || *p == 0)
         {
             if (ndig == 0)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             out[idx++] = (uint8_t)oct;
             octets++;
@@ -166,16 +169,16 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PROT
         }
         else
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     if (octets != 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[4] = (uint8_t)(port >> 8);
     out[5] = (uint8_t)(port & 0xFF);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,38 +187,44 @@ static proto_bool serialize_peer(const char *ip, uint16_t port, uint8_t out[PROT
 
 // Take a copy of one datagram and its peer. False when it does not fit or the ring is full, and a
 // dropped datagram is what the DTLS retransmission timer already recovers from.
-static proto_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+static embed_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
     if (!dg || !ip || len == 0 || len > PROTOCORE_COAPS_MAX_DATAGRAM)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    size_t head = COAPS_SERVER_CTX(work)->ring_head;
+    size_t head =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &COAPS_SERVER_CTX(work)->ring_head);
     size_t next = (head + 1) % PROTOCORE_COAPS_INGEST_RING;
-    if (next == (size_t)COAPS_SERVER_CTX(work)->ring_tail)
+    if (next == (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg,
+                                   .word = &COAPS_SERVER_CTX(work)->ring_tail))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     CoapsIngest *e = &COAPS_SERVER_CTX(work)->ring[head];
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->data, .src = dg, .bytes = len);
     e->len = (uint16_t)len;
     (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = e->ip, .src = ip, .cap = sizeof(e->ip));
     e->port = port;
-    COAPS_SERVER_CTX(work)->ring_head = next; // published only once the entry is whole
-    return PROTO_TRUE;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head,
+               .value = next); // published only once the entry is whole
+    return EMBED_TRUE;
 }
 
 // Take the oldest queued datagram. False when the ring holds none.
-static proto_bool ring_pop(uint8_t *work, CoapsIngest *out)
+static embed_bool ring_pop(uint8_t *work, CoapsIngest *out)
 {
-    size_t tail = COAPS_SERVER_CTX(work)->ring_tail;
-    if (tail == (size_t)COAPS_SERVER_CTX(work)->ring_head)
+    size_t tail =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail);
+    if (tail == (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg,
+                                   .word = &COAPS_SERVER_CTX(work)->ring_head))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = COAPS_SERVER_CTX(work)->ring[tail];
-    COAPS_SERVER_CTX(work)->ring_tail = (tail + 1) % PROTOCORE_COAPS_INGEST_RING;
-    return PROTO_TRUE;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail,
+               .value = (tail + 1) % PROTOCORE_COAPS_INGEST_RING);
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -230,7 +239,7 @@ static CoapsSlot *slot_by_peer(uint8_t *work, const char *ip, uint16_t port)
         CoapsSlot *s = &COAPS_SERVER_CTX(work)->pool[i];
         if (s->used && s->peer_port == port &&
             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s->peer_ip, .other = ip, .cap = sizeof(s->peer_ip),
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             return s;
         }
@@ -272,7 +281,7 @@ static CoapsSlot *alloc_slot(uint8_t *work)
         {
             CoapsSlot *s = &COAPS_SERVER_CTX(work)->pool[i];
             EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
-            s->used = PROTO_TRUE;
+            s->used = EMBED_TRUE;
             return s;
         }
     }
@@ -296,7 +305,7 @@ static CoapsSlot *open_conn(uint8_t *work, const char *ip, uint16_t port)
     s->cfg.server_random = s->srand;
     s->cfg.cookie_key = COAPS_SERVER_CTX(work)->cookie_key;
     uint8_t paddr[PROTOCORE_COAPS_PEER_SER];
-    proto_bool bound = serialize_peer(ip, port, paddr);
+    embed_bool bound = serialize_peer(ip, port, paddr);
     DtlsServerV.init_args.c = &s->conn;
     DtlsServerV.init_args.cfg = &s->cfg;
     DtlsServerV.init_args.peer_addr = bound ? paddr : NULL;
@@ -344,7 +353,7 @@ static void route_datagram(uint8_t *work, const CoapsIngest *ig, uint32_t now, u
     // A record carrying a Connection ID (RFC 9147 sec 4 Figure 3, the C bit) routes by that id, so a
     // peer that moved to a new address still reaches its connection (RFC 9146, RFC 9147 sec 9).
     // Everything else routes by source address, and a new peer's plaintext ClientHello opens a slot.
-    proto_bool cid_rec =
+    embed_bool cid_rec =
         ig->len >= 1 && (ig->data[0] & COAPS_UHDR_FIXED_MASK) == COAPS_UHDR_FIXED && (ig->data[0] & COAPS_UHDR_CID);
     CoapsSlot *s = cid_rec ? slot_by_cid(work, ig->data + 1, ig->len - 1) : NULL;
     if (!s)
@@ -362,7 +371,7 @@ static void route_datagram(uint8_t *work, const CoapsIngest *ig, uint32_t now, u
     // A valid record from a new address moves where the replies go.
     if (cid_rec &&
         (s->peer_port != ig->port || !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s->peer_ip, .other = ig->ip,
-                                                 .cap = sizeof(s->peer_ip), .ci = PROTO_FALSE)))
+                                                 .cap = sizeof(s->peer_ip), .ci = EMBED_FALSE)))
     {
         (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = s->peer_ip, .src = ig->ip, .cap = sizeof(s->peer_ip));
         s->peer_port = ig->port;
@@ -380,7 +389,7 @@ static void route_datagram(uint8_t *work, const CoapsIngest *ig, uint32_t now, u
     }
     else if (CoapsV.i32 < 0)
     {
-        s->used = PROTO_FALSE; // the handshake failed, so the slot goes back
+        s->used = EMBED_FALSE; // the handshake failed, so the slot goes back
     }
 }
 
@@ -407,13 +416,13 @@ static void service_slot(uint8_t *work, CoapsSlot *s, uint32_t now, uint8_t *out
         }
         else if (n < 0)
         {
-            s->used = PROTO_FALSE; // the retransmission ceiling was reached
+            s->used = EMBED_FALSE; // the retransmission ceiling was reached
             return;
         }
     }
     if (now - s->last_ms >= PROTOCORE_COAPS_IDLE_MS) // unsigned, so the clock's wrap is safe
     {
-        s->used = PROTO_FALSE;
+        s->used = EMBED_FALSE;
     }
 }
 
@@ -443,7 +452,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
 // Install ns->identity, bind ns->bind.port, and route its datagrams into the pool.
 void protocore_coaps_server_begin(uint8_t *work)
 {
-    CoapsServerV.ok = PROTO_FALSE;
+    CoapsServerV.ok = EMBED_FALSE;
     if (!CoapsServerV.identity.rng || !CoapsServerV.identity.cert_der || CoapsServerV.identity.cert_len == 0)
     {
         return;
@@ -458,11 +467,13 @@ void protocore_coaps_server_begin(uint8_t *work)
     COAPS_SERVER_CTX(work)->port = CoapsServerV.bind.port ? CoapsServerV.bind.port : PROTOCORE_COAPS_PORT;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
-        COAPS_SERVER_CTX(work)->pool[i].used = PROTO_FALSE;
+        COAPS_SERVER_CTX(work)->pool[i].used = EMBED_FALSE;
     }
-    COAPS_SERVER_CTX(work)->ring_head = 0;
-    COAPS_SERVER_CTX(work)->ring_tail = 0;
-    COAPS_SERVER_CTX(work)->running = PROTO_TRUE;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail,
+               .value = 0);
+    COAPS_SERVER_CTX(work)->running = EMBED_TRUE;
 #if PROTOCORE_HAS_NET_STACK
     UdpListenerV.port = COAPS_SERVER_CTX(work)->port;
     UdpListenerV.bind.handler = udp_ingest_cb;
@@ -470,14 +481,14 @@ void protocore_coaps_server_begin(uint8_t *work)
     UdpListener.listen(protocore_udp_listener_span());
     CoapsServerV.ok = UdpListenerV.ok;
 #else
-    CoapsServerV.ok = PROTO_TRUE; // fed through ingest instead
+    CoapsServerV.ok = EMBED_TRUE; // fed through ingest instead
 #endif
 }
 
 // Drain the queued datagrams, then service every slot.
 void protocore_coaps_server_poll(uint8_t *work)
 {
-    CoapsServerV.ok = PROTO_FALSE;
+    CoapsServerV.ok = EMBED_FALSE;
     if (!COAPS_SERVER_CTX(work)->running)
     {
         return;
@@ -495,7 +506,7 @@ void protocore_coaps_server_poll(uint8_t *work)
     {
         service_slot(work, &COAPS_SERVER_CTX(work)->pool[i], now, out, sizeof(out));
     }
-    CoapsServerV.ok = PROTO_TRUE;
+    CoapsServerV.ok = EMBED_TRUE;
 }
 
 // The pool slots in use.
@@ -510,20 +521,22 @@ void protocore_coaps_server_active_conns(uint8_t *work)
         }
     }
     CoapsServerV.u8 = n;
-    CoapsServerV.ok = PROTO_TRUE;
+    CoapsServerV.ok = EMBED_TRUE;
 }
 
 // Stop polling, release every slot, and empty the ingest ring. The port stays bound.
 void protocore_coaps_server_stop(uint8_t *work)
 {
-    COAPS_SERVER_CTX(work)->running = PROTO_FALSE;
+    COAPS_SERVER_CTX(work)->running = EMBED_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
-        COAPS_SERVER_CTX(work)->pool[i].used = PROTO_FALSE;
+        COAPS_SERVER_CTX(work)->pool[i].used = EMBED_FALSE;
     }
-    COAPS_SERVER_CTX(work)->ring_head = 0;
-    COAPS_SERVER_CTX(work)->ring_tail = 0;
-    CoapsServerV.ok = PROTO_TRUE;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail,
+               .value = 0);
+    CoapsServerV.ok = EMBED_TRUE;
 }
 
 #if !PROTOCORE_HAS_NET_STACK
@@ -532,7 +545,7 @@ void protocore_coaps_server_set_out_sink(uint8_t *work)
 {
     COAPS_SERVER_CTX(work)->out_sink = CoapsServerV.sink.fn;
     COAPS_SERVER_CTX(work)->out_ctx = CoapsServerV.sink.ctx;
-    CoapsServerV.ok = PROTO_TRUE;
+    CoapsServerV.ok = EMBED_TRUE;
 }
 
 // Queue ns->dgram as though it had been received, for the next poll to route.
@@ -547,6 +560,6 @@ void protocore_coaps_server_ingest(uint8_t *work)
 /** @brief The operands and the outcome. */
 CoapsServerVars CoapsServerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

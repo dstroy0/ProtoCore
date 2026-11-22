@@ -25,7 +25,7 @@
 //   test_rfc4330_symmetric_active_is_answered_symmetric_passive ntp_server.c:34 always writes mode 4
 //
 // The precision octet has no published value, only a published range (RFC 4330 sec 4: "-6 for
-// mains-frequency clocks to -20 for microsecond clocks"), so it is asserted as a range.
+// mains-frequency clocks to -20 for microsecond clocks"). So it is asserted as a range.
 
 #include "network_drivers/application/ntp_server/ntp_server.h"
 #include "network_drivers/transport/udp/server/server.h"
@@ -236,7 +236,7 @@ void test_rfc4330_precision_lies_in_the_published_range(void)
 
 // RFC 4330 sec 5: "The Root Delay and Root Dispersion fields are set to 0 for a primary server."
 // The sec 5 reply table repeats it: Root Delay 0, Root Dispersion 0. Sec 4 bounds the dispersion of
-// a server message at "zero to several hundred milliseconds"; both fields are NTP short format,
+// a server message at "zero to several hundred milliseconds". Both fields are NTP short format,
 // 16 bits of seconds then 16 of fraction (RFC 5905 sec 6), so 0x00010000 is 1.0 s.
 void test_rfc4330_a_primary_server_zeroes_delay_and_dispersion(void)
 {
@@ -515,7 +515,7 @@ void test_rfc4330_symmetric_active_is_answered_symmetric_passive(void)
 
 // RFC 5905 sec 6: a zero timestamp represents unknown or unsynchronized time, and Figure 9 gives
 // LI 3 the same meaning. A server with no clock therefore either stays silent or answers with LI 3
-// and zero timestamps; what it must not do is put an invented instant on the wire.
+// and zero timestamps. What it must not do is put an invented instant on the wire.
 void test_a_server_with_no_clock_puts_no_time_on_the_wire(void)
 {
     start_server(0u, 1, 0x4C4F434Cu);

@@ -36,7 +36,7 @@
 
 #include "crypto/asymmetric/rsa/rsa.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_SSH_RSA_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -74,7 +74,7 @@ typedef struct
 {
     uint8_t n[PROTOCORE_RSA_KEY_BYTES]; ///< Modulus n (256 bytes, big-endian).
     uint8_t e_bytes[4];                 ///< Public exponent e (big-endian uint32).
-    proto_bool loaded;                  ///< True after protocore_ssh_rsa_load_pubkey() succeeds.
+    embed_bool loaded;                  ///< True after protocore_ssh_rsa_load_pubkey() succeeds.
 } SshRsaPubKey;
 
 /** @brief What sign takes: crypto_work, msg, msg_len, hash, sig. */
@@ -119,7 +119,7 @@ typedef struct
 {
     SshRsaSignArgs sign_args;
     SshRsaEncodePubkeyArgs encode_pubkey_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
 } SshRsaVars;
 
@@ -131,14 +131,14 @@ typedef struct
 {
     void (*const load_pubkey)(uint8_t *work);
     void (*const sign)(uint8_t *work);
-    void (*const encode_pubkey)(uint8_t *work);
+    void (*const encode_pubkey)(const uint8_t *work);
 } SshRsaNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshRsaV or a region of the borrow at a fixed offset.
 void protocore_ssh_rsa_load_pubkey(uint8_t *work);
 void protocore_ssh_rsa_sign(uint8_t *work);
-void protocore_ssh_rsa_encode_pubkey(uint8_t *work);
+void protocore_ssh_rsa_encode_pubkey(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -170,7 +170,7 @@ extern SshRsaPubKey ssh_host_pubkey;
  */
 uint8_t *protocore_ssh_rsa_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_RSA
 

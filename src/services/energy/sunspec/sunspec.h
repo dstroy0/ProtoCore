@@ -34,7 +34,7 @@
 
 #if PROTOCORE_ENABLE_SUNSPEC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define SUNSPEC_MARKER 0x53756E53u ///< "SunS"
 #define SUNSPEC_END_MODEL 0xFFFFu  ///< end-model id
@@ -52,16 +52,16 @@ typedef struct
 // ---- reader ----
 
 /** @brief True if the SunS identifier (0x53756E53) is at the head of @p regs. */
-proto_bool protocore_sunspec_check_marker(const uint8_t *regs, size_t len);
+embed_bool protocore_sunspec_check_marker(const uint8_t *regs, size_t len);
 
 /** @brief Begin a walk: verifies the marker and sets *offset just past it (to 4). */
-proto_bool protocore_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset);
+embed_bool protocore_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset);
 
 /**
  * @brief Read the model at *offset and advance past it.
  * @return true and fills @p out for a model; false at the end model (0xFFFF) or on truncation.
  */
-proto_bool protocore_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out);
+embed_bool protocore_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out);
 
 // Typed point readers at a register offset within a model body (big-endian).
 uint16_t protocore_sunspec_u16(const uint8_t *body, size_t reg);
@@ -73,7 +73,7 @@ int32_t protocore_sunspec_i32(const uint8_t *body, size_t reg);
  * @brief Copy a SunSpec string point (@p nregs registers, NUL-padded) into @p out.
  * @return true on success (NUL-terminated, content up to the first NUL), false on bad args.
  */
-proto_bool protocore_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap);
+embed_bool protocore_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap);
 
 // ---- writer ----
 
@@ -83,22 +83,22 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     size_t pos;
-    proto_bool error;
+    embed_bool error;
 } SunSpecWriter;
 
 void protocore_sunspec_writer_init(SunSpecWriter *w, uint8_t *buf, size_t cap);
-proto_bool protocore_sunspec_write_marker(SunSpecWriter *w); ///< "SunS"
-proto_bool protocore_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length);
-proto_bool protocore_sunspec_write_u16(SunSpecWriter *w, uint16_t v);
-proto_bool protocore_sunspec_write_i16(SunSpecWriter *w, int16_t v);
-proto_bool protocore_sunspec_write_u32(SunSpecWriter *w, uint32_t v);
-proto_bool protocore_sunspec_write_i32(SunSpecWriter *w, int32_t v);
-proto_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s,
+embed_bool protocore_sunspec_write_marker(SunSpecWriter *w); ///< "SunS"
+embed_bool protocore_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length);
+embed_bool protocore_sunspec_write_u16(SunSpecWriter *w, uint16_t v);
+embed_bool protocore_sunspec_write_i16(SunSpecWriter *w, int16_t v);
+embed_bool protocore_sunspec_write_u32(SunSpecWriter *w, uint32_t v);
+embed_bool protocore_sunspec_write_i32(SunSpecWriter *w, int32_t v);
+embed_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s,
                                           size_t nregs);        ///< nregs registers, NUL-padded
-proto_bool protocore_sunspec_write_end_model(SunSpecWriter *w); ///< [0xFFFF][0]
-size_t protocore_sunspec_writer_finish(SunSpecWriter *w);       ///< bytes written, or 0 on overflow
+embed_bool protocore_sunspec_write_end_model(SunSpecWriter *w); ///< [0xFFFF][0]
+size_t protocore_sunspec_writer_finish(const SunSpecWriter *w); ///< bytes written, or 0 on overflow
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SUNSPEC
 

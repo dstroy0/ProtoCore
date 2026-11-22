@@ -13,7 +13,7 @@
 //     checksum, so they are timed as DBENCH_BULK to report ns/byte + MB/s over the whole frame.
 //   - protocore_iec_get_ioa - reading the 3-octet little-endian Information Object Address.
 // Out of scope: the per-type-id information elements (single/double point, measured values,
-// commands) are the application's, not this framing layer; and no real -104 TCP socket or -101
+// commands) are the application's, not this framing layer. And no real -104 TCP socket or -101
 // UART transport is touched - this rig has no peripherals attached.
 //
 // Sample frames are the known-good, spec-conformant byte vectors from test/test_iec60870.

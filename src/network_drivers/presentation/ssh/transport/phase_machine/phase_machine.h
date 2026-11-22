@@ -22,23 +22,22 @@
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
 /** @brief SSH connection lifecycle phase. */
-typedef enum PROTO_ENUM_PACKED
-{
-    SSH_PHASE_IDENT,   ///< Awaiting the peer identification string.
-    SSH_PHASE_KEXINIT, ///< Awaiting the peer KEXINIT.
-    SSH_PHASE_DH_INIT, ///< Awaiting SSH_MSG_KEXDH_INIT.
-    SSH_PHASE_NEWKEYS, ///< Awaiting SSH_MSG_NEWKEYS.
-    SSH_PHASE_SERVICE, ///< Awaiting SERVICE_REQUEST ("ssh-userauth").
-    SSH_PHASE_AUTH,    ///< User authentication in progress (RFC 4252).
-    SSH_PHASE_OPEN     ///< Authenticated; connection/channel protocol active.
-} SshPhase;
+EMBED_ENUM_BYTE(SshPhase,
+                SSH_PHASE_IDENT,   ///< Awaiting the peer identification string.
+                SSH_PHASE_KEXINIT, ///< Awaiting the peer KEXINIT.
+                SSH_PHASE_DH_INIT, ///< Awaiting SSH_MSG_KEXDH_INIT.
+                SSH_PHASE_NEWKEYS, ///< Awaiting SSH_MSG_NEWKEYS.
+                SSH_PHASE_SERVICE, ///< Awaiting SERVICE_REQUEST ("ssh-userauth").
+                SSH_PHASE_AUTH,    ///< User authentication in progress (RFC 4252).
+                SSH_PHASE_OPEN     ///< Authenticated; connection/channel protocol active.
+);
 
 /** @brief What get takes: i. */
 typedef struct
@@ -240,7 +239,7 @@ typedef struct
     PhaseMachineAuthCompleteArgs auth_complete_args;
     PhaseMachineAdmitsRekeyArgs admits_rekey_args;
     PhaseMachineIsOpenArgs is_open_args;
-    proto_bool ok;
+    embed_bool ok;
     SshPhase value;
 } PhaseMachineVars;
 
@@ -250,49 +249,49 @@ extern PhaseMachineVars PhaseMachineV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const get)(uint8_t *work);
-    void (*const is)(uint8_t *work);
-    void (*const reset)(uint8_t *work);
-    void (*const ident_done)(uint8_t *work);
-    void (*const kexinit_done)(uint8_t *work);
-    void (*const kex_done)(uint8_t *work);
-    void (*const newkeys_done)(uint8_t *work);
-    void (*const service_done)(uint8_t *work);
-    void (*const auth_done)(uint8_t *work);
-    void (*const rekey_begin)(uint8_t *work);
+    void (*const get)(const uint8_t *work);
+    void (*const is)(const uint8_t *work);
+    void (*const reset)(const uint8_t *work);
+    void (*const ident_done)(const uint8_t *work);
+    void (*const kexinit_done)(const uint8_t *work);
+    void (*const kex_done)(const uint8_t *work);
+    void (*const newkeys_done)(const uint8_t *work);
+    void (*const service_done)(const uint8_t *work);
+    void (*const auth_done)(const uint8_t *work);
+    void (*const rekey_begin)(const uint8_t *work);
     void (*const admits_ident)(uint8_t *work);
     void (*const admits_kexinit)(uint8_t *work);
-    void (*const kexinit_needs_reply)(uint8_t *work);
+    void (*const kexinit_needs_reply)(const uint8_t *work);
     void (*const admits_kexdh_init)(uint8_t *work);
     void (*const admits_newkeys)(uint8_t *work);
     void (*const admits_service_request)(uint8_t *work);
     void (*const admits_userauth)(uint8_t *work);
-    void (*const auth_complete)(uint8_t *work);
-    void (*const admits_rekey)(uint8_t *work);
+    void (*const auth_complete)(const uint8_t *work);
+    void (*const admits_rekey)(const uint8_t *work);
     void (*const is_open)(uint8_t *work);
 } PhaseMachineNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PhaseMachineV or a region of the borrow at a fixed offset.
-void protocore_phase_machine_get(uint8_t *work);
-void protocore_phase_machine_is(uint8_t *work);
-void protocore_phase_machine_reset(uint8_t *work);
-void protocore_phase_machine_ident_done(uint8_t *work);
-void protocore_phase_machine_kexinit_done(uint8_t *work);
-void protocore_phase_machine_kex_done(uint8_t *work);
-void protocore_phase_machine_newkeys_done(uint8_t *work);
-void protocore_phase_machine_service_done(uint8_t *work);
-void protocore_phase_machine_auth_done(uint8_t *work);
-void protocore_phase_machine_rekey_begin(uint8_t *work);
+void protocore_phase_machine_get(const uint8_t *work);
+void protocore_phase_machine_is(const uint8_t *work);
+void protocore_phase_machine_reset(const uint8_t *work);
+void protocore_phase_machine_ident_done(const uint8_t *work);
+void protocore_phase_machine_kexinit_done(const uint8_t *work);
+void protocore_phase_machine_kex_done(const uint8_t *work);
+void protocore_phase_machine_newkeys_done(const uint8_t *work);
+void protocore_phase_machine_service_done(const uint8_t *work);
+void protocore_phase_machine_auth_done(const uint8_t *work);
+void protocore_phase_machine_rekey_begin(const uint8_t *work);
 void protocore_phase_machine_admits_ident(uint8_t *work);
 void protocore_phase_machine_admits_kexinit(uint8_t *work);
-void protocore_phase_machine_kexinit_needs_reply(uint8_t *work);
+void protocore_phase_machine_kexinit_needs_reply(const uint8_t *work);
 void protocore_phase_machine_admits_kexdh_init(uint8_t *work);
 void protocore_phase_machine_admits_newkeys(uint8_t *work);
 void protocore_phase_machine_admits_service_request(uint8_t *work);
 void protocore_phase_machine_admits_userauth(uint8_t *work);
-void protocore_phase_machine_auth_complete(uint8_t *work);
-void protocore_phase_machine_admits_rekey(uint8_t *work);
+void protocore_phase_machine_auth_complete(const uint8_t *work);
+void protocore_phase_machine_admits_rekey(const uint8_t *work);
 void protocore_phase_machine_is_open(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -322,7 +321,7 @@ static const PhaseMachineNs PhaseMachine __attribute__((unused)) = {
     .is_open = protocore_phase_machine_is_open,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 

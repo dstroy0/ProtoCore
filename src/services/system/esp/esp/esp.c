@@ -40,9 +40,9 @@ static void esp_nonce(uint8_t nonce[PROTOCORE_AESGCM_IV_LEN], const uint8_t *sal
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, const uint8_t *key, const uint8_t *salt,
-                                     const uint8_t *iv, uint8_t next_header, const uint8_t *payload, size_t payload_len,
-                                     uint8_t *out, size_t out_cap)
+size_t protocore_esp_gcm_encapsulate(const uint8_t *work, uint32_t spi, uint32_t seq, const uint8_t *key,
+                                     const uint8_t *salt, const uint8_t *iv, uint8_t next_header,
+                                     const uint8_t *payload, size_t payload_len, uint8_t *out, size_t out_cap)
 {
     (void)work;
 
@@ -84,7 +84,6 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -98,12 +97,12 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
         AesGcmV.seal_args.tag_out = pt + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
     return total;
 }
 
-proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, const uint8_t *salt, uint8_t *packet,
+embed_bool protocore_esp_gcm_decapsulate(const uint8_t *work, const uint8_t *key, const uint8_t *salt, uint8_t *packet,
                                          size_t len, uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
                                          const uint8_t **payload_out, size_t *payload_len_out)
 {
@@ -111,12 +110,12 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
 
     if (!key || !salt || !packet || !payload_out || !payload_len_out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // Minimum: header + IV + at least the 2-octet trailer (Pad Length + Next Header) + ICV.
     if (len < PROTOCORE_ESP_CT_OFF + 2 + PROTOCORE_ESP_ICV_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     const uint8_t *iv = packet + PROTOCORE_ESP_HDR_LEN;
@@ -126,12 +125,11 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
 
     uint8_t nonce[PROTOCORE_AESGCM_IV_LEN];
     esp_nonce(nonce, salt, iv);
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     {
         // Per-call context: this path is not hot enough to justify a per-session one. The cost is the
         // ~9,200-cycle lifecycle documented in aesgcm.h - hoist the context into session state if it
         // ever shows up in a profile.
-        size_t mark = protocore_secure_guard()->temporary_buf_mark();
         uint8_t *gcm =
             (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AESGCM_BORROW, protocore_secure_owner());
         AesGcmV.key_args.key = key;
@@ -146,11 +144,11 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
         AesGcm.open(gcm);
         ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(gcm, protocore_secure_owner());
     }
     if (!ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Trailer: the last octet is Next Header, the one before it is Pad Length.
@@ -158,7 +156,7 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
     uint8_t pad_len = ct[ct_len - 2];
     if ((size_t)pad_len + 2 > ct_len) // padding + trailer cannot exceed the plaintext
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     if (spi_out)
@@ -175,12 +173,12 @@ proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, cons
     }
     *payload_out = ct;
     *payload_len_out = ct_len - 2 - pad_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ── ESP anti-replay window (RFC 4303 §3.4.3) ───────────────────────────────────────────────────
 
-void protocore_esp_replay_init(uint8_t *work, EspReplay *r)
+void protocore_esp_replay_init(const uint8_t *work, EspReplay *r)
 {
     (void)work;
 
@@ -190,24 +188,24 @@ void protocore_esp_replay_init(uint8_t *work, EspReplay *r)
     }
     r->highest = 0;
     r->bitmap = 0;
-    r->seen_any = PROTO_FALSE;
+    r->seen_any = EMBED_FALSE;
 }
 
-proto_bool protocore_esp_replay_check(uint8_t *work, EspReplay *r, uint32_t seq)
+embed_bool protocore_esp_replay_check(const uint8_t *work, EspReplay *r, uint32_t seq)
 {
     (void)work;
 
     if (!r || seq == 0) // sequence 0 is never valid (ESP counts from 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     if (!r->seen_any)
     {
         r->highest = seq;
         r->bitmap = 1; // bit 0 = this (the new highest)
-        r->seen_any = PROTO_TRUE;
-        return PROTO_TRUE;
+        r->seen_any = EMBED_TRUE;
+        return EMBED_TRUE;
     }
 
     if (seq > r->highest)
@@ -217,21 +215,21 @@ proto_bool protocore_esp_replay_check(uint8_t *work, EspReplay *r, uint32_t seq)
         r->bitmap = (shift >= PROTOCORE_ESP_REPLAY_WINDOW) ? 0u : (r->bitmap << shift);
         r->bitmap |= 1u;
         r->highest = seq;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 
     uint32_t offset = r->highest - seq;
     if (offset >= PROTOCORE_ESP_REPLAY_WINDOW) // left of the window -> too old
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint64_t mask = (uint64_t)1 << offset;
     if (r->bitmap & mask) // already accepted -> replay
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     r->bitmap |= mask;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_IKEV2

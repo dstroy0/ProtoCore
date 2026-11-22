@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #ifndef PROTOCORE_COAPS_MAX_CONNS
 #define PROTOCORE_COAPS_MAX_CONNS 2 ///< simultaneous connections; each slot is one handshake engine
@@ -127,7 +127,7 @@ typedef struct
     CoapsServerSinkArgs sink;    ///< where the replies go
     CoapsServerIngestArgs dgram; ///< what an injected datagram carries
 #endif
-    proto_bool ok;
+    embed_bool ok;
     uint8_t u8;
 #if !PROTOCORE_HAS_NET_STACK
 #endif
@@ -184,7 +184,7 @@ static const CoapsServerNs CoapsServer __attribute__((unused)) = {
  */
 uint8_t *protocore_coaps_server_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 

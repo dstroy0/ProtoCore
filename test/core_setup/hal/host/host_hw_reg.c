@@ -19,7 +19,7 @@
 
 #if PROTOCORE_HOST
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Every slot of the window in one owned context (internal linkage): the address a slot answers for,
 // whether it has been claimed, the four octets themselves, the discard slot a full window falls back
@@ -28,10 +28,10 @@ typedef struct
 {
     uintptr_t addr[PROTOCORE_HW_REG_HOST_SLOTS];
     uint8_t octet[PROTOCORE_HW_REG_HOST_SLOTS][4];
-    proto_bool used[PROTOCORE_HW_REG_HOST_SLOTS];
+    embed_bool used[PROTOCORE_HW_REG_HOST_SLOTS];
     uint8_t discard[4];
     unsigned bits;
-    proto_bool be;
+    embed_bool be;
 } HwRegHostCtx;
 static HwRegHostCtx s_hw = {{0}, {{0}}, {0}, {0}, PROTOCORE_HW_BUS_BITS, PROTOCORE_HW_BUS_BE};
 
@@ -44,7 +44,7 @@ static uint8_t *slot_of(uintptr_t addr)
     {
         if (!s_hw.used[i])
         {
-            s_hw.used[i] = PROTO_TRUE;
+            s_hw.used[i] = EMBED_TRUE;
             s_hw.addr[i] = addr;
             s_hw.octet[i][0] = 0u; // an address seen for the first time reads zero
             s_hw.octet[i][1] = 0u;
@@ -61,7 +61,7 @@ static uint8_t *slot_of(uintptr_t addr)
     return s_hw.discard; // window full: absorb the access rather than alias another register
 }
 
-// Where octet @p k of the value sits once the bus has carried it. A unit is bits/8 octets wide; the
+// Where octet @p k of the value sits once the bus carried it. A unit is bits/8 octets wide; the
 // value's octets keep their order inside a unit on a little-endian bus and reverse on a big-endian
 // one. A bus wider than the register carries it in one unit, so 64 behaves as 32 does for the
 // register's own four octets and differs only in the unit a driver must align to.
@@ -101,7 +101,7 @@ void protocore_hw_reg_host_reset(void)
 {
     for (uint32_t i = 0; i < PROTOCORE_HW_REG_HOST_SLOTS; i++)
     {
-        s_hw.used[i] = PROTO_FALSE;
+        s_hw.used[i] = EMBED_FALSE;
         s_hw.addr[i] = 0u;
         s_hw.octet[i][0] = 0u;
         s_hw.octet[i][1] = 0u;
@@ -114,15 +114,15 @@ void protocore_hw_reg_host_reset(void)
     s_hw.discard[3] = 0u;
 }
 
-void protocore_hw_reg_host_bus(unsigned bits, proto_bool be)
+void protocore_hw_reg_host_bus(unsigned bits, embed_bool be)
 {
     if (bits == 16u || bits == 32u || bits == 64u)
     {
         s_hw.bits = bits;
     }
-    s_hw.be = be ? PROTO_TRUE : PROTO_FALSE;
+    s_hw.be = be ? EMBED_TRUE : EMBED_FALSE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST

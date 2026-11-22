@@ -12,7 +12,7 @@
 
 #include "crypto/hash/sha3/sha3.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition of KeccakCtx - private to this TU. It sits at SHA3_OFF_CTX in the caller's
 // borrow, so its size never leaves this file and no consumer can name it. `out_pos` is how many
@@ -41,7 +41,10 @@ static_assert(SHA3_OFF_CTX % _Alignof(KeccakCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The sponge, at its offset in the caller's borrow.
-#define SHA3_SPONGE(w) ((KeccakCtx *)(void *)((w) + SHA3_OFF_CTX))
+#define SHA3_SPONGE(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const KeccakCtx *)(const void *)((w) + SHA3_OFF_CTX),                                        \
+        default: (KeccakCtx *)(void *)((w) + SHA3_OFF_CTX))
 
 // Keccak-f[1600] permutation constants (FIPS 202): iota round constants, rho rotation offsets, and
 // the rho/pi lane-permutation order.
@@ -179,18 +182,18 @@ void protocore_sha3_absorb(uint8_t *work)
     protocore_keccak_absorb(SHA3_SPONGE(work), Sha3V.absorb_args.rate, Sha3V.absorb_args.in, Sha3V.absorb_args.inlen,
                             Sha3V.absorb_args.domain);
     SHA3_SPONGE(work)->absorbed = 1;
-    Sha3V.ok = PROTO_TRUE;
+    Sha3V.ok = EMBED_TRUE;
 }
 
 void protocore_sha3_squeeze(uint8_t *work)
 {
     if (!SHA3_SPONGE(work)->absorbed || !Sha3V.squeeze_args.out)
     {
-        Sha3V.ok = PROTO_FALSE;
+        Sha3V.ok = EMBED_FALSE;
         return;
     }
     protocore_keccak_squeeze(SHA3_SPONGE(work), Sha3V.squeeze_args.out, Sha3V.squeeze_args.outlen);
-    Sha3V.ok = PROTO_TRUE;
+    Sha3V.ok = EMBED_TRUE;
 }
 
 // One-shot digest: absorb the message at @p rate with the SHA3 domain byte, squeeze @p outlen octets.
@@ -198,14 +201,14 @@ static void sha3_digest(uint8_t *work, uint32_t rate, size_t outlen)
 {
     if (!Sha3V.digest_args.out)
     {
-        Sha3V.ok = PROTO_FALSE;
+        Sha3V.ok = EMBED_FALSE;
         return;
     }
     KeccakCtx *c = SHA3_SPONGE(work);
     protocore_keccak_absorb(c, rate, Sha3V.digest_args.in, Sha3V.digest_args.inlen, 0x06);
     protocore_keccak_squeeze(c, Sha3V.digest_args.out, outlen);
     c->absorbed = 1;
-    Sha3V.ok = PROTO_TRUE;
+    Sha3V.ok = EMBED_TRUE;
 }
 
 void protocore_sha3_sha3_256(uint8_t *work)
@@ -223,14 +226,14 @@ static void sha3_xof(uint8_t *work, uint32_t rate)
 {
     if (!Sha3V.xof_args.out)
     {
-        Sha3V.ok = PROTO_FALSE;
+        Sha3V.ok = EMBED_FALSE;
         return;
     }
     KeccakCtx *c = SHA3_SPONGE(work);
     protocore_keccak_absorb(c, rate, Sha3V.xof_args.in, Sha3V.xof_args.inlen, 0x1F);
     protocore_keccak_squeeze(c, Sha3V.xof_args.out, Sha3V.xof_args.outlen);
     c->absorbed = 1;
-    Sha3V.ok = PROTO_TRUE;
+    Sha3V.ok = EMBED_TRUE;
 }
 
 void protocore_sha3_shake128(uint8_t *work)
@@ -248,12 +251,12 @@ void protocore_sha3_shake128_absorb(uint8_t *work)
     protocore_keccak_absorb(SHA3_SPONGE(work), KECCAK_RATE_SHAKE128, Sha3V.shake128_absorb_args.in,
                             Sha3V.shake128_absorb_args.inlen, 0x1F);
     SHA3_SPONGE(work)->absorbed = 1;
-    Sha3V.ok = PROTO_TRUE;
+    Sha3V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Sha3Vars Sha3V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SHA3

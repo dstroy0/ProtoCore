@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http3/quic_server/quic_server.h" // QuicServerRequestFn: the seam this fills
 
@@ -75,14 +75,14 @@ typedef struct
     H3ReqArgs req;      ///< the request that stream carried
     H3RngArgs rng_args; ///< where random bytes are drawn
 
-    void (*const request)(uint8_t *work);
-    void (*const rng)(uint8_t *work);
+    void (*const request)(const uint8_t *work);
+    void (*const rng)(const uint8_t *work);
 } H3ServerNs;
 
 /** @brief The one symbol this module exports. */
 extern H3ServerNs H3Server;
 
-// The QUIC server's seam dictates these two shapes, so they stay plain functions and carry their
+// The QUIC server's seam dictates these two shapes. So they stay plain functions and carry their
 // arguments onto the handle before the call that does the work.
 void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id, const char *method, const char *path,
                                  const char *authority, const uint8_t *body, size_t body_len);
@@ -95,7 +95,7 @@ void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id
  */
 void protocore_h3_server_rng(uint8_t *out, size_t len);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

@@ -44,7 +44,7 @@ static const char *const PANIC =
 static ExcInfo g_info;
 static char g_json[1024];
 
-static proto_bool decode(const char *text)
+static embed_bool decode(const char *text)
 {
     ExcV.parse_args.text = text;
     ExcV.parse_args.info = &g_info;

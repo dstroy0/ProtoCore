@@ -21,7 +21,7 @@
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/ldc1614/ldc1614.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -45,10 +45,10 @@ uint8_t *protocore_ldc1614_span(void)
     return s_own.span;
 }
 
-void protocore_ldc1614_build_config(uint8_t *work);
-void protocore_ldc1614_data(uint8_t *work);
+void protocore_ldc1614_build_config(const uint8_t *work);
+void protocore_ldc1614_data(const uint8_t *work);
 
-void protocore_ldc1614_data(uint8_t *work)
+void protocore_ldc1614_data(const uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Ldc1614V.data_args.msb_reg;
@@ -57,7 +57,7 @@ void protocore_ldc1614_data(uint8_t *work)
     Ldc1614V.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
 }
 
-void protocore_ldc1614_error(uint8_t *work)
+void protocore_ldc1614_error(const uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Ldc1614V.error_args.msb_reg;
@@ -65,7 +65,7 @@ void protocore_ldc1614_error(uint8_t *work)
     Ldc1614V.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
 }
 
-void protocore_ldc1614_sensor_freq_hz(uint8_t *work)
+void protocore_ldc1614_sensor_freq_hz(const uint8_t *work)
 {
     (void)work;
     uint32_t data28 = Ldc1614V.sensor_freq_hz_args.data28;
@@ -74,7 +74,7 @@ void protocore_ldc1614_sensor_freq_hz(uint8_t *work)
     Ldc1614V.hz = ((uint64_t)data28 * fref_hz) >> 28;
 }
 
-void protocore_ldc1614_build_config(uint8_t *work)
+void protocore_ldc1614_build_config(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ldc1614V.build_config_args.buf;
@@ -134,7 +134,10 @@ static_assert(LDC1614_OFF_CTX % _Alignof(Ldc1614Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define LDC1614_CTX(w) ((Ldc1614Ctx *)(void *)((w) + LDC1614_OFF_CTX))
+#define LDC1614_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ldc1614Ctx *)(const void *)((w) + LDC1614_OFF_CTX),                                    \
+        default: (Ldc1614Ctx *)(void *)((w) + LDC1614_OFF_CTX))
 
 // Zero is "no address set yet", which is the address the ADDR pin selects when it is low - stated
 // here rather than on the declaration so the context carries no initializer and can live in a
@@ -144,18 +147,18 @@ static uint8_t dev_addr(uint8_t *work)
     return LDC1614_CTX(work)->addr ? LDC1614_CTX(work)->addr : (uint8_t)PROTOCORE_LDC1614_I2C_ADDR;
 }
 
-static proto_bool read16(uint8_t *work, uint8_t reg, uint16_t *out)
+static embed_bool read16(uint8_t *work, uint8_t reg, uint16_t *out)
 {
     if (!protocore_i2c_write_read(dev_addr(work), &reg, 1, LDC1614_CTX(work)->frame, 2))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out =
         (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = LDC1614_CTX(work)->frame, .width = MMGR_ENDIAN_16);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool write16(uint8_t *work, uint8_t reg, uint16_t val)
+static embed_bool write16(uint8_t *work, uint8_t reg, uint16_t val)
 {
     LDC1614_CTX(work)->frame[0] = reg;
     (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = &LDC1614_CTX(work)->frame[1], .val = val,
@@ -174,12 +177,12 @@ void protocore_ldc1614_begin(uint8_t *work)
     uint16_t id = 0;
     if (!read16(work, LDC1614_REG_DEVICE_ID, &id))
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614V.ok = EMBED_FALSE;
         return;
     }
     if (id != LDC1614_DEVICE_ID)
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614V.ok = EMBED_FALSE;
         return;
     }
     Ldc1614V.build_config_args.buf = LDC1614_CTX(work)->config;
@@ -194,11 +197,11 @@ void protocore_ldc1614_begin(uint8_t *work)
                      (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = &LDC1614_CTX(work)->config[i + 1],
                                           .width = MMGR_ENDIAN_16)))
         {
-            Ldc1614V.ok = PROTO_FALSE;
+            Ldc1614V.ok = EMBED_FALSE;
             return;
         }
     }
-    Ldc1614V.ok = PROTO_TRUE;
+    Ldc1614V.ok = EMBED_TRUE;
 }
 
 void protocore_ldc1614_read_ch0(uint8_t *work)
@@ -207,26 +210,26 @@ void protocore_ldc1614_read_ch0(uint8_t *work)
 
     if (!out)
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614V.ok = EMBED_FALSE;
         return;
     }
     uint16_t msb = 0;
     uint16_t lsb = 0;
     if (!read16(work, LDC1614_REG_DATA_CH0_MSB, &msb) || !read16(work, LDC1614_REG_DATA_CH0_LSB, &lsb))
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614V.ok = EMBED_FALSE;
         return;
     }
     Ldc1614V.data_args.msb_reg = msb;
     Ldc1614V.data_args.lsb_reg = lsb;
     protocore_ldc1614_data(work);
     *out = Ldc1614V.value;
-    Ldc1614V.ok = PROTO_TRUE;
+    Ldc1614V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Ldc1614Vars Ldc1614V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LDC1614

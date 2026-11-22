@@ -43,7 +43,7 @@ static int sse_format(char *buf, size_t cap, const char *data, const char *event
     return SseV.n;
 }
 
-static proto_bool sse_write(SseConn *stream, const char *data, const char *event, const char *event_id)
+static embed_bool sse_write(SseConn *stream, const char *data, const char *event, const char *event_id)
 {
     SseV.stream = stream;
     SseV.event_args.data = data;
@@ -60,7 +60,8 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].pcb = protocore_net_host_pcb();
     }
 }
@@ -265,7 +266,7 @@ void test_sse_write_null_data_returns_false()
 void test_sse_write_returns_false_when_conn_not_active()
 {
     SseConn *sse = sse_alloc(0, "/events");
-    conn_pool[0].state = CONN_FREE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_FREE);
     TEST_ASSERT_FALSE(sse_write(sse, "hello", NULL, NULL));
 }
 
@@ -456,7 +457,7 @@ void stress_sse_write_100_calls()
     SseConn *sse = sse_alloc(0, "/events");
     for (int i = 0; i < 100; i++)
     {
-        proto_bool ok = sse_write(sse, "data", "update", "1");
+        embed_bool ok = sse_write(sse, "data", "update", "1");
         TEST_ASSERT_TRUE_MESSAGE(ok, "write failed");
     }
 

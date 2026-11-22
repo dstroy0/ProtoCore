@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_GUARDRAILS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief A health snapshot. */
 typedef struct
@@ -96,18 +96,18 @@ extern GuardrailsVars GuardrailsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const eval)(uint8_t *work);
-    void (*const json)(uint8_t *work);
-    void (*const sample)(uint8_t *work);
+    void (*const eval)(const uint8_t *work);
+    void (*const json)(const uint8_t *work);
+    void (*const sample)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const check)(uint8_t *work);
 } GuardrailsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in GuardrailsV or a region of the borrow at a fixed offset.
-void protocore_guardrails_eval(uint8_t *work);
-void protocore_guardrails_json(uint8_t *work);
-void protocore_guardrails_sample(uint8_t *work);
+void protocore_guardrails_eval(const uint8_t *work);
+void protocore_guardrails_json(const uint8_t *work);
+void protocore_guardrails_sample(const uint8_t *work);
 void protocore_guardrails_begin(uint8_t *work);
 void protocore_guardrails_check(uint8_t *work);
 
@@ -134,7 +134,7 @@ static const GuardrailsNs Guardrails __attribute__((unused)) = {
  */
 uint8_t *protocore_guardrails_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS
 

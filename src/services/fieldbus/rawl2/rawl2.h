@@ -9,7 +9,7 @@
  * VLAN-tagged frames) so the app can inject/receive arbitrary L2 frames - the basis for the raw-L2
  * industrial protocols (PROFINET DCP, IEC 61850 GOOSE, POWERLINK, SERCOS) and for custom management /
  * proprietary MAC framing. On device the bytes go out through the vendor L2 transmit path
- * (wired or Wi-Fi); the MAC normally appends the FCS, so the builder emits the frame
+ * (wired or Wi-Fi). The MAC normally appends the FCS, so the builder emits the frame
  * without it and `Rawl2.fcs` is provided for the cases that need it.
  *
  *   Ethernet II:  [dst MAC 6][src MAC 6][ethertype 2][payload]
@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_RAWL2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -47,7 +47,7 @@ typedef struct
 {
     const uint8_t *dst;
     const uint8_t *src;
-    proto_bool vlan;
+    embed_bool vlan;
     uint8_t pcp;
     uint16_t vid;
     uint16_t ethertype;
@@ -73,7 +73,7 @@ typedef struct
     const uint8_t *dst;
     const uint8_t *src;
     uint8_t pcp;    ///< priority code point (0..7)
-    proto_bool dei; ///< drop-eligible indicator
+    embed_bool dei; ///< drop-eligible indicator
     uint16_t vid;   ///< VLAN id (0..4095)
     uint16_t ethertype;
     const uint8_t *payload;
@@ -135,7 +135,7 @@ typedef struct
     Rawl2BuildVlanArgs build_vlan_args;
     Rawl2ParseArgs parse_args;
     Rawl2FcsArgs fcs_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint32_t u32;
 } Rawl2Vars;
@@ -146,17 +146,17 @@ extern Rawl2Vars Rawl2V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build)(uint8_t *work);
-    void (*const build_vlan)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const build)(const uint8_t *work);
+    void (*const build_vlan)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
     void (*const fcs)(uint8_t *work);
 } Rawl2Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Rawl2V or a region of the borrow at a fixed offset.
-void protocore_rawl2_build(uint8_t *work);
-void protocore_rawl2_build_vlan(uint8_t *work);
-void protocore_rawl2_parse(uint8_t *work);
+void protocore_rawl2_build(const uint8_t *work);
+void protocore_rawl2_build_vlan(const uint8_t *work);
+void protocore_rawl2_parse(const uint8_t *work);
 void protocore_rawl2_fcs(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -170,7 +170,7 @@ static const Rawl2Ns Rawl2 __attribute__((unused)) = {
     .fcs = protocore_rawl2_fcs,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RAWL2
 

@@ -5,7 +5,7 @@
  * @file webdav_handler.h
  * @brief WebDAV request handling against a mounted filesystem (RFC 4918).
  *
- * The server half of WebDAV: it resolves a request path against a ROUTE_DAV mount, dispatches the
+ * The server half of WebDAV. It resolves a request path against a ROUTE_DAV mount, dispatches the
  * method, walks directories for PROPFIND, and streams a PUT body to the file. The wire format it
  * speaks - method classification, Depth parsing, the 207 Multi-Status builder, and the lock table -
  * is the pure codec in network_drivers/application/webdav/webdav.h, which this file calls.
@@ -20,7 +20,7 @@
 
 #if PROTOCORE_ENABLE_WEBDAV
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_WEBDAV_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -57,7 +57,7 @@ typedef struct
 typedef struct
 {
     DavTryServeDavArgs try_serve_dav_args;
-    proto_bool ok;
+    embed_bool ok;
 } DavVars;
 
 /** @brief The operands and the outcome. */
@@ -92,7 +92,7 @@ static const DavNs Dav __attribute__((unused)) = {
  */
 uint8_t *protocore_webdav_handler_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBDAV
 

@@ -5,13 +5,13 @@
  * @file ipsec_db.h
  * @brief IPsec Security Policy Database (SPD) + Security Association Database (SAD) - RFC 4301.
  *
- * The ESP datapath (esp.h) is the crypto transform; this file is the two databases that decide, for a
+ * The ESP datapath (esp.h) is the crypto transform. This file is the two databases that decide, for a
  * given packet, WHETHER and WITH WHICH SA to apply it. Both are pure, host-testable data structures with
  * no heap and no lwIP dependency - the remaining device-side piece is only the IP input/output hook that
  * feeds packets through these lookups.
  *
  *   - SPD (RFC 4301 §4.4.1): an ordered list of policies matched against a packet's selectors (source /
- *     destination address ranges, protocol, port ranges); the FIRST matching policy wins and names an
+ *     destination address ranges, protocol, port ranges). The FIRST matching policy wins and names an
  *     action - PROTECT (apply ESP with a bound SA), BYPASS (send in the clear), or DISCARD (drop).
  *   - SAD (RFC 4301 §4.4.2): the active Security Associations keyed by SPI. An inbound ESP packet is
  *     demuxed to its SA by SPI; an outbound PROTECT policy names the SA to encapsulate with. Each SA
@@ -35,7 +35,7 @@
 #include "services/security/ikev2/ikev2/ikev2.h" // the complete type a public struct below holds by value
 #include "services/system/esp/esp/esp.h"         // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -51,12 +51,11 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_IPSEC_SAD_MAX 8
 
 /** @brief SPD policy action (RFC 4301 §4.4.1). */
-typedef enum PROTO_ENUM_PACKED
-{
-    IPSEC_ACTION_DISCARD = 0, ///< drop the packet
-    IPSEC_ACTION_BYPASS = 1,  ///< forward without IPsec
-    IPSEC_ACTION_PROTECT = 2, ///< apply ESP with the bound SA
-} IpsecAction;
+EMBED_ENUM_BYTE(IpsecAction,
+                IPSEC_ACTION_DISCARD = 0, ///< drop the packet
+                IPSEC_ACTION_BYPASS = 1,  ///< forward without IPsec
+                IPSEC_ACTION_PROTECT = 2, ///< apply ESP with the bound SA
+);
 
 /**
  * @brief A traffic selector as an SPD range (value type, addresses inline big-endian).
@@ -114,8 +113,8 @@ typedef struct
     uint8_t salt[PROTOCORE_ESP_SALT_LEN];  ///< AES-GCM salt (the key's tail)
     uint32_t seq;                          ///< outbound: last sequence number issued (0 = none yet)
     EspReplay replay;                      ///< inbound: anti-replay window
-    proto_bool inbound;                    ///< true = receive SA, false = send SA
-    proto_bool valid;                      ///< false = free slot
+    embed_bool inbound;                    ///< true = receive SA, false = send SA
+    embed_bool valid;                      ///< false = free slot
 } IpsecSaEntry;
 
 /** @brief The active Security Association Database, keyed by SPI. */
@@ -177,7 +176,7 @@ typedef struct
     uint8_t addr_len;
     const uint8_t *key;  ///< PROTOCORE_ESP_KEY_LEN bytes.
     const uint8_t *salt; ///< PROTOCORE_ESP_SALT_LEN bytes.
-    proto_bool inbound;
+    embed_bool inbound;
 } IpsecDbProtocoreIpsecSadAddArgs;
 
 /** @brief What protocore_ipsec_sad_find takes: sad, spi. */
@@ -251,7 +250,7 @@ typedef struct
     IpsecDbProtocoreIpsecSadFindArgs protocore_ipsec_sad_find_args;
     IpsecDbProtocoreIpsecSadRemoveArgs protocore_ipsec_sad_remove_args;
     IpsecDbProtocoreIpsecSadNextSeqArgs protocore_ipsec_sad_next_seq_args;
-    proto_bool ok;
+    embed_bool ok;
     const IpsecPolicy *ptr;
     IpsecSaEntry *sa;
 } IpsecDbVars;
@@ -262,30 +261,30 @@ extern IpsecDbVars IpsecDbV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const protocore_ipsec_spd_init)(uint8_t *work);
-    void (*const protocore_ipsec_spd_add)(uint8_t *work);
+    void (*const protocore_ipsec_spd_init)(const uint8_t *work);
+    void (*const protocore_ipsec_spd_add)(const uint8_t *work);
     void (*const protocore_ipsec_spd_lookup)(uint8_t *work);
-    void (*const protocore_ipsec_selector_match)(uint8_t *work);
-    void (*const protocore_ipsec_selector_from_ts)(uint8_t *work);
-    void (*const protocore_ipsec_sad_init)(uint8_t *work);
+    void (*const protocore_ipsec_selector_match)(const uint8_t *work);
+    void (*const protocore_ipsec_selector_from_ts)(const uint8_t *work);
+    void (*const protocore_ipsec_sad_init)(const uint8_t *work);
     void (*const protocore_ipsec_sad_add)(uint8_t *work);
-    void (*const protocore_ipsec_sad_find)(uint8_t *work);
+    void (*const protocore_ipsec_sad_find)(const uint8_t *work);
     void (*const protocore_ipsec_sad_remove)(uint8_t *work);
-    void (*const protocore_ipsec_sad_next_seq)(uint8_t *work);
+    void (*const protocore_ipsec_sad_next_seq)(const uint8_t *work);
 } IpsecDbNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IpsecDbV or a region of the borrow at a fixed offset.
-void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_spd_init(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_spd_add(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_from_ts(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_init(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_next_seq(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -304,7 +303,7 @@ static const IpsecDbNs IpsecDb __attribute__((unused)) = {
     .protocore_ipsec_sad_next_seq = protocore_ipsec_db_protocore_ipsec_sad_next_seq,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2
 

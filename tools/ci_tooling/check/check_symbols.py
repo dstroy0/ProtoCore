@@ -55,7 +55,7 @@ MACRO_LIMIT = 31
 # spelling is fixed by a datasheet. The rename pass learned this the hard way - a blanket
 # PC-prefix sweep would have renamed PCA9685 and the PCR_* register block.
 # EMBED_CALL is embedded_types' macro. types.h restates it for C++, where the name has to stay the same.
-FOREIGN = re.compile(r"^(PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD|EMBED_CALL$)", re.I)
+FOREIGN = re.compile(r"^(?:(?:PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD)|EMBED_CALL$)", re.I)
 
 
 def decomment(t):
@@ -230,6 +230,13 @@ def check():
                     continue  # an inline anonymous enum names no type
                 name, at = tail.group(1), i + 1 + tail.start(1)
             ln = code[:at].count("\n") + 1
+            if not re.fullmatch(r"[A-Z][A-Za-z0-9]*", name):
+                add("enum-name", rel, ln, f"enum type {name} is not StructName PascalCase")
+            types_seen.setdefault(name.lower(), rel)
+        # An enum of embedded_types names its type as the first argument of EMBED_ENUM_BYTE.
+        for m in re.finditer(r"\bEMBED_ENUM_BYTE\s*\(\s*(\w+)\s*,", code):
+            name = m.group(1)
+            ln = code[: m.start(1)].count("\n") + 1
             if not re.fullmatch(r"[A-Z][A-Za-z0-9]*", name):
                 add("enum-name", rel, ln, f"enum type {name} is not StructName PascalCase")
             types_seen.setdefault(name.lower(), rel)

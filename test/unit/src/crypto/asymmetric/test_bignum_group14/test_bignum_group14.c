@@ -50,7 +50,6 @@ static uint8_t g_work[PROTOCORE_BIGNUM_BORROW] __attribute__((aligned(8)));
 
 void setUp(void)
 {
-    protocore_secure_guard()->temporary_buf_reset();
 }
 void tearDown(void)
 {

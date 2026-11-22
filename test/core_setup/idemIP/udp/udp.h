@@ -14,7 +14,7 @@
 #include "idemIP/checksum.h"
 #include "idemIP/ip/ipv4.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Field offsets (RFC 768, "Format")
@@ -48,25 +48,25 @@ PROTOCORE_BEGIN_DECLS
 #define IDEMIP_UDP_CKSUM_ZERO_AS 0xFFFFu
 
 /** @brief Source Port. RFC 768: optional; "If not used, a value of zero is inserted." */
-PROTOCORE_INLINE uint16_t idemip_udp_src_port(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_udp_src_port(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_UDP_OFF_SRC_PORT);
 }
 
 /** @brief Destination Port. */
-PROTOCORE_INLINE uint16_t idemip_udp_dst_port(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_udp_dst_port(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_UDP_OFF_DST_PORT);
 }
 
 /** @brief Length: this header plus the data. */
-PROTOCORE_INLINE uint16_t idemip_udp_len(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_udp_len(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_UDP_OFF_LEN);
 }
 
 /** @brief Checksum as carried; IDEMIP_UDP_CKSUM_NONE means the sender computed none. */
-PROTOCORE_INLINE uint16_t idemip_udp_cksum(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_udp_cksum(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_UDP_OFF_CKSUM);
 }
@@ -78,10 +78,10 @@ PROTOCORE_INLINE uint16_t idemip_udp_cksum(const uint8_t *h)
  * destination address, the protocol, and the UDP length. This information gives protection against
  * misrouted datagrams." It is a zero octet, the protocol, and the length, after the two addresses.
  *
- * Not part of the datagram: it is summed, never sent, so this accumulates into a running sum the
+ * Not part of the datagram. It is summed, never sent, so this accumulates into a running sum the
  * caller then carries over the header and data.
  */
-PROTOCORE_INLINE uint32_t idemip_udp_pseudo_accum(uint32_t sum, uint32_t src, uint32_t dst, uint16_t udp_len)
+EMBED_INLINE uint32_t idemip_udp_pseudo_accum(uint32_t sum, uint32_t src, uint32_t dst, uint16_t udp_len)
 {
     sum += (src >> 16) & 0xFFFFu;
     sum += src & 0xFFFFu;
@@ -98,7 +98,7 @@ PROTOCORE_INLINE uint32_t idemip_udp_pseudo_accum(uint32_t sum, uint32_t src, ui
  * The caller zeroes the checksum field first; RFC 1071's sum is over the datagram as it will be
  * sent, and the field is part of it.
  */
-PROTOCORE_INLINE uint16_t idemip_udp_cksum_compute(const uint8_t *h, size_t len, uint32_t src, uint32_t dst)
+EMBED_INLINE uint16_t idemip_udp_cksum_compute(const uint8_t *h, size_t len, uint32_t src, uint32_t dst)
 {
     uint32_t sum = idemip_udp_pseudo_accum(0u, src, dst, (uint16_t)len);
     uint16_t c = idemip_cksum_final(idemip_cksum_accum(sum, h, len));
@@ -108,6 +108,6 @@ PROTOCORE_INLINE uint16_t idemip_udp_cksum_compute(const uint8_t *h, size_t len,
 static_assert(IDEMIP_UDP_OFF_CKSUM + 2u == IDEMIP_UDP_HDR_LEN,
               "the RFC 768 field offsets must sum to the header length");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_UDP_H

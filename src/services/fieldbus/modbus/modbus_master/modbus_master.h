@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file modbus_master.h
@@ -36,21 +36,22 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*build_read)(uint8_t *, uint8_t, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
-    int (*parse_response)(uint8_t *, const uint8_t *, size_t, uint16_t *, size_t, uint8_t *);
-    size_t (*build_read_bits)(uint8_t *, uint8_t, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
-    int (*parse_read_bits_response)(uint8_t *, const uint8_t *, size_t, uint16_t, uint8_t *, size_t, uint8_t *);
-    size_t (*build_write_single_coil)(uint8_t *, uint16_t, uint8_t, uint16_t, proto_bool, uint8_t *, size_t);
-    size_t (*build_write_multiple_coils)(uint8_t *, uint16_t, uint8_t, uint16_t, const uint8_t *, uint16_t, uint8_t *,
-                                         size_t);
-    size_t (*build_write_single)(uint8_t *, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
-    size_t (*build_write_multiple)(uint8_t *, uint16_t, uint8_t, uint16_t, const uint16_t *, uint16_t, uint8_t *,
+    size_t (*build_read)(const uint8_t *, uint8_t, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
+    int (*parse_response)(const uint8_t *, const uint8_t *, size_t, uint16_t *, size_t, uint8_t *);
+    size_t (*build_read_bits)(const uint8_t *, uint8_t, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
+    int (*parse_read_bits_response)(const uint8_t *, const uint8_t *, size_t, uint16_t, uint8_t *, size_t, uint8_t *);
+    size_t (*build_write_single_coil)(const uint8_t *, uint16_t, uint8_t, uint16_t, embed_bool, uint8_t *, size_t);
+    size_t (*build_write_multiple_coils)(const uint8_t *, uint16_t, uint8_t, uint16_t, const uint8_t *, uint16_t,
+                                         uint8_t *, size_t);
+    size_t (*build_write_single)(const uint8_t *, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
+    size_t (*build_write_multiple)(const uint8_t *, uint16_t, uint8_t, uint16_t, const uint16_t *, uint16_t, uint8_t *,
                                    size_t);
-    int (*parse_write_response)(uint8_t *, const uint8_t *, size_t, uint16_t *, uint8_t *);
-    size_t (*build_mask_write)(uint8_t *, uint16_t, uint8_t, uint16_t, uint16_t, uint16_t, uint8_t *, size_t);
-    size_t (*build_read_write_multiple)(uint8_t *, uint16_t, uint8_t, uint16_t, uint16_t, uint16_t, const uint16_t *,
-                                        uint16_t, uint8_t *, size_t);
-    int (*parse_mask_write_response)(uint8_t *, const uint8_t *, size_t, uint16_t *, uint16_t *, uint16_t *, uint8_t *);
+    int (*parse_write_response)(const uint8_t *, const uint8_t *, size_t, uint16_t *, uint8_t *);
+    size_t (*build_mask_write)(const uint8_t *, uint16_t, uint8_t, uint16_t, uint16_t, uint16_t, uint8_t *, size_t);
+    size_t (*build_read_write_multiple)(const uint8_t *, uint16_t, uint8_t, uint16_t, uint16_t, uint16_t,
+                                        const uint16_t *, uint16_t, uint8_t *, size_t);
+    int (*parse_mask_write_response)(const uint8_t *, const uint8_t *, size_t, uint16_t *, uint16_t *, uint16_t *,
+                                     uint8_t *);
 } ModbusMasterNs;
 PROTOCORE_NS_LAYOUT(ModbusMasterNs, build_read, parse_response, build_read_bits, parse_read_bits_response,
                     build_write_single_coil, build_write_multiple_coils, build_write_single, build_write_multiple,
@@ -68,7 +69,7 @@ PROTOCORE_NS_LAYOUT(ModbusMasterNs, build_read, parse_response, build_read_bits,
  * @param cap destination capacity (>= 12)
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_read(uint8_t *work, uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start,
+size_t protocore_modbus_master_build_read(const uint8_t *work, uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start,
                                           uint16_t count, uint8_t *out, size_t cap);
 /**
  * @brief Parse a read-response ADU into register values.
@@ -80,7 +81,7 @@ size_t protocore_modbus_master_build_read(uint8_t *work, uint8_t fc, uint16_t tx
  * @param exception_out set to the Modbus exception code if the slave returned one (then the function returns 0
  * @return The int.
  */
-int protocore_modbus_master_parse_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t *regs_out,
+int protocore_modbus_master_parse_response(const uint8_t *work, const uint8_t *adu, size_t len, uint16_t *regs_out,
                                            size_t max_regs, uint8_t *exception_out);
 /**
  * @brief Build a read-bits request ADU (FC 0x01 coils or 0x02 discrete .
@@ -94,8 +95,8 @@ int protocore_modbus_master_parse_response(uint8_t *work, const uint8_t *adu, si
  * @param cap destination capacity (>= 12)
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_read_bits(uint8_t *work, uint8_t fc, uint16_t txid, uint8_t unit, uint16_t start,
-                                               uint16_t count, uint8_t *out, size_t cap);
+size_t protocore_modbus_master_build_read_bits(const uint8_t *work, uint8_t fc, uint16_t txid, uint8_t unit,
+                                               uint16_t start, uint16_t count, uint8_t *out, size_t cap);
 /**
  * @brief Parse a read-bits response ADU (FC 0x01 / 0x02) into one byte (0/1).
  * @param work PROTOCORE_MODBUS_MASTER_BORROW bytes the caller took. Not held past the call.
@@ -107,8 +108,9 @@ size_t protocore_modbus_master_build_read_bits(uint8_t *work, uint8_t fc, uint16
  * @param exception_out set to the Modbus exception code if the slave returned one (then 0 is returned)
  * @return The int.
  */
-int protocore_modbus_master_parse_read_bits_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t count,
-                                                     uint8_t *bits_out, size_t max_bits, uint8_t *exception_out);
+int protocore_modbus_master_parse_read_bits_response(const uint8_t *work, const uint8_t *adu, size_t len,
+                                                     uint16_t count, uint8_t *bits_out, size_t max_bits,
+                                                     uint8_t *exception_out);
 /**
  * @brief Build a Write Single Coil request ADU (FC 0x05).
  * @param work PROTOCORE_MODBUS_MASTER_BORROW bytes the caller took. Not held past the call.
@@ -120,8 +122,8 @@ int protocore_modbus_master_parse_read_bits_response(uint8_t *work, const uint8_
  * @param cap destination capacity (>= 12)
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_write_single_coil(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
-                                                       proto_bool on, uint8_t *out, size_t cap);
+size_t protocore_modbus_master_build_write_single_coil(const uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
+                                                       embed_bool on, uint8_t *out, size_t cap);
 /**
  * @brief Build a Write Multiple Coils request ADU (FC 0x0F).
  * @param work PROTOCORE_MODBUS_MASTER_BORROW bytes the caller took. Not held past the call.
@@ -134,9 +136,9 @@ size_t protocore_modbus_master_build_write_single_coil(uint8_t *work, uint16_t t
  * @param cap destination capacity (>= 14 + ceil(count/8))
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_write_multiple_coils(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t start,
-                                                          const uint8_t *bits, uint16_t count, uint8_t *out,
-                                                          size_t cap);
+size_t protocore_modbus_master_build_write_multiple_coils(const uint8_t *work, uint16_t txid, uint8_t unit,
+                                                          uint16_t start, const uint8_t *bits, uint16_t count,
+                                                          uint8_t *out, size_t cap);
 /**
  * @brief Build a Write Single Register request ADU (FC 0x06).
  * @param work PROTOCORE_MODBUS_MASTER_BORROW bytes the caller took. Not held past the call.
@@ -148,7 +150,7 @@ size_t protocore_modbus_master_build_write_multiple_coils(uint8_t *work, uint16_
  * @param cap destination capacity (>= 12)
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_write_single(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
+size_t protocore_modbus_master_build_write_single(const uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
                                                   uint16_t value, uint8_t *out, size_t cap);
 /**
  * @brief Build a Write Multiple Registers request ADU (FC 0x10).
@@ -162,7 +164,7 @@ size_t protocore_modbus_master_build_write_single(uint8_t *work, uint16_t txid, 
  * @param cap destination capacity (>= 13 + 2*count)
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_write_multiple(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t start,
+size_t protocore_modbus_master_build_write_multiple(const uint8_t *work, uint16_t txid, uint8_t unit, uint16_t start,
                                                     const uint16_t *values, uint16_t count, uint8_t *out, size_t cap);
 /**
  * @brief Parse a write-response ADU (FC 0x05, 0x06, 0x0F, or 0x10). A normal .
@@ -173,8 +175,8 @@ size_t protocore_modbus_master_build_write_multiple(uint8_t *work, uint16_t txid
  * @param exception_out set to the Modbus exception code if the slave returned one (then 0 is returned)
  * @return The int.
  */
-int protocore_modbus_master_parse_write_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t *addr_out,
-                                                 uint8_t *exception_out);
+int protocore_modbus_master_parse_write_response(const uint8_t *work, const uint8_t *adu, size_t len,
+                                                 uint16_t *addr_out, uint8_t *exception_out);
 /**
  * @brief Build a Mask Write Register request ADU (FC 0x16). The slave .
  * @param work PROTOCORE_MODBUS_MASTER_BORROW bytes the caller took. Not held past the call.
@@ -187,7 +189,7 @@ int protocore_modbus_master_parse_write_response(uint8_t *work, const uint8_t *a
  * @param cap destination capacity (>= 14)
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_mask_write(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
+size_t protocore_modbus_master_build_mask_write(const uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
                                                 uint16_t and_mask, uint16_t or_mask, uint8_t *out, size_t cap);
 /**
  * @brief Build a Read/Write Multiple Registers request ADU (FC 0x17): write.
@@ -203,7 +205,7 @@ size_t protocore_modbus_master_build_mask_write(uint8_t *work, uint16_t txid, ui
  * @param cap destination capacity (>= 17 + 2*write_count)
  * @return The size_t.
  */
-size_t protocore_modbus_master_build_read_write_multiple(uint8_t *work, uint16_t txid, uint8_t unit,
+size_t protocore_modbus_master_build_read_write_multiple(const uint8_t *work, uint16_t txid, uint8_t unit,
                                                          uint16_t read_start, uint16_t read_count, uint16_t write_start,
                                                          const uint16_t *values, uint16_t write_count, uint8_t *out,
                                                          size_t cap);
@@ -218,8 +220,9 @@ size_t protocore_modbus_master_build_read_write_multiple(uint8_t *work, uint16_t
  * @param exception_out set to the Modbus exception code if the slave returned one
  * @return The int.
  */
-int protocore_modbus_master_parse_mask_write_response(uint8_t *work, const uint8_t *adu, size_t len, uint16_t *addr_out,
-                                                      uint16_t *and_out, uint16_t *or_out, uint8_t *exception_out);
+int protocore_modbus_master_parse_mask_write_response(const uint8_t *work, const uint8_t *adu, size_t len,
+                                                      uint16_t *addr_out, uint16_t *and_out, uint16_t *or_out,
+                                                      uint8_t *exception_out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS ModbusMasterNs ModbusMaster PROTOCORE_UNUSED = {
@@ -236,6 +239,6 @@ PROTOCORE_NS ModbusMasterNs ModbusMaster PROTOCORE_UNUSED = {
     .build_read_write_multiple = protocore_modbus_master_build_read_write_multiple,
     .parse_mask_write_response = protocore_modbus_master_parse_mask_write_response};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_MODBUS_MASTER_H

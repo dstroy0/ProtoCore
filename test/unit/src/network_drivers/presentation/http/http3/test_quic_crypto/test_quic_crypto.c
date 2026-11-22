@@ -79,7 +79,7 @@ static size_t hx(const char *s, uint8_t *buf, size_t cap)
 // One scratch AEAD context, rekeyed per use so a backend that attaches vendor state to a context
 // does not accumulate one per vector.
 static uint8_t g_gcm_ws[PROTOCORE_WORK_AES128GCM] __attribute__((aligned(8)));
-static proto_bool g_gcm_live = PROTO_FALSE;
+static embed_bool g_gcm_live = EMBED_FALSE;
 
 static uint8_t *gcm(const uint8_t *key)
 {
@@ -87,7 +87,7 @@ static uint8_t *gcm(const uint8_t *key)
     {
         Aes128Gcm.key_wipe(g_gcm_ws);
     }
-    g_gcm_live = PROTO_TRUE;
+    g_gcm_live = EMBED_TRUE;
     Aes128GcmV.key_args.key = key;
     Aes128Gcm.key_init(g_gcm_ws);
     return g_gcm_ws;
@@ -153,7 +153,6 @@ void test_fips197_aes128_block(void)
     hx("00112233445566778899aabbccddeeff", in, sizeof(in));
     hx("69c4e0d86a7b0430d8cdb78070b4c55a", want, sizeof(want));
 
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_AES128GCM_BORROW,
                                                                                              protocore_secure_owner()),
@@ -165,7 +164,7 @@ void test_fips197_aes128_block(void)
     Aes128GcmV.block_args.out = out;
     Aes128Gcm.block_encrypt(w.buf);
     Aes128Gcm.block_wipe(w.buf);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
     TEST_ASSERT_EQUAL_MEMORY(want, out, 16);
 }
 
@@ -310,7 +309,7 @@ void test_rfc9001_a3_server_initial(void)
     // the header's Length field is 0x4075, a 2-octet varint holding 117 = 2 packet-number octets +
     // 99 frame octets + the 16-octet tag, so the packet number starts at offset 18
     size_t quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 2, 1, frames_len, &s.server, PROTO_TRUE);
+        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 2, 1, frames_len, &s.server, EMBED_TRUE);
     size_t n = quic_crypto_n;
     TEST_ASSERT_EQUAL_UINT(135u, n);
     TEST_ASSERT_EQUAL_MEMORY(want, g_pkt, 135);
@@ -319,7 +318,7 @@ void test_rfc9001_a3_server_initial(void)
     uint64_t pn = 0;
     memcpy(g_pkt, want, want_len);
     quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, PROTO_TRUE, g_plain, &pn);
+        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, EMBED_TRUE, g_plain, &pn);
     size_t pt = quic_crypto_n;
     TEST_ASSERT_EQUAL_UINT(99u, pt);
     TEST_ASSERT_EQUAL_HEX64(1u, pn);
@@ -356,7 +355,7 @@ void test_rfc9001_a2_client_initial(void)
 
     // Length 0x449e = 1182 = 4 packet-number octets + 1162 payload + 16 tag, so pn_offset is 18
     size_t quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 4, 2, 1162, &s.client, PROTO_TRUE);
+        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 4, 2, 1162, &s.client, EMBED_TRUE);
     size_t n = quic_crypto_n;
     TEST_ASSERT_EQUAL_UINT(1200u, n);
 
@@ -372,7 +371,7 @@ void test_rfc9001_a2_client_initial(void)
 
     uint64_t pn = 0;
     quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x49e, 0, &s.client, PROTO_TRUE, g_plain, &pn);
+        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x49e, 0, &s.client, EMBED_TRUE, g_plain, &pn);
     size_t pt = quic_crypto_n;
     TEST_ASSERT_EQUAL_UINT(1162u, pt);
     TEST_ASSERT_EQUAL_HEX64(2u, pn);
@@ -429,21 +428,21 @@ void test_tampered_packet_fails_authentication(void)
     memcpy(g_pkt, pkt, want_len);
     g_pkt[10] ^= 0x01;
     size_t quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, PROTO_TRUE, g_plain, NULL);
+        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, EMBED_TRUE, g_plain, NULL);
     TEST_ASSERT_EQUAL_UINT((size_t)-1, quic_crypto_n);
 
     // a flipped octet in the ciphertext
     memcpy(g_pkt, pkt, want_len);
     g_pkt[40] ^= 0x01;
     quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, PROTO_TRUE, g_plain, NULL);
+        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, EMBED_TRUE, g_plain, NULL);
     TEST_ASSERT_EQUAL_UINT((size_t)-1, quic_crypto_n);
 
     // a flipped octet in the authentication tag
     memcpy(g_pkt, pkt, want_len);
     g_pkt[want_len - 1] ^= 0x01;
     quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, PROTO_TRUE, g_plain, NULL);
+        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 0x75, 0, &s.server, EMBED_TRUE, g_plain, NULL);
     TEST_ASSERT_EQUAL_UINT((size_t)-1, quic_crypto_n);
 }
 
@@ -459,19 +458,19 @@ void test_parameter_bounds(void)
 
     memset(g_pkt, 0, 64);
     size_t quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 0, 1, 8, &s.server, PROTO_TRUE);
+        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 0, 1, 8, &s.server, EMBED_TRUE);
     TEST_ASSERT_EQUAL_UINT(0u, quic_crypto_n);
     quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 5, 1, 8, &s.server, PROTO_TRUE);
+        QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 18, 5, 1, 8, &s.server, EMBED_TRUE);
     TEST_ASSERT_EQUAL_UINT(0u, quic_crypto_n);
     // 18 + 2 + 8 + 16 = 44 octets needed
-    quic_crypto_n = QuicCrypto.packet_protect(quic_crypto_work, g_pkt, 43, 18, 2, 1, 8, &s.server, PROTO_TRUE);
+    quic_crypto_n = QuicCrypto.packet_protect(quic_crypto_work, g_pkt, 43, 18, 2, 1, 8, &s.server, EMBED_TRUE);
     TEST_ASSERT_EQUAL_UINT(0u, quic_crypto_n);
-    quic_crypto_n = QuicCrypto.packet_protect(quic_crypto_work, g_pkt, 44, 18, 2, 1, 8, &s.server, PROTO_TRUE);
+    quic_crypto_n = QuicCrypto.packet_protect(quic_crypto_work, g_pkt, 44, 18, 2, 1, 8, &s.server, EMBED_TRUE);
     TEST_ASSERT_EQUAL_UINT(44u, quic_crypto_n);
 
     quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 19, 0, &s.server, PROTO_TRUE, g_plain, NULL);
+        QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 18, 19, 0, &s.server, EMBED_TRUE, g_plain, NULL);
     TEST_ASSERT_EQUAL_UINT((size_t)-1, quic_crypto_n);
 }
 
@@ -495,14 +494,14 @@ void test_short_header_round_trip(void)
     memcpy(g_pkt + 8, payload, sizeof(payload));
 
     size_t quic_crypto_n = QuicCrypto.packet_protect(quic_crypto_work, g_pkt, sizeof(g_pkt), 5, 3, 0x2700bff4ULL,
-                                                     sizeof(payload), &s.server, PROTO_FALSE);
+                                                     sizeof(payload), &s.server, EMBED_FALSE);
     size_t n = quic_crypto_n;
     TEST_ASSERT_EQUAL_UINT(8u + 16u + 16u, n);
     TEST_ASSERT_TRUE(g_pkt[0] != 0x42); // the first octet is masked
 
     uint64_t pn = 0;
     quic_crypto_n = QuicCrypto.packet_unprotect(quic_crypto_work, g_pkt, 5, 3 + 16 + 16, 0x2700bff3ULL, &s.server,
-                                                PROTO_FALSE, g_plain, &pn);
+                                                EMBED_FALSE, g_plain, &pn);
     size_t pt = quic_crypto_n;
     TEST_ASSERT_EQUAL_UINT(16u, pt);
     TEST_ASSERT_EQUAL_HEX64(0x2700bff4ULL, pn);

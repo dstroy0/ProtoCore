@@ -12,7 +12,7 @@
  * Zeroing storage is not here: mmgr_zero_buf() is a memory-manager operation and lives in
  * locus_carcerum/locus_carcerum.h, beside the cellblock that zeroes on release.
  *
- * The compare is `static inline` here, so it inlines into the caller's loop. ::CtEq is the same
+ * The compare is `static inline` here. So it inlines into the caller's loop. ::CtEq is the same
  * compare reached through the namespace, with the operands on the handle.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -28,7 +28,7 @@
 
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Constant-time equality of two @p n-byte buffers: returns true iff every byte matches, in time
@@ -39,7 +39,7 @@ PROTOCORE_BEGIN_DECLS
  * early on the first mismatch). The XOR-accumulate has no data-dependent branch; only the final all-zero test
  * (the intended result) is a comparison.
  */
-static inline proto_bool protocore_ct_eq(const void *a, const void *b, size_t n)
+static inline embed_bool protocore_ct_eq(const void *a, const void *b, size_t n)
 {
     const uint8_t *pa = (const uint8_t *)a;
     const uint8_t *pb = (const uint8_t *)b;
@@ -88,8 +88,8 @@ typedef struct
 typedef struct
 {
     CtEqEqArgs eq_args;
-    proto_bool ok;
-    proto_bool equal;
+    embed_bool ok;
+    embed_bool equal;
 } CtEqVars;
 
 /** @brief The operands and the outcome. */
@@ -98,12 +98,12 @@ extern CtEqVars CtEqV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const eq)(uint8_t *work);
+    void (*const eq)(const uint8_t *work);
 } CtEqNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CtEqV or a region of the borrow at a fixed offset.
-void protocore_ct_eq_eq(uint8_t *work);
+void protocore_ct_eq_eq(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -113,7 +113,7 @@ static const CtEqNs CtEq __attribute__((unused)) = {
     .eq = protocore_ct_eq_eq,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CT_EQ
 

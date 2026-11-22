@@ -39,7 +39,7 @@
  * The Overview states operation names are case insensitive. The parser here matches them in the
  * upper case a server writes.
  *
- * A builder writes one operation into the caller's buffer and reports its length; the parser decodes
+ * A builder writes one operation into the caller's buffer and reports its length. The parser decodes
  * the operation at the head of the caller's inbound buffer and reports the octets it occupies.
  * Pure: no state, no allocation, no I/O.
  *
@@ -56,19 +56,18 @@
 
 #if PROTOCORE_ENABLE_NATS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The server-to-client operation a parse decoded (NATS Protocol). */
-typedef enum PROTO_ENUM_PACKED
-{
-    NATS_OP_MSG,     ///< MSG, or HMSG when the header section is set: subject, sid, reply-to, payload
-    NATS_OP_INFO,    ///< INFO: the options JSON lands in @c arg
-    NATS_OP_PING,    ///< PING
-    NATS_OP_PONG,    ///< PONG
-    NATS_OP_OK,      ///< +OK
-    NATS_OP_ERR,     ///< -ERR: the error message lands in @c arg
-    NATS_OP_UNKNOWN, ///< an operation name this decoder does not carry
-} NatsOp;
+EMBED_ENUM_BYTE(NatsOp,
+                NATS_OP_MSG,     ///< MSG, or HMSG when the header section is set: subject, sid, reply-to, payload
+                NATS_OP_INFO,    ///< INFO: the options JSON lands in @c arg
+                NATS_OP_PING,    ///< PING
+                NATS_OP_PONG,    ///< PONG
+                NATS_OP_OK,      ///< +OK
+                NATS_OP_ERR,     ///< -ERR: the error message lands in @c arg
+                NATS_OP_UNKNOWN, ///< an operation name this decoder does not carry
+);
 
 /**
  * @brief One decoded protocol message. Every span points into the caller's inbound buffer.
@@ -126,7 +125,7 @@ typedef struct
     const char *queue_group; ///< SUB: the queue group; NULL leaves the optional field off
     const char *sid;         ///< the alphanumeric subscription id the client generates
     uint32_t max_msgs;       ///< UNSUB: messages to deliver before the subscription ends
-    proto_bool with_max;     ///< UNSUB: write max_msgs; false ends the subscription at once
+    embed_bool with_max;     ///< UNSUB: write max_msgs; false ends the subscription at once
 } NatsSubscriptionArgs;
 
 /** @brief The inbound octets a parse reads. */
@@ -182,7 +181,7 @@ typedef struct
     NatsHeadersArgs headers;           ///< the header section an HPUB carries
     NatsSubscriptionArgs subscription; ///< what a SUB opens or an UNSUB ends
     NatsInboundArgs in;                ///< what a parse reads
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     size_t consumed;
     NatsMsg msg;
@@ -201,7 +200,7 @@ typedef struct
     void (*const unsub)(uint8_t *work);
     void (*const ping)(uint8_t *work);
     void (*const pong)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
 } NatsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -213,7 +212,7 @@ void protocore_nats_sub(uint8_t *work);
 void protocore_nats_unsub(uint8_t *work);
 void protocore_nats_ping(uint8_t *work);
 void protocore_nats_pong(uint8_t *work);
-void protocore_nats_parse(uint8_t *work);
+void protocore_nats_parse(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -230,7 +229,7 @@ static const NatsNs Nats __attribute__((unused)) = {
     .parse = protocore_nats_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NATS
 

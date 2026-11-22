@@ -20,7 +20,7 @@ Encryption defend the silicon.
 
 ## What is at risk without it
 
-The library keeps these secrets/assets in flash; without Flash Encryption they can
+The library keeps these secrets/assets in flash. Without Flash Encryption they can
 be dumped with `esptool.py read_flash`, and without Secure Boot the firmware can be
 replaced with a malicious build:
 

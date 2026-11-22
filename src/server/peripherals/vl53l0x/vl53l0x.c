@@ -20,7 +20,7 @@
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/vl53l0x/vl53l0x.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -44,11 +44,11 @@ uint8_t *protocore_vl53l0x_span(void)
     return s_own.span;
 }
 
-void protocore_vl53l0x_range_mm(uint8_t *work);
-void protocore_vl53l0x_range_status(uint8_t *work);
+void protocore_vl53l0x_range_mm(const uint8_t *work);
+void protocore_vl53l0x_range_status(const uint8_t *work);
 void protocore_vl53l0x_range_valid(uint8_t *work);
 
-void protocore_vl53l0x_range_mm(uint8_t *work)
+void protocore_vl53l0x_range_mm(const uint8_t *work)
 {
     (void)work;
     uint8_t hi = Vl53l0xV.range_mm_args.hi;
@@ -57,7 +57,7 @@ void protocore_vl53l0x_range_mm(uint8_t *work)
     Vl53l0xV.mm = (uint16_t)((hi << 8) | lo);
 }
 
-void protocore_vl53l0x_data_ready(uint8_t *work)
+void protocore_vl53l0x_data_ready(const uint8_t *work)
 {
     (void)work;
     uint8_t interrupt_status = Vl53l0xV.data_ready_args.interrupt_status;
@@ -65,7 +65,7 @@ void protocore_vl53l0x_data_ready(uint8_t *work)
     Vl53l0xV.ok = (interrupt_status & 0x07) != 0;
 }
 
-void protocore_vl53l0x_range_status(uint8_t *work)
+void protocore_vl53l0x_range_status(const uint8_t *work)
 {
     (void)work;
     uint8_t range_status_reg = Vl53l0xV.range_status_args.range_status_reg;
@@ -110,7 +110,10 @@ static_assert(VL53L0X_OFF_CTX % _Alignof(Vl53l0xCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define VL53L0X_CTX(w) ((Vl53l0xCtx *)(void *)((w) + VL53L0X_OFF_CTX))
+#define VL53L0X_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Vl53l0xCtx *)(const void *)((w) + VL53L0X_OFF_CTX),                                    \
+        default: (Vl53l0xCtx *)(void *)((w) + VL53L0X_OFF_CTX))
 
 // Zero is "no address set yet", which is the address the part answers to out of reset - stated
 // here rather than on the declaration so the context carries no initializer and can live in a
@@ -120,19 +123,19 @@ static uint8_t dev_addr(uint8_t *work)
     return VL53L0X_CTX(work)->addr ? VL53L0X_CTX(work)->addr : (uint8_t)PROTOCORE_VL53L0X_I2C_ADDR;
 }
 
-static proto_bool w8(uint8_t *work, uint8_t reg, uint8_t val)
+static embed_bool w8(uint8_t *work, uint8_t reg, uint8_t val)
 {
     VL53L0X_CTX(work)->frame[0] = reg;
     VL53L0X_CTX(work)->frame[1] = val;
     return protocore_i2c_write(dev_addr(work), VL53L0X_CTX(work)->frame, sizeof(VL53L0X_CTX(work)->frame));
 }
 
-static proto_bool r8(uint8_t *work, uint8_t reg, uint8_t *val)
+static embed_bool r8(uint8_t *work, uint8_t reg, uint8_t *val)
 {
     return protocore_i2c_write_read(dev_addr(work), &reg, 1, val, 1);
 }
 
-static proto_bool rn(uint8_t *work, uint8_t reg, uint8_t *buf, uint8_t n)
+static embed_bool rn(uint8_t *work, uint8_t reg, uint8_t *buf, uint8_t n)
 {
     return protocore_i2c_write_read(dev_addr(work), &reg, 1, buf, n);
 }
@@ -146,7 +149,7 @@ void protocore_vl53l0x_begin(uint8_t *work)
     uint8_t id = 0;
     if (!r8(work, VL53L0X_REG_IDENTIFICATION_MODEL_ID, &id) || id != VL53L0X_MODEL_ID)
     {
-        Vl53l0xV.ok = PROTO_FALSE;
+        Vl53l0xV.ok = EMBED_FALSE;
         return;
     }
     Vl53l0xV.ok = w8(work, VL53L0X_REG_SYSRANGE_START, 0x02); // continuous back-to-back ranging
@@ -158,7 +161,7 @@ void protocore_vl53l0x_read_mm(uint8_t *work)
 
     if (!mm)
     {
-        Vl53l0xV.ok = PROTO_FALSE;
+        Vl53l0xV.ok = EMBED_FALSE;
         return;
     }
     // The read fills irq and the test reads it, so the two are separate statements: staged above
@@ -166,25 +169,25 @@ void protocore_vl53l0x_read_mm(uint8_t *work)
     uint8_t irq = 0;
     if (!r8(work, VL53L0X_REG_RESULT_INTERRUPT_STATUS, &irq))
     {
-        Vl53l0xV.ok = PROTO_FALSE;
+        Vl53l0xV.ok = EMBED_FALSE;
         return;
     }
     Vl53l0xV.data_ready_args.interrupt_status = irq;
     protocore_vl53l0x_data_ready(work);
     if (!Vl53l0xV.ok)
     {
-        Vl53l0xV.ok = PROTO_FALSE;
+        Vl53l0xV.ok = EMBED_FALSE;
         return;
     }
     if (!rn(work, VL53L0X_REG_RESULT_RANGE_STATUS, VL53L0X_CTX(work)->result,
             (uint8_t)sizeof(VL53L0X_CTX(work)->result)))
     {
-        Vl53l0xV.ok = PROTO_FALSE;
+        Vl53l0xV.ok = EMBED_FALSE;
         return;
     }
     Vl53l0xV.range_valid_args.range_status_reg = VL53L0X_CTX(work)->result[0];
     protocore_vl53l0x_range_valid(work);
-    proto_bool valid = Vl53l0xV.ok;
+    embed_bool valid = Vl53l0xV.ok;
     Vl53l0xV.range_mm_args.hi = VL53L0X_CTX(work)->result[10];
     Vl53l0xV.range_mm_args.lo = VL53L0X_CTX(work)->result[11];
     protocore_vl53l0x_range_mm(work);
@@ -196,6 +199,6 @@ void protocore_vl53l0x_read_mm(uint8_t *work)
 /** @brief The operands and the outcome. */
 Vl53l0xVars Vl53l0xV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_VL53L0X

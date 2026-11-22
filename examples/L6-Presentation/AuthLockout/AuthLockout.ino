@@ -55,7 +55,7 @@ void setup()
     on_http_auth(
         "/secret", HTTP_GET,
         [](uint8_t id, HttpReq *) { send_text(id, 200, "text/plain", "authenticated!"); }, "Restricted", "admin",
-        "s3cret", PROTO_FALSE);
+        "s3cret", EMBED_FALSE);
 
     begin_http(80, NULL);
 }

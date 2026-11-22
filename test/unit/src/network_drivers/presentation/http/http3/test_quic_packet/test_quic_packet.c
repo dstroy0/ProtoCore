@@ -54,7 +54,7 @@ void test_rfc9001_published_headers(void)
 
     // A.2 client Initial: 0xc3 = long form, Fixed Bit, type 0x00, and 0b11 in the packet-number
     // length bits, which sec 17.2 defines as length - 1, so 4 octets - the RFC says as much.
-    proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, A2_CLIENT_INITIAL[0]);
+    embed_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, A2_CLIENT_INITIAL[0]);
     TEST_ASSERT_TRUE(quic_packet_ok);
     quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, sizeof(A2_CLIENT_INITIAL), &h);
     TEST_ASSERT_TRUE(quic_packet_ok);
@@ -124,7 +124,7 @@ void test_rfc9000_long_packet_types(void)
         size_t n = quic_packet_n;
         TEST_ASSERT_EQUAL_UINT(7u, n);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)(0xC0 | (TYPES[i] << 4)), g_out[0]);
-        proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, g_out, n, &h);
+        embed_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, g_out, n, &h);
         TEST_ASSERT_TRUE(quic_packet_ok);
         TEST_ASSERT_EQUAL_HEX8(TYPES[i], h.type);
     }
@@ -139,7 +139,7 @@ void test_rfc9000_fixed_bit_is_required(void)
     uint8_t buf[sizeof(A2_CLIENT_INITIAL)];
     memcpy(buf, A2_CLIENT_INITIAL, sizeof(buf));
     buf[0] &= (uint8_t)~0x40;
-    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, buf, sizeof(buf), &h);
+    embed_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, buf, sizeof(buf), &h);
     TEST_ASSERT_FALSE(quic_packet_ok);
 
     QuicShortHeader s;
@@ -162,7 +162,7 @@ void test_rfc9001_short_header(void)
 {
     static const uint8_t A5[4] = {0x42, 0x00, 0xbf, 0xf4};
     QuicShortHeader s;
-    proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, A5[0]);
+    embed_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, A5[0]);
     TEST_ASSERT_FALSE(quic_packet_ok);
     quic_packet_ok = QuicPacket.parse_short_header(quic_packet_work, A5, sizeof(A5), 0, &s);
     TEST_ASSERT_TRUE(quic_packet_ok);
@@ -203,7 +203,7 @@ void test_rfc9000_version_negotiation(void)
 
     // Version 0 is what marks it, and it is the one long header exempt from the Fixed Bit rule
     QuicLongHeader h;
-    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, g_out, n, &h);
+    embed_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, g_out, n, &h);
     TEST_ASSERT_TRUE(quic_packet_ok);
     TEST_ASSERT_EQUAL_HEX32(0u, h.version);
     TEST_ASSERT_EQUAL_UINT8(2, h.dcid_len);
@@ -215,8 +215,8 @@ void test_rfc9000_version_negotiation(void)
     TEST_ASSERT_TRUE(quic_packet_ok);
 }
 
-// RFC 9000 Appendix A.2 worked example: "if an endpoint has received an acknowledgment for packet
-// 0xabe8b3 and is sending a packet with a number of 0xac5c02, there are 29,519 (0x734f) outstanding
+// RFC 9000 Appendix A.2 worked example: "if an endpoint received an acknowledgment for packet
+// 0xabe8b3 and sends a packet with a number of 0xac5c02, there are 29,519 (0x734f) outstanding
 // packet numbers. In order to represent at least twice this range (59,038 packets, or 0xe69e), 16
 // bits are required." and "sending a packet with a number of 0xace8fe uses the 24-bit encoding".
 void test_rfc9000_a2_packet_number_length(void)
@@ -301,7 +301,7 @@ void test_connection_id_bounds(void)
     TEST_ASSERT_EQUAL_UINT(0u, quic_packet_n);
 
     static const uint8_t OVERLONG_DCID[7] = {0xC0, 0x00, 0x00, 0x00, 0x01, 21, 0x00};
-    proto_bool quic_packet_ok =
+    embed_bool quic_packet_ok =
         QuicPacket.parse_long_header(quic_packet_work, OVERLONG_DCID, sizeof(OVERLONG_DCID), &h);
     TEST_ASSERT_FALSE(quic_packet_ok);
 
@@ -317,7 +317,7 @@ void test_truncated_headers_are_refused(void)
 {
     QuicLongHeader h;
     QuicShortHeader s;
-    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, 6, &h);
+    embed_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, 6, &h);
     TEST_ASSERT_FALSE(quic_packet_ok); // shorter than the fixed part
     quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, A2_CLIENT_INITIAL, 10, &h);
     TEST_ASSERT_FALSE(quic_packet_ok); // DCID runs past the end

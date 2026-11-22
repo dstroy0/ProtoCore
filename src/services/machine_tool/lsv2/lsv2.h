@@ -14,7 +14,7 @@
  * counts ONLY the payload - the mnemonic is not included - so a telegram with no payload is exactly 8
  * bytes on the wire (e.g. a bare `T_OK` acknowledgement is `00 00 00 00 'T' '_' 'O' 'K'`). The command
  * mnemonics group into login / logout (`A_LG` / `A_LO`), file system (`C_*` write, `R_*` read), and
- * run / status inspection (`R_RI` / `R_ST` / `R_VR`); the control answers with a response mnemonic
+ * run / status inspection (`R_RI` / `R_ST` / `R_VR`). The control answers with a response mnemonic
  * (`T_OK` done, `T_FD` file-data finished, `S_*` a data reply, or `T_ER` / `T_BD` a two-byte
  * error-class + error-code).
  *
@@ -41,7 +41,7 @@
 
 #if PROTOCORE_ENABLE_LSV2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Default LSV/2-over-TCP port a Heidenhain control listens on. */
 #define PROTOCORE_LSV2_TCP_PORT 19000
@@ -89,7 +89,7 @@ PROTOCORE_BEGIN_DECLS
 
 /** @brief Run-info selectors for @ref protocore_lsv2_build_run_info (the 2-byte `R_RI` argument). */
 enum Lsv2RunInfo : uint16_t // NOSONAR(cpp:S3642): unscoped so a selector converts to the 2-byte R_RI
-                            // argument without a cast; no other enum in this header shares its value space
+                            // argument without a cast. No other enum in this header shares its value space
 {
     LSV2_RI_EXEC_STATE = 23,   ///< program execution state (running / stopped / ...)
     LSV2_RI_SELECTED_PGM = 24, ///< currently selected program
@@ -108,7 +108,7 @@ typedef struct
 
 /**
  * @brief Frame a telegram: a 4-byte big-endian @p payload_len, the 4-character @p mnemonic, then the
- *        payload. @p mnemonic must point at (at least) four characters; exactly four are copied.
+ *        payload. @p mnemonic must point at (at least) four characters. Exactly four are copied.
  * @return total bytes written (`PROTOCORE_LSV2_HEADER_LEN + payload_len`), or 0 on overflow / bad input.
  */
 size_t protocore_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, const uint8_t *payload, size_t payload_len);
@@ -120,12 +120,12 @@ size_t protocore_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, cons
  * @return true if a complete telegram was found; false if fewer than `8 + payload_len` bytes are
  *         available yet (the caller should accumulate more).
  */
-proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed);
+embed_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed);
 
 /**
  * @brief True if the parsed telegram's mnemonic equals the four characters at @p mnemonic4.
  */
-proto_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4);
+embed_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4);
 
 /**
  * @brief Build a login telegram (`A_LG`): payload is the NUL-terminated privilege group (one of the
@@ -159,20 +159,20 @@ size_t protocore_lsv2_build_run_info(uint8_t *buf, size_t cap, uint16_t info_cod
 /**
  * @brief True if the response is `T_OK` (transaction completed).
  */
-proto_bool protocore_lsv2_is_ok(const Lsv2Telegram *t);
+embed_bool protocore_lsv2_is_ok(const Lsv2Telegram *t);
 
 /**
  * @brief True if the response is an error mnemonic (`T_ER` transaction error or `T_BD` transfer error).
  */
-proto_bool protocore_lsv2_is_error(const Lsv2Telegram *t);
+embed_bool protocore_lsv2_is_error(const Lsv2Telegram *t);
 
 /**
  * @brief Decode an error response's two-byte payload into @p err_class and @p err_code.
  * @return true on an error mnemonic (`T_ER` / `T_BD`) carrying exactly two payload bytes.
  */
-proto_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
+embed_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LSV2
 

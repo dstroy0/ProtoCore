@@ -85,7 +85,7 @@ static void find_av_timestamp(const uint8_t *ti, size_t ti_len, uint8_t out[8])
     }
 }
 
-static proto_bool read_exact(SmbRecvFn recv, void *ctx, uint8_t *buf, size_t n)
+static embed_bool read_exact(SmbRecvFn recv, void *ctx, uint8_t *buf, size_t n)
 {
     size_t got = 0;
     while (got < n)
@@ -93,15 +93,15 @@ static proto_bool read_exact(SmbRecvFn recv, void *ctx, uint8_t *buf, size_t n)
         int r = recv(ctx, buf + got, n - got);
         if (r <= 0)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         got += (size_t)r;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Frame the SMB2 message that sits at frame+4 (msg_len bytes) with the Direct-TCP prefix and send it.
-static proto_bool send_msg(SmbSendFn send, void *ctx, uint8_t *frame, size_t msg_len)
+static embed_bool send_msg(SmbSendFn send, void *ctx, uint8_t *frame, size_t msg_len)
 {
     frame[0] = 0x00;
     frame[1] = (uint8_t)(msg_len >> 16);
@@ -134,7 +134,7 @@ static int recv_msg(SmbRecvFn recv, void *ctx, uint8_t *rx, size_t cap)
 // SMB dialogue working buffers, kept off the caller's stack: smb_open alone needs ~4 KB, which
 // overflows the default 8 KB Arduino loopTask (seen on HW as "Stack canary watchpoint triggered").
 // The client drives one sequential dialogue at a time (open -> read/write -> close), so a single
-// owned working set is correct; it is not reentrant across two concurrent SMB connections.
+// owned working set is correct. It is not reentrant across two concurrent SMB connections.
 typedef struct
 {
     uint8_t tx[PROTOCORE_SMB_BUF];
@@ -164,7 +164,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SMB_CLIENT_CTX(w) ((SmbClientCtx *)(void *)((w) + SMB_CLIENT_OFF_CTX))
+#define SMB_CLIENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SmbClientCtx *)(const void *)((w) + SMB_CLIENT_OFF_CTX),                               \
+        default: (SmbClientCtx *)(void *)((w) + SMB_CLIENT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -192,7 +195,7 @@ uint8_t *protocore_smb_client_span(void)
 // (MS-SMB2 §3.1.4.1 / §3.1.5.1).
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     Smb2SignAlgo algo;
     uint8_t key[16];
 } SmbSign;
@@ -205,8 +208,8 @@ typedef struct
 // given key, so callers persist it across requests (on the SmbHandle for read/write/close).
 typedef struct
 {
-    proto_bool active;
-    proto_bool available;
+    embed_bool active;
+    embed_bool available;
     uint16_t cipher;
     uint8_t c2s[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
     uint8_t s2c[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
@@ -226,14 +229,14 @@ static void smb_apply_sign(uint8_t *work, const SmbSign *s, uint8_t *msg, size_t
         Smb2.sign(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
     }
 }
-static proto_bool smb_check_sign(uint8_t *work, const SmbSign *s, uint8_t *msg, size_t len)
+static embed_bool smb_check_sign(uint8_t *work, const SmbSign *s, uint8_t *msg, size_t len)
 {
     if (s->algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        proto_bool smb2_ok = Smb2.verify_cmac(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
+        embed_bool smb2_ok = Smb2.verify_cmac(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
         return smb2_ok;
     }
-    proto_bool smb2_ok = Smb2.verify(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
+    embed_bool smb2_ok = Smb2.verify(work, SMB_CLIENT_CTX(work)->crypto_work, s->key, msg, len);
     return smb2_ok;
 }
 
@@ -354,7 +357,7 @@ static SmbResult smb_negotiate(uint8_t *work, SmbSendFn send, SmbRecvFn recv, vo
     Smb2.preauth_update(work, SMB_CLIENT_CTX(work)->crypto_work, preauth, SMB_CLIENT_CTX(work)->rx,
                         (size_t)rl); // fold the NEGOTIATE response
     Smb2NegotiateResp neg;
-    proto_bool smb2_ok = Smb2.parse_negotiate_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &neg);
+    embed_bool smb2_ok = Smb2.parse_negotiate_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &neg);
     if (!smb2_ok)
     {
         return SMB_ERR_PROTOCOL;
@@ -368,7 +371,7 @@ static SmbResult smb_negotiate(uint8_t *work, SmbSendFn send, SmbRecvFn recv, vo
     if (neg.dialect == (uint16_t)SMB2_DIALECT_0311)
     {
         Smb2NegotiateContexts nc;
-        proto_bool smb2_ok = Smb2.parse_negotiate_contexts(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &nc);
+        embed_bool smb2_ok = Smb2.parse_negotiate_contexts(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &nc);
         if (smb2_ok && nc.have_encryption)
         {
             *cipher = nc.cipher;
@@ -383,7 +386,7 @@ static SmbResult smb_negotiate(uint8_t *work, SmbSendFn send, SmbRecvFn recv, vo
 // the server required signing (@p want_signing) and the session is not GUEST/NULL - fills *sign with the
 // per-dialect signer: HMAC-SHA256 over the NTLMv2 session key for SMB 2.x, or AES-CMAC over the
 // SP800-108-derived signing key (from the final preauth hash) for SMB 3.x, so every later request signs.
-static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const char *domain, proto_bool want_signing,
+static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const char *domain, embed_bool want_signing,
                                    uint16_t dialect, uint16_t cipher, SmbPreauth *preauth, SmbSendFn send,
                                    SmbRecvFn recv, void *ctx, uint64_t *session_id, SmbSign *sign, SmbCrypt *crypt)
 {
@@ -413,7 +416,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     Smb2.preauth_update(work, SMB_CLIENT_CTX(work)->crypto_work, preauth, SMB_CLIENT_CTX(work)->rx,
                         (size_t)rl); // fold SESSION_SETUP response 1
     Smb2Header h1;
-    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h1);
+    embed_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h1);
     if (!smb2_ok || h1.status != SMB2_STATUS_MORE_PROCESSING_REQUIRED)
     {
         return SMB_ERR_AUTH;
@@ -427,13 +430,13 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     }
     const uint8_t *chal_tok = NULL;
     size_t chal_len = 0;
-    proto_bool spnego_ok = Spnego.parse_response(work, ss1.sec_buf, ss1.sec_buf_len, &chal_tok, &chal_len);
+    embed_bool spnego_ok = Spnego.parse_response(work, ss1.sec_buf, ss1.sec_buf_len, &chal_tok, &chal_len);
     if (!spnego_ok)
     {
         return SMB_ERR_PROTOCOL;
     }
     NtlmChallenge ch;
-    proto_bool ntlmssp_ok = Ntlmssp.parse_challenge(work, chal_tok, chal_len, &ch);
+    embed_bool ntlmssp_ok = Ntlmssp.parse_challenge(work, chal_tok, chal_len, &ch);
     if (!ntlmssp_ok)
     {
         return SMB_ERR_PROTOCOL;
@@ -443,7 +446,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     uint8_t nt_hash[16];
     uint8_t owf[16];
     Ntlm.nt_hash(work, cfg->pass, nt_hash);
-    proto_bool ntlm_ok = Ntlm.ntowfv2(work, nt_hash, cfg->user, domain, owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(work, nt_hash, cfg->user, domain, owf);
     if (!ntlm_ok)
     {
         return SMB_ERR_OVERFLOW;
@@ -473,7 +476,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     }
     ntlmssp_n = Ntlmssp.build_authenticate(work, SMB_CLIENT_CTX(work)->ntauth, sizeof(SMB_CLIENT_CTX(work)->ntauth),
                                            NULL, 0, SMB_CLIENT_CTX(work)->nt_resp, nt_len, domain, cfg->user,
-                                           cfg->workstation, ch.flags, PROTO_TRUE);
+                                           cfg->workstation, ch.flags, EMBED_TRUE);
     size_t ntauth_n = ntlmssp_n;
     if (!ntauth_n)
     {
@@ -514,7 +517,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     uint8_t sign_key[16];
     if (algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        const proto_bool is_311 = dialect == (uint16_t)SMB2_DIALECT_0311;
+        const embed_bool is_311 = dialect == (uint16_t)SMB2_DIALECT_0311;
         Smb2.derive_signing_key(work, skey, dialect, is_311 ? preauth->hash : NULL, sign_key);
     }
     else
@@ -544,7 +547,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     // A GUEST or anonymous (NULL) session is never signed even if signing was negotiated (MS-SMB2
     // §3.2.5.3.1); anything else with the server requiring signing signs the rest of the session.
     Smb2SessionSetupResp ss2;
-    proto_bool guest_or_null = PROTO_FALSE;
+    embed_bool guest_or_null = EMBED_FALSE;
     uint16_t sess_flags = 0;
     smb2_ok = Smb2.parse_session_setup_response(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &ss2);
     if (smb2_ok)
@@ -562,16 +565,16 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     // that requires encryption rejects the unencrypted TREE_CONNECT before it can advertise the share flag, so
     // a caller that wants such a share sets cfg->encrypt to force encryption on from TREE_CONNECT (client-forced,
     // like smbclient -e; MS-SMB2 §3.2.4.1.5). Otherwise the keys sit ready (available) but inactive.
-    crypt->active = PROTO_FALSE;
-    crypt->available = PROTO_FALSE;
+    crypt->active = EMBED_FALSE;
+    crypt->available = EMBED_FALSE;
     crypt->cipher = 0;
     crypt->session_id = *session_id;
     crypt->nonce = 0;
     const size_t cipher_key_len = protocore_smb2_cipher_key_len(cipher);
     if (cipher_key_len != 0 && dialect >= (uint16_t)SMB2_DIALECT_0300 && !guest_or_null)
     {
-        const proto_bool is_311 = dialect == (uint16_t)SMB2_DIALECT_0311;
-        proto_bool smb2_ok = Smb2.derive_encryption_keys(work, skey, dialect, is_311 ? preauth->hash : NULL,
+        const embed_bool is_311 = dialect == (uint16_t)SMB2_DIALECT_0311;
+        embed_bool smb2_ok = Smb2.derive_encryption_keys(work, skey, dialect, is_311 ? preauth->hash : NULL,
                                                          cipher_key_len, crypt->c2s, crypt->s2c);
         crypt->available = smb2_ok;
         if (crypt->available)
@@ -579,7 +582,7 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
             crypt->cipher = cipher;
             if ((sess_flags & SMB2_SESSION_FLAG_ENCRYPT_DATA) || cfg->encrypt)
             {
-                crypt->active = PROTO_TRUE;
+                crypt->active = EMBED_TRUE;
             }
         }
     }
@@ -610,7 +613,7 @@ static SmbResult smb_tree_connect(uint8_t *work, const SmbConfig *cfg, uint64_t 
     }
     Smb2Header h3;
     Smb2TreeConnectResp tc;
-    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h3);
+    embed_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h3);
     if (!smb2_ok || h3.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
@@ -625,7 +628,7 @@ static SmbResult smb_tree_connect(uint8_t *work, const SmbConfig *cfg, uint64_t 
     // provided the cipher keys were derived at session setup.
     if (crypt && crypt->available && (tc.share_flags & SMB2_SHAREFLAG_ENCRYPT_DATA))
     {
-        crypt->active = PROTO_TRUE;
+        crypt->active = EMBED_TRUE;
     }
     return SMB_OK;
 }
@@ -656,7 +659,7 @@ static SmbResult smb_create(uint8_t *work, const SmbConfig *cfg, SmbHandle *h, u
     }
     Smb2Header h4;
     Smb2CreateResp cr;
-    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h4);
+    embed_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &h4);
     if (!smb2_ok || h4.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
@@ -726,10 +729,10 @@ SmbResult protocore_smb_client_smb_open(uint8_t *work, const SmbConfig *cfg, Smb
         return r;
     }
     // The client advertises SIGNING_ENABLED, so the session is signed exactly when the server requires it.
-    proto_bool want_signing = (sec_mode & SMB2_NEGOTIATE_SIGNING_REQUIRED) != 0;
+    embed_bool want_signing = (sec_mode & SMB2_NEGOTIATE_SIGNING_REQUIRED) != 0;
 
-    SmbSign sign = {PROTO_FALSE, SMB2_SIGN_ALGO_HMAC_SHA256, {0}};
-    SmbCrypt crypt = {PROTO_FALSE, PROTO_FALSE, 0, {0}, {0}, 0, 0};
+    SmbSign sign = {EMBED_FALSE, SMB2_SIGN_ALGO_HMAC_SHA256, {0}};
+    SmbCrypt crypt = {EMBED_FALSE, EMBED_FALSE, 0, {0}, {0}, 0, 0};
     uint64_t session_id = 0;
     r = smb_session_setup(work, cfg, domain, want_signing, dialect, cipher, &preauth, send, recv, ctx, &session_id,
                           &sign, &crypt);
@@ -775,7 +778,7 @@ SmbResult protocore_smb_client_smb_close(uint8_t *work, SmbHandle *h, SmbSendFn 
     }
     Smb2Header hd;
     Smb2CloseResp cl;
-    proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
+    embed_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
     if (!smb2_ok || hd.status != SMB2_STATUS_SUCCESS)
     {
         return SMB_ERR_PROTOCOL;
@@ -827,7 +830,7 @@ SmbResult protocore_smb_client_smb_read(uint8_t *work, SmbHandle *h, uint64_t of
             return rt;
         }
         Smb2Header hd;
-        proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
+        embed_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
         if (!smb2_ok)
         {
             return SMB_ERR_PROTOCOL;
@@ -901,7 +904,7 @@ SmbResult protocore_smb_client_smb_write(uint8_t *work, SmbHandle *h, uint64_t o
             return rt;
         }
         Smb2Header hd;
-        proto_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
+        embed_bool smb2_ok = Smb2.parse_header(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &hd);
         if (!smb2_ok)
         {
             return SMB_ERR_PROTOCOL;

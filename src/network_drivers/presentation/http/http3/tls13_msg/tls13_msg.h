@@ -5,7 +5,7 @@
  * @file tls13_msg.h
  * @brief TLS 1.3 handshake messages for the QUIC handshake (RFC 8446 sec 4).
  *
- * The wire formats of the handshake messages a QUIC server exchanges: it parses the client's
+ * The wire formats of the handshake messages a QUIC server exchanges. It parses the client's
  * ClientHello and builds its own flight (ServerHello, then the encrypted EncryptedExtensions,
  * Certificate, CertificateVerify, and Finished). Every message is emitted whole, including the
  * 4-byte handshake header (msg_type + 24-bit length), because that is what both the CRYPTO stream
@@ -31,7 +31,7 @@
 
 #if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS)
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake: both carry the same TLS 1.3
 // messages, so this module compiles for either. The DTLS-specific additions (HelloRetryRequest, the
@@ -79,23 +79,23 @@ typedef struct
     const uint8_t *session_id; ///< legacy_session_id (echoed back in ServerHello)
     uint8_t session_id_len;
     uint8_t client_x25519[32]; ///< the client's X25519 key_share (valid iff has_key_share or has_hybrid_share)
-    proto_bool has_key_share;
+    embed_bool has_key_share;
 #if PROTOCORE_ENABLE_PQC_KEX
-    proto_bool offers_x25519mlkem768; ///< supported_groups contains X25519MLKEM768
-    proto_bool has_hybrid_share;      ///< key_share carried an X25519MLKEM768 entry
+    embed_bool offers_x25519mlkem768; ///< supported_groups contains X25519MLKEM768
+    embed_bool has_hybrid_share;      ///< key_share carried an X25519MLKEM768 entry
     const uint8_t *client_mlkem_ek;   ///< the client's ML-KEM-768 encapsulation key (1184 B, aliases input)
 #endif
-    proto_bool offers_tls13;            ///< supported_versions contains 0x0304
-    proto_bool offers_aes128gcm_sha256; ///< cipher_suites contains TLS_AES_128_GCM_SHA256
-    proto_bool offers_aes256gcm_sha384; ///< cipher_suites contains TLS_AES_256_GCM_SHA384
-    proto_bool offers_x25519;           ///< supported_groups contains x25519
-    proto_bool offers_ed25519;          ///< signature_algorithms contains ed25519
-    proto_bool has_server_cert_type;    ///< a server_certificate_type extension (RFC 7250) was present
-    proto_bool offers_x509_server_cert; ///< that extension's list contained X509(0)
+    embed_bool offers_tls13;            ///< supported_versions contains 0x0304
+    embed_bool offers_aes128gcm_sha256; ///< cipher_suites contains TLS_AES_128_GCM_SHA256
+    embed_bool offers_aes256gcm_sha384; ///< cipher_suites contains TLS_AES_256_GCM_SHA384
+    embed_bool offers_x25519;           ///< supported_groups contains x25519
+    embed_bool offers_ed25519;          ///< signature_algorithms contains ed25519
+    embed_bool has_server_cert_type;    ///< a server_certificate_type extension (RFC 7250) was present
+    embed_bool offers_x509_server_cert; ///< that extension's list contained X509(0)
 #if PROTOCORE_ENABLE_TLS_RPK
-    proto_bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
+    embed_bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
 #endif
-    proto_bool offers_h3_alpn; ///< ALPN contains "h3"
+    embed_bool offers_h3_alpn; ///< ALPN contains "h3"
     const uint8_t *alpn_list;  ///< the ProtocolNameList body (aliases input), or NULL when absent
     size_t alpn_list_len;      ///< how many bytes of it there are
     const uint8_t *quic_tp;    ///< raw quic_transport_parameters extension body (or NULL)
@@ -104,7 +104,7 @@ typedef struct
     size_t sni_len;
     const uint8_t *cookie; ///< cookie extension body echoed after a HelloRetryRequest (or NULL); DTLS §5.1
     size_t cookie_len;
-    proto_bool has_conn_id; ///< the connection_id extension was present (RFC 9146 / RFC 9147 §9)
+    embed_bool has_conn_id; ///< the connection_id extension was present (RFC 9146 / RFC 9147 §9)
     const uint8_t *conn_id; ///< the CID the client wants the server to use in records sent to it (may be empty)
     size_t conn_id_len;     ///< length of @c conn_id (0..255; 0 = the client wants a zero-length CID)
 } Tls13ClientHello;
@@ -116,15 +116,15 @@ typedef struct
     const uint8_t *session_id; ///< legacy_session_id_echo (aliases input)
     uint8_t session_id_len;
     uint16_t cipher_suite;     ///< the suite the server selected
-    proto_bool selected_tls13; ///< supported_versions carried the 1.3 code point
-    proto_bool is_hrr;         ///< the Random is the fixed HelloRetryRequest value (sec 4.1.3)
-    proto_bool has_key_share;  ///< a key_share extension was present
+    embed_bool selected_tls13; ///< supported_versions carried the 1.3 code point
+    embed_bool is_hrr;         ///< the Random is the fixed HelloRetryRequest value (sec 4.1.3)
+    embed_bool has_key_share;  ///< a key_share extension was present
     uint16_t group;            ///< its NamedGroup: the server's share, or a HelloRetryRequest's selected_group
     const uint8_t *share;      ///< the server's key_exchange (aliases input); NULL in a HelloRetryRequest
     size_t share_len;
     const uint8_t *cookie; ///< cookie to echo in the retried ClientHello (aliases input), or NULL
     size_t cookie_len;
-    proto_bool has_conn_id; ///< a connection_id extension was present (RFC 9146 / RFC 9147 §9)
+    embed_bool has_conn_id; ///< a connection_id extension was present (RFC 9146 / RFC 9147 §9)
     const uint8_t *conn_id; ///< the CID to place in records sent to the server (aliases input)
     size_t conn_id_len;
 } Tls13ServerHello;
@@ -139,7 +139,7 @@ typedef struct
     const uint8_t *msg;
     size_t len;
     Tls13ClientHello *out;
-    proto_bool dtls; ///< true for a DTLS ClientHello (RFC 9147 §5.3), which carries an extra legacy_cookie field ...
+    embed_bool dtls; ///< true for a DTLS ClientHello (RFC 9147 §5.3), which carries an extra legacy_cookie field ...
 } Tls13MsgParseClientHelloArgs;
 
 /** @brief What parse_server_hello takes: msg, len, out, dtls. */
@@ -148,7 +148,7 @@ typedef struct
     const uint8_t *msg;
     size_t len;
     Tls13ServerHello *out;
-    proto_bool dtls; ///< true for DTLS, whose supported_versions selection is 0xFEFC (RFC 9147 §5.3)
+    embed_bool dtls; ///< true for DTLS, whose supported_versions selection is 0xFEFC (RFC 9147 §5.3)
 } Tls13MsgParseServerHelloArgs;
 
 /** @brief What build_client_hello takes: out, cap, random, ... */
@@ -167,8 +167,8 @@ typedef struct
     const char *alpn;
     const uint8_t *cookie;
     size_t cookie_len;
-    proto_bool rpk_server_cert;
-    proto_bool dtls;
+    embed_bool rpk_server_cert;
+    embed_bool dtls;
 } Tls13MsgBuildClientHelloArgs;
 
 /** @brief What parse_certificate takes: msg, len, cert, cert_len. */
@@ -212,7 +212,7 @@ typedef struct
     size_t share_len; ///< length of share (32 for X25519, 1120 for the hybrid)
     uint16_t group;   ///< the selected named group (TLS_GROUP_X25519 or TLS_GROUP_X25519MLKEM768)
     uint16_t suite;   ///< the selected cipher suite, as its IANA code point
-    proto_bool dtls;  ///< true to emit the DTLS 1.3 version codepoints (RFC 9147 §5.3), false for TLS 1.3
+    embed_bool dtls;  ///< true to emit the DTLS 1.3 version codepoints (RFC 9147 §5.3), false for TLS 1.3
     const uint8_t *conn_id; ///< when non-NULL, emit a connection_id extension (RFC 9146 / RFC 9147 §9) carrying the ...
     size_t conn_id_len;     ///< length of conn_id (0..255)
 } Tls13MsgBuildServerHelloArgs;
@@ -224,7 +224,7 @@ typedef struct
     size_t cap;
     const uint8_t *quic_tp;
     size_t quic_tp_len;
-    proto_bool rpk_server_cert; ///< when true (PROTOCORE_ENABLE_TLS_RPK), also emit the negotiated
+    embed_bool rpk_server_cert; ///< when true (PROTOCORE_ENABLE_TLS_RPK), also emit the negotiated
                                 ///< server_certificate_type = ...
 } Tls13MsgBuildEncryptedExtensionsArgs;
 
@@ -264,7 +264,7 @@ typedef struct
     size_t cap;
     const uint8_t *transcript_hash;
     size_t hash_len;
-    proto_bool is_server;
+    embed_bool is_server;
 } Tls13MsgCertVerifyContentArgs;
 
 /** @brief What build_hello_retry_request takes: out, cap, session_id, ... */
@@ -278,7 +278,7 @@ typedef struct
     uint16_t suite; ///< the selected cipher suite, as its IANA code point; §4.1.4 makes the retried ServerHello ...
     const uint8_t *cookie; ///< the return-routability cookie the client must echo (may be NULL if len 0)
     size_t cookie_len;
-    proto_bool dtls; ///< true to emit the DTLS 1.3 version codepoints (0xFEFD / 0xFEFC, RFC 9147 §5.3); false for ...
+    embed_bool dtls; ///< true to emit the DTLS 1.3 version codepoints (0xFEFD / 0xFEFC, RFC 9147 §5.3); false for ...
 } Tls13MsgBuildHelloRetryRequestArgs;
 
 /** @brief What build_encrypted_extensions_empty takes: out, cap, ... */
@@ -286,7 +286,7 @@ typedef struct
 {
     uint8_t *out;
     size_t cap;
-    proto_bool rpk_server_cert;
+    embed_bool rpk_server_cert;
     const char *alpn;
 } Tls13MsgBuildEncryptedExtensionsEmptyArgs;
 
@@ -365,7 +365,7 @@ typedef struct
     Tls13MsgBuildHelloRetryRequestArgs build_hello_retry_request_args;
     Tls13MsgBuildEncryptedExtensionsEmptyArgs build_encrypted_extensions_empty_args;
     Tls13MsgBuildMessageHashArgs build_message_hash_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } Tls13MsgVars;
 
@@ -375,40 +375,40 @@ extern Tls13MsgVars Tls13MsgV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse_client_hello)(uint8_t *work);
-    void (*const parse_server_hello)(uint8_t *work);
-    void (*const build_client_hello)(uint8_t *work);
-    void (*const parse_certificate)(uint8_t *work);
-    void (*const parse_cert_verify)(uint8_t *work);
-    void (*const parse_finished)(uint8_t *work);
-    void (*const build_server_hello)(uint8_t *work);
-    void (*const build_encrypted_extensions)(uint8_t *work);
-    void (*const build_certificate)(uint8_t *work);
+    void (*const parse_client_hello)(const uint8_t *work);
+    void (*const parse_server_hello)(const uint8_t *work);
+    void (*const build_client_hello)(const uint8_t *work);
+    void (*const parse_certificate)(const uint8_t *work);
+    void (*const parse_cert_verify)(const uint8_t *work);
+    void (*const parse_finished)(const uint8_t *work);
+    void (*const build_server_hello)(const uint8_t *work);
+    void (*const build_encrypted_extensions)(const uint8_t *work);
+    void (*const build_certificate)(const uint8_t *work);
     void (*const build_cert_verify)(uint8_t *work);
-    void (*const build_finished)(uint8_t *work);
-    void (*const cert_verify_content)(uint8_t *work);
-    void (*const build_hello_retry_request)(uint8_t *work);
-    void (*const build_encrypted_extensions_empty)(uint8_t *work);
-    void (*const build_message_hash)(uint8_t *work);
+    void (*const build_finished)(const uint8_t *work);
+    void (*const cert_verify_content)(const uint8_t *work);
+    void (*const build_hello_retry_request)(const uint8_t *work);
+    void (*const build_encrypted_extensions_empty)(const uint8_t *work);
+    void (*const build_message_hash)(const uint8_t *work);
 } Tls13MsgNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Tls13MsgV or a region of the borrow at a fixed offset.
-void protocore_tls13_msg_parse_client_hello(uint8_t *work);
-void protocore_tls13_msg_parse_server_hello(uint8_t *work);
-void protocore_tls13_msg_build_client_hello(uint8_t *work);
-void protocore_tls13_msg_parse_certificate(uint8_t *work);
-void protocore_tls13_msg_parse_cert_verify(uint8_t *work);
-void protocore_tls13_msg_parse_finished(uint8_t *work);
-void protocore_tls13_msg_build_server_hello(uint8_t *work);
-void protocore_tls13_msg_build_encrypted_extensions(uint8_t *work);
-void protocore_tls13_msg_build_certificate(uint8_t *work);
+void protocore_tls13_msg_parse_client_hello(const uint8_t *work);
+void protocore_tls13_msg_parse_server_hello(const uint8_t *work);
+void protocore_tls13_msg_build_client_hello(const uint8_t *work);
+void protocore_tls13_msg_parse_certificate(const uint8_t *work);
+void protocore_tls13_msg_parse_cert_verify(const uint8_t *work);
+void protocore_tls13_msg_parse_finished(const uint8_t *work);
+void protocore_tls13_msg_build_server_hello(const uint8_t *work);
+void protocore_tls13_msg_build_encrypted_extensions(const uint8_t *work);
+void protocore_tls13_msg_build_certificate(const uint8_t *work);
 void protocore_tls13_msg_build_cert_verify(uint8_t *work);
-void protocore_tls13_msg_build_finished(uint8_t *work);
-void protocore_tls13_msg_cert_verify_content(uint8_t *work);
-void protocore_tls13_msg_build_hello_retry_request(uint8_t *work);
-void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *work);
-void protocore_tls13_msg_build_message_hash(uint8_t *work);
+void protocore_tls13_msg_build_finished(const uint8_t *work);
+void protocore_tls13_msg_cert_verify_content(const uint8_t *work);
+void protocore_tls13_msg_build_hello_retry_request(const uint8_t *work);
+void protocore_tls13_msg_build_encrypted_extensions_empty(const uint8_t *work);
+void protocore_tls13_msg_build_message_hash(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -432,7 +432,7 @@ static const Tls13MsgNs Tls13Msg __attribute__((unused)) = {
     .build_message_hash = protocore_tls13_msg_build_message_hash,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS)
 

@@ -33,7 +33,7 @@
 #endif
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPoolNs: the accepted connections
 #include "network_drivers/transport/tcp/server/server.h"     // TcpListenerNs: the bound ports
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The connection oriented transport.
@@ -47,17 +47,17 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-    ConnPoolNs *const conn;
-    TcpListenerNs *const listener;
+    const ConnPoolNs *const conn;
+    const TcpListenerNs *const listener;
 #if PROTOCORE_ENABLE_TCP_CLIENT
-    TcpClientNs *const client;
+    const TcpClientNs *const client;
 #endif
 } TcpNs;
 
 /** @brief The one symbol this module exports. */
 extern TcpNs Tcp;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TCP
 

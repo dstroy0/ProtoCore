@@ -85,7 +85,7 @@ void test_rfc4303_packet_layout(void)
         uint8_t next_header = 0;
         const uint8_t *out = NULL;
         size_t out_len = 0;
-        proto_bool esp_ok =
+        embed_bool esp_ok =
             Esp.gcm_decapsulate(esp_work, KEY, SALT, packet, n, &spi, &seq, &next_header, &out, &out_len);
         TEST_ASSERT_TRUE(esp_ok);
         TEST_ASSERT_EQUAL_HEX32(0x11223344u, spi);
@@ -135,7 +135,7 @@ void test_header_fields_round_trip(void)
         uint8_t nh = 0;
         const uint8_t *out = NULL;
         size_t out_len = 0;
-        proto_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len);
+        embed_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len);
         TEST_ASSERT_TRUE(esp_ok);
         TEST_ASSERT_EQUAL_HEX32(SPIS[i], spi);
         TEST_ASSERT_EQUAL_HEX32(SEQS[i], seq);
@@ -169,7 +169,7 @@ void test_every_bit_is_authenticated(void)
             uint8_t nh = 0;
             const uint8_t *out = (const uint8_t *)1;
             size_t out_len = 99;
-            proto_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len);
+            embed_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len);
             TEST_ASSERT_FALSE(esp_ok);
         }
     }
@@ -199,7 +199,7 @@ void test_a_different_key_or_salt_cannot_open_the_packet(void)
     size_t out_len = 0;
 
     memcpy(scratch, packet, n);
-    proto_bool esp_ok = Esp.gcm_decapsulate(esp_work, other_key, SALT, scratch, n, &spi, &seq, &nh, &out, &out_len);
+    embed_bool esp_ok = Esp.gcm_decapsulate(esp_work, other_key, SALT, scratch, n, &spi, &seq, &nh, &out, &out_len);
     TEST_ASSERT_FALSE(esp_ok);
     memcpy(scratch, packet, n);
     esp_ok = Esp.gcm_decapsulate(esp_work, KEY, other_salt, scratch, n, &spi, &seq, &nh, &out, &out_len);
@@ -251,7 +251,7 @@ void test_header_is_additional_authenticated_data(void)
     uint8_t nh = 0;
     const uint8_t *out = NULL;
     size_t out_len = 0;
-    proto_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len);
+    embed_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len);
     TEST_ASSERT_FALSE(esp_ok);
 }
 
@@ -274,7 +274,7 @@ void test_bounds_are_refused(void)
     size_t out_len = 0;
     // Header + IV + ICV with no room for even the Pad Length and Next Header.
     uint8_t tiny[PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN + PROTOCORE_ESP_ICV_LEN] = {0};
-    proto_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, tiny, sizeof(tiny), &spi, &seq, &nh, &out, &out_len);
+    embed_bool esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, tiny, sizeof(tiny), &spi, &seq, &nh, &out, &out_len);
     TEST_ASSERT_FALSE(esp_ok);
     esp_ok = Esp.gcm_decapsulate(esp_work, KEY, SALT, tiny, 0, &spi, &seq, &nh, &out, &out_len);
     TEST_ASSERT_FALSE(esp_ok);
@@ -291,7 +291,7 @@ void test_replay_rejects_sequence_zero(void)
 {
     EspReplay r;
     Esp.replay_init(esp_work, &r);
-    proto_bool esp_ok = Esp.replay_check(esp_work, &r, 0u);
+    embed_bool esp_ok = Esp.replay_check(esp_work, &r, 0u);
     TEST_ASSERT_FALSE(esp_ok);
     esp_ok = Esp.replay_check(esp_work, &r, 1u);
     TEST_ASSERT_TRUE(esp_ok);
@@ -305,7 +305,7 @@ void test_replay_rejects_a_duplicate(void)
 {
     EspReplay r;
     Esp.replay_init(esp_work, &r);
-    proto_bool esp_ok = Esp.replay_check(esp_work, &r, 1u);
+    embed_bool esp_ok = Esp.replay_check(esp_work, &r, 1u);
     TEST_ASSERT_TRUE(esp_ok);
     esp_ok = Esp.replay_check(esp_work, &r, 1u);
     TEST_ASSERT_FALSE(esp_ok);
@@ -322,7 +322,7 @@ void test_replay_accepts_reordering_inside_the_window(void)
 {
     EspReplay r;
     Esp.replay_init(esp_work, &r);
-    proto_bool esp_ok = Esp.replay_check(esp_work, &r, 10u);
+    embed_bool esp_ok = Esp.replay_check(esp_work, &r, 10u);
     TEST_ASSERT_TRUE(esp_ok);
     esp_ok = Esp.replay_check(esp_work, &r, 7u);
     TEST_ASSERT_TRUE(esp_ok);
@@ -345,7 +345,7 @@ void test_replay_window_width(void)
     EspReplay r;
     Esp.replay_init(esp_work, &r);
     const uint32_t top = 1000u;
-    proto_bool esp_ok = Esp.replay_check(esp_work, &r, top);
+    embed_bool esp_ok = Esp.replay_check(esp_work, &r, top);
     TEST_ASSERT_TRUE(esp_ok);
     esp_ok = Esp.replay_check(esp_work, &r, top - (PROTOCORE_ESP_REPLAY_WINDOW - 1));
     TEST_ASSERT_TRUE(esp_ok);
@@ -365,19 +365,19 @@ void test_replay_window_advances_cleanly(void)
     Esp.replay_init(esp_work, &r);
     for (uint32_t s = 1; s <= 20; s++)
     {
-        proto_bool esp_ok = Esp.replay_check(esp_work, &r, s);
+        embed_bool esp_ok = Esp.replay_check(esp_work, &r, s);
         TEST_ASSERT_TRUE(esp_ok);
     }
-    proto_bool esp_ok = Esp.replay_check(esp_work, &r, 5000u);
+    embed_bool esp_ok = Esp.replay_check(esp_work, &r, 5000u);
     TEST_ASSERT_TRUE(esp_ok); // a large jump forward
     for (uint32_t s = 5000u - (PROTOCORE_ESP_REPLAY_WINDOW - 1); s < 5000u; s++)
     {
-        proto_bool esp_ok = Esp.replay_check(esp_work, &r, s);
+        embed_bool esp_ok = Esp.replay_check(esp_work, &r, s);
         TEST_ASSERT_TRUE(esp_ok); // none of these was ever seen
     }
     for (uint32_t s = 5000u - (PROTOCORE_ESP_REPLAY_WINDOW - 1); s <= 5000u; s++)
     {
-        proto_bool esp_ok = Esp.replay_check(esp_work, &r, s);
+        embed_bool esp_ok = Esp.replay_check(esp_work, &r, s);
         TEST_ASSERT_FALSE(esp_ok); // now every one is a duplicate
     }
 }
@@ -389,12 +389,12 @@ void test_replay_accepts_a_monotone_stream(void)
     Esp.replay_init(esp_work, &r);
     for (uint32_t s = 1; s <= 500u; s++)
     {
-        proto_bool esp_ok = Esp.replay_check(esp_work, &r, s);
+        embed_bool esp_ok = Esp.replay_check(esp_work, &r, s);
         TEST_ASSERT_TRUE(esp_ok);
     }
     for (uint32_t s = 500u; s > 500u - PROTOCORE_ESP_REPLAY_WINDOW; s--)
     {
-        proto_bool esp_ok = Esp.replay_check(esp_work, &r, s);
+        embed_bool esp_ok = Esp.replay_check(esp_work, &r, s);
         TEST_ASSERT_FALSE(esp_ok);
     }
 }
@@ -406,7 +406,7 @@ void test_replay_first_packet_may_be_any_sequence(void)
     EspReplay r;
     Esp.replay_init(esp_work, &r);
     TEST_ASSERT_FALSE(r.seen_any);
-    proto_bool esp_ok = Esp.replay_check(esp_work, &r, 0xFFFFFFFFu);
+    embed_bool esp_ok = Esp.replay_check(esp_work, &r, 0xFFFFFFFFu);
     TEST_ASSERT_TRUE(esp_ok);
     TEST_ASSERT_TRUE(r.seen_any);
     TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, r.highest);

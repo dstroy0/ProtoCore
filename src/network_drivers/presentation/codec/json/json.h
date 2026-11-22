@@ -43,7 +43,7 @@
 
 #if PROTOCORE_ENABLE_JSON
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -66,26 +66,26 @@ typedef struct
     char *buf;
     size_t cap;
     size_t len;
-    proto_bool ok;
-    proto_bool after_key;                  // next value follows a key(): suppress its comma
+    embed_bool ok;
+    embed_bool after_key;                  // next value follows a key(): suppress its comma
     uint8_t depth;                         // open containers
-    proto_bool need_comma[JSON_MAX_DEPTH]; // per-level: has a prior item been emitted?
+    embed_bool need_comma[JSON_MAX_DEPTH]; // per-level: has a prior item been emitted?
 } protocore_json_writer;
 
 /** @brief False after any overflow / structural error. */
-PROTOCORE_INLINE proto_bool protocore_json_ok(const protocore_json_writer *w)
+EMBED_INLINE embed_bool protocore_json_ok(const protocore_json_writer *w)
 {
     return w->ok;
 }
 
 /** @brief Bytes written so far (excludes the NUL). */
-PROTOCORE_INLINE size_t protocore_json_length(const protocore_json_writer *w)
+EMBED_INLINE size_t protocore_json_length(const protocore_json_writer *w)
 {
     return w->len;
 }
 
 /** @brief NUL-terminated output (truncated if !protocore_json_ok()). */
-PROTOCORE_INLINE const char *protocore_json_c_str(const protocore_json_writer *w)
+EMBED_INLINE const char *protocore_json_c_str(const protocore_json_writer *w)
 {
     return w->buf;
 }
@@ -154,7 +154,7 @@ typedef struct
 typedef struct
 {
     protocore_json_writer *w;
-    proto_bool v;
+    embed_bool v;
 } JsonPutBoolArgs;
 
 /** @brief What put_null takes: w. */
@@ -199,7 +199,7 @@ typedef struct
 {
     protocore_json_writer *w;
     const char *k;
-    proto_bool v;
+    embed_bool v;
 } JsonKvBoolArgs;
 
 /** @brief What kv_null takes: w, k. */
@@ -239,7 +239,7 @@ typedef struct
 {
     const char *json;
     const char *key;
-    proto_bool *out;
+    embed_bool *out;
 } JsonGetBoolArgs;
 
 /**
@@ -324,7 +324,7 @@ typedef struct
     JsonGetStrArgs get_str_args;
     JsonGetIntArgs get_int_args;
     JsonGetBoolArgs get_bool_args;
-    proto_bool ok;
+    embed_bool ok;
 } JsonVars;
 
 /** @brief The operands and the outcome. */
@@ -333,52 +333,52 @@ extern JsonVars JsonV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *work);
-    void (*const begin_object)(uint8_t *work);
-    void (*const end_object)(uint8_t *work);
-    void (*const begin_array)(uint8_t *work);
-    void (*const end_array)(uint8_t *work);
-    void (*const key)(uint8_t *work);
-    void (*const put_str)(uint8_t *work);
-    void (*const put_int)(uint8_t *work);
-    void (*const put_uint)(uint8_t *work);
-    void (*const put_bool)(uint8_t *work);
-    void (*const put_null)(uint8_t *work);
-    void (*const put_raw)(uint8_t *work);
+    void (*const init)(const uint8_t *work);
+    void (*const begin_object)(const uint8_t *work);
+    void (*const end_object)(const uint8_t *work);
+    void (*const begin_array)(const uint8_t *work);
+    void (*const end_array)(const uint8_t *work);
+    void (*const key)(const uint8_t *work);
+    void (*const put_str)(const uint8_t *work);
+    void (*const put_int)(const uint8_t *work);
+    void (*const put_uint)(const uint8_t *work);
+    void (*const put_bool)(const uint8_t *work);
+    void (*const put_null)(const uint8_t *work);
+    void (*const put_raw)(const uint8_t *work);
     void (*const kv_str)(uint8_t *work);
     void (*const kv_int)(uint8_t *work);
     void (*const kv_uint)(uint8_t *work);
     void (*const kv_bool)(uint8_t *work);
     void (*const kv_null)(uint8_t *work);
     void (*const kv_raw)(uint8_t *work);
-    void (*const get_str)(uint8_t *work);
-    void (*const get_int)(uint8_t *work);
-    void (*const get_bool)(uint8_t *work);
+    void (*const get_str)(const uint8_t *work);
+    void (*const get_int)(const uint8_t *work);
+    void (*const get_bool)(const uint8_t *work);
 } JsonNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in JsonV or a region of the borrow at a fixed offset.
-void protocore_json_init(uint8_t *work);
-void protocore_json_begin_object(uint8_t *work);
-void protocore_json_end_object(uint8_t *work);
-void protocore_json_begin_array(uint8_t *work);
-void protocore_json_end_array(uint8_t *work);
-void protocore_json_key(uint8_t *work);
-void protocore_json_put_str(uint8_t *work);
-void protocore_json_put_int(uint8_t *work);
-void protocore_json_put_uint(uint8_t *work);
-void protocore_json_put_bool(uint8_t *work);
-void protocore_json_put_null(uint8_t *work);
-void protocore_json_put_raw(uint8_t *work);
+void protocore_json_init(const uint8_t *work);
+void protocore_json_begin_object(const uint8_t *work);
+void protocore_json_end_object(const uint8_t *work);
+void protocore_json_begin_array(const uint8_t *work);
+void protocore_json_end_array(const uint8_t *work);
+void protocore_json_key(const uint8_t *work);
+void protocore_json_put_str(const uint8_t *work);
+void protocore_json_put_int(const uint8_t *work);
+void protocore_json_put_uint(const uint8_t *work);
+void protocore_json_put_bool(const uint8_t *work);
+void protocore_json_put_null(const uint8_t *work);
+void protocore_json_put_raw(const uint8_t *work);
 void protocore_json_kv_str(uint8_t *work);
 void protocore_json_kv_int(uint8_t *work);
 void protocore_json_kv_uint(uint8_t *work);
 void protocore_json_kv_bool(uint8_t *work);
 void protocore_json_kv_null(uint8_t *work);
 void protocore_json_kv_raw(uint8_t *work);
-void protocore_json_get_str(uint8_t *work);
-void protocore_json_get_int(uint8_t *work);
-void protocore_json_get_bool(uint8_t *work);
+void protocore_json_get_str(const uint8_t *work);
+void protocore_json_get_int(const uint8_t *work);
+void protocore_json_get_bool(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -408,7 +408,7 @@ static const JsonNs Json __attribute__((unused)) = {
     .get_bool = protocore_json_get_bool,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_JSON
 

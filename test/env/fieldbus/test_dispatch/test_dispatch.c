@@ -14,24 +14,25 @@
 
 #endif
 
-static proto_bool handler_called = PROTO_FALSE;
+static embed_bool handler_called = EMBED_FALSE;
 
 static void handle_ok(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = PROTO_TRUE;
+    handler_called = EMBED_TRUE;
     send_text(slot_id, 200, "text/plain", "OK");
 }
 
 void setUp()
 {
     protocore_server_reset();
-    handler_called = PROTO_FALSE;
+    handler_called = EMBED_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -230,7 +231,8 @@ void test_incomplete_request_survives_before_deadline()
     handle();
 
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
     TEST_ASSERT_NOT_EQUAL(0, (int)http_req_start_ms[0]);
 }
 
@@ -262,7 +264,8 @@ void test_streaming_body_upload_not_reaped_past_deadline()
     handle();
 
     TEST_ASSERT_NULL(strstr(tcp_captured(), "408"));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 #endif
 

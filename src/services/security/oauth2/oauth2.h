@@ -5,7 +5,7 @@
  * @file oauth2.h
  * @brief OAuth 2.0 client at the token endpoint (RFC 6749), PROTOCORE_ENABLE_OAUTH2.
  *
- * RFC 6749 sec 3.2 names the token endpoint; sec 4.1.3 is the Access Token Request that trades an
+ * RFC 6749 sec 3.2 names the token endpoint. Sec 4.1.3 is the Access Token Request that trades an
  * authorization code for tokens, and sec 6 is the same exchange presenting a refresh token. Both
  * requests are `application/x-www-form-urlencoded` bodies encoded per RFC 6749 Appendix B, whose
  * percent-encoding is RFC 3986 sec 2.1 over the unreserved set of RFC 3986 sec 2.3. The reply is the
@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_OAUTH2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #ifndef PROTOCORE_OAUTH2_TOKEN_TYPE_LEN
 #define PROTOCORE_OAUTH2_TOKEN_TYPE_LEN 24 ///< the `token_type` value buffer, "Bearer" and any longer registered name.
@@ -55,12 +55,11 @@ typedef struct
 } Oauth2Tokens;
 
 /** @brief Negative outcomes of a transport call. An HTTP status code is positive. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_OAUTH2_ERR_BUILD = -1,     ///< the encoded body did not fit @c request.cap
-    PROTOCORE_OAUTH2_ERR_TRANSPORT = -2, ///< the HTTP client reached no endpoint
-    PROTOCORE_OAUTH2_ERR_RESPONSE = -3,  ///< the body carried no access_token (RFC 6749 sec 5.2)
-} Oauth2Result;
+EMBED_ENUM_BYTE(Oauth2Result,
+                PROTOCORE_OAUTH2_ERR_BUILD = -1,     ///< the encoded body did not fit @c request.cap
+                PROTOCORE_OAUTH2_ERR_TRANSPORT = -2, ///< the HTTP client reached no endpoint
+                PROTOCORE_OAUTH2_ERR_RESPONSE = -3,  ///< the body carried no access_token (RFC 6749 sec 5.2)
+);
 
 /**
  * @brief RFC 6749 sec 3.2.1: the client identity a token request carries.
@@ -137,7 +136,7 @@ typedef struct
     Oauth2RefreshArgs refresh_grant; ///< the refresh_token grant
     Oauth2RequestArgs request;       ///< where the request goes and where its body is built
     Oauth2ResponseArgs response;     ///< the reply and the tokens read out of it
-    proto_bool ok;
+    embed_bool ok;
     int32_t i32;
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #endif
@@ -189,7 +188,7 @@ static const Oauth2Ns Oauth2 __attribute__((unused)) = {
 uint8_t *protocore_oauth2_span(void);
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OAUTH2
 

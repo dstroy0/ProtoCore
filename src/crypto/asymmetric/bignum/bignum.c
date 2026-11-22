@@ -19,7 +19,7 @@
 #include "crypto/asymmetric/bignum/bignum.h"
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition of BignumCtx - private to this TU. It sits at BIGNUM_OFF_CTX in the caller's
 // borrow, so its size never leaves this file and no consumer can name it. An entry stages its operands
@@ -39,7 +39,7 @@ typedef struct BignumCtx
 } BignumCtx;
 
 // The caller's borrow, split: the staged operands, then the p-1 the DH check builds and compares
-// against. p-1 is 256 bytes and is built per call, so it lives here rather than on the stack.
+// against. p-1 is 256 bytes and is built per call. So it lives here rather than on the stack.
 #define BIGNUM_OFF_CTX 0u
 #define BIGNUM_OFF_PM1 (BIGNUM_OFF_CTX + sizeof(struct BignumCtx))
 static_assert(BIGNUM_OFF_PM1 + sizeof(protocore_bignum) <= PROTOCORE_BIGNUM_BORROW,
@@ -55,8 +55,14 @@ static_assert(BIGNUM_OFF_PM1 % _Alignof(protocore_bignum) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define BIGNUM_CTX(w) ((struct BignumCtx *)(void *)((w) + BIGNUM_OFF_CTX))
-#define BIGNUM_PM1(w) ((protocore_bignum *)(void *)((w) + BIGNUM_OFF_PM1))
+#define BIGNUM_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct BignumCtx *)(const void *)((w) + BIGNUM_OFF_CTX),                               \
+        default: (struct BignumCtx *)(void *)((w) + BIGNUM_OFF_CTX))
+#define BIGNUM_PM1(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const protocore_bignum *)(const void *)((w) + BIGNUM_OFF_PM1),                               \
+        default: (protocore_bignum *)(void *)((w) + BIGNUM_OFF_PM1))
 
 // ---------------------------------------------------------------------------
 // Group-14 prime and generator (RFC 3526, §3)
@@ -121,7 +127,7 @@ static void bignum_expmod(uint8_t *work)
 
 void protocore_bignum_from_bytes(uint8_t *work)
 {
-    BignumV.ok = PROTO_FALSE;
+    BignumV.ok = EMBED_FALSE;
     if (!BignumV.from_bytes_args.out || !BignumV.from_bytes_args.bytes)
     {
         return;
@@ -138,12 +144,12 @@ void protocore_bignum_from_bytes(uint8_t *work)
         size_t byte_pos = i; // byte i from LSB (bytes[len-1-i] is the i-th byte from the end)
         out->d[byte_pos / 4] |= (uint32_t)bytes[len - 1 - i] << ((byte_pos % 4) * 8);
     }
-    BignumV.ok = PROTO_TRUE;
+    BignumV.ok = EMBED_TRUE;
 }
 
 void protocore_bignum_to_bytes(uint8_t *work)
 {
-    BignumV.ok = PROTO_FALSE;
+    BignumV.ok = EMBED_FALSE;
     if (!BignumV.to_bytes_args.bytes || !BignumV.to_bytes_args.in)
     {
         return;
@@ -159,12 +165,12 @@ void protocore_bignum_to_bytes(uint8_t *work)
         bytes[i * 4 + 2] = (uint8_t)(v >> 8);
         bytes[i * 4 + 3] = (uint8_t)(v);
     }
-    BignumV.ok = PROTO_TRUE;
+    BignumV.ok = EMBED_TRUE;
 }
 
 void protocore_bignum_cmp(uint8_t *work)
 {
-    BignumV.ok = PROTO_FALSE;
+    BignumV.ok = EMBED_FALSE;
     if (!BignumV.cmp_args.a || !BignumV.cmp_args.b)
     {
         return;
@@ -175,12 +181,12 @@ void protocore_bignum_cmp(uint8_t *work)
     ctx->n = PROTOCORE_BN_LIMBS;
     bignum_order(work);
     BignumV.sign = ctx->sign;
-    BignumV.ok = PROTO_TRUE;
+    BignumV.ok = EMBED_TRUE;
 }
 
 void protocore_bignum_cmp_raw(uint8_t *work)
 {
-    BignumV.ok = PROTO_FALSE;
+    BignumV.ok = EMBED_FALSE;
     if (!BignumV.cmp_raw_args.a || !BignumV.cmp_raw_args.b)
     {
         return;
@@ -191,13 +197,13 @@ void protocore_bignum_cmp_raw(uint8_t *work)
     ctx->n = BignumV.cmp_raw_args.n;
     bignum_order(work);
     BignumV.sign = ctx->sign;
-    BignumV.ok = PROTO_TRUE;
+    BignumV.ok = EMBED_TRUE;
 }
 
 void protocore_bignum_is_zero(uint8_t *work)
 {
-    BignumV.ok = PROTO_FALSE;
-    BignumV.zero = PROTO_FALSE;
+    BignumV.ok = EMBED_FALSE;
+    BignumV.zero = EMBED_FALSE;
     if (!BignumV.is_zero_args.a)
     {
         return;
@@ -208,17 +214,17 @@ void protocore_bignum_is_zero(uint8_t *work)
     {
         if (a->d[i])
         {
-            BignumV.ok = PROTO_TRUE;
+            BignumV.ok = EMBED_TRUE;
             return;
         }
     }
-    BignumV.zero = PROTO_TRUE;
-    BignumV.ok = PROTO_TRUE;
+    BignumV.zero = EMBED_TRUE;
+    BignumV.ok = EMBED_TRUE;
 }
 
 void protocore_bignum_expmod_group14(uint8_t *work)
 {
-    BignumV.ok = PROTO_FALSE;
+    BignumV.ok = EMBED_FALSE;
     if (!BignumV.expmod_args.out || !BignumV.expmod_args.base || !BignumV.expmod_args.exp)
     {
         return;
@@ -228,13 +234,13 @@ void protocore_bignum_expmod_group14(uint8_t *work)
     ctx->base = BignumV.expmod_args.base;
     ctx->exp = BignumV.expmod_args.exp;
     bignum_expmod(work);
-    BignumV.ok = PROTO_TRUE;
+    BignumV.ok = EMBED_TRUE;
 }
 
 // RFC 4253 §8: the received value e (or f) must satisfy 1 < e < p-1.
 void protocore_bignum_dh_validate(uint8_t *work)
 {
-    BignumV.ok = PROTO_FALSE;
+    BignumV.ok = EMBED_FALSE;
     if (!BignumV.validate_args.v)
     {
         return;
@@ -269,12 +275,12 @@ void protocore_bignum_dh_validate(uint8_t *work)
     {
         return;
     }
-    BignumV.ok = PROTO_TRUE;
+    BignumV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 BignumVars BignumV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BIGNUM

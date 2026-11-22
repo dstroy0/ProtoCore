@@ -139,9 +139,9 @@ static protocore_spa_ctx healthy(void)
 {
     protocore_spa_ctx c;
     c.api_prefix = "/api/";
-    c.shell_available = PROTO_TRUE;
-    c.client_scripting = PROTO_TRUE;
-    c.degraded = PROTO_FALSE;
+    c.shell_available = EMBED_TRUE;
+    c.client_scripting = EMBED_TRUE;
+    c.degraded = EMBED_FALSE;
     return c;
 }
 
@@ -175,11 +175,11 @@ void test_route_ex_matches_plain_route_when_healthy(void)
 void test_only_the_shell_decision_degrades(void)
 {
     protocore_spa_ctx no_shell = healthy();
-    no_shell.shell_available = PROTO_FALSE;
+    no_shell.shell_available = EMBED_FALSE;
     protocore_spa_ctx no_js = healthy();
-    no_js.client_scripting = PROTO_FALSE;
+    no_js.client_scripting = EMBED_FALSE;
     protocore_spa_ctx degraded = healthy();
-    degraded.degraded = PROTO_TRUE;
+    degraded.degraded = EMBED_TRUE;
 
     const protocore_spa_ctx *CASES[3] = {&no_shell, &no_js, &degraded};
     for (int i = 0; i < 3; i++)
@@ -205,13 +205,13 @@ void test_only_the_shell_decision_degrades(void)
 
 // --- conditional UI streaming ---------------------------------------------------------------------
 
-static proto_bool always_false(void *ctx)
+static embed_bool always_false(void *ctx)
 {
     (void)ctx;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-static proto_bool flag_is_set(void *ctx)
+static embed_bool flag_is_set(void *ctx)
 {
     return *(const int *)ctx != 0;
 }
@@ -240,7 +240,7 @@ static size_t drain(const protocore_ui_fragment *frags, size_t count, void *ctx,
         // condition is re-evaluated every iteration, and the namespace reports through one member.
         SpaRouterV.ui_stream_done_args.s = &s;
         SpaRouter.ui_stream_done(spa_router_work);
-        const proto_bool done = SpaRouterV.ok;
+        const embed_bool done = SpaRouterV.ok;
         if (done)
         {
             break;

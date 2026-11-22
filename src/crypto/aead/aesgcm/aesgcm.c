@@ -32,7 +32,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "proximus_operor/proximus_operor.h" // proto_raw_u32 - the aliasing-permitted word load
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the AES-256 block context - one member, two platform shapes -----------
 
@@ -91,7 +91,10 @@ static_assert(AESGCM_OFF_CTX % _Alignof(GcmWork) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define AESGCM_CTX(w) ((GcmWork *)(void *)((w) + AESGCM_OFF_CTX))
+#define AESGCM_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const GcmWork *)(const void *)((w) + AESGCM_OFF_CTX),                                        \
+        default: (GcmWork *)(void *)((w) + AESGCM_OFF_CTX))
 #define AESGCM_GHASH(w) ((w) + AESGCM_OFF_GHASH)
 
 // --- the AES-256 block seam - one wrapper set, two platform bodies ---------
@@ -120,7 +123,7 @@ static inline void aes256_free_key(GcmWork *w)
 #if !PROTOCORE_HAS_HW_AESGCM
 
 // AES-256 single-block primitive (operates on the schedule inside GcmWork).
-static inline void aes256_ecb(GcmWork *w, const uint8_t in[16], uint8_t out[16])
+static inline void aes256_ecb(const GcmWork *w, const uint8_t in[16], uint8_t out[16])
 {
     protocore_aes_encrypt_block(w->blk.rk, 14, in, out);
 }
@@ -128,7 +131,7 @@ static inline void aes256_load_key(GcmWork *w, const uint8_t key[32])
 {
     protocore_aes_key_expand(key, 8, w->blk.rk);
 }
-static inline void aes256_free_key(GcmWork *w)
+static inline void aes256_free_key(const GcmWork *w)
 {
     (void)w; // software schedule lives in-place in GcmWork; nothing external to release
 }
@@ -162,7 +165,7 @@ static inline void put_be64(uint8_t *p, uint64_t v)
 static inline void inc32(uint8_t ctr[16])
 {
     // A single-byte carry (ctr[15] 0xff -> 0x00 into ctr[14]) is cheap to reach and exercised by
-    // test_aesgcm_gctr_counter_byte_carry; the full 2^32 wrap (~64 GiB in one call) is the only branch a
+    // test_aesgcm_gctr_counter_byte_carry. The full 2^32 wrap (~64 GiB in one call) is the only branch a
     // host test cannot reach.
     for (int i = 15; i >= 12; i--)
     {
@@ -240,12 +243,12 @@ static void gcm_tag(uint8_t *work, const uint8_t *aad, size_t aad_len, const uin
     }
 }
 
-static proto_bool aesgcm_key_load(uint8_t *work, const uint8_t *key)
+static embed_bool aesgcm_key_load(uint8_t *work, const uint8_t *key)
 {
     GcmWork *w = AESGCM_CTX(work);
     aes256_load_key(w, key);
     gcm_key_setup(work);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void aesgcm_key_release(uint8_t *work)
@@ -254,7 +257,7 @@ static void aesgcm_key_release(uint8_t *work)
     aes256_free_key(w);
 }
 
-static proto_bool aesgcm_seal_record(uint8_t *work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
+static embed_bool aesgcm_seal_record(uint8_t *work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
                                      const uint8_t *pt, size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
     GcmWork *w = AESGCM_CTX(work);
@@ -264,10 +267,10 @@ static proto_bool aesgcm_seal_record(uint8_t *work, const uint8_t *nonce, const 
     inc32(w->ctr);
     gctr(w, pt, pt_len, ct_out);
     gcm_tag(work, aad, aad_len, ct_out, pt_len, tag_out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool aesgcm_open_record(uint8_t *work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
+static embed_bool aesgcm_open_record(uint8_t *work, const uint8_t *nonce, const uint8_t *aad, size_t aad_len,
                                      const uint8_t *ct, size_t ct_len, const uint8_t *tag, uint8_t *out)
 {
     GcmWork *w = AESGCM_CTX(work);
@@ -276,19 +279,19 @@ static proto_bool aesgcm_open_record(uint8_t *work, const uint8_t *nonce, const 
     gcm_tag(work, aad, aad_len, ct, ct_len, w->ej0);
     if (!protocore_ct_eq(w->ej0, tag, PROTOCORE_AESGCM_TAG_LEN))
     {
-        return PROTO_FALSE; // tag mismatch: nothing written
+        return EMBED_FALSE; // tag mismatch: nothing written
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->ctr, .src = w->j0, .bytes = 16);
     inc32(w->ctr);
     gctr(w, ct, ct_len, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the entries -----------------------------------------------------------
 
 void protocore_aes_gcm_key_init(uint8_t *work)
 {
-    AesGcmV.ok = PROTO_FALSE;
+    AesGcmV.ok = EMBED_FALSE;
     if (!AesGcmV.key_args.key)
     {
         return;
@@ -300,14 +303,14 @@ void protocore_aes_gcm_key_init(uint8_t *work)
 // the pool wipes it.
 void protocore_aes_gcm_key_wipe(uint8_t *work)
 {
-    AesGcmV.ok = PROTO_FALSE;
+    AesGcmV.ok = EMBED_FALSE;
     aesgcm_key_release(work);
-    AesGcmV.ok = PROTO_TRUE;
+    AesGcmV.ok = EMBED_TRUE;
 }
 
 void protocore_aes_gcm_seal(uint8_t *work)
 {
-    AesGcmV.ok = PROTO_FALSE;
+    AesGcmV.ok = EMBED_FALSE;
     if (!AesGcmV.seal_args.nonce || !AesGcmV.seal_args.ct_out || !AesGcmV.seal_args.tag_out)
     {
         return;
@@ -319,7 +322,7 @@ void protocore_aes_gcm_seal(uint8_t *work)
 
 void protocore_aes_gcm_open(uint8_t *work)
 {
-    AesGcmV.ok = PROTO_FALSE;
+    AesGcmV.ok = EMBED_FALSE;
     if (!AesGcmV.open_args.nonce || !AesGcmV.open_args.tag || !AesGcmV.open_args.out)
     {
         return;
@@ -331,10 +334,10 @@ void protocore_aes_gcm_open(uint8_t *work)
 
 // Advance the RFC 5647 invocation counter: the low 8 bytes of the 12-byte nonce, big-endian; the 4-byte
 // fixed field never changes. The nonce is the caller's own, so the borrow goes unread.
-void protocore_aes_gcm_iv_increment(uint8_t *work)
+void protocore_aes_gcm_iv_increment(const uint8_t *work)
 {
     (void)work;
-    AesGcmV.ok = PROTO_FALSE;
+    AesGcmV.ok = EMBED_FALSE;
     if (!AesGcmV.iv_args.iv)
     {
         return;
@@ -347,12 +350,12 @@ void protocore_aes_gcm_iv_increment(uint8_t *work)
             break;
         }
     }
-    AesGcmV.ok = PROTO_TRUE;
+    AesGcmV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 AesGcmVars AesGcmV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AESGCM

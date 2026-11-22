@@ -64,7 +64,7 @@ function, which keeps a `forbid` from matching a call in unrelated code. `requir
 regular expressions matched case insensitively against the disassembly text.
 
 A compiler that is not installed makes the case SKIPPED and not a pass. A skip is printed and does
-not refuse, because a manifest naming four cross compilers is normal and nobody has all four; what
+not refuse, because a manifest naming four cross compilers is normal and nobody has all four. What
 would be wrong is counting the absent ones as satisfied.
 """
 
@@ -94,7 +94,7 @@ def manifest_path(cfg, named):
     """The manifest to read, and where it was asked for, from the command line then the config.
 
     Returns (path, how) so a refusal can say which of the three it was looking for. A default that
-    quietly resolves to nothing is the same shape as a prose root that had moved: the run reads zero
+    quietly resolves to nothing is the same shape as a prose root that moved: the run reads zero
     cases and reports success. Every path this returns is checked for existence by the caller.
     """
     if named:

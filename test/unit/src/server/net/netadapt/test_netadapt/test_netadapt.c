@@ -240,7 +240,7 @@ void test_dhcp_fallback_attempt_budget(void)
 // oscillation between DHCP and the static address.
 void test_dhcp_fallback_latches_as_the_counters_advance(void)
 {
-    proto_bool seen = PROTO_FALSE;
+    embed_bool seen = EMBED_FALSE;
     for (uint32_t ms = 0u; ms <= 20000u; ms += 250u)
     {
         NetadaptV.dhcp_fallback_args.elapsed_ms = ms;
@@ -248,7 +248,7 @@ void test_dhcp_fallback_latches_as_the_counters_advance(void)
         NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
         NetadaptV.dhcp_fallback_args.max_attempts = 5u;
         Netadapt.dhcp_fallback(netadapt_work);
-        proto_bool now = NetadaptV.ok;
+        embed_bool now = NetadaptV.ok;
         if (seen)
         {
             TEST_ASSERT_TRUE_MESSAGE(now, "fallback un-triggered as time advanced");
@@ -257,7 +257,7 @@ void test_dhcp_fallback_latches_as_the_counters_advance(void)
     }
     TEST_ASSERT_TRUE(seen);
 
-    seen = PROTO_FALSE;
+    seen = EMBED_FALSE;
     for (uint32_t n = 0u; n <= 12u; n++)
     {
         NetadaptV.dhcp_fallback_args.elapsed_ms = 0u;
@@ -265,7 +265,7 @@ void test_dhcp_fallback_latches_as_the_counters_advance(void)
         NetadaptV.dhcp_fallback_args.timeout_ms = 10000u;
         NetadaptV.dhcp_fallback_args.max_attempts = 5u;
         Netadapt.dhcp_fallback(netadapt_work);
-        proto_bool now = NetadaptV.ok;
+        embed_bool now = NetadaptV.ok;
         if (seen)
         {
             TEST_ASSERT_TRUE_MESSAGE(now, "fallback un-triggered as attempts advanced");

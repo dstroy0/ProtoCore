@@ -34,7 +34,7 @@
 
 #if PROTOCORE_ENABLE_JWT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 7515 sec 7.1: the compact serialization a call reads, bare or inside Bearer credentials. */
 typedef struct
@@ -133,7 +133,7 @@ typedef struct
     JwtTimeArgs time;   ///< the clock the time claims are judged against
     JwtClaimArgs claim; ///< the claim a read names
     JwtScopeArgs scope; ///< the scope claim and the scope demanded of it
-    proto_bool ok;
+    embed_bool ok;
     long num;
 } JwtVars;
 
@@ -150,7 +150,7 @@ typedef struct
     void (*const verify_bearer_at)(uint8_t *work);
     void (*const claim_int)(uint8_t *work);
     void (*const claim_str)(uint8_t *work);
-    void (*const scope_allows)(uint8_t *work);
+    void (*const scope_allows)(const uint8_t *work);
 } JwtNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -162,7 +162,7 @@ void protocore_jwt_verify_mac_at(uint8_t *work);
 void protocore_jwt_verify_bearer_at(uint8_t *work);
 void protocore_jwt_claim_int(uint8_t *work);
 void protocore_jwt_claim_str(uint8_t *work);
-void protocore_jwt_scope_allows(uint8_t *work);
+void protocore_jwt_scope_allows(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -179,7 +179,7 @@ static const JwtNs Jwt __attribute__((unused)) = {
     .scope_allows = protocore_jwt_scope_allows,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_JWT
 

@@ -14,8 +14,6 @@
 
 #include "config/platform/platform.h" // the target's queues and tasks, under our names
 
-#include <stdatomic.h> // PROTOCORE_ATOMIC_LOAD/STORE: the run flag crosses tasks
-
 // ---------------------------------------------------------------------------
 // Worker identity
 // ---------------------------------------------------------------------------
@@ -29,7 +27,7 @@
 // each block with malloc and calls abort when it cannot. A build that owns no heap after boot
 // cannot link that, so the identity is held here instead.
 //
-// One entry per worker plus the ghost slot, which is every context that can ever bind one; the
+// One entry per worker plus the ghost slot, which is every context that can ever bind one. The
 // count is fixed at build time, so this is BSS and the claim is a bounded walk. `s_bound` is the
 // counter: a context that has never bound reads worker 0.
 #define PROTOCORE_WORKER_BINDINGS (PROTOCORE_WORKER_COUNT + 1)
@@ -90,9 +88,9 @@ LocusCarcerum(ghost_site, MMGR_MINIMUM_SECURITY(ghost_plain), MMGR_MAXIMUM_SECUR
 
 // What each worker slot borrows through. NULL is the ghost's.
 static const MinimumSecurityGuard *s_plain[PROTOCORE_WORKER_COUNT];
-static const MaximumSecurityGuard *s_secure[PROTOCORE_WORKER_COUNT];
+static const MaxSecurityGuard *s_secure[PROTOCORE_WORKER_COUNT];
 
-void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaximumSecurityGuard *secure)
+void protocore_cellblocks_bind(int worker, const MinimumSecurityGuard *plain, const MaxSecurityGuard *secure)
 {
     if (worker < 0 || worker >= PROTOCORE_WORKER_COUNT)
     {
@@ -112,7 +110,7 @@ const MinimumSecurityGuard *protocore_plain_guard(void)
     return &ghost_site.ghost_plain;
 }
 
-const MaximumSecurityGuard *protocore_secure_guard(void)
+const MaxSecurityGuard *protocore_secure_guard(void)
 {
     const int w = protocore_worker_self();
     if (w >= 0 && w < PROTOCORE_WORKER_COUNT && s_secure[w] != NULL)
@@ -122,28 +120,18 @@ const MaximumSecurityGuard *protocore_secure_guard(void)
     return &ghost_site.ghost_secure;
 }
 
-// The library's two owners, one per tier of secrecy. Each registers on its first take, which comes
-// before any cell can be counted to it, and a second context registering it at once is refused
-// with nothing changed.
-static CellOwner s_plain_owner = MMGR_CELL_OWNER("protocore_plain");
-static CellOwner s_secure_owner = MMGR_CELL_OWNER("protocore_secure");
+// The owner table of the program, one owner for each tier of secrecy. No owner registers at run
+// time, because the linker resolves each identity.
+MMGR_OWNERS(PROTOCORE_OWNERS)
 
-CellOwner *protocore_plain_owner(void)
+const CellOwner *protocore_plain_owner(void)
 {
-    if (!mmgr_owner_registered(&s_plain_owner))
-    {
-        (void)mmgr_owner_register(&s_plain_owner);
-    }
-    return &s_plain_owner;
+    return protocore_owner_plain;
 }
 
-CellOwner *protocore_secure_owner(void)
+const CellOwner *protocore_secure_owner(void)
 {
-    if (!mmgr_owner_registered(&s_secure_owner))
-    {
-        (void)mmgr_owner_register(&s_secure_owner);
-    }
-    return &s_secure_owner;
+    return protocore_owner_secure;
 }
 
 void *protocore_plain_persist(size_t n)
@@ -193,7 +181,7 @@ struct WorkerStorage
     protocore_platform_queue_ctrl dq_struct[PROTOCORE_WORKER_COUNT]; ///< their descriptors
     uint8_t dq_storage[PROTOCORE_WORKER_COUNT][PROTOCORE_DEFER_QUEUE_DEPTH * sizeof(DeferCmd)]; ///< their backing store
     protocore_worker_pump_fn pump; ///< what each worker runs every iteration
-    _Atomic proto_bool run;        ///< cleared from another task to stop the loops
+    embed_atomic_u32 run;          ///< cleared from another task to stop the loops
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -205,7 +193,10 @@ static_assert(WORKER_OFF_CTX + sizeof(struct WorkerStorage) <= PROTOCORE_WORKER_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define WORKER_CTX(w) ((struct WorkerStorage *)(void *)((w) + WORKER_OFF_CTX))
+#define WORKER_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct WorkerStorage *)(const void *)((w) + WORKER_OFF_CTX),                           \
+        default: (struct WorkerStorage *)(void *)((w) + WORKER_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -232,14 +223,15 @@ uint8_t *protocore_worker_span(void)
 // (Tcp.listener->enqueue, protocore_defer) nudges it the moment work arrives, so events are
 // serviced immediately rather than on the next tick. The block still times out
 // after PROTOCORE_WORKER_POLL_TICKS so the idle timeout sweep (check_timeouts) keeps
-// reaping stale connections with no events in flight; raising that knob now lowers
+// reaping stale connections with no events in flight. Raising that knob now lowers
 // idle wakeups without costing event latency. A nudge that races the pump is
 // latched in the notify count, so the wait returns at once - no lost wake.
 static void worker_task(void *arg)
 {
     int id = (int)(intptr_t)arg;
     protocore_worker_set_self(id);
-    while (PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(protocore_worker_span())->run))
+    while (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                      .word = &WORKER_CTX(protocore_worker_span())->run))
     {
         if (WORKER_CTX(protocore_worker_span())->pump)
         {
@@ -254,7 +246,7 @@ static void worker_task(void *arg)
 
 void protocore_workers_start(uint8_t *work)
 {
-    if (PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run))
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &WORKER_CTX(work)->run))
     {
         return; // already running
     }
@@ -268,7 +260,8 @@ void protocore_workers_start(uint8_t *work)
                                                 WORKER_CTX(work)->dq_storage[i], &WORKER_CTX(work)->dq_struct[i]);
         }
     }
-    PROTOCORE_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_TRUE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &WORKER_CTX(work)->run,
+               .value = EMBED_TRUE);
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         int core = (PROTOCORE_WORKER_CORE + i) % PROTOCORE_PLATFORM_CORES;
@@ -279,7 +272,7 @@ void protocore_workers_start(uint8_t *work)
 
 void protocore_workers_defer(uint8_t *work)
 {
-    WorkersV.ok = PROTO_FALSE;
+    WorkersV.ok = EMBED_FALSE;
     if (!WorkersV.defer_args.fn)
     {
         return;
@@ -295,7 +288,7 @@ void protocore_workers_defer(uint8_t *work)
         return;
     }
     protocore_workers_wake(work); // run the callback now, not on the next idle sweep
-    WorkersV.ok = PROTO_TRUE;
+    WorkersV.ok = EMBED_TRUE;
 }
 
 void protocore_workers_wake(uint8_t *work)
@@ -330,11 +323,12 @@ void protocore_workers_run_deferred(uint8_t *work)
 
 void protocore_workers_stop(uint8_t *work)
 {
-    if (!PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run))
+    if (!EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &WORKER_CTX(work)->run))
     {
         return;
     }
-    PROTOCORE_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_FALSE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &WORKER_CTX(work)->run,
+               .value = EMBED_FALSE);
     // Tasks self-delete on their next iteration; give them a few ticks to exit
     // before the caller tears down the slots they were servicing.
     protocore_platform_task_delay(3);
@@ -342,7 +336,7 @@ void protocore_workers_stop(uint8_t *work)
 
 void protocore_workers_running(uint8_t *work)
 {
-    WorkersV.ok = PROTOCORE_ATOMIC_LOAD(&WORKER_CTX(work)->run);
+    WorkersV.ok = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &WORKER_CTX(work)->run);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

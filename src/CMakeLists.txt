@@ -24,7 +24,11 @@ target_include_directories(pc_config INTERFACE
   "${PROTOCORE_ROOT}/test/support"
   "${PROTOCORE_ROOT}/src"
   "${PROTOCORE_ROOT}/include"
-  "${PROTOCORE_ROOT}")
+  "${PROTOCORE_ROOT}/include/idemIP"
+  "${PROTOCORE_ROOT}"
+  "${PROTOCORE_ROOT}/include/MMgr/include"
+  "${PROTOCORE_ROOT}/include/MMgr/src"
+  "${PROTOCORE_ROOT}/include/embedded_types/include")
 
 # Every feature flag, and the -D that carries each one to the compiler. Read here, before the module
 # directories below: protocore_add_module() returns early when its GATE is off, so the options have

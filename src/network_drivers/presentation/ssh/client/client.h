@@ -11,16 +11,15 @@
 
 #include "network_drivers/presentation/ssh/common/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Lifecycle phase of the forward, for observability. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_SSH_CLIENT_IDLE = 0,   ///< not started.
-    PROTOCORE_SSH_CLIENT_CONNECTING, ///< TCP + SSH handshake + auth in progress.
-    PROTOCORE_SSH_CLIENT_UP,         ///< authenticated and the remote forward is established.
-    PROTOCORE_SSH_CLIENT_FAILED      ///< the last attempt failed (host-key mismatch, auth, or transport).
-} protocore_ssh_client_state;
+EMBED_ENUM_BYTE(protocore_ssh_client_state,
+                PROTOCORE_SSH_CLIENT_IDLE = 0,   ///< not started.
+                PROTOCORE_SSH_CLIENT_CONNECTING, ///< TCP + SSH handshake + auth in progress.
+                PROTOCORE_SSH_CLIENT_UP,         ///< authenticated and the remote forward is established.
+                PROTOCORE_SSH_CLIENT_FAILED      ///< the last attempt failed (host-key mismatch, auth, or transport).
+);
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
@@ -79,16 +78,16 @@ typedef struct
 
     SshClientMsgArgs msg; ///< the message bytes a send carries
 
-    proto_bool ok;                       ///< a call's true/false outcome
+    embed_bool ok;                       ///< a call's true/false outcome
     uint8_t *work;                       ///< the crypto scratch a lookup reports
     protocore_ssh_client_state state_of; ///< the phase a lookup reports
 
-    void (*const send)(uint8_t *work);
-    void (*const crypto_work)(uint8_t *work);
-    void (*const state)(uint8_t *work);
+    void (*const send)(const uint8_t *work);
+    void (*const crypto_work)(const uint8_t *work);
+    void (*const state)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const poll)(uint8_t *work);
-    void (*const end)(uint8_t *work);
+    void (*const end)(const uint8_t *work);
 } SshClientNs;
 
 /** @brief The one instance, defined in client.c. */
@@ -107,6 +106,6 @@ uint8_t *protocore_ssh_client_span(void);
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CLIENT_CLIENT_H

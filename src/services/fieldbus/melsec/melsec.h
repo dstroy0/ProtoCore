@@ -39,7 +39,7 @@
 
 #if PROTOCORE_ENABLE_MELSEC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -157,7 +157,7 @@ typedef struct
     MelsecBuildReadArgs build_read_args;
     MelsecBuildWriteArgs build_write_args;
     MelsecParseResponseArgs parse_response_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } MelsecVars;
 
@@ -167,16 +167,16 @@ extern MelsecVars MelsecV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_read)(uint8_t *work);
-    void (*const build_write)(uint8_t *work);
-    void (*const parse_response)(uint8_t *work);
+    void (*const build_read)(const uint8_t *work);
+    void (*const build_write)(const uint8_t *work);
+    void (*const parse_response)(const uint8_t *work);
 } MelsecNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MelsecV or a region of the borrow at a fixed offset.
-void protocore_melsec_build_read(uint8_t *work);
-void protocore_melsec_build_write(uint8_t *work);
-void protocore_melsec_parse_response(uint8_t *work);
+void protocore_melsec_build_read(const uint8_t *work);
+void protocore_melsec_build_write(const uint8_t *work);
+void protocore_melsec_parse_response(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -188,7 +188,7 @@ static const MelsecNs Melsec __attribute__((unused)) = {
     .parse_response = protocore_melsec_parse_response,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MELSEC
 

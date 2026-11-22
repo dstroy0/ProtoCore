@@ -22,7 +22,7 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a field-line's text
 #include "memoria_operor/memoria_operor.h" // memor.cpy / memor.cmp: the spans a frame is assembled from and matched on
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Write Message-Length as a 4 byte unsigned integer, big endian.
 static void put_be32(uint8_t *buf, uint32_t v)
@@ -41,25 +41,25 @@ static uint32_t get_be32(const uint8_t *buf)
 
 // Append a NUL-terminated string at *pos and advance it. False when it would pass cap. The length
 // is read no further than cap, and *pos is past the prefix, so a longer string fails the test.
-static proto_bool put_str(uint8_t *buf, size_t cap, size_t *pos, const char *s)
+static embed_bool put_str(uint8_t *buf, size_t cap, size_t *pos, const char *s)
 {
     const size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap);
     if (*pos + n > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *pos, .src = s, .bytes = n);
     *pos += n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append a non-negative value at *pos as 1*DIGIT, no leading zero, and advance it. False on a
 // negative value or when the digits would pass cap.
-static proto_bool put_int(uint8_t *buf, size_t cap, size_t *pos, int32_t v)
+static embed_bool put_int(uint8_t *buf, size_t cap, size_t *pos, int32_t v)
 {
     if (v < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint32_t u = (uint32_t)v;
     uint32_t scale = 1;
@@ -71,7 +71,7 @@ static proto_bool put_int(uint8_t *buf, size_t cap, size_t *pos, int32_t v)
     }
     if (*pos + n > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < n; i++)
     {
@@ -79,12 +79,12 @@ static proto_bool put_int(uint8_t *buf, size_t cap, size_t *pos, int32_t v)
         scale /= 10u;
     }
     *pos += n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Find a lower-case field-name at the start of a field-line in [body, body+len) and report the
 // offset of its field-value. A line starts at offset 0 or just past a '\n'. False when absent.
-static proto_bool find_key(const uint8_t *body, size_t len, const char *key, size_t klen, size_t *value_at)
+static embed_bool find_key(const uint8_t *body, size_t len, const char *key, size_t klen, size_t *value_at)
 {
     for (size_t i = 0; i + klen <= len; i++)
     {
@@ -92,19 +92,19 @@ static proto_bool find_key(const uint8_t *body, size_t len, const char *key, siz
             EMBED_CALL(memor.cmp, MemoriaCfg, .src = body + i, .other = key, .bytes = klen) == 0)
         {
             *value_at = i + klen;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Build one Length-Prefixed-Message from ns->msg into ns->out, under the frame byte in msg.flags.
-void protocore_grpc_web_frame(uint8_t *work)
+void protocore_grpc_web_frame(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = GrpcWebV.out.buf;
     const size_t body_len = GrpcWebV.msg.body_len;
-    GrpcWebV.ok = PROTO_FALSE;
+    GrpcWebV.ok = EMBED_FALSE;
     GrpcWebV.n = 0;
     // Message-Length is a 4 byte field, so a longer body has no frame that can carry it.
     if (!buf || (body_len && !GrpcWebV.msg.body) || body_len > 0xFFFFFFFFu)
@@ -124,7 +124,7 @@ void protocore_grpc_web_frame(uint8_t *work)
                    .bytes = body_len);
     }
     GrpcWebV.n = total;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWebV.ok = EMBED_TRUE;
 }
 
 // Frame a Message, taking its Compressed-Flag from msg.compressed and leaving the MSB clear.
@@ -140,12 +140,12 @@ void protocore_grpc_web_frame_message(uint8_t *work)
 
 // Build a trailers frame: the prefix, then `grpc-status:<Status>\r\n` and, when a Status-Message is
 // given, `grpc-message:<text>\r\n`. The prefix is reserved first and patched once the section ends.
-void protocore_grpc_web_frame_trailers(uint8_t *work)
+void protocore_grpc_web_frame_trailers(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = GrpcWebV.out.buf;
     const size_t cap = GrpcWebV.out.cap;
-    GrpcWebV.ok = PROTO_FALSE;
+    GrpcWebV.ok = EMBED_FALSE;
     GrpcWebV.n = 0;
     if (!buf || cap < PROTOCORE_GRPCWEB_PREFIX_LEN)
     {
@@ -169,17 +169,17 @@ void protocore_grpc_web_frame_trailers(uint8_t *work)
     buf[0] = PROTOCORE_GRPCWEB_TRAILERS;
     put_be32(buf + 1, (uint32_t)(pos - PROTOCORE_GRPCWEB_PREFIX_LEN));
     GrpcWebV.n = pos;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWebV.ok = EMBED_TRUE;
 }
 
 // Decode the Length-Prefixed-Message at the head of ns->in into ns->parsed, and report the octets
 // it spans in ns->n. False while fewer than the prefix plus Message-Length octets are buffered.
-void protocore_grpc_web_parse(uint8_t *work)
+void protocore_grpc_web_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = GrpcWebV.in.data;
     const size_t len = GrpcWebV.in.len;
-    GrpcWebV.ok = PROTO_FALSE;
+    GrpcWebV.ok = EMBED_FALSE;
     GrpcWebV.n = 0;
     if (!buf || len < PROTOCORE_GRPCWEB_PREFIX_LEN)
     {
@@ -196,18 +196,18 @@ void protocore_grpc_web_parse(uint8_t *work)
     GrpcWebV.parsed.body = buf + PROTOCORE_GRPCWEB_PREFIX_LEN;
     GrpcWebV.parsed.body_len = body_len;
     GrpcWebV.n = (size_t)PROTOCORE_GRPCWEB_PREFIX_LEN + body_len;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWebV.ok = EMBED_TRUE;
 }
 
 // Read Status, the "grpc-status" 1*DIGIT field-value, out of the trailer-section in ns->in.
-void protocore_grpc_web_trailers_status(uint8_t *work)
+void protocore_grpc_web_trailers_status(const uint8_t *work)
 {
     (void)work;
     static const char key[] = "grpc-status:";
     const uint8_t *body = GrpcWebV.in.data;
     const size_t len = GrpcWebV.in.len;
     size_t j = 0;
-    GrpcWebV.ok = PROTO_FALSE;
+    GrpcWebV.ok = EMBED_FALSE;
     GrpcWebV.i32 = 0;
     if (!body || !find_key(body, len, key, sizeof(key) - 1, &j))
     {
@@ -229,19 +229,19 @@ void protocore_grpc_web_trailers_status(uint8_t *work)
         }
     }
     GrpcWebV.i32 = (int32_t)v;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWebV.ok = EMBED_TRUE;
 }
 
 // Read Status-Message, the "grpc-message" field-value, out of the trailer-section in ns->in. The
 // slice runs to the end of its field-line and stays Percent-Encoded, so decoding is the caller's.
-void protocore_grpc_web_trailers_message(uint8_t *work)
+void protocore_grpc_web_trailers_message(const uint8_t *work)
 {
     (void)work;
     static const char key[] = "grpc-message:";
     const uint8_t *body = GrpcWebV.in.data;
     const size_t len = GrpcWebV.in.len;
     size_t start = 0;
-    GrpcWebV.ok = PROTO_FALSE;
+    GrpcWebV.ok = EMBED_FALSE;
     GrpcWebV.text = NULL;
     GrpcWebV.text_len = 0;
     if (!body || !find_key(body, len, key, sizeof(key) - 1, &start))
@@ -255,13 +255,13 @@ void protocore_grpc_web_trailers_message(uint8_t *work)
     }
     GrpcWebV.text = (const char *)(body + start);
     GrpcWebV.text_len = j - start;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWebV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 GrpcWebVars GrpcWebV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GRPC_WEB

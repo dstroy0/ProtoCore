@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_GOOSE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The GOOSE control fields (strings are borrowed, not copied). */
 typedef struct
@@ -38,9 +38,9 @@ typedef struct
     const uint8_t *t;              ///< 8-octet UtcTime (seconds-since-epoch + fraction + quality).
     uint32_t st_num;               ///< state number (bumped on a data change).
     uint32_t sq_num;               ///< sequence number (bumped on each resend).
-    proto_bool simulation;         ///< test/simulation flag.
+    embed_bool simulation;         ///< test/simulation flag.
     uint32_t conf_rev;             ///< configuration revision.
-    proto_bool nds_com;            ///< needs-commissioning flag.
+    embed_bool nds_com;            ///< needs-commissioning flag.
     uint32_t num_entries;          ///< number of dataset entries in allData.
     const uint8_t *all_data;       ///< pre-encoded BER SEQUENCE-of-Data body (contents of the AB field).
     size_t all_data_len;
@@ -74,9 +74,9 @@ typedef struct
     const uint8_t *t;        ///< 8-octet UtcTime, or nullptr
     uint32_t st_num;         ///< state number
     uint32_t sq_num;         ///< sequence number
-    proto_bool simulation;   ///< test / simulation flag
+    embed_bool simulation;   ///< test / simulation flag
     uint32_t conf_rev;       ///< configuration revision
-    proto_bool nds_com;      ///< needs-commissioning flag
+    embed_bool nds_com;      ///< needs-commissioning flag
     uint32_t num_entries;    ///< number of dataset entries
     const uint8_t *all_data; ///< the BER-encoded allData contents (inside the 0xAB tag), or nullptr
     size_t all_data_len;
@@ -87,9 +87,9 @@ typedef struct
  *        input buffer. Unknown / future PDU tags are skipped.
  * @return true iff the ethertype is 0x88B8 and the IECGoosePdu parses without truncation; false otherwise.
  */
-proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore_goose_rx *out);
+embed_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore_goose_rx *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GOOSE
 

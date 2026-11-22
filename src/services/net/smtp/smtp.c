@@ -21,7 +21,7 @@
 
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.encode: RFC 4648 sec 4
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport
@@ -34,7 +34,7 @@ PROTOCORE_BEGIN_DECLS
 // Reply codes this client acts on (RFC 5321 sec 4.2.3, RFC 4954 sec 6, RFC 3207 sec 4).
 #define SMTP_REPLY_SERVICE_READY 220 // <domain> Service ready, and STARTTLS ready to start TLS
 #define SMTP_REPLY_OK 250            // Requested mail action okay, completed
-#define SMTP_REPLY_WILL_FORWARD 251  // User not local; will forward to <forward-path>
+#define SMTP_REPLY_WILL_FORWARD 251  // User not local. Will forward to <forward-path>
 #define SMTP_REPLY_START_INPUT 354   // Start mail input; end with <CRLF>.<CRLF>
 #define SMTP_REPLY_AUTH_OK 235       // Authentication Succeeded
 #define SMTP_REPLY_AUTH_CONTINUE 334 // server challenge, base64 in the text part
@@ -55,7 +55,7 @@ typedef struct
     int cid;               ///< the ::TcpClient slot this session rides
     uint32_t deadline;     ///< the protocore_millis() value the current read gives up at
     const char *host;      ///< the server name; the SNI an upgrade offers
-    proto_bool tls_active; ///< every later record on this channel is encrypted
+    embed_bool tls_active; ///< every later record on this channel is encrypted
 } SmtpChannel;
 
 /**
@@ -71,7 +71,7 @@ struct SmtpStorage
     char reply[PROTOCORE_SMTP_REPLY_MAX]; ///< one reply, continuation lines included (RFC 5321 sec 4.5.3.1.5)
     char content[PROTOCORE_SMTP_MSG_MAX]; ///< the assembled message and its end of mail data indication
     int code;                             ///< the code the last complete reply carried
-    proto_bool keyword_seen;              ///< the last EHLO reply advertised the keyword that was probed for
+    embed_bool keyword_seen;              ///< the last EHLO reply advertised the keyword that was probed for
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -83,7 +83,10 @@ static_assert(SMTP_OFF_CTX + sizeof(struct SmtpStorage) <= PROTOCORE_SMTP_BORROW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SMTP_CTX(w) ((struct SmtpStorage *)(void *)((w) + SMTP_OFF_CTX))
+#define SMTP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SmtpStorage *)(const void *)((w) + SMTP_OFF_CTX),                               \
+        default: (struct SmtpStorage *)(void *)((w) + SMTP_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Reply parsing (RFC 5321 sec 4.2)
@@ -93,7 +96,7 @@ static_assert(SMTP_OFF_CTX + sizeof(struct SmtpStorage) <= PROTOCORE_SMTP_BORROW
 // Reply-line = *( Reply-code "-" [ textstring ] CRLF ) Reply-code [ SP textstring ] CRLF,
 // so continuation lines carry '-' after the code and the final line carries SP or nothing. On a
 // complete reply, write the three digits to *code and return true.
-static proto_bool reply_complete(const char *buf, size_t len, int *code)
+static embed_bool reply_complete(const char *buf, size_t len, int *code)
 {
     size_t start = 0;
     for (size_t i = 0; i + 1 < len; i++)
@@ -106,21 +109,21 @@ static proto_bool reply_complete(const char *buf, size_t len, int *code)
         if (line_len >= 3 && buf[start] >= '0' && buf[start] <= '9' && buf[start + 1] >= '0' && buf[start + 1] <= '9' &&
             buf[start + 2] >= '0' && buf[start + 2] <= '9')
         {
-            proto_bool final_line = (line_len == 3) || buf[start + 3] == ' ';
+            embed_bool final_line = (line_len == 3) || buf[start + 3] == ' ';
             if (final_line)
             {
                 *code = (buf[start] - '0') * 100 + (buf[start + 1] - '0') * 10 + (buf[start + 2] - '0');
-                return PROTO_TRUE;
+                return EMBED_TRUE;
             }
         }
         start = i + 2; // the next line begins after the CRLF
     }
-    return PROTO_FALSE; // no final line yet - more octets are needed
+    return EMBED_FALSE; // no final line yet - more octets are needed
 }
 
 // Case-insensitive compare of @p n octets. RFC 5321 sec 4.1.1.1: EHLO keywords may be specified in
 // upper, lower, or mixed case and MUST be recognized case-insensitively.
-static proto_bool keyword_ieq(const char *a, const char *b, size_t n)
+static embed_bool keyword_ieq(const char *a, const char *b, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -136,17 +139,17 @@ static proto_bool keyword_ieq(const char *a, const char *b, size_t n)
         }
         if (ca != cb)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Does @p keyword appear as a whole ehlo-keyword of its own? RFC 5321 sec 4.1.1.1 gives
 // ehlo-line = ehlo-keyword *( SP ehlo-param ), one per reply line after the code and its separator,
 // so the keyword starts at offset 4 and ends at a space or the CRLF. Matching it whole is what
 // keeps "STARTTLSX" from reading as STARTTLS.
-static proto_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyword)
+static embed_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyword)
 {
     size_t wlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = keyword,
                              .cap = len + 1); // a whole keyword cannot outrun the reply that carries it
@@ -164,12 +167,12 @@ static proto_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyw
             size_t klen = line_len - 4;
             if (klen >= wlen && keyword_ieq(kw, keyword, wlen) && (klen == wlen || kw[wlen] == ' '))
             {
-                return PROTO_TRUE;
+                return EMBED_TRUE;
             }
         }
         start = i + 2;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // ---------------------------------------------------------------------------
@@ -177,7 +180,7 @@ static proto_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyw
 // ---------------------------------------------------------------------------
 
 // Publish one session's outcome on the handle.
-static void finish(uint8_t *work, SmtpResult r)
+static void finish(const uint8_t *work, SmtpResult r)
 {
     SmtpV.result = r;
     SmtpV.ok = (r == SMTP_OK);
@@ -185,7 +188,7 @@ static void finish(uint8_t *work, SmtpResult r)
 }
 
 // Write a whole command line; true only when every octet went out.
-static proto_bool send_line(uint8_t *work, const char *line)
+static embed_bool send_line(uint8_t *work, const char *line)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = line, .cap = PROTOCORE_SMTP_LINE_MAX + 1);
     return n == 0 || SmtpV.transport.send(SmtpV.transport.ctx, (const uint8_t *)line, n) == (int)n;
@@ -380,11 +383,11 @@ static int build_content(uint8_t *work)
     size_t n = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb);
     if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = out, .cap = cap, .at = sb))
     {
-        return (int)SMTP_ERR_OVERFLOW;
+        return SMTP_ERR_OVERFLOW;
     }
 
     const char *b = SmtpV.content.body ? SmtpV.content.body : "";
-    proto_bool at_line_start = PROTO_TRUE;
+    embed_bool at_line_start = EMBED_TRUE;
     for (size_t i = 0; b[i]; i++)
     {
         char c = b[i];
@@ -396,27 +399,27 @@ static int build_content(uint8_t *work)
         {
             if (n + 2 > cap)
             {
-                return (int)SMTP_ERR_OVERFLOW;
+                return SMTP_ERR_OVERFLOW;
             }
             out[n++] = '\r';
             out[n++] = '\n';
-            at_line_start = PROTO_TRUE;
+            at_line_start = EMBED_TRUE;
             continue;
         }
         if (at_line_start && c == '.')
         {
             if (n + 1 > cap)
             {
-                return (int)SMTP_ERR_OVERFLOW;
+                return SMTP_ERR_OVERFLOW;
             }
             out[n++] = '.'; // the inserted period of RFC 5321 sec 4.5.2
         }
         if (n + 1 > cap)
         {
-            return (int)SMTP_ERR_OVERFLOW;
+            return SMTP_ERR_OVERFLOW;
         }
         out[n++] = c;
-        at_line_start = PROTO_FALSE;
+        at_line_start = EMBED_FALSE;
     }
     // RFC 5321 sec 4.1.1.4: the first CRLF of the terminating sequence is the one that ends the
     // final line of the message, and an extra CRLF MUST NOT be added. n is past the fixed header
@@ -426,14 +429,14 @@ static int build_content(uint8_t *work)
     {
         if (n + 2 > cap)
         {
-            return (int)SMTP_ERR_OVERFLOW;
+            return SMTP_ERR_OVERFLOW;
         }
         out[n++] = '\r';
         out[n++] = '\n';
     }
     if (n + 3 > cap)
     {
-        return (int)SMTP_ERR_OVERFLOW;
+        return SMTP_ERR_OVERFLOW;
     }
     out[n++] = '.';
     out[n++] = '\r';
@@ -541,7 +544,7 @@ uint8_t *protocore_smtp_span(void)
 void protocore_smtp_run(uint8_t *work)
 {
     SMTP_CTX(work)->code = 0;
-    SMTP_CTX(work)->keyword_seen = PROTO_FALSE;
+    SMTP_CTX(work)->keyword_seen = EMBED_FALSE;
 
     if (!SmtpV.transport.send || !SmtpV.transport.recv || !SmtpV.session.host || !SmtpV.envelope.reverse_path ||
         !SmtpV.envelope.reverse_path[0] || !SmtpV.envelope.forward_path || !SmtpV.envelope.forward_path[0])
@@ -674,11 +677,11 @@ static int wire_recv(void *ctx, uint8_t *buf, size_t cap)
 }
 
 // The in-place upgrade RFC 3207 sec 4 asks for, run after the server's 220.
-static proto_bool wire_starttls(void *ctx)
+static embed_bool wire_starttls(void *ctx)
 {
     SmtpChannel *chan = (SmtpChannel *)ctx;
     (void)chan;
-    return PROTO_FALSE; // STARTTLS asked for in a build without TLS
+    return EMBED_FALSE; // STARTTLS asked for in a build without TLS
 }
 
 // Dial the server, step the open to a connection, walk the session, close.
@@ -703,10 +706,10 @@ void protocore_smtp_send(uint8_t *work)
     }
     chan->cid = TcpClientV.i32;
     chan->host = SmtpV.session.host;
-    chan->tls_active = PROTO_FALSE;
+    chan->tls_active = EMBED_FALSE;
     chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
 
-    // open() takes a slot and starts the name lookup; the connection exists only once connected()
+    // open() takes a slot and starts the name lookup. The connection exists only once connected()
     // says so, so the open is stepped here until it lands, closes, or runs out of budget.
     for (;;)
     {
@@ -763,6 +766,6 @@ void protocore_smtp_send(uint8_t *work)
 /** @brief The operands and the outcome. */
 SmtpVars SmtpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SMTP

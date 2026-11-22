@@ -20,13 +20,13 @@ typedef struct
 } UpMsg;
 static UpMsg g_up[64];
 static size_t g_up_n;
-static proto_bool g_up_accept = PROTO_TRUE;
+static embed_bool g_up_accept = EMBED_TRUE;
 
-static proto_bool cap_uplink(const protocore_gateway_msg *m, void *)
+static embed_bool cap_uplink(const protocore_gateway_msg *m, void *)
 {
     if (!g_up_accept)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     UpMsg u;
     u.payload_len = (size_t)(m->len) < 512 ? (size_t)(m->len) : 512;
@@ -41,7 +41,7 @@ static proto_bool cap_uplink(const protocore_gateway_msg *m, void *)
     {
         g_up[g_up_n++] = u;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 typedef struct
@@ -53,13 +53,13 @@ typedef struct
 } DownMsg;
 static DownMsg g_down[64];
 static size_t g_down_n;
-static proto_bool g_tx_accept = PROTO_TRUE;
+static embed_bool g_tx_accept = EMBED_TRUE;
 
-static proto_bool cap_tx(uint8_t port, uint16_t dst, const uint8_t *d, uint16_t n, void *)
+static embed_bool cap_tx(uint8_t port, uint16_t dst, const uint8_t *d, uint16_t n, void *)
 {
     if (!g_tx_accept)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     DownMsg x;
     x.payload_len = (size_t)(n) < 512 ? (size_t)(n) : 512;
@@ -70,17 +70,17 @@ static proto_bool cap_tx(uint8_t port, uint16_t dst, const uint8_t *d, uint16_t 
     {
         g_down[g_down_n++] = x;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool add_port(uint8_t id, protocore_gateway_kind kind, uint16_t rate, proto_bool withtx)
+static embed_bool add_port(uint8_t id, protocore_gateway_kind kind, uint16_t rate, embed_bool withtx)
 {
     protocore_gateway_port_config c = {0};
     c.port_id = id;
     c.kind = kind;
     c.tx = withtx ? cap_tx : NULL;
     c.rate_cap = rate;
-    proto_bool gateway_ok = Gateway.add_port(protocore_gateway_span(), &c);
+    embed_bool gateway_ok = Gateway.add_port(protocore_gateway_span(), &c);
     return gateway_ok;
 }
 
@@ -105,8 +105,8 @@ void setUp()
 {
     g_up_n = 0;
     g_down_n = 0;
-    g_up_accept = PROTO_TRUE;
-    g_tx_accept = PROTO_TRUE;
+    g_up_accept = EMBED_TRUE;
+    g_tx_accept = EMBED_TRUE;
     Gateway.reset(protocore_gateway_span());
     Clock.src.fn = test_clock;
     Clock.src.ticks_per_second = 1000;
@@ -120,10 +120,10 @@ void tearDown()
 
 void test_uplink_envelopes_and_publishes()
 {
-    TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE));
     Gateway.set_uplink_cb(protocore_gateway_span(), cap_uplink, NULL);
     const uint8_t hi[2] = {'h', 'i'};
-    proto_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 0x42, hi, 2, -50);
+    embed_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 0x42, hi, 2, -50);
     TEST_ASSERT_TRUE(gateway_ok);
     TEST_ASSERT_EQUAL_size_t(1, g_up_n);
     TEST_ASSERT_EQUAL_UINT16(0x42, g_up[0].src_addr);
@@ -137,9 +137,9 @@ void test_uplink_envelopes_and_publishes()
 
 void test_uplink_no_sink_drops()
 {
-    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE);
     const uint8_t x[1] = {1};
-    proto_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
+    embed_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
     TEST_ASSERT_FALSE(gateway_ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().up_published);
@@ -149,7 +149,7 @@ void test_uplink_unknown_port_drops()
 {
     Gateway.set_uplink_cb(protocore_gateway_span(), cap_uplink, NULL);
     const uint8_t x[1] = {1};
-    proto_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 9, 1, x, 1, 0);
+    embed_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 9, 1, x, 1, 0);
     TEST_ASSERT_FALSE(gateway_ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_size_t(0, g_up_n);
@@ -157,10 +157,10 @@ void test_uplink_unknown_port_drops()
 
 void test_uplink_rate_cap()
 {
-    add_port(0, PROTOCORE_GW_NRF24, 2, PROTO_FALSE);
+    add_port(0, PROTOCORE_GW_NRF24, 2, EMBED_FALSE);
     Gateway.set_uplink_cb(protocore_gateway_span(), cap_uplink, NULL);
     const uint8_t x[1] = {7};
-    proto_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
+    embed_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
     TEST_ASSERT_TRUE(gateway_ok);
     gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
     TEST_ASSERT_TRUE(gateway_ok);
@@ -176,11 +176,11 @@ void test_uplink_rate_cap()
 
 void test_uplink_sink_refusal_counted()
 {
-    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE);
     Gateway.set_uplink_cb(protocore_gateway_span(), cap_uplink, NULL);
-    g_up_accept = PROTO_FALSE;
+    g_up_accept = EMBED_FALSE;
     const uint8_t x[1] = {1};
-    proto_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
+    embed_bool gateway_ok = Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
     TEST_ASSERT_FALSE(gateway_ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().up_published);
@@ -188,9 +188,9 @@ void test_uplink_sink_refusal_counted()
 
 void test_downlink_transmits()
 {
-    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_TRUE);
+    add_port(0, PROTOCORE_GW_LORA, 0, EMBED_TRUE);
     const uint8_t cmd[3] = {'c', 'm', 'd'};
-    proto_bool gateway_ok = Gateway.downlink(protocore_gateway_span(), 0, 0x10, cmd, 3);
+    embed_bool gateway_ok = Gateway.downlink(protocore_gateway_span(), 0, 0x10, cmd, 3);
     TEST_ASSERT_TRUE(gateway_ok);
     TEST_ASSERT_EQUAL_size_t(1, g_down_n);
     TEST_ASSERT_EQUAL_UINT8(0, g_down[0].port_id);
@@ -201,9 +201,9 @@ void test_downlink_transmits()
 
 void test_downlink_no_tx_or_unknown_port_drops()
 {
-    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE);
     const uint8_t x[1] = {1};
-    proto_bool gateway_ok = Gateway.downlink(protocore_gateway_span(), 0, 1, x, 1);
+    embed_bool gateway_ok = Gateway.downlink(protocore_gateway_span(), 0, 1, x, 1);
     TEST_ASSERT_FALSE(gateway_ok);
     gateway_ok = Gateway.downlink(protocore_gateway_span(), 9, 1, x, 1);
     TEST_ASSERT_FALSE(gateway_ok);
@@ -212,10 +212,10 @@ void test_downlink_no_tx_or_unknown_port_drops()
 
 void test_downlink_tx_refusal_counted()
 {
-    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_TRUE);
-    g_tx_accept = PROTO_FALSE;
+    add_port(0, PROTOCORE_GW_LORA, 0, EMBED_TRUE);
+    g_tx_accept = EMBED_FALSE;
     const uint8_t x[1] = {1};
-    proto_bool gateway_ok = Gateway.downlink(protocore_gateway_span(), 0, 1, x, 1);
+    embed_bool gateway_ok = Gateway.downlink(protocore_gateway_span(), 0, 1, x, 1);
     TEST_ASSERT_FALSE(gateway_ok);
     TEST_ASSERT_EQUAL_UINT32(1, stats().down_dropped);
     TEST_ASSERT_EQUAL_UINT32(0, stats().down_sent);
@@ -251,19 +251,19 @@ void test_topic_format()
 
 void test_add_port_validation_and_table_full()
 {
-    proto_bool gateway_ok = Gateway.add_port(protocore_gateway_span(), NULL);
+    embed_bool gateway_ok = Gateway.add_port(protocore_gateway_span(), NULL);
     TEST_ASSERT_FALSE(gateway_ok);
-    TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
-    TEST_ASSERT_TRUE(add_port(1, PROTOCORE_GW_NRF24, 0, PROTO_FALSE));
-    TEST_ASSERT_TRUE(add_port(2, PROTOCORE_GW_ZIGBEE, 0, PROTO_FALSE));
-    TEST_ASSERT_TRUE(add_port(3, PROTOCORE_GW_BLE, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(add_port(4, PROTOCORE_GW_LORA, 0, PROTO_FALSE));
+    TEST_ASSERT_TRUE(add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE));
+    TEST_ASSERT_FALSE(add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE));
+    TEST_ASSERT_TRUE(add_port(1, PROTOCORE_GW_NRF24, 0, EMBED_FALSE));
+    TEST_ASSERT_TRUE(add_port(2, PROTOCORE_GW_ZIGBEE, 0, EMBED_FALSE));
+    TEST_ASSERT_TRUE(add_port(3, PROTOCORE_GW_BLE, 0, EMBED_FALSE));
+    TEST_ASSERT_FALSE(add_port(4, PROTOCORE_GW_LORA, 0, EMBED_FALSE));
 }
 
 void test_seq_increments_per_uplink()
 {
-    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE);
     Gateway.set_uplink_cb(protocore_gateway_span(), cap_uplink, NULL);
     const uint8_t x[1] = {1};
     Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);
@@ -296,7 +296,7 @@ void test_topic_zero_and_overflow_steps()
 
 void test_get_stats_null_out_is_noop()
 {
-    add_port(0, PROTOCORE_GW_LORA, 0, PROTO_FALSE);
+    add_port(0, PROTOCORE_GW_LORA, 0, EMBED_FALSE);
     Gateway.set_uplink_cb(protocore_gateway_span(), cap_uplink, NULL);
     const uint8_t x[1] = {1};
     Gateway.uplink(protocore_gateway_span(), 0, 1, x, 1, 0);

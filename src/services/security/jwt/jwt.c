@@ -21,7 +21,7 @@
 #include "network_drivers/presentation/codec/base64/base64.h" // base64url, RFC 4648 sec 5
 #include "server/core/worker/worker.h"                        // the MAC's working set, wiped on release
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // HS256 emits a 32-byte MAC, and 32 bytes in base64url with the padding skipped are 43 characters
 // (RFC 4648 sec 5).
@@ -60,23 +60,23 @@ typedef struct
 
 // Split on the two periods of the compact serialization (RFC 7515 sec 7.1). A third period is a
 // different serialization and fails here.
-static proto_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
+static embed_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
 {
     const char *d1 = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = jws, .bytes = jws_len, .val = (uint8_t)'.');
     if (!d1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const size_t rem1 = jws_len - (size_t)(d1 + 1 - jws);
     const char *d2 = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = d1 + 1, .bytes = rem1, .val = (uint8_t)'.');
     if (!d2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const size_t rem2 = jws_len - (size_t)(d2 + 1 - jws);
     if (EMBED_CALL(memor.chr, MemoriaCfg, .src = d2 + 1, .bytes = rem2, .val = (uint8_t)'.'))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     parts->header = jws;
     parts->header_len = (size_t)(d1 - jws);
@@ -85,13 +85,13 @@ static proto_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
     parts->signature = d2 + 1;
     parts->signature_len = rem2;
     parts->signing_len = (size_t)(d2 - jws);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // RFC 7515 sec 4.1.1: `alg` names the algorithm that secures the JWS, and RFC 8725 sec 3.1 requires
 // the operation performed to be the one it names. Decode the header segment and demand HS256
 // (RFC 7518 sec 3.1), which settles `none`, RS256 and every other substitution before the MAC runs.
-static proto_bool alg_is_hs256(uint8_t *work, const char *header, size_t header_len)
+static embed_bool alg_is_hs256(uint8_t *work, const char *header, size_t header_len)
 {
     uint8_t buf[JWT_JOSE_HDR_CAP];
     Base64V.url_decode_args.src = header;
@@ -102,15 +102,15 @@ static proto_bool alg_is_hs256(uint8_t *work, const char *header, size_t header_
     const size_t n = Base64V.n;
     if (n == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     buf[n] = '\0';
 
     const char *p = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = (const char *)buf, .cap = n + 1u,
-                               .other = "\"alg\"", .other_cap = sizeof("\"alg\""), .ci = PROTO_FALSE);
+                               .other = "\"alg\"", .other_cap = sizeof("\"alg\""), .ci = EMBED_FALSE);
     if (!p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p += sizeof("\"alg\"") - 1u;
     while (*p == ' ' || *p == ':' || *p == '\t')
@@ -119,14 +119,14 @@ static proto_bool alg_is_hs256(uint8_t *work, const char *header, size_t header_
     }
     if (*p != '"')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p++;
     // The value plus its closing quote, compared against what is left of the decoded header.
     const size_t left = n - (size_t)(p - (const char *)buf);
     if (left < sizeof("HS256\"") - 1u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return EMBED_CALL(memor.cmp, MemoriaCfg, .src = p, .other = "HS256\"", .bytes = sizeof("HS256\"") - 1u) == 0;
 }
@@ -142,7 +142,7 @@ static const char *bearer_token(const char *credentials)
         return NULL;
     }
     if (!EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = credentials, .other = "Bearer ", .cap = sizeof("Bearer "),
-                    .ci = PROTO_TRUE))
+                    .ci = EMBED_TRUE))
     {
         return NULL;
     }
@@ -193,7 +193,7 @@ static const char *claim_value(uint8_t *work, const char *jws, size_t jws_len, c
         return NULL;
     }
     const char *p = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = (const char *)buf, .cap = n + 1u, .other = key,
-                               .other_cap = kn + 1u, .ci = PROTO_FALSE);
+                               .other_cap = kn + 1u, .ci = EMBED_FALSE);
     if (!p)
     {
         return NULL;
@@ -208,22 +208,22 @@ static const char *claim_value(uint8_t *work, const char *jws, size_t jws_len, c
 
 // The integer claim @p name, or false when the claim is absent or its value is not a number. Both
 // claim reads and the time-claim check go through this one scan.
-static proto_bool claim_num(uint8_t *work, const char *jws, size_t jws_len, const char *name, long *out)
+static embed_bool claim_num(uint8_t *work, const char *jws, size_t jws_len, const char *name, long *out)
 {
     uint8_t buf[PROTOCORE_JWT_MAX_LEN];
     const char *v = claim_value(work, jws, jws_len, name, buf, sizeof(buf));
     if (!v)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *end = v;
     const long parsed = EMBED_CALL(cellul.to_long, TransfiguroCfg, .src = v, .end = &end);
     if (end == v) // no digit converted
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = parsed;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // RFC 7515 sec 5.2: the JWS Signature is validated against the JWS Signing Input under the
@@ -234,7 +234,7 @@ void protocore_jwt_verify_mac(uint8_t *work)
     (void)work;
     const char *jws = JwtV.token.jws;
     const size_t jws_len = JwtV.token.jws_len;
-    JwtV.ok = PROTO_FALSE;
+    JwtV.ok = EMBED_FALSE;
     if (!jws || jws_len < 5u || jws_len > PROTOCORE_JWT_MAX_LEN)
     {
         return;
@@ -261,18 +261,16 @@ void protocore_jwt_verify_mac(uint8_t *work)
 
     uint8_t mac[PROTOCORE_HMAC_SHA256_LEN];
     // One borrow for this token's MAC, returned before the compare.
-    const size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span ws = EMBED_CALL(spat.from, SpatiumCfg,
                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                   PROTOCORE_HMAC_SHA256_BORROW, protocore_secure_owner()),
                               .cap = PROTOCORE_HMAC_SHA256_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
         return;
     }
     HmacSha256.mac(ws.buf, JwtV.key.secret, JwtV.key.secret_len, (const uint8_t *)jws, parts.signing_len, mac);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
 
     char computed[JWT_SIG_B64_CAP];
     // A 32-byte MAC is always 43 base64url characters, so this length test never fires.
@@ -293,7 +291,7 @@ void protocore_jwt_verify_bearer(uint8_t *work)
     const char *tok = bearer_token(JwtV.token.credentials);
     if (!tok)
     {
-        JwtV.ok = PROTO_FALSE;
+        JwtV.ok = EMBED_FALSE;
         return;
     }
     JwtV.token.jws = tok;
@@ -314,7 +312,7 @@ void protocore_jwt_time_claims_valid(uint8_t *work)
     const size_t jws_len = JwtV.token.jws_len;
     const long now = JwtV.time.now;
     const long leeway_s = JwtV.time.leeway_s;
-    JwtV.ok = PROTO_TRUE;
+    JwtV.ok = EMBED_TRUE;
     if (!jws || now <= 0)
     {
         return; // no wall clock: neither claim can be judged, and the MAC is the gate
@@ -323,14 +321,14 @@ void protocore_jwt_time_claims_valid(uint8_t *work)
     long exp = 0;
     if (claim_num(work, jws, jws_len, "exp", &exp) && (exp <= 0 || now - exp > leeway_s))
     {
-        JwtV.ok = PROTO_FALSE;
+        JwtV.ok = EMBED_FALSE;
         return;
     }
 
     long nbf = 0;
     if (claim_num(work, jws, jws_len, "nbf", &nbf) && nbf > 0 && nbf - now > leeway_s)
     {
-        JwtV.ok = PROTO_FALSE;
+        JwtV.ok = EMBED_FALSE;
     }
 }
 
@@ -373,7 +371,7 @@ void protocore_jwt_claim_str(uint8_t *work)
     (void)work;
     char *out = JwtV.claim.out;
     const size_t out_cap = JwtV.claim.out_cap;
-    JwtV.ok = PROTO_FALSE;
+    JwtV.ok = EMBED_FALSE;
     if (!out || out_cap == 0)
     {
         return;
@@ -402,18 +400,18 @@ void protocore_jwt_claim_str(uint8_t *work)
         return;
     }
     out[i] = '\0';
-    JwtV.ok = PROTO_TRUE;
+    JwtV.ok = EMBED_TRUE;
 }
 
 // RFC 6749 sec 3.3: a scope is a list of space-delimited, case-sensitive strings, which is the
 // syntax RFC 8693 sec 4.2 gives the `scope` claim. The match is on a whole token, so a prefix of one
 // never passes.
-void protocore_jwt_scope_allows(uint8_t *work)
+void protocore_jwt_scope_allows(const uint8_t *work)
 {
     (void)work;
     const char *claim = JwtV.scope.claim;
     const char *required = JwtV.scope.required;
-    JwtV.ok = PROTO_FALSE;
+    JwtV.ok = EMBED_FALSE;
     if (!claim || !required || !*required)
     {
         return;
@@ -434,7 +432,7 @@ void protocore_jwt_scope_allows(uint8_t *work)
         if ((size_t)(p - start) == rlen &&
             EMBED_CALL(memor.cmp, MemoriaCfg, .src = start, .other = required, .bytes = rlen) == 0)
         {
-            JwtV.ok = PROTO_TRUE;
+            JwtV.ok = EMBED_TRUE;
             return;
         }
     }
@@ -444,6 +442,6 @@ void protocore_jwt_scope_allows(uint8_t *work)
 /** @brief The operands and the outcome. */
 JwtVars JwtV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_JWT

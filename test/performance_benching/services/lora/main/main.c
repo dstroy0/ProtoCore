@@ -10,7 +10,7 @@
 //     chip-select). This rig has no radio wired, so - exactly as the host test test_lora does - the
 //     bus is a mock SX127x: a register file plus a FIFO with the chip's auto-incrementing address
 //     pointer. That stub satisfies the driver's bus with plain memory accesses, so the benched cycles
-//     are the register-sequence CPU cost only; the actual RF link (SPI transactions, PA, air time) is
+//     are the register-sequence CPU cost only. The actual RF link (SPI transactions, PA, air time) is
 //     deliberately out of scope everywhere here.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

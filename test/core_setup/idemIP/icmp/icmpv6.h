@@ -16,7 +16,7 @@
 #include "idemIP/checksum.h"
 #include "idemIP/ip/ipv6.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // The common three fields, at the head of every message (RFC 4443 sec 2.1)
@@ -38,15 +38,14 @@ PROTOCORE_BEGIN_DECLS
 #define IDEMIP_ICMP6_INFORMATIONAL 0x80u
 
 /** @brief Message types RFC 4443 assigns. Numbered apart from RFC 792's. */
-typedef enum PROTO_ENUM_PACKED
-{
-    IDEMIP_ICMP6_DEST_UNREACHABLE = 1,  ///< sec 3.1
-    IDEMIP_ICMP6_PACKET_TOO_BIG = 2,    ///< sec 3.2
-    IDEMIP_ICMP6_TIME_EXCEEDED = 3,     ///< sec 3.3
-    IDEMIP_ICMP6_PARAMETER_PROBLEM = 4, ///< sec 3.4
-    IDEMIP_ICMP6_ECHO_REQUEST = 128,    ///< sec 4.1
-    IDEMIP_ICMP6_ECHO_REPLY = 129,      ///< sec 4.2
-} IdemIpIcmp6Type;
+EMBED_ENUM_BYTE(IdemIpIcmp6Type,
+                IDEMIP_ICMP6_DEST_UNREACHABLE = 1,  ///< sec 3.1
+                IDEMIP_ICMP6_PACKET_TOO_BIG = 2,    ///< sec 3.2
+                IDEMIP_ICMP6_TIME_EXCEEDED = 3,     ///< sec 3.3
+                IDEMIP_ICMP6_PARAMETER_PROBLEM = 4, ///< sec 3.4
+                IDEMIP_ICMP6_ECHO_REQUEST = 128,    ///< sec 4.1
+                IDEMIP_ICMP6_ECHO_REPLY = 129,      ///< sec 4.2
+);
 
 // ---------------------------------------------------------------------------
 // Codes (RFC 4443 sec 3)
@@ -101,49 +100,49 @@ typedef enum PROTO_ENUM_PACKED
 #define IDEMIP_ICMP6_ERR_QUOTE_MAX (IDEMIP_IPV6_MIN_MTU - IDEMIP_IPV6_HDR_LEN - IDEMIP_ICMP6_ERR_HDR_LEN)
 
 /** @brief Type. */
-PROTOCORE_INLINE uint8_t idemip_icmp6_type(const uint8_t *m)
+EMBED_INLINE uint8_t idemip_icmp6_type(const uint8_t *m)
 {
     return m[IDEMIP_ICMP6_OFF_TYPE];
 }
 
 /** @brief Code; its meaning depends on the type. */
-PROTOCORE_INLINE uint8_t idemip_icmp6_code(const uint8_t *m)
+EMBED_INLINE uint8_t idemip_icmp6_code(const uint8_t *m)
 {
     return m[IDEMIP_ICMP6_OFF_CODE];
 }
 
 /** @brief Checksum as carried. */
-PROTOCORE_INLINE uint16_t idemip_icmp6_cksum(const uint8_t *m)
+EMBED_INLINE uint16_t idemip_icmp6_cksum(const uint8_t *m)
 {
     return idemip_rd16(m + IDEMIP_ICMP6_OFF_CKSUM);
 }
 
 /** @brief True for types 128 through 255, which are informational rather than errors. */
-PROTOCORE_INLINE proto_bool idemip_icmp6_is_informational(const uint8_t *m)
+EMBED_INLINE embed_bool idemip_icmp6_is_informational(const uint8_t *m)
 {
     return (m[IDEMIP_ICMP6_OFF_TYPE] & IDEMIP_ICMP6_INFORMATIONAL) != 0u;
 }
 
 /** @brief Identifier (echo request and echo reply). */
-PROTOCORE_INLINE uint16_t idemip_icmp6_id(const uint8_t *m)
+EMBED_INLINE uint16_t idemip_icmp6_id(const uint8_t *m)
 {
     return idemip_rd16(m + IDEMIP_ICMP6_OFF_ID);
 }
 
 /** @brief Sequence Number (echo request and echo reply). */
-PROTOCORE_INLINE uint16_t idemip_icmp6_seq(const uint8_t *m)
+EMBED_INLINE uint16_t idemip_icmp6_seq(const uint8_t *m)
 {
     return idemip_rd16(m + IDEMIP_ICMP6_OFF_SEQ);
 }
 
 /** @brief MTU of the next-hop link (Packet Too Big). */
-PROTOCORE_INLINE uint32_t idemip_icmp6_mtu(const uint8_t *m)
+EMBED_INLINE uint32_t idemip_icmp6_mtu(const uint8_t *m)
 {
     return idemip_rd32(m + IDEMIP_ICMP6_OFF_MTU);
 }
 
 /** @brief Octet offset within the invoking packet where the fault was found (Parameter Problem). */
-PROTOCORE_INLINE uint32_t idemip_icmp6_pointer(const uint8_t *m)
+EMBED_INLINE uint32_t idemip_icmp6_pointer(const uint8_t *m)
 {
     return idemip_rd32(m + IDEMIP_ICMP6_OFF_POINTER);
 }
@@ -158,8 +157,7 @@ PROTOCORE_INLINE uint32_t idemip_icmp6_pointer(const uint8_t *m)
  * The caller zeroes the checksum field first. Unlike RFC 792, the addresses are covered, because
  * IPv6 carries no header checksum of its own.
  */
-PROTOCORE_INLINE uint16_t idemip_icmp6_cksum_compute(const uint8_t *m, size_t len, const uint8_t *src,
-                                                     const uint8_t *dst)
+EMBED_INLINE uint16_t idemip_icmp6_cksum_compute(const uint8_t *m, size_t len, const uint8_t *src, const uint8_t *dst)
 {
     uint32_t sum = idemip_ip6_pseudo_accum(0u, src, dst, (uint32_t)len, IDEMIP_IP6_NH_ICMPV6);
     return idemip_cksum_final(idemip_cksum_accum(sum, m, len));
@@ -174,6 +172,6 @@ static_assert(IDEMIP_ICMP6_ECHO_REQUEST >= IDEMIP_ICMP6_INFORMATIONAL,
 static_assert(IDEMIP_ICMP6_PARAMETER_PROBLEM < IDEMIP_ICMP6_INFORMATIONAL,
               "RFC 4443 sec 2.1 puts the error types below 128");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_ICMPV6_H

@@ -28,7 +28,7 @@
 
 // Elapsed-time test, wrap-safe across a Clock.ms rollover (unsigned arithmetic is modulo 2^32).
 // A limit of 0 is always satisfied, which is what disables debounce / hold.
-static inline proto_bool elapsed(uint32_t now, uint32_t since, uint32_t limit)
+static inline embed_bool elapsed(uint32_t now, uint32_t since, uint32_t limit)
 {
     return (now - since) >= limit;
 }
@@ -55,7 +55,7 @@ uint8_t *protocore_rcwl0516_span(void)
     return s_own.span;
 }
 
-void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
+void protocore_rcwl0516_presence_init(const uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
                                       uint32_t now)
 {
     (void)work;
@@ -74,13 +74,13 @@ void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t d
     c->changed = 0;
 }
 
-proto_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, proto_bool pin_high, uint32_t now)
+embed_bool protocore_rcwl0516_presence_update(const uint8_t *work, PresenceCore *c, embed_bool pin_high, uint32_t now)
 {
     (void)work;
 
     if (!c)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t lvl = pin_high ? 1u : 0u;
 
@@ -91,7 +91,7 @@ proto_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, pr
         c->raw_since_ms = now;
     }
 
-    // 2) believe the raw level once it has outlasted the debounce
+    // 2) believe the raw level once it outlasted the debounce
     if (elapsed(now, c->raw_since_ms, c->debounce_ms))
     {
         c->stable = c->raw;
@@ -116,23 +116,23 @@ proto_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, pr
     return c->present != 0;
 }
 
-proto_bool protocore_rcwl0516_presence_get(uint8_t *work, const PresenceCore *c)
+embed_bool protocore_rcwl0516_presence_get(const uint8_t *work, const PresenceCore *c)
 {
     (void)work;
 
     return c && c->present != 0;
 }
 
-proto_bool protocore_rcwl0516_presence_take_event(uint8_t *work, PresenceCore *c)
+embed_bool protocore_rcwl0516_presence_take_event(const uint8_t *work, PresenceCore *c)
 {
     (void)work;
 
     if (!c || !c->changed)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     c->changed = 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_rcwl0516_core_init(uint8_t *work, PresenceCore *c, uint32_t now)
@@ -151,7 +151,7 @@ typedef struct
 {
     PresenceCore core;
     int pin;
-    proto_bool begun; ///< begin() ran; until it has, the pin reports -1
+    embed_bool begun; ///< begin() ran; until it has, the pin reports -1
 } Rcwl0516Ctx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -170,7 +170,10 @@ static_assert(RCWL0516_OFF_CTX % _Alignof(Rcwl0516Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define RCWL0516_CTX(w) ((Rcwl0516Ctx *)(void *)((w) + RCWL0516_OFF_CTX))
+#define RCWL0516_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Rcwl0516Ctx *)(const void *)((w) + RCWL0516_OFF_CTX),                                  \
+        default: (Rcwl0516Ctx *)(void *)((w) + RCWL0516_OFF_CTX))
 
 // The pin, or -1 for "there is none" - which is what a failed or absent begin() reports, the way a
 // main() reports failure. Stated here rather than as an initializer on the declaration so the
@@ -182,31 +185,31 @@ static int dev_pin(uint8_t *work)
     return RCWL0516_CTX(work)->begun ? RCWL0516_CTX(work)->pin : -1;
 }
 
-proto_bool protocore_rcwl0516_begin(uint8_t *work, int out_pin)
+embed_bool protocore_rcwl0516_begin(uint8_t *work, int out_pin)
 {
 
     RCWL0516_CTX(work)->pin = out_pin;
-    RCWL0516_CTX(work)->begun = PROTO_TRUE;
+    RCWL0516_CTX(work)->begun = EMBED_TRUE;
     protocore_platform_gpio_mode((uint8_t)(out_pin),
                                  PROTOCORE_GPIO_IN); // the module drives OUT actively; no pull needed
     Rcwl0516.core_init(work, &RCWL0516_CTX(work)->core, Clock.ms);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_rcwl0516_poll(uint8_t *work)
+embed_bool protocore_rcwl0516_poll(uint8_t *work)
 {
     const int pin = dev_pin(work);
     if (pin < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     Rcwl0516.presence_update(work, &RCWL0516_CTX(work)->core,
                              protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH, Clock.ms);
     Rcwl0516.presence_take_event(work, &RCWL0516_CTX(work)->core);
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-proto_bool protocore_rcwl0516_present(uint8_t *work)
+embed_bool protocore_rcwl0516_present(uint8_t *work)
 {
     return Rcwl0516.presence_get(work, &RCWL0516_CTX(work)->core);
 }

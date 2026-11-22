@@ -85,7 +85,7 @@ def main() -> int:
         cwd=ROOT,
         check=True,
     )
-    # A header's inline lines arrive once per translation unit that included it; the generic format
+    # A header's inline lines arrive once per translation unit that included it. The generic format
     # requires each line once per file, so the union folds them before SonarQube reads it.
     dedupe_sonar_cov.dedupe(os.path.join(ROOT, a.out))
     print(f"wrote {a.out}")

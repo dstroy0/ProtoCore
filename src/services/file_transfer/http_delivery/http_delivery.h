@@ -29,19 +29,19 @@
 
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
 /** @brief Cache-freshness verdict (the sole return of swr). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(
+    DeliveryVerdict,
     DELIVERY_FRESH = 0,            ///< age <= max-age: serve from cache, no revalidation.
     DELIVERY_STALE_REVALIDATE = 1, ///< within the stale-while-revalidate window: serve stale, refresh in bg.
     DELIVERY_EXPIRED = 2           ///< past both windows: must revalidate before serving.
-} DeliveryVerdict;
+);
 
 /** @brief What swr takes: age_s, max_age_s, swr_s. */
 typedef struct
@@ -114,7 +114,7 @@ typedef struct
     HttpDeliveryCacheControlArgs cache_control_args;
     HttpDeliverySwManifestArgs sw_manifest_args;
     HttpDeliveryServeSwArgs serve_sw_args;
-    proto_bool ok;
+    embed_bool ok;
     DeliveryVerdict value;
     size_t n;
 } HttpDeliveryVars;
@@ -125,18 +125,18 @@ extern HttpDeliveryVars HttpDeliveryV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const swr)(uint8_t *work);
-    void (*const cache_control)(uint8_t *work);
-    void (*const sw_manifest)(uint8_t *work);
-    void (*const serve_sw)(uint8_t *work);
+    void (*const swr)(const uint8_t *work);
+    void (*const cache_control)(const uint8_t *work);
+    void (*const sw_manifest)(const uint8_t *work);
+    void (*const serve_sw)(const uint8_t *work);
 } HttpDeliveryNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpDeliveryV or a region of the borrow at a fixed offset.
-void protocore_http_delivery_swr(uint8_t *work);
-void protocore_http_delivery_cache_control(uint8_t *work);
-void protocore_http_delivery_sw_manifest(uint8_t *work);
-void protocore_http_delivery_serve_sw(uint8_t *work);
+void protocore_http_delivery_swr(const uint8_t *work);
+void protocore_http_delivery_cache_control(const uint8_t *work);
+void protocore_http_delivery_sw_manifest(const uint8_t *work);
+void protocore_http_delivery_serve_sw(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -149,7 +149,7 @@ static const HttpDeliveryNs HttpDelivery __attribute__((unused)) = {
     .serve_sw = protocore_http_delivery_serve_sw,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_DELIVERY
 

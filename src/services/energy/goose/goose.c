@@ -14,7 +14,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/energy/goose/goose.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Number of octets to encode a BER definite length.
 static size_t len_octets(size_t len)
@@ -53,12 +53,12 @@ static size_t write_len(uint8_t *p, size_t len)
 }
 
 // Append a TLV. Returns false on overflow.
-static proto_bool tlv(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const uint8_t *val, size_t val_len)
+static embed_bool tlv(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const uint8_t *val, size_t val_len)
 {
     size_t need = 1 + len_octets(val_len) + val_len;
     if (*n + need > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[(*n)++] = tag;
     *n += write_len(out + *n, val_len);
@@ -67,11 +67,11 @@ static proto_bool tlv(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const ui
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *n, .src = val, .bytes = val_len);
         *n += val_len;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append a BER INTEGER (unsigned value, minimal length, leading 0x00 if the MSB is set).
-static proto_bool protocore_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t tag, uint32_t v)
+static embed_bool protocore_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t tag, uint32_t v)
 {
     uint8_t buf[5];
     size_t k = 0;
@@ -100,13 +100,13 @@ static proto_bool protocore_ber_int(uint8_t *out, size_t cap, size_t *n, uint8_t
     return tlv(out, cap, n, tag, buf, k);
 }
 
-static proto_bool protocore_ber_str(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const char *s)
+static embed_bool protocore_ber_str(uint8_t *out, size_t cap, size_t *n, uint8_t tag, const char *s)
 {
     return tlv(out, cap, n, tag, (const uint8_t *)(s ? s : ""),
                s ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap + 1) : 0);
 }
 
-static proto_bool protocore_ber_bool(uint8_t *out, size_t cap, size_t *n, uint8_t tag, proto_bool v)
+static embed_bool protocore_ber_bool(uint8_t *out, size_t cap, size_t *n, uint8_t tag, embed_bool v)
 {
     uint8_t b = v ? 0xFF : 0x00;
     return tlv(out, cap, n, tag, &b, 1);
@@ -114,12 +114,12 @@ static proto_bool protocore_ber_bool(uint8_t *out, size_t cap, size_t *n, uint8_
 
 // Read one definite-length BER TLV at *p within [*p, end). Advances *p past the value on success.
 // Rejects truncation and indefinite / over-4-octet lengths (a GOOSE PDU never needs them).
-static proto_bool ber_read(const uint8_t *end, const uint8_t **p, uint8_t *tag, const uint8_t **vptr, size_t *vlen)
+static embed_bool ber_read(const uint8_t *end, const uint8_t **p, uint8_t *tag, const uint8_t **vptr, size_t *vlen)
 {
     const uint8_t *q = *p;
     if (q + 2 > end)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t t = *q++;
     size_t len = *q++;
@@ -128,7 +128,7 @@ static proto_bool ber_read(const uint8_t *end, const uint8_t **p, uint8_t *tag, 
         size_t nb = len & 0x7F;
         if (nb == 0 || nb > 4 || q + nb > end)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         len = 0;
         for (size_t i = 0; i < nb; i++)
@@ -138,13 +138,13 @@ static proto_bool ber_read(const uint8_t *end, const uint8_t **p, uint8_t *tag, 
     }
     if (len > (size_t)(end - q))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *tag = t;
     *vptr = q;
     *vlen = len;
     *p = q + len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // A big-endian unsigned BER INTEGER value (a leading 0x00 sign octet folds in harmlessly).
@@ -177,7 +177,7 @@ size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap)
     {
         timestamp = g->t;
     }
-    proto_bool ok =
+    embed_bool ok =
         protocore_ber_str(out, cap, &n, 0x80, g->gocb_ref) &&
         protocore_ber_int(out, cap, &n, 0x81, g->time_allowed_to_live) &&
         protocore_ber_str(out, cap, &n, 0x82, g->dat_set) && protocore_ber_str(out, cap, &n, 0x83, g->go_id) &&
@@ -230,15 +230,15 @@ size_t protocore_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t ap
     return 22 + pdu;
 }
 
-proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore_goose_rx *out)
+embed_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore_goose_rx *out)
 {
     if (!buf || !out || len < 24) // 14 Ethernet + 8 GOOSE header + a minimal PDU
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (buf[12] != 0x88 || buf[13] != 0xB8) // GOOSE ethertype
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     out->appid = (uint16_t)((buf[14] << 8) | buf[15]);
@@ -250,7 +250,7 @@ proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore
     size_t vlen = 0;
     if (!ber_read(end, &p, &tag, &v, &vlen) || tag != 0x61) // the outer IECGoosePdu SEQUENCE
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     const uint8_t *inner_end = v + vlen;
@@ -259,7 +259,7 @@ proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore
     {
         if (!ber_read(inner_end, &ip, &tag, &v, &vlen))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         switch (tag)
         {
@@ -310,9 +310,9 @@ proto_bool protocore_goose_parse_frame(const uint8_t *buf, size_t len, protocore
             break; // unknown / future tags are skipped
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GOOSE

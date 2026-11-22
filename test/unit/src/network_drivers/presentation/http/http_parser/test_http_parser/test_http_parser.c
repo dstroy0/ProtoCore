@@ -232,7 +232,7 @@ void test_rfc9112_3_2_duplicate_host_is_rejected(void)
     TEST_ASSERT_EQUAL_INT(PARSE_ERROR, r->parse_state);
 }
 
-// RFC 9112 sec 2.2: the line terminator for the start-line and fields "is the sequence CRLF"; the
+// RFC 9112 sec 2.2: the line terminator for the start-line and fields "is the sequence CRLF". The
 // same section makes recognizing a bare LF a MAY, which this parser declines. A CR not followed by
 // its LF is malformed, and a message terminated only by LF never completes.
 void test_rfc9112_2_2_requires_crlf(void)
@@ -291,7 +291,7 @@ void test_capacity_limits_get_their_own_terminal_states(void)
     TEST_ASSERT_EQUAL_INT(PARSE_BODY, r->parse_state);
 }
 
-// Once a message has reached a terminal state, later octets belong to the next message and must not
+// Once a message reached a terminal state, later octets belong to the next message and must not
 // move this one: a pipelined second request would otherwise be folded into the first.
 void test_terminal_states_ignore_further_octets(void)
 {
@@ -405,36 +405,36 @@ void test_rfc6265_cookie_extraction(void)
     HttpReq *r = feed("GET / HTTP/1.1\r\nCookie: sid=abc123; theme=dark\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
 
-    proto_bool http_parser_ok = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", out, sizeof(out));
+    embed_bool http_parser_ok = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", out, sizeof(out));
     TEST_ASSERT_TRUE(http_parser_ok);
     TEST_ASSERT_EQUAL_STRING("abc123", out);
-    proto_bool http_parser_ok2 = HttpParser.get_cookie(protocore_http_parser_span(), r, "theme", out, sizeof(out));
+    embed_bool http_parser_ok2 = HttpParser.get_cookie(protocore_http_parser_span(), r, "theme", out, sizeof(out));
     TEST_ASSERT_TRUE(http_parser_ok2);
     TEST_ASSERT_EQUAL_STRING("dark", out);
 
     // Absent, and case-mismatched, both report false and leave an empty string.
-    proto_bool http_parser_ok3 = HttpParser.get_cookie(protocore_http_parser_span(), r, "nope", out, sizeof(out));
+    embed_bool http_parser_ok3 = HttpParser.get_cookie(protocore_http_parser_span(), r, "nope", out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok3);
     TEST_ASSERT_EQUAL_STRING("", out);
-    proto_bool http_parser_ok4 = HttpParser.get_cookie(protocore_http_parser_span(), r, "SID", out, sizeof(out));
+    embed_bool http_parser_ok4 = HttpParser.get_cookie(protocore_http_parser_span(), r, "SID", out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok4);
 
     // sec 4.1.1: cookie-value may be a DQUOTE-wrapped span; the quotes are not part of the value.
     r = feed("GET / HTTP/1.1\r\nCookie: q=\"quoted value\"\r\n\r\n");
-    proto_bool http_parser_ok5 = HttpParser.get_cookie(protocore_http_parser_span(), r, "q", out, sizeof(out));
+    embed_bool http_parser_ok5 = HttpParser.get_cookie(protocore_http_parser_span(), r, "q", out, sizeof(out));
     TEST_ASSERT_TRUE(http_parser_ok5);
     TEST_ASSERT_EQUAL_STRING("quoted value", out);
 
     // A name that is a prefix of a stored one must not match it.
     r = feed("GET / HTTP/1.1\r\nCookie: session=one\r\n\r\n");
-    proto_bool http_parser_ok6 = HttpParser.get_cookie(protocore_http_parser_span(), r, "sess", out, sizeof(out));
+    embed_bool http_parser_ok6 = HttpParser.get_cookie(protocore_http_parser_span(), r, "sess", out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok6);
-    proto_bool http_parser_ok7 = HttpParser.get_cookie(protocore_http_parser_span(), r, "session", out, sizeof(out));
+    embed_bool http_parser_ok7 = HttpParser.get_cookie(protocore_http_parser_span(), r, "session", out, sizeof(out));
     TEST_ASSERT_TRUE(http_parser_ok7);
 
     // No Cookie header at all.
     r = feed("GET / HTTP/1.1\r\n\r\n");
-    proto_bool http_parser_ok8 = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", out, sizeof(out));
+    embed_bool http_parser_ok8 = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok8);
 }
 
@@ -445,11 +445,11 @@ void test_rfc6265_cookie_extraction(void)
 void test_rfc7239_forwarded_client(void)
 {
     char ip[PROTOCORE_IP_STR_MAX];
-    proto_bool https = PROTO_FALSE;
+    embed_bool https = EMBED_FALSE;
 
     // sec 4 example: "Forwarded: for=192.0.2.60;proto=http;by=203.0.113.43".
     HttpReq *r = feed("GET / HTTP/1.1\r\nForwarded: for=192.0.2.60;proto=http\r\n\r\n");
-    proto_bool http_parser_ok = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_TRUE(http_parser_ok);
     TEST_ASSERT_EQUAL_STRING("192.0.2.60", ip);
     TEST_ASSERT_FALSE(https);
@@ -457,53 +457,53 @@ void test_rfc7239_forwarded_client(void)
     // sec 4 example: "Forwarded: for=192.0.2.43, for=198.51.100.17" - the first element is the
     // original client.
     r = feed("GET / HTTP/1.1\r\nForwarded: for=192.0.2.43, for=198.51.100.17\r\n\r\n");
-    proto_bool http_parser_ok2 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok2 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_TRUE(http_parser_ok2);
     TEST_ASSERT_EQUAL_STRING("192.0.2.43", ip);
 
     // sec 6 example: "[2001:db8:cafe::17]:47011", quoted because ":" is not a token character.
     r = feed("GET / HTTP/1.1\r\nForwarded: For=\"[2001:db8:cafe::17]:4711\"\r\n\r\n");
-    proto_bool http_parser_ok3 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok3 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_TRUE(http_parser_ok3);
     TEST_ASSERT_EQUAL_STRING("2001:db8:cafe::17", ip);
 
     // proto=https is what sets the flag.
     r = feed("GET / HTTP/1.1\r\nForwarded: for=192.0.2.60;proto=https\r\n\r\n");
-    https = PROTO_FALSE;
-    proto_bool http_parser_ok4 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    https = EMBED_FALSE;
+    embed_bool http_parser_ok4 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_TRUE(http_parser_ok4);
     TEST_ASSERT_TRUE(https);
 
     // sec 6.2 "unknown" and sec 6.3 obfuscated "_gazonk" name no address, so neither is returned.
     r = feed("GET / HTTP/1.1\r\nForwarded: for=unknown\r\n\r\n");
-    proto_bool http_parser_ok5 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok5 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_FALSE(http_parser_ok5);
     r = feed("GET / HTTP/1.1\r\nForwarded: for=\"_gazonk\"\r\n\r\n");
-    proto_bool http_parser_ok6 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok6 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_FALSE(http_parser_ok6);
 
     // The de-facto X-Forwarded-For / -Proto pair, leftmost first.
     r = feed("GET / HTTP/1.1\r\nX-Forwarded-For: 203.0.113.7, 198.51.100.2\r\n"
              "X-Forwarded-Proto: https\r\n\r\n");
-    https = PROTO_FALSE;
-    proto_bool http_parser_ok7 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    https = EMBED_FALSE;
+    embed_bool http_parser_ok7 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_TRUE(http_parser_ok7);
     TEST_ASSERT_EQUAL_STRING("203.0.113.7", ip);
     TEST_ASSERT_TRUE(https);
 
     // An IPv4 with the sec 6 optional ":" node-port keeps only the address.
     r = feed("GET / HTTP/1.1\r\nX-Forwarded-For: 203.0.113.7:47011\r\n\r\n");
-    proto_bool http_parser_ok8 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok8 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_TRUE(http_parser_ok8);
     TEST_ASSERT_EQUAL_STRING("203.0.113.7", ip);
 
     // Nothing forwarded, and a malformed literal, both report false with an empty result.
     r = feed("GET / HTTP/1.1\r\n\r\n");
-    proto_bool http_parser_ok9 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok9 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_FALSE(http_parser_ok9);
     TEST_ASSERT_EQUAL_STRING("", ip);
     r = feed("GET / HTTP/1.1\r\nX-Forwarded-For: 999.1.1.1\r\n\r\n");
-    proto_bool http_parser_ok10 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
+    embed_bool http_parser_ok10 = HttpParser.forwarded_client(protocore_http_parser_span(), r, ip, sizeof(ip), &https);
     TEST_ASSERT_FALSE(http_parser_ok10);
 }
 
@@ -518,13 +518,13 @@ void test_urlencoded_form_fields(void)
                       "\r\n"
                       "user=bob&pass=s3cr3");
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
-    proto_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), r, "user", out, sizeof(out));
+    embed_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), r, "user", out, sizeof(out));
     TEST_ASSERT_TRUE(http_parser_ok);
     TEST_ASSERT_EQUAL_STRING("bob", out);
-    proto_bool http_parser_ok2 = HttpParser.get_form(protocore_http_parser_span(), r, "pass", out, sizeof(out));
+    embed_bool http_parser_ok2 = HttpParser.get_form(protocore_http_parser_span(), r, "pass", out, sizeof(out));
     TEST_ASSERT_TRUE(http_parser_ok2);
     TEST_ASSERT_EQUAL_STRING("s3cr3", out);
-    proto_bool http_parser_ok3 = HttpParser.get_form(protocore_http_parser_span(), r, "missing", out, sizeof(out));
+    embed_bool http_parser_ok3 = HttpParser.get_form(protocore_http_parser_span(), r, "missing", out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok3);
     TEST_ASSERT_EQUAL_STRING("", out);
 
@@ -534,10 +534,10 @@ void test_urlencoded_form_fields(void)
              "Content-Length: 12\r\n"
              "\r\n"
              "flag&user=bo");
-    proto_bool http_parser_ok4 = HttpParser.get_form(protocore_http_parser_span(), r, "flag", out, sizeof(out));
+    embed_bool http_parser_ok4 = HttpParser.get_form(protocore_http_parser_span(), r, "flag", out, sizeof(out));
     TEST_ASSERT_TRUE(http_parser_ok4);
     TEST_ASSERT_EQUAL_STRING("", out);
-    proto_bool http_parser_ok5 = HttpParser.get_form(protocore_http_parser_span(), r, "use", out, sizeof(out));
+    embed_bool http_parser_ok5 = HttpParser.get_form(protocore_http_parser_span(), r, "use", out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok5);
 
     // Any other media type is not a form, whatever the body looks like.
@@ -546,7 +546,7 @@ void test_urlencoded_form_fields(void)
              "Content-Length: 8\r\n"
              "\r\n"
              "user=bob");
-    proto_bool http_parser_ok6 = HttpParser.get_form(protocore_http_parser_span(), r, "user", out, sizeof(out));
+    embed_bool http_parser_ok6 = HttpParser.get_form(protocore_http_parser_span(), r, "user", out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok6);
 }
 
@@ -556,19 +556,19 @@ void test_lookup_helpers_refuse_a_null_destination(void)
     char out[8];
     HttpReq *r = feed("GET / HTTP/1.1\r\nCookie: sid=a\r\n\r\n");
 
-    proto_bool http_parser_ok = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", NULL, sizeof(out));
+    embed_bool http_parser_ok = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", NULL, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok);
-    proto_bool http_parser_ok2 = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", out, 0);
+    embed_bool http_parser_ok2 = HttpParser.get_cookie(protocore_http_parser_span(), r, "sid", out, 0);
     TEST_ASSERT_FALSE(http_parser_ok2);
-    proto_bool http_parser_ok3 = HttpParser.get_cookie(protocore_http_parser_span(), r, NULL, out, sizeof(out));
+    embed_bool http_parser_ok3 = HttpParser.get_cookie(protocore_http_parser_span(), r, NULL, out, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok3);
-    proto_bool http_parser_ok4 = HttpParser.get_form(protocore_http_parser_span(), r, "x", NULL, sizeof(out));
+    embed_bool http_parser_ok4 = HttpParser.get_form(protocore_http_parser_span(), r, "x", NULL, sizeof(out));
     TEST_ASSERT_FALSE(http_parser_ok4);
-    proto_bool http_parser_ok5 = HttpParser.get_form(protocore_http_parser_span(), r, "x", out, 0);
+    embed_bool http_parser_ok5 = HttpParser.get_form(protocore_http_parser_span(), r, "x", out, 0);
     TEST_ASSERT_FALSE(http_parser_ok5);
-    proto_bool http_parser_ok6 = HttpParser.forwarded_client(protocore_http_parser_span(), r, NULL, sizeof(out), NULL);
+    embed_bool http_parser_ok6 = HttpParser.forwarded_client(protocore_http_parser_span(), r, NULL, sizeof(out), NULL);
     TEST_ASSERT_FALSE(http_parser_ok6);
-    proto_bool http_parser_ok7 = HttpParser.forwarded_client(protocore_http_parser_span(), r, out, 0, NULL);
+    embed_bool http_parser_ok7 = HttpParser.forwarded_client(protocore_http_parser_span(), r, out, 0, NULL);
     TEST_ASSERT_FALSE(http_parser_ok7);
     const char *http_parser_text = HttpParser.get_param(protocore_http_parser_span(), r, NULL);
     TEST_ASSERT_NULL(http_parser_text);

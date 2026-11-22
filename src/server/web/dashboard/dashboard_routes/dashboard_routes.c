@@ -7,7 +7,7 @@
  *        inbound control socket. See dashboard.h.
  *
  * Only the callbacks live here. They have fixed signatures set by whoever dispatches them, so they
- * hold no state and reach the module through its namespace; the entries that register them are in
+ * hold no state and reach the module through its namespace. The entries that register them are in
  * dashboard.c with the rest of the surface, so the whole namespace is one initializer.
  */
 
@@ -20,7 +20,7 @@
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_DASHBOARD_PAGE
 #include "protocore.h"
 #include "shared/mime/mime.h"
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_pool for inbound control messages
@@ -77,6 +77,6 @@ void dash_ws_close(uint8_t ws_id)
 }
 #endif
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DASHBOARD

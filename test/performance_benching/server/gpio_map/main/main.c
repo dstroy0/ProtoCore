@@ -44,7 +44,7 @@ static int32_t gpio_json(const protocore_gpio_pin *pins, uint8_t count, char *ou
 }
 
 /** @brief Parse `pin=<n>&level=<0|1>` out of @p body into @p pin and @p level. */
-static proto_bool gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
+static embed_bool gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
 {
     GpioMapV.parse_args.body = body;
     GpioMapV.parse_args.len = len;
@@ -55,7 +55,7 @@ static proto_bool gpio_parse_set(const char *body, size_t len, uint8_t *pin, uin
 }
 
 /** @brief Whether @p pin is mapped as an output in the @p count pins at @p pins. */
-static proto_bool gpio_is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin)
+static embed_bool gpio_is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin)
 {
     GpioMapV.args.pins = pins;
     GpioMapV.args.count = count;

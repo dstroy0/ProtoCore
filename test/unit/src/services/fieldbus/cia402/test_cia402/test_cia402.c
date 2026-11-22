@@ -354,8 +354,8 @@ static CanFrame upload_response(uint8_t node, uint16_t index, const uint8_t *val
     CanFrame f;
     memset(&f, 0, sizeof(f));
     f.id = 0x580u + node;
-    f.extended = PROTO_FALSE;
-    f.rtr = PROTO_FALSE;
+    f.extended = EMBED_FALSE;
+    f.rtr = EMBED_FALSE;
     f.dlc = 8;
     f.data[0] = (uint8_t)(0x40u | (((uint8_t)(4u - n)) << 2) | 0x03u); // scs 2, expedited, size indicated
     f.data[1] = (uint8_t)index;
@@ -411,7 +411,7 @@ void test_sdo_get_u16_checks_the_index(void)
     CanopenV.build_sdo_abort_args.index = CIA402_OD_STATUSWORD;
     CanopenV.build_sdo_abort_args.sub = 0;
     CanopenV.build_sdo_abort_args.abort_code = CANOPEN_ABORT_NO_OBJECT;
-    CanopenV.build_sdo_abort_args.to_server = PROTO_FALSE;
+    CanopenV.build_sdo_abort_args.to_server = EMBED_FALSE;
     Canopen.build_sdo_abort(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     Cia402V.sdo_get_u16_args.f = &abort_frame;

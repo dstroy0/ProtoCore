@@ -2,7 +2,7 @@
 
 Turn an ESP32 with a GPS module into a **GNSS RTK base station and NTRIP caster**: it surveys in its own
 antenna position and serves RTCM 3.x corrections to rovers over the network. A second board runs the
-**rover** role — an NTRIP client that subscribes to the base and decodes its position stream.
+**rover** role - an NTRIP client that subscribes to the base and decodes its position stream.
 
 This one sketch builds either role. Flip `NTRIP_ROLE_BASE` at the top:
 
@@ -32,7 +32,7 @@ Two ESP32-S3 boards, each with a GT-U7 (u-blox 6/7-class) GPS:
 ## Run it
 
 1. Flash **board A** with `NTRIP_ROLE_BASE 1`. Open Serial @ 115200. It connects to Wi-Fi, prints
-   `BASE IP: x.x.x.x`, then surveys in — averaging GT-U7 fixes until it has `SURVEY_MIN_OBS` observations
+   `BASE IP: x.x.x.x`, then surveys in - averaging GT-U7 fixes until it has `SURVEY_MIN_OBS` observations
    with a 3-D spread under `SURVEY_ACC_LIMIT_M`. It prints progress, then `survey COMPLETE` and begins
    broadcasting a `1005` station-reference message once per second.
 2. Flash **board B** with `NTRIP_ROLE_BASE 0` and `BASE_IP` set to board A's IP. It connects to the
@@ -62,7 +62,7 @@ curl -s http://<BASE_IP>:2101/BASE1 | xxd | head
 
 RTK needs the base to broadcast **observation** messages (RTCM MSM: 1074/1077/1084/…), which are built
 from the receiver's raw carrier-phase / pseudorange measurements. The GT-U7 (like the NEO-6/7) does **not**
-output raw measurements (no `UBX-RXM-RAWX`), so it can only serve the surveyed **reference point** (1005/ 1006) — not the observations a rover needs to fix ambiguities. A true RTK base needs an F9P/M8T-class
+output raw measurements (no `UBX-RXM-RAWX`). So it can only serve the surveyed **reference point** (1005/ 1006) - not the observations a rover needs to fix ambiguities. A true RTK base needs an F9P/M8T-class
 receiver; with one, the base would add MSM generation and the rover would compute a real fix.
 
 What this example **does** prove, end to end on real hardware: survey-in position averaging →
@@ -73,6 +73,6 @@ pipeline is complete; only the raw-measurement source is missing.
 
 - **PPS (GPIO4)** is counted via a rising-edge interrupt and printed for observability. It marks the GPS
   second boundary and can gate precise survey sampling or a stratum-1 NTP tie-in (see `NtpServer`).
-- **Security**: the caster supports optional HTTP Basic auth per mountpoint — pass the base64 of
+- **Security**: the caster supports optional HTTP Basic auth per mountpoint - pass the base64 of
   `user:pass` as the third argument to `protocore_ntrip_caster_add_mount()` (null = open access).
 - Tune `SURVEY_MIN_OBS` / `SURVEY_ACC_LIMIT_M` for how long/tight the survey-in must be before serving.

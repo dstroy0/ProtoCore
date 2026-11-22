@@ -48,16 +48,19 @@ static_assert(KDF_OFF_CTX % _Alignof(KdfCtx) == 0,
 
 // The regions, at their offsets in the caller's borrow.
 #define KDF_MAC(w) ((w) + KDF_OFF_MAC)
-#define KDF_CTX(w) ((KdfCtx *)(void *)((w) + KDF_OFF_CTX))
+#define KDF_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const KdfCtx *)(const void *)((w) + KDF_OFF_CTX),                                            \
+        default: (KdfCtx *)(void *)((w) + KDF_OFF_CTX))
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
+embed_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
                                          size_t fixed_len, uint8_t *out, size_t out_len)
 {
     if (!ki || !fixed || !out || out_len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     KdfCtx *c = KDF_CTX(work);
     uint8_t *hw = KDF_MAC(work);
@@ -78,7 +81,7 @@ proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + done, .src = c->block, .bytes = take);
         done += take;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_KDF

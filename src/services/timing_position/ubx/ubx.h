@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_UBX
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define PROTOCORE_UBX_SYNC1 0xB5u ///< first sync char
 #define PROTOCORE_UBX_SYNC2 0x62u ///< second sync char
@@ -62,7 +62,7 @@ size_t protocore_ubx_build_poll(uint8_t *buf, size_t cap, uint8_t cls, uint8_t i
  * declared length against @p len, and the checksum; fills @p out (payload aliases @p s). Returns
  * false on a short / malformed / bad-checksum frame.
  */
-proto_bool protocore_ubx_parse(const uint8_t *s, size_t len, protocore_ubx *out);
+embed_bool protocore_ubx_parse(const uint8_t *s, size_t len, protocore_ubx *out);
 
 /**
  * @brief ACK helper. Returns 1 for UBX-ACK-ACK, 0 for UBX-ACK-NAK, -1 if @p m is not an ACK frame.
@@ -96,7 +96,7 @@ enum protocore_ubx_fix_type
 };
 
 /** @brief Decoded UBX-NAV-PVT payload (the fields an application usually needs; native integer scales). */
-typedef struct // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol message; its ~30 fields mirror the
+typedef struct // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol message. Its ~30 fields mirror the
                // wire layout, so splitting the struct would be artificial, not clearer
 {
     uint32_t itow_ms;      ///< GPS time of week of the solution (ms)
@@ -133,7 +133,7 @@ typedef struct // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol message;
  * @return true iff @p m is a NAV-PVT frame (class 0x01 / id 0x07) of at least @ref PROTOCORE_UBX_NAV_PVT_LEN
  *         octets; false (and @p out untouched) otherwise.
  */
-proto_bool protocore_ubx_parse_nav_pvt(const protocore_ubx *m, protocore_ubx_nav_pvt *out);
+embed_bool protocore_ubx_parse_nav_pvt(const protocore_ubx *m, protocore_ubx_nav_pvt *out);
 
 // -- NAV-SAT: per-satellite signal + usage info (variable length) --
 
@@ -167,15 +167,15 @@ typedef struct
 /**
  * @brief Decode a UBX-NAV-SAT frame's fixed header (per the u-blox interface description).
  * @return true iff @p m is a NAV-SAT frame (class 0x01 / id 0x35) whose declared length holds the header
- *         plus its @c num_svs blocks; false otherwise. Walk the blocks with @ref protocore_ubx_nav_sat_get.
+ *         plus its @c num_svs blocks. False otherwise. Walk the blocks with @ref protocore_ubx_nav_sat_get.
  */
-proto_bool protocore_ubx_parse_nav_sat(const protocore_ubx *m, protocore_ubx_nav_sat_hdr *out);
+embed_bool protocore_ubx_parse_nav_sat(const protocore_ubx *m, protocore_ubx_nav_sat_hdr *out);
 
 /**
  * @brief Decode satellite block @p index (0-based) from a NAV-SAT frame into @p out.
  * @return true on success, false if @p index is out of range or @p m is not a valid NAV-SAT frame.
  */
-proto_bool protocore_ubx_nav_sat_get(const protocore_ubx *m, uint8_t index, protocore_ubx_sat *out);
+embed_bool protocore_ubx_nav_sat_get(const protocore_ubx *m, uint8_t index, protocore_ubx_sat *out);
 
 // -- NAV-TIMEUTC: the validated UTC time solution (for a GNSS time source) --
 
@@ -198,14 +198,14 @@ typedef struct
     uint8_t minute;       ///< UTC minute (0..59)
     uint8_t second;       ///< UTC second (0..60)
     uint8_t valid;        ///< validity flags (@ref PROTOCORE_UBX_TIMEUTC_VALID_TOW / _WKN / _UTC + utcStandard)
-    proto_bool utc_valid; ///< convenience: the UTC-valid bit is set (leap seconds resolved)
+    embed_bool utc_valid; ///< convenience: the UTC-valid bit is set (leap seconds resolved)
 } protocore_ubx_nav_time_utc;
 
 /**
  * @brief Decode a UBX-NAV-TIMEUTC frame into @p out (the receiver's UTC time, for a GNSS time source).
  * @return true iff @p m is a NAV-TIMEUTC frame (class 0x01 / id 0x21) of at least 20 octets; false otherwise.
  */
-proto_bool protocore_ubx_parse_nav_timeutc(const protocore_ubx *m, protocore_ubx_nav_time_utc *out);
+embed_bool protocore_ubx_parse_nav_timeutc(const protocore_ubx *m, protocore_ubx_nav_time_utc *out);
 
 // -- CFG: configure the receiver (which messages to emit, and how fast) --
 
@@ -269,7 +269,7 @@ void protocore_ubx_stream_init(protocore_ubx_stream *st);
  */
 int protocore_ubx_stream_feed(protocore_ubx_stream *st, uint8_t b, protocore_ubx *out, uint8_t *passthrough);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UBX
 

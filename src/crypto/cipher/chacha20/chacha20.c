@@ -43,7 +43,10 @@ static_assert(CHACHA20_OFF_CTX % _Alignof(Chacha20Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define CHACHA20_CTX(w) ((Chacha20Ctx *)(void *)((w) + CHACHA20_OFF_CTX))
+#define CHACHA20_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Chacha20Ctx *)(const void *)((w) + CHACHA20_OFF_CTX),                                  \
+        default: (Chacha20Ctx *)(void *)((w) + CHACHA20_OFF_CTX))
 #define CHACHA20_KS(w) ((w) + CHACHA20_OFF_KS)
 
 // ---------------------------------------------------------------------------
@@ -109,12 +112,12 @@ static const uint32_t SIGMA3 = 0x6b206574;
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
+embed_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
                                    const uint8_t *in, uint8_t *out, size_t len)
 {
     if (!key || !iv || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     Chacha20Ctx *w = CHACHA20_CTX(work);
     uint8_t *ks = CHACHA20_KS(work);
@@ -143,15 +146,15 @@ proto_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint
         off += n;
         counter++;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint32_t counter, const uint8_t *nonce,
+embed_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint32_t counter, const uint8_t *nonce,
                                          uint8_t *out)
 {
     if (!key || !nonce || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     Chacha20Ctx *w = CHACHA20_CTX(work);
 
@@ -168,7 +171,7 @@ proto_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint
     w->st[14] = rd_le32(nonce + 4);
     w->st[15] = rd_le32(nonce + 8);
     chacha_core(w, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_CHACHA20

@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_MBPLUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -111,7 +111,7 @@ typedef struct
     MbplusBuildArgs build_args;
     MbplusParseArgs parse_args;
     MbplusNextTokenArgs next_token_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t value;
     size_t n;
 } MbplusVars;
@@ -125,7 +125,7 @@ typedef struct
     void (*const crc)(uint8_t *work);
     void (*const build)(uint8_t *work);
     void (*const parse)(uint8_t *work);
-    void (*const next_token)(uint8_t *work);
+    void (*const next_token)(const uint8_t *work);
 } MbplusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -133,7 +133,7 @@ typedef struct
 void protocore_mbplus_crc(uint8_t *work);
 void protocore_mbplus_build(uint8_t *work);
 void protocore_mbplus_parse(uint8_t *work);
-void protocore_mbplus_next_token(uint8_t *work);
+void protocore_mbplus_next_token(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -146,7 +146,7 @@ static const MbplusNs Mbplus __attribute__((unused)) = {
     .next_token = protocore_mbplus_next_token,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MBPLUS
 

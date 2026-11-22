@@ -20,7 +20,7 @@
  *    state + unit mode, the requested/actual machine speed, and the production counters.
  *
  * This is a pure, fixed-BSS service: no heap, no I/O. The state engine (protocore_packml_command /
- * protocore_packml_state_complete) is a pure transition table; the owned service (protocore_packml_svc_*) layers the
+ * protocore_packml_state_complete) is a pure transition table. The owned service (protocore_packml_svc_*) layers the
  * PackTags + counters + timers on top for a machine to run directly. Host-tested (native_packml).
  *
  * @author  Douglas Quigg (dstroy0)
@@ -34,56 +34,41 @@
 
 #if PROTOCORE_ENABLE_PACKML
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief PackML unit / machine state. The underlying value is the ISA-TR88.00.02 StateCurrent wire number
  *        (1..17), so casting to the byte a PackTags Status.StateCurrent carries is a no-op at the boundary.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    PACK_ML_STATE_UNDEFINED = 0,     ///< not yet initialized
-    PACK_ML_STATE_CLEARING = 1,      ///< acting: clearing a fault (Aborted -> Stopped)
-    PACK_ML_STATE_STOPPED = 2,       ///< wait: powered, safe, not producing
-    PACK_ML_STATE_STARTING = 3,      ///< acting: Idle -> Execute
-    PACK_ML_STATE_IDLE = 4,          ///< wait: ready to start
-    PACK_ML_STATE_SUSPENDED = 5,     ///< wait: paused by an external condition (starved/blocked)
-    PACK_ML_STATE_EXECUTE = 6,       ///< wait/producing: the machine is doing its work
-    PACK_ML_STATE_STOPPING = 7,      ///< acting: -> Stopped
-    PACK_ML_STATE_ABORTING = 8,      ///< acting: -> Aborted (fault)
-    PACK_ML_STATE_ABORTED = 9,       ///< wait: faulted; needs Clear
-    PACK_ML_STATE_HOLDING = 10,      ///< acting: Execute -> Held
-    PACK_ML_STATE_HELD = 11,         ///< wait: production paused by the operator
-    PACK_ML_STATE_UNHOLDING = 12,    ///< acting: Held -> Execute
-    PACK_ML_STATE_SUSPENDING = 13,   ///< acting: Execute -> Suspended
-    PACK_ML_STATE_UNSUSPENDING = 14, ///< acting: Suspended -> Execute
-    PACK_ML_STATE_RESETTING = 15,    ///< acting: Stopped/Complete -> Idle
-    PACK_ML_STATE_COMPLETING = 16,   ///< acting: Execute (production done) -> Complete
-    PACK_ML_STATE_COMPLETE = 17      ///< wait: the production run finished
-} PackMlState;
+EMBED_ENUM_BYTE(PackMlState,
+                PACK_ML_STATE_UNDEFINED = 0,     ///< not yet initialized
+                PACK_ML_STATE_CLEARING = 1,      ///< acting: clearing a fault (Aborted -> Stopped)
+                PACK_ML_STATE_STOPPED = 2,       ///< wait: powered, safe, not producing
+                PACK_ML_STATE_STARTING = 3,      ///< acting: Idle -> Execute
+                PACK_ML_STATE_IDLE = 4,          ///< wait: ready to start
+                PACK_ML_STATE_SUSPENDED = 5,     ///< wait: paused by an external condition (starved/blocked)
+                PACK_ML_STATE_EXECUTE = 6,       ///< wait/producing: the machine does its work
+                PACK_ML_STATE_STOPPING = 7,      ///< acting: -> Stopped
+                PACK_ML_STATE_ABORTING = 8,      ///< acting: -> Aborted (fault)
+                PACK_ML_STATE_ABORTED = 9,       ///< wait: faulted; needs Clear
+                PACK_ML_STATE_HOLDING = 10,      ///< acting: Execute -> Held
+                PACK_ML_STATE_HELD = 11,         ///< wait: production paused by the operator
+                PACK_ML_STATE_UNHOLDING = 12,    ///< acting: Held -> Execute
+                PACK_ML_STATE_SUSPENDING = 13,   ///< acting: Execute -> Suspended
+                PACK_ML_STATE_UNSUSPENDING = 14, ///< acting: Suspended -> Execute
+                PACK_ML_STATE_RESETTING = 15,    ///< acting: Stopped/Complete -> Idle
+                PACK_ML_STATE_COMPLETING = 16,   ///< acting: Execute (production done) -> Complete
+                PACK_ML_STATE_COMPLETE = 17      ///< wait: the production run finished
+);
 
 /** @brief PackML control command (the Command.CntrlCmd tag). Value is the conventional CntrlCmd number. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PACK_ML_COMMAND_PROTOCORE_NONE = 0,
-    PACK_ML_COMMAND_RESET = 1,
-    PACK_ML_COMMAND_START = 2,
-    PACK_ML_COMMAND_STOP = 3,
-    PACK_ML_COMMAND_HOLD = 4,
-    PACK_ML_COMMAND_UNHOLD = 5,
-    PACK_ML_COMMAND_SUSPEND = 6,
-    PACK_ML_COMMAND_UNSUSPEND = 7,
-    PACK_ML_COMMAND_ABORT = 8,
-    PACK_ML_COMMAND_CLEAR = 9
-} PackMlCommand;
+EMBED_ENUM_BYTE(PackMlCommand, PACK_ML_COMMAND_PROTOCORE_NONE = 0, PACK_ML_COMMAND_RESET = 1, PACK_ML_COMMAND_START = 2,
+                PACK_ML_COMMAND_STOP = 3, PACK_ML_COMMAND_HOLD = 4, PACK_ML_COMMAND_UNHOLD = 5,
+                PACK_ML_COMMAND_SUSPEND = 6, PACK_ML_COMMAND_UNSUSPEND = 7, PACK_ML_COMMAND_ABORT = 8,
+                PACK_ML_COMMAND_CLEAR = 9);
 
 /** @brief PackML unit mode (Command.UnitMode / Status.UnitModeCurrent). Producing is the full state model. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PACK_ML_MODE_PRODUCING = 1,
-    PACK_ML_MODE_MAINTENANCE = 2,
-    PACK_ML_MODE_MANUAL = 3
-} PackMlMode;
+EMBED_ENUM_BYTE(PackMlMode, PACK_ML_MODE_PRODUCING = 1, PACK_ML_MODE_MAINTENANCE = 2, PACK_ML_MODE_MANUAL = 3);
 
 // ---------------------------------------------------------------------------
 // Pure state engine (no state stored here - the caller holds the current state)
@@ -109,10 +94,10 @@ PackMlState protocore_packml_state_complete(PackMlState s);
 PackMlState protocore_packml_execute_complete(PackMlState s);
 
 /** @brief True if @p s is an acting (transient, auto-advancing) state rather than a wait (stable) state. */
-proto_bool protocore_packml_is_acting(PackMlState s);
+embed_bool protocore_packml_is_acting(PackMlState s);
 
 /** @brief True if @p c is a legal command in @p s (i.e. protocore_packml_command would change the state). */
-proto_bool protocore_packml_command_valid(PackMlState s, PackMlCommand c);
+embed_bool protocore_packml_command_valid(PackMlState s, PackMlCommand c);
 
 /** @brief Human-readable state name (e.g. "Execute") for an HMI / log. Never null. */
 const char *protocore_packml_state_name(PackMlState s);
@@ -143,10 +128,10 @@ void protocore_packml_svc_init(PackMlMode mode);
  * @brief Apply a control command (Command.CntrlCmd) to the running service.
  * @return true if the command was legal in the current state and the state advanced.
  */
-proto_bool protocore_packml_svc_command(PackMlCommand c);
+embed_bool protocore_packml_svc_command(PackMlCommand c);
 
 /**
- * @brief Signal that the current acting state's action has finished (the machine's State-Complete). Advances
+ * @brief Signal that the current acting state's action finished (the machine's State-Complete). Advances
  *        an acting state to its target; a no-op in a wait state.
  * @return the new state.
  */
@@ -157,13 +142,13 @@ PackMlState protocore_packml_svc_state_complete(void);
  *        @p defective, ProdDefectiveCount). Does not itself leave Execute (call protocore_packml_svc_complete_run
  *        to end the run).
  */
-void protocore_packml_svc_count(proto_bool defective);
+void protocore_packml_svc_count(embed_bool defective);
 
 /** @brief End the production run: Execute -> Completing (then State-Complete carries it to Complete). */
-proto_bool protocore_packml_svc_complete_run(void);
+embed_bool protocore_packml_svc_complete_run(void);
 
 /** @brief Request a unit-mode change. Allowed only in a stable, non-producing state (Stopped/Idle/Aborted). */
-proto_bool protocore_packml_svc_set_mode(PackMlMode mode);
+embed_bool protocore_packml_svc_set_mode(PackMlMode mode);
 
 /** @brief Set the commanded machine speed (Command.MachSpeed); reflected as MachSpeedActual while in Execute. */
 void protocore_packml_svc_set_speed(float mach_speed);
@@ -174,7 +159,7 @@ PackMlState protocore_packml_svc_state(void);
 /** @brief Fill @p out with the current Status/Admin tag snapshot. */
 void protocore_packml_svc_status(PackMlStatus *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PACKML
 

@@ -18,7 +18,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_quic_varint_len(uint8_t *work, uint64_t value)
+size_t protocore_quic_varint_len(const uint8_t *work, uint64_t value)
 {
     (void)work;
 
@@ -59,18 +59,19 @@ size_t protocore_quic_varint_encode(uint8_t *work, uint8_t *out, size_t cap, uin
     return n;
 }
 
-proto_bool protocore_quic_varint_decode(uint8_t *work, const uint8_t *in, size_t len, uint64_t *value, size_t *consumed)
+embed_bool protocore_quic_varint_decode(const uint8_t *work, const uint8_t *in, size_t len, uint64_t *value,
+                                        size_t *consumed)
 {
     (void)work;
 
     if (len < 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t n = (size_t)1 << (in[0] >> 6); // 1, 2, 4, or 8
     if (len < n)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint64_t v = (uint64_t)(in[0] & 0x3F);
     for (size_t i = 1; i < n; i++)
@@ -79,7 +80,7 @@ proto_bool protocore_quic_varint_decode(uint8_t *work, const uint8_t *in, size_t
     }
     *value = v;
     *consumed = n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_HTTP3

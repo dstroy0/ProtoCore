@@ -6,7 +6,7 @@
 
 This ties several layers together into a finished feature: a fixed compile-time
 widget table served at `/dashboard`. Display widgets (gauge / value / chart) update
-live over SSE; control widgets (toggle / slider / button) send values back to the
+live over SSE. Control widgets (toggle / slider / button) send values back to the
 device over WebSocket, delivered to a control callback. The page itself is rendered
 by the library - you only declare widgets and feed data.
 

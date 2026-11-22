@@ -16,7 +16,7 @@
  *
  * PROTOCORE_RADIO_WIFI_PS picks the mode and PROTOCORE_RADIO_MAX_TX_DBM the cap; @ref RadioNs::power
  * applies both in one call, trading throughput and latency for lower average draw. The mode
- * names are pure and host-tested; the apply and the readback go through the L1 phy contract,
+ * names are pure and host-tested. The apply and the readback go through the L1 phy contract,
  * which reports failure when the part carries no radio backend.
  *
  * The module exports one symbol, @ref Radio. Everything in radio_power.c has internal linkage, so no
@@ -35,7 +35,7 @@
 
 #include "network_drivers/physical/physical/physical.h" // protocore_phy_ps: the L1 contract
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The power management mode a call applies or renders (802.11-2020 11.2.3.2). */
 typedef struct
@@ -81,7 +81,7 @@ typedef struct RadioNs
     RadioPsArgs ps; ///< the power management mode a call applies or renders (802.11-2020 11.2.3.2)
     RadioTxArgs tx; ///< the transmit power a cap applies (802.11-2020 11.7)
 
-    proto_bool ok;
+    embed_bool ok;
     protocore_phy_ps mode;
     const char *text;
 
@@ -108,7 +108,7 @@ extern RadioNs Radio;
  */
 uint8_t *protocore_radio_power_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RADIO_POWER
 

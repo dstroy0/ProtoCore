@@ -21,7 +21,7 @@ static void sink_cb(const protocore_tc_window *, void *)
 }
 
 /** @brief Open a capture with @p cfg: the pre-roll ring, the post-trigger half, and the sink. */
-static proto_bool tc_begin(const protocore_tc_config *cfg)
+static embed_bool tc_begin(const protocore_tc_config *cfg)
 {
     TraceCaptureV.cfg = cfg;
     TraceCapture.begin(protocore_trace_capture_span());

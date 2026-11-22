@@ -21,7 +21,7 @@
 
 #include "network_drivers/presentation/codec/json/json.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
@@ -49,7 +49,10 @@ static_assert(OAUTH2_OFF_CTX + sizeof(struct Oauth2Storage) <= PROTOCORE_OAUTH2_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define OAUTH2_CTX(w) ((struct Oauth2Storage *)(void *)((w) + OAUTH2_OFF_CTX))
+#define OAUTH2_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct Oauth2Storage *)(const void *)((w) + OAUTH2_OFF_CTX),                           \
+        default: (struct Oauth2Storage *)(void *)((w) + OAUTH2_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -74,7 +77,7 @@ uint8_t *protocore_oauth2_span(void)
 #endif
 
 // The unreserved set of RFC 3986 sec 2.3: ALPHA / DIGIT / "-" / "." / "_" / "~".
-static proto_bool unreserved(char c)
+static embed_bool unreserved(char c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '.' ||
            c == '_' || c == '~';
@@ -93,7 +96,7 @@ static size_t put_form_value(uint8_t *work, char *out, size_t cap, size_t at, co
             continue;
         }
         at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = '%');
-        HexV.args.upper = PROTO_TRUE;
+        HexV.args.upper = EMBED_TRUE;
         HexV.args.nibble = (uint8_t)(c >> 4);
         Hex.digit(work);
         at = EMBED_CALL(verba_littera.ch, VerbaLitteraCfg, .out = out, .cap = cap, .at = at, .ch = HexV.ch);
@@ -175,7 +178,7 @@ void protocore_oauth2_build_refresh_request(uint8_t *work)
 void protocore_oauth2_parse_token_response(uint8_t *work)
 {
     (void)work;
-    Oauth2V.ok = PROTO_FALSE;
+    Oauth2V.ok = EMBED_FALSE;
     const char *json = Oauth2V.response.json;
     Oauth2Tokens *t = Oauth2V.response.tokens;
     if (!json || !t)
@@ -221,7 +224,7 @@ void protocore_oauth2_parse_token_response(uint8_t *work)
     {
         t->expires_in = e;
     }
-    Oauth2V.ok = PROTO_TRUE;
+    Oauth2V.ok = EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
@@ -289,6 +292,6 @@ void protocore_oauth2_refresh(uint8_t *work)
 /** @brief The operands and the outcome. */
 Oauth2Vars Oauth2V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OAUTH2

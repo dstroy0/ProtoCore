@@ -15,7 +15,7 @@
  * value is a compact, versioned, little-endian serialization of the entry's response metadata + body.
  *
  * These are pure functions over a caller-owned dbm handle and a caller-owned scratch buffer (no
- * file-scope state); the proxy glue (edge_cache_proxy) owns the dbm and the buffer and installs the
+ * file-scope state). The proxy glue (edge_cache_proxy) owns the dbm and the buffer and installs the
  * write-back / promote wiring.
  *
  * Reboot note: the monotonic insert time is meaningless across a reboot (no wall clock), so a promoted
@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -145,7 +145,7 @@ typedef struct
     EdgeCacheSdDelArgs del_args;
     EdgeCacheSdPurgePrefixArgs purge_prefix_args;
     EdgeCacheSdPurgeAllArgs purge_all_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint32_t count;
     // The store operations are the only part that needs a key/value database behind it, so they
@@ -160,25 +160,25 @@ extern EdgeCacheSdVars EdgeCacheSdV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const serialize)(uint8_t *work);
+    void (*const serialize)(const uint8_t *work);
     void (*const deserialize)(uint8_t *work);
     void (*const put)(uint8_t *work);
     void (*const get)(uint8_t *work);
-    void (*const del)(uint8_t *work);
-    void (*const purge_prefix)(uint8_t *work);
-    void (*const purge_all)(uint8_t *work);
+    void (*const del)(const uint8_t *work);
+    void (*const purge_prefix)(const uint8_t *work);
+    void (*const purge_all)(const uint8_t *work);
 } EdgeCacheSdNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in EdgeCacheSdV or a region of the borrow at a fixed offset.
-void protocore_edge_cache_sd_serialize(uint8_t *work);
+void protocore_edge_cache_sd_serialize(const uint8_t *work);
 void protocore_edge_cache_sd_deserialize(uint8_t *work);
 #if PROTOCORE_ENABLE_DBM
 void protocore_edge_cache_sd_put(uint8_t *work);
 void protocore_edge_cache_sd_get(uint8_t *work);
-void protocore_edge_cache_sd_del(uint8_t *work);
-void protocore_edge_cache_sd_purge_prefix(uint8_t *work);
-void protocore_edge_cache_sd_purge_all(uint8_t *work);
+void protocore_edge_cache_sd_del(const uint8_t *work);
+void protocore_edge_cache_sd_purge_prefix(const uint8_t *work);
+void protocore_edge_cache_sd_purge_all(const uint8_t *work);
 #endif
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -197,7 +197,7 @@ static const EdgeCacheSdNs EdgeCacheSd __attribute__((unused)) = {
 #endif
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE
 

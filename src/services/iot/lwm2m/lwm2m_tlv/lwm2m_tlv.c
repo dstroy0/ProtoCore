@@ -20,7 +20,7 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded String measure
 #include "memoria_operor/memoria_operor.h" // memor.cpy: the Value octets a write copies, and the Float bit pattern
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The writer cursor: the caller buffer, how far into it the last write reached, and the poison an
 // entry that did not fit leaves behind. scalar holds the octets a typed write stages.
@@ -29,7 +29,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     size_t pos;
-    proto_bool overflow;
+    embed_bool overflow;
     uint8_t scalar[8];
 } Lwm2mTlvWriteCursor;
 
@@ -61,7 +61,10 @@ static_assert(LWM2M_TLV_OFF_CTX + sizeof(struct Lwm2mTlvStorage) <= PROTOCORE_LW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define LWM2M_TLV_CTX(w) ((struct Lwm2mTlvStorage *)(void *)((w) + LWM2M_TLV_OFF_CTX))
+#define LWM2M_TLV_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct Lwm2mTlvStorage *)(const void *)((w) + LWM2M_TLV_OFF_CTX),                      \
+        default: (struct Lwm2mTlvStorage *)(void *)((w) + LWM2M_TLV_OFF_CTX))
 
 // The shortest Integer width holding v: 1, 2, 4 or 8 octets (LwM2M Core Appendix C Table C.-2).
 static size_t integer_octets(int64_t v)
@@ -128,14 +131,14 @@ void protocore_lwm2m_tlv_write(uint8_t *work)
     Lwm2mTlvWriteCursor *w = &LWM2M_TLV_CTX(work)->w;
     const uint8_t *value = Lwm2mTlvV.val.opaque;
     const size_t value_len = Lwm2mTlvV.val.len;
-    Lwm2mTlvV.ok = PROTO_FALSE;
+    Lwm2mTlvV.ok = EMBED_FALSE;
     if (value_len && !value)
     {
         return;
     }
 
     uint8_t type = (uint8_t)(Lwm2mTlvV.hdr.id_type & LWM2M_TLV_IDTYPE_MASK);
-    proto_bool id16 = Lwm2mTlvV.hdr.id > 0xFF; // past 255 the Identifier field is 16 bits
+    embed_bool id16 = Lwm2mTlvV.hdr.id > 0xFF; // past 255 the Identifier field is 16 bits
     if (id16)
     {
         type |= LWM2M_TLV_ID16_FLAG;
@@ -170,7 +173,7 @@ void protocore_lwm2m_tlv_write(uint8_t *work)
     size_t need = 1 + (id16 ? 2 : 1) + lenbytes + value_len;
     if (w->overflow || w->pos + need > w->cap)
     {
-        w->overflow = PROTO_TRUE;
+        w->overflow = EMBED_TRUE;
         return;
     }
 
@@ -187,7 +190,7 @@ void protocore_lwm2m_tlv_write(uint8_t *work)
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = value, .bytes = value_len);
         w->pos += value_len;
     }
-    Lwm2mTlvV.ok = PROTO_TRUE;
+    Lwm2mTlvV.ok = EMBED_TRUE;
 }
 
 // Stage the Integer in its shortest width and emit it.
@@ -215,7 +218,7 @@ void protocore_lwm2m_tlv_write_string(uint8_t *work)
 {
     if (!Lwm2mTlvV.val.string_value)
     {
-        Lwm2mTlvV.ok = PROTO_FALSE;
+        Lwm2mTlvV.ok = EMBED_FALSE;
         return;
     }
     Lwm2mTlvV.val.opaque = (const uint8_t *)Lwm2mTlvV.val.string_value;
@@ -259,7 +262,7 @@ void protocore_lwm2m_tlv_next(uint8_t *work)
     const Lwm2mTlvReadCursor *r = &LWM2M_TLV_CTX(work)->r;
     const uint8_t *buf = r->buf;
     const size_t len = r->len;
-    Lwm2mTlvV.ok = PROTO_FALSE;
+    Lwm2mTlvV.ok = EMBED_FALSE;
     if (!buf || r->pos >= len)
     {
         return;
@@ -267,7 +270,7 @@ void protocore_lwm2m_tlv_next(uint8_t *work)
 
     size_t p = r->pos;
     uint8_t type = buf[p++];
-    proto_bool id16 = (type & LWM2M_TLV_ID16_FLAG) != 0;
+    embed_bool id16 = (type & LWM2M_TLV_ID16_FLAG) != 0;
     if (p + (id16 ? 2u : 1u) > len)
     {
         return;
@@ -306,16 +309,16 @@ void protocore_lwm2m_tlv_next(uint8_t *work)
     Lwm2mTlvV.val.opaque = buf + p;
     Lwm2mTlvV.val.len = value_len;
     LWM2M_TLV_CTX(work)->r.pos = p + value_len;
-    Lwm2mTlvV.ok = PROTO_TRUE;
+    Lwm2mTlvV.ok = EMBED_TRUE;
 }
 
 // Read a Value as an Integer: 1, 2, 4 or 8 octets, network byte order, two's complement.
-void protocore_lwm2m_tlv_value_integer(uint8_t *work)
+void protocore_lwm2m_tlv_value_integer(const uint8_t *work)
 {
     (void)work;
     const uint8_t *value = Lwm2mTlvV.val.opaque;
     const size_t len = Lwm2mTlvV.val.len;
-    Lwm2mTlvV.ok = PROTO_FALSE;
+    Lwm2mTlvV.ok = EMBED_FALSE;
     if (!value || (len != 1 && len != 2 && len != 4 && len != 8))
     {
         return;
@@ -326,13 +329,13 @@ void protocore_lwm2m_tlv_value_integer(uint8_t *work)
         v = (int64_t)(((uint64_t)v << 8) | value[i]);
     }
     Lwm2mTlvV.val.integer_value = v;
-    Lwm2mTlvV.ok = PROTO_TRUE;
+    Lwm2mTlvV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 Lwm2mTlvVars Lwm2mTlvV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LWM2M

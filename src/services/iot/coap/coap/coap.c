@@ -21,7 +21,7 @@
 #include "server/clock/clock.h"                          // Clock.millis: entry freshness and notification sequencing
 #include "shared/ip/ip.h"                                // Ip.parse: an observer's address, per notification
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The option numbers this server reads (RFC 7252 sec 5.10, RFC 7641 sec 2, RFC 7959 sec 2.1). Every
 // other option number falls to the critical/elective rule in sec 5.4.1.
@@ -59,7 +59,7 @@ typedef struct
  */
 typedef struct
 {
-    proto_bool valid;
+    embed_bool valid;
     char ip[COAP_ENDPOINT_TEXT];
     uint16_t port;
     uint16_t mid;
@@ -73,7 +73,7 @@ typedef struct
 /** @brief One entry in the list of observers (RFC 7641 sec 4.1): a client endpoint and its Token. */
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     char ip[COAP_ENDPOINT_TEXT];
     uint16_t port;
     uint8_t token[COAP_MAX_TOKEN];
@@ -127,7 +127,10 @@ static_assert(COAP_OFF_CTX + sizeof(struct CoapStorage) <= PROTOCORE_COAP_BORROW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define COAP_CTX(w) ((struct CoapStorage *)(void *)((w) + COAP_OFF_CTX))
+#define COAP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct CoapStorage *)(const void *)((w) + COAP_OFF_CTX),                               \
+        default: (struct CoapStorage *)(void *)((w) + COAP_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -155,15 +158,15 @@ uint8_t *protocore_coap_span(void)
 
 // Two NUL-terminated runs are the same string within nul_cap bytes. The compare is bounded by the
 // measured length, so neither side is read past its own terminator. An absent run matches nothing.
-static proto_bool text_eq(const char *a, const char *b, size_t nul_cap)
+static embed_bool text_eq(const char *a, const char *b, size_t nul_cap)
 {
     if (!a || !b)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t la = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = a, .cap = nul_cap);
     return la == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = b, .cap = nul_cap) &&
-           EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = a, .other = b, .cap = la + 1u, .ci = PROTO_FALSE);
+           EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = a, .other = b, .cap = la + 1u, .ci = EMBED_FALSE);
 }
 
 // An option value as a big-endian unsigned (RFC 7252 sec 3.2, the 'uint' option format).
@@ -179,12 +182,12 @@ static uint32_t opt_uint(const uint8_t *v, size_t n)
 
 // Append one Uri-Path or Uri-Query segment behind sep ('\0' for none), keeping the buffer terminated.
 // False when the segment would not fit.
-static proto_bool seg_append(char *buf, size_t cap, size_t *len, char sep, const uint8_t *seg, size_t seglen)
+static embed_bool seg_append(char *buf, size_t cap, size_t *len, char sep, const uint8_t *seg, size_t seglen)
 {
     size_t need = (sep ? 1u : 0u) + seglen + 1u; // separator, segment, terminator
     if (*len + need > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (sep)
     {
@@ -193,7 +196,7 @@ static proto_bool seg_append(char *buf, size_t cap, size_t *len, char sep, const
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *len, .src = seg, .bytes = seglen);
     *len += seglen;
     buf[*len] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Write the 4-byte header and the Token (RFC 7252 sec 3), and nothing else. Returns the length, or 0
@@ -245,7 +248,7 @@ static size_t append_opt(uint8_t *resp, size_t cap, size_t n, uint32_t *last_opt
 {
     uint32_t delta = opt_num - *last_opt;
     uint8_t dn = (uint8_t)(delta < 13 ? delta : 13);
-    proto_bool ext = delta >= 13;
+    embed_bool ext = delta >= 13;
     if (n + 1u + (ext ? 1u : 0u) + vlen > cap)
     {
         return n;
@@ -343,10 +346,10 @@ void protocore_coap_reset(uint8_t *work)
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
-        COAP_CTX(work)->dedup[i].valid = PROTO_FALSE;
+        COAP_CTX(work)->dedup[i].valid = EMBED_FALSE;
     }
 #endif
-    CoapV.ok = PROTO_TRUE;
+    CoapV.ok = EMBED_TRUE;
 }
 
 // Take one more row of the table for ns->resource.
@@ -354,14 +357,14 @@ void protocore_coap_add_resource(uint8_t *work)
 {
     if (COAP_CTX(work)->res_count >= PROTOCORE_COAP_MAX_RESOURCES || !CoapV.resource.path || !CoapV.resource.handler)
     {
-        CoapV.ok = PROTO_FALSE;
+        CoapV.ok = EMBED_FALSE;
         return;
     }
     COAP_CTX(work)->res[COAP_CTX(work)->res_count].path = CoapV.resource.path;
     COAP_CTX(work)->res[COAP_CTX(work)->res_count].methods = CoapV.resource.methods;
     COAP_CTX(work)->res[COAP_CTX(work)->res_count].handler = CoapV.resource.handler;
     COAP_CTX(work)->res_count++;
-    CoapV.ok = PROTO_TRUE;
+    CoapV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -459,8 +462,8 @@ void protocore_coap_process_observe(uint8_t *work)
     const uint8_t *payload = NULL;
     size_t payload_len = 0;
     uint32_t opt_num = 0;
-    proto_bool format_error = PROTO_FALSE;     // RFC 7252 sec 3.1: a message format error
-    proto_bool unknown_critical = PROTO_FALSE; // an unrecognized option of class critical (sec 5.4.1)
+    embed_bool format_error = EMBED_FALSE;     // RFC 7252 sec 3.1: a message format error
+    embed_bool unknown_critical = EMBED_FALSE; // an unrecognized option of class critical (sec 5.4.1)
 #if PROTOCORE_ENABLE_COAP_BLOCK
     int32_t req_block1 = -1; // the request's Block1 value (RFC 7959 sec 2.2), or -1 when absent
     int32_t req_block2 = -1; // its Block2 value, or -1 when absent
@@ -479,7 +482,7 @@ void protocore_coap_process_observe(uint8_t *work)
         uint32_t olen = b & 0x0F;
         if (delta == 15 || olen == 15) // 15 belongs to the Payload Marker (RFC 7252 sec 3.1)
         {
-            format_error = PROTO_TRUE;
+            format_error = EMBED_TRUE;
             break;
         }
         // The extended Option Delta and Option Length: 13 adds one byte, 14 adds two (sec 3.1).
@@ -487,7 +490,7 @@ void protocore_coap_process_observe(uint8_t *work)
         {
             if (p >= end)
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
                 break;
             }
             delta = (uint32_t)(*p++) + 13;
@@ -496,7 +499,7 @@ void protocore_coap_process_observe(uint8_t *work)
         {
             if (p + 2 > end)
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
                 break;
             }
             delta = (uint32_t)((p[0] << 8) | p[1]) + 269;
@@ -506,7 +509,7 @@ void protocore_coap_process_observe(uint8_t *work)
         {
             if (p >= end)
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
                 break;
             }
             olen = (uint32_t)(*p++) + 13;
@@ -515,7 +518,7 @@ void protocore_coap_process_observe(uint8_t *work)
         {
             if (p + 2 > end)
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
                 break;
             }
             olen = (uint32_t)((p[0] << 8) | p[1]) + 269;
@@ -523,7 +526,7 @@ void protocore_coap_process_observe(uint8_t *work)
         }
         if (p + olen > end)
         {
-            format_error = PROTO_TRUE;
+            format_error = EMBED_TRUE;
             break;
         }
         opt_num += delta;
@@ -535,14 +538,14 @@ void protocore_coap_process_observe(uint8_t *work)
         case COAP_OPT_URI_PATH:
             if (!seg_append(COAP_CTX(work)->path, sizeof(COAP_CTX(work)->path), &path_len, '/', val, olen))
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
             }
             break;
         case COAP_OPT_URI_QUERY:
             if (!seg_append(COAP_CTX(work)->query, sizeof(COAP_CTX(work)->query), &query_len, query_len ? '&' : '\0',
                             val, olen))
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
             }
             break;
         case COAP_OPT_CONTENT_FORMAT:
@@ -557,7 +560,7 @@ void protocore_coap_process_observe(uint8_t *work)
         case COAP_OPT_BLOCK1:
             if (olen > 3) // RFC 7959 sec 2.2: the value is a 0..3 byte uint
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
             }
             else
             {
@@ -567,7 +570,7 @@ void protocore_coap_process_observe(uint8_t *work)
         case COAP_OPT_BLOCK2:
             if (olen > 3)
             {
-                format_error = PROTO_TRUE;
+                format_error = EMBED_TRUE;
             }
             else
             {
@@ -581,7 +584,7 @@ void protocore_coap_process_observe(uint8_t *work)
             // are critical, so a build without them rejects them here.
             if (opt_num & 1)
             {
-                unknown_critical = PROTO_TRUE;
+                unknown_critical = EMBED_TRUE;
             }
             break;
         }
@@ -767,7 +770,7 @@ void protocore_coap_process_observe(uint8_t *work)
     {
         uint8_t szx = PROTOCORE_COAP_BLOCK_SZX_MAX;
         uint32_t num = 0;
-        proto_bool block_wise = PROTO_FALSE;
+        embed_bool block_wise = EMBED_FALSE;
         if (req_block2 >= 0)
         {
             uint32_t b = (uint32_t)req_block2;
@@ -783,11 +786,11 @@ void protocore_coap_process_observe(uint8_t *work)
             {
                 szx = PROTOCORE_COAP_BLOCK_SZX_MAX; // sec 2.4: the size asked for, or a smaller one
             }
-            block_wise = PROTO_TRUE;
+            block_wise = EMBED_TRUE;
         }
         else if (cresp.payload_len > (size_t)(1u << (szx + 4)))
         {
-            block_wise = PROTO_TRUE; // too large for one block, so start at block number 0
+            block_wise = EMBED_TRUE; // too large for one block, so start at block number 0
         }
         if (block_wise)
         {
@@ -838,7 +841,7 @@ void protocore_coap_process(uint8_t *work)
 // The response already sent for ns->exchange, when its row is still fresh.
 void protocore_coap_dedup_lookup(uint8_t *work)
 {
-    CoapV.ok = PROTO_FALSE;
+    CoapV.ok = EMBED_FALSE;
     CoapV.bytes = NULL;
     CoapV.n = 0;
     if (!CoapV.exchange.src_ip)
@@ -855,7 +858,7 @@ void protocore_coap_dedup_lookup(uint8_t *work)
         {
             CoapV.bytes = e->resp;
             CoapV.n = e->len;
-            CoapV.ok = PROTO_TRUE;
+            CoapV.ok = EMBED_TRUE;
             return;
         }
     }
@@ -864,7 +867,7 @@ void protocore_coap_dedup_lookup(uint8_t *work)
 // Keep the response sent for ns->exchange so its repeat is answered without the handler.
 void protocore_coap_dedup_store(uint8_t *work)
 {
-    CoapV.ok = PROTO_FALSE;
+    CoapV.ok = EMBED_FALSE;
     if (!CoapV.exchange.src_ip || !CoapV.exchange.resp || CoapV.exchange.resp_len == 0 ||
         CoapV.exchange.resp_len > PROTOCORE_COAP_DEDUP_RESP_MAX)
     {
@@ -902,8 +905,8 @@ void protocore_coap_dedup_store(uint8_t *work)
     e->stamp_ms = now;
     e->len = (uint16_t)CoapV.exchange.resp_len;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->resp, .src = CoapV.exchange.resp, .bytes = CoapV.exchange.resp_len);
-    e->valid = PROTO_TRUE;
-    CoapV.ok = PROTO_TRUE;
+    e->valid = EMBED_TRUE;
+    CoapV.ok = EMBED_TRUE;
 }
 #endif // PROTOCORE_COAP_DEDUP_ENTRIES > 0
 
@@ -922,7 +925,7 @@ static void peer_reply(const struct protocore_udp_peer *peer, const uint8_t *dat
 
 #if PROTOCORE_ENABLE_COAP_OBSERVE || PROTOCORE_COAP_DEDUP_ENTRIES > 0
 // The sender's address and port, as text. False when the transport did not name one.
-static proto_bool peer_text(const struct protocore_udp_peer *peer, char *ip, size_t cap, uint16_t *port)
+static embed_bool peer_text(const struct protocore_udp_peer *peer, char *ip, size_t cap, uint16_t *port)
 {
     UdpListenerV.peer_args.peer = peer;
     UdpListenerV.peer_args.ip_out = ip;
@@ -953,7 +956,7 @@ static uint16_t dgram_mid(const uint8_t *data)
 // ---------------------------------------------------------------------------
 
 // The entry's Token is the one the request in flight carried (RFC 7641 sec 4.1).
-static proto_bool same_token(const uint8_t *work, const CoapObserver *o)
+static embed_bool same_token(const uint8_t *work, const CoapObserver *o)
 {
     return o->tkl == COAP_CTX(work)->last_tkl &&
            (o->tkl == 0 || EMBED_CALL(memor.cmp, MemoriaCfg, .src = o->token, .other = COAP_CTX(work)->last_token,
@@ -961,7 +964,7 @@ static proto_bool same_token(const uint8_t *work, const CoapObserver *o)
 }
 
 // The entry is this endpoint's (RFC 7641 sec 4.1: the list is keyed by client endpoint and Token).
-static proto_bool same_endpoint(const uint8_t *work, const CoapObserver *o)
+static embed_bool same_endpoint(const uint8_t *work, const CoapObserver *o)
 {
     return o->port == CoapV.exchange.src_port && text_eq(o->ip, CoapV.exchange.src_ip, sizeof(o->ip));
 }
@@ -984,7 +987,7 @@ static int32_t obs_register(uint8_t *work, int32_t res_idx)
         CoapObserver *o = &COAP_CTX(work)->obs[i];
         if (!o->active)
         {
-            o->active = PROTO_TRUE;
+            o->active = EMBED_TRUE;
             (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = o->ip, .src = CoapV.exchange.src_ip,
                              .cap = sizeof(o->ip));
             o->port = CoapV.exchange.src_port;
@@ -1009,7 +1012,7 @@ static void obs_drop_token(uint8_t *work)
         CoapObserver *o = &COAP_CTX(work)->obs[i];
         if (o->active && same_endpoint(work, o) && same_token(work, o))
         {
-            o->active = PROTO_FALSE;
+            o->active = EMBED_FALSE;
         }
     }
 }
@@ -1022,7 +1025,7 @@ static void obs_drop_endpoint(uint8_t *work)
         CoapObserver *o = &COAP_CTX(work)->obs[i];
         if (o->active && same_endpoint(work, o))
         {
-            o->active = PROTO_FALSE;
+            o->active = EMBED_FALSE;
         }
     }
 }
@@ -1030,7 +1033,7 @@ static void obs_drop_endpoint(uint8_t *work)
 // Send the current representation of ns->observe.path to every observer of it (RFC 7641 sec 4.2).
 void protocore_coap_notify(uint8_t *work)
 {
-    CoapV.ok = PROTO_FALSE;
+    CoapV.ok = EMBED_FALSE;
     int32_t ridx = find_resource_index(work, CoapV.observe.path);
     if (ridx < 0)
     {
@@ -1080,7 +1083,7 @@ void protocore_coap_notify(uint8_t *work)
         Ip.parse(work);
         if (!n || !IpV.ok)
         {
-            o->active = PROTO_FALSE; // unreachable, so the entry goes
+            o->active = EMBED_FALSE; // unreachable, so the entry goes
             continue;
         }
         UdpListenerV.port = COAP_CTX(work)->port;
@@ -1091,10 +1094,10 @@ void protocore_coap_notify(uint8_t *work)
         UdpListener.sendto(protocore_udp_listener_span());
         if (!UdpListenerV.ok)
         {
-            o->active = PROTO_FALSE;
+            o->active = EMBED_FALSE;
         }
     }
-    CoapV.ok = PROTO_TRUE;
+    CoapV.ok = EMBED_TRUE;
 }
 
 static void coap_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *user)
@@ -1103,7 +1106,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
     uint8_t *work = protocore_coap_span();
     char ip[COAP_ENDPOINT_TEXT] = {0};
     uint16_t pport = 0;
-    proto_bool have_peer = peer_text(peer, ip, sizeof(ip), &pport);
+    embed_bool have_peer = peer_text(peer, ip, sizeof(ip), &pport);
     CoapV.exchange.src_ip = ip;
     CoapV.exchange.src_port = pport;
 
@@ -1117,7 +1120,7 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
         return;
     }
 
-    const proto_bool confirmable = have_peer && len >= COAP_HDR_LEN && dgram_type(data) == COAP_TYPE_CON;
+    const embed_bool confirmable = have_peer && len >= COAP_HDR_LEN && dgram_type(data) == COAP_TYPE_CON;
 
     CoapV.msg.req = data;
     CoapV.msg.req_len = len;
@@ -1189,7 +1192,7 @@ void protocore_coap_begin(uint8_t *work)
     COAP_CTX(work)->port = CoapV.bind.port;
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
-        COAP_CTX(work)->obs[i].active = PROTO_FALSE;
+        COAP_CTX(work)->obs[i].active = EMBED_FALSE;
     }
     UdpListenerV.port = CoapV.bind.port;
     UdpListenerV.bind.handler = coap_udp_handler;
@@ -1207,8 +1210,8 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     char ip[COAP_ENDPOINT_TEXT] = {0};
     uint16_t pport = 0;
-    proto_bool have_peer = peer_text(peer, ip, sizeof(ip), &pport);
-    const proto_bool confirmable = have_peer && len >= COAP_HDR_LEN && dgram_type(data) == COAP_TYPE_CON;
+    embed_bool have_peer = peer_text(peer, ip, sizeof(ip), &pport);
+    const embed_bool confirmable = have_peer && len >= COAP_HDR_LEN && dgram_type(data) == COAP_TYPE_CON;
     if (confirmable)
     {
         CoapV.exchange.src_ip = ip;
@@ -1260,6 +1263,6 @@ void protocore_coap_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 CoapVars CoapV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_COAP

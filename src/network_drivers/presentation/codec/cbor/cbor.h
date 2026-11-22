@@ -26,7 +26,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_CBOR
 
@@ -45,6 +45,6 @@ extern const protocore_codec Cbor;
 
 #endif // PROTOCORE_ENABLE_CBOR
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CBOR_H

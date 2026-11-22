@@ -1623,6 +1623,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<services/net/http_client/http_client.c>",
         "+<server/web/edge_cache/edge_cache/edge_cache.c>",
@@ -1683,6 +1684,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<server/web/edge_cache/edge_cache/edge_cache.c>",
         "+<network_drivers/application/http_range/http_range.c>",
         "+<network_drivers/presentation/http/httpcache/httpcache.c>",
@@ -1713,6 +1715,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/storage/wal/wal/wal.c>",
         "+<services/storage/wal/wal_store/wal_store.c>",
         "+<services/storage/dbm/dbm.c>",
@@ -1742,6 +1745,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<network_drivers/presentation/http/httpcache/httpcache.c>",
         "+<services/net/http_client/http_client.c>",
         "+<server/web/edge_cache/edge_cache/edge_cache.c>",
@@ -1989,6 +1993,80 @@
       ],
       "tests": [
         "unit/src/network_drivers/network/forward/test_forward"
+      ]
+    },
+    "native_stack": {
+      "desc": "The idemIP stack (network_drivers/network/stack) over the fake PHY of idemIP, at 192.168.1.2/24.\nIt answers an RFC 826 REQUEST with a REPLY, and an RFC 792 Echo with an Echo Reply.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_IDEMIP=1"
+      ],
+      "src": [
+        "+<server/core/worker/worker.c>",
+        "+<network_drivers/network/stack/stack.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<network_drivers/network/stack/stack_tcp.c>",
+        "+<network_drivers/network/stack/stack_net.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/network/stack/test_stack"
+      ]
+    },
+    
+    "native_stack_transport": {
+      "desc": "The TCP and UDP transport, the DNS resolver and the TCP client over the idemIP arm of the protocore_net_* seam (network_drivers/network/stack/stack_net.c).",
+      "flags": [
+        "-DPROTOCORE_ENABLE_IDEMIP=1",
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1",
+        "-DPROTOCORE_ENABLE_TCP_CLIENT=1",
+        "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
+      ],
+      "src": [
+        "-<*>",
+        "+<src/network_drivers/network/stack/stack.c>",
+        "+<src/shared/ip/ip.c>",
+        "+<src/network_drivers/transport/tcp/tcp.c>",
+        "+<src/network_drivers/transport/tcp/client/client.c>",
+        "+<src/network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<src/network_drivers/transport/tcp/lower/lower.c>",
+        "+<src/network_drivers/transport/tcp/server/server.c>",
+        "+<src/network_drivers/transport/net_addr/net_addr.c>",
+        "+<src/server/core/worker/worker.c>",
+        "+<src/server/clock/clock.c>",
+        "+<src/network_drivers/network/network.c>",
+        "+<src/network_drivers/network/dns/dns_resolver/dns_resolver.c>",
+        "+<src/network_drivers/network/dns/dns_wire/dns_wire.c>",
+        "+<src/network_drivers/network/dns/dns/dns.c>",
+        "+<src/network_drivers/transport/udp/udp.c>",
+        "+<src/network_drivers/transport/udp/server/server.c>",
+        "+<src/network_drivers/transport/udp/client/client.c>",
+        "+<src/shared/hex/hex.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<src/network_drivers/network/stack/stack_tcp.c>",
+        "+<src/network_drivers/network/stack/stack_net.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/network/stack/test_stack"
+      ]
+    },
+    "native_wifi_link": {
+      "desc": "The Wi-Fi link (network_drivers/physical/wifi_link) over a radio that the suite answers.\nA release frees only the buffer it names, a full ring drops and counts, and an ARP REQUEST from the radio gets its REPLY through the stack.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_IDEMIP=1"
+      ],
+      "src": [
+        "+<server/core/worker/worker.c>",
+        "+<network_drivers/network/stack/stack.c>",
+        "+<network_drivers/physical/wifi_link/wifi_link.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<network_drivers/network/stack/stack_tcp.c>",
+        "+<network_drivers/network/stack/stack_net.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/physical/test_wifi_link"
       ]
     },
     "native_forwarded_trust": {
@@ -2550,6 +2628,7 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
+        "+<server/core/worker/worker.c>",
         "+<services/net/http_client/http_client.c>",
         "+<server/clock/clock.c>",
         "+<shared/hex/hex.c>",
@@ -2693,7 +2772,8 @@
         "-DPROTOCORE_ENABLE_IFACE_BRIDGE=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
-        "-DPROTOCORE_ENABLE_TCP=1"
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<server/net/iface_bridge/iface_bridge/iface_bridge.c>",
@@ -3328,7 +3408,8 @@
         "-DPROTOCORE_MODBUS_DISCRETE_INPUTS=256",
         "-DPROTOCORE_MODBUS_HOLDING_REGS=256",
         "-DPROTOCORE_MODBUS_INPUT_REGS=256",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<services/fieldbus/modbus/modbus/modbus.c>",
@@ -3356,7 +3437,8 @@
         "-DPROTOCORE_ENABLE_MODBUS=1",
         "-DPROTOCORE_ENABLE_MODBUS_MASTER=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MODBUS_RTU=1"
+        "-DPROTOCORE_ENABLE_MODBUS_RTU=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<services/fieldbus/modbus/modbus/modbus.c>",
@@ -4079,7 +4161,8 @@
         "-DPROTOCORE_ENABLE_JSON=1",
         "-DPROTOCORE_ENABLE_UDP=1",
         "-DPROTOCORE_ENABLE_TCP_CLIENT=1",
-        "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
+        "-DPROTOCORE_ENABLE_DNS_RESOLVER=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -4941,7 +5024,8 @@
         "-DPROTOCORE_ENABLE_RELAY=1",
         "-DPROTOCORE_ENABLE_TCP=1",
         "-DPROTOCORE_ENABLE_TCP_CLIENT=1",
-        "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
+        "-DPROTOCORE_ENABLE_DNS_RESOLVER=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<server/net/relay/relay/relay.c>",
@@ -5113,7 +5197,8 @@
         "-DPROTOCORE_ENABLE_MODBUS=1",
         "-DPROTOCORE_ENABLE_MODBUS_MASTER=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MODBUS_RTU=1"
+        "-DPROTOCORE_ENABLE_MODBUS_RTU=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<services/southbound/southbound/southbound.c>",
@@ -6268,6 +6353,7 @@
       "desc": "RSASSA-PKCS1-v1.5 over RSA-2048 (crypto/asymmetric/rsa.h) on the software modular multiply. Verify is driven onto Project Wycheproof's rsa_signature_2048_sha256 and _sha512 files at a pinned commit - 97 rows of which 78 are the encoding attacks a lax PKCS#1 parser accepts: BER-encoded padding, altered ASN.1 in the DigestInfo, a missing NULL parameter, short padding, a representative raised past the modulus. Sign is held to signatures openssl produced over a throwaway key whose primes test/vectors/openssl_rsa_2048_sign.json publishes, octet for octet, plus the sign/verify round trip.",
       "flags": [],
       "src": [
+        "+<server/core/worker/worker.c>",
         "-<*>",
         "+<crypto/asymmetric/rsa/rsa.c>",
         "+<crypto/asymmetric/bignum/bignum.c>",
@@ -6284,6 +6370,7 @@
       "desc": "RSASSA-PKCS1-v1.5 over RSA-2048 a second time with the accelerated modular multiply selected (PROTOCORE_RSA_MODMUL_HW), answered by the host RSA/MPI HAL so both arms of the multiply run natively against the same vectors.",
       "flags": ["-DPROTOCORE_RSA_MODMUL_HW=1"],
       "src": [
+        "+<server/core/worker/worker.c>",
         "-<*>",
         "+<crypto/asymmetric/rsa/rsa.c>",
         "+<crypto/asymmetric/bignum/bignum.c>",
@@ -6329,7 +6416,8 @@
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
         "-DPROTOCORE_HAS_HW_BIGNUM=1",
-        "-DPROTOCORE_RSA_MODMUL_HW=1"
+        "-DPROTOCORE_RSA_MODMUL_HW=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "-<*>",
@@ -6381,7 +6469,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_HAS_HW_BIGNUM=0"
+        "-DPROTOCORE_HAS_HW_BIGNUM=0",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "-<*>",
@@ -7391,7 +7480,8 @@
         "-DPROTOCORE_ENABLE_TLS=1",
         "-DPROTOCORE_ENABLE_TLS_RPK=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_X509=1"
+        "-DPROTOCORE_ENABLE_X509=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "-<*>",
@@ -7494,7 +7584,8 @@
     "native_udp": {
       "desc": "The UDP path a stack drives, run on the host against the pcb driver in test/core_setup/hal/host. Covers udp_listener + udp_client against the\nhost pcb driver: the receive ring, both send paths reaching the wire in the call that makes them,\nNetAddr carrying v4 and v6 both ways, the pbuf pool refusing, and the datagrams the core handed to the stack read back as a DLT_RAW libpcap\ncapture with synthesized IP and UDP headers (test/core_setup/hal/host/protocore_net_pcap.h).",
       "flags": [
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<server/core/worker/worker.c>",

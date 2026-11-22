@@ -14,7 +14,7 @@
 //
 // test_body_framing_follows_the_rfc9112_precedence is the load-bearing case: it drives all four of
 // those items over the same field section. Getting the precedence wrong is the request-smuggling /
-// response-splitting failure sec 6.3 item 3 exists to name, so it is the one rule here whose
+// response-splitting failure sec 6.3 item 3 exists to name. So it is the one rule here whose
 // violation is a security bug rather than a formatting one.
 
 #include "services/net/http_client/http_client.h"
@@ -54,7 +54,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool split(const char *url)
+static embed_bool split(const char *url)
 {
     HttpClientV.target.url = url;
     HttpClient.parse_target_uri(http_client_work());

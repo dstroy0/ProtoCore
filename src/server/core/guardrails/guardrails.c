@@ -14,7 +14,7 @@
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The guardrails' compile-time storage: the breach callback, for the length of a build. */
 struct GuardrailsStorage
@@ -31,7 +31,10 @@ static_assert(GUARDRAILS_OFF_CTX + sizeof(struct GuardrailsStorage) <= PROTOCORE
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define GUARDRAILS_CTX(w) ((struct GuardrailsStorage *)(void *)((w) + GUARDRAILS_OFF_CTX))
+#define GUARDRAILS_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct GuardrailsStorage *)(const void *)((w) + GUARDRAILS_OFF_CTX),                   \
+        default: (struct GuardrailsStorage *)(void *)((w) + GUARDRAILS_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -53,7 +56,7 @@ uint8_t *protocore_guardrails_span(void)
     return s_own.span;
 }
 
-void protocore_guardrails_eval(uint8_t *work)
+void protocore_guardrails_eval(const uint8_t *work)
 {
     (void)work;
     const protocore_health *h = GuardrailsV.health;
@@ -82,7 +85,7 @@ void protocore_guardrails_eval(uint8_t *work)
     GuardrailsV.breaches = b;
 }
 
-void protocore_guardrails_json(uint8_t *work)
+void protocore_guardrails_json(const uint8_t *work)
 {
     (void)work;
     const protocore_health *h = GuardrailsV.health;
@@ -128,7 +131,7 @@ void protocore_guardrails_json(uint8_t *work)
     GuardrailsV.n = w;
 }
 
-void protocore_guardrails_sample(uint8_t *work)
+void protocore_guardrails_sample(const uint8_t *work)
 {
     (void)work;
     protocore_health *h = GuardrailsV.health;
@@ -173,6 +176,6 @@ void protocore_guardrails_check(uint8_t *work)
 /** @brief The operands and the outcome. */
 GuardrailsVars GuardrailsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS

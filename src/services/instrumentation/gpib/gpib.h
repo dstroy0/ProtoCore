@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_GPIB
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The Prologix GPIB-Ethernet raw-socket TCP port. */
 #define PROTOCORE_GPIB_PORT 1234
@@ -38,21 +38,19 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_GPIB_DISCOVERY_PORT 3040
 
 /** @brief GPIB terminator appended to data sent to the instrument (`++eos`). */
-typedef enum PROTO_ENUM_PACKED
-{
-    GPIB_EOS_CRLF = 0,           ///< GPIB_EOS_CR + GPIB_EOS_LF
-    GPIB_EOS_CR = 1,             ///< GPIB_EOS_CR
-    GPIB_EOS_LF = 2,             ///< GPIB_EOS_LF
-    GPIB_EOS_PROTOCORE_NONE = 3, ///< none (use for binary payloads)
-} GpibEos;
+EMBED_ENUM_BYTE(GpibEos,
+                GPIB_EOS_CRLF = 0,           ///< GPIB_EOS_CR + GPIB_EOS_LF
+                GPIB_EOS_CR = 1,             ///< GPIB_EOS_CR
+                GPIB_EOS_LF = 2,             ///< GPIB_EOS_LF
+                GPIB_EOS_PROTOCORE_NONE = 3, ///< none (use for binary payloads)
+);
 
 /** @brief Read-termination mode (`++read`). */
-typedef enum PROTO_ENUM_PACKED
-{
-    UNTIL_TIMEOUT, ///< `++read` - read until the inter-character timeout only (NOT until EOI)
-    UNTIL_EOI,     ///< `++read eoi` - read until EOI or timeout
-    UNTIL_CHAR,    ///< `++read <char>` - read until the given character or timeout
-} GpibRead;
+EMBED_ENUM_BYTE(GpibRead,
+                UNTIL_TIMEOUT, ///< `++read` - read until the inter-character timeout only (NOT until EOI)
+                UNTIL_EOI,     ///< `++read eoi` - read until EOI or timeout
+                UNTIL_CHAR,    ///< `++read <char>` - read until the given character or timeout
+);
 
 /**
  * @brief Build a generic `++` command line: `"++"` + @p cmd + `'\n'` (e.g. `protocore_gpib_command(...,
@@ -95,14 +93,14 @@ size_t protocore_gpib_eos(char *buf, size_t cap, GpibEos eos);
 size_t protocore_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, size_t len);
 
 /** @brief True if @p line is a controller command (starts with an unescaped `++`), else it is data. */
-proto_bool protocore_gpib_is_command(const char *line, size_t len);
+embed_bool protocore_gpib_is_command(const char *line, size_t len);
 
 /**
  * @brief Parse a decimal integer response (trims surrounding spaces / CR / LF) - the `++spoll`
  *        status byte, the `++srq` 0/1, or a `++addr` primary address.
  * @return true on a clean decimal; false otherwise.
  */
-proto_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out);
+embed_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out);
 
 /**
  * @brief Parse a `++addr` query response: a primary address, optionally a space + secondary.
@@ -110,16 +108,16 @@ proto_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out
  * @param sad receives the secondary address, or -1 if none was present.
  * @return true on a clean response; false otherwise.
  */
-proto_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad);
+embed_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad);
 
 /**
  * @brief Parse a `++ver` response: locate the version token after `"version "`. @p ver points INTO
  *        @p s (trailing CR/LF trimmed from @p ver_len).
  * @return true if a version token was found; false otherwise.
  */
-proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len);
+embed_bool protocore_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIB
 

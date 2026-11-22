@@ -5,7 +5,7 @@
 // (services/radio/espnow): protocore_espnow_encode/decode (typed [magic][type][len] + payload framing) and
 // the bounded peer registry (protocore_espnow_peer_add/has), all pure - no heap, no radio. Per
 // test_matrix.json, the envelope codec + peer registry are host-tested here while the esp_now
-// radio binding is ESP32-only; this rig benches only the shared pure core. Deliberately out of
+// radio binding is ESP32-only. This rig benches only the shared pure core. Deliberately out of
 // scope: protocore_espnow_begin/add_peer/send/broadcast, which call esp_now_init()/esp_now_add_peer()/
 // esp_now_send() against real WiFi/radio state this rig does not have configured - exercising
 // them here would be real radio I/O, not a deterministic CPU-side microbenchmark.

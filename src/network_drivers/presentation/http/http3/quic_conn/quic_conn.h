@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #ifndef PROTOCORE_QUIC_MAX_DATAGRAM
 #endif
@@ -65,7 +65,7 @@ typedef struct
 typedef struct
 {
     /** @brief In-order stream bytes arrived on @p stream_id (@p fin marks the final bytes). */
-    void (*on_stream_data)(void *app, uint8_t *qc, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin);
+    void (*on_stream_data)(void *app, uint8_t *qc, uint64_t stream_id, const uint8_t *data, size_t len, embed_bool fin);
     /** @brief The handshake completed (client Finished verified); 1-RTT is open. */
     void (*on_handshake_done)(void *app, uint8_t *qc);
     void *app; ///< opaque, passed back to the callbacks
@@ -109,7 +109,7 @@ typedef struct
     uint64_t stream_id;  ///< the stream
     const uint8_t *data; ///< the bytes
     size_t len;          ///< how many
-    proto_bool fin;      ///< finish the stream after these bytes
+    embed_bool fin;      ///< finish the stream after these bytes
 } QuicConnStreamSendArgs;
 
 /** @brief A received Destination Connection ID, asked of a connection. */
@@ -149,7 +149,7 @@ typedef struct
  * @var QuicConnNs::close_args        the error a close reports
  * @var QuicConnNs::ok                a call's true/false outcome
  * @var QuicConnNs::n                 bytes the last send or stream_send produced
- * @var QuicConnNs::established       whether the handshake has completed (client Finished verified)
+ * @var QuicConnNs::established       whether the handshake completed (client Finished verified)
  * @var QuicConnNs::closed            whether the connection is closed or draining
  * @var QuicConnNs::init              open a server connection from the client's first Initial
  * @var QuicConnNs::callbacks         install @ref QuicConnNs::cb on the bound connection
@@ -185,10 +185,10 @@ typedef struct
     QuicConnStreamSendArgs stream_send_args;
     QuicConnOwnsArgs owns_args;
     QuicConnCloseArgs close_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
-    proto_bool established;
-    proto_bool closed;
+    embed_bool established;
+    embed_bool closed;
 } QuicConnVars;
 
 /** @brief The operands and the outcome. */
@@ -242,7 +242,7 @@ static const QuicConnNs QuicConn __attribute__((unused)) = {
     .is_closed = protocore_quic_conn_is_closed,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

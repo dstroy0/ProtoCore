@@ -20,7 +20,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // RFC1951: the sec 3.2.5 tables
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define PROTOCORE_MAXBITS 15    // max bits in a Huffman code
 #define PROTOCORE_MAXLCODES 288 // max literal/length codes
@@ -56,7 +56,7 @@ typedef struct
     size_t incnt;   // bytes consumed
     int bitbuf;     // bit accumulator (LSB first)
     int bitcnt;     // bits available in bitbuf
-    proto_bool err; // ran out of input mid-element
+    embed_bool err; // ran out of input mid-element
 } State;
 
 // Pull @p need bits (LSB first). On end-of-input sets s->err and returns 0.
@@ -67,7 +67,7 @@ static int bits(State *s, int need)
     {
         if (s->incnt >= s->inlen)
         {
-            s->err = PROTO_TRUE;
+            s->err = EMBED_TRUE;
             return 0;
         }
         val |= (long)(s->in[s->incnt++]) << s->bitcnt;
@@ -380,7 +380,7 @@ static InflateResult dynamic(State *s, Huffman *lencode, Huffman *distcode, shor
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_inflate_raw(uint8_t *work)
+void protocore_inflate_raw(const uint8_t *work)
 {
     (void)work;
     const uint8_t *src = InflateV.raw_args.src;
@@ -410,7 +410,7 @@ void protocore_inflate_raw(uint8_t *work)
     s.incnt = 0;
     s.bitbuf = 0;
     s.bitcnt = 0;
-    s.err = PROTO_FALSE;
+    s.err = EMBED_FALSE;
 
     int last = 0;
     do
@@ -463,6 +463,6 @@ void protocore_inflate_raw(uint8_t *work)
 /** @brief The operands and the outcome. */
 InflateVars InflateV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WS_DEFLATE

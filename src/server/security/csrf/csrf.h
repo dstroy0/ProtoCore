@@ -6,7 +6,7 @@
  * @brief Stateless HMAC-signed CSRF token (PROTOCORE_ENABLE_CSRF).
  *
  * A token is `<nonce_hex>.<sig_hex>` where sig is the first CSRF_SIG_BYTES of
- * HMAC-SHA256(secret, nonce). The secret is seeded once from the platform's randomness; the nonce is
+ * HMAC-SHA256(secret, nonce). The secret is seeded once from the platform's randomness. The nonce is
  * a per-issue counter and need not be secret, because the security is the HMAC. A verify recomputes
  * the HMAC over the embedded nonce and compares the signature in constant time, so no server-side
  * session state is kept.
@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_CSRF
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Nonce length in bytes (hex-encoded in the token). */
 #define CSRF_NONCE_BYTES 6
@@ -97,9 +97,9 @@ typedef struct
     CsrfSecretArgs secret_args;
     CsrfIssueArgs issue_args;
     CsrfVerifyArgs verify_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
-    proto_bool valid;
+    embed_bool valid;
 } CsrfVars;
 
 /** @brief The operands and the outcome. */
@@ -143,7 +143,7 @@ static const CsrfNs Csrf __attribute__((unused)) = {
  */
 uint8_t *protocore_csrf_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CSRF
 

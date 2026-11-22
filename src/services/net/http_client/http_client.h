@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief What went wrong below the status code.
@@ -43,17 +43,16 @@ PROTOCORE_BEGIN_DECLS
  * RFC 9110 sec 15: every status code is in the range 100..599, so a negative value can never
  * collide with one and @ref HttpClientNs::status carries both.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    HTTP_CLIENT_ERR_URL = -1,      ///< the target URI does not parse (RFC 9110 sec 4.2.1 / 4.2.2)
-    HTTP_CLIENT_ERR_DNS = -2,      ///< the uri-host did not resolve; the transport reports that as a close, so an
-                                   ///< exchange that fails to resolve reports ::HTTP_CLIENT_ERR_CONNECT
-    HTTP_CLIENT_ERR_CONNECT = -3,  ///< the connection did not come up (RFC 9112 sec 9.1)
-    HTTP_CLIENT_ERR_TIMEOUT = -4,  ///< no complete message arrived before the deadline
-    HTTP_CLIENT_ERR_SEND = -5,     ///< the request message did not go out
-    HTTP_CLIENT_ERR_RESPONSE = -6, ///< the response does not parse (RFC 9112 sec 4)
-    HTTP_CLIENT_ERR_TLS = -7,      ///< an https target URI with no TLS, or a failed handshake
-} HttpClientError;
+EMBED_ENUM_BYTE(HttpClientError,
+                HTTP_CLIENT_ERR_URL = -1, ///< the target URI does not parse (RFC 9110 sec 4.2.1 / 4.2.2)
+                HTTP_CLIENT_ERR_DNS = -2, ///< the uri-host did not resolve; the transport reports that as a close, so
+                                          ///< an exchange that fails to resolve reports ::HTTP_CLIENT_ERR_CONNECT
+                HTTP_CLIENT_ERR_CONNECT = -3,  ///< the connection did not come up (RFC 9112 sec 9.1)
+                HTTP_CLIENT_ERR_TIMEOUT = -4,  ///< no complete message arrived before the deadline
+                HTTP_CLIENT_ERR_SEND = -5,     ///< the request message did not go out
+                HTTP_CLIENT_ERR_RESPONSE = -6, ///< the response does not parse (RFC 9112 sec 4)
+                HTTP_CLIENT_ERR_TLS = -7,      ///< an https target URI with no TLS, or a failed handshake
+);
 
 /**
  * @brief RFC 9110 sec 7.1: the target URI, split into the parts a request sends.
@@ -69,7 +68,7 @@ typedef struct
     char *path;       ///< where the origin-form request target goes (RFC 9112 sec 3.2.1)
     size_t path_cap;  ///< how much room it has
     uint16_t port;    ///< the authority's port; 80 for http, 443 for https when the URI omits it
-    proto_bool https; ///< the scheme is "https", so the exchange runs over TLS (RFC 9112 sec 9.7)
+    embed_bool https; ///< the scheme is "https", so the exchange runs over TLS (RFC 9112 sec 9.7)
 } HttpTargetArgs;
 
 /** @brief RFC 9112 sec 3: the request-line's method, the content it encloses, and where it is built. */
@@ -120,7 +119,7 @@ typedef struct
     HttpTargetArgs target;   ///< the target URI and its parts (RFC 9110 sec 7.1)
     HttpRequestArgs request; ///< what a request-line and its field lines carry (RFC 9112 sec 3)
     HttpMessageArgs message; ///< the received message a parse frames (RFC 9112 sec 2.1)
-    proto_bool ok;
+    embed_bool ok;
     int32_t status;
     size_t n;
     size_t body_off;
@@ -134,18 +133,18 @@ extern HttpClientVars HttpClientV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse_target_uri)(uint8_t *work);
-    void (*const build_request)(uint8_t *work);
-    void (*const parse_response)(uint8_t *work);
+    void (*const parse_target_uri)(const uint8_t *work);
+    void (*const build_request)(const uint8_t *work);
+    void (*const parse_response)(const uint8_t *work);
     void (*const get)(uint8_t *work);
     void (*const post)(uint8_t *work);
 } HttpClientNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpClientV or a region of the borrow at a fixed offset.
-void protocore_http_client_parse_target_uri(uint8_t *work);
-void protocore_http_client_build_request(uint8_t *work);
-void protocore_http_client_parse_response(uint8_t *work);
+void protocore_http_client_parse_target_uri(const uint8_t *work);
+void protocore_http_client_build_request(const uint8_t *work);
+void protocore_http_client_parse_response(const uint8_t *work);
 void protocore_http_client_get(uint8_t *work);
 void protocore_http_client_post(uint8_t *work);
 
@@ -176,7 +175,7 @@ static const HttpClientNs HttpClient __attribute__((unused)) = {
 // asking a stackless build for its borrow saw no declaration. Only the entries take the capability.
 uint8_t *protocore_http_client_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
 

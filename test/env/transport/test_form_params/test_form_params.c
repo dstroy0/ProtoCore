@@ -10,25 +10,25 @@
 #include <unity.h>
 
 static char g_a[64], g_b[64], g_missing[64];
-static proto_bool g_found_a, g_found_b, g_found_missing;
+static embed_bool g_found_a, g_found_b, g_found_missing;
 
 static void h_form(uint8_t slot, HttpReq *req)
 {
-    proto_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), req, "a", g_a, sizeof(g_a));
+    embed_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), req, "a", g_a, sizeof(g_a));
     g_found_a = http_parser_ok;
-    proto_bool http_parser_ok2 = HttpParser.get_form(protocore_http_parser_span(), req, "b", g_b, sizeof(g_b));
+    embed_bool http_parser_ok2 = HttpParser.get_form(protocore_http_parser_span(), req, "b", g_b, sizeof(g_b));
     g_found_b = http_parser_ok2;
-    proto_bool http_parser_ok3 =
+    embed_bool http_parser_ok3 =
         HttpParser.get_form(protocore_http_parser_span(), req, "nope", g_missing, sizeof(g_missing));
     g_found_missing = http_parser_ok3;
     send_text(slot, 200, "text/plain", "ok");
 }
 
 static char g_trunc[4];
-static proto_bool g_found_trunc;
+static embed_bool g_found_trunc;
 static void h_form_trunc(uint8_t slot, HttpReq *req)
 {
-    proto_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), req, "a", g_trunc, sizeof(g_trunc));
+    embed_bool http_parser_ok = HttpParser.get_form(protocore_http_parser_span(), req, "a", g_trunc, sizeof(g_trunc));
     g_found_trunc = http_parser_ok;
     send_text(slot, 200, "text/plain", "ok");
 }
@@ -37,12 +37,13 @@ void setUp()
 {
     protocore_server_reset();
     g_a[0] = g_b[0] = g_missing[0] = g_trunc[0] = '\0';
-    g_found_a = g_found_b = g_found_missing = g_found_trunc = PROTO_FALSE;
+    g_found_a = g_found_b = g_found_missing = g_found_trunc = EMBED_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;

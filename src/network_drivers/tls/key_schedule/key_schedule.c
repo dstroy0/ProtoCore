@@ -19,7 +19,7 @@
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "crypto/mac/hmac_sha384/hmac_sha384.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // RFC 8446 sec 7.1 ("tls13 ") and RFC 9147 sec 5.9 ("dtls13") HKDF-Expand-Label prefixes.
 const Tls13Kdf TLS13_KDF = {"tls13 "};
@@ -36,13 +36,13 @@ const Tls13Kdf DTLS13_KDF = {"dtls13"};
 // schedule's own shape does not branch on it.
 
 // Hash.length for the bound suite (RFC 8446 sec 7.1).
-static size_t hash_len(proto_bool is384)
+static size_t hash_len(embed_bool is384)
 {
     return is384 ? (size_t)TLS13_SECRET_SHA384 : (size_t)TLS13_SECRET_SHA256;
 }
 
 // HKDF-Expand-Label(secret, label, "", out_len) under kdf's prefix and the bound hash.
-static void expand(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const uint8_t *secret, const char *label,
+static void expand(const Tls13Kdf *kdf, embed_bool is384, uint8_t *work, const uint8_t *secret, const char *label,
                    uint8_t *out, size_t out_len)
 {
     if (is384)
@@ -59,7 +59,7 @@ static void expand(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
 }
 
 // Derive-Secret(secret, label, Messages) = HKDF-Expand-Label(secret, label, Hash(Messages), L).
-static void derive(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const uint8_t *secret, const char *label,
+static void derive(const Tls13Kdf *kdf, embed_bool is384, uint8_t *work, const uint8_t *secret, const char *label,
                    const uint8_t *transcript_hash, uint8_t *out)
 {
     const size_t len = hash_len(is384);
@@ -79,7 +79,7 @@ static void derive(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
 }
 
 // HKDF-Extract(salt, ikm) under the bound hash.
-static void extract(proto_bool is384, uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
+static void extract(embed_bool is384, uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
                     size_t ikm_len, uint8_t *prk)
 {
     if (is384)
@@ -96,7 +96,7 @@ static void extract(proto_bool is384, uint8_t *work, const uint8_t *salt, size_t
 }
 
 // Transcript-Hash("") under the bound hash, the context the "derived" steps take.
-static void empty_hash(proto_bool is384, uint8_t *work, uint8_t *out)
+static void empty_hash(embed_bool is384, uint8_t *work, uint8_t *out)
 {
     if (is384)
     {
@@ -107,7 +107,7 @@ static void empty_hash(proto_bool is384, uint8_t *work, uint8_t *out)
 }
 
 // HMAC(finished_key, transcript_hash) under the bound hash (RFC 8446 sec 4.4.4).
-static void finished_hmac(proto_bool is384, uint8_t *work, const uint8_t *key, const uint8_t *data, uint8_t *out)
+static void finished_hmac(embed_bool is384, uint8_t *work, const uint8_t *key, const uint8_t *data, uint8_t *out)
 {
     const size_t len = hash_len(is384);
     if (is384)
@@ -140,14 +140,14 @@ void protocore_tls13_ks_early(uint8_t *work)
     Tls13KsV.len = ks->len;
     if (ks->s == NULL)
     {
-        Tls13KsV.ok = PROTO_FALSE;
+        Tls13KsV.ok = EMBED_FALSE;
         return;
     }
     // No PSK: Early Secret = HKDF-Extract(salt=0, IKM=0^Hash.length). HMAC zero-pads a short/absent
     // key, so an empty salt and a run of Hash.length zero bytes reproduce the RFC 8448 early secret
     // exactly.
     extract(ks->is384, ks->s + TLS13_KS_WORK, NULL, 0, ks->s + TLS13_KS_ZEROS, ks->len, ks->s + TLS13_KS_EARLY);
-    Tls13KsV.ok = PROTO_TRUE;
+    Tls13KsV.ok = EMBED_TRUE;
 }
 
 void protocore_tls13_ks_handshake(uint8_t *work)
@@ -244,6 +244,6 @@ void protocore_tls13_ks_transcript_peek(uint8_t *work)
 /** @brief The operands and the outcome. */
 Tls13KsVars Tls13KsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS

@@ -61,11 +61,11 @@ static inline void blk_init(AesBlk *b, const uint8_t key[16])
 {
     protocore_aes_key_expand(key, 4, b->rk);
 }
-static inline void blk_enc(AesBlk *b, const uint8_t in[16], uint8_t out[16])
+static inline void blk_enc(const AesBlk *b, const uint8_t in[16], uint8_t out[16])
 {
     protocore_aes_encrypt_block(b->rk, 10, in, out);
 }
-static inline void blk_free(AesBlk *b)
+static inline void blk_free(const AesBlk *b)
 {
     (void)b; // the software path holds no vendor allocation to release
 }
@@ -97,7 +97,10 @@ static_assert(AES_CMAC_OFF_Y + PROTOCORE_AES_CMAC_LEN <= PROTOCORE_AES_CMAC_BORR
               "blocks - raise it in protocore_config.h, which sums it into the secure arena");
 
 // The regions, at their offsets in the caller's borrow.
-#define AES_CMAC_CTX(w) ((struct AesCmacCtx *)(void *)((w) + AES_CMAC_OFF_CTX))
+#define AES_CMAC_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct AesCmacCtx *)(const void *)((w) + AES_CMAC_OFF_CTX),                            \
+        default: (struct AesCmacCtx *)(void *)((w) + AES_CMAC_OFF_CTX))
 #define AES_CMAC_LAST(w) ((w) + AES_CMAC_OFF_LAST)
 #define AES_CMAC_X(w) ((w) + AES_CMAC_OFF_X)
 #define AES_CMAC_Y(w) ((w) + AES_CMAC_OFF_Y)
@@ -139,11 +142,11 @@ static void subkeys(uint8_t *work)
 // --- the entry -------------------------------------------------------------
 
 // One-shot over the members already set: expand the key, derive the subkeys, CBC-MAC the message.
-proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t msg_len, uint8_t *out)
+embed_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t msg_len, uint8_t *out)
 {
     if (!key || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t *mac = out;
 
@@ -153,7 +156,7 @@ proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8
 
     // n = number of blocks; the message is a whole number of blocks iff msg_len > 0 && msg_len % 16 == 0.
     const size_t n = msg_len == 0 ? 1 : (msg_len + 15) / 16;
-    const proto_bool complete = msg_len != 0 && (msg_len % 16) == 0;
+    const embed_bool complete = msg_len != 0 && (msg_len % 16) == 0;
 
     // Build the last block: the final 16 bytes XOR K1 when complete, else the 10*-padded remainder XOR K2.
     uint8_t *last = AES_CMAC_LAST(work);
@@ -193,7 +196,7 @@ proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8
     blk_enc(&ctx->blk, y, mac);
 
     blk_free(&ctx->blk);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_AES_CMAC

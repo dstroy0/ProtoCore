@@ -14,7 +14,7 @@
 #include "services/fieldbus/mbplus/mbplus.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -87,12 +87,12 @@ void protocore_mbplus_parse(uint8_t *work)
     // Min: 7E addr ctrl CRClo CRChi 7E = 6 bytes.
     if (!frame || !out || len < 6)
     {
-        MbplusV.ok = PROTO_FALSE;
+        MbplusV.ok = EMBED_FALSE;
         return;
     }
     if (frame[0] != MBPLUS_FLAG || frame[len - 1] != MBPLUS_FLAG)
     {
-        MbplusV.ok = PROTO_FALSE;
+        MbplusV.ok = EMBED_FALSE;
         return;
     }
     // Body is frame[1 .. len-2), the CRC is the last 2 body bytes.
@@ -106,17 +106,17 @@ void protocore_mbplus_parse(uint8_t *work)
     uint16_t got = (uint16_t)(frame[crc_pos] | (frame[crc_pos + 1] << 8));
     if (want != got)
     {
-        MbplusV.ok = PROTO_FALSE;
+        MbplusV.ok = EMBED_FALSE;
         return;
     }
     out->address = frame[1];
     out->control = frame[2];
     out->payload = (covered > 2) ? (frame + 3) : NULL;
     out->payload_len = covered - 2; // minus addr + ctrl
-    MbplusV.ok = PROTO_TRUE;
+    MbplusV.ok = EMBED_TRUE;
 }
 
-void protocore_mbplus_next_token(uint8_t *work)
+void protocore_mbplus_next_token(const uint8_t *work)
 {
     (void)work;
     uint8_t current = MbplusV.next_token_args.current;
@@ -133,6 +133,6 @@ void protocore_mbplus_next_token(uint8_t *work)
 /** @brief The operands and the outcome. */
 MbplusVars MbplusV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MBPLUS

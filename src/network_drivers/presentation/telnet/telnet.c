@@ -20,7 +20,7 @@
 #include "server/core/proto_handler/proto_handler.h"
 #include <stdarg.h>
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Telnet protocol bytes (RFC 854 / 858 / 857).
 #define T_SE 240
@@ -34,22 +34,15 @@ PROTOCORE_BEGIN_DECLS
 #define OPT_SGA 3
 
 // IAC parser state per connection (a mutually-exclusive state, not a wire value).
-typedef enum PROTO_ENUM_PACKED
-{
-    TN_NORMAL,
-    TN_IAC,
-    TN_OPT,
-    TN_SB,
-    TN_SB_IAC
-} TelnetState;
+EMBED_ENUM_BYTE(TelnetState, TN_NORMAL, TN_IAC, TN_OPT, TN_SB, TN_SB_IAC);
 
 typedef struct
 {
     uint8_t slot;
-    proto_bool used;
+    embed_bool used;
     TelnetState st;    // IAC parser state
     uint8_t cmd;       // pending WILL/WONT/DO/DONT
-    proto_bool saw_cr; // last data byte was CR: the next one completes CR LF or CR NUL
+    embed_bool saw_cr; // last data byte was CR: the next one completes CR LF or CR NUL
     uint16_t len;      // bytes in line[]
     char line[TELNET_BUF_SIZE];
 } Nvt;
@@ -76,7 +69,10 @@ static_assert(TELNET_OFF_CTX + sizeof(struct TelnetStorage) <= PROTOCORE_TELNET_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TELNET_CTX(w) ((struct TelnetStorage *)(void *)((w) + TELNET_OFF_CTX))
+#define TELNET_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TelnetStorage *)(const void *)((w) + TELNET_OFF_CTX),                           \
+        default: (struct TelnetStorage *)(void *)((w) + TELNET_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -125,7 +121,7 @@ static void command_send(uint8_t slot, const void *data, size_t n)
         return;
     }
     ConnPoolV.io.data = data;
-    ConnPoolV.io.len = (proto_u16)n;
+    ConnPoolV.io.len = (embed_u16)n;
     ConnPool.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
 }
@@ -151,7 +147,7 @@ static void data_send(uint8_t slot, const void *data, size_t n)
             if (i > start)
             {
                 ConnPoolV.io.data = b + start;
-                ConnPoolV.io.len = (proto_u16)(i - start);
+                ConnPoolV.io.len = (embed_u16)(i - start);
                 ConnPool.send(protocore_conn_pool_span());
             }
             ConnPoolV.io.data = "\xff\xff"; // doubled IAC
@@ -163,7 +159,7 @@ static void data_send(uint8_t slot, const void *data, size_t n)
     if (n > start)
     {
         ConnPoolV.io.data = b + start;
-        ConnPoolV.io.len = (proto_u16)(n - start);
+        ConnPoolV.io.len = (embed_u16)(n - start);
         ConnPool.send(protocore_conn_pool_span());
     }
     ConnPool.flush(protocore_conn_pool_span());
@@ -192,7 +188,7 @@ void protocore_telnet_accept(uint8_t *work)
         return;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = t, .val = 0, .bytes = sizeof(*t));
-    t->used = PROTO_TRUE;
+    t->used = EMBED_TRUE;
     t->slot = TelnetV.slot;
     t->st = TN_NORMAL;
     TELNET_CTX(work)->conn = t;
@@ -209,7 +205,7 @@ void protocore_telnet_close(uint8_t *work)
     find_conn(work);
     if (TELNET_CTX(work)->conn)
     {
-        TELNET_CTX(work)->conn->used = PROTO_FALSE;
+        TELNET_CTX(work)->conn->used = EMBED_FALSE;
     }
 }
 
@@ -234,7 +230,7 @@ static void nvt_data(uint8_t slot, Nvt *t, uint8_t b)
     // the control-byte arm below, which would drop the NUL and leave the line undispatched.
     if (t->saw_cr)
     {
-        t->saw_cr = PROTO_FALSE;
+        t->saw_cr = EMBED_FALSE;
         if (b == '\n' || b == 0)
         {
             line_dispatch(slot, t);
@@ -243,7 +239,7 @@ static void nvt_data(uint8_t slot, Nvt *t, uint8_t b)
     }
     if (b == '\r')
     {
-        t->saw_cr = PROTO_TRUE;
+        t->saw_cr = EMBED_TRUE;
         return;
     }
     if (b == '\n') // a bare LF ends the line too
@@ -429,7 +425,7 @@ void protocore_telnet_client_count(uint8_t *work)
     TelnetV.u8 = c;
 }
 
-// The session layer's seam dictates these shapes, so they stay as they are and carry the slot onto
+// The session layer's seam dictates these shapes. So they stay as they are and carry the slot onto
 // the handle before the call that does the work.
 static void evt_accept(uint8_t slot)
 {
@@ -453,7 +449,7 @@ static void evt_close(uint8_t slot)
 // on_poll are unset: a null on_abort falls back to on_close, and this protocol is not polled.
 static const ProtoHandler s_telnet_handler = {.on_accept = evt_accept, .on_data = evt_rx, .on_close = evt_close};
 
-void protocore_telnet_proto_handler(uint8_t *work)
+void protocore_telnet_proto_handler(const uint8_t *work)
 {
     (void)work;
     TelnetV.handler = &s_telnet_handler;
@@ -463,6 +459,6 @@ void protocore_telnet_proto_handler(uint8_t *work)
 /** @brief The operands and the outcome. */
 TelnetVars TelnetV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TELNET

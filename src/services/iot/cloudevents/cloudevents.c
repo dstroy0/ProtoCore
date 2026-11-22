@@ -19,7 +19,7 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer an envelope is built with
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The JSON member names an envelope carries (JSON Event Format 1.0.2 sec 3), spelled once so the
 // has-data and no-data paths emit the same keys.
@@ -45,7 +45,7 @@ PROTOCORE_BEGIN_DECLS
 
 // An attribute is present when it is a non-empty string: every REQUIRED attribute "MUST be a
 // non-empty string", and a present subject "MUST be a non-empty string" (CloudEvents 1.0.2).
-static proto_bool ce_present(const char *s)
+static embed_bool ce_present(const char *s)
 {
     return s != NULL && s[0] != '\0';
 }
@@ -55,7 +55,7 @@ static proto_bool ce_present(const char *s)
 void protocore_cloud_events_build_structured(uint8_t *work)
 {
     (void)work;
-    CloudEventsV.ok = PROTO_FALSE;
+    CloudEventsV.ok = EMBED_FALSE;
     CloudEventsV.n = 0;
 
     char *out = CloudEventsV.envelope.out;
@@ -152,16 +152,16 @@ void protocore_cloud_events_build_structured(uint8_t *work)
         return;
     }
     CloudEventsV.n = protocore_json_length(&w);
-    CloudEventsV.ok = PROTO_TRUE;
+    CloudEventsV.ok = EMBED_TRUE;
 }
 
 // Take the context attributes off the message's headers, and report whether the three REQUIRED ones
 // arrived. The payload is the HTTP body in this mode (HTTP Protocol Binding 1.0.2 sec 3.1.2), so the
 // data members are cleared rather than filled.
-void protocore_cloud_events_read_binary(uint8_t *work)
+void protocore_cloud_events_read_binary(const uint8_t *work)
 {
     (void)work;
-    CloudEventsV.ok = PROTO_FALSE;
+    CloudEventsV.ok = EMBED_FALSE;
     CloudEventsV.n = 0;
     CloudEventsV.attr.id = NULL;
     CloudEventsV.attr.source = NULL;
@@ -200,6 +200,6 @@ void protocore_cloud_events_read_binary(uint8_t *work)
 /** @brief The operands and the outcome. */
 CloudEventsVars CloudEventsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CLOUDEVENTS

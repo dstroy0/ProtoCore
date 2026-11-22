@@ -34,34 +34,34 @@ void test_published_crc_over_worked_frames(void)
     struct
     {
         uint16_t value;
-        proto_bool tlm;
+        embed_bool tlm;
         uint16_t want;
     } static const CASES[] = {
         // value 0, tlm 0: v12 = 0x000, nibbles 0^0^0 = 0 -> frame 0x0000
-        {0u, PROTO_FALSE, 0x0000u},
+        {0u, EMBED_FALSE, 0x0000u},
         // value 0, tlm 1: v12 = 0x001, nibbles 0^0^1 = 1 -> frame 0x0011
-        {0u, PROTO_TRUE, 0x0011u},
+        {0u, EMBED_TRUE, 0x0011u},
         // value 1, tlm 0: v12 = 0x002, nibbles 0^0^2 = 2 -> frame 0x0022
-        {1u, PROTO_FALSE, 0x0022u},
+        {1u, EMBED_FALSE, 0x0022u},
         // DSHOT_CMD_BEACON5 with telemetry: v12 = (5<<1)|1 = 0x00B, 0^0^B = B -> frame 0x00BB
-        {5u, PROTO_TRUE, 0x00BBu},
+        {5u, EMBED_TRUE, 0x00BBu},
         // value 48 (first throttle step): v12 = 0x060, 0^6^0 = 6 -> frame 0x0606
-        {48u, PROTO_FALSE, 0x0606u},
+        {48u, EMBED_FALSE, 0x0606u},
         // value 1000: v12 = 1000*2 = 2000 = 0x7D0, nibbles 0^D^7 = A -> frame 0x7D0A
-        {1000u, PROTO_FALSE, 0x7D0Au},
+        {1000u, EMBED_FALSE, 0x7D0Au},
         // value 1000 with telemetry: v12 = 0x7D1, 1^D^7 = B -> frame 0x7D1B
-        {1000u, PROTO_TRUE, 0x7D1Bu},
+        {1000u, EMBED_TRUE, 0x7D1Bu},
         // value 2047 (max): v12 = 0xFFE, E^F^F = E -> frame 0xFFEE
-        {2047u, PROTO_FALSE, 0xFFEEu},
+        {2047u, EMBED_FALSE, 0xFFEEu},
         // value 2047 with telemetry: v12 = 0xFFF, F^F^F = F -> frame 0xFFFF
-        {2047u, PROTO_TRUE, 0xFFFFu},
+        {2047u, EMBED_TRUE, 0xFFFFu},
     };
 
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         DshotV.encode_args.value11 = CASES[i].value;
         DshotV.encode_args.telemetry = CASES[i].tlm;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_FALSE;
         Dshot.encode(dshot_work);
         TEST_ASSERT_EQUAL_HEX16(CASES[i].want, DshotV.frame);
     }
@@ -73,33 +73,33 @@ void test_bidirectional_inverts_only_the_checksum(void)
 {
     // value 1000: normal crc A -> inverted 5, so 0x7D0A becomes 0x7D05
     DshotV.encode_args.value11 = 1000u;
-    DshotV.encode_args.telemetry = PROTO_FALSE;
-    DshotV.encode_args.bidirectional = PROTO_TRUE;
+    DshotV.encode_args.telemetry = EMBED_FALSE;
+    DshotV.encode_args.bidirectional = EMBED_TRUE;
     Dshot.encode(dshot_work);
     TEST_ASSERT_EQUAL_HEX16(0x7D05u, DshotV.frame);
     // value 0: normal crc 0 -> inverted F
     DshotV.encode_args.value11 = 0u;
-    DshotV.encode_args.telemetry = PROTO_FALSE;
-    DshotV.encode_args.bidirectional = PROTO_TRUE;
+    DshotV.encode_args.telemetry = EMBED_FALSE;
+    DshotV.encode_args.bidirectional = EMBED_TRUE;
     Dshot.encode(dshot_work);
     TEST_ASSERT_EQUAL_HEX16(0x000Fu, DshotV.frame);
     // value 2047 with telemetry: normal crc F -> inverted 0
     DshotV.encode_args.value11 = 2047u;
-    DshotV.encode_args.telemetry = PROTO_TRUE;
-    DshotV.encode_args.bidirectional = PROTO_TRUE;
+    DshotV.encode_args.telemetry = EMBED_TRUE;
+    DshotV.encode_args.bidirectional = EMBED_TRUE;
     Dshot.encode(dshot_work);
     TEST_ASSERT_EQUAL_HEX16(0xFFF0u, DshotV.frame);
 
     for (uint16_t v = 0u; v <= DSHOT_VALUE_MAX; v = (uint16_t)(v + 7u))
     {
         DshotV.encode_args.value11 = v;
-        DshotV.encode_args.telemetry = PROTO_FALSE;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
+        DshotV.encode_args.telemetry = EMBED_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_FALSE;
         Dshot.encode(dshot_work);
         uint16_t normal = DshotV.frame;
         DshotV.encode_args.value11 = v;
-        DshotV.encode_args.telemetry = PROTO_FALSE;
-        DshotV.encode_args.bidirectional = PROTO_TRUE;
+        DshotV.encode_args.telemetry = EMBED_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_TRUE;
         Dshot.encode(dshot_work);
         uint16_t bidir = DshotV.frame;
         TEST_ASSERT_EQUAL_HEX16(0x000Fu, (uint16_t)(normal ^ bidir));
@@ -116,15 +116,15 @@ void test_encode_decode_round_trip_over_the_whole_value_domain(void)
         {
             for (int b = 0; b < 2; b++)
             {
-                proto_bool tlm = t ? PROTO_TRUE : PROTO_FALSE;
-                proto_bool bidir = b ? PROTO_TRUE : PROTO_FALSE;
+                embed_bool tlm = t ? EMBED_TRUE : EMBED_FALSE;
+                embed_bool bidir = b ? EMBED_TRUE : EMBED_FALSE;
                 DshotV.encode_args.value11 = v;
                 DshotV.encode_args.telemetry = tlm;
                 DshotV.encode_args.bidirectional = bidir;
                 Dshot.encode(dshot_work);
                 uint16_t frame = DshotV.frame;
                 uint16_t got_v = 0xFFFFu;
-                proto_bool got_t = PROTO_FALSE;
+                embed_bool got_t = EMBED_FALSE;
                 DshotV.decode_args.frame = frame;
                 DshotV.decode_args.value11 = &got_v;
                 DshotV.decode_args.telemetry = &got_t;
@@ -147,14 +147,14 @@ void test_every_single_bit_error_is_rejected(void)
     for (size_t i = 0; i < sizeof(VALUE) / sizeof(VALUE[0]); i++)
     {
         DshotV.encode_args.value11 = VALUE[i];
-        DshotV.encode_args.telemetry = PROTO_FALSE;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
+        DshotV.encode_args.telemetry = EMBED_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_FALSE;
         Dshot.encode(dshot_work);
         uint16_t frame = DshotV.frame;
         DshotV.decode_args.frame = frame;
         DshotV.decode_args.value11 = NULL;
         DshotV.decode_args.telemetry = NULL;
-        DshotV.decode_args.bidirectional = PROTO_FALSE;
+        DshotV.decode_args.bidirectional = EMBED_FALSE;
         Dshot.decode(dshot_work);
         TEST_ASSERT_TRUE(DshotV.ok);
         for (int bit = 0; bit < 16; bit++)
@@ -163,7 +163,7 @@ void test_every_single_bit_error_is_rejected(void)
             DshotV.decode_args.frame = bad;
             DshotV.decode_args.value11 = NULL;
             DshotV.decode_args.telemetry = NULL;
-            DshotV.decode_args.bidirectional = PROTO_FALSE;
+            DshotV.decode_args.bidirectional = EMBED_FALSE;
             Dshot.decode(dshot_work);
             TEST_ASSERT_FALSE_MESSAGE(DshotV.ok, "bit error accepted");
         }
@@ -177,25 +177,25 @@ void test_the_two_crc_conventions_do_not_accept_each_other(void)
     for (uint16_t v = 0u; v <= DSHOT_VALUE_MAX; v = (uint16_t)(v + 13u))
     {
         DshotV.encode_args.value11 = v;
-        DshotV.encode_args.telemetry = PROTO_FALSE;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
+        DshotV.encode_args.telemetry = EMBED_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_FALSE;
         Dshot.encode(dshot_work);
         uint16_t normal = DshotV.frame;
         DshotV.encode_args.value11 = v;
-        DshotV.encode_args.telemetry = PROTO_FALSE;
-        DshotV.encode_args.bidirectional = PROTO_TRUE;
+        DshotV.encode_args.telemetry = EMBED_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_TRUE;
         Dshot.encode(dshot_work);
         uint16_t bidir = DshotV.frame;
         DshotV.decode_args.frame = normal;
         DshotV.decode_args.value11 = NULL;
         DshotV.decode_args.telemetry = NULL;
-        DshotV.decode_args.bidirectional = PROTO_TRUE;
+        DshotV.decode_args.bidirectional = EMBED_TRUE;
         Dshot.decode(dshot_work);
         TEST_ASSERT_FALSE(DshotV.ok);
         DshotV.decode_args.frame = bidir;
         DshotV.decode_args.value11 = NULL;
         DshotV.decode_args.telemetry = NULL;
-        DshotV.decode_args.bidirectional = PROTO_FALSE;
+        DshotV.decode_args.bidirectional = EMBED_FALSE;
         Dshot.decode(dshot_work);
         TEST_ASSERT_FALSE(DshotV.ok);
     }
@@ -211,22 +211,22 @@ void test_values_wider_than_eleven_bits_are_masked(void)
     {
         uint16_t inside;
         uint16_t wider;
-        proto_bool tlm;
+        embed_bool tlm;
     } PAIR[] = {
-        {0u, 0x0800u, PROTO_FALSE},   // bit 11 set
-        {1u, 0xF801u, PROTO_FALSE},   // bits 11..15 set
-        {2047u, 0xFFFFu, PROTO_TRUE}, // every bit above the field set
+        {0u, 0x0800u, EMBED_FALSE},   // bit 11 set
+        {1u, 0xF801u, EMBED_FALSE},   // bits 11..15 set
+        {2047u, 0xFFFFu, EMBED_TRUE}, // every bit above the field set
     };
     for (size_t i = 0; i < sizeof(PAIR) / sizeof(PAIR[0]); i++)
     {
         DshotV.encode_args.value11 = PAIR[i].inside;
         DshotV.encode_args.telemetry = PAIR[i].tlm;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_FALSE;
         Dshot.encode(dshot_work);
         const uint16_t inside = DshotV.frame;
         DshotV.encode_args.value11 = PAIR[i].wider;
         DshotV.encode_args.telemetry = PAIR[i].tlm;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_FALSE;
         Dshot.encode(dshot_work);
         TEST_ASSERT_EQUAL_HEX16(inside, DshotV.frame);
     }
@@ -248,14 +248,14 @@ void test_published_command_and_throttle_domains(void)
         // The encoded frame is captured into a local before the decode: both calls report through
         // the one namespace, so nesting them would have the decode read its own outcome.
         DshotV.encode_args.value11 = CMD[i];
-        DshotV.encode_args.telemetry = PROTO_FALSE;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
+        DshotV.encode_args.telemetry = EMBED_FALSE;
+        DshotV.encode_args.bidirectional = EMBED_FALSE;
         Dshot.encode(dshot_work);
         const uint16_t frame = DshotV.frame;
         DshotV.decode_args.frame = frame;
         DshotV.decode_args.value11 = &got;
         DshotV.decode_args.telemetry = NULL;
-        DshotV.decode_args.bidirectional = PROTO_FALSE;
+        DshotV.decode_args.bidirectional = EMBED_FALSE;
         Dshot.decode(dshot_work);
         TEST_ASSERT_TRUE(DshotV.ok);
         TEST_ASSERT_EQUAL_HEX16(CMD[i], got);
@@ -284,11 +284,11 @@ void test_bit_timing_is_three_quarters_and_three_eighths_of_the_period(void)
     for (size_t i = 0; i < sizeof(RATE) / sizeof(RATE[0]); i++)
     {
         DshotV.bit_ns_args.rate_kbit = RATE[i].rate;
-        DshotV.bit_ns_args.bit = PROTO_TRUE;
+        DshotV.bit_ns_args.bit = EMBED_TRUE;
         Dshot.bit_ns(dshot_work);
         uint32_t one = DshotV.ns;
         DshotV.bit_ns_args.rate_kbit = RATE[i].rate;
-        DshotV.bit_ns_args.bit = PROTO_FALSE;
+        DshotV.bit_ns_args.bit = EMBED_FALSE;
         Dshot.bit_ns(dshot_work);
         uint32_t zero = DshotV.ns;
         TEST_ASSERT_EQUAL_UINT32(RATE[i].period * 3u / 4u, one);
@@ -298,11 +298,11 @@ void test_bit_timing_is_three_quarters_and_three_eighths_of_the_period(void)
         TEST_ASSERT_TRUE(one < RATE[i].period); // the line must return low inside the bit period
     }
     DshotV.bit_ns_args.rate_kbit = 150u;
-    DshotV.bit_ns_args.bit = PROTO_TRUE;
+    DshotV.bit_ns_args.bit = EMBED_TRUE;
     Dshot.bit_ns(dshot_work);
     TEST_ASSERT_EQUAL_UINT32(5000u, DshotV.ns);
     DshotV.bit_ns_args.rate_kbit = 150u;
-    DshotV.bit_ns_args.bit = PROTO_FALSE;
+    DshotV.bit_ns_args.bit = EMBED_FALSE;
     Dshot.bit_ns(dshot_work);
     TEST_ASSERT_EQUAL_UINT32(2500u, DshotV.ns);
 }
@@ -311,19 +311,19 @@ void test_bit_timing_is_three_quarters_and_three_eighths_of_the_period(void)
 void test_unknown_bit_rates_return_zero(void)
 {
     DshotV.bit_ns_args.rate_kbit = 0u;
-    DshotV.bit_ns_args.bit = PROTO_TRUE;
+    DshotV.bit_ns_args.bit = EMBED_TRUE;
     Dshot.bit_ns(dshot_work);
     TEST_ASSERT_EQUAL_UINT32(0u, DshotV.ns);
     DshotV.bit_ns_args.rate_kbit = 1u;
-    DshotV.bit_ns_args.bit = PROTO_FALSE;
+    DshotV.bit_ns_args.bit = EMBED_FALSE;
     Dshot.bit_ns(dshot_work);
     TEST_ASSERT_EQUAL_UINT32(0u, DshotV.ns);
     DshotV.bit_ns_args.rate_kbit = 500u;
-    DshotV.bit_ns_args.bit = PROTO_TRUE;
+    DshotV.bit_ns_args.bit = EMBED_TRUE;
     Dshot.bit_ns(dshot_work);
     TEST_ASSERT_EQUAL_UINT32(0u, DshotV.ns);
     DshotV.bit_ns_args.rate_kbit = 2400u;
-    DshotV.bit_ns_args.bit = PROTO_TRUE;
+    DshotV.bit_ns_args.bit = EMBED_TRUE;
     Dshot.bit_ns(dshot_work);
     TEST_ASSERT_EQUAL_UINT32(0u, DshotV.ns);
 }

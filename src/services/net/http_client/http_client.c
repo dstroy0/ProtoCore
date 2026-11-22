@@ -12,13 +12,14 @@
  */
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "shared/log/log.h"   // PROTOCORE_LOGD: the debug lines
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
 #include "server/core/worker/worker.h" // the persistent end this module's key material is taken from
 #include "services/net/http_client/http_client.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
@@ -29,18 +30,25 @@ PROTOCORE_BEGIN_DECLS
 #include "shared/mime/mime.h"          // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
 #include "verba_scribo/verba_scribo.h" // verba_scribo: the message builder
 #ifdef PROTOCORE_HTTP_CLIENT_DEBUG
-#include <stdio.h>
 #endif
 // ---------------------------------------------------------------------------
 // Literals
 // ---------------------------------------------------------------------------
 
-// Stage tracing: build with -DPROTOCORE_HTTP_CLIENT_DEBUG to print where an exchange stalls.
-#ifdef PROTOCORE_HTTP_CLIENT_DEBUG
-#define CL_DBG(...) printf(__VA_ARGS__)
-#else
-#define CL_DBG(...) ((void)0)
-#endif
+// Stage tracing at the debug level of the log: where an exchange stalls.
+static const mmgr_field CL_LOG_TARGET[] = {{MMGR_FK_LIT, 0, sizeof("[hc] host=") - 1, "[hc] host="},
+                                           MMGR_STR,
+                                           {MMGR_FK_LIT, 0, sizeof(" port=") - 1, " port="},
+                                           MMGR_U32,
+                                           {MMGR_FK_LIT, 0, sizeof(" https=") - 1, " https="},
+                                           MMGR_U32,
+                                           {MMGR_FK_LIT, 0, sizeof(" path=") - 1, " path="},
+                                           MMGR_STR,
+                                           MMGR_END};
+static const mmgr_field CL_LOG_OPEN[] = {
+    {MMGR_FK_LIT, 0, sizeof("[hc] open cid=") - 1, "[hc] open cid="}, MMGR_I64, MMGR_END};
+static const mmgr_field CL_LOG_MSG[] = {
+    {MMGR_FK_LIT, 0, sizeof("[hc] msg_len=") - 1, "[hc] msg_len="}, MMGR_U32, MMGR_END};
 
 // The uri-host, the origin-form request target, and the request message the exchange builds.
 #define HTTP_CLIENT_HOST_CAP 80
@@ -86,7 +94,10 @@ static_assert(HTTP_CLIENT_OFF_CTX + sizeof(struct HttpClientStorage) <= PROTOCOR
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define HTTP_CLIENT_CTX(w) ((struct HttpClientStorage *)(void *)((w) + HTTP_CLIENT_OFF_CTX))
+#define HTTP_CLIENT_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct HttpClientStorage *)(const void *)((w) + HTTP_CLIENT_OFF_CTX),                  \
+        default: (struct HttpClientStorage *)(void *)((w) + HTTP_CLIENT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -117,11 +128,11 @@ uint8_t *protocore_http_client_span(void)
 // Split the target URI into the authority to dial and the origin-form request target to send.
 // Scheme defaults are RFC 9110 sec 4.2.1 (http, port 80) and sec 4.2.2 (https, port 443); an empty
 // path component sends "/" (RFC 9112 sec 3.2.1).
-void protocore_http_client_parse_target_uri(uint8_t *work)
+void protocore_http_client_parse_target_uri(const uint8_t *work)
 {
     (void)work;
     HttpClientVars *ns = &HttpClientV;
-    ns->ok = PROTO_FALSE;
+    ns->ok = EMBED_FALSE;
     if (!ns->target.url || !ns->target.host || !ns->target.path)
     {
         return;
@@ -129,18 +140,18 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
 
     const char *p = ns->target.url;
     if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = "https://", .cap = sizeof("https://"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
-        ns->target.https = PROTO_TRUE;
+        ns->target.https = EMBED_TRUE;
         ns->target.port = 443;
         p += sizeof("https://") - 1;
     }
     else if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = "http://", .cap = sizeof("http://"),
-                        .ci = PROTO_FALSE)) // NOSONAR: a user agent dials http:// too
+                        .ci = EMBED_FALSE)) // NOSONAR: a user agent dials http:// too
     {
-        ns->target.https = PROTO_FALSE;
+        ns->target.https = EMBED_FALSE;
         ns->target.port = 80;
-        p += sizeof("http://") - 1;
+        p += sizeof("http://") - 1; // NOSONAR(c:S5332): the length of the scheme that the caller gave
     }
     else
     {
@@ -200,7 +211,7 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ns->target.path, .src = p, .bytes = plen + 1);
     }
-    ns->ok = PROTO_TRUE;
+    ns->ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,7 +220,7 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
 
 // Write "method SP request-target SP HTTP/1.1" and the field lines, then the content. Host carries
 // the port only when it is not the scheme's default (RFC 9110 sec 7.2, sec 4.2.1 / 4.2.2).
-void protocore_http_client_build_request(uint8_t *work)
+void protocore_http_client_build_request(const uint8_t *work)
 {
     (void)work;
     HttpClientVars *ns = &HttpClientV;
@@ -219,7 +230,7 @@ void protocore_http_client_build_request(uint8_t *work)
         return;
     }
 
-    const proto_bool default_port =
+    const embed_bool default_port =
         (ns->target.https && ns->target.port == 443) || (!ns->target.https && ns->target.port == 80);
     char hosthdr[HTTP_CLIENT_HOST_CAP + 8];
     size_t sb_host = 0;
@@ -237,7 +248,7 @@ void protocore_http_client_build_request(uint8_t *work)
         hosthdr[0] = '\0';
     }
 
-    const proto_bool has_content = (ns->request.body != NULL) && (ns->request.body_len != 0);
+    const embed_bool has_content = (ns->request.body != NULL) && (ns->request.body_len != 0);
     char *const sb_out_out = ns->request.out;
     const size_t sb_out_cap = ns->request.cap;
     size_t sb_out = 0;
@@ -302,7 +313,7 @@ static const char *field_value(const uint8_t *buf, const uint8_t *end, const cha
     while (p + nlen + 1 < end)
     {
         if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = (const char *)p, .other = name, .cap = nlen,
-                       .ci = PROTO_TRUE) == nlen &&
+                       .ci = EMBED_TRUE) == nlen &&
             p[nlen] == ':')
         {
             const uint8_t *v = p + nlen + 1;
@@ -326,7 +337,7 @@ static const char *field_value(const uint8_t *buf, const uint8_t *end, const cha
 
 // RFC 9112 sec 6.3 item 4: chunked frames the body only when it is the final transfer coding. Walks
 // the field value to its line end, back over the trailing OWS, and tests the last coding name.
-static proto_bool chunked_is_final(const char *value, const char *end)
+static embed_bool chunked_is_final(const char *value, const char *end)
 {
     const char *v = value;
     while (v < end && *v != '\r' && *v != '\n')
@@ -340,13 +351,13 @@ static proto_bool chunked_is_final(const char *value, const char *end)
     const size_t nlen = sizeof("chunked") - 1;
     if ((size_t)(v - value) < nlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *last = v - nlen;
-    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = last, .other = "chunked", .cap = nlen, .ci = PROTO_TRUE) !=
+    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = last, .other = "chunked", .cap = nlen, .ci = EMBED_TRUE) !=
         nlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return (last == value) || last[-1] == ',' || last[-1] == ' ' || last[-1] == '\t';
 }
@@ -361,7 +372,7 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
     while (in < len)
     {
         size_t chunk_size = 0;
-        proto_bool any = PROTO_FALSE;
+        embed_bool any = EMBED_FALSE;
         while (in < len && buf[in] != '\r')
         {
             uint8_t c = buf[in++];
@@ -387,7 +398,7 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
             {
                 chunk_size = len;
             }
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
         while (in < len && buf[in] != '\n')
         {
@@ -418,7 +429,7 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
 
 // Read the status-line and frame the message body: chunked when it is the final coding, else
 // Content-Length, else the octets received before the close (RFC 9112 sec 6.3 items 4, 6 and 8).
-void protocore_http_client_parse_response(uint8_t *work)
+void protocore_http_client_parse_response(const uint8_t *work)
 {
     (void)work;
     HttpClientVars *ns = &HttpClientV;
@@ -516,13 +527,13 @@ static uint32_t now_ms(void)
 
 // The peer closed and its wire ring is drained: no further octet can arrive (RFC 9112 sec 6.3
 // item 8, the close-delimited body).
-static proto_bool peer_done(uint8_t *work)
+static embed_bool peer_done(uint8_t *work)
 {
     TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
     TcpClient.is_closed(protocore_tcp_client_span());
     if (!TcpClientV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
     TcpClient.available(protocore_tcp_client_span());
@@ -561,8 +572,10 @@ static void exchange(uint8_t *work)
         ns->status = (int32_t)HTTP_CLIENT_ERR_URL;
         return;
     }
-    CL_DBG("[hc] host=%s port=%u https=%d path=%s\n", HTTP_CLIENT_CTX(work)->host, (unsigned)ns->target.port,
-           (int)ns->target.https, HTTP_CLIENT_CTX(work)->path);
+    PROTOCORE_LOGD(CL_LOG_TARGET,
+                   ((const mmgr_fval[]){MMGR_VSTR(HTTP_CLIENT_CTX(work)->host), MMGR_VU32(ns->target.port),
+                                        MMGR_VU32(ns->target.https ? 1u : 0u), MMGR_VSTR(HTTP_CLIENT_CTX(work)->path)}),
+                   4);
     if (ns->target.https)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_TLS;
@@ -588,7 +601,7 @@ static void exchange(uint8_t *work)
     TcpClientV.dial.timeout_ms = PROTOCORE_HTTP_CLIENT_TIMEOUT_MS;
     TcpClient.open(protocore_tcp_client_span());
     HTTP_CLIENT_CTX(work)->cid = (int)TcpClientV.i32;
-    CL_DBG("[hc] open cid=%d\n", HTTP_CLIENT_CTX(work)->cid);
+    PROTOCORE_LOGD(CL_LOG_OPEN, ((const mmgr_fval[]){MMGR_VI64(HTTP_CLIENT_CTX(work)->cid)}), 1);
     if (HTTP_CLIENT_CTX(work)->cid < 0)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
@@ -657,7 +670,8 @@ static void exchange(uint8_t *work)
         }
     }
 
-    CL_DBG("[hc] msg_len=%u\n", (unsigned)msg_len);
+    // Explicit cast narrows the length, which the message buffer holds below 2^32
+    PROTOCORE_LOGD(CL_LOG_MSG, ((const mmgr_fval[]){MMGR_VU32((uint32_t)msg_len)}), 1);
     close_conn(work);
 
     if (msg_len == 0)
@@ -718,6 +732,6 @@ void protocore_http_client_post(uint8_t *work)
 /** @brief The operands and the outcome. */
 HttpClientVars HttpClientV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT

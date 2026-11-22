@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_NMEA2000
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/fieldbus/j1939/j1939.h" // reuses the J1939 29-bit identifier codec
 #include "shared/can/can.h"
@@ -39,19 +39,18 @@ PROTOCORE_BEGIN_DECLS
 #define N2K_FP_FN_DATA 7u       ///< data octets in a continuation frame
 
 /** @brief Result of feeding a frame to the Fast Packet reassembler. */
-typedef enum PROTO_ENUM_PACKED
-{
-    N2K_FP_IGNORED = 0, ///< not part of the active sequence
-    N2K_FP_STARTED,     ///< first frame opened a sequence
-    N2K_FP_PROGRESS,    ///< a continuation frame was accepted
-    N2K_FP_COMPLETE,    ///< the message is fully reassembled
-    N2K_FP_ERR,         ///< out-of-order / too large
-} N2kFpResult;
+EMBED_ENUM_BYTE(N2kFpResult,
+                N2K_FP_IGNORED = 0, ///< not part of the active sequence
+                N2K_FP_STARTED,     ///< first frame opened a sequence
+                N2K_FP_PROGRESS,    ///< a continuation frame was accepted
+                N2K_FP_COMPLETE,    ///< the message is fully reassembled
+                N2K_FP_ERR,         ///< out-of-order / too large
+);
 
 /** @brief Fast Packet reassembly context (one in-flight message). */
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t seq;        ///< sequence counter of the in-progress message
     uint8_t sa;         ///< source address
     uint32_t pgn;       ///< the message PGN
@@ -68,7 +67,7 @@ uint8_t protocore_n2k_fastpacket_num_frames(uint16_t total_len);
  * @brief Build Fast Packet frame @p frame_idx (0-based) of a message.
  * @p seq is the 0..7 sequence counter for this message; @p total_len is the whole payload.
  */
-proto_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t frame_idx, uint8_t priority,
+embed_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t frame_idx, uint8_t priority,
                                                 uint32_t pgn, uint8_t sa, uint8_t da, const uint8_t *data,
                                                 uint16_t total_len);
 
@@ -79,7 +78,7 @@ void protocore_n2k_fastpacket_reset(N2kFastPacketRx *rx);
 N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f);
 
 /** @brief Build a single-frame (<= 8 octet) NMEA 2000 message (a thin wrap of J1939). */
-proto_bool protocore_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
+embed_bool protocore_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
                                       const uint8_t *data, uint8_t len);
 
 // --- typed decoders for common single-frame PGNs ---
@@ -134,7 +133,7 @@ proto_bool protocore_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t 
 /** @brief Decoded Position Rapid Update (PGN 129025). */
 typedef struct
 {
-    proto_bool valid; ///< false if either coordinate is not-available
+    embed_bool valid; ///< false if either coordinate is not-available
     double lat_deg;   ///< latitude in decimal degrees (1e-7 deg/bit)
     double lon_deg;   ///< longitude in decimal degrees
 } N2kPositionRapid;
@@ -144,9 +143,9 @@ typedef struct
 {
     uint8_t sid;          ///< sequence id
     uint8_t cog_ref;      ///< course reference (@ref N2K_COG_REF_TRUE / _MAGNETIC)
-    proto_bool cog_valid; ///< false if the course over ground is not-available
+    embed_bool cog_valid; ///< false if the course over ground is not-available
     float cog_rad;        ///< course over ground (radians, 0.0001 rad per bit)
-    proto_bool sog_valid; ///< false if the speed over ground is not-available
+    embed_bool sog_valid; ///< false if the speed over ground is not-available
     float sog_mps;        ///< speed over ground (m/s, 0.01 m/s per bit)
 } N2kCogSogRapid;
 
@@ -154,11 +153,11 @@ typedef struct
 typedef struct
 {
     uint8_t instance;       ///< engine instance (0 = single / port, 1 = starboard, ...)
-    proto_bool speed_valid; ///< false if the engine speed is not-available
+    embed_bool speed_valid; ///< false if the engine speed is not-available
     float speed_rpm;        ///< engine speed (rpm, 0.25 rpm per bit)
-    proto_bool boost_valid; ///< false if the boost pressure is not-available
+    embed_bool boost_valid; ///< false if the boost pressure is not-available
     float boost_pa;         ///< engine boost pressure (Pa, 100 Pa per bit)
-    proto_bool tilt_valid;  ///< false if the tilt/trim is not-available
+    embed_bool tilt_valid;  ///< false if the tilt/trim is not-available
     int8_t tilt_pct;        ///< engine tilt / trim (percent, 1 %/bit, signed)
 } N2kEngineRapid;
 
@@ -172,9 +171,9 @@ typedef struct
 {
     uint8_t instance;             ///< rudder instance
     uint8_t direction_order;      ///< commanded direction (@ref N2K_RUDDER_NO_ORDER etc.)
-    proto_bool angle_order_valid; ///< false if the angle order is not-available
+    embed_bool angle_order_valid; ///< false if the angle order is not-available
     float angle_order_rad;        ///< commanded rudder angle (radians, 0.0001 rad per bit)
-    proto_bool position_valid;    ///< false if the position is not-available
+    embed_bool position_valid;    ///< false if the position is not-available
     float position_rad;           ///< actual rudder position (radians, 0.0001 rad per bit)
 } N2kRudder;
 
@@ -182,11 +181,11 @@ typedef struct
 typedef struct
 {
     uint8_t sid;            ///< sequence id
-    proto_bool yaw_valid;   ///< false if yaw is not-available
+    embed_bool yaw_valid;   ///< false if yaw is not-available
     float yaw_rad;          ///< yaw (radians); + = bow rotating to starboard
-    proto_bool pitch_valid; ///< false if pitch is not-available
+    embed_bool pitch_valid; ///< false if pitch is not-available
     float pitch_rad;        ///< pitch (radians); + = bow up
-    proto_bool roll_valid;  ///< false if roll is not-available
+    embed_bool roll_valid;  ///< false if roll is not-available
     float roll_rad;         ///< roll (radians); + = starboard side down
 } N2kAttitude;
 
@@ -197,9 +196,9 @@ typedef struct
     uint8_t sid;             ///< sequence id
     uint8_t instance;        ///< temperature instance
     uint8_t source;          ///< temperature source (@ref N2K_TEMP_SRC_SEA etc.)
-    proto_bool actual_valid; ///< false if the actual temperature is not-available
+    embed_bool actual_valid; ///< false if the actual temperature is not-available
     float actual_c;          ///< actual temperature (degrees Celsius)
-    proto_bool set_valid;    ///< false if the set/target temperature is not-available
+    embed_bool set_valid;    ///< false if the set/target temperature is not-available
     float set_c;             ///< set / target temperature (degrees Celsius)
 } N2kTemperature;
 
@@ -209,27 +208,27 @@ typedef struct // NOSONAR(cpp:S1820): one decoded PGN is one logical message; th
                // protocol's signals, so splitting the struct would be artificial, not clearer
 {
     uint8_t instance; ///< engine instance
-    proto_bool oil_pressure_valid;
+    embed_bool oil_pressure_valid;
     float oil_pressure_pa; ///< engine oil pressure (Pa, 100 Pa per bit)
-    proto_bool oil_temp_valid;
+    embed_bool oil_temp_valid;
     float oil_temp_c; ///< engine oil temperature (degrees Celsius; 0.1 K/bit on the wire)
-    proto_bool coolant_temp_valid;
+    embed_bool coolant_temp_valid;
     float coolant_temp_c; ///< engine coolant temperature (degrees Celsius; 0.01 K/bit on the wire)
-    proto_bool alt_voltage_valid;
+    embed_bool alt_voltage_valid;
     float alt_voltage_v; ///< alternator potential (V, 0.01 V per bit, signed)
-    proto_bool fuel_rate_valid;
+    embed_bool fuel_rate_valid;
     float fuel_rate_lph; ///< fuel rate (L/h, 0.1 L/h per bit, signed)
-    proto_bool engine_hours_valid;
+    embed_bool engine_hours_valid;
     uint32_t engine_hours_s; ///< total engine hours (seconds, 1 s per bit)
-    proto_bool coolant_pressure_valid;
+    embed_bool coolant_pressure_valid;
     float coolant_pressure_pa; ///< coolant pressure (Pa, 100 Pa per bit)
-    proto_bool fuel_pressure_valid;
+    embed_bool fuel_pressure_valid;
     float fuel_pressure_pa;     ///< fuel pressure (Pa, 1000 Pa per bit)
     uint16_t discrete_status_1; ///< discrete status 1 (raw bitfield)
     uint16_t discrete_status_2; ///< discrete status 2 (raw bitfield)
-    proto_bool load_valid;
+    embed_bool load_valid;
     int8_t load_pct; ///< percent engine load (%, 1 %/bit, signed)
-    proto_bool torque_valid;
+    embed_bool torque_valid;
     int8_t torque_pct; ///< percent engine torque (%, 1 %/bit, signed)
 } N2kEngineDynamic;
 
@@ -237,9 +236,9 @@ typedef struct // NOSONAR(cpp:S1820): one decoded PGN is one logical message; th
 typedef struct
 {
     uint8_t sid;            ///< sequence id
-    proto_bool speed_valid; ///< false if the wind speed is not-available
+    embed_bool speed_valid; ///< false if the wind speed is not-available
     float speed_mps;        ///< wind speed (m/s, 0.01 m/s per bit)
-    proto_bool angle_valid; ///< false if the wind angle is not-available
+    embed_bool angle_valid; ///< false if the wind angle is not-available
     float angle_rad;        ///< wind angle (radians, 0.0001 rad per bit)
     uint8_t reference;      ///< wind reference (@ref N2K_WIND_REF_TRUE_NORTH etc.)
 } N2kWindData;
@@ -255,9 +254,9 @@ typedef struct
 typedef struct
 {
     uint8_t sid;             ///< sequence id
-    proto_bool water_valid;  ///< false if the water-referenced speed is not-available
+    embed_bool water_valid;  ///< false if the water-referenced speed is not-available
     float water_mps;         ///< speed through water (m/s, 0.01 m/s per bit)
-    proto_bool ground_valid; ///< false if the ground-referenced speed is not-available
+    embed_bool ground_valid; ///< false if the ground-referenced speed is not-available
     float ground_mps;        ///< speed over ground (m/s, 0.01 m/s per bit)
     uint8_t water_ref_type;  ///< water-speed sensor type (@ref N2K_SPEED_TYPE_PADDLE_WHEEL etc.)
 } N2kSpeed;
@@ -266,7 +265,7 @@ typedef struct
 typedef struct
 {
     uint8_t sid;            ///< sequence id
-    proto_bool depth_valid; ///< false if the depth is not-available
+    embed_bool depth_valid; ///< false if the depth is not-available
     float depth_m;          ///< water depth below the transducer (metres, 0.01 m per bit)
     float offset_m;         ///< transducer offset (m); positive = distance to waterline, negative = to keel
 } N2kWaterDepth;
@@ -275,7 +274,7 @@ typedef struct
 typedef struct
 {
     uint8_t sid;              ///< sequence id
-    proto_bool heading_valid; ///< false if the heading is not-available
+    embed_bool heading_valid; ///< false if the heading is not-available
     float heading_rad;        ///< heading (radians, 0.0001 rad per bit)
     float deviation_rad;      ///< magnetic deviation (radians)
     float variation_rad;      ///< magnetic variation (radians)
@@ -286,55 +285,55 @@ typedef struct
  * @brief Decode a Position Rapid Update (PGN 129025) payload into @p out.
  * @return true iff @p len is at least 8 octets; false otherwise.
  */
-proto_bool protocore_n2k_decode_position_rapid(const uint8_t *payload, size_t len, N2kPositionRapid *out);
+embed_bool protocore_n2k_decode_position_rapid(const uint8_t *payload, size_t len, N2kPositionRapid *out);
 
 /**
  * @brief Decode a COG & SOG Rapid Update (PGN 129026) payload into @p out.
  * @return true iff @p len is at least 6 octets (SID + reference + COG + SOG); false otherwise.
  */
-proto_bool protocore_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len, N2kCogSogRapid *out);
+embed_bool protocore_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len, N2kCogSogRapid *out);
 
 /**
  * @brief Decode an Engine Parameters Rapid Update (PGN 127488) payload into @p out.
  * @return true iff @p len is at least 6 octets (instance + speed + boost + tilt); false otherwise.
  */
-proto_bool protocore_n2k_decode_engine_rapid(const uint8_t *payload, size_t len, N2kEngineRapid *out);
+embed_bool protocore_n2k_decode_engine_rapid(const uint8_t *payload, size_t len, N2kEngineRapid *out);
 
 /**
  * @brief Decode an Engine Parameters Dynamic (PGN 127489) payload into @p out. This is a Fast Packet PGN, so
  *        @p payload is the reassembled message body.
  * @return true iff @p len is at least 26 octets (the full engine-parameters record); false otherwise.
  */
-proto_bool protocore_n2k_decode_engine_dynamic(const uint8_t *payload, size_t len, N2kEngineDynamic *out);
+embed_bool protocore_n2k_decode_engine_dynamic(const uint8_t *payload, size_t len, N2kEngineDynamic *out);
 
 /**
  * @brief Decode a Rudder (PGN 127245) payload into @p out.
  * @return true iff @p len is at least 6 octets (instance + direction + angle order + position); false otherwise.
  */
-proto_bool protocore_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRudder *out);
+embed_bool protocore_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRudder *out);
 
 /**
  * @brief Decode an Attitude (PGN 127257) payload into @p out.
  * @return true iff @p len is at least 7 octets (SID + yaw + pitch + roll); false otherwise.
  */
-proto_bool protocore_n2k_decode_attitude(const uint8_t *payload, size_t len, N2kAttitude *out);
+embed_bool protocore_n2k_decode_attitude(const uint8_t *payload, size_t len, N2kAttitude *out);
 
 /**
  * @brief Decode a Temperature (PGN 130312) payload into @p out.
  * @return true iff @p len is at least 7 octets (SID + instance + source + actual + set); false otherwise.
  */
-proto_bool protocore_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemperature *out);
+embed_bool protocore_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemperature *out);
 
 /** @brief Decoded Battery Status (PGN 127508): a battery bank's voltage, current, and temperature. Each
  *  measurement clears a validity flag for a not-available raw. */
 typedef struct
 {
     uint8_t instance;         ///< battery instance
-    proto_bool voltage_valid; ///< false when the raw voltage is in the not-available range
+    embed_bool voltage_valid; ///< false when the raw voltage is in the not-available range
     float voltage_v;          ///< battery voltage (V, 0.01 V/bit)
-    proto_bool current_valid;
+    embed_bool current_valid;
     float current_a; ///< battery current (A, 0.1 A/bit, signed)
-    proto_bool temp_valid;
+    embed_bool temp_valid;
     float temp_c; ///< battery temperature (degrees C; carried as Kelvin at 0.01 K/bit on the wire)
     uint8_t sid;  ///< sequence id (correlates related messages)
 } N2kBatteryStatus;
@@ -344,7 +343,7 @@ typedef struct
  *        current (2, signed, 0.1 A) + temperature (2, unsigned, 0.01 K) + SID.
  * @return true iff @p len is at least 8 octets; false otherwise.
  */
-proto_bool protocore_n2k_decode_battery_status(const uint8_t *payload, size_t len, N2kBatteryStatus *out);
+embed_bool protocore_n2k_decode_battery_status(const uint8_t *payload, size_t len, N2kBatteryStatus *out);
 
 // Fluid / tank type (PGN 127505 byte 0, high nibble).
 #define PROTOCORE_N2K_FLUID_FUEL 0
@@ -359,9 +358,9 @@ typedef struct
 {
     uint8_t instance;       ///< tank instance (0..15)
     uint8_t fluid_type;     ///< fluid / tank type (PROTOCORE_N2K_FLUID_*)
-    proto_bool level_valid; ///< false when the raw level is in the not-available range
+    embed_bool level_valid; ///< false when the raw level is in the not-available range
     float level_pct;        ///< tank level as a percentage full (0.004 %/bit)
-    proto_bool capacity_valid;
+    embed_bool capacity_valid;
     float capacity_l; ///< total tank capacity (litres, 0.1 L/bit)
 } N2kFluidLevel;
 
@@ -370,7 +369,7 @@ typedef struct
  *        the level (2, signed, 0.004 %) and the total capacity (4, unsigned, 0.1 L).
  * @return true iff @p len is at least 7 octets; false otherwise.
  */
-proto_bool protocore_n2k_decode_fluid_level(const uint8_t *payload, size_t len, N2kFluidLevel *out);
+embed_bool protocore_n2k_decode_fluid_level(const uint8_t *payload, size_t len, N2kFluidLevel *out);
 
 // Pressure source (PGN 130314 byte 2).
 #define PROTOCORE_N2K_PRESSURE_ATMOSPHERIC 0
@@ -389,7 +388,7 @@ typedef struct
     uint8_t sid;               ///< sequence id (correlates related messages)
     uint8_t instance;          ///< pressure instance
     uint8_t source;            ///< pressure source (PROTOCORE_N2K_PRESSURE_*)
-    proto_bool pressure_valid; ///< false when the raw pressure is in the not-available range
+    embed_bool pressure_valid; ///< false when the raw pressure is in the not-available range
     float pressure_pa;         ///< measured pressure (Pa, 0.1 Pa/bit, signed)
 } N2kActualPressure;
 
@@ -398,33 +397,33 @@ typedef struct
  *        (4, signed, 0.1 Pa/bit). The trailing reserved octet is not required.
  * @return true iff @p len is at least 7 octets (SID + instance + source + pressure); false otherwise.
  */
-proto_bool protocore_n2k_decode_actual_pressure(const uint8_t *payload, size_t len, N2kActualPressure *out);
+embed_bool protocore_n2k_decode_actual_pressure(const uint8_t *payload, size_t len, N2kActualPressure *out);
 
 /**
  * @brief Decode a Wind Data (PGN 130306) payload into @p out.
  * @return true iff @p len is at least 6 octets; false otherwise.
  */
-proto_bool protocore_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2kWindData *out);
+embed_bool protocore_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2kWindData *out);
 
 /**
  * @brief Decode a Speed (PGN 128259) payload into @p out.
  * @return true iff @p len is at least 6 octets (SID + water speed + ground speed + type); false otherwise.
  */
-proto_bool protocore_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpeed *out);
+embed_bool protocore_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpeed *out);
 
 /**
  * @brief Decode a Water Depth (PGN 128267) payload into @p out.
  * @return true iff @p len is at least 7 octets (SID + depth + offset); false otherwise.
  */
-proto_bool protocore_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWaterDepth *out);
+embed_bool protocore_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWaterDepth *out);
 
 /**
  * @brief Decode a Vessel Heading (PGN 127250) payload into @p out.
  * @return true iff @p len is at least 8 octets; false otherwise.
  */
-proto_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out);
+embed_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NMEA2000
 

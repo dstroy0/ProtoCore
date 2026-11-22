@@ -182,7 +182,7 @@
 #define PROTOCORE_HPACK_BORROW ((size_t)PROTOCORE_HPACK_MAX_ENTRIES * 8 + PROTOCORE_HPACK_TABLE_BYTES + 32)
 #endif
 
-// The ring indexes with `% cap` (mmgr/ring.h). A power-of-two capacity makes that an AND; any other
+// The ring indexes with `% cap` (mmgr/ring.h). A power-of-two capacity makes that an AND. Any other
 // value emits a divide, which on a target without one is a call into a software routine per access.
 #if (PROTOCORE_UDP_RX_RING & (PROTOCORE_UDP_RX_RING - 1)) != 0
 #error "ProtoCore: PROTOCORE_UDP_RX_RING must be a power of two"
@@ -271,7 +271,7 @@
 // The edge cache's state, split across both pools the way a QUIC connection is. The L1 response
 // store, the route maps, the fetch slots and the per-connection scratch are cached origin bytes and
 // carry nothing secret, so they take the PLAINTEXT borrow. Measured at 18168 bytes with the default
-// widths and 26128 with the mesh, L2 and range arms all on, which is what this number covers; the
+// widths and 26128 with the mesh, L2 and range arms all on, which is what this number covers. The
 // static_assert refuses a build it is short of. Only the TLS half is secure, below. A literal rather
 // than a formula because the terms are edge_cache.h's, which this file is included by rather than
 // includes; proved against sizeof(EdgeCacheProxyCtx) by a static_assert in edge_cache_proxy.c.
@@ -401,9 +401,10 @@
 // bitmap of bound slots, the reentrancy latch and the text a joined group is formatted into. Scales
 // with the listener count and the ring. No key material, so the plaintext end. Proved against
 // sizeof(struct UdpListenerStorage) by a static_assert in udp/server/server.c.
-// One mmgr_ring: MMGR_RING_WORDS machine words, stated here because this header reaches no MMgr header.
-// The static_assert behind each borrow that uses it proves it against sizeof(mmgr_ring).
-#define PROTOCORE_RING_STORAGE_BYTES (40u * sizeof(size_t))
+// One ring of MMgr: MMGR_RING_WORDS machine words. The header mmgr_settings.h gives that count to MMgr and to
+// this header. The static_assert behind each borrow that uses it proves it against the size of the ring type.
+#include "mmgr_settings.h" // MMGR_RING_WORDS: the size of one ring of MMgr
+#define PROTOCORE_RING_STORAGE_BYTES ((size_t)MMGR_RING_WORDS * sizeof(size_t))
 
 #ifndef PROTOCORE_UDP_LISTENER_BORROW
 #define PROTOCORE_UDP_LISTENER_BORROW                                                                                  \
@@ -423,9 +424,9 @@
 // TcpConn, receive ring included), the nine close-reason counters, the idle deadline and the
 // installed observer. No key material - the slot payloads live in conn_pool, not here - so the
 // plaintext end. Proved against sizeof(struct ConnPoolStorage) by a static_assert in
-// tcp/protocol/protocol.c.
+// tcp/protocol/protocol.c. The receive ring of the template is one ring of MMgr, counted at its own size.
 #ifndef PROTOCORE_CONN_POOL_BORROW
-#define PROTOCORE_CONN_POOL_BORROW ((size_t)RX_BUF_SIZE + 512u)
+#define PROTOCORE_CONN_POOL_BORROW ((size_t)RX_BUF_SIZE + PROTOCORE_RING_STORAGE_BYTES + 256u)
 #endif
 
 // The accepting side's accept-time state: the global fixed-window throttle, the per-source-address
@@ -693,7 +694,7 @@
 #endif
 // The X25519 borrow: the clamped scalar, the base point, and the Montgomery ladder's running points
 // and per-bit intermediates. The radix-2^16 protocore_gf arm is the larger of the two at 960 octets,
-// seven 128-octet field elements over the two 32-octet scalars; the radix-2^32 fe arm is 576. Proved
+// seven 128-octet field elements over the two 32-octet scalars. The radix-2^32 fe arm is 576. Proved
 // by a static_assert in curve25519.c.
 #ifndef PROTOCORE_CURVE25519_BORROW
 #define PROTOCORE_CURVE25519_BORROW 960
@@ -770,7 +771,7 @@
 #define PROTOCORE_TLS13_SECRET_MAX 48
 #endif
 // The key share, the ECDHE secret, the transcript hash in hand, the Finished MAC, and
-// Transcript-Hash(CH..server Finished). The peer's public key is NOT one of these: it can be an
+// Transcript-Hash(CH..server Finished). The peer's public key is NOT one of these. It can be an
 // RSA modulus, so it has its own region (PROTOCORE_TLS_CONN_PEERKEY_CAP) rather than a 32-byte term.
 #ifndef PROTOCORE_TLS_CONN_TERMS
 #define PROTOCORE_TLS_CONN_TERMS 5
@@ -795,7 +796,7 @@
 #ifndef PROTOCORE_TLS_CONN_PEERKEY_CAP
 #define PROTOCORE_TLS_CONN_PEERKEY_CAP 320
 #endif
-// The terms of one TLS 1.3 key schedule: early, handshake and master secrets; the four traffic
+// The terms of one TLS 1.3 key schedule: early, handshake and master secrets. The four traffic
 // secrets; the empty hash, the derived salt, the finished key, the zero IKM, and the Finished
 // verify_data. The connection that runs the schedule owns the storage, so the extent is stated
 // here and spent there: PROTOCORE_TLS13_KS_CAP.
@@ -956,7 +957,7 @@
 // stamp, mount and fault counts) plus the four callbacks the application registered and the context
 // it passes back. Taken from the persistent end so a volume's state survives the polls that watch
 // it. A literal rather than a formula because the terms are hotswap.h's, which this file is
-// included by rather than includes; proved against sizeof(HotswapCtx) by a static_assert in
+// included by rather than includes. Proved against sizeof(HotswapCtx) by a static_assert in
 // hotswap.c.
 #ifndef PROTOCORE_HOTSWAP_BORROW
 #define PROTOCORE_HOTSWAP_BORROW 128
@@ -966,7 +967,7 @@
 // composed in - two address bytes, a command, a count, a 32-octet block and the PEC, which is the
 // longest sequence any shape puts on the wire. Taken from the persistent end so the PEC setting
 // outlives the transactions that use it. A literal rather than a formula because the terms are
-// smbus.h's, which this file is included by rather than includes; proved against sizeof(SmbusCtx)
+// smbus.h's, which this file is included by rather than includes. Proved against sizeof(SmbusCtx)
 // by a static_assert in smbus.c.
 #ifndef PROTOCORE_SMBUS_BORROW
 #define PROTOCORE_SMBUS_BORROW 64
@@ -1036,7 +1037,7 @@
 #ifndef PROTOCORE_SECURE_ARENA_SIZE
 
 // The modexp dominates: one backend or the other is compiled, never both. The software backend also
-// walks the SSH host key in the pool and holds its private exponent there; the accelerated one hands
+// walks the SSH host key in the pool and holds its private exponent there. The accelerated one hands
 // the key to mbedtls instead.
 #if PROTOCORE_HAS_HW_BIGNUM
 #define PROTOCORE_SECURE_WORK_BIGNUM PROTOCORE_WORK_BIGNUM_HW
@@ -1918,7 +1919,7 @@ static_assert((unsigned)PROTO_UDP < PROTO_MAX_HANDLERS, "PROTO_MAX_HANDLERS must
 #endif
 #endif
 
-// The FTP session driver holds a control connection and a data connection at the same time; with a
+// The FTP session driver holds a control connection and a data connection at the same time. With a
 // smaller pool the data open would fail after login and every transfer would abort mid-session.
 #if PROTOCORE_ENABLE_FTP_SESSION && (PROTOCORE_CLIENT_CONNS < 2)
 #error "ProtoCore: PROTOCORE_ENABLE_FTP_SESSION needs PROTOCORE_CLIENT_CONNS >= 2 (control + data)"

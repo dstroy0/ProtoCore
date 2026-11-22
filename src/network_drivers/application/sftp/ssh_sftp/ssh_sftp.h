@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ssh_sftp.h
@@ -61,6 +61,6 @@ uint8_t *protocore_ssh_sftp_span(void);
 /** @brief Module namespace. */
 PROTOCORE_NS SshSftpNs SshSftp PROTOCORE_UNUSED = {.begin = protocore_ssh_sftp_begin};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SSH_SFTP_H

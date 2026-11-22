@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Layering guard: fail if a file includes a header from a higher layer.
 
-The stack is the one in docs/ARCHITECTURE.md, and it runs one way: a layer includes what is
+The stack is the one in docs/ARCHITECTURE.md. It runs one way: a layer includes what is
 below it and publishes to what is above. An include that points up is either a layering
 violation or a misfiled file, and both read the same way here - the edge is what is wrong,
 not which of the two caused it.
@@ -52,7 +52,7 @@ LAYERS = (
     ("network_drivers/transport/", 7),
     ("network_drivers/tls/", 8),
     ("server/core/", 9),
-    # The session layer uses the server core rather than being part of it, so it ranks with it:
+    # The session layer uses the server core rather than being part of it. So it ranks with it:
     # session may include the core, and an equal rank is what permits that.
     ("network_drivers/session/", 9),
     ("network_drivers/presentation/", 10),
@@ -86,7 +86,7 @@ COND_OPEN = re.compile(r"^\s*#\s*(if|ifdef|ifndef)\b\s*(.*)")
 COND_MID = re.compile(r"^\s*#\s*(elif|else)\b\s*(.*)")
 COND_END = re.compile(r"^\s*#\s*endif\b")
 
-# An include guard is the file's own name, so it is not a configuration branch and naming it in
+# An include guard is the file's own name. So it is not a configuration branch and naming it in
 # the report would bury the real guard under noise.
 GUARD_NAME = re.compile(r"^PROTOCORE_\w+_H$")
 
@@ -122,7 +122,7 @@ def sources():
             if fn.endswith((".c", ".h")):
                 p = Path(dirpath) / fn
                 yield str(p.relative_to(SRC)).replace(os.sep, "/"), p
-    # The entry header names its includes as src-relative paths, so it is walked with the same
+    # The entry header names its includes as src-relative paths. So it is walked with the same
     # relative root; its own name is not a layer and never appears as an include target.
     for fn in sorted(os.listdir(ENTRY)) if ENTRY.is_dir() else []:
         if fn.endswith((".c", ".h")):

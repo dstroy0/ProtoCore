@@ -148,7 +148,7 @@ static size_t record_seal(uint8_t *work, TlsRecordKeys *keys, uint8_t content_ty
 }
 
 // Open one received record under keys into out; false on an AEAD failure.
-static proto_bool record_open(uint8_t *work, TlsRecordKeys *keys, const uint8_t *rec, size_t rec_len, uint8_t *out,
+static embed_bool record_open(uint8_t *work, TlsRecordKeys *keys, const uint8_t *rec, size_t rec_len, uint8_t *out,
                               size_t out_cap, TlsCiphertext *info)
 {
     TlsRecordV.key.keys = keys;
@@ -223,7 +223,7 @@ static void server_flight(uint8_t *work)
     Tls13MsgV.build_server_hello_args.share_len = TLS_X25519_SHARE_LEN;
     Tls13MsgV.build_server_hello_args.group = TLS_GROUP_X25519;
     Tls13MsgV.build_server_hello_args.suite = protocore_tls_cipher_code(c->cfg->cipher);
-    Tls13MsgV.build_server_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_server_hello_args.dtls = EMBED_FALSE;
     Tls13MsgV.build_server_hello_args.conn_id = NULL;
     Tls13MsgV.build_server_hello_args.conn_id_len = 0;
     Tls13Msg.build_server_hello(work);
@@ -257,11 +257,11 @@ static void server_flight(uint8_t *work)
     Tls13Ks.handshake(work);
     keys_derive(work, &c->hs_tx, c->ks.s + TLS13_KS_SERVER_HS);
     keys_derive(work, &c->hs_rx, c->ks.s + TLS13_KS_CLIENT_HS);
-    c->hs_keys_ready = PROTO_TRUE;
+    c->hs_keys_ready = EMBED_TRUE;
 
     // A configured certificate is presented as itself; without one this end's credential is the
     // RFC 7250 raw public key, and the negotiated server_certificate_type says which.
-    const proto_bool rpk = (c->cfg->cert_der == NULL);
+    const embed_bool rpk = (c->cfg->cert_der == NULL);
     Tls13MsgV.build_encrypted_extensions_empty_args.out = c->tx;
     Tls13MsgV.build_encrypted_extensions_empty_args.cap = PROTOCORE_TLS_CONN_MSG_CAP;
     Tls13MsgV.build_encrypted_extensions_empty_args.rpk_server_cert = rpk;
@@ -340,7 +340,7 @@ static void server_flight(uint8_t *work)
     Tls13Ks.master(work);
     keys_derive(work, &c->ap_tx, c->ks.s + TLS13_KS_SERVER_AP);
     keys_derive(work, &c->ap_rx, c->ks.s + TLS13_KS_CLIENT_AP);
-    c->ap_keys_ready = PROTO_TRUE;
+    c->ap_keys_ready = EMBED_TRUE;
 
     c->state = TLS_CONN_WAIT_FINISHED;
     TlsConnectionV.i32 = (int)off;
@@ -410,7 +410,7 @@ static void server_hello_retry(uint8_t *work, const uint8_t *msg, size_t len)
     Tls13MsgV.build_hello_retry_request_args.suite = protocore_tls_cipher_code(c->cfg->cipher);
     Tls13MsgV.build_hello_retry_request_args.cookie = NULL;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = 0;
-    Tls13MsgV.build_hello_retry_request_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_hello_retry_request_args.dtls = EMBED_FALSE;
     Tls13Msg.build_hello_retry_request(work);
     n = Tls13MsgV.n;
     if (n == 0)
@@ -432,7 +432,7 @@ static void server_hello_retry(uint8_t *work, const uint8_t *msg, size_t len)
         fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
-    c->hrr_sent = PROTO_TRUE;
+    c->hrr_sent = EMBED_TRUE;
     TlsConnectionV.i32 = (int)TlsRecordV.n;
 }
 
@@ -443,7 +443,7 @@ static void server_on_client_hello(uint8_t *work, const uint8_t *msg, size_t len
     Tls13MsgV.parse_client_hello_args.msg = msg;
     Tls13MsgV.parse_client_hello_args.len = len;
     Tls13MsgV.parse_client_hello_args.out = c->hello;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(work);
     if (!Tls13MsgV.ok)
     {
@@ -454,7 +454,7 @@ static void server_on_client_hello(uint8_t *work, const uint8_t *msg, size_t len
     // 4.1.1: no overlap in the parameters themselves is a handshake_failure. sec 4.1.3 makes the
     // selection one of the suites the client listed, so a client that did not offer it is refused
     // rather than answered with it.
-    const proto_bool offered = protocore_tls_cipher_is384(c->cfg->cipher) ? c->hello->offers_aes256gcm_sha384
+    const embed_bool offered = protocore_tls_cipher_is384(c->cfg->cipher) ? c->hello->offers_aes256gcm_sha384
                                                                           : c->hello->offers_aes128gcm_sha256;
     if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->offers_ed25519 || !offered)
     {
@@ -513,19 +513,19 @@ static void server_on_finished(uint8_t *work, const uint8_t *msg, size_t len)
 // The connection's persistent storage, split by offset. One borrow from the secure pool's
 // persistent end on first use, kept for the connection's life, so a connection that is initialised
 // again reuses the bytes it already holds.
-static proto_bool slot_storage(uint8_t *work)
+static embed_bool slot_storage(uint8_t *work)
 {
     TlsConn *c = TlsConnectionV.conn;
     if (c->tx != NULL)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     mmgr_span b =
         EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_TLS_CONN_BORROW),
                    .cap = PROTOCORE_TLS_CONN_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = b))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     c->tx = b.buf + TLS_OFF_TX;
     c->rx = b.buf + TLS_OFF_RX;
@@ -534,7 +534,7 @@ static proto_bool slot_storage(uint8_t *work)
     c->sign_work = b.buf + TLS_OFF_SIGN;
     c->ks_work = b.buf + TLS_OFF_KS;
     c->hello = (Tls13ClientHello *)(b.buf + TLS_OFF_HELLO);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_tls_connection_init(uint8_t *work)
@@ -542,10 +542,10 @@ void protocore_tls_connection_init(uint8_t *work)
     TlsConn *c = TlsConnectionV.conn;
     if (!slot_storage(work))
     {
-        TlsConnectionV.ok = PROTO_FALSE;
+        TlsConnectionV.ok = EMBED_FALSE;
         return;
     }
-    // The bytes carry the previous tenant's key material; the pointers to them stay, or the next
+    // The bytes carry the previous tenant's key material. The pointers to them stay, or the next
     // init would ask the persistent end for a second borrow it never gives back.
     mmgr_zero_buf(c->tx, PROTOCORE_TLS_CONN_BORROW);
     mmgr_zero_buf(&c->ks, sizeof(c->ks));
@@ -553,8 +553,8 @@ void protocore_tls_connection_init(uint8_t *work)
     mmgr_zero_buf(&c->hs_rx, sizeof(c->hs_rx));
     mmgr_zero_buf(&c->ap_tx, sizeof(c->ap_tx));
     mmgr_zero_buf(&c->ap_rx, sizeof(c->ap_rx));
-    c->hs_keys_ready = PROTO_FALSE;
-    c->ap_keys_ready = PROTO_FALSE;
+    c->hs_keys_ready = EMBED_FALSE;
+    c->ap_keys_ready = EMBED_FALSE;
     c->alert = 0;
     c->cfg = TlsConnectionV.init_args.cfg;
     c->role = TlsConnectionV.init_args.role;
@@ -587,7 +587,7 @@ static void client_on_server_hello(uint8_t *work, const uint8_t *msg, size_t len
     Tls13MsgV.parse_server_hello_args.msg = msg;
     Tls13MsgV.parse_server_hello_args.len = len;
     Tls13MsgV.parse_server_hello_args.out = &sh;
-    Tls13MsgV.parse_server_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_server_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_server_hello(work);
     if (!Tls13MsgV.ok)
     {
@@ -630,7 +630,7 @@ static void client_on_server_hello(uint8_t *work, const uint8_t *msg, size_t len
     Tls13Ks.handshake(work);
     keys_derive(work, &c->hs_tx, c->ks.s + TLS13_KS_CLIENT_HS);
     keys_derive(work, &c->hs_rx, c->ks.s + TLS13_KS_SERVER_HS);
-    c->hs_keys_ready = PROTO_TRUE;
+    c->hs_keys_ready = EMBED_TRUE;
 
     c->state = TLS_CONN_WAIT_FLIGHT;
     TlsConnectionV.i32 = 0;
@@ -638,18 +638,18 @@ static void client_on_server_hello(uint8_t *work, const uint8_t *msg, size_t len
 
 // Keep the peer's subjectPublicKey past the message it arrived in. c->tx is the borrow's base, so
 // the region is far beyond the buffer the next handshake message overwrites.
-static proto_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, size_t key_len)
+static embed_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, size_t key_len)
 {
     uint8_t *w = TlsConnectionV.conn->tx;
     if (key_len > TLS_PEERKEY_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     w[TLS_OFF_PEERKEY] = (uint8_t)alg;
     w[TLS_OFF_PEERKEY + 1] = (uint8_t)(key_len >> 8);
     w[TLS_OFF_PEERKEY + 2] = (uint8_t)key_len;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = TLS_PEERKEY_P(w), .src = key, .bytes = key_len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The peer's Certificate, by whichever credential this connection was configured to accept: an
@@ -657,7 +657,7 @@ static proto_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, 
 // public key. Either way the key it carries is kept, because CertificateVerify is checked under it.
 static void client_on_certificate(uint8_t *work, const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnectionV.conn;
+    const TlsConn *c = TlsConnectionV.conn;
     const uint8_t *entry = NULL;
     size_t entry_len = 0;
     Tls13MsgV.parse_certificate_args.msg = msg;
@@ -741,7 +741,7 @@ static void client_on_certificate(uint8_t *work, const uint8_t *msg, size_t len)
 #endif
 
     const uint8_t *pub = NULL;
-    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(work, entry, entry_len, &pub);
+    embed_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(work, entry, entry_len, &pub);
     if (!tls13_rpk_ok)
     {
         fail(TLS_ALERT_DECODE_ERROR);
@@ -785,7 +785,7 @@ static protocore_x509_sig_alg sig_alg_of(uint16_t scheme)
 // message joins it (sec 4.4.3).
 static void client_on_cert_verify(uint8_t *work, const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnectionV.conn;
+    const TlsConn *c = TlsConnectionV.conn;
     uint16_t scheme = 0;
     const uint8_t *sig = NULL;
     size_t sig_len = 0;
@@ -812,7 +812,7 @@ static void client_on_cert_verify(uint8_t *work, const uint8_t *msg, size_t len)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
     Tls13MsgV.cert_verify_content_args.transcript_hash = c->terms + TLS_TERM_HASH;
     Tls13MsgV.cert_verify_content_args.hash_len = c->ks.len;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(work);
     size_t clen = Tls13MsgV.n;
     if (clen == 0)
@@ -875,7 +875,7 @@ static void client_on_server_finished(uint8_t *work, const uint8_t *msg, size_t 
     Tls13Ks.master(work);
     keys_derive(work, &c->ap_tx, c->ks.s + TLS13_KS_CLIENT_AP);
     keys_derive(work, &c->ap_rx, c->ks.s + TLS13_KS_SERVER_AP);
-    c->ap_keys_ready = PROTO_TRUE;
+    c->ap_keys_ready = EMBED_TRUE;
 
     // This end's Finished covers the same transcript, under the client handshake secret.
     finished_mac(work, c->ks.s + TLS13_KS_CLIENT_HS, TLS_TERM_HS_FIN);
@@ -950,8 +950,8 @@ void protocore_tls_connection_start(uint8_t *work)
     Tls13MsgV.build_client_hello_args.alpn = alpn;
     Tls13MsgV.build_client_hello_args.cookie = NULL;
     Tls13MsgV.build_client_hello_args.cookie_len = 0;
-    Tls13MsgV.build_client_hello_args.rpk_server_cert = PROTO_TRUE;
-    Tls13MsgV.build_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_client_hello_args.rpk_server_cert = EMBED_TRUE;
+    Tls13MsgV.build_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.build_client_hello(work);
     size_t n = Tls13MsgV.n;
     if (n == 0)
@@ -977,7 +977,7 @@ void protocore_tls_connection_start(uint8_t *work)
 }
 
 // The worker filled RX with one record and says how much. A ClientHello is in the clear, so it is
-// read where it lies; everything after it opens into TX, which builds nothing while a received
+// read where it lies. Everything after it opens into TX, which builds nothing while a received
 // message stands in it.
 void protocore_tls_connection_process(uint8_t *work)
 {
@@ -1087,7 +1087,7 @@ void protocore_tls_connection_seal_app(uint8_t *work)
 
 void protocore_tls_connection_open_app(uint8_t *work)
 {
-    TlsConnectionV.ok = PROTO_FALSE;
+    TlsConnectionV.ok = EMBED_FALSE;
     if (!TlsConnectionV.conn->ap_keys_ready)
     {
         return;

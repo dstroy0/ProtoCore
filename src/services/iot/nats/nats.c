@@ -20,7 +20,7 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a caller's NUL-terminated field
 #include "memoria_operor/memoria_operor.h" // memor.cpy / memor.cmp: the spans an operation is laid from and matched against
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The terminator every protocol message ends with (NATS Protocol, Protocol conventions: Newlines).
 #define NATS_CRLF "\r\n"
@@ -46,7 +46,7 @@ typedef struct
     char *p;       ///< the buffer being written
     size_t cap;    ///< octets it holds
     size_t pos;    ///< octets written so far
-    proto_bool ok; ///< every append so far fit
+    embed_bool ok; ///< every append so far fit
 } Buf;
 
 // Append a NUL-terminated string. A null string or a run past cap stops the cursor.
@@ -54,7 +54,7 @@ static void put_str(Buf *b, const char *s)
 {
     if (!s)
     {
-        b->ok = PROTO_FALSE;
+        b->ok = EMBED_FALSE;
         return;
     }
     if (!b->ok)
@@ -64,7 +64,7 @@ static void put_str(Buf *b, const char *s)
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = b->cap + 1);
     if (b->pos + n > b->cap)
     {
-        b->ok = PROTO_FALSE;
+        b->ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->p + b->pos, .src = s, .bytes = n);
@@ -80,7 +80,7 @@ static void put_bytes(Buf *b, const uint8_t *d, size_t n)
     }
     if (b->pos + n > b->cap)
     {
-        b->ok = PROTO_FALSE;
+        b->ok = EMBED_FALSE;
         return;
     }
     if (n)
@@ -99,7 +99,7 @@ static void put_ch(Buf *b, char c)
     }
     if (b->pos + 1 > b->cap)
     {
-        b->ok = PROTO_FALSE;
+        b->ok = EMBED_FALSE;
         return;
     }
     b->p[b->pos++] = c;
@@ -130,12 +130,12 @@ static void put_uint(Buf *b, uint64_t v)
 
 // Report the octets the cursor wrote, NUL-terminating when one byte is left over. A stopped cursor
 // reports 0 octets and a false outcome.
-static void finish(uint8_t *work, Buf *b)
+static void finish(const uint8_t *work, Buf *b)
 {
     if (!b->ok)
     {
         NatsV.n = 0;
-        NatsV.ok = PROTO_FALSE;
+        NatsV.ok = EMBED_FALSE;
         return;
     }
     if (b->pos < b->cap)
@@ -143,19 +143,19 @@ static void finish(uint8_t *work, Buf *b)
         b->p[b->pos] = '\0';
     }
     NatsV.n = b->pos;
-    NatsV.ok = PROTO_TRUE;
+    NatsV.ok = EMBED_TRUE;
 }
 
 // CONNECT {"option_name":option_value,...}
 void protocore_nats_connect(uint8_t *work)
 {
     NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     if (!NatsV.out.buf || !NatsV.client.options)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, EMBED_TRUE};
     put_str(&b, "CONNECT ");
     put_str(&b, NatsV.client.options);
     put_str(&b, NATS_CRLF);
@@ -166,12 +166,12 @@ void protocore_nats_connect(uint8_t *work)
 void protocore_nats_pub(uint8_t *work)
 {
     NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     if (!NatsV.out.buf || !NatsV.publish.subject || (NatsV.publish.payload_len && !NatsV.publish.payload))
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, EMBED_TRUE};
     put_str(&b, "PUB ");
     put_str(&b, NatsV.publish.subject);
     if (NatsV.publish.reply_to)
@@ -192,13 +192,13 @@ void protocore_nats_pub(uint8_t *work)
 void protocore_nats_hpub(uint8_t *work)
 {
     NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     if (!NatsV.out.buf || !NatsV.publish.subject || !NatsV.headers.block || NatsV.headers.bytes == 0 ||
         (NatsV.publish.payload_len && !NatsV.publish.payload))
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, EMBED_TRUE};
     put_str(&b, "HPUB ");
     put_str(&b, NatsV.publish.subject);
     if (NatsV.publish.reply_to)
@@ -221,12 +221,12 @@ void protocore_nats_hpub(uint8_t *work)
 void protocore_nats_sub(uint8_t *work)
 {
     NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     if (!NatsV.out.buf || !NatsV.subscription.subject || !NatsV.subscription.sid)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, EMBED_TRUE};
     put_str(&b, "SUB ");
     put_str(&b, NatsV.subscription.subject);
     if (NatsV.subscription.queue_group)
@@ -244,12 +244,12 @@ void protocore_nats_sub(uint8_t *work)
 void protocore_nats_unsub(uint8_t *work)
 {
     NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     if (!NatsV.out.buf || !NatsV.subscription.sid)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, EMBED_TRUE};
     put_str(&b, "UNSUB ");
     put_str(&b, NatsV.subscription.sid);
     if (NatsV.subscription.with_max)
@@ -265,12 +265,12 @@ void protocore_nats_unsub(uint8_t *work)
 void protocore_nats_ping(uint8_t *work)
 {
     NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     if (!NatsV.out.buf)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, EMBED_TRUE};
     put_str(&b, "PING" NATS_CRLF);
     finish(work, &b);
 }
@@ -279,12 +279,12 @@ void protocore_nats_ping(uint8_t *work)
 void protocore_nats_pong(uint8_t *work)
 {
     NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     if (!NatsV.out.buf)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, EMBED_TRUE};
     put_str(&b, "PONG" NATS_CRLF);
     finish(work, &b);
 }
@@ -303,36 +303,36 @@ static size_t find_crlf(const char *buf, size_t len)
 }
 
 // Decimal parse of [s, s+n); false on an empty run or a non-digit.
-static proto_bool parse_uint(const char *s, size_t n, size_t *out)
+static embed_bool parse_uint(const char *s, size_t n, size_t *out)
 {
     if (n == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t v = 0;
     for (size_t i = 0; i < n; i++)
     {
         if (s[i] < '0' || s[i] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = v * 10 + (size_t)(s[i] - '0');
     }
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // True when the control line opens with the operation name op and ends there or at a delimiter.
-static proto_bool verb_is(const char *buf, size_t line_len, const char *op)
+static embed_bool verb_is(const char *buf, size_t line_len, const char *op)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = op, .cap = line_len + 1);
     if (line_len < n)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = buf, .other = op, .bytes = n) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return line_len == n || buf[n] == ' ' || buf[n] == '\t';
 }
@@ -367,10 +367,10 @@ static size_t split_fields(const char *buf, size_t line_len, size_t from, const 
 }
 
 // Decode the operation at the head of in.buf into msg, and report the octets it occupies.
-void protocore_nats_parse(uint8_t *work)
+void protocore_nats_parse(const uint8_t *work)
 {
     (void)work;
-    NatsV.ok = PROTO_FALSE;
+    NatsV.ok = EMBED_FALSE;
     NatsV.consumed = 0;
 
     const char *buf = NatsV.in.buf;
@@ -399,21 +399,21 @@ void protocore_nats_parse(uint8_t *work)
     {
         out->op = NATS_OP_PING;
         NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        NatsV.ok = EMBED_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "PONG"))
     {
         out->op = NATS_OP_PONG;
         NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        NatsV.ok = EMBED_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "+OK"))
     {
         out->op = NATS_OP_OK;
         NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        NatsV.ok = EMBED_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "-ERR") || verb_is(buf, line_len, "INFO"))
@@ -427,7 +427,7 @@ void protocore_nats_parse(uint8_t *work)
         out->arg = buf + a;
         out->arg_len = line_len - a;
         NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        NatsV.ok = EMBED_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "MSG"))
@@ -464,7 +464,7 @@ void protocore_nats_parse(uint8_t *work)
         out->payload = (const uint8_t *)(buf + after_line);
         out->payload_len = size;
         NatsV.consumed = after_line + size + NATS_CRLF_LEN;
-        NatsV.ok = PROTO_TRUE;
+        NatsV.ok = EMBED_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "HMSG"))
@@ -477,7 +477,8 @@ void protocore_nats_parse(uint8_t *work)
         {
             return;
         }
-        size_t hdr_len, total_size;
+        size_t hdr_len;
+        size_t total_size;
         if (!parse_uint(tok[ntok - 2], tlen[ntok - 2], &hdr_len) ||
             !parse_uint(tok[ntok - 1], tlen[ntok - 1], &total_size))
         {
@@ -507,19 +508,19 @@ void protocore_nats_parse(uint8_t *work)
         out->payload = (const uint8_t *)(buf + after_line + hdr_len);
         out->payload_len = total_size - hdr_len;
         NatsV.consumed = after_line + total_size + NATS_CRLF_LEN;
-        NatsV.ok = PROTO_TRUE;
+        NatsV.ok = EMBED_TRUE;
         return;
     }
 
     out->op = NATS_OP_UNKNOWN;
     NatsV.consumed = after_line;
-    NatsV.ok = PROTO_TRUE;
+    NatsV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 NatsVars NatsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NATS

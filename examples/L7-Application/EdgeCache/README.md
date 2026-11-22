@@ -110,7 +110,7 @@ GET /cache/stats for counters; POST /cache/purge to invalidate /cdn/
   `https://` origin cannot be fetched and is rejected rather than fetched in the clear.
 - **Range / `206`.** Build with `-DPROTOCORE_ENABLE_RANGE=1` and a cached object serves
   a `Range: bytes=...` request as `206 Partial Content` with a `Content-Range`
-  header, streaming just the requested window; every full hit then advertises
+  header, streaming just the requested window. Every full hit then advertises
   `Accept-Ranges: bytes`, and an unsatisfiable range answers `416`. Single-range
   only (a multi-range request falls back to a full `200`, per RFC 7233 §3.1).
 
@@ -129,7 +129,7 @@ GET /cache/stats for counters; POST /cache/purge to invalidate /cdn/
   `304` can refresh. Raise `PROTOCORE_DBM_VAL_MAX` toward `PROTOCORE_EDGE_BODY_MAX + ~470`
   so full-size bodies fit one SD record; larger entries just stay L1-only. Watch
   `l2_spills` / `l2_promotes` in `GET /cache/stats`. The dbm index is fixed RAM
-  (`PROTOCORE_DBM_SLOTS` keys); on a classic ESP32 the default 256 will not fit
+  (`PROTOCORE_DBM_SLOTS` keys). On a classic ESP32 the default 256 will not fit
   alongside the cache + SD driver, so lower it (e.g. `-DPROTOCORE_DBM_SLOTS=32`) or use
   an S3 / PSRAM board.
 

@@ -34,7 +34,7 @@
 
 #if PROTOCORE_ENABLE_TOTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief X: the time step in seconds a zero @c step.x takes (RFC 6238 sec 4.1). */
 #define PROTOCORE_TOTP_X_DEFAULT 30u
@@ -99,7 +99,7 @@ typedef struct
     TotpStepArgs step;      ///< the moving factor an OTP is computed for
     TotpValidateArgs check; ///< what a validation judges, and the drift around it
     TotpSecretArgs secret;  ///< the base32 secret and where a decode writes K
-    proto_bool ok;
+    embed_bool ok;
     uint32_t u32;
     int32_t i32;
 } TotpVars;
@@ -113,7 +113,7 @@ typedef struct
     void (*const hotp)(uint8_t *work);
     void (*const totp)(uint8_t *work);
     void (*const verify)(uint8_t *work);
-    void (*const base32_decode)(uint8_t *work);
+    void (*const base32_decode)(const uint8_t *work);
 } TotpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -121,7 +121,7 @@ typedef struct
 void protocore_totp_hotp(uint8_t *work);
 void protocore_totp_totp(uint8_t *work);
 void protocore_totp_verify(uint8_t *work);
-void protocore_totp_base32_decode(uint8_t *work);
+void protocore_totp_base32_decode(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -134,7 +134,7 @@ static const TotpNs Totp __attribute__((unused)) = {
     .base32_decode = protocore_totp_base32_decode,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TOTP
 

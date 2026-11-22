@@ -36,7 +36,7 @@ ROOT = dr.repo_root(__file__)
 EXAMPLES = os.path.join(ROOT, "examples")
 
 # Vendor networking. The library maps every one of these onto its own call, so a
-# vendor call in an example is teaching the unmapped form.
+# vendor call in an example teaches the unmapped form.
 VENDOR = [
     (re.compile(r"#include\s*<WiFi\.h>"), "#include <WiFi.h>", "the library's own physical.h"),
     (re.compile(r"\bWiFi\.localIP\(\)"), "WiFi.localIP()", "protocore_net_egress_ip()"),

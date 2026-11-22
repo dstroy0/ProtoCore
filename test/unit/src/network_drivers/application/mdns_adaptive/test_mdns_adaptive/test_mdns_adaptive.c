@@ -218,7 +218,7 @@ void test_moderate_contention_holds_the_interval(void)
     }
 }
 
-// The due test is modular subtraction, so it survives the millis() rollover: an announce scheduled
+// The due test is modular subtraction. So it survives the millis() rollover: an announce scheduled
 // across the wrap fires at the same elapsed time it would anywhere else.
 void test_due_is_wrap_safe_across_the_millis_rollover(void)
 {

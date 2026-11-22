@@ -12,14 +12,14 @@
 
 #include "server/net/sockpool/sockpool.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_sockpool_init(uint8_t *work)
+void protocore_sockpool_init(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.init_args.p;
@@ -34,13 +34,13 @@ void protocore_sockpool_init(uint8_t *work)
     p->n = slots ? n : 0;
     for (size_t i = 0; i < p->n; i++)
     {
-        p->slots[i].in_use = PROTO_FALSE;
+        p->slots[i].in_use = EMBED_FALSE;
         p->slots[i].id = 0;
         p->slots[i].last_used = 0;
     }
 }
 
-void protocore_sockpool_acquire(uint8_t *work)
+void protocore_sockpool_acquire(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.acquire_args.p;
@@ -60,7 +60,7 @@ void protocore_sockpool_acquire(uint8_t *work)
     {
         if (!p->slots[i].in_use)
         {
-            p->slots[i].in_use = PROTO_TRUE;
+            p->slots[i].in_use = EMBED_TRUE;
             p->slots[i].id = id;
             p->slots[i].last_used = now;
             if (idx)
@@ -94,7 +94,7 @@ void protocore_sockpool_acquire(uint8_t *work)
     SockpoolV.acq = SOCK_ACQ_RECYCLED;
 }
 
-void protocore_sockpool_touch(uint8_t *work)
+void protocore_sockpool_touch(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.touch_args.p;
@@ -111,7 +111,7 @@ void protocore_sockpool_touch(uint8_t *work)
     }
 }
 
-void protocore_sockpool_release(uint8_t *work)
+void protocore_sockpool_release(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.release_args.p;
@@ -119,14 +119,14 @@ void protocore_sockpool_release(uint8_t *work)
 
     if (!p || !p->slots || idx >= p->n || !p->slots[idx].in_use)
     {
-        SockpoolV.ok = PROTO_FALSE;
+        SockpoolV.ok = EMBED_FALSE;
         return;
     }
-    p->slots[idx].in_use = PROTO_FALSE;
-    SockpoolV.ok = PROTO_TRUE;
+    p->slots[idx].in_use = EMBED_FALSE;
+    SockpoolV.ok = EMBED_TRUE;
 }
 
-void protocore_sockpool_find(uint8_t *work)
+void protocore_sockpool_find(const uint8_t *work)
 {
     (void)work;
     const SockPool *p = SockpoolV.find_args.p;
@@ -135,7 +135,7 @@ void protocore_sockpool_find(uint8_t *work)
 
     if (!p || !p->slots)
     {
-        SockpoolV.ok = PROTO_FALSE;
+        SockpoolV.ok = EMBED_FALSE;
         return;
     }
     for (size_t i = 0; i < p->n; i++)
@@ -146,14 +146,14 @@ void protocore_sockpool_find(uint8_t *work)
             {
                 *idx = i;
             }
-            SockpoolV.ok = PROTO_TRUE;
+            SockpoolV.ok = EMBED_TRUE;
             return;
         }
     }
-    SockpoolV.ok = PROTO_FALSE;
+    SockpoolV.ok = EMBED_FALSE;
 }
 
-void protocore_sockpool_in_use(uint8_t *work)
+void protocore_sockpool_in_use(const uint8_t *work)
 {
     (void)work;
     const SockPool *p = SockpoolV.in_use_args.p;
@@ -177,6 +177,6 @@ void protocore_sockpool_in_use(uint8_t *work)
 /** @brief The operands and the outcome. */
 SockpoolVars SockpoolV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOCKPOOL

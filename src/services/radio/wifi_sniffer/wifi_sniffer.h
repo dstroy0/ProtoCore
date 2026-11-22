@@ -22,7 +22,7 @@
 
 #if PROTOCORE_ENABLE_WIFI_SNIFFER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_WIFI_SNIFFER_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -43,10 +43,10 @@ typedef struct
     uint8_t version;            ///< protocol version (FC bits 0-1).
     uint8_t type;               ///< WIFI_TYPE_*.
     uint8_t subtype;            ///< FC bits 4-7.
-    proto_bool to_ds;           ///< to the distribution system.
-    proto_bool from_ds;         ///< from the distribution system.
-    proto_bool retry;           ///< retransmission.
-    proto_bool protected_frame; ///< the Protected Frame (WEP/WPA) flag.
+    embed_bool to_ds;           ///< to the distribution system.
+    embed_bool from_ds;         ///< from the distribution system.
+    embed_bool retry;           ///< retransmission.
+    embed_bool protected_frame; ///< the Protected Frame (WEP/WPA) flag.
     uint8_t naddr;              ///< number of addresses decoded (1..3).
     uint8_t addr1[6];           ///< receiver / destination (role varies by DS bits).
     uint8_t addr2[6];           ///< transmitter / source (present when naddr >= 2).
@@ -219,14 +219,14 @@ typedef struct
  * @var WifiSnifferNs::stats_add  fold one decoded frame into the tally
  * @var WifiSnifferNs::should_roam  channel-agility roaming decision
  * @var WifiSnifferNs::scan_init  start a sweep at first, dwelling dwell_ms per channel. Clamps to ...
- * @var WifiSnifferNs::scan_due  true once the current channel's dwell has elapsed (wrap-safe ...
+ * @var WifiSnifferNs::scan_due  true once the current channel's dwell elapsed (wrap-safe ...
  * @var WifiSnifferNs::scan_next  advance to the next channel (wrapping to chan_first and counting a ...
  * @var WifiSnifferNs::survey_reset  clear the survey to track count channels starting at first
  * @var WifiSnifferNs::survey_add  fold one captured frame (on channel, at rssi) into the survey. ...
  * @var WifiSnifferNs::survey_get  the survey entry for channel, or nullptr if it is outside the ...
  * @var WifiSnifferNs::survey_best  find the strongest channel heard, ignoring exclude_channel (pass 0 ...
  * @var WifiSnifferNs::begin  start a live channel-hopping sniff across [first_chan, last_chan]. ...
- * @var WifiSnifferNs::tick  hop to the next channel when the dwell has elapsed. Cheap to call ...
+ * @var WifiSnifferNs::tick  hop to the next channel when the dwell elapsed. Cheap to call ...
  * @var WifiSnifferNs::end  stop capture
  * @var WifiSnifferNs::stats  the running traffic tally (never null)
  * @var WifiSnifferNs::survey  the per-channel survey (never null)
@@ -249,7 +249,7 @@ typedef struct
     WifiSnifferSurveyGetArgs survey_get_args;
     WifiSnifferSurveyBestArgs survey_best_args;
     WifiSnifferBeginArgs begin_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     const WifiChannelSurvey *ptr;
     const WifiStats *stats_out;
@@ -263,17 +263,17 @@ extern WifiSnifferVars WifiSnifferV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse)(uint8_t *work);
-    void (*const stats_reset)(uint8_t *work);
-    void (*const stats_add)(uint8_t *work);
-    void (*const should_roam)(uint8_t *work);
-    void (*const scan_init)(uint8_t *work);
-    void (*const scan_due)(uint8_t *work);
-    void (*const scan_next)(uint8_t *work);
-    void (*const survey_reset)(uint8_t *work);
-    void (*const survey_add)(uint8_t *work);
-    void (*const survey_get)(uint8_t *work);
-    void (*const survey_best)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const stats_reset)(const uint8_t *work);
+    void (*const stats_add)(const uint8_t *work);
+    void (*const should_roam)(const uint8_t *work);
+    void (*const scan_init)(const uint8_t *work);
+    void (*const scan_due)(const uint8_t *work);
+    void (*const scan_next)(const uint8_t *work);
+    void (*const survey_reset)(const uint8_t *work);
+    void (*const survey_add)(const uint8_t *work);
+    void (*const survey_get)(const uint8_t *work);
+    void (*const survey_best)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const tick)(uint8_t *work);
     void (*const end)(uint8_t *work);
@@ -284,17 +284,17 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WifiSnifferV or a region of the borrow at a fixed offset.
-void protocore_wifi_sniffer_parse(uint8_t *work);
-void protocore_wifi_sniffer_stats_reset(uint8_t *work);
-void protocore_wifi_sniffer_stats_add(uint8_t *work);
-void protocore_wifi_sniffer_should_roam(uint8_t *work);
-void protocore_wifi_sniffer_scan_init(uint8_t *work);
-void protocore_wifi_sniffer_scan_due(uint8_t *work);
-void protocore_wifi_sniffer_scan_next(uint8_t *work);
-void protocore_wifi_sniffer_survey_reset(uint8_t *work);
-void protocore_wifi_sniffer_survey_add(uint8_t *work);
-void protocore_wifi_sniffer_survey_get(uint8_t *work);
-void protocore_wifi_sniffer_survey_best(uint8_t *work);
+void protocore_wifi_sniffer_parse(const uint8_t *work);
+void protocore_wifi_sniffer_stats_reset(const uint8_t *work);
+void protocore_wifi_sniffer_stats_add(const uint8_t *work);
+void protocore_wifi_sniffer_should_roam(const uint8_t *work);
+void protocore_wifi_sniffer_scan_init(const uint8_t *work);
+void protocore_wifi_sniffer_scan_due(const uint8_t *work);
+void protocore_wifi_sniffer_scan_next(const uint8_t *work);
+void protocore_wifi_sniffer_survey_reset(const uint8_t *work);
+void protocore_wifi_sniffer_survey_add(const uint8_t *work);
+void protocore_wifi_sniffer_survey_get(const uint8_t *work);
+void protocore_wifi_sniffer_survey_best(const uint8_t *work);
 void protocore_wifi_sniffer_begin(uint8_t *work);
 void protocore_wifi_sniffer_tick(uint8_t *work);
 void protocore_wifi_sniffer_end(uint8_t *work);
@@ -337,7 +337,7 @@ static const WifiSnifferNs WifiSniffer __attribute__((unused)) = {
  */
 uint8_t *protocore_wifi_sniffer_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WIFI_SNIFFER
 

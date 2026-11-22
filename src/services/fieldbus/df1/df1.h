@@ -15,7 +15,7 @@
  *  - BCC: the 2's complement of the modulo-256 sum of the application data bytes (the ETX
  *    is NOT included). One octet.
  *  - CRC: CRC-16 (poly X16+X15+X2+X0 = 0x8005, init 0x0000, reflected) over the application
- *    data bytes AND the ETX byte; two octets, transmitted low byte first.
+ *    data bytes AND the ETX byte. Two octets, transmitted low byte first.
  *
  * This is the data-link framing layer; the DST/SRC/CMD/STS/TNS application header lives
  * inside the application data. Field definitions verified against the 1770-6.5.16 manual.
@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_DF1
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -42,11 +42,10 @@ PROTOCORE_BEGIN_DECLS
 #define DF1_ETX 0x03
 
 /** @brief Which error check the frame carries. */
-typedef enum PROTO_ENUM_PACKED
-{
-    DF1_CHECK_BCC, ///< 1-octet block check character
-    DF1_CHECK_CRC  ///< 2-octet CRC-16
-} Df1Check;
+EMBED_ENUM_BYTE(Df1Check,
+                DF1_CHECK_BCC, ///< 1-octet block check character
+                DF1_CHECK_CRC  ///< 2-octet CRC-16
+);
 
 /** @brief What bcc takes: data, len. */
 typedef struct
@@ -118,7 +117,7 @@ typedef struct
     Df1CrcArgs crc_args;
     Df1BuildFrameArgs build_frame_args;
     Df1ParseFrameArgs parse_frame_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     uint16_t u16;
     size_t n;
@@ -130,7 +129,7 @@ extern Df1Vars Df1V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const bcc)(uint8_t *work);
+    void (*const bcc)(const uint8_t *work);
     void (*const crc)(uint8_t *work);
     void (*const build_frame)(uint8_t *work);
     void (*const parse_frame)(uint8_t *work);
@@ -138,7 +137,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Df1V or a region of the borrow at a fixed offset.
-void protocore_df1_bcc(uint8_t *work);
+void protocore_df1_bcc(const uint8_t *work);
 void protocore_df1_crc(uint8_t *work);
 void protocore_df1_build_frame(uint8_t *work);
 void protocore_df1_parse_frame(uint8_t *work);
@@ -154,7 +153,7 @@ static const Df1Ns Df1 __attribute__((unused)) = {
     .parse_frame = protocore_df1_parse_frame,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DF1
 

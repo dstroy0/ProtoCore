@@ -189,10 +189,10 @@ void test_asdu_header_field_layout(void)
     size_t consumed = 0;
 
     h.type_id = IEC_TYPE_M_ME_NC_1;
-    h.sq = PROTO_TRUE;
+    h.sq = EMBED_TRUE;
     h.count = 3u;
-    h.test = PROTO_FALSE;
-    h.negative = PROTO_TRUE;
+    h.test = EMBED_FALSE;
+    h.negative = EMBED_TRUE;
     h.cot = IEC_COT_ACT_CON;
     h.orig_addr = 0x11u;
     h.common_addr = 0x1234u;
@@ -217,9 +217,9 @@ void test_asdu_header_field_layout(void)
     TEST_ASSERT_EQUAL_HEX16(0x1234u, got.common_addr);
 
     // The test bit is the other flag sharing that octet, and the count field is 7 bits wide.
-    h.test = PROTO_TRUE;
-    h.negative = PROTO_FALSE;
-    h.sq = PROTO_FALSE;
+    h.test = EMBED_TRUE;
+    h.negative = EMBED_FALSE;
+    h.sq = EMBED_FALSE;
     h.count = 127u;
     h.cot = IEC_COT_SPONTANEOUS;
     TEST_ASSERT_EQUAL_UINT(6u, protocore_iec_asdu_build_header(buf, sizeof(buf), &h));
@@ -260,11 +260,11 @@ void test_single_point_object(void)
 {
     uint8_t buf[8];
     uint32_t ioa = 0;
-    proto_bool on = PROTO_FALSE;
+    embed_bool on = EMBED_FALSE;
     uint8_t q = 0;
 
     TEST_ASSERT_EQUAL_UINT(4u,
-                           protocore_iec_io_build_sp(buf, sizeof(buf), 100u, PROTO_TRUE, IEC_QUAL_NT | IEC_QUAL_IV));
+                           protocore_iec_io_build_sp(buf, sizeof(buf), 100u, EMBED_TRUE, IEC_QUAL_NT | IEC_QUAL_IV));
     TEST_ASSERT_EQUAL_HEX8(0x64u, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0xC1u, buf[3]); // NT | IV | SPI
     TEST_ASSERT_TRUE(protocore_iec_io_parse_sp(buf, 4u, &ioa, &on, &q));
@@ -272,12 +272,12 @@ void test_single_point_object(void)
     TEST_ASSERT_TRUE(on);
     TEST_ASSERT_EQUAL_HEX8(IEC_QUAL_NT | IEC_QUAL_IV, q);
 
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sp(buf, sizeof(buf), 1u, PROTO_FALSE, 0u));
+    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sp(buf, sizeof(buf), 1u, EMBED_FALSE, 0u));
     TEST_ASSERT_EQUAL_HEX8(0x00u, buf[3]);
     TEST_ASSERT_TRUE(protocore_iec_io_parse_sp(buf, 4u, NULL, &on, NULL));
     TEST_ASSERT_FALSE(on);
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_iec_io_build_sp(buf, 3u, 1u, PROTO_TRUE, 0u));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_iec_io_build_sp(buf, 3u, 1u, EMBED_TRUE, 0u));
     TEST_ASSERT_FALSE(protocore_iec_io_parse_sp(buf, 3u, &ioa, &on, &q));
 }
 
@@ -456,26 +456,26 @@ void test_single_command_object(void)
 {
     uint8_t buf[8];
     uint32_t ioa = 0;
-    proto_bool on = PROTO_FALSE;
-    proto_bool sel = PROTO_FALSE;
+    embed_bool on = EMBED_FALSE;
+    embed_bool sel = EMBED_FALSE;
 
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sc(buf, sizeof(buf), 3u, PROTO_TRUE, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sc(buf, sizeof(buf), 3u, EMBED_TRUE, EMBED_TRUE));
     TEST_ASSERT_EQUAL_HEX8(0x81u, buf[3]);
     TEST_ASSERT_TRUE(protocore_iec_io_parse_sc(buf, 4u, &ioa, &on, &sel));
     TEST_ASSERT_EQUAL_UINT32(3u, ioa);
     TEST_ASSERT_TRUE(on);
     TEST_ASSERT_TRUE(sel);
 
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sc(buf, sizeof(buf), 3u, PROTO_TRUE, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sc(buf, sizeof(buf), 3u, EMBED_TRUE, EMBED_FALSE));
     TEST_ASSERT_EQUAL_HEX8(0x01u, buf[3]);
     TEST_ASSERT_TRUE(protocore_iec_io_parse_sc(buf, 4u, NULL, &on, &sel));
     TEST_ASSERT_TRUE(on);
     TEST_ASSERT_FALSE(sel);
 
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sc(buf, sizeof(buf), 3u, PROTO_FALSE, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_sc(buf, sizeof(buf), 3u, EMBED_FALSE, EMBED_FALSE));
     TEST_ASSERT_EQUAL_HEX8(0x00u, buf[3]);
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_iec_io_build_sc(buf, 3u, 0u, PROTO_TRUE, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_iec_io_build_sc(buf, 3u, 0u, EMBED_TRUE, EMBED_FALSE));
     TEST_ASSERT_FALSE(protocore_iec_io_parse_sc(buf, 3u, NULL, &on, &sel));
 }
 
@@ -487,9 +487,9 @@ void test_double_command_object(void)
     uint32_t ioa = 0;
     uint8_t dcs = 0;
     uint8_t qu = 0;
-    proto_bool sel = PROTO_FALSE;
+    embed_bool sel = EMBED_FALSE;
 
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_dc(buf, sizeof(buf), 11u, IEC_DP_ON, 3u, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_dc(buf, sizeof(buf), 11u, IEC_DP_ON, 3u, EMBED_TRUE));
     TEST_ASSERT_EQUAL_HEX8(0x8Eu, buf[3]); // S/E | (3 << 2) | 2
     TEST_ASSERT_TRUE(protocore_iec_io_parse_dc(buf, 4u, &ioa, &dcs, &qu, &sel));
     TEST_ASSERT_EQUAL_UINT32(11u, ioa);
@@ -498,14 +498,14 @@ void test_double_command_object(void)
     TEST_ASSERT_TRUE(sel);
 
     // The qualifier is five bits, so its widest value fills bits 3-7 without reaching S/E.
-    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_dc(buf, sizeof(buf), 0u, IEC_DP_OFF, 31u, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(4u, protocore_iec_io_build_dc(buf, sizeof(buf), 0u, IEC_DP_OFF, 31u, EMBED_FALSE));
     TEST_ASSERT_EQUAL_HEX8(0x7Du, buf[3]);
     TEST_ASSERT_TRUE(protocore_iec_io_parse_dc(buf, 4u, NULL, &dcs, &qu, &sel));
     TEST_ASSERT_EQUAL_UINT8(IEC_DP_OFF, dcs);
     TEST_ASSERT_EQUAL_UINT8(31u, qu);
     TEST_ASSERT_FALSE(sel);
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_iec_io_build_dc(buf, 3u, 0u, IEC_DP_ON, 0u, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_iec_io_build_dc(buf, 3u, 0u, IEC_DP_ON, 0u, EMBED_FALSE));
     TEST_ASSERT_FALSE(protocore_iec_io_parse_dc(buf, 3u, NULL, &dcs, &qu, &sel));
 }
 

@@ -58,10 +58,10 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *b, size_t n)
     return n;
 }
 
-static proto_bool ram_sync(void *ctx)
+static embed_bool ram_sync(void *ctx)
 {
     (void)ctx;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static WalDev dev_over(struct RamDisk *d)
@@ -70,16 +70,16 @@ static WalDev dev_over(struct RamDisk *d)
     return v;
 }
 
-static proto_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static embed_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     struct RamDisk *m = (struct RamDisk *)ctx;
     uint64_t off = (uint64_t)(pgno - 1) * page_size;
     if (pgno < 1 || off + page_size > m->size)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(page, m->buf + off, page_size);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /** @brief Encode @p argc bulk strings, sized by @p lens, as one command into @p out; the octets written. */

@@ -20,7 +20,7 @@
 #include "services/net/webhook/webhook.h"
 #include "verba_scribo/verba_scribo.h" // verba_scribo: the bounded frame builder the URI is built with
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
@@ -37,22 +37,22 @@ PROTOCORE_BEGIN_DECLS
 
 // Append the NUL-terminated s at *pos, terminator included in the bound. Leaves the region
 // untouched and reports false when the whole string would not fit.
-static proto_bool json_append(char *out, size_t cap, size_t *pos, const char *s)
+static embed_bool json_append(char *out, size_t cap, size_t *pos, const char *s)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap + 1);
     if (*pos + n >= cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = s, .bytes = n);
     *pos += n;
     out[*pos] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append s as the body of a JSON string, escaping quotation mark and reverse solidus with a
 // preceding reverse solidus (RFC 8259 sec 7). Every other octet is copied as it stands.
-static proto_bool json_append_escaped(char *out, size_t cap, size_t *pos, const char *s)
+static embed_bool json_append_escaped(char *out, size_t cap, size_t *pos, const char *s)
 {
     for (; *s; s++)
     {
@@ -61,7 +61,7 @@ static proto_bool json_append_escaped(char *out, size_t cap, size_t *pos, const 
         {
             if (*pos + 2 >= cap)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             out[(*pos)++] = '\\';
             out[(*pos)++] = c;
@@ -70,18 +70,18 @@ static proto_bool json_append_escaped(char *out, size_t cap, size_t *pos, const 
         {
             if (*pos + 1 >= cap)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             out[(*pos)++] = c;
         }
         out[*pos] = '\0';
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Build "https://maker.ifttt.com/trigger/<event>/with/key/<key>" into the build region: an https
 // URI (RFC 9110 sec 4.2.2) whose last two segments are the event and the key.
-void protocore_webhook_ifttt_url(uint8_t *work)
+void protocore_webhook_ifttt_url(const uint8_t *work)
 {
     (void)work;
     char *out = WebhookV.build.out;
@@ -119,7 +119,7 @@ void protocore_webhook_ifttt_url(uint8_t *work)
 // Build the object {"value1":..,"value2":..,"value3":..} into the build region: begin-object,
 // members separated by a value-separator, end-object (RFC 8259 sec 4). A NULL value omits its
 // member, so three NULLs yield {}.
-void protocore_webhook_ifttt_payload(uint8_t *work)
+void protocore_webhook_ifttt_payload(const uint8_t *work)
 {
     (void)work;
     char *out = WebhookV.build.out;
@@ -134,8 +134,8 @@ void protocore_webhook_ifttt_payload(uint8_t *work)
     }
     out[0] = '\0';
     size_t pos = 0;
-    proto_bool ok = json_append(out, cap, &pos, "{");
-    proto_bool first = PROTO_TRUE;
+    embed_bool ok = json_append(out, cap, &pos, "{");
+    embed_bool first = EMBED_TRUE;
     for (int i = 0; i < 3 && ok; i++)
     {
         if (!vals[i])
@@ -148,7 +148,7 @@ void protocore_webhook_ifttt_payload(uint8_t *work)
         {
             ok = ok && json_append(out, cap, &pos, ",");
         }
-        first = PROTO_FALSE;
+        first = EMBED_FALSE;
         ok = ok && json_append(out, cap, &pos, "\"");
         ok = ok && json_append(out, cap, &pos, names[i]);
         ok = ok && json_append(out, cap, &pos, "\":\"");
@@ -169,7 +169,7 @@ void protocore_webhook_ifttt_payload(uint8_t *work)
 // POST the content to the target URI (RFC 9110 sec 9.3.3), typed application/json
 // (RFC 9110 sec 8.3), its length measured for the Content-Length the client sends
 // (RFC 9110 sec 8.6). Reports the status code (RFC 9110 sec 15.1) or a negative transport error.
-void protocore_webhook_post(uint8_t *work)
+void protocore_webhook_post(const uint8_t *work)
 {
     (void)work;
     const char *target_uri = WebhookV.request.target_uri;
@@ -188,7 +188,7 @@ void protocore_webhook_post(uint8_t *work)
 #else // no outbound HTTP client in this build
 
 // Nothing can be sent, so every POST reports -1 and no request is formed.
-void protocore_webhook_post(uint8_t *work)
+void protocore_webhook_post(const uint8_t *work)
 {
     (void)work;
     WebhookV.i32 = -1;
@@ -234,6 +234,6 @@ void protocore_webhook_ifttt_trigger(uint8_t *work)
 /** @brief The operands and the outcome. */
 WebhookVars WebhookV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBHOOK

@@ -30,25 +30,28 @@ void test_check_timeouts_reaps_only_owned_slots(void)
     set_millis(100000);
 
     conn_pool[0].owner = 0;
-    conn_pool[0].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
     conn_pool[0].pcb = NULL;
     conn_pool[0].last_activity_ms = 0;
 
     conn_pool[1].owner = 1;
-    conn_pool[1].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[1].state, .value = CONN_ACTIVE);
     conn_pool[1].pcb = NULL;
     conn_pool[1].last_activity_ms = 0;
 
     ConnPoolV.life.worker_id = 0;
     Clock.ms = CONN_TIMEOUT_MS + 1u; // the slots were stamped at 0, so this makes them stale
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[0].state);
-    TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)conn_pool[1].state);
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                             .word = &conn_pool[1].state));
 
     ConnPoolV.life.worker_id = 1;
     Clock.ms = CONN_TIMEOUT_MS + 1u; // the slots were stamped at 0, so this makes them stale
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[1].state);
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[1].state));
 }
 
 void test_pool_init_defaults_owner_zero(void)
@@ -197,7 +200,7 @@ void test_accept_cb_round_robins_slot_owner(void)
     TcpListenerV.idx = 0;
     TcpListenerV.bind.port = 80;
     TcpListenerV.bind.proto = PROTO_HTTP;
-    TcpListenerV.bind.tls = PROTO_FALSE;
+    TcpListenerV.bind.tls = EMBED_FALSE;
     TcpListener.add(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
 
@@ -220,7 +223,7 @@ void test_dynamic_listener_creates_worker_queues(void)
     ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     TcpListenerV.bind.port = 2;
-    TcpListenerV.bind.proto = 4444;
+    TcpListenerV.bind.proto = PROTO_HTTP;
     TcpListenerV.bind.tls = PROTO_HTTP;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);

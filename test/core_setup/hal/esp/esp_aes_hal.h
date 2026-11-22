@@ -45,7 +45,7 @@
 
 #include "proximus_operor/proximus_operor.h" // proto_raw_u32 - the aliasing-permitted word load at any alignment
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Raw memory-mapped register access - the only primitive; no vendor REG_* macro. A read and a write
 // rather than one lvalue, because a host build models the bus that carries them and a narrow or
@@ -138,7 +138,7 @@ static inline void protocore_aes_hw_block(const uint8_t *in, uint8_t *out)
     }
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HAS_HW_AES
 

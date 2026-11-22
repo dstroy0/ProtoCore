@@ -91,8 +91,8 @@ static const uint16_t DEC_SYM[257] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_hpack_prim_encode_int(uint8_t *work, uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags,
-                                       uint32_t value)
+size_t protocore_hpack_prim_encode_int(const uint8_t *work, uint8_t *out, size_t cap, uint8_t prefix_bits,
+                                       uint8_t flags, uint32_t value)
 {
     (void)work;
 
@@ -126,14 +126,14 @@ size_t protocore_hpack_prim_encode_int(uint8_t *work, uint8_t *out, size_t cap, 
     return i;
 }
 
-proto_bool protocore_hpack_prim_decode_int(uint8_t *work, const uint8_t *in, size_t len, uint8_t prefix_bits,
+embed_bool protocore_hpack_prim_decode_int(const uint8_t *work, const uint8_t *in, size_t len, uint8_t prefix_bits,
                                            size_t *consumed, uint32_t *value)
 {
     (void)work;
 
     if (len < 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t max = (uint8_t)((1u << prefix_bits) - 1);
     uint32_t v = in[0] & max;
@@ -141,7 +141,7 @@ proto_bool protocore_hpack_prim_decode_int(uint8_t *work, const uint8_t *in, siz
     {
         *consumed = 1;
         *value = v;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     size_t i = 1;
     uint32_t m = 0;
@@ -150,7 +150,7 @@ proto_bool protocore_hpack_prim_decode_int(uint8_t *work, const uint8_t *in, siz
     {
         if (i >= len || m > 28) // bound the continuation to a 32-bit result
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         b = in[i++];
         // RFC 7541 sec 5.1: an integer encoding past the implementation's limit is a decoding error.
@@ -159,22 +159,22 @@ proto_bool protocore_hpack_prim_decode_int(uint8_t *work, const uint8_t *in, siz
         uint32_t add = (uint32_t)(b & 0x7f);
         if (m == 28 && add > 0x0Fu)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         add <<= m;
         if (add > 0xFFFFFFFFu - v)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v += add;
         m += 7;
     } while (b & 0x80);
     *consumed = i;
     *value = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-size_t protocore_hpack_prim_huff_len(uint8_t *work, const char *s, size_t n)
+size_t protocore_hpack_prim_huff_len(const uint8_t *work, const char *s, size_t n)
 {
     (void)work;
 
@@ -186,7 +186,7 @@ size_t protocore_hpack_prim_huff_len(uint8_t *work, const char *s, size_t n)
     return (bits + 7) / 8;
 }
 
-size_t protocore_hpack_prim_huff_encode(uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
+size_t protocore_hpack_prim_huff_encode(const uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
 {
     (void)work;
 
@@ -220,7 +220,7 @@ size_t protocore_hpack_prim_huff_encode(uint8_t *work, uint8_t *out, size_t cap,
     return o;
 }
 
-proto_bool protocore_hpack_prim_huff_decode(uint8_t *work, const uint8_t *in, size_t n, char *out, size_t cap,
+embed_bool protocore_hpack_prim_huff_decode(const uint8_t *work, const uint8_t *in, size_t n, char *out, size_t cap,
                                             size_t *out_len)
 {
     (void)work;
@@ -238,7 +238,7 @@ proto_bool protocore_hpack_prim_huff_decode(uint8_t *work, const uint8_t *in, si
             // path matches a symbol by length 30 and len can never reach 31.
             if (len > 30)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             uint16_t cnt = DEC_COUNT[len];
             if (!cnt)
@@ -257,11 +257,11 @@ proto_bool protocore_hpack_prim_huff_decode(uint8_t *work, const uint8_t *in, si
             uint16_t sym = DEC_SYM[DEC_FIRSTSYM[len] + (code - first)];
             if (sym == 256) // EOS symbol must never be decoded
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             if (o >= cap)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             out[o++] = (char)sym;
             code = 0;
@@ -270,61 +270,61 @@ proto_bool protocore_hpack_prim_huff_decode(uint8_t *work, const uint8_t *in, si
     }
     if (len >= 8) // padding longer than a byte is malformed
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (len > 0)
     {
         uint32_t pad = ((uint32_t)1 << len) - 1;
         if ((code & pad) != pad) // padding must be the EOS prefix (all 1s)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     *out_len = o;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- string literal (RFC 7541 sec 5.2; RFC 9204 reuses it verbatim) -------------------------------
 
-proto_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, size_t len, size_t *pos, char *out,
+embed_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, size_t len, size_t *pos, char *out,
                                            size_t cap, size_t *out_len)
 {
     if (*pos >= len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool huff = (block[*pos] & 0x80) != 0;
+    embed_bool huff = (block[*pos] & 0x80) != 0;
     size_t c = 0;
     uint32_t slen = 0;
-    proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + *pos, len - *pos, 7, &c, &slen);
+    embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + *pos, len - *pos, 7, &c, &slen);
     if (!hpack_prim_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *pos += c;
     if (*pos + slen > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (huff)
     {
-        proto_bool hpack_prim_ok = HpackPrim.huff_decode(work, block + *pos, slen, out, cap, out_len);
+        embed_bool hpack_prim_ok = HpackPrim.huff_decode(work, block + *pos, slen, out, cap, out_len);
         if (!hpack_prim_ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     else
     {
         if (slen > cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = block + *pos, .bytes = slen);
         *out_len = slen;
     }
     *pos += slen;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_hpack_prim_encode_str(uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)

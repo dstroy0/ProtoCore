@@ -618,7 +618,7 @@ void test_dump_reports_integrity(void)
 }
 
 // The dump fails closed at every capacity short of what it needs, rather than emitting a document
-// that is missing its closing bracket.
+// that misses its closing bracket.
 void test_dump_fails_closed_at_every_short_capacity(void)
 {
     for (int i = 0; i < 3; i++)

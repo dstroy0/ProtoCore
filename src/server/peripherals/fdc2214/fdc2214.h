@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_FDC2214
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_I2C_DEVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -145,7 +145,7 @@ typedef struct
     Fdc2214BuildConfigArgs build_config_args;
     Fdc2214BeginArgs begin_args;
     Fdc2214ReadCh0Args read_ch0_args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t value;
     uint8_t flags;
     uint64_t hz;
@@ -158,20 +158,20 @@ extern Fdc2214Vars Fdc2214V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const data)(uint8_t *work);
-    void (*const error)(uint8_t *work);
-    void (*const sensor_freq_hz)(uint8_t *work);
-    void (*const build_config)(uint8_t *work);
+    void (*const data)(const uint8_t *work);
+    void (*const error)(const uint8_t *work);
+    void (*const sensor_freq_hz)(const uint8_t *work);
+    void (*const build_config)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read_ch0)(uint8_t *work);
 } Fdc2214Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Fdc2214V or a region of the borrow at a fixed offset.
-void protocore_fdc2214_data(uint8_t *work);
-void protocore_fdc2214_error(uint8_t *work);
-void protocore_fdc2214_sensor_freq_hz(uint8_t *work);
-void protocore_fdc2214_build_config(uint8_t *work);
+void protocore_fdc2214_data(const uint8_t *work);
+void protocore_fdc2214_error(const uint8_t *work);
+void protocore_fdc2214_sensor_freq_hz(const uint8_t *work);
+void protocore_fdc2214_build_config(const uint8_t *work);
 void protocore_fdc2214_begin(uint8_t *work);
 void protocore_fdc2214_read_ch0(uint8_t *work);
 
@@ -199,7 +199,7 @@ static const Fdc2214Ns Fdc2214 __attribute__((unused)) = {
  */
 uint8_t *protocore_fdc2214_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FDC2214
 

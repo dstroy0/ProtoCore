@@ -10,7 +10,7 @@ default port **5051**). It is the cheapest way to pull live machine status (seri
 active program, run status, parts counter, any macro/system variable) with no vendor middleware.
 `services/haas_mdc` is a pure codec for it; the sketch owns the socket.
 
-You send an uppercase `?Q###` line; the control replies with a comma-delimited payload framed
+You send an uppercase `?Q###` line. The control replies with a comma-delimited payload framed
 between **STX (0x02)** and **ETB (0x17)**, followed by CR LF and a `>` prompt:
 
 ```

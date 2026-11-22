@@ -9,7 +9,7 @@
 #include "network_drivers/transport/net_addr/net_addr.h"
 #include "proximus_operor/proximus_operor.h" // proxim.read: the byte reads of the stack's address words
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Read the stack's address into @p out, network-order bytes preserved.
@@ -53,42 +53,42 @@ void protocore_net_addr_to_ip(const protocore_net_ip *a, protocore_ip *out)
  * address is tagged first and then takes its sixteen bytes, which are the four network-order words.
  * A v6 address on a stack built without v6 leaves @p out unspecified and reports false.
  */
-proto_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *out)
+embed_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *out)
 {
     if (out == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     protocore_net_ip4_set(out, 0, 0, 0, 0);
     if (a == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (a->family == PROTOCORE_IP_V6)
     {
 #if PROTOCORE_NET_HAS_IPV6
         protocore_net_ip6_mark(out);
         EMBED_CALL(proxim.read, ProximusCfg, .dst = protocore_net_ip6_wbytes(out), .at = a->bytes, .size = 16);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
 #else
-        return PROTO_FALSE;
+        return EMBED_FALSE;
 #endif
     }
     if (a->family != PROTOCORE_IP_V4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     protocore_net_ip4_set(out, a->bytes[0], a->bytes[1], a->bytes[2], a->bytes[3]);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static void to_ip(uint8_t *work)
+static void to_ip(const uint8_t *work)
 {
     (void)work;
     protocore_net_addr_to_ip(NetAddr.in.addr, NetAddr.in.out_ip);
 }
 
-static void from_ip(uint8_t *work)
+static void from_ip(const uint8_t *work)
 {
     (void)work;
     NetAddr.ok = protocore_net_addr_from_ip(NetAddr.out.ip, NetAddr.out.out_addr);
@@ -97,4 +97,4 @@ static void from_ip(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 NetAddrNs NetAddr = {.to_ip = to_ip, .from_ip = from_ip};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS

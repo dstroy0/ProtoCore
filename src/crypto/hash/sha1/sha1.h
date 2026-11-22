@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file sha1.h
@@ -30,7 +30,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*hash)(uint8_t *, const uint8_t *, size_t, uint8_t *);
+    embed_bool (*hash)(uint8_t *, const uint8_t *, size_t, uint8_t *);
 } Sha1Ns;
 PROTOCORE_NS_LAYOUT(Sha1Ns, hash);
 
@@ -40,13 +40,13 @@ PROTOCORE_NS_LAYOUT(Sha1Ns, hash);
  * @param data the bytes
  * @param len how many
  * @param out PROTOCORE_SHA1_DIGEST_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sha1_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out);
+embed_bool protocore_sha1_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Sha1Ns Sha1 PROTOCORE_UNUSED = {.hash = protocore_sha1_hash};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SHA1_H

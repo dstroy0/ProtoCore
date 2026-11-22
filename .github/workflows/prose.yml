@@ -1,0 +1,35 @@
+name: Prose Ratchet
+
+# The prose gate and the ASD-STE100 gate over the whole tree. A file can carry no more prose findings than
+# tools/prose/prose_ratchet.tsv allows it, and no breaking finding. A technical document can carry no more
+# ASD-STE100 findings than tools/prose/ste_ratchet.tsv allows it. The pre-commit hook holds the staged files to the
+# same two ratchets, and this workflow holds the tree where a commit did not pass the hook.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ratchet:
+    name: Prose ratchet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Prose ratchet
+        run: python3 tools/prose/docs_check --ratchet=tools/prose/prose_ratchet.tsv > prose.log || (tail -40 prose.log && exit 1)
+
+      - name: ASD-STE100 ratchet
+        run: >-
+          python3 tools/prose/ste_check.py --words tools/prose/voice.tsv --words tools/prose/project_words.tsv
+          --words tools/prose/engineering_words.tsv --ratchet tools/prose/ste_ratchet.tsv .

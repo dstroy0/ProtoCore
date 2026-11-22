@@ -6,7 +6,7 @@
 // on.
 //
 // "When used over TCP/IP, the server normally listens for connections on port 22." Listening is
-// this role's; which bindings exist is the connection protocol's decision, so the socket comes from
+// this role's. Which bindings exist is the connection protocol's decision, so the socket comes from
 // here and the binding asks for it by port.
 
 #include "network_drivers/presentation/ssh/server/server.h"

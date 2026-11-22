@@ -6,7 +6,7 @@
 // the cursor reader (pc_lwm2m_tlv_read), and integer value decoding (pc_lwm2m_tlv_value_int).
 // This is a pure `application/vnd.oma.lwm2m+tlv` byte codec, so - like performance_benching/device/modbus - every
 // call here exercises the real production code path. Deliberately out of scope: the CoAP/DTLS
-// transport that would actually carry these TLVs over the wire; this rig has no network attached
+// transport that would actually carry these TLVs over the wire. This rig has no network attached
 // and the codec itself never touches a socket, heap, or peripheral.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

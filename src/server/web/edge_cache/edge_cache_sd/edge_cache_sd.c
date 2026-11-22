@@ -18,7 +18,7 @@
 #include "server/web/edge_cache/edge_cache_sd/edge_cache_sd.h"
 #include "services/storage/dbm/dbm.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define PROTOCORE_EDGE_SD_VERSION 1
 
@@ -33,7 +33,7 @@ static uint16_t get_u16(const uint8_t *p)
 }
 
 // Append a u16 length prefix + the NUL-terminated string @p s. False (no write) on overflow.
-static proto_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
+static embed_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
 {
     size_t sl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap);
     // Split from the capacity check below so excluding it does not also drop that check - which IS
@@ -42,36 +42,36 @@ static proto_bool put_str(uint8_t *out, size_t cap, size_t *pos, const char *s)
     // build this library is sized for. The check guards the u16 cast if cap ever grows.
     if (sl > 0xFFFFu)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (*pos + 2 + sl > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     put_u16(out + *pos, (uint16_t)sl);
     *pos += 2;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = s, .bytes = sl);
     *pos += sl;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Read a u16-prefixed string into @p out (NUL-terminated). False if short or it would not fit (no truncation).
-static proto_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out, size_t out_cap)
+static embed_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out, size_t out_cap)
 {
     if (*pos + 2 > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint16_t sl = get_u16(buf + *pos);
     *pos += 2;
     if (*pos + sl > len || sl >= out_cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = buf + *pos, .bytes = sl);
     out[sl] = '\0';
     *pos += sl;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The entries this file calls before reaching their definitions.
@@ -81,9 +81,9 @@ static proto_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out
 // never read.
 
 void protocore_edge_cache_sd_deserialize(uint8_t *work);
-void protocore_edge_cache_sd_serialize(uint8_t *work);
+void protocore_edge_cache_sd_serialize(const uint8_t *work);
 
-void protocore_edge_cache_sd_serialize(uint8_t *work)
+void protocore_edge_cache_sd_serialize(const uint8_t *work)
 {
     (void)work;
     const EdgeEntry *e = EdgeCacheSdV.serialize_args.e;
@@ -129,7 +129,7 @@ void protocore_edge_cache_sd_deserialize(uint8_t *work)
 
     if (!buf || !e || len < 3 || buf[0] != PROTOCORE_EDGE_SD_VERSION)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return;
     }
     size_t pos = 1;
@@ -143,19 +143,19 @@ void protocore_edge_cache_sd_deserialize(uint8_t *work)
         !get_str(buf, len, &pos, e->vary_names, sizeof(e->vary_names)) ||
         !get_str(buf, len, &pos, e->vary_vals, sizeof(e->vary_vals)))
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return;
     }
     if (pos + 2 > len)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return;
     }
     uint16_t bl = get_u16(buf + pos);
     pos += 2;
     if (bl > PROTOCORE_EDGE_BODY_MAX || pos + bl > len)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->body, .src = buf + pos, .bytes = bl);
@@ -167,7 +167,7 @@ void protocore_edge_cache_sd_deserialize(uint8_t *work)
     EdgeCacheV.key_digest_args.len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = e->key, .cap = sizeof(e->key));
     EdgeCacheV.key_digest_args.digest = e->digest;
     EdgeCache.key_digest(work);
-    EdgeCacheSdV.ok = PROTO_TRUE;
+    EdgeCacheSdV.ok = EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_DBM
@@ -194,11 +194,11 @@ static const char *canon_path(const char *canon)
 }
 
 // True if @p buf is a valid edge serialization; if so copies its canonical key into @p canon_out.
-static proto_bool peek_canon(const uint8_t *buf, size_t len, char *canon_out, size_t cap)
+static embed_bool peek_canon(const uint8_t *buf, size_t len, char *canon_out, size_t cap)
 {
     if (len < 3 || buf[0] != PROTOCORE_EDGE_SD_VERSION)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t pos = 3; // version(1) + status(2)
     return get_str(buf, len, &pos, canon_out, cap);
@@ -215,42 +215,42 @@ typedef struct
     size_t scratch_cap;
     uint8_t batch[PROTOCORE_EDGE_SD_PURGE_BATCH][32];
     int count;
-    proto_bool full; // hit the batch cap: another pass is needed
+    embed_bool full; // hit the batch cap: another pass is needed
 } CollectCtx;
 
-static proto_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
+static embed_bool collect_cb(const char *key, uint16_t key_len, void *vctx)
 {
     CollectCtx *c = (CollectCtx *)vctx;
     if (key_len != 32)
     {
-        return PROTO_TRUE; // not an edge digest key (shared dbm) - leave it be
+        return EMBED_TRUE; // not an edge digest key (shared dbm) - leave it be
     }
     long n = protocore_dbm_get(c->db, key, key_len, c->scratch, c->scratch_cap);
     if (n <= 0)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     char canon[PROTOCORE_EDGE_KEY_MAX];
     if (!peek_canon(c->scratch, (size_t)n, canon, sizeof(canon)))
     {
-        return PROTO_TRUE; // not an edge value - do not touch it
+        return EMBED_TRUE; // not an edge value - do not touch it
     }
     if (c->prefix)
     {
         const char *path = canon_path(canon);
         if (!path || !EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = c->prefix, .cap = c->plen,
-                                 .ci = PROTO_FALSE))
+                                 .ci = EMBED_FALSE))
         {
-            return PROTO_TRUE; // path does not match the purge prefix
+            return EMBED_TRUE; // path does not match the purge prefix
         }
     }
     if (c->count >= PROTOCORE_EDGE_SD_PURGE_BATCH)
     {
-        c->full = PROTO_TRUE;
-        return PROTO_FALSE; // stop this pass; the caller deletes the batch then re-iterates
+        c->full = EMBED_TRUE;
+        return EMBED_FALSE; // stop this pass; the caller deletes the batch then re-iterates
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->batch[c->count++], .src = key, .bytes = 32);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uint8_t *scratch, size_t scratch_cap)
@@ -265,7 +265,7 @@ static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uin
         c.scratch = scratch;
         c.scratch_cap = scratch_cap;
         c.count = 0;
-        c.full = PROTO_FALSE;
+        c.full = EMBED_FALSE;
         protocore_dbm_iterate(db, collect_cb, &c);
         for (int i = 0; i < c.count; i++)
         {
@@ -292,14 +292,14 @@ void protocore_edge_cache_sd_put(uint8_t *work)
 
     if (!db || !e || !scratch)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return;
     }
     EdgeCacheV.entry_has_validator_args.e = e;
     EdgeCache.entry_has_validator(work);
     if (!EdgeCacheV.ok)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return; // only spill what a cheap 304 can refresh after a reboot
     }
     EdgeCacheSdV.serialize_args.e = e;
@@ -309,7 +309,7 @@ void protocore_edge_cache_sd_put(uint8_t *work)
     size_t n = EdgeCacheSdV.n;
     if (n == 0 || n > PROTOCORE_DBM_VAL_MAX)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return; // too large for the L2 value bound -> stays L1-only
     }
     EdgeCacheSdV.ok = protocore_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
@@ -327,13 +327,13 @@ void protocore_edge_cache_sd_get(uint8_t *work)
 
     if (!db || !digest || !e || !scratch)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return;
     }
     long n = protocore_dbm_get(db, (const char *)digest, 32, scratch, scratch_cap);
     if (n < 0)
     {
-        EdgeCacheSdV.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = EMBED_FALSE;
         return;
     }
     EdgeCacheSdV.deserialize_args.entry_buf = entry_buf;
@@ -343,7 +343,7 @@ void protocore_edge_cache_sd_get(uint8_t *work)
     protocore_edge_cache_sd_deserialize(work);
 }
 
-void protocore_edge_cache_sd_del(uint8_t *work)
+void protocore_edge_cache_sd_del(const uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.del_args.db;
@@ -352,7 +352,7 @@ void protocore_edge_cache_sd_del(uint8_t *work)
     EdgeCacheSdV.ok = db && digest && protocore_dbm_del(db, (const char *)digest, 32);
 }
 
-void protocore_edge_cache_sd_purge_prefix(uint8_t *work)
+void protocore_edge_cache_sd_purge_prefix(const uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.purge_prefix_args.db;
@@ -368,7 +368,7 @@ void protocore_edge_cache_sd_purge_prefix(uint8_t *work)
     EdgeCacheSdV.count = purge_matching(db, path_prefix, scratch, scratch_cap);
 }
 
-void protocore_edge_cache_sd_purge_all(uint8_t *work)
+void protocore_edge_cache_sd_purge_all(const uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.purge_all_args.db;
@@ -391,6 +391,6 @@ void protocore_edge_cache_sd_purge_all(uint8_t *work)
 /** @brief The operands and the outcome. */
 EdgeCacheSdVars EdgeCacheSdV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE

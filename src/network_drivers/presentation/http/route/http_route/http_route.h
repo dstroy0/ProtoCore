@@ -7,7 +7,7 @@
 #include "network_drivers/presentation/http/http.h" // the complete type a public struct below holds by value
 #include "protocore_config.h"                       // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file http_route.h
@@ -85,10 +85,10 @@ typedef struct HttpRoute
     uint8_t auth_id; ///< Required password.
 #endif
 
-    proto_bool is_active;           ///< `false` for unused table slots.
-    proto_bool is_wildcard;         ///< `true` when path ends with `*`.
-    proto_bool is_param;            ///< `true` when the path contains a `:name` segment.
-    proto_bool is_regex;            ///< `true` when the path is a regex (see on_regex()).
+    embed_bool is_active;           ///< `false` for unused table slots.
+    embed_bool is_wildcard;         ///< `true` when path ends with `*`.
+    embed_bool is_param;            ///< `true` when the path contains a `:name` segment.
+    embed_bool is_regex;            ///< `true` when the path is a regex (see on_regex()).
     protocore_if_kind iface_filter; ///< Interface gate; PROTOCORE_IF_ANY (0) = match any interface.
 } HttpRoute;
 
@@ -148,6 +148,6 @@ PROTOCORE_NS HttpRouteNs HttpRoutes PROTOCORE_UNUSED = {.add = protocore_http_ro
                                                         .at = protocore_http_routes_at,
                                                         .reset = protocore_http_routes_reset};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HTTP_ROUTE_H

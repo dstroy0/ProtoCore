@@ -13,16 +13,16 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/system/esp/ipsec_db/ipsec_db.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // addr is within the inclusive [lo, hi] range. Addresses are big-endian, so a byte-wise unsigned compare
 // (memcmp) is the numeric compare.
-static proto_bool in_range(const uint8_t *addr, const uint8_t *lo, const uint8_t *hi, uint8_t len)
+static embed_bool in_range(const uint8_t *addr, const uint8_t *lo, const uint8_t *hi, uint8_t len)
 {
     return EMBED_CALL(memor.cmp, MemoriaCfg, .src = addr, .other = lo, .bytes = len) >= 0 &&
            EMBED_CALL(memor.cmp, MemoriaCfg, .src = addr, .other = hi, .bytes = len) <= 0;
 }
-static proto_bool port_in(uint16_t p, uint16_t lo, uint16_t hi)
+static embed_bool port_in(uint16_t p, uint16_t lo, uint16_t hi)
 {
     return p >= lo && p <= hi;
 }
@@ -35,10 +35,10 @@ static proto_bool port_in(uint16_t p, uint16_t lo, uint16_t hi)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work);
 
-void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_spd_init(const uint8_t *work)
 {
     (void)work;
     IpsecSpd *spd = IpsecDbV.protocore_ipsec_spd_init_args.spd;
@@ -50,7 +50,7 @@ void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *work)
     spd->count = 0;
 }
 
-void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_spd_add(const uint8_t *work)
 {
     (void)work;
     IpsecSpd *spd = IpsecDbV.protocore_ipsec_spd_add_args.spd;
@@ -60,7 +60,7 @@ void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work)
 
     if (!spd || !sel || spd->count >= PROTOCORE_IPSEC_SPD_MAX)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     IpsecPolicy *p = &spd->entries[spd->count];
@@ -68,10 +68,10 @@ void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work)
     p->action = action;
     p->sa_spi = (action == IPSEC_ACTION_PROTECT) ? sa_spi : 0;
     spd->count++;
-    IpsecDbV.ok = PROTO_TRUE;
+    IpsecDbV.ok = EMBED_TRUE;
 }
 
-void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work)
 {
     (void)work;
     const IpsecSelector *sel = IpsecDbV.protocore_ipsec_selector_match_args.sel;
@@ -79,45 +79,45 @@ void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work)
 
     if (!sel || !flow || !flow->src || !flow->dst)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (sel->addr_len != flow->addr_len) // different address family
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (sel->addr_len != 4 && sel->addr_len != 16)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (sel->ip_protocol != 0 && sel->ip_protocol != flow->ip_protocol)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (!in_range(flow->src, sel->src_lo, sel->src_hi, sel->addr_len))
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (!in_range(flow->dst, sel->dst_lo, sel->dst_hi, sel->addr_len))
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (!port_in(flow->src_port, sel->src_port_lo, sel->src_port_hi))
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (!port_in(flow->dst_port, sel->dst_port_lo, sel->dst_port_hi))
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
-    IpsecDbV.ok = PROTO_TRUE;
+    IpsecDbV.ok = EMBED_TRUE;
 }
 
 void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work)
@@ -144,7 +144,7 @@ void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work)
     IpsecDbV.ptr = NULL;
 }
 
-void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_selector_from_ts(const uint8_t *work)
 {
     (void)work;
     IpsecSelector *out = IpsecDbV.protocore_ipsec_selector_from_ts_args.out;
@@ -153,28 +153,28 @@ void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work)
 
     if (!out || !ts_src || !ts_dst)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (ts_src->ts_type != ts_dst->ts_type)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (ts_src->addr_len != ts_dst->addr_len || (ts_src->addr_len != 4 && ts_src->addr_len != 16))
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (!ts_src->start_addr || !ts_src->end_addr || !ts_dst->start_addr || !ts_dst->end_addr)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     // Protocol: honor "any" (0) on either side; if both name a protocol they must agree.
     if (ts_src->ip_protocol != 0 && ts_dst->ip_protocol != 0 && ts_src->ip_protocol != ts_dst->ip_protocol)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
 
@@ -190,12 +190,12 @@ void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work)
     out->src_port_hi = ts_src->end_port;
     out->dst_port_lo = ts_dst->start_port;
     out->dst_port_hi = ts_dst->end_port;
-    IpsecDbV.ok = PROTO_TRUE;
+    IpsecDbV.ok = EMBED_TRUE;
 }
 
 // ── SAD ─────────────────────────────────────────────────────────────────────────────────────────
 
-void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_init(const uint8_t *work)
 {
     (void)work;
     IpsecSad *sad = IpsecDbV.protocore_ipsec_sad_init_args.sad;
@@ -207,7 +207,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *work)
     sad->count = 0;
     for (size_t i = 0; i < PROTOCORE_IPSEC_SAD_MAX; i++)
     {
-        sad->entries[i].valid = PROTO_FALSE;
+        sad->entries[i].valid = EMBED_FALSE;
     }
 }
 
@@ -219,7 +219,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work)
     uint8_t addr_len = IpsecDbV.protocore_ipsec_sad_add_args.addr_len;
     const uint8_t *key = IpsecDbV.protocore_ipsec_sad_add_args.key;
     const uint8_t *salt = IpsecDbV.protocore_ipsec_sad_add_args.salt;
-    proto_bool inbound = IpsecDbV.protocore_ipsec_sad_add_args.inbound;
+    embed_bool inbound = IpsecDbV.protocore_ipsec_sad_add_args.inbound;
 
     if (!sad || !dst || !key || !salt || (addr_len != 4 && addr_len != 16))
     {
@@ -261,12 +261,12 @@ void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work)
     {
         Esp.replay_init(work, &e->replay);
     }
-    e->valid = PROTO_TRUE;
+    e->valid = EMBED_TRUE;
     sad->count++;
     IpsecDbV.sa = e;
 }
 
-void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work)
 {
     (void)work;
     IpsecSad *sad = IpsecDbV.protocore_ipsec_sad_find_args.sad;
@@ -299,19 +299,19 @@ void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work)
     IpsecSaEntry *e = IpsecDbV.sa;
     if (!e)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = e, .val = 0, .bytes = sizeof(*e)); // wipe the key material with the slot
-    e->valid = PROTO_FALSE;
+    e->valid = EMBED_FALSE;
     if (sad->count)
     {
         sad->count--;
     }
-    IpsecDbV.ok = PROTO_TRUE;
+    IpsecDbV.ok = EMBED_TRUE;
 }
 
-void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_next_seq(const uint8_t *work)
 {
     (void)work;
     IpsecSaEntry *sa = IpsecDbV.protocore_ipsec_sad_next_seq_args.sa;
@@ -319,22 +319,22 @@ void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *work)
 
     if (!sa || !seq_out)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     if (sa->seq == 0xFFFFFFFFu) // counter exhausted - must rekey before sending more (RFC 4303 §3.3.3)
     {
-        IpsecDbV.ok = PROTO_FALSE;
+        IpsecDbV.ok = EMBED_FALSE;
         return;
     }
     sa->seq++; // pre-increment: the first packet uses sequence number 1
     *seq_out = sa->seq;
-    IpsecDbV.ok = PROTO_TRUE;
+    IpsecDbV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 IpsecDbVars IpsecDbV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2

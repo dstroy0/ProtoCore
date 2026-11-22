@@ -17,7 +17,7 @@
 
 #include "network_drivers/presentation/ssh/connection/connection.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 4254 sec 5.4 CHANNEL_REQUEST: the type it names, and the body that follows. */
 typedef struct
@@ -45,7 +45,7 @@ typedef struct
 {
     uint8_t slot;       ///< the SSH slot the request arrived on
     uint32_t channel;   ///< the channel it names
-    proto_bool accept;  ///< in/out: set when an accepted SFTP subsystem flips acceptance
+    embed_bool accept;  ///< in/out: set when an accepted SFTP subsystem flips acceptance
     SshChanReqArgs req; ///< what one channel request names and carries
 } SshAppServerVars;
 
@@ -55,12 +55,12 @@ extern SshAppServerVars SshAppServerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const classify)(uint8_t *work);
+    void (*const classify)(const uint8_t *work);
 } SshAppServerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshAppServerV or a region of the borrow at a fixed offset.
-void protocore_ssh_app_server_classify(uint8_t *work);
+void protocore_ssh_app_server_classify(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -70,6 +70,6 @@ static const SshAppServerNs SshAppServer __attribute__((unused)) = {
     .classify = protocore_ssh_app_server_classify,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_APP_SERVER_H

@@ -22,7 +22,7 @@
 // rather than as published numbers.
 
 // The .c, so the Read and Browse resolvers are reachable: they answer the OPC UA server's
-// handler contract (Part 4 sec 5.9.2 / sec 5.11.2), so they are internal to the module and the
+// handler contract (Part 4 sec 5.9.2 / sec 5.11.2). So they are internal to the module and the
 // env does not build this .c itself.
 #include "services/opcua/models/umati/umati.c"
 #include "services/opcua/opcua.h"
@@ -60,7 +60,7 @@ void setUp(void)
     g_mt.channel.active_program = "O1234.NC";
     g_mt.spindle.rotation_speed = 8000.0;
     g_mt.spindle.override_value = 100.0;
-    g_mt.spindle.is_rotating = PROTO_TRUE;
+    g_mt.spindle.is_rotating = EMBED_TRUE;
     g_mt.axis_x.actual_position = 10.25;
     g_mt.axis_y.actual_position = -3.5;
     g_mt.axis_z.actual_position = 0.125;

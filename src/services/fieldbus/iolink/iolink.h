@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_IOLINK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -64,7 +64,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief What mc takes: read, channel, address. */
 typedef struct
 {
-    proto_bool read;
+    embed_bool read;
     uint8_t channel;
     uint8_t address;
 } IolinkMcArgs;
@@ -97,8 +97,8 @@ typedef struct
 /** @brief What cks takes: event, pd_invalid, checksum6. */
 typedef struct
 {
-    proto_bool event;
-    proto_bool pd_invalid;
+    embed_bool event;
+    embed_bool pd_invalid;
     uint8_t checksum6;
 } IolinkCksArgs;
 
@@ -173,7 +173,7 @@ typedef struct
     IolinkChecksum6Args checksum6_args;
     IolinkFinalizeArgs finalize_args;
     IolinkVerifyArgs verify_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
 } IolinkVars;
 
@@ -183,28 +183,28 @@ extern IolinkVars IolinkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const mc)(uint8_t *work);
-    void (*const mc_is_read)(uint8_t *work);
-    void (*const mc_channel)(uint8_t *work);
-    void (*const mc_address)(uint8_t *work);
-    void (*const ckt)(uint8_t *work);
-    void (*const cks)(uint8_t *work);
-    void (*const checksum6)(uint8_t *work);
+    void (*const mc)(const uint8_t *work);
+    void (*const mc_is_read)(const uint8_t *work);
+    void (*const mc_channel)(const uint8_t *work);
+    void (*const mc_address)(const uint8_t *work);
+    void (*const ckt)(const uint8_t *work);
+    void (*const cks)(const uint8_t *work);
+    void (*const checksum6)(const uint8_t *work);
     void (*const finalize)(uint8_t *work);
-    void (*const verify)(uint8_t *work);
+    void (*const verify)(const uint8_t *work);
 } IolinkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IolinkV or a region of the borrow at a fixed offset.
-void protocore_iolink_mc(uint8_t *work);
-void protocore_iolink_mc_is_read(uint8_t *work);
-void protocore_iolink_mc_channel(uint8_t *work);
-void protocore_iolink_mc_address(uint8_t *work);
-void protocore_iolink_ckt(uint8_t *work);
-void protocore_iolink_cks(uint8_t *work);
-void protocore_iolink_checksum6(uint8_t *work);
+void protocore_iolink_mc(const uint8_t *work);
+void protocore_iolink_mc_is_read(const uint8_t *work);
+void protocore_iolink_mc_channel(const uint8_t *work);
+void protocore_iolink_mc_address(const uint8_t *work);
+void protocore_iolink_ckt(const uint8_t *work);
+void protocore_iolink_cks(const uint8_t *work);
+void protocore_iolink_checksum6(const uint8_t *work);
 void protocore_iolink_finalize(uint8_t *work);
-void protocore_iolink_verify(uint8_t *work);
+void protocore_iolink_verify(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -222,7 +222,7 @@ static const IolinkNs Iolink __attribute__((unused)) = {
     .verify = protocore_iolink_verify,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IOLINK
 

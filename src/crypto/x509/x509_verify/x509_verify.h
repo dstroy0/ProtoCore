@@ -26,24 +26,23 @@
 
 #include "crypto/x509/x509_types/x509_types.h" // X509Cert: what a check is given
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Why a link was refused. A caller that only needs yes or no reads ::X509VerifyNs::ok. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_X509_OK = 0,              ///< the link holds
-    PROTOCORE_X509_ERR_ARGS,            ///< a certificate was not supplied
-    PROTOCORE_X509_ERR_ISSUER_NAME,     ///< sec 6.1.3 (a)(4): the issuer name is not the subject above it
-    PROTOCORE_X509_ERR_NOT_YET_VALID,   ///< sec 6.1.3 (a)(2): the current time is before notBefore
-    PROTOCORE_X509_ERR_EXPIRED,         ///< sec 6.1.3 (a)(2): the current time is after notAfter
-    PROTOCORE_X509_ERR_NOT_A_CA,        ///< sec 6.1.4 (k): the issuer has no basicConstraints cA TRUE
-    PROTOCORE_X509_ERR_NO_CERT_SIGN,    ///< sec 6.1.4 (n): the issuer's keyUsage omits keyCertSign
-    PROTOCORE_X509_ERR_PATH_LEN,        ///< sec 6.1.4 (m): pathLenConstraint does not reach this far
-    PROTOCORE_X509_ERR_ALG_UNSUPPORTED, ///< an algorithm this build does not verify
-    PROTOCORE_X509_ERR_KEY_MALFORMED,   ///< the issuer's public key did not decode
-    PROTOCORE_X509_ERR_SIG_MALFORMED,   ///< the signature did not decode
-    PROTOCORE_X509_ERR_BAD_SIGNATURE,   ///< it decoded, and it does not verify
-} protocore_x509_status;
+EMBED_ENUM_BYTE(protocore_x509_status,
+                PROTOCORE_X509_OK = 0,              ///< the link holds
+                PROTOCORE_X509_ERR_ARGS,            ///< a certificate was not supplied
+                PROTOCORE_X509_ERR_ISSUER_NAME,     ///< sec 6.1.3 (a)(4): the issuer name is not the subject above it
+                PROTOCORE_X509_ERR_NOT_YET_VALID,   ///< sec 6.1.3 (a)(2): the current time is before notBefore
+                PROTOCORE_X509_ERR_EXPIRED,         ///< sec 6.1.3 (a)(2): the current time is after notAfter
+                PROTOCORE_X509_ERR_NOT_A_CA,        ///< sec 6.1.4 (k): the issuer has no basicConstraints cA TRUE
+                PROTOCORE_X509_ERR_NO_CERT_SIGN,    ///< sec 6.1.4 (n): the issuer's keyUsage omits keyCertSign
+                PROTOCORE_X509_ERR_PATH_LEN,        ///< sec 6.1.4 (m): pathLenConstraint does not reach this far
+                PROTOCORE_X509_ERR_ALG_UNSUPPORTED, ///< an algorithm this build does not verify
+                PROTOCORE_X509_ERR_KEY_MALFORMED,   ///< the issuer's public key did not decode
+                PROTOCORE_X509_ERR_SIG_MALFORMED,   ///< the signature did not decode
+                PROTOCORE_X509_ERR_BAD_SIGNATURE,   ///< it decoded, and it does not verify
+);
 
 /** @brief What a signature check is given: the certificate, and the one whose key signed it. */
 typedef struct
@@ -105,7 +104,7 @@ typedef struct
     X509TimeArgs time_args;
     X509IssuerArgs issuer_args;
     X509MessageArgs message_args;
-    proto_bool ok;
+    embed_bool ok;
     protocore_x509_status status;
 } X509VerifyVars;
 
@@ -116,8 +115,8 @@ extern X509VerifyVars X509VerifyV;
 typedef struct
 {
     void (*const signature)(uint8_t *work);
-    void (*const validity)(uint8_t *work);
-    void (*const may_sign)(uint8_t *work);
+    void (*const validity)(const uint8_t *work);
+    void (*const may_sign)(const uint8_t *work);
     void (*const link)(uint8_t *work);
     void (*const message)(uint8_t *work);
 } X509VerifyNs;
@@ -125,8 +124,8 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in X509VerifyV or a region of the borrow at a fixed offset.
 void protocore_x509_verify_signature(uint8_t *work);
-void protocore_x509_verify_validity(uint8_t *work);
-void protocore_x509_verify_may_sign(uint8_t *work);
+void protocore_x509_verify_validity(const uint8_t *work);
+void protocore_x509_verify_may_sign(const uint8_t *work);
 void protocore_x509_verify_link(uint8_t *work);
 void protocore_x509_verify_message(uint8_t *work);
 
@@ -152,6 +151,6 @@ static const X509VerifyNs X509Verify __attribute__((unused)) = {
  */
 uint8_t *protocore_x509_verify_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_X509_VERIFY_H

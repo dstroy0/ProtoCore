@@ -6,8 +6,12 @@
  * @brief What an application calls to drive and provision the outbound role.
  */
 
-#include "network_drivers/presentation/ssh/app/client/client.h"
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "memoria_operor/memoria_operor.h"
+#include "network_drivers/presentation/ssh/app/client/client.h"
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
@@ -26,14 +30,14 @@
 // Public API
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_app_client_state_get(uint8_t *work)
+void protocore_ssh_app_client_state_get(const uint8_t *work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
     SshAppClientV.state = SshClient.state_of;
 }
 
-void protocore_ssh_app_client_up(uint8_t *work)
+void protocore_ssh_app_client_up(const uint8_t *work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
@@ -41,7 +45,7 @@ void protocore_ssh_app_client_up(uint8_t *work)
 }
 
 // Key derivation for provisioning: the seed's public half, without a connection.
-void protocore_ssh_app_client_pubkey(uint8_t *work)
+void protocore_ssh_app_client_pubkey(const uint8_t *work)
 {
     (void)work;
     const uint8_t *seed = SshAppClientV.seed;
@@ -58,19 +62,19 @@ void protocore_ssh_app_client_pubkey(uint8_t *work)
 
 #else
 
-void protocore_ssh_app_client_state_get(uint8_t *work)
+void protocore_ssh_app_client_state_get(const uint8_t *work)
 {
     (void)work;
     SshAppClientV.state = PROTOCORE_SSH_CLIENT_IDLE;
 }
 
-void protocore_ssh_app_client_up(uint8_t *work)
+void protocore_ssh_app_client_up(const uint8_t *work)
 {
     (void)work;
-    SshAppClientV.ok = PROTO_FALSE;
+    SshAppClientV.ok = EMBED_FALSE;
 }
 
-void protocore_ssh_app_client_pubkey(uint8_t *work)
+void protocore_ssh_app_client_pubkey(const uint8_t *work)
 {
     (void)work;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = SshAppClientV.pub, .bytes = 32, .val = 0);
@@ -81,3 +85,5 @@ void protocore_ssh_app_client_pubkey(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshAppClientVars SshAppClientV;
+
+#endif // PROTOCORE_ENABLE_SSH

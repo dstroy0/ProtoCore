@@ -14,7 +14,7 @@
 #include "services/timing_position/nmea2000/nmea2000.h"
 #include "shared/can/can.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 uint8_t protocore_n2k_fastpacket_num_frames(uint16_t total_len)
 {
@@ -25,17 +25,17 @@ uint8_t protocore_n2k_fastpacket_num_frames(uint16_t total_len)
     return (uint8_t)(1u + (total_len - N2K_FP_F0_DATA + (N2K_FP_FN_DATA - 1)) / N2K_FP_FN_DATA);
 }
 
-proto_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t frame_idx, uint8_t priority,
+embed_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint8_t frame_idx, uint8_t priority,
                                                 uint32_t pgn, uint8_t sa, uint8_t da, const uint8_t *data,
                                                 uint16_t total_len)
 {
     if (!out || !data || seq > 7 || total_len == 0 || total_len > PROTOCORE_N2K_FP_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (frame_idx >= protocore_n2k_fastpacket_num_frames(total_len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t id;
     J1939V.encode_id_args.id = &id;
@@ -46,11 +46,11 @@ proto_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint
     J1939.encode_id(protocore_j1939_span());
     if (!J1939V.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->id = id;
-    out->extended = PROTO_TRUE;
-    out->rtr = PROTO_FALSE;
+    out->extended = EMBED_TRUE;
+    out->rtr = EMBED_FALSE;
     out->dlc = PROTOCORE_CAN_MAX_DLC; // Fast Packet frames are full 8-octet frames
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out->data, .val = 0xFF,
                .bytes = sizeof(out->data)); // pad unused octets with 0xFF
@@ -69,7 +69,7 @@ proto_bool protocore_n2k_fastpacket_build_frame(CanFrame *out, uint8_t seq, uint
         uint8_t n = remaining < N2K_FP_FN_DATA ? (uint8_t)remaining : (uint8_t)N2K_FP_FN_DATA;
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 1, .src = data + off, .bytes = n);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_n2k_fastpacket_reset(N2kFastPacketRx *rx)
@@ -108,7 +108,7 @@ N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f
             return N2K_FP_ERR;
         }
         protocore_n2k_fastpacket_reset(rx);
-        rx->active = PROTO_TRUE;
+        rx->active = EMBED_TRUE;
         rx->seq = seq;
         rx->sa = id.sa;
         rx->pgn = id.pgn;
@@ -119,7 +119,7 @@ N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f
         rx->next_frame = 1;
         if (rx->received >= total)
         {
-            rx->active = PROTO_FALSE;
+            rx->active = EMBED_FALSE;
             return N2K_FP_COMPLETE;
         }
         return N2K_FP_STARTED;
@@ -142,13 +142,13 @@ N2kFpResult protocore_n2k_fastpacket_feed(N2kFastPacketRx *rx, const CanFrame *f
     rx->next_frame++;
     if (rx->received >= rx->total_len)
     {
-        rx->active = PROTO_FALSE;
+        rx->active = EMBED_FALSE;
         return N2K_FP_COMPLETE;
     }
     return N2K_FP_PROGRESS;
 }
 
-proto_bool protocore_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
+embed_bool protocore_n2k_build_single(CanFrame *out, uint8_t priority, uint32_t pgn, uint8_t sa, uint8_t da,
                                       const uint8_t *data, uint8_t len)
 {
     J1939V.build_message_args.out = out;
@@ -181,25 +181,25 @@ static int16_t rd_i16le(const uint8_t *p)
     return (int16_t)rd_u16le(p);
 }
 
-proto_bool protocore_n2k_decode_position_rapid(const uint8_t *payload, size_t len, N2kPositionRapid *out)
+embed_bool protocore_n2k_decode_position_rapid(const uint8_t *payload, size_t len, N2kPositionRapid *out)
 {
     if (!payload || !out || len < 8)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int32_t lat = rd_i32le(payload); // 1e-7 deg/bit
     int32_t lon = rd_i32le(payload + 4);
     out->valid = (lat != (int32_t)0x7FFFFFFF && lon != (int32_t)0x7FFFFFFF); // 0x7FFFFFFF = not available
     out->lat_deg = (double)lat * 1e-7;
     out->lon_deg = (double)lon * 1e-7;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len, N2kCogSogRapid *out)
+embed_bool protocore_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len, N2kCogSogRapid *out)
 {
     if (!payload || !out || len < 6) // SID(1) + ref(1) + COG(2) + SOG(2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     out->cog_ref = (uint8_t)(payload[1] & 0x03u);
@@ -209,14 +209,14 @@ proto_bool protocore_n2k_decode_cog_sog_rapid(const uint8_t *payload, size_t len
     out->cog_rad = (float)cog * 0.0001f;
     out->sog_valid = (sog != 0xFFFFu);
     out->sog_mps = (float)sog * 0.01f;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_engine_rapid(const uint8_t *payload, size_t len, N2kEngineRapid *out)
+embed_bool protocore_n2k_decode_engine_rapid(const uint8_t *payload, size_t len, N2kEngineRapid *out)
 {
     if (!payload || !out || len < 6) // instance(1) + speed(2) + boost(2) + tilt(1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->instance = payload[0];
     uint16_t rpm = rd_u16le(payload + 1); // 0.25 rpm per bit
@@ -227,14 +227,14 @@ proto_bool protocore_n2k_decode_engine_rapid(const uint8_t *payload, size_t len,
     out->boost_pa = (float)boost * 100.0f;
     out->tilt_valid = (payload[5] != 0x7Fu); // 0x7F = not-available for a signed 1-octet field
     out->tilt_pct = (int8_t)payload[5];
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemperature *out)
+embed_bool protocore_n2k_decode_temperature(const uint8_t *payload, size_t len, N2kTemperature *out)
 {
     if (!payload || !out || len < 7) // sid(1) + instance(1) + source(1) + actual(2) + set(2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     out->instance = payload[1];
@@ -245,14 +245,14 @@ proto_bool protocore_n2k_decode_temperature(const uint8_t *payload, size_t len, 
     uint16_t set = rd_u16le(payload + 5);
     out->set_valid = (set != 0xFFFFu);
     out->set_c = (float)set * 0.01f - 273.15f;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_battery_status(const uint8_t *payload, size_t len, N2kBatteryStatus *out)
+embed_bool protocore_n2k_decode_battery_status(const uint8_t *payload, size_t len, N2kBatteryStatus *out)
 {
     if (!payload || !out || len < 8) // instance(1) + voltage(2) + current(2) + temperature(2) + sid(1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->instance = payload[0];
     int16_t v = rd_i16le(payload + 1); // 0.01 V per bit, signed (0x7FFF = not available)
@@ -265,14 +265,14 @@ proto_bool protocore_n2k_decode_battery_status(const uint8_t *payload, size_t le
     out->temp_valid = (t != 0xFFFFu);
     out->temp_c = (float)t * 0.01f - 273.15f; // Kelvin -> Celsius
     out->sid = payload[7];
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_fluid_level(const uint8_t *payload, size_t len, N2kFluidLevel *out)
+embed_bool protocore_n2k_decode_fluid_level(const uint8_t *payload, size_t len, N2kFluidLevel *out)
 {
     if (!payload || !out || len < 7) // instance/type(1) + level(2) + capacity(4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->instance = (uint8_t)(payload[0] & 0x0F);          // instance in the low nibble
     out->fluid_type = (uint8_t)((payload[0] >> 4) & 0x0F); // fluid type in the high nibble
@@ -282,14 +282,14 @@ proto_bool protocore_n2k_decode_fluid_level(const uint8_t *payload, size_t len, 
     uint32_t cap = rd_u32le(payload + 3); // 0.1 L per bit, unsigned (0xFFFFFFFF = not available)
     out->capacity_valid = (cap != 0xFFFFFFFFu);
     out->capacity_l = (float)cap * 0.1f;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_actual_pressure(const uint8_t *payload, size_t len, N2kActualPressure *out)
+embed_bool protocore_n2k_decode_actual_pressure(const uint8_t *payload, size_t len, N2kActualPressure *out)
 {
     if (!payload || !out || len < 7) // sid(1) + instance(1) + source(1) + pressure(4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     out->instance = payload[1];
@@ -297,14 +297,14 @@ proto_bool protocore_n2k_decode_actual_pressure(const uint8_t *payload, size_t l
     int32_t p = rd_i32le(payload + 3); // 0.1 Pa per bit, signed (0x7FFFFFFF = not available)
     out->pressure_valid = (p != (int32_t)0x7FFFFFFF);
     out->pressure_pa = (float)p * 0.1f;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRudder *out)
+embed_bool protocore_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRudder *out)
 {
     if (!payload || !out || len < 6) // instance(1) + direction(1) + angle order(2) + position(2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->instance = payload[0];
     out->direction_order = (uint8_t)(payload[1] & 0x07u); // low 3 bits
@@ -314,14 +314,14 @@ proto_bool protocore_n2k_decode_rudder(const uint8_t *payload, size_t len, N2kRu
     int16_t pos = rd_i16le(payload + 4);
     out->position_valid = ((uint16_t)pos != 0x7FFFu);
     out->position_rad = (float)pos * 0.0001f;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_attitude(const uint8_t *payload, size_t len, N2kAttitude *out)
+embed_bool protocore_n2k_decode_attitude(const uint8_t *payload, size_t len, N2kAttitude *out)
 {
     if (!payload || !out || len < 7) // sid(1) + yaw(2) + pitch(2) + roll(2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     int16_t yaw = rd_i16le(payload + 1); // 0.0001 rad per bit, signed
@@ -333,14 +333,14 @@ proto_bool protocore_n2k_decode_attitude(const uint8_t *payload, size_t len, N2k
     int16_t roll = rd_i16le(payload + 5);
     out->roll_valid = ((uint16_t)roll != 0x7FFFu);
     out->roll_rad = (float)roll * 0.0001f;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_engine_dynamic(const uint8_t *payload, size_t len, N2kEngineDynamic *out)
+embed_bool protocore_n2k_decode_engine_dynamic(const uint8_t *payload, size_t len, N2kEngineDynamic *out)
 {
     if (!payload || !out || len < 26)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->instance = payload[0];
     uint16_t oilp = rd_u16le(payload + 1); // 100 Pa per bit
@@ -374,14 +374,14 @@ proto_bool protocore_n2k_decode_engine_dynamic(const uint8_t *payload, size_t le
     out->load_pct = (int8_t)payload[24];
     out->torque_valid = (payload[25] != 0x7Fu);
     out->torque_pct = (int8_t)payload[25];
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2kWindData *out)
+embed_bool protocore_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2kWindData *out)
 {
     if (!payload || !out || len < 6)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     uint16_t speed = rd_u16le(payload + 1); // 0.01 m/s per bit
@@ -391,14 +391,14 @@ proto_bool protocore_n2k_decode_wind_data(const uint8_t *payload, size_t len, N2
     out->angle_valid = (angle != 0xFFFFu);
     out->angle_rad = (float)angle * 0.0001f;
     out->reference = (uint8_t)(payload[5] & 0x07u);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpeed *out)
+embed_bool protocore_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpeed *out)
 {
     if (!payload || !out || len < 6) // sid(1) + water(2) + ground(2) + type(1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     uint16_t w = rd_u16le(payload + 1); // 0.01 m/s per bit
@@ -408,28 +408,28 @@ proto_bool protocore_n2k_decode_speed(const uint8_t *payload, size_t len, N2kSpe
     out->ground_valid = (g != 0xFFFFu);
     out->ground_mps = (float)g * 0.01f;
     out->water_ref_type = payload[5];
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWaterDepth *out)
+embed_bool protocore_n2k_decode_water_depth(const uint8_t *payload, size_t len, N2kWaterDepth *out)
 {
     if (!payload || !out || len < 7) // SID(1) + depth(4) + offset(2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     uint32_t depth = rd_u32le(payload + 1); // 0.01 m per bit
     out->depth_valid = (depth != 0xFFFFFFFFu);
     out->depth_m = (float)depth * 0.01f;
     out->offset_m = (float)rd_i16le(payload + 5) * 0.001f; // 0.001 m per bit
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out)
+embed_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t len, N2kVesselHeading *out)
 {
     if (!payload || !out || len < 8)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->sid = payload[0];
     uint16_t heading = rd_u16le(payload + 1); // 0.0001 rad per bit
@@ -438,9 +438,9 @@ proto_bool protocore_n2k_decode_vessel_heading(const uint8_t *payload, size_t le
     out->deviation_rad = (float)rd_i16le(payload + 3) * 0.0001f;
     out->variation_rad = (float)rd_i16le(payload + 5) * 0.0001f;
     out->reference = (uint8_t)(payload[7] & 0x03u);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NMEA2000

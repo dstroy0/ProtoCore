@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_WAMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Message type codes, WAMP sec 3.5 (the Basic Profile table).
 #define WAMP_HELLO 1
@@ -144,7 +144,7 @@ typedef struct
     WampUriArgs uri;         ///< the URI a message names
     WampPayloadArgs payload; ///< the dicts and the payload lists a message carries
     WampParseArgs parse;     ///< the received message and the element a read names
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint64_t u64;
     int32_t i32;
@@ -166,7 +166,7 @@ typedef struct
     void (*const build_register)(uint8_t *work);
     void (*const build_unregister)(uint8_t *work);
     void (*const build_yield)(uint8_t *work);
-    void (*const element)(uint8_t *work);
+    void (*const element)(const uint8_t *work);
     void (*const get_type)(uint8_t *work);
     void (*const get_id)(uint8_t *work);
     void (*const get_uri)(uint8_t *work);
@@ -183,7 +183,7 @@ void protocore_wamp_build_call(uint8_t *work);
 void protocore_wamp_build_register(uint8_t *work);
 void protocore_wamp_build_unregister(uint8_t *work);
 void protocore_wamp_build_yield(uint8_t *work);
-void protocore_wamp_element(uint8_t *work);
+void protocore_wamp_element(const uint8_t *work);
 void protocore_wamp_get_type(uint8_t *work);
 void protocore_wamp_get_id(uint8_t *work);
 void protocore_wamp_get_uri(uint8_t *work);
@@ -208,7 +208,7 @@ static const WampNs Wamp __attribute__((unused)) = {
     .get_uri = protocore_wamp_get_uri,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAMP
 

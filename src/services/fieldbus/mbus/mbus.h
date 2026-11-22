@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_MBUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -76,13 +76,11 @@ PROTOCORE_BEGIN_DECLS
 #define MBUS_MEDIUM_COLD_WATER 0x16u
 
 /** @brief M-Bus frame kinds. */
-typedef enum PROTO_ENUM_PACKED
-{
-    MBUS_FRAME_NONE = 0,
-    MBUS_FRAME_ACK,   ///< single 0xE5
-    MBUS_FRAME_SHORT, ///< 10 C A CS 16
-    MBUS_FRAME_LONG,  ///< 68 L L 68 C A CI ... CS 16 (control frame = long with no data)
-} MbusFrameType;
+EMBED_ENUM_BYTE(MbusFrameType, MBUS_FRAME_NONE = 0,
+                MBUS_FRAME_ACK,   ///< single 0xE5
+                MBUS_FRAME_SHORT, ///< 10 C A CS 16
+                MBUS_FRAME_LONG,  ///< 68 L L 68 C A CI ... CS 16 (control frame = long with no data)
+);
 
 /** @brief A parsed M-Bus frame (data points into the caller's buffer). */
 typedef struct
@@ -95,25 +93,24 @@ typedef struct
     uint8_t data_len;    ///< user-data length (long only)
 } MbusFrame;
 
-typedef enum PROTO_ENUM_PACKED
-{
-    MBUS_DIF_NONE = 0x0,     ///< no data
-    MBUS_DIF_INT8 = 0x1,     ///< 8-bit integer
-    MBUS_DIF_INT16 = 0x2,    ///< 16-bit integer
-    MBUS_DIF_INT24 = 0x3,    ///< 24-bit integer
-    MBUS_DIF_INT32 = 0x4,    ///< 32-bit integer
-    MBUS_DIF_REAL32 = 0x5,   ///< 32-bit IEEE-754 real
-    MBUS_DIF_INT48 = 0x6,    ///< 48-bit integer
-    MBUS_DIF_INT64 = 0x7,    ///< 64-bit integer
-    MBUS_DIF_READOUT = 0x8,  ///< selection for readout (no data)
-    MBUS_DIF_BCD2 = 0x9,     ///< 2-digit BCD (1 octet)
-    MBUS_DIF_BCD4 = 0xA,     ///< 4-digit BCD (2 octets)
-    MBUS_DIF_BCD6 = 0xB,     ///< 6-digit BCD (3 octets)
-    MBUS_DIF_BCD8 = 0xC,     ///< 8-digit BCD (4 octets)
-    MBUS_DIF_VARIABLE = 0xD, ///< variable length (LVAR octet precedes the data)
-    MBUS_DIF_BCD12 = 0xE,    ///< 12-digit BCD (6 octets)
-    MBUS_DIF_SPECIAL = 0xF,  ///< special functions (no data)
-} MbusDifCoding;
+EMBED_ENUM_BYTE(MbusDifCoding,
+                MBUS_DIF_NONE = 0x0,     ///< no data
+                MBUS_DIF_INT8 = 0x1,     ///< 8-bit integer
+                MBUS_DIF_INT16 = 0x2,    ///< 16-bit integer
+                MBUS_DIF_INT24 = 0x3,    ///< 24-bit integer
+                MBUS_DIF_INT32 = 0x4,    ///< 32-bit integer
+                MBUS_DIF_REAL32 = 0x5,   ///< 32-bit IEEE-754 real
+                MBUS_DIF_INT48 = 0x6,    ///< 48-bit integer
+                MBUS_DIF_INT64 = 0x7,    ///< 64-bit integer
+                MBUS_DIF_READOUT = 0x8,  ///< selection for readout (no data)
+                MBUS_DIF_BCD2 = 0x9,     ///< 2-digit BCD (1 octet)
+                MBUS_DIF_BCD4 = 0xA,     ///< 4-digit BCD (2 octets)
+                MBUS_DIF_BCD6 = 0xB,     ///< 6-digit BCD (3 octets)
+                MBUS_DIF_BCD8 = 0xC,     ///< 8-digit BCD (4 octets)
+                MBUS_DIF_VARIABLE = 0xD, ///< variable length (LVAR octet precedes the data)
+                MBUS_DIF_BCD12 = 0xE,    ///< 12-digit BCD (6 octets)
+                MBUS_DIF_SPECIAL = 0xF,  ///< special functions (no data)
+);
 
 /** @brief One decoded EN 13757-3 data record. */
 typedef struct
@@ -126,20 +123,18 @@ typedef struct
 } MbusRecord;
 
 /** @brief Physical unit a VIF decodes to (the common EN 13757-3 measurement ranges). */
-typedef enum PROTO_ENUM_PACKED
-{
-    MBUS_UNIT_UNKNOWN = 0,
-    MBUS_UNIT_WH,       ///< energy, watt-hours
-    MBUS_UNIT_J,        ///< energy, joules
-    MBUS_UNIT_M3,       ///< volume, cubic metres
-    MBUS_UNIT_KG,       ///< mass, kilograms
-    MBUS_UNIT_W,        ///< power, watts
-    MBUS_UNIT_J_PER_H,  ///< power, joules per hour
-    MBUS_UNIT_M3_PER_H, ///< volume flow, cubic metres per hour
-    MBUS_UNIT_CELSIUS,  ///< temperature, degrees Celsius
-    MBUS_UNIT_K,        ///< temperature difference, kelvin
-    MBUS_UNIT_BAR,      ///< pressure, bar
-} MbusUnit;
+EMBED_ENUM_BYTE(MbusUnit, MBUS_UNIT_UNKNOWN = 0,
+                MBUS_UNIT_WH,       ///< energy, watt-hours
+                MBUS_UNIT_J,        ///< energy, joules
+                MBUS_UNIT_M3,       ///< volume, cubic metres
+                MBUS_UNIT_KG,       ///< mass, kilograms
+                MBUS_UNIT_W,        ///< power, watts
+                MBUS_UNIT_J_PER_H,  ///< power, joules per hour
+                MBUS_UNIT_M3_PER_H, ///< volume flow, cubic metres per hour
+                MBUS_UNIT_CELSIUS,  ///< temperature, degrees Celsius
+                MBUS_UNIT_K,        ///< temperature difference, kelvin
+                MBUS_UNIT_BAR,      ///< pressure, bar
+);
 
 /** @brief The decoded EN 13757-3 variable-data-structure fixed header. */
 typedef struct
@@ -196,7 +191,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     uint8_t a;
-    proto_bool fcb;
+    embed_bool fcb;
 } MbusBuildReqUd2Args;
 
 /** @brief What build_req_ud1 takes: buf, cap, a, fcb. */
@@ -205,7 +200,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     uint8_t a;
-    proto_bool fcb;
+    embed_bool fcb;
 } MbusBuildReqUd1Args;
 
 /** @brief What parse takes: buf, len, out, consumed. */
@@ -322,7 +317,7 @@ typedef struct
     MbusRecordValueRealArgs record_value_real_args;
     MbusVifDecodeArgs vif_decode_args;
     MbusParseVarHeaderArgs parse_var_header_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint8_t value;
 } MbusVars;
@@ -333,36 +328,36 @@ extern MbusVars MbusV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_ack)(uint8_t *work);
-    void (*const build_short)(uint8_t *work);
-    void (*const build_long)(uint8_t *work);
+    void (*const build_ack)(const uint8_t *work);
+    void (*const build_short)(const uint8_t *work);
+    void (*const build_long)(const uint8_t *work);
     void (*const build_snd_nke)(uint8_t *work);
     void (*const build_req_ud2)(uint8_t *work);
     void (*const build_req_ud1)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
-    void (*const dif_data_len)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const dif_data_len)(const uint8_t *work);
     void (*const record_next)(uint8_t *work);
-    void (*const record_value_int)(uint8_t *work);
-    void (*const record_value_real)(uint8_t *work);
-    void (*const vif_decode)(uint8_t *work);
-    void (*const parse_var_header)(uint8_t *work);
+    void (*const record_value_int)(const uint8_t *work);
+    void (*const record_value_real)(const uint8_t *work);
+    void (*const vif_decode)(const uint8_t *work);
+    void (*const parse_var_header)(const uint8_t *work);
 } MbusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MbusV or a region of the borrow at a fixed offset.
-void protocore_mbus_build_ack(uint8_t *work);
-void protocore_mbus_build_short(uint8_t *work);
-void protocore_mbus_build_long(uint8_t *work);
+void protocore_mbus_build_ack(const uint8_t *work);
+void protocore_mbus_build_short(const uint8_t *work);
+void protocore_mbus_build_long(const uint8_t *work);
 void protocore_mbus_build_snd_nke(uint8_t *work);
 void protocore_mbus_build_req_ud2(uint8_t *work);
 void protocore_mbus_build_req_ud1(uint8_t *work);
-void protocore_mbus_parse(uint8_t *work);
-void protocore_mbus_dif_data_len(uint8_t *work);
+void protocore_mbus_parse(const uint8_t *work);
+void protocore_mbus_dif_data_len(const uint8_t *work);
 void protocore_mbus_record_next(uint8_t *work);
-void protocore_mbus_record_value_int(uint8_t *work);
-void protocore_mbus_record_value_real(uint8_t *work);
-void protocore_mbus_vif_decode(uint8_t *work);
-void protocore_mbus_parse_var_header(uint8_t *work);
+void protocore_mbus_record_value_int(const uint8_t *work);
+void protocore_mbus_record_value_real(const uint8_t *work);
+void protocore_mbus_vif_decode(const uint8_t *work);
+void protocore_mbus_parse_var_header(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -384,7 +379,7 @@ static const MbusNs Mbus __attribute__((unused)) = {
     .parse_var_header = protocore_mbus_parse_var_header,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MBUS
 

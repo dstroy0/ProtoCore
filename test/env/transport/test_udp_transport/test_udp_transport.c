@@ -654,8 +654,8 @@ void test_multicast_lookup_skips_a_different_multicast_group()
 }
 
 static char g_edge_ip[16];
-static proto_bool g_edge_had_ip_out = PROTO_FALSE;
-static proto_bool g_edge_had_port_out = PROTO_FALSE;
+static embed_bool g_edge_had_ip_out = EMBED_FALSE;
+static embed_bool g_edge_had_port_out = EMBED_FALSE;
 
 static void on_datagram_edge_cases(const uint8_t *, size_t, const struct protocore_udp_peer *peer, void *)
 {
@@ -697,8 +697,8 @@ static void on_datagram_edge_cases(const uint8_t *, size_t, const struct protoco
 
 void test_peer_addr_refuses_a_buffer_it_cannot_fill_and_allows_a_null_port_out()
 {
-    g_edge_had_ip_out = PROTO_TRUE;
-    g_edge_had_port_out = PROTO_FALSE;
+    g_edge_had_ip_out = EMBED_TRUE;
+    g_edge_had_port_out = EMBED_FALSE;
     UdpListenerV.port = 7002;
     UdpListenerV.bind.handler = on_datagram_edge_cases;
     UdpListenerV.bind.handler_ctx = NULL;

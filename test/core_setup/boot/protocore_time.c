@@ -39,7 +39,7 @@ struct tm *gmtime_r(const time_t *epoch, struct tm *out)
     }
 
     // Whole days and the second within the day. C division truncates toward zero, so a negative
-    // epoch lands one day high with a negative remainder; adding a day back moves both to the floor
+    // epoch lands one day high with a negative remainder. Adding a day back moves both to the floor
     // the calendar math assumes.
     int64_t days = (int64_t)*epoch / 86400;
     int64_t rem = (int64_t)*epoch % 86400;

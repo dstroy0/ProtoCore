@@ -28,7 +28,7 @@ static StompFrame g_frame;
 static char g_out[512];
 
 // Parse len octets and return whether the frame was complete.
-static proto_bool parse(const char *in, size_t len)
+static embed_bool parse(const char *in, size_t len)
 {
     StompV.frame = &g_frame;
     StompV.buf.in = in;

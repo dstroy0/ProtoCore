@@ -79,7 +79,7 @@ static inline uint32_t protocore_bus_host_drain(uint8_t *buf, uint32_t len)
     return n;
 }
 
-// Per-transaction log. The concatenated write stream says what went out; this says where one
+// Per-transaction log. The concatenated write stream says what went out. This says where one
 // transfer ended and the next began, which bus ran it, and which device it addressed. A driver
 // that splits a frame across two transfers, or addresses the wrong part, is only visible here.
 
@@ -481,7 +481,7 @@ static inline void protocore_bus_host_reset(void)
 // ---------------------------------------------------------------------------
 //
 // NOT a CSPRNG and not a stand-in for one. On the target this call reaches a true hardware
-// source (thermal / RF noise); here it is a deterministic xorshift so a failing crypto test
+// source (thermal / RF noise). Here it is a deterministic xorshift so a failing crypto test
 // reproduces exactly. Nothing built on this host build is secret, and no key produced here
 // should ever leave a test.
 //
@@ -615,7 +615,7 @@ static inline uint32_t protocore_platform_micros(void)
     protocore_host_us_tick++;
     return millis() * 1000u + protocore_host_us_tick;
 }
-// The cycle counter is the one time seam that must track real elapsed time: it is what the
+// The cycle counter is the one time seam that must track real elapsed time. It is what the
 // microbenchmarks measure with, and millis() above is a virtual clock that only set_millis() moves.
 // The count is the host CPU's own, at the host CPU's own rate, and protocore_platform_cycle_mhz()
 // below reports that rate so a caller converts with the clock the count was taken on. It wraps at
@@ -718,7 +718,7 @@ static inline void protocore_platform_restart(void)
     protocore_host_restarts++;
 }
 
-/** @brief How many times the core has asked for a reboot since the last reset. */
+/** @brief How many times the core asked for a reboot since the last reset. */
 static inline uint32_t protocore_host_restart_count(void)
 {
     return protocore_host_restarts;
@@ -1205,6 +1205,10 @@ static inline protocore_platform_task protocore_platform_task_self(void)
     return (void *)1;
 }
 
+// With PROTOCORE_ENABLE_IDEMIP, the stack module of the network layer answers each protocore_net_* call, and
+// the imitation below stays out.
+#if !defined(PROTOCORE_ENABLE_IDEMIP) || !PROTOCORE_ENABLE_IDEMIP
+
 // ---------------------------------------------------------------------------
 // Address
 // ---------------------------------------------------------------------------
@@ -1572,7 +1576,7 @@ static inline protocore_net_err protocore_net_close(protocore_pcb *p)
     }
     return PROTOCORE_NET_OK;
 }
-// How many aborts the code under test has issued. A slot reaped by an accept gate or a timeout
+// How many aborts the code under test issued. A slot reaped by an accept gate or a timeout
 // sweep is only distinguishable from one closed cleanly by whether the stack was told to abort.
 PROTOCORE_HOST_SHARED int protocore_net_host_abort_calls;
 
@@ -1750,11 +1754,11 @@ static inline void protocore_net_opt_set(void *p, uint32_t opt)
 // ---------------------------------------------------------------------------
 //
 // protocore_net_udp_sendto is where a datagram leaves the core, so it is the only place a test can see
-// what the wire would have carried. It records the destination, the ports and the payload; the
+// what the wire would have carried. It records the destination, the ports and the payload. The
 // renderer in protocore_net_pcap.h turns that log into a .pcap the test parses and Wireshark opens.
 //
 // The log holds the fields rather than the pcap bytes because this header is parsed from inside
-// protocore_config.h, before shared/protocore_types.h supplies PROTOCORE_INLINE - so pcap.h cannot be
+// protocore_config.h, before shared/protocore_types.h supplies EMBED_INLINE - so pcap.h cannot be
 // included here.
 
 #ifndef PROTOCORE_NET_HOST_PBUFS
@@ -2176,5 +2180,9 @@ static inline int protocore_net_host_udp_deliver(uint16_t port, const char *src_
     p->on_recv(p->arg, p, &b, &src, src_port);
     return 1;
 }
+
+#else
+#include "network_drivers/network/stack/stack_net.h" // the protocore_net_* calls over idemIP
+#endif                                               // PROTOCORE_ENABLE_IDEMIP
 
 #endif // PROTOCORE_PROTOCORE_NET_HOST_H

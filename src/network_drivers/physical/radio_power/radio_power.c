@@ -20,7 +20,7 @@
 #include "network_drivers/physical/radio_power/radio_power.h"
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The module's compile-time storage: the keep-awake count.
@@ -41,7 +41,10 @@ static_assert(RADIO_POWER_OFF_CTX + sizeof(struct RadioStorage) <= PROTOCORE_RAD
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define RADIO_POWER_CTX(w) ((struct RadioStorage *)(void *)((w) + RADIO_POWER_OFF_CTX))
+#define RADIO_POWER_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct RadioStorage *)(const void *)((w) + RADIO_POWER_OFF_CTX),                       \
+        default: (struct RadioStorage *)(void *)((w) + RADIO_POWER_OFF_CTX))
 
 // Renders an 802.11-2020 11.2.3.2 power management mode as text.
 
@@ -137,6 +140,6 @@ RadioNs Radio = {.power = radio_power,
                  .ps_mode = radio_ps_mode,
                  .tx_power_set = radio_tx_power_set};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RADIO_POWER

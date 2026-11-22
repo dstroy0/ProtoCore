@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_GPIO_MAP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Configured direction of a mapped pin (how the panel renders / drives it).
@@ -36,13 +36,12 @@ PROTOCORE_BEGIN_DECLS
  * silent: the profile numbers a direction 0/1/2/3 as IN/OUT/PULLUP/PULLDOWN, this enum in
  * declaration order.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_GPIO_DIR_IN = 0,      ///< read-only input.
-    PROTOCORE_GPIO_DIR_IN_PULLUP,   ///< input with internal pull-up.
-    PROTOCORE_GPIO_DIR_IN_PULLDOWN, ///< input with internal pull-down.
-    PROTOCORE_GPIO_DIR_OUT,         ///< output (drivable from the panel).
-} protocore_gpio_dir;
+EMBED_ENUM_BYTE(protocore_gpio_dir,
+                PROTOCORE_GPIO_DIR_IN = 0,      ///< read-only input.
+                PROTOCORE_GPIO_DIR_IN_PULLUP,   ///< input with internal pull-up.
+                PROTOCORE_GPIO_DIR_IN_PULLDOWN, ///< input with internal pull-down.
+                PROTOCORE_GPIO_DIR_OUT,         ///< output (drivable from the panel).
+);
 
 /** @brief One mapped GPIO pin. */
 typedef struct
@@ -113,7 +112,7 @@ typedef struct
     GpioArgs args;
     GpioParseArgs parse_args;
     GpioOutArgs out_args;
-    proto_bool ok;
+    embed_bool ok;
     const char *text;
     int32_t n;
 } GpioMapVars;
@@ -124,25 +123,25 @@ extern GpioMapVars GpioMapV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const dir_name)(uint8_t *work);
-    void (*const json)(uint8_t *work);
-    void (*const parse_set)(uint8_t *work);
-    void (*const is_output)(uint8_t *work);
-    void (*const begin_pins)(uint8_t *work);
-    void (*const sample)(uint8_t *work);
-    void (*const write)(uint8_t *work);
+    void (*const dir_name)(const uint8_t *work);
+    void (*const json)(const uint8_t *work);
+    void (*const parse_set)(const uint8_t *work);
+    void (*const is_output)(const uint8_t *work);
+    void (*const begin_pins)(const uint8_t *work);
+    void (*const sample)(const uint8_t *work);
+    void (*const write)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
 } GpioMapNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in GpioMapV or a region of the borrow at a fixed offset.
-void protocore_gpio_map_dir_name(uint8_t *work);
-void protocore_gpio_map_json(uint8_t *work);
-void protocore_gpio_map_parse_set(uint8_t *work);
-void protocore_gpio_map_is_output(uint8_t *work);
-void protocore_gpio_map_begin_pins(uint8_t *work);
-void protocore_gpio_map_sample(uint8_t *work);
-void protocore_gpio_map_write(uint8_t *work);
+void protocore_gpio_map_dir_name(const uint8_t *work);
+void protocore_gpio_map_json(const uint8_t *work);
+void protocore_gpio_map_parse_set(const uint8_t *work);
+void protocore_gpio_map_is_output(const uint8_t *work);
+void protocore_gpio_map_begin_pins(const uint8_t *work);
+void protocore_gpio_map_sample(const uint8_t *work);
+void protocore_gpio_map_write(const uint8_t *work);
 void protocore_gpio_map_begin(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -160,7 +159,7 @@ static const GpioMapNs GpioMap __attribute__((unused)) = {
     .begin = protocore_gpio_map_begin,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIO_MAP
 

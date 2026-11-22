@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/nts/nts.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 const char NTS_EXPORTER_LABEL[] = "EXPORTER-network-time-security";
 
@@ -33,13 +33,13 @@ static uint16_t get_u16(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_nts_ef(uint8_t *work);
-void protocore_nts_ke_record(uint8_t *work);
+void protocore_nts_ef(const uint8_t *work);
+void protocore_nts_ke_record(const uint8_t *work);
 
-void protocore_nts_ke_record(uint8_t *work)
+void protocore_nts_ke_record(const uint8_t *work)
 {
     (void)work;
-    proto_bool critical = NtsV.ke_record_args.critical;
+    embed_bool critical = NtsV.ke_record_args.critical;
     uint16_t type = NtsV.ke_record_args.type;
     const uint8_t *body = NtsV.ke_record_args.body;
     size_t body_len = NtsV.ke_record_args.body_len;
@@ -78,13 +78,14 @@ void protocore_nts_ke_request(uint8_t *work)
 
     size_t n = 0;
     size_t r;
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = proto;
     NtsV.ke_record_args.body_len = 2;
     NtsV.ke_record_args.out = out + n;
     NtsV.ke_record_args.cap = cap - n;
     protocore_nts_ke_record(work);
+    NtsV.ke_record_args.body = NULL;
     r = NtsV.n;
     if (!r)
     {
@@ -92,13 +93,14 @@ void protocore_nts_ke_request(uint8_t *work)
         return;
     }
     n += r;
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_AEAD_ALGORITHM;
     NtsV.ke_record_args.body = aead;
     NtsV.ke_record_args.body_len = 2;
     NtsV.ke_record_args.out = out + n;
     NtsV.ke_record_args.cap = cap - n;
     protocore_nts_ke_record(work);
+    NtsV.ke_record_args.body = NULL;
     r = NtsV.n;
     if (!r)
     {
@@ -106,7 +108,7 @@ void protocore_nts_ke_request(uint8_t *work)
         return;
     }
     n += r;
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_END_OF_MESSAGE;
     NtsV.ke_record_args.body = NULL;
     NtsV.ke_record_args.body_len = 0;
@@ -123,7 +125,7 @@ void protocore_nts_ke_request(uint8_t *work)
     NtsV.n = n;
 }
 
-void protocore_nts_ke_parse(uint8_t *work)
+void protocore_nts_ke_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = NtsV.ke_parse_args.buf;
@@ -136,11 +138,11 @@ void protocore_nts_ke_parse(uint8_t *work)
     {
         uint16_t tf = get_u16(buf + off);
         uint16_t blen = get_u16(buf + off + 2);
-        proto_bool critical = (tf & NTS_KE_CRITICAL) != 0;
+        embed_bool critical = (tf & NTS_KE_CRITICAL) != 0;
         uint16_t type = (uint16_t)(tf & 0x7FFF);
         if (off + 4 + blen > len)
         {
-            NtsV.ok = PROTO_FALSE; // truncated body
+            NtsV.ok = EMBED_FALSE; // truncated body
             return;
         }
         if (cb)
@@ -151,14 +153,14 @@ void protocore_nts_ke_parse(uint8_t *work)
         if (type == NTS_KE_END_OF_MESSAGE)
         {
             // RFC 8915 sec 4.1.1: End of Message is the final record, so octets past it are malformed.
-            NtsV.ok = off == len ? PROTO_TRUE : PROTO_FALSE;
+            NtsV.ok = off == len ? EMBED_TRUE : EMBED_FALSE;
             return;
         }
     }
-    NtsV.ok = PROTO_FALSE; // no End-of-Message record
+    NtsV.ok = EMBED_FALSE; // no End-of-Message record
 }
 
-void protocore_nts_ef(uint8_t *work)
+void protocore_nts_ef(const uint8_t *work)
 {
     (void)work;
     uint16_t field_type = NtsV.ef_args.field_type;
@@ -226,6 +228,6 @@ void protocore_nts_ef_cookie(uint8_t *work)
 /** @brief The operands and the outcome. */
 NtsVars NtsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTS

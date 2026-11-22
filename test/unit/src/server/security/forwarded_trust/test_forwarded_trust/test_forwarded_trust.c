@@ -39,7 +39,7 @@ static protocore_ip parsed(const char *text)
     return ip;
 }
 
-static proto_bool same(const protocore_ip *a, const protocore_ip *b)
+static embed_bool same(const protocore_ip *a, const protocore_ip *b)
 {
     IpV.args.ip = a;
     IpV.args.b = b;
@@ -322,7 +322,7 @@ void test_a_trusted_upstream_is_believed(void)
 
 // A trusted upstream that sends no forwarded client, or one that cannot be parsed, falls back to
 // the proxy's own address rather than to nothing. RFC 7239 sec 6.3 defines the obfuscated node
-// identifier ("_hidden") a proxy may send instead of an address; that is not an address, so it
+// identifier ("_hidden") a proxy may send instead of an address. That is not an address, so it
 // falls back too.
 void test_a_trusted_upstream_with_no_usable_client_falls_back(void)
 {

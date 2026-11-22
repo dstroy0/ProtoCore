@@ -19,7 +19,7 @@
 #include "memoria_operor/memoria_operor.h"       // memor.cpy: the spans a line is assembled from
 #include "verba_scribo/verba_scribo.h"           // Sb: the field set's numeric renderings
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one line, one datagram
@@ -45,13 +45,13 @@ struct UdpTelemetryStorage
 #if PROTOCORE_HAS_NET_STACK
     protocore_ip collector;
     uint16_t port;
-    proto_bool ready;
+    embed_bool ready;
 #endif
     char *buf;
     size_t cap;
     size_t pos;
-    proto_bool overflow;
-    proto_bool have_field;
+    embed_bool overflow;
+    embed_bool have_field;
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -63,7 +63,10 @@ static_assert(UDP_TELEMETRY_OFF_CTX + sizeof(struct UdpTelemetryStorage) <= PROT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define UDP_TELEMETRY_CTX(w) ((struct UdpTelemetryStorage *)(void *)((w) + UDP_TELEMETRY_OFF_CTX))
+#define UDP_TELEMETRY_CTX(w)                                                                                           \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct UdpTelemetryStorage *)(const void *)((w) + UDP_TELEMETRY_OFF_CTX),              \
+        default: (struct UdpTelemetryStorage *)(void *)((w) + UDP_TELEMETRY_OFF_CTX))
 
 // Append s while the line still leaves room for a trailing NUL, latching overflow the first time it
 // does not, so every later append is a no-op.
@@ -77,7 +80,7 @@ static void line_append(uint8_t *work, const char *s)
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = store->cap + 1);
     if (store->pos + n >= store->cap)
     {
-        store->overflow = PROTO_TRUE;
+        store->overflow = EMBED_TRUE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = store->buf + store->pos, .src = s, .bytes = n);
@@ -112,7 +115,7 @@ static void line_append_escaped(uint8_t *work, const char *s)
 static void line_sep(uint8_t *work)
 {
     line_append(work, UDP_TELEMETRY_CTX(work)->have_field ? "," : " ");
-    UDP_TELEMETRY_CTX(work)->have_field = PROTO_TRUE;
+    UDP_TELEMETRY_CTX(work)->have_field = EMBED_TRUE;
 }
 
 // Publish the line's state on the handle: its octet count, its overflow latch, and whether it is a
@@ -165,7 +168,7 @@ void protocore_udp_telemetry_begin(uint8_t *work)
     UDP_TELEMETRY_CTX(work)->port = UdpTelemetryV.collector.port;
     UdpTelemetryV.ok = UDP_TELEMETRY_CTX(work)->ready;
 #else
-    UdpTelemetryV.ok = PROTO_FALSE;
+    UdpTelemetryV.ok = EMBED_FALSE;
 #endif
 }
 
@@ -176,7 +179,7 @@ void protocore_udp_telemetry_measurement(uint8_t *work)
     store->buf = UdpTelemetryV.line.buf;
     store->cap = UdpTelemetryV.line.cap;
     store->pos = 0;
-    store->have_field = PROTO_FALSE;
+    store->have_field = EMBED_FALSE;
     store->overflow = (store->buf == NULL);
     if (!store->overflow && store->cap)
     {
@@ -194,7 +197,7 @@ void protocore_udp_telemetry_tag(uint8_t *work)
     // overflow instead.
     if (UDP_TELEMETRY_CTX(work)->have_field)
     {
-        UDP_TELEMETRY_CTX(work)->overflow = PROTO_TRUE;
+        UDP_TELEMETRY_CTX(work)->overflow = EMBED_TRUE;
     }
     else
     {
@@ -260,7 +263,7 @@ void protocore_udp_telemetry_timestamp(uint8_t *work)
     // point to stamp. The line latches overflow instead.
     if (!UDP_TELEMETRY_CTX(work)->have_field)
     {
-        UDP_TELEMETRY_CTX(work)->overflow = PROTO_TRUE;
+        UDP_TELEMETRY_CTX(work)->overflow = EMBED_TRUE;
     }
     else
     {
@@ -280,7 +283,7 @@ void protocore_udp_telemetry_timestamp(uint8_t *work)
 // duplicate protection are not guaranteed), so ok reports only that the stack took the octets.
 void protocore_udp_telemetry_send(uint8_t *work)
 {
-    UdpTelemetryV.ok = PROTO_FALSE;
+    UdpTelemetryV.ok = EMBED_FALSE;
 #if PROTOCORE_HAS_NET_STACK
     if (!UDP_TELEMETRY_CTX(work)->ready || !UdpTelemetryV.payload.data)
     {
@@ -301,7 +304,7 @@ void protocore_udp_telemetry_write(uint8_t *work)
 {
     if (UDP_TELEMETRY_CTX(work)->overflow || !UDP_TELEMETRY_CTX(work)->have_field)
     {
-        UdpTelemetryV.ok = PROTO_FALSE;
+        UdpTelemetryV.ok = EMBED_FALSE;
         return;
     }
     UdpTelemetryV.payload.data = UDP_TELEMETRY_CTX(work)->buf;
@@ -313,6 +316,6 @@ void protocore_udp_telemetry_write(uint8_t *work)
 /** @brief The operands and the outcome. */
 UdpTelemetryVars UdpTelemetryV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UDP_TELEMETRY

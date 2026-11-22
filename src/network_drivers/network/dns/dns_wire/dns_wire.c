@@ -10,7 +10,7 @@
 
 #include "proximus_operor/proximus_operor.h" // proxim.read: the label octets move whole
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // RFC 1035 sec 4.1.4: the high order two bits of a length octet. 00 is a label, 11 is a pointer,
 // 10 and 01 are reserved.
@@ -22,10 +22,10 @@ PROTOCORE_BEGIN_DECLS
 
 // Walks the labels at msg.off, writing each one into msg.out with a dot between, and follows a
 // pointer's OFFSET when msg.allow_ptr is set.
-void protocore_dns_wire_decode(uint8_t *work)
+void protocore_dns_wire_decode(const uint8_t *work)
 {
     (void)work;
-    DnsWireV.ok = PROTO_FALSE;
+    DnsWireV.ok = EMBED_FALSE;
     DnsWireV.next = 0;
 
     const uint8_t *pkt = DnsWireV.msg.pkt;
@@ -41,7 +41,7 @@ void protocore_dns_wire_decode(uint8_t *work)
     size_t cur = DnsWireV.msg.off; // where the next length octet sits
     size_t after = 0;              // offset just past the name as it sits at msg.off
     size_t hops = 0;               // pointers followed
-    proto_bool jumped = PROTO_FALSE;
+    embed_bool jumped = EMBED_FALSE;
     for (;;)
     {
         if (cur >= len)
@@ -59,7 +59,7 @@ void protocore_dns_wire_decode(uint8_t *work)
             if (!jumped)
             {
                 after = cur + 2;
-                jumped = PROTO_TRUE;
+                jumped = EMBED_TRUE;
             }
             hops++;
             // OFFSET: the pointer's low six bits over the whole second octet.
@@ -102,12 +102,12 @@ void protocore_dns_wire_decode(uint8_t *work)
     }
     out[n] = '\0';
     DnsWireV.next = after;
-    DnsWireV.ok = PROTO_TRUE;
+    DnsWireV.ok = EMBED_TRUE;
 }
 
 // Splits text.dotted at each dot and writes every run as a length octet followed by its octets,
 // then the null label of the root.
-void protocore_dns_wire_encode(uint8_t *work)
+void protocore_dns_wire_encode(const uint8_t *work)
 {
     (void)work;
     DnsWireV.n = 0;
@@ -166,10 +166,10 @@ void protocore_dns_wire_encode(uint8_t *work)
 }
 
 // Folds each A-Z to lower case and compares octet by octet, ends included.
-void protocore_dns_wire_eq(uint8_t *work)
+void protocore_dns_wire_eq(const uint8_t *work)
 {
     (void)work;
-    DnsWireV.ok = PROTO_FALSE;
+    DnsWireV.ok = EMBED_FALSE;
 
     const char *a = DnsWireV.cmp.a;
     const char *b = DnsWireV.cmp.b;
@@ -196,11 +196,11 @@ void protocore_dns_wire_eq(uint8_t *work)
         }
         i++;
     }
-    DnsWireV.ok = (a[i] == b[i]) ? PROTO_TRUE : PROTO_FALSE;
+    DnsWireV.ok = (a[i] == b[i]) ? EMBED_TRUE : EMBED_FALSE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 DnsWireVars DnsWireV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS

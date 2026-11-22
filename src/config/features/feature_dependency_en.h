@@ -151,7 +151,7 @@
 /**
  * @brief Internal: the parser's streaming-body machinery (OTA, file upload, WebDAV PUT).
  *
- * Each streams the request body to a sink instead of buffering it into body[]; the
+ * Each streams the request body to a sink instead of buffering it into body[]. The
  * parser support is shared and compiled when any of these features is enabled. The
  * sink is a single global hook, so only one streaming consumer is active per build
  * (the last to register wins) - do not combine OTA / upload / WebDAV streaming in

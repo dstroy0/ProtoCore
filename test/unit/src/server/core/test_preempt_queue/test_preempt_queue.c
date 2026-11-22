@@ -11,7 +11,7 @@
 // where the ISR would.
 //
 // test_a_dma_completion_is_processed_off_the_interrupt is the load-bearing case: the whole reason
-// this pipe exists is that a DMA-complete callback runs in interrupt context, so it must do nothing
+// this pipe exists is that a DMA-complete callback runs in interrupt context. So it must do nothing
 // but hand the bytes over, and the work must happen in the lane's task. If the handler ran inside
 // the callback the module would be an interrupt-context work queue, which is the failure it exists
 // to prevent.
@@ -23,7 +23,7 @@
 #include "server/core/preempt_queue/preempt_queue.h"
 // The host DMA driver defines the mmgr_praet_hw_* hooks with external linkage, so it belongs to
 // exactly one translation unit. Unity's runner generator copies every line matching "#include" at
-// the start of a line into the runner; the space after the '#' keeps this one out of that copy and
+// the start of a line into the runner. The space after the '#' keeps this one out of that copy and
 // out of a duplicate-definition link error.
 #include "protocore_dma_host.h"
 #include <string.h>
@@ -70,7 +70,7 @@ static void on_dma(const void *item, void *ctx)
 
 // --- the calls, each as one helper -------------------------------------------------------------
 
-static proto_bool lane_start(protocore_pq_lane lane, const protocore_pq_config *cfg)
+static embed_bool lane_start(protocore_pq_lane lane, const protocore_pq_config *cfg)
 {
     PreemptQueueV.lane = lane;
     PreemptQueueV.cfg = cfg;
@@ -78,7 +78,7 @@ static proto_bool lane_start(protocore_pq_lane lane, const protocore_pq_config *
     return PreemptQueueV.ok;
 }
 
-static proto_bool lane_post(protocore_pq_lane lane, const void *item)
+static embed_bool lane_post(protocore_pq_lane lane, const void *item)
 {
     PreemptQueueV.lane = lane;
     PreemptQueueV.post_args.item = item;
@@ -87,7 +87,7 @@ static proto_bool lane_post(protocore_pq_lane lane, const void *item)
     return PreemptQueueV.ok;
 }
 
-static proto_bool lane_post_urgent(protocore_pq_lane lane, const void *item)
+static embed_bool lane_post_urgent(protocore_pq_lane lane, const void *item)
 {
     PreemptQueueV.lane = lane;
     PreemptQueueV.post_args.item = item;
@@ -96,7 +96,7 @@ static proto_bool lane_post_urgent(protocore_pq_lane lane, const void *item)
     return PreemptQueueV.ok;
 }
 
-static proto_bool lane_post_isr(protocore_pq_lane lane, const void *item)
+static embed_bool lane_post_isr(protocore_pq_lane lane, const void *item)
 {
     PreemptQueueV.lane = lane;
     PreemptQueueV.post_args.item = item;
@@ -104,7 +104,7 @@ static proto_bool lane_post_isr(protocore_pq_lane lane, const void *item)
     return PreemptQueueV.ok;
 }
 
-static proto_bool lane_running(protocore_pq_lane lane)
+static embed_bool lane_running(protocore_pq_lane lane)
 {
     PreemptQueueV.lane = lane;
     PreemptQueue.running(protocore_preempt_queue_span());
@@ -147,7 +147,7 @@ static PqItem item_u32(uint32_t v)
     return it;
 }
 
-static proto_bool post_user(uint32_t v)
+static embed_bool post_user(uint32_t v)
 {
     PqItem it = item_u32(v);
     return protocore_pq_post(&it, 0);
@@ -188,7 +188,7 @@ static void on_dma_complete(const mmgr_praet_event *ev, void *ctx)
     }
 }
 
-static void open_dma_lane(uint8_t ch, proto_bool loopback)
+static void open_dma_lane(uint8_t ch, embed_bool loopback)
 {
     protocore_pq_config lane;
     memset(&lane, 0, sizeof(lane));
@@ -346,7 +346,7 @@ void test_internal_lanes_outrank_the_user_lane(void)
     TEST_ASSERT_GREATER_THAN_UINT8(lane_rank(PROTOCORE_PQ_LANE_USER), lane_rank(PROTOCORE_PQ_LANE_DEVICE));
 }
 
-// A lane with no handler has nothing to do with an item, so it does not start; and starting one
+// A lane with no handler has nothing to do with an item, so it does not start. And starting one
 // that is already up changes nothing.
 void test_start_requires_a_handler_and_is_idempotent(void)
 {
@@ -420,11 +420,11 @@ void test_a_lane_out_of_range_and_a_null_item_fail_closed(void)
     TEST_ASSERT_FALSE(protocore_pq_post_from_isr(NULL));
 }
 
-// The completion callback runs where the interrupt would, and it only hands the bytes over: the
+// The completion callback runs where the interrupt would. It only hands the bytes over: the
 // handler runs later, in the lane's task, with the payload it was given.
 void test_a_dma_completion_is_processed_off_the_interrupt(void)
 {
-    open_dma_lane(0, PROTO_FALSE);
+    open_dma_lane(0, EMBED_FALSE);
     const uint8_t rx[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     TEST_ASSERT_TRUE(protocore_dma_host_feed(0, rx, (uint16_t)sizeof(rx)));
 
@@ -445,7 +445,7 @@ void test_a_dma_completion_is_processed_off_the_interrupt(void)
 // each completion reaches the lane carrying its own bytes, in the order they arrived.
 void test_ping_pong_completions_reach_the_lane_in_order(void)
 {
-    open_dma_lane(1, PROTO_FALSE);
+    open_dma_lane(1, EMBED_FALSE);
     uint8_t rx[PROTOCORE_DMA_BUF_SIZE * 2];
     for (size_t i = 0; i < sizeof(rx); i++)
     {
@@ -468,7 +468,7 @@ void test_ping_pong_completions_reach_the_lane_in_order(void)
 // An egress completion says the buffer is free, so it carries a length and no bytes.
 void test_a_tx_completion_carries_no_bytes(void)
 {
-    open_dma_lane(0, PROTO_FALSE);
+    open_dma_lane(0, EMBED_FALSE);
     const uint8_t tx[3] = {1, 2, 3};
     TEST_ASSERT_TRUE(
         EMBED_CALL(praet.tx_submit, PraetTransferCfg, .channel = 0, .buf = tx, .bytes = (uint16_t)sizeof(tx)));
@@ -488,7 +488,7 @@ void test_a_tx_completion_carries_no_bytes(void)
 // lane: the TX that freed the buffer, then the RX carrying the same bytes back.
 void test_loopback_round_trips_through_the_lane(void)
 {
-    open_dma_lane(1, PROTO_TRUE);
+    open_dma_lane(1, EMBED_TRUE);
     const uint8_t tx[4] = {0xA0, 0xA1, 0xA2, 0xA3};
     TEST_ASSERT_TRUE(
         EMBED_CALL(praet.tx_submit, PraetTransferCfg, .channel = 1, .buf = tx, .bytes = (uint16_t)sizeof(tx)));
@@ -505,7 +505,7 @@ void test_loopback_round_trips_through_the_lane(void)
 // post fails there instead of waiting for room.
 void test_a_full_lane_drops_the_completion_in_the_isr(void)
 {
-    open_dma_lane(0, PROTO_FALSE);
+    open_dma_lane(0, EMBED_FALSE);
     uint8_t rx[PROTOCORE_DMA_BUF_SIZE];
     memset(rx, 0x5A, sizeof(rx));
     for (uint32_t i = 0; i < PROTOCORE_PQ_DEPTH + 1u; i++)

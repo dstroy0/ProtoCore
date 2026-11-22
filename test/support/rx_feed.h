@@ -22,7 +22,7 @@ static inline void rx_reset(TcpConn *c)
     c->rx_unacked = 0;
 }
 
-// Lay connection @p c's ring when no pool init has reached it. A laid ring holds its buffer's
+// Lay connection @p c's ring when no pool init reached it. A laid ring holds its buffer's
 // address, so a ring of all zero bytes is one nothing has laid.
 static inline void rx_ensure(TcpConn *c)
 {

@@ -22,7 +22,7 @@
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
 #include "server/core/proto_handler/proto_handler.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/i2c/i2c.h"   // the shared I2C bus owner
@@ -31,11 +31,11 @@ PROTOCORE_BEGIN_DECLS
 #endif
 
 // One published listener -> hardware rule. Dispatch is by the listener id the transport stamps on each
-// accepted slot (identical to server/net/relay); the rule pointer is stable for the life of the binding
+// accepted slot (identical to server/net/relay). The rule pointer is stable for the life of the binding
 // because rules live in the pure table's static storage.
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t listener_id;
     const BridgeRule *rule;
 } BridgeBind;
@@ -45,8 +45,8 @@ typedef struct
 typedef struct
 {
     BridgeBind binds[PROTOCORE_BRIDGE_MAX_RULES];
-    proto_bool registered;                         ///< the PROTO_BRIDGE handler is installed
-    proto_bool spi_begun;                          ///< the shared SPI bus has been brought up (once)
+    embed_bool registered;                         ///< the PROTO_BRIDGE handler is installed
+    embed_bool spi_begun;                          ///< the shared SPI bus has been brought up (once)
     uint8_t stream[PROTOCORE_BRIDGE_STREAM_CHUNK]; ///< the chunk a STREAM target moves per pump
 } BridgeGlueCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -67,7 +67,10 @@ static_assert(IFACE_BRIDGE_HW_OFF_CTX % _Alignof(BridgeGlueCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define IFACE_BRIDGE_HW_CTX(w) ((BridgeGlueCtx *)(void *)((w) + IFACE_BRIDGE_HW_OFF_CTX))
+#define IFACE_BRIDGE_HW_CTX(w)                                                                                         \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const BridgeGlueCtx *)(const void *)((w) + IFACE_BRIDGE_HW_OFF_CTX),                         \
+        default: (BridgeGlueCtx *)(void *)((w) + IFACE_BRIDGE_HW_OFF_CTX))
 
 static const BridgeRule *rule_for_slot(uint8_t *work, uint8_t slot)
 {
@@ -105,7 +108,7 @@ static void bus_begin(uint8_t *work, const BridgeTarget *t)
         if (!IFACE_BRIDGE_HW_CTX(work)->spi_begun)
         {
             (void)protocore_spi_begin();
-            IFACE_BRIDGE_HW_CTX(work)->spi_begun = PROTO_TRUE;
+            IFACE_BRIDGE_HW_CTX(work)->spi_begun = EMBED_TRUE;
         }
         break;
     case BRIDGE_BUS_I2C:
@@ -116,7 +119,7 @@ static void bus_begin(uint8_t *work, const BridgeTarget *t)
 
 // One write-then-read transaction against the target's bus. Clocks @p wlen bytes out, reads @p rlen bytes
 // back into @p rbuf (short reads are zero-padded). Returns false only on a bus-level failure.
-static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
+static embed_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
 {
     switch (t->bus)
     {
@@ -131,14 +134,14 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
         {
             return protocore_i2c_write((uint8_t)t->addr_cs, wbuf, wlen);
         }
-        return rlen ? protocore_i2c_read((uint8_t)t->addr_cs, rbuf, rlen) : PROTO_TRUE;
+        return rlen ? protocore_i2c_read((uint8_t)t->addr_cs, rbuf, rlen) : EMBED_TRUE;
 
     case BRIDGE_BUS_SPI: {
         // The target names its own clock, bit order and mode, so the transfer carries them rather
         // than taking the bus owner's configured defaults. CS is held across both halves.
         uint8_t order = t->bit_order ? PROTOCORE_SPI_LSBFIRST : PROTOCORE_SPI_MSBFIRST;
         uint32_t hz = t->rate ? t->rate : PROTOCORE_SPI_HZ;
-        proto_bool ok = PROTO_TRUE;
+        embed_bool ok = EMBED_TRUE;
         protocore_spi_cs_select((uint8_t)(t->addr_cs));
         if (wlen)
         {
@@ -155,7 +158,7 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
     case BRIDGE_BUS_UART: {
         if (wlen && !protocore_uart_write(t->unit, wbuf, wlen))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         // One bounded read for the whole reply, then zero-pad whatever did not arrive.
         size_t got = rlen ? protocore_uart_read(t->unit, rbuf, rlen, PROTOCORE_BRIDGE_UART_TXN_MS) : 0u;
@@ -163,10 +166,10 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
         {
             rbuf[i] = 0;
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // STREAM: pipe socket RX -> UART (called from on_data).
@@ -206,7 +209,7 @@ static void stream_uart_to_sock(uint8_t *work, uint8_t slot, const BridgeTarget 
         {
             ConnPoolV.slot = slot;
             ConnPoolV.io.data = IFACE_BRIDGE_HW_CTX(work)->stream;
-            ConnPoolV.io.len = (proto_u16)n;
+            ConnPoolV.io.len = (embed_u16)n;
             ConnPool.send(protocore_conn_pool_span());
         }
     }
@@ -225,14 +228,14 @@ static void bus_begin(uint8_t *work, const BridgeTarget *t)
     (void)work;
     (void)t;
 }
-static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
+static embed_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
 {
     (void)t;
     (void)wbuf;
     (void)wlen;
     (void)rbuf;
     (void)rlen;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 static void stream_sock_to_uart(uint8_t *work, uint8_t slot, const BridgeTarget *t)
 {
@@ -426,7 +429,7 @@ void protocore_iface_bridge_hw_publish(uint8_t *work)
 
     if (!target)
     {
-        IfaceBridgeHwV.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = EMBED_FALSE;
         return;
     }
     IfaceBridgeV.map_args.ip = NULL;
@@ -436,7 +439,7 @@ void protocore_iface_bridge_hw_publish(uint8_t *work)
     IfaceBridge.map(protocore_iface_bridge_span());
     if (!IfaceBridgeV.ok) // store + validate + dedupe in the pure table
     {
-        IfaceBridgeHwV.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = EMBED_FALSE;
         return;
     }
     IfaceBridgeV.find_args.port = port;
@@ -445,7 +448,7 @@ void protocore_iface_bridge_hw_publish(uint8_t *work)
     const BridgeRule *rule = IfaceBridgeV.rule;
     if (!rule)
     {
-        IfaceBridgeHwV.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = EMBED_FALSE;
         return;
     }
     int idx = -1;
@@ -459,10 +462,10 @@ void protocore_iface_bridge_hw_publish(uint8_t *work)
     }
     if (idx < 0)
     {
-        IfaceBridgeHwV.ok = PROTO_FALSE;
+        IfaceBridgeHwV.ok = EMBED_FALSE;
         return;
     }
-    IFACE_BRIDGE_HW_CTX(work)->binds[idx].active = PROTO_TRUE;
+    IFACE_BRIDGE_HW_CTX(work)->binds[idx].active = EMBED_TRUE;
     IFACE_BRIDGE_HW_CTX(work)->binds[idx].listener_id = listener_id;
     IFACE_BRIDGE_HW_CTX(work)->binds[idx].rule = rule;
     bus_begin(work, &rule->target);
@@ -471,16 +474,16 @@ void protocore_iface_bridge_hw_publish(uint8_t *work)
         ProtocolsV.proto = PROTO_BRIDGE;
         ProtocolsV.h = &s_bridge_handler;
         Protocols.add(protocore_session_span());
-        IFACE_BRIDGE_HW_CTX(work)->registered = PROTO_TRUE;
+        IFACE_BRIDGE_HW_CTX(work)->registered = EMBED_TRUE;
     }
-    IfaceBridgeHwV.ok = PROTO_TRUE;
+    IfaceBridgeHwV.ok = EMBED_TRUE;
 }
 
 void protocore_iface_bridge_hw_reset(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
-        IFACE_BRIDGE_HW_CTX(work)->binds[i].active = PROTO_FALSE;
+        IFACE_BRIDGE_HW_CTX(work)->binds[i].active = EMBED_FALSE;
     }
     IfaceBridge.clear(protocore_iface_bridge_span());
 }
@@ -488,6 +491,6 @@ void protocore_iface_bridge_hw_reset(uint8_t *work)
 /** @brief The operands and the outcome. */
 IfaceBridgeHwVars IfaceBridgeHwV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IFACE_BRIDGE

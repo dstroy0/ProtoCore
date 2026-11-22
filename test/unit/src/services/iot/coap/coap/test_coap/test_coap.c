@@ -41,11 +41,11 @@ static char g_query[128];
 static CoapContentFormat g_cf;
 static uint8_t g_payload[128];
 static size_t g_payload_len;
-static proto_bool g_called;
+static embed_bool g_called;
 
 static void record(const CoapRequest *req)
 {
-    g_called = PROTO_TRUE;
+    g_called = EMBED_TRUE;
     g_method = req->method;
     strncpy(g_path, req->path, sizeof(g_path) - 1);
     g_path[sizeof(g_path) - 1] = '\0';
@@ -104,7 +104,7 @@ static void h_big(const CoapRequest *req, CoapResponse *resp)
 
 void setUp()
 {
-    g_called = PROTO_FALSE;
+    g_called = EMBED_FALSE;
     g_method = (CoapMethod)0;
     g_path[0] = '\0';
     g_query[0] = '\0';
@@ -271,11 +271,11 @@ typedef struct
 #define BLK_M(v) (((uint32_t)(v) >> 3) & 1)
 #define BLK_SZX(v) ((uint32_t)(v) & 7)
 
-static proto_bool dec(const uint8_t *buf, size_t len, CoapDec *d)
+static embed_bool dec(const uint8_t *buf, size_t len, CoapDec *d)
 {
     if (len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     d->ver = buf[0] >> 6;
     d->type = (buf[0] >> 4) & 0x03;
@@ -346,7 +346,7 @@ static proto_bool dec(const uint8_t *buf, size_t len, CoapDec *d)
         }
         p += l;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void enc_block(CoapEnc *e, uint32_t optnum, uint32_t num, uint8_t m, uint8_t szx)
@@ -2171,7 +2171,7 @@ void test_dedup_handler_replays_without_rerunning()
     uint8_t req[64];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x4242, paths, 1, NULL, 0, -1, NULL, 0);
 
-    g_called = PROTO_FALSE;
+    g_called = EMBED_FALSE;
     protocore_net_host_udp_reset();
     inject(5683, "10.0.0.9", 5555, req, rl);
     TEST_ASSERT_TRUE(g_called);
@@ -2180,14 +2180,14 @@ void test_dedup_handler_replays_without_rerunning()
     uint8_t saved[64];
     memcpy(saved, sent_bytes(), n1);
 
-    g_called = PROTO_FALSE;
+    g_called = EMBED_FALSE;
     protocore_net_host_udp_reset();
     inject(5683, "10.0.0.9", 5555, req, rl);
     TEST_ASSERT_FALSE(g_called);
     TEST_ASSERT_EQUAL_size_t(n1, sent_len());
     TEST_ASSERT_EQUAL_HEX8_ARRAY(saved, sent_bytes(), n1);
 
-    g_called = PROTO_FALSE;
+    g_called = EMBED_FALSE;
     protocore_net_host_udp_reset();
     inject(5683, "10.0.0.10", 5555, req, rl);
     TEST_ASSERT_TRUE(g_called);

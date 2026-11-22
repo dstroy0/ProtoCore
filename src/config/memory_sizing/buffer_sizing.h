@@ -33,7 +33,7 @@
  * while - if concurrency equals the pool size there is none, and the overflow connection is refused
  * (correct backpressure, but it caps clean throughput at concurrency == MAX_CONNS - 1). Set lower
  * (e.g. -DMAX_CONNS=4, ~16 KB less RAM) on a RAM-constrained target, or higher (16/32) for a
- * connection-heavy HTTP server; the event queue tracks it automatically (EVT_QUEUE_DEPTH below).
+ * connection-heavy HTTP server. The event queue tracks it automatically (EVT_QUEUE_DEPTH below).
  */
 #ifndef MAX_CONNS
 #define MAX_CONNS 8
@@ -95,7 +95,7 @@
  * the whole fixed pool to legitimate clients (a connection-slot DoS - verified on HW). This is an ABSOLUTE
  * deadline from the first byte of a request to the end of its HEADERS that a trickle cannot reset: a connection
  * whose request headers are not complete within PROTOCORE_REQUEST_TIMEOUT_MS is answered 408 and closed, freeing the
- * slot (the nginx client_header_timeout semantic). It is scoped to the header phase, so it never reaps a
+ * slot (the nginx client_header_timeout semantic). It is scoped to the header phase. So it never reaps a
  * legitimate slow body: a large streaming upload (PARSE_BODY) is governed by the streaming handler + idle
  * timer, not this deadline. It also does not touch WebSocket / SSE slots (long-lived by design). Lower it to
  * tighten the window on a trusted LAN; 0 turns the defense off.
@@ -175,7 +175,7 @@
 // SSH (curve25519 + ssh-ed25519, server OR the reverse-SSH client) and HTTP/3 (the QUIC TLS-1.3
 // handshake reuses the same protocore_ed25519 signer for CertificateVerify) all peak at ~10.5 KB on the
 // worker task; the PQ/T hybrid (PROTOCORE_ENABLE_PQC_KEX) runs ML-KEM-768 on top, ~7 KB more. The default
-// tracks the matching floor so a hybrid build is provisioned, not starved; the guard at the bottom of
+// tracks the matching floor so a hybrid build is provisioned, not starved. The guard at the bottom of
 // this file is the backstop when the stack is set by hand. (A flag set only in the config block below,
 // not via -D, is still undefined here and reads as 0 - the guard then catches any shortfall.)
 // sntrup761x25519-sha512 (on by default with the PQC hybrid, but a standalone -D can enable it without
@@ -417,7 +417,7 @@
 
 /** @brief Build-time toggle for the forwarding-path inspection hook (default off, for cost +
  *         privacy). When 1, Forward.inspect.fn + Forward.set_inspector install a runtime callback
- *         that observes / filters each ingress frame before it is forwarded; when 0 the hook is
+ *         that observes / filters each ingress frame before it is forwarded. When 0 the hook is
  *         compiled out entirely (no call site). Runtime toggle: register or clear (null) the
  *         inspector. */
 #ifndef PROTOCORE_FWD_INSPECT
@@ -587,7 +587,7 @@
 //
 // Bring up a wired Ethernet link (an RMII PHY: LAN8720 / TLK110 / RTL8201 / DP83848) so the
 // server runs over Ethernet instead of (or alongside) Wi-Fi. Physical.eth_init is a thin
-// wrapper over the Arduino ETH library; the PHY pins / type / clock come from the standard
+// wrapper over the Arduino ETH library. The PHY pins / type / clock come from the standard
 // ETH_PHY_* build flags for your board (see example Ethernet). The egress reporting
 // (Physical.egress -> Physical.if_kind == PROTOCORE_IF_ETH) and the per-route interface classifier
 // already handle a wired route, so once the link has an IP the server accepts on it with no other
@@ -741,11 +741,11 @@
  *
  * Allocated on the worker stack only while a chunk is being framed - no persistent
  * RAM cost. The pump asks the source for at most this many bytes (or fewer when the
- * send window is smaller), so it bounds the chunk size, not the total body.
+ * send window is smaller). So it bounds the chunk size, not the total body.
  *
  * Sized to one TCP segment (~MSS): the pump frames + sends each chunk in a single
  * tcpip_thread round-trip (~23 us on-device), so a bigger chunk = fewer round-trips per
- * byte. 1440 keeps the framed chunk within one segment; raise it (up to the send window)
+ * byte. 1440 keeps the framed chunk within one segment. Raise it (up to the send window)
  * to cut the round-trip count further on a fast transport (e.g. Ethernet), at more stack.
  */
 #ifndef CHUNK_BUF_SIZE
@@ -766,7 +766,7 @@
 /**
  * @brief Step budget for the regex route matcher (see on_regex()).
  *
- * The matcher is a bounded backtracker: it counts match steps and fails closed
+ * The matcher is a bounded backtracker. It counts match steps and fails closed
  * (no match) once this budget is exhausted, so a pathological pattern can never
  * backtrack unboundedly. Keeps regex routing deterministic. Routing patterns hit
  * only a handful of steps; the default leaves wide margin.
@@ -905,7 +905,7 @@
  *   heap = sizeof(StaticQueue_t) + EVT_QUEUE_DEPTH * sizeof(TcpEvt)
  *
  * Must be large enough to absorb a burst of MAX_CONNS * 4 events without
- * blocking the lwIP thread, so it tracks MAX_CONNS automatically (a raised
+ * blocking the lwIP thread. So it tracks MAX_CONNS automatically (a raised
  * MAX_CONNS never trips the EVT_QUEUE_DEPTH >= MAX_CONNS * 4 guard below).
  */
 #ifndef EVT_QUEUE_DEPTH
@@ -1416,7 +1416,7 @@
  *
  * Default off: a clock-less device must not emit a wrong `Date`, and most embedded
  * responses do not need one, so it stays off the hot path. When set, every dynamic
- * response carries `Date: <IMF-fixdate>` - but only once a real time exists; before a
+ * response carries `Date: <IMF-fixdate>` - but only once a real time exists. Before a
  * source has valid time it is silently omitted (still correct for a clock-less boot).
  *
  * The time is taken from the multi-source registry (any enabled NTP / GPS / RTC / ...
@@ -2094,7 +2094,7 @@
 #endif
 
 /** @brief I2C address of the VL53L0X. DS11555 gives the device address as 0x52, which is the 8-bit
- *         form with the R/W bit in it; on a 7-bit API that is 0x29. */
+ *         form with the R/W bit in it. On a 7-bit API that is 0x29. */
 #ifndef PROTOCORE_VL53L0X_I2C_ADDR
 #define PROTOCORE_VL53L0X_I2C_ADDR 0x29
 #endif
@@ -2153,7 +2153,7 @@
 
 /** @brief DNS resolve timeout in milliseconds. */
 /**
- * @brief Nameserver the portable resolver asks when nothing has told it otherwise.
+ * @brief Nameserver the portable resolver asks when nothing told it otherwise.
  *
  * The vendor backend takes its servers from the stack (DHCP), so this is the portable one's only
  * starting point. A device that learns a server from DHCP or provisioning should hand it over with
@@ -2268,7 +2268,7 @@
  * The client borrows twice this from the secure pool's persistent end and splits it: one half is
  * the payload the codec assembles into and the receive reassembly, the other is the wire. Must hold
  * the largest CONNECT/PUBLISH the client sends and the largest incoming PUBLISH it accepts
- * (topic + payload + a few header bytes); larger incoming packets are dropped.
+ * (topic + payload + a few header bytes). Larger incoming packets are dropped.
  */
 #ifndef PROTOCORE_MQTT_BUF_SIZE
 #define PROTOCORE_MQTT_BUF_SIZE 1024
@@ -2600,7 +2600,7 @@
 #endif
 
 // Internal request-dispatch slots appended to the connection pool for non-TCP transports.
-// HTTP/3 runs over QUIC/UDP and has no accept-time TCP slot, but it reuses the same request
+// HTTP/3 runs over QUIC/UDP and has no accept-time TCP slot. But it reuses the same request
 // pipeline (match_and_execute + send), which is indexed by a connection-pool slot. One reserved
 // slot at index MAX_CONNS lets an HTTP/3 request run through that pipeline. The TCP accept path only
 // ever scans [0, MAX_CONNS), and this slot is driven synchronously by the HTTP/3 poll on the worker
@@ -2942,7 +2942,7 @@
  * @brief Maximum concurrent remote-forward listeners (`ssh -R` / `tcpip-forward`).
  *
  * Each accepted client that requests remote forwarding can bind up to this many
- * ports on the device; each binding consumes one `listener_pool[]` slot, so
+ * ports on the device. Each binding consumes one `listener_pool[]` slot, so
  * `MAX_LISTENERS` must have that much headroom above the app's own listeners.
  * Remote forwarding shares `PROTOCORE_SSH_PORT_FORWARD` (compiled in) and is inert
  * until `protocore_ssh_forward_begin()`.
@@ -2998,7 +2998,7 @@
 /**
  * @brief Largest serialized SSH_FXP_NAME entry one READDIR emits: filename, `ls -l` longname and
  *        attributes. Sizes the per-handle stash an entry that did not fit is held in, which is a
- *        field of SftpHandle in session.h, so it is stated here rather than in the server's own .c.
+ *        field of SftpHandle in session.h. So it is stated here rather than in the server's own .c.
  */
 #ifndef PROTOCORE_SFTP_ENTRY_MAX
 #define PROTOCORE_SFTP_ENTRY_MAX (PROTOCORE_FILESYSTEM_PATH_MAX + 320)
@@ -3510,7 +3510,7 @@
 #endif
 
 // The rendered `Date` header value, held between the render and the caller reading it. One
-// IMF-fixdate plus its NUL, so it is ::PROTOCORE_HTTP_DATE_MAX and nothing else - the size is a
+// IMF-fixdate plus its NUL. So it is ::PROTOCORE_HTTP_DATE_MAX and nothing else - the size is a
 // property of RFC 7231's fixed-width format rather than a tuning choice. A timestamp, no key
 // material, so the plaintext end. Taken only where a build emits the header at all.
 #ifndef PROTOCORE_HTTP_CLOCK_BORROW
@@ -3767,9 +3767,17 @@
 #define PROTOCORE_PLAINTEXT_WORK_DIFFSERV 0
 #endif
 
+#if PROTOCORE_ENABLE_UDP
 #define PROTOCORE_PLAINTEXT_WORK_UDPCLIENT PROTOCORE_UDP_CLIENT_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_UDPCLIENT 0
+#endif
 
+#if PROTOCORE_ENABLE_UDP
 #define PROTOCORE_PLAINTEXT_WORK_UDPLISTENER PROTOCORE_UDP_LISTENER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_UDPLISTENER 0
+#endif
 
 #define PROTOCORE_PLAINTEXT_WORK_TCPLOWER PROTOCORE_TCP_LOWER_BORROW
 
@@ -3790,6 +3798,123 @@
 #endif
 
 #define PROTOCORE_PLAINTEXT_WORK_PHYSICAL PROTOCORE_PHYSICAL_BORROW
+
+#if PROTOCORE_ENABLE_IDEMIP
+#include "src/ethernet/ethernet_defines.h" // IDEMIP_TOTAL_BORROW and the frame, header and address lengths
+/**
+ * @brief The cells of the stack module: 32 units that the interfaces share, and 11 units on each interface.
+ */
+#define PROTOCORE_STACK_CELLS (32u + (11u * IDEMIP_NETIF_COUNT))
+/**
+ * @brief The bytes that one cell costs beyond its payload. MMgr adds two words and rounds the payload up to
+ *        a word.
+ */
+#define PROTOCORE_STACK_CELL_COST (3u * sizeof(size_t))
+/**
+ * @brief The context of the stack module: one pointer for each cell, and the pointer and the descriptor of the
+ *        reply buffer of each interface. 64 bytes hold the state and the padding.
+ */
+#ifndef PROTOCORE_STACK_BORROW
+#define PROTOCORE_STACK_BORROW                                                                                         \
+    ((PROTOCORE_STACK_CELLS * sizeof(uint8_t *)) + (IDEMIP_NETIF_COUNT * (sizeof(uint8_t *) + 1u)) + 64u)
+#endif
+/**
+ * @brief The cellblock of the units of idemIP: each unit and the cost of its cell, in whole MMGR_ALIGN_BYTES.
+ *
+ * @note The units have a cellblock of their own, apart from the plaintext arena. On a 32-bit word, a
+ *       cellblock holds 65535 bytes at most, and the arena and the units together are larger.
+ */
+#define PROTOCORE_STACK_CELLBLOCK_BYTES                                                                                \
+    IDEMIP_ROUND_UP(IDEMIP_TOTAL_BORROW + (PROTOCORE_STACK_CELLS * PROTOCORE_STACK_CELL_COST), MMGR_ALIGN_BYTES)
+/**
+ * @brief The TCP connections that the stack carries at one time, below 255. Each entry holds one TCB while
+ *        its connection is open, so an entry above IDEMIP_TCP_PCBS can carry no connection.
+ */
+#ifndef PROTOCORE_STACK_TCP_ENTRIES
+#define PROTOCORE_STACK_TCP_ENTRIES IDEMIP_TCP_PCBS
+#endif
+static_assert(PROTOCORE_STACK_TCP_ENTRIES <= IDEMIP_TCP_PCBS,
+              "PROTOCORE_STACK_TCP_ENTRIES is above IDEMIP_TCP_PCBS: the entries above it can carry no connection");
+/**
+ * @brief The segments of the transmit ring of each TCP connection, a power of two. Each segment holds the
+ *        octets of one write, up to its size.
+ */
+#ifndef PROTOCORE_STACK_TCP_SEGMENTS
+#define PROTOCORE_STACK_TCP_SEGMENTS 4u
+#endif
+/** @brief The StackTcpEvent records that the event ring of the TCP of the stack holds, a power of two. */
+#ifndef PROTOCORE_STACK_TCP_EVENTS
+#define PROTOCORE_STACK_TCP_EVENTS 32u
+#endif
+/**
+ * @brief The context of the TCP of the stack: one row for each TCB, one record for each entry, and two
+ *        pointers. 64 bytes hold the state and the padding.
+ */
+#ifndef PROTOCORE_STACK_TCP_BORROW
+#define PROTOCORE_STACK_TCP_BORROW                                                                                     \
+    ((IDEMIP_TCP_PCBS * 32u) + (PROTOCORE_STACK_TCP_ENTRIES * ((2u * sizeof(uint8_t *)) + 24u)) +                      \
+     (2u * sizeof(uint8_t *)) + 64u)
+#endif
+/**
+ * @brief The milliseconds that a TCB stays in FIN-WAIT-2 after its entry goes back. The peer then sent no
+ *        FIN, and the TCB closes. RFC 9293 sets no bound, and a TCB that waits forever takes a TCB from each
+ *        later connection.
+ */
+#ifndef PROTOCORE_STACK_TCP_FIN_WAIT_2_MS
+#define PROTOCORE_STACK_TCP_FIN_WAIT_2_MS 60000u
+#endif
+/** @brief The TCP control blocks of the raw API that listen, apart from one for each entry. */
+#ifndef PROTOCORE_STACK_NET_LISTENERS
+#define PROTOCORE_STACK_NET_LISTENERS 4u
+#endif
+/**
+ * @brief The octets of the receive ring of each entry, a power of two. The receive window of the entry is
+ *        this count less one, and the transport frees the octets with protocore_net_recved.
+ */
+#ifndef PROTOCORE_STACK_NET_RX_BYTES
+#define PROTOCORE_STACK_NET_RX_BYTES 2048u
+#endif
+/** @brief The octets of each transmit segment of an entry: the count in front, and the text of one write. */
+#ifndef PROTOCORE_STACK_NET_SEGMENT_BYTES
+#define PROTOCORE_STACK_NET_SEGMENT_BYTES 1028u
+#endif
+/** @brief The packet buffers of the raw API, which carry received text to the transport. */
+#ifndef PROTOCORE_STACK_NET_PBUFS
+#define PROTOCORE_STACK_NET_PBUFS 4u
+#endif
+/** @brief The stack octets of the task that runs the pass of the stack. */
+#ifndef PROTOCORE_STACK_NET_TASK_STACK
+#define PROTOCORE_STACK_NET_TASK_STACK 8192
+#endif
+/** @brief The priority of that task, above each worker, as the tcpip thread of lwIP is. */
+#ifndef PROTOCORE_STACK_NET_TASK_PRIORITY
+#define PROTOCORE_STACK_NET_TASK_PRIORITY (PROTOCORE_WORKER_TASK_PRIORITY + 1)
+#endif
+/** @brief The core of that task. */
+#ifndef PROTOCORE_STACK_NET_TASK_CORE
+#define PROTOCORE_STACK_NET_TASK_CORE 0
+#endif
+/** @brief The milliseconds that an active open waits for the ARP row of its next hop. */
+#ifndef PROTOCORE_STACK_NET_ARP_WAIT_MS
+#define PROTOCORE_STACK_NET_ARP_WAIT_MS 3000u
+#endif
+/** @brief The milliseconds between two ARP requests of one active open. RFC 1122 sec 2.3.2.1 sets one each second. */
+#ifndef PROTOCORE_STACK_NET_ARP_RETRY_MS
+#define PROTOCORE_STACK_NET_ARP_RETRY_MS 1000u
+#endif
+/** @brief The UDP control blocks of the raw API, at most IDEMIP_UDP_PCBS. */
+#ifndef PROTOCORE_STACK_NET_UDP_PCBS
+#define PROTOCORE_STACK_NET_UDP_PCBS 8u
+#endif
+/** @brief The octets of each packet buffer of the raw API. */
+#ifndef PROTOCORE_STACK_NET_PBUF_BYTES
+#define PROTOCORE_STACK_NET_PBUF_BYTES 1460u
+#endif
+/** @brief The share of the stack module in the plaintext arena: its context and that of its TCP. */
+#define PROTOCORE_PLAINTEXT_WORK_STACK (PROTOCORE_STACK_BORROW + PROTOCORE_STACK_TCP_BORROW)
+#else
+#define PROTOCORE_PLAINTEXT_WORK_STACK 0
+#endif
 
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
 #define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                 \
@@ -3815,7 +3940,7 @@
      PROTOCORE_PLAINTEXT_WORK_NTPSERVICE + PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE +                                    \
      PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE + PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +  \
      PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_MTCONNECT + PROTOCORE_PLAINTEXT_WORK_FILESERVING +    \
-     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + 256)
+     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + PROTOCORE_PLAINTEXT_WORK_STACK + 256)
 #endif
 
 /**
@@ -3861,7 +3986,7 @@
 // name rather than by knowing which consumer drags it in. Stated here rather than in the module's own
 // header because the six derived below read the feature flags, which are all resolved above.
 //
-// The six that a header used to gate on a consumer keep that consumer's expression verbatim; the rest
+// The six that a header used to gate on a consumer keep that consumer's expression verbatim. The rest
 // were compiled unconditionally before they had a gate, so they stand at 1. Every one is
 // #ifndef-guarded, so -D on the command line wins.
 
@@ -4000,7 +4125,7 @@
 // └──────────────────────────────┴──────────────────────────────────────────────────────────────┴──────────┘
 //
 // ESP32 has 320 KB of SRAM; the library uses ~5–18 KB depending on features.
-// Stack usage is separate; the largest frame is during SSH DH key exchange
+// Stack usage is separate. The largest frame is during SSH DH key exchange
 // (~256 B for the protocore_bignum private scalar on the call stack before it is
 // zeroed by ssh_dh_finish()).
 //
@@ -4034,8 +4159,8 @@
  * part of the listener API.  Feature flags gate the implementation, not the
  * identifier.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(
+    ProtoConn,
     PROTO_NONE = 0,     ///< Unassigned slot.
     PROTO_HTTP = 1,     ///< HTTP/1.1 with optional WS and SSE upgrades.
     PROTO_TELNET = 2,   ///< Telnet (RFC 854).
@@ -4049,7 +4174,7 @@ typedef enum PROTO_ENUM_PACKED
     PROTO_MESH =
         10,         ///< Edge-cache sibling link (PROTOCORE_ENABLE_EDGE_MESH): answers a peer's content-addressed query.
     PROTO_UDP = 11, ///< A bound datagram port. The slot carries the peer per entry, not per slot.
-} ProtoConn;
+);
 
 /**
  * @brief What an interface is, and the filter that selects one.
@@ -4060,15 +4185,14 @@ typedef enum PROTO_ENUM_PACKED
  * comparing its local IP to the softAP IP; a bus or radio interface is registered by the
  * application and forwarded to like any other.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_IF_ANY = 0,      ///< unspecified kind, and the filter that matches any interface
-    PROTOCORE_IF_WIFI_STA = 1, ///< station interface (joined to an AP / your LAN)
-    PROTOCORE_IF_WIFI_AP = 2,  ///< softAP interface (clients joined to the device)
-    PROTOCORE_IF_ETH = 3,      ///< wired Ethernet PHY
-    PROTOCORE_IF_BUS = 4,      ///< a bus bridged onto the network (uart, spi, can)
-    PROTOCORE_IF_RADIO = 5,    ///< a non-wifi radio
-} protocore_if_kind;
+EMBED_ENUM_BYTE(protocore_if_kind,
+                PROTOCORE_IF_ANY = 0,      ///< unspecified kind, and the filter that matches any interface
+                PROTOCORE_IF_WIFI_STA = 1, ///< station interface (joined to an AP / your LAN)
+                PROTOCORE_IF_WIFI_AP = 2,  ///< softAP interface (clients joined to the device)
+                PROTOCORE_IF_ETH = 3,      ///< wired Ethernet PHY
+                PROTOCORE_IF_BUS = 4,      ///< a bus bridged onto the network (uart, spi, can)
+                PROTOCORE_IF_RADIO = 5,    ///< a non-wifi radio
+);
 
 // --- feature dependency guards (centralized; see the BUILD-FLAG DEPENDENCY TREE
 //     near the top of this file). A child feature requires its parent(s). ---

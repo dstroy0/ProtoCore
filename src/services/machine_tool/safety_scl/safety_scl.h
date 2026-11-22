@@ -49,24 +49,22 @@
 
 #if PROTOCORE_ENABLE_SAFETY_SCL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Where a safety connection stands. */
-typedef enum PROTO_ENUM_PACKED
-{
-    SCL_STATE_INIT = 0,     ///< initialized, no valid frame accepted yet.
-    SCL_STATE_RUNNING = 1,  ///< at least one frame accepted and no fault since.
-    SCL_STATE_FAILSAFE = 2, ///< a check failed; latched until protocore_scl_reset().
-} SclState;
+EMBED_ENUM_BYTE(SclState,
+                SCL_STATE_INIT = 0,     ///< initialized, no valid frame accepted yet.
+                SCL_STATE_RUNNING = 1,  ///< at least one frame accepted and no fault since.
+                SCL_STATE_FAILSAFE = 2, ///< a check failed; latched until protocore_scl_reset().
+);
 
 /** @brief Why a connection went fail-safe. */
-typedef enum PROTO_ENUM_PACKED
-{
-    SCL_FAULT_PROTOCORE_NONE = 0, ///< no fault.
-    SCL_FAULT_SIGNATURE = 1,      ///< the caller's CRC check rejected the frame (corruption).
-    SCL_FAULT_COUNTER = 2,        ///< the monitoring counter was not the expected next value.
-    SCL_FAULT_TIMEOUT = 3,        ///< no valid frame arrived within the watchdog.
-} SclFault;
+EMBED_ENUM_BYTE(SclFault,
+                SCL_FAULT_PROTOCORE_NONE = 0, ///< no fault.
+                SCL_FAULT_SIGNATURE = 1,      ///< the caller's CRC check rejected the frame (corruption).
+                SCL_FAULT_COUNTER = 2,        ///< the monitoring counter was not the expected next value.
+                SCL_FAULT_TIMEOUT = 3,        ///< no valid frame arrived within the watchdog.
+);
 
 /**
  * @brief One safety connection's receive state.
@@ -114,7 +112,7 @@ void protocore_scl_init(SclConn *c, uint32_t first_counter, uint32_t counter_mod
  *
  * @return true if the frame was accepted (its safety payload may be used).
  */
-proto_bool protocore_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t counter, uint32_t now);
+embed_bool protocore_scl_on_frame(SclConn *c, embed_bool signature_ok, uint32_t counter, uint32_t now);
 
 /**
  * @brief Check the receive watchdog at @p now. Call it every cycle, including cycles with no frame -
@@ -125,7 +123,7 @@ proto_bool protocore_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t 
  *
  * @return true if the connection is still usable (not fail-safe).
  */
-proto_bool protocore_scl_poll(SclConn *c, uint32_t now);
+embed_bool protocore_scl_poll(SclConn *c, uint32_t now);
 
 /**
  * @brief Re-establish a fail-safe connection, arming it for @p first_counter at @p now.
@@ -136,7 +134,7 @@ proto_bool protocore_scl_poll(SclConn *c, uint32_t now);
 void protocore_scl_reset(SclConn *c, uint32_t first_counter, uint32_t now);
 
 /** @brief True while the connection may be used (not fail-safe). */
-proto_bool protocore_scl_ok(const SclConn *c);
+embed_bool protocore_scl_ok(const SclConn *c);
 
 /** @brief The connection's state. */
 SclState protocore_scl_state(const SclConn *c);
@@ -154,7 +152,7 @@ SclFault protocore_scl_fault(const SclConn *c);
  */
 uint32_t protocore_scl_next_counter(uint32_t counter, uint32_t counter_mod);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SAFETY_SCL
 

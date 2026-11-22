@@ -82,7 +82,7 @@ void test_sha1_abc_one_block(void)
     uint8_t got[20];
     block_abc_512(blk);
     protocore_sha_hw_acquire();
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_1, h, 5u, (const uint32_t *)(const void *)blk, 16u, PROTO_TRUE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_1, h, 5u, (const uint32_t *)(const void *)blk, 16u, EMBED_TRUE);
     protocore_sha_hw_release();
     words_to_be(h, 5u, got);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, got, 20);
@@ -98,7 +98,7 @@ void test_sha256_abc_one_block(void)
     uint8_t got[32];
     block_abc_512(blk);
     protocore_sha_hw_acquire();
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, h, 8u, (const uint32_t *)(const void *)blk, 16u, PROTO_TRUE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, h, 8u, (const uint32_t *)(const void *)blk, 16u, EMBED_TRUE);
     protocore_sha_hw_release();
     words_to_be(h, 8u, got);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, got, 32);
@@ -115,7 +115,7 @@ void test_sha224_abc_one_block(void)
     uint8_t got[32];
     block_abc_512(blk);
     protocore_sha_hw_acquire();
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_224, h, 8u, (const uint32_t *)(const void *)blk, 16u, PROTO_TRUE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_224, h, 8u, (const uint32_t *)(const void *)blk, 16u, EMBED_TRUE);
     protocore_sha_hw_release();
     words_to_be(h, 8u, got);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, got, 28);
@@ -134,7 +134,7 @@ void test_sha512_abc_one_block(void)
     block_abc_1024(blk);
     protocore_sha_hw_acquire();
     protocore_sha_hw_block(PROTOCORE_SHA_MODE_512, (uint32_t *)(void *)h, 16u, (const uint32_t *)(const void *)blk, 32u,
-                           PROTO_TRUE);
+                           EMBED_TRUE);
     protocore_sha_hw_release();
     lanes_to_be(h, 8u, got);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, got, 64);
@@ -153,7 +153,7 @@ void test_sha384_abc_one_block(void)
     block_abc_1024(blk);
     protocore_sha_hw_acquire();
     protocore_sha_hw_block(PROTOCORE_SHA_MODE_384, (uint32_t *)(void *)h, 16u, (const uint32_t *)(const void *)blk, 32u,
-                           PROTO_TRUE);
+                           EMBED_TRUE);
     protocore_sha_hw_release();
     lanes_to_be(h, 8u, got);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, got, 48);
@@ -171,9 +171,9 @@ void test_continue_matches_supplied_iv(void)
     uint32_t b[8];
     block_abc_512(blk);
     protocore_sha_hw_acquire();
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, a, 8u, (const uint32_t *)(const void *)blk, 16u, PROTO_TRUE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, a, 8u, (const uint32_t *)(const void *)blk, 16u, EMBED_TRUE);
     memcpy(b, IV256, sizeof(IV256));
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, b, 8u, (const uint32_t *)(const void *)blk, 16u, PROTO_FALSE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, b, 8u, (const uint32_t *)(const void *)blk, 16u, EMBED_FALSE);
     protocore_sha_hw_release();
     TEST_ASSERT_EQUAL_HEX32_ARRAY(a, b, 8);
 }
@@ -185,8 +185,8 @@ void test_null_operands_are_refused(void)
     uint32_t h[8];
     block_abc_512(blk);
     memset(h, 0x5A, sizeof(h));
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, NULL, 8u, (const uint32_t *)(const void *)blk, 16u, PROTO_TRUE);
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, h, 8u, NULL, 16u, PROTO_TRUE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, NULL, 8u, (const uint32_t *)(const void *)blk, 16u, EMBED_TRUE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, h, 8u, NULL, 16u, EMBED_TRUE);
     for (unsigned i = 0; i < 8u; i++)
     {
         TEST_ASSERT_EQUAL_HEX32(0x5A5A5A5Au, h[i]);

@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_PN532
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -112,7 +112,7 @@ typedef struct
     Pn532ParseFrameArgs parse_frame_args;
     Pn532IsAckArgs is_ack_args;
     Pn532BuildAckArgs build_ack_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t len;
     int n;
 } Pn532Vars;
@@ -123,18 +123,18 @@ extern Pn532Vars Pn532V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_frame)(uint8_t *work);
-    void (*const parse_frame)(uint8_t *work);
-    void (*const is_ack)(uint8_t *work);
-    void (*const build_ack)(uint8_t *work);
+    void (*const build_frame)(const uint8_t *work);
+    void (*const parse_frame)(const uint8_t *work);
+    void (*const is_ack)(const uint8_t *work);
+    void (*const build_ack)(const uint8_t *work);
 } Pn532Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Pn532V or a region of the borrow at a fixed offset.
-void protocore_pn532_build_frame(uint8_t *work);
-void protocore_pn532_parse_frame(uint8_t *work);
-void protocore_pn532_is_ack(uint8_t *work);
-void protocore_pn532_build_ack(uint8_t *work);
+void protocore_pn532_build_frame(const uint8_t *work);
+void protocore_pn532_parse_frame(const uint8_t *work);
+void protocore_pn532_is_ack(const uint8_t *work);
+void protocore_pn532_build_ack(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -147,7 +147,7 @@ static const Pn532Ns Pn532 __attribute__((unused)) = {
     .build_ack = protocore_pn532_build_ack,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PN532
 

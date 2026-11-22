@@ -45,12 +45,12 @@ void test_digit_tables_are_ascii(void)
 // One nibble out, both cases.
 void test_digit_of_nibble(void)
 {
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     HexV.args.nibble = 0x0Au;
     Hex.digit(hex_work);
     TEST_ASSERT_EQUAL_CHAR('a', HexV.ch);
 
-    HexV.args.upper = PROTO_TRUE;
+    HexV.args.upper = EMBED_TRUE;
     HexV.args.nibble = 0x0Fu;
     Hex.digit(hex_work);
     TEST_ASSERT_EQUAL_CHAR('F', HexV.ch);
@@ -59,7 +59,7 @@ void test_digit_of_nibble(void)
 // Only the low four bits select the digit, so a caller cannot index past the table.
 void test_digit_masks_to_four_bits(void)
 {
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     HexV.args.nibble = 0xF3u; // high nibble must be ignored
     Hex.digit(hex_work);
     TEST_ASSERT_EQUAL_CHAR('3', HexV.ch);
@@ -97,7 +97,7 @@ void test_encode_decode_round_trip(void)
     char text[2 * sizeof(IN) + 1];
     uint8_t back[sizeof(IN)];
 
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     HexV.io.in = IN;
     HexV.io.n = (uint32_t)sizeof(IN);
     HexV.io.out = text;

@@ -22,7 +22,7 @@
 
 #include "server/clock/clock.h" // Clock.millis: the one time source the rate cap reads
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // One control on forwarding: a (src, dst) pair, its verdict, and its rate window. RFC 1812 sec 5.3.11.
 typedef struct
@@ -33,7 +33,7 @@ typedef struct
     uint8_t src;
     uint8_t dst;
     protocore_fwd_action action;
-    proto_bool used;
+    embed_bool used;
 } rule;
 
 // One access-list entry: a source interface and a masked byte pattern. RFC 1812 sec 5.3.9.
@@ -45,7 +45,7 @@ typedef struct
     uint8_t src;    // source interface, or PROTOCORE_FWD_IF_ANY
     uint8_t patlen; // 0 = match any content
     protocore_fwd_action action;
-    proto_bool used;
+    embed_bool used;
 } acl_entry;
 
 // One policy route: the same masked byte pattern, bound to one next hop. RFC 1812 sec 5.2.4.3.
@@ -60,7 +60,7 @@ typedef struct
     uint8_t src;       // source interface, or PROTOCORE_FWD_IF_ANY
     uint8_t patlen;    // 0 = match any content
     uint8_t egress;    // the interface a matched frame leaves on
-    proto_bool used;
+    embed_bool used;
 } route;
 
 /**
@@ -91,7 +91,10 @@ static_assert(FORWARD_OFF_CTX + sizeof(struct ForwardStorage) <= PROTOCORE_FORWA
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define FORWARD_CTX(w) ((struct ForwardStorage *)(void *)((w) + FORWARD_OFF_CTX))
+#define FORWARD_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct ForwardStorage *)(const void *)((w) + FORWARD_OFF_CTX),                         \
+        default: (struct ForwardStorage *)(void *)((w) + FORWARD_OFF_CTX))
 
 // The one time source (server/clock/clock.h). Clock.ms is where the LAST reading landed, not a
 // live read, so a rate window that only looked at it measured against whichever instant something
@@ -105,7 +108,7 @@ static uint32_t fwd_now(void)
 // Layer 1 owns the interface registry; these three set its call members and read its outcome.
 
 // Whether layer 1 holds interface @p id.
-static proto_bool fwd_iface_present(uint8_t id)
+static embed_bool fwd_iface_present(uint8_t id)
 {
     PhysicalV.iface.id = id;
     Physical.iface_present(protocore_physical_span());
@@ -121,7 +124,7 @@ static int16_t fwd_iface_at(uint8_t i)
 }
 
 // Hand the held frame to layer 1 for interface @p id.
-static proto_bool fwd_iface_send(uint8_t *work, uint8_t id)
+static embed_bool fwd_iface_send(uint8_t *work, uint8_t id)
 {
     PhysicalV.iface.id = id;
     PhysicalV.iface.data = ForwardV.frame.data;
@@ -131,20 +134,15 @@ static proto_bool fwd_iface_send(uint8_t *work, uint8_t id)
 }
 
 // What the controls on forwarding say about one (src, dst) pair. RFC 1812 sec 5.3.11.
-typedef enum PROTO_ENUM_PACKED
-{
-    RESOLVE_RESULT_R_NOROUTE,
-    RESOLVE_RESULT_R_DENY,
-    RESOLVE_RESULT_R_ALLOW,
-} resolve_result;
+EMBED_ENUM_BYTE(resolve_result, RESOLVE_RESULT_R_NOROUTE, RESOLVE_RESULT_R_DENY, RESOLVE_RESULT_R_ALLOW, );
 
 // Resolve the control on forwarding for (src_if -> dst): a DENY wins; otherwise the first matching
-// ALLOW governs and its index lands in @p allow_idx; otherwise nothing matched.
+// ALLOW governs and its index lands in @p allow_idx. Otherwise nothing matched.
 static resolve_result fwd_resolve(uint8_t *work, uint8_t dst, int *allow_idx)
 {
     const uint8_t src = ForwardV.src_if;
     int allow = -1;
-    proto_bool deny = PROTO_FALSE;
+    embed_bool deny = EMBED_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
     {
         const rule *r = &FORWARD_CTX(work)->rules[i];
@@ -154,7 +152,7 @@ static resolve_result fwd_resolve(uint8_t *work, uint8_t dst, int *allow_idx)
         }
         if (r->action == PROTOCORE_FWD_DENY)
         {
-            deny = PROTO_TRUE;
+            deny = EMBED_TRUE;
         }
         else if (allow < 0)
         {
@@ -175,11 +173,11 @@ static resolve_result fwd_resolve(uint8_t *work, uint8_t dst, int *allow_idx)
 
 // Fixed one-second window rate cap: true once the cap is reached, which drops the frame.
 // RFC 1812 sec 5.3.6. Shared by the controls and the policy routes, which keep the same two fields.
-static proto_bool rate_gate(uint32_t *window_start, uint16_t *count, uint16_t rate_cap)
+static embed_bool rate_gate(uint32_t *window_start, uint16_t *count, uint16_t rate_cap)
 {
     if (rate_cap == 0)
     {
-        return PROTO_FALSE; // uncapped
+        return EMBED_FALSE; // uncapped
     }
     uint32_t now = fwd_now();
     if ((now - *window_start) >= 1000)
@@ -189,13 +187,13 @@ static proto_bool rate_gate(uint32_t *window_start, uint16_t *count, uint16_t ra
     }
     if (*count >= rate_cap)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     (*count)++;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-static proto_bool rate_exceeded(rule *r)
+static embed_bool rate_exceeded(rule *r)
 {
     return rate_gate(&r->window_start, &r->count, r->rate_cap);
 }
@@ -203,40 +201,40 @@ static proto_bool rate_exceeded(rule *r)
 // Does a stored byte pattern match this frame? @p patlen bytes at @p offset, compared under
 // @p mask against an already-masked @p pattern. patlen 0 matches any content; a frame shorter
 // than offset + patlen does not match.
-static proto_bool pat_match(uint16_t offset, const uint8_t *pattern, const uint8_t *mask, uint8_t patlen,
+static embed_bool pat_match(uint16_t offset, const uint8_t *pattern, const uint8_t *mask, uint8_t patlen,
                             const uint8_t *data, uint16_t len)
 {
     if (patlen == 0)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if ((uint32_t)offset + patlen > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (uint8_t i = 0; i < patlen; i++)
     {
         if ((data[offset + i] & mask[i]) != pattern[i])
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Does an access-list entry match this frame? Its source interface, then its byte pattern.
-static proto_bool acl_match(const acl_entry *a, uint8_t src, const uint8_t *data, uint16_t len)
+static embed_bool acl_match(const acl_entry *a, uint8_t src, const uint8_t *data, uint16_t len)
 {
     if (a->src != PROTOCORE_FWD_IF_ANY && a->src != src)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return pat_match(a->offset, a->pattern, a->mask, a->patlen, data, len);
 }
 
 // The access list: the first matching entry's action decides, otherwise the fallback.
 // RFC 1812 sec 5.3.9.
-static proto_bool fwd_acl_permits(uint8_t *work)
+static embed_bool fwd_acl_permits(uint8_t *work)
 {
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ACL; i++)
     {
@@ -264,11 +262,11 @@ static void pat_store(uint8_t *dst_pattern, uint8_t *dst_mask, const uint8_t *pa
 }
 
 // A pattern longer than the row, or a null pattern / mask with a non-zero length, is not storable.
-static proto_bool pat_args_valid(const FwdMatchArgs *m)
+static embed_bool pat_args_valid(const FwdMatchArgs *m)
 {
     if (m->patlen > PROTOCORE_FWD_ACL_PATLEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return m->patlen == 0 || (m->pattern != NULL && m->mask != NULL);
 }
@@ -320,7 +318,7 @@ void protocore_forward_acl_set_default(uint8_t *work)
 
 void protocore_forward_acl_add(uint8_t *work)
 {
-    ForwardV.ok = PROTO_FALSE;
+    ForwardV.ok = EMBED_FALSE;
     if (!pat_args_valid(&ForwardV.match))
     {
         return;
@@ -337,8 +335,8 @@ void protocore_forward_acl_add(uint8_t *work)
         a->src = ForwardV.src_if;
         a->patlen = ForwardV.match.patlen;
         a->action = ForwardV.acl.action;
-        a->used = PROTO_TRUE;
-        ForwardV.ok = PROTO_TRUE;
+        a->used = EMBED_TRUE;
+        ForwardV.ok = EMBED_TRUE;
         return;
     }
     // table full
@@ -346,7 +344,7 @@ void protocore_forward_acl_add(uint8_t *work)
 
 void protocore_forward_route_add(uint8_t *work)
 {
-    ForwardV.ok = PROTO_FALSE;
+    ForwardV.ok = EMBED_FALSE;
     if (!pat_args_valid(&ForwardV.match))
     {
         return;
@@ -366,8 +364,8 @@ void protocore_forward_route_add(uint8_t *work)
         rt->src = ForwardV.src_if;
         rt->patlen = ForwardV.match.patlen;
         rt->egress = ForwardV.route.egress_if;
-        rt->used = PROTO_TRUE;
-        ForwardV.ok = PROTO_TRUE;
+        rt->used = EMBED_TRUE;
+        ForwardV.ok = EMBED_TRUE;
         return;
     }
     // table full
@@ -375,7 +373,7 @@ void protocore_forward_route_add(uint8_t *work)
 
 void protocore_forward_add_rule(uint8_t *work)
 {
-    ForwardV.ok = PROTO_FALSE;
+    ForwardV.ok = EMBED_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
     {
         rule *r = &FORWARD_CTX(work)->rules[i];
@@ -389,8 +387,8 @@ void protocore_forward_add_rule(uint8_t *work)
         r->src = ForwardV.src_if;
         r->dst = ForwardV.rule.dst_if;
         r->action = ForwardV.rule.action;
-        r->used = PROTO_TRUE;
-        ForwardV.ok = PROTO_TRUE;
+        r->used = EMBED_TRUE;
+        ForwardV.ok = EMBED_TRUE;
         return;
     }
     // table full
@@ -399,7 +397,7 @@ void protocore_forward_add_rule(uint8_t *work)
 // The first matching policy route decides the frame: it leaves on that one next hop, or it is
 // dropped. Returns true when a route matched, and writes the next hops reached to ns->n.
 // RFC 1812 sec 5.2.4.3.
-static proto_bool fwd_policy_route(uint8_t *work)
+static embed_bool fwd_policy_route(uint8_t *work)
 {
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ROUTES; i++)
     {
@@ -415,28 +413,28 @@ static proto_bool fwd_policy_route(uint8_t *work)
         FORWARD_CTX(work)->stats.policy_routed++;
         if (rt->egress == ForwardV.src_if) // a frame never leaves on the interface it arrived on
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         if (!fwd_iface_present(rt->egress)) // an unregistered next hop drops the frame
         {
             FORWARD_CTX(work)->stats.send_fail++;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         if (rate_gate(&rt->window_start, &rt->count, rt->rate_cap))
         {
             FORWARD_CTX(work)->stats.rate_dropped++;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         if (fwd_iface_send(work, rt->egress))
         {
             FORWARD_CTX(work)->stats.forwarded++;
             ForwardV.n = 1;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         FORWARD_CTX(work)->stats.send_fail++;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void protocore_forward_ingress(uint8_t *work)
@@ -519,6 +517,6 @@ void protocore_forward_set_inspector(uint8_t *work)
 /** @brief The operands and the outcome. */
 ForwardVars ForwardV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FORWARD

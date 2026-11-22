@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_TLS_POLICY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief TLS protocol version wire words. */
 #define TLS_VERSION_1_2 0x0303
@@ -105,11 +105,11 @@ typedef struct
     TlsPolicyNameArgs name_args;
     TlsPolicySelectArgs select_args;
     TlsPolicyAeadArgs aead_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t version;
     uint16_t suite;
     const char *text;
-    proto_bool aead;
+    embed_bool aead;
 } TlsPolicyVars;
 
 /** @brief The operands and the outcome. */
@@ -118,18 +118,18 @@ extern TlsPolicyVars TlsPolicyV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const negotiate)(uint8_t *work);
-    void (*const name)(uint8_t *work);
-    void (*const select)(uint8_t *work);
-    void (*const is_aead)(uint8_t *work);
+    void (*const negotiate)(const uint8_t *work);
+    void (*const name)(const uint8_t *work);
+    void (*const select)(const uint8_t *work);
+    void (*const is_aead)(const uint8_t *work);
 } TlsPolicyNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TlsPolicyV or a region of the borrow at a fixed offset.
-void protocore_tls_policy_negotiate(uint8_t *work);
-void protocore_tls_policy_name(uint8_t *work);
-void protocore_tls_policy_select(uint8_t *work);
-void protocore_tls_policy_is_aead(uint8_t *work);
+void protocore_tls_policy_negotiate(const uint8_t *work);
+void protocore_tls_policy_name(const uint8_t *work);
+void protocore_tls_policy_select(const uint8_t *work);
+void protocore_tls_policy_is_aead(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -142,7 +142,7 @@ static const TlsPolicyNs TlsPolicy __attribute__((unused)) = {
     .is_aead = protocore_tls_policy_is_aead,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TLS_POLICY
 

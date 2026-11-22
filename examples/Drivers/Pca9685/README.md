@@ -96,4 +96,4 @@ Each channel has a 12-bit **ON** count and **OFF** count at register `0x06 + 4 *
 servo pulse of _N_ microseconds becomes an OFF count of `N * 4096 * freq / 1e6`
 (`protocore_pca9685_us_to_count`), and `protocore_pca9685_set_pwm_bytes` packs the 5-byte I2C write. All of that math
 and the register encoding are unit-tested on a PC (see `test/test_pca9685`), including the
-full-on/off flag; only the I2C writes run on the ESP32.
+full-on/off flag. Only the I2C writes run on the ESP32.

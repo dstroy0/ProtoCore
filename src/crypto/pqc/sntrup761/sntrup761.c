@@ -829,11 +829,11 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_sntrup761_enc(uint8_t *work, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
+embed_bool protocore_sntrup761_enc(uint8_t *work, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 {
     if (!pk || !ct || !ss)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint16_t scr16[PROTOCORE_SCR16];
@@ -846,14 +846,14 @@ proto_bool protocore_sntrup761_enc(uint8_t *work, const uint8_t *pk, uint8_t *ct
     Short_random(r);
     Hide(work, ct, r_enc, r, pk, cache, scr16, scr32);
     HashSession(work, ss, 1, r_enc, ct);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk)
+embed_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk)
 {
     if (!pk || !sk)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint16_t scr16[PROTOCORE_SCR16];
@@ -872,14 +872,14 @@ proto_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk)
     RngV.fill_args.len = PROTOCORE_SMALL_BYTES;
     Rng.fill(protocore_rng_span());
     Hash_prefix(work, tail + PROTOCORE_PK_BYTES + PROTOCORE_SMALL_BYTES, 4, pk, PROTOCORE_PK_BYTES);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
+embed_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
 {
     if (!sk || !ct || !ss)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint16_t scr16[PROTOCORE_SCR16];
@@ -905,7 +905,7 @@ proto_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8
         r_enc[i] = (uint8_t)(r_enc[i] ^ (mask & (r_enc[i] ^ rho[i]))); // implicit reject -> rho
     }
     HashSession(work, ss, 1 + mask, r_enc, ct);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_SNTRUP761

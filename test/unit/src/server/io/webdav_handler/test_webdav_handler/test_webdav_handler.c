@@ -30,7 +30,7 @@ static void rearm()
 {
     conn_pool[0] = (TcpConn){0};
     conn_pool[0].id = 0;
-    conn_pool[0].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConnV.slot = 0;
@@ -46,37 +46,37 @@ static void tree_mkdir(const char *path)
 {
     TEST_ASSERT_TRUE(lfsm_mkdir(path));
 }
-static proto_bool tree_has(const char *path)
+static embed_bool tree_has(const char *path)
 {
     return lfsm()->exists(path);
 }
-static proto_bool tree_is_dir(const char *path)
+static embed_bool tree_is_dir(const char *path)
 {
     protocore_mnt_stat st;
     return lfsm()->stat(path, &st) && st.is_dir;
 }
-static proto_bool tree_content_eq(const char *path, const char *exp)
+static embed_bool tree_content_eq(const char *path, const char *exp)
 {
     protocore_mnt_stat st;
     if (!lfsm()->stat(path, &st) || st.is_dir || st.size != strlen(exp))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     char buf[512];
     if (st.size >= sizeof(buf))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int h = lfsm()->open(path, PROTOCORE_MNT_READ);
     if (h < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int n = lfsm()->read(h, buf, sizeof(buf));
     lfsm()->close(h);
-    return (n == (int)strlen(exp) && memcmp(buf, exp, (size_t)n) == 0) ? PROTO_TRUE : PROTO_FALSE;
+    return (n == (int)strlen(exp) && memcmp(buf, exp, (size_t)n) == 0) ? EMBED_TRUE : EMBED_FALSE;
 }
-static proto_bool protocore_resp_status(int code)
+static embed_bool protocore_resp_status(int code)
 {
     char want[20];
     snprintf(want, sizeof(want), "HTTP/1.1 %d", code);
@@ -99,7 +99,8 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -351,26 +352,26 @@ static void feed_put_if(uint8_t slot, const char *path, const char *if_hdr, cons
     handle();
 }
 
-static proto_bool extract_lock_token(const char *resp, char *out, size_t cap)
+static embed_bool extract_lock_token(const char *resp, char *out, size_t cap)
 {
     const char *p = strstr(resp, "opaquelocktoken:");
     if (!p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *e = strchr(p, '>');
     if (!e)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t len = (size_t)(e - p);
     if (len + 1 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(out, p, len);
     out[len] = 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void test_lock_enforcement()

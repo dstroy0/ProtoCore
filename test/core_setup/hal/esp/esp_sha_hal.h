@@ -15,7 +15,7 @@
  * and hold-clear bits are stated. This file includes NO `soc/` header, references NO vendor symbol
  * (no `esp_sha_*` / `sha_hal_*` / `sha_ll_*`, no `SHA_*_REG`, no `SYSTEM`/`PCR`/`HP_SYS_CLKRST`
  * struct) and tests NO `CONFIG_IDF_TARGET_*`. The block register offsets below are shared by every
- * die carrying the unified SHA peripheral; only the base and the clock/reset bits differ, and those
+ * die carrying the unified SHA peripheral. Only the base and the clock/reset bits differ, and those
  * come from the profile.
  *
  * EXCLUSIVITY
@@ -43,7 +43,7 @@
 #include "test/core_setup/hal/host/host_hw_reg.h"
 #endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Raw memory-mapped register access - the only primitive; no vendor REG_* macro. A read and a write
 // rather than one lvalue, because a host build models the bus that carries them and a narrow or
@@ -105,7 +105,7 @@ void protocore_sha_hw_release(void);
  *                false to compress onto the state written back from @p h.
  */
 static inline void protocore_sha_hw_block(uint32_t mode, uint32_t *h, unsigned hwords, const uint32_t *blk,
-                                          unsigned bwords, proto_bool first)
+                                          unsigned bwords, embed_bool first)
 {
     PROTOCORE_HW_WR(PROTOCORE_SHA_MODE, mode);
     if (!first)
@@ -141,7 +141,7 @@ static inline void protocore_sha_hw_block(uint32_t mode, uint32_t *h, unsigned h
     }
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HAS_HW_SHA
 

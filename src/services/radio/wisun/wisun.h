@@ -7,7 +7,7 @@
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 #include "shared/ip/ip.h"     // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file wisun.h
@@ -44,7 +44,7 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     protocore_ip addr;  ///< the node's IPv6 address on the mesh.
-    proto_bool joined;  ///< true once the node has joined the FAN.
+    embed_bool joined;  ///< true once the node joined the FAN.
     uint32_t last_seen; ///< tick of the last contact.
 } WisunNode;
 
@@ -62,12 +62,12 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*build_coap)(uint8_t *, uint8_t, uint8_t, uint16_t, const uint8_t *, uint8_t, const char *, const uint8_t *,
-                         size_t, uint8_t *, size_t);
-    void (*init)(uint8_t *, WisunFan *, const protocore_ip *, WisunNode *, size_t);
+    size_t (*build_coap)(const uint8_t *, uint8_t, uint8_t, uint16_t, const uint8_t *, uint8_t, const char *,
+                         const uint8_t *, size_t, uint8_t *, size_t);
+    void (*init)(const uint8_t *, WisunFan *, const protocore_ip *, WisunNode *, size_t);
     int (*node_register)(uint8_t *, WisunFan *, const protocore_ip *, uint32_t);
-    proto_bool (*node_find)(uint8_t *, const WisunFan *, const protocore_ip *, size_t *);
-    size_t (*joined_count)(uint8_t *, const WisunFan *);
+    embed_bool (*node_find)(uint8_t *, const WisunFan *, const protocore_ip *, size_t *);
+    size_t (*joined_count)(const uint8_t *, const WisunFan *);
     size_t (*nodes_json)(uint8_t *, const WisunFan *, char *, size_t);
 } WisunNs;
 PROTOCORE_NS_LAYOUT(WisunNs, build_coap, init, node_register, node_find, joined_count, nodes_json);
@@ -87,9 +87,9 @@ PROTOCORE_NS_LAYOUT(WisunNs, build_coap, init, node_register, node_find, joined_
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_wisun_build_coap(uint8_t *work, uint8_t type, uint8_t code, uint16_t msg_id, const uint8_t *token,
-                                  uint8_t tkl, const char *uri_path, const uint8_t *payload, size_t plen, uint8_t *out,
-                                  size_t cap);
+size_t protocore_wisun_build_coap(const uint8_t *work, uint8_t type, uint8_t code, uint16_t msg_id,
+                                  const uint8_t *token, uint8_t tkl, const char *uri_path, const uint8_t *payload,
+                                  size_t plen, uint8_t *out, size_t cap);
 /**
  * @brief Initialize the connector over caller storage.
  * @param work PROTOCORE_WISUN_BORROW bytes the caller took. Not held past the call.
@@ -98,7 +98,7 @@ size_t protocore_wisun_build_coap(uint8_t *work, uint8_t type, uint8_t code, uin
  * @param storage Storage
  * @param cap Cap
  */
-void protocore_wisun_init(uint8_t *work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage,
+void protocore_wisun_init(const uint8_t *work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage,
                           size_t cap);
 /**
  * @brief Register (or refresh) a node by address; sets joined + last_seen.
@@ -115,16 +115,16 @@ int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_
  * @param fan Fan
  * @param addr Addr
  * @param idx Idx
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx);
+embed_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx);
 /**
  * @brief Number of joined nodes.
  * @param work PROTOCORE_WISUN_BORROW bytes the caller took. Not held past the call.
  * @param fan Fan
  * @return The size_t.
  */
-size_t protocore_wisun_joined_count(uint8_t *work, const WisunFan *fan);
+size_t protocore_wisun_joined_count(const uint8_t *work, const WisunFan *fan);
 /**
  * @brief Serialize the node table as `[{"addr":"..","joined":bool},...]` for .
  * @param work PROTOCORE_WISUN_BORROW bytes the caller took. Not held past the call.
@@ -143,6 +143,6 @@ PROTOCORE_NS WisunNs Wisun PROTOCORE_UNUSED = {.build_coap = protocore_wisun_bui
                                                .joined_count = protocore_wisun_joined_count,
                                                .nodes_json = protocore_wisun_nodes_json};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_WISUN_H

@@ -56,7 +56,10 @@ static_assert(HMAC_OFF_WORK % _Alignof(HmacWork) == 0,
 // The regions, at their offsets in the caller's borrow.
 #define HMAC_INNER(w) ((w) + HMAC_OFF_INNER)
 #define HMAC_OKEY(w) ((w) + HMAC_OFF_OKEY)
-#define HMAC_WORK(w) ((HmacWork *)(void *)((w) + HMAC_OFF_WORK))
+#define HMAC_WORK(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HmacWork *)(const void *)((w) + HMAC_OFF_WORK),                                        \
+        default: (HmacWork *)(void *)((w) + HMAC_OFF_WORK))
 #define HMAC_HASH(w) ((w) + HMAC_OFF_HASH)
 
 // Build one 64-byte HMAC key block into @p block (RFC 2104 sec 2), using @p scratch (64 bytes) to hold the
@@ -83,7 +86,7 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[64
     }
 }
 
-proto_bool protocore_hmac_sha256_init(uint8_t *work, const uint8_t *key, size_t key_len)
+embed_bool protocore_hmac_sha256_init(uint8_t *work, const uint8_t *key, size_t key_len)
 {
     HmacWork *w = HMAC_WORK(work);
     // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
@@ -92,20 +95,20 @@ proto_bool protocore_hmac_sha256_init(uint8_t *work, const uint8_t *key, size_t 
 
     Sha256.init(HMAC_INNER(work));
     Sha256.update(HMAC_INNER(work), w->ipad, PROTOCORE_SHA256_BLOCK_LEN);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_hmac_sha256_update(uint8_t *work, const uint8_t *data, size_t len)
+embed_bool protocore_hmac_sha256_update(uint8_t *work, const uint8_t *data, size_t len)
 {
     Sha256.update(HMAC_INNER(work), data, len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_hmac_sha256_final(uint8_t *work, uint8_t *out)
+embed_bool protocore_hmac_sha256_final(uint8_t *work, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     HmacWork *w = HMAC_WORK(work);
     Sha256.final(HMAC_INNER(work), w->inner_digest);
@@ -115,15 +118,15 @@ proto_bool protocore_hmac_sha256_final(uint8_t *work, uint8_t *out)
     Sha256.update(HMAC_HASH(work), HMAC_OKEY(work), PROTOCORE_SHA256_BLOCK_LEN);
     Sha256.update(HMAC_HASH(work), w->inner_digest, PROTOCORE_SHA256_DIGEST_LEN);
     Sha256.final(HMAC_HASH(work), out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_hmac_sha256_mac(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
+embed_bool protocore_hmac_sha256_mac(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *data, size_t len,
                                      uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // Self-contained: ipad block first, fold it into the inner hash, then reuse its slot as the opad
     // key-padding scratch - so no key block ever lands on the stack.
@@ -140,7 +143,7 @@ proto_bool protocore_hmac_sha256_mac(uint8_t *work, const uint8_t *key, size_t k
     Sha256.update(hw, w->opad, PROTOCORE_SHA256_BLOCK_LEN);
     Sha256.update(hw, w->inner_digest, PROTOCORE_SHA256_DIGEST_LEN);
     Sha256.final(hw, out); // HMAC = H((K XOR opad) || inner)
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_HMAC_SHA256

@@ -112,22 +112,22 @@ void test_frame_control_flag_bit_positions(void)
     struct
     {
         uint8_t octet1;
-        proto_bool to_ds;
-        proto_bool from_ds;
-        proto_bool retry;
-        proto_bool prot;
+        embed_bool to_ds;
+        embed_bool from_ds;
+        embed_bool retry;
+        embed_bool prot;
     } static const CASES[] = {
-        {0x00, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE},
-        {0x01, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE},  // To DS
-        {0x02, PROTO_FALSE, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE},  // From DS
-        {0x04, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE}, // More Fragments, not exposed
-        {0x08, PROTO_FALSE, PROTO_FALSE, PROTO_TRUE, PROTO_FALSE},  // Retry
-        {0x10, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE}, // Power Management
-        {0x20, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE}, // More Data
-        {0x40, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_TRUE},  // Protected Frame
-        {0x80, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE}, // +HTC
-        {0x03, PROTO_TRUE, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE},   // a WDS frame
-        {0x4B, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE},     // all four at once
+        {0x00, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE},
+        {0x01, EMBED_TRUE, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE},  // To DS
+        {0x02, EMBED_FALSE, EMBED_TRUE, EMBED_FALSE, EMBED_FALSE},  // From DS
+        {0x04, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE}, // More Fragments, not exposed
+        {0x08, EMBED_FALSE, EMBED_FALSE, EMBED_TRUE, EMBED_FALSE},  // Retry
+        {0x10, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE}, // Power Management
+        {0x20, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE}, // More Data
+        {0x40, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, EMBED_TRUE},  // Protected Frame
+        {0x80, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE}, // +HTC
+        {0x03, EMBED_TRUE, EMBED_TRUE, EMBED_FALSE, EMBED_FALSE},   // a WDS frame
+        {0x4B, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE},     // all four at once
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {

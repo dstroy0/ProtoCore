@@ -42,7 +42,7 @@
 
 #if PROTOCORE_ENABLE_FLOW_EXPORT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define FLOW_V5_HEADER_SIZE 24 ///< octets in the vendor Version 5 packet header
 #define FLOW_V5_RECORD_SIZE 48 ///< octets in one vendor Version 5 flow record
@@ -165,7 +165,7 @@ typedef struct
     FlowMessageArgs message; ///< the Message Header fields a begin writes
     FlowTemplateArgs tmpl;   ///< the Field Specifiers a Template Record lists
     FlowDataArgs data;       ///< one encoded Data Record
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } FlowExportVars;
 
@@ -175,8 +175,8 @@ extern FlowExportVars FlowExportV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const v5_header)(uint8_t *work);
-    void (*const v5_record)(uint8_t *work);
+    void (*const v5_header)(const uint8_t *work);
+    void (*const v5_record)(const uint8_t *work);
     void (*const ipfix_begin)(uint8_t *work);
     void (*const v9_begin)(uint8_t *work);
     void (*const template_set)(uint8_t *work);
@@ -188,8 +188,8 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FlowExportV or a region of the borrow at a fixed offset.
-void protocore_flow_export_v5_header(uint8_t *work);
-void protocore_flow_export_v5_record(uint8_t *work);
+void protocore_flow_export_v5_header(const uint8_t *work);
+void protocore_flow_export_v5_record(const uint8_t *work);
 void protocore_flow_export_ipfix_begin(uint8_t *work);
 void protocore_flow_export_v9_begin(uint8_t *work);
 void protocore_flow_export_template_set(uint8_t *work);
@@ -225,7 +225,7 @@ static const FlowExportNs FlowExport __attribute__((unused)) = {
  */
 uint8_t *protocore_flow_export_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FLOW_EXPORT
 

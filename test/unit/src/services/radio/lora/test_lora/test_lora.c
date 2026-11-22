@@ -77,7 +77,7 @@ void test_frame_build_then_parse()
     protocore_lora_header out = {0};
     const uint8_t *p = NULL;
     uint16_t pl = 0;
-    proto_bool lora_ok = Lora.frame_parse(lora_work, frame, n, &out, &p, &pl);
+    embed_bool lora_ok = Lora.frame_parse(lora_work, frame, n, &out, &p, &pl);
     TEST_ASSERT_TRUE(lora_ok);
     TEST_ASSERT_EQUAL_UINT8(0xAA, out.to);
     TEST_ASSERT_EQUAL_UINT8(0x02, out.from);
@@ -90,7 +90,7 @@ void test_frame_parse_rejects_short()
 {
     protocore_lora_header h = {0};
     const uint8_t raw[3] = {1, 2, 3};
-    proto_bool lora_ok = Lora.frame_parse(lora_work, raw, 3, &h, NULL, NULL);
+    embed_bool lora_ok = Lora.frame_parse(lora_work, raw, 3, &h, NULL, NULL);
     TEST_ASSERT_FALSE(lora_ok);
 }
 
@@ -106,7 +106,7 @@ void test_frame_build_bounds()
 void test_init_verifies_chip_and_lands_in_standby()
 {
     protocore_lora_config c = default_cfg();
-    proto_bool lora_ok = Lora.init(lora_work, &g_bus, &c);
+    embed_bool lora_ok = Lora.init(lora_work, &g_bus, &c);
     TEST_ASSERT_TRUE(lora_ok);
     TEST_ASSERT_EQUAL_HEX8(0x81, g_chip.reg[0x01]);
     TEST_ASSERT_EQUAL_HEX8(0x12, g_chip.reg[0x39]);
@@ -116,7 +116,7 @@ void test_init_fails_on_wrong_version()
 {
     g_chip.reg[0x42] = 0x00;
     protocore_lora_config c = default_cfg();
-    proto_bool lora_ok = Lora.init(lora_work, &g_bus, &c);
+    embed_bool lora_ok = Lora.init(lora_work, &g_bus, &c);
     TEST_ASSERT_FALSE(lora_ok);
 }
 
@@ -135,7 +135,7 @@ void test_send_loads_fifo_and_starts_tx()
     protocore_lora_config c = default_cfg();
     Lora.init(lora_work, &g_bus, &c);
     const uint8_t frame[6] = {0x01, 0x02, 0x03, 0x00, 0xDE, 0xAD};
-    proto_bool lora_ok = Lora.send(lora_work, &g_bus, frame, 6);
+    embed_bool lora_ok = Lora.send(lora_work, &g_bus, frame, 6);
     TEST_ASSERT_TRUE(lora_ok);
     TEST_ASSERT_EQUAL_HEX8(0x83, g_chip.reg[0x01]);
     TEST_ASSERT_EQUAL_UINT8(6, g_chip.reg[0x22]);
@@ -144,7 +144,7 @@ void test_send_loads_fifo_and_starts_tx()
 
 void test_tx_done_flag()
 {
-    proto_bool lora_ok = Lora.tx_done(lora_work, &g_bus);
+    embed_bool lora_ok = Lora.tx_done(lora_work, &g_bus);
     TEST_ASSERT_FALSE(lora_ok);
     g_chip.reg[0x12] = 0x08;
     lora_ok = Lora.tx_done(lora_work, &g_bus);
@@ -218,7 +218,7 @@ void test_frame_parse_build_guards()
     const uint8_t *payload = NULL;
     uint16_t payload_len = 0;
     uint8_t too_short[1] = {0};
-    proto_bool lora_ok = Lora.frame_parse(lora_work, too_short, sizeof(too_short), &hdr, &payload, &payload_len);
+    embed_bool lora_ok = Lora.frame_parse(lora_work, too_short, sizeof(too_short), &hdr, &payload, &payload_len);
     TEST_ASSERT_FALSE(lora_ok);
     uint8_t out[4];
     uint8_t pay[8] = {0};
@@ -233,7 +233,7 @@ void test_frame_parse_null_guards_and_optional_outs()
     const uint8_t *p = NULL;
     uint16_t pl = 0;
 
-    proto_bool lora_ok = Lora.frame_parse(lora_work, NULL, sizeof(raw), &h, &p, &pl);
+    embed_bool lora_ok = Lora.frame_parse(lora_work, NULL, sizeof(raw), &h, &p, &pl);
     TEST_ASSERT_FALSE(lora_ok);
     lora_ok = Lora.frame_parse(lora_work, raw, sizeof(raw), NULL, &p, &pl);
     TEST_ASSERT_FALSE(lora_ok);
@@ -266,7 +266,7 @@ void test_init_rejects_incomplete_bus()
     protocore_lora_bus no_read = {NULL, mock_write, &g_chip};
     protocore_lora_bus no_write = {mock_read, NULL, &g_chip};
 
-    proto_bool lora_ok = Lora.init(lora_work, NULL, &cfg);
+    embed_bool lora_ok = Lora.init(lora_work, NULL, &cfg);
     TEST_ASSERT_FALSE(lora_ok);
     lora_ok = Lora.init(lora_work, &no_read, &cfg);
     TEST_ASSERT_FALSE(lora_ok);
@@ -281,7 +281,7 @@ void test_init_sets_low_data_rate_optimize_at_high_sf()
 {
     protocore_lora_config cfg = default_cfg();
     cfg.spreading = 12;
-    proto_bool lora_ok = Lora.init(lora_work, &g_bus, &cfg);
+    embed_bool lora_ok = Lora.init(lora_work, &g_bus, &cfg);
     TEST_ASSERT_TRUE(lora_ok);
     TEST_ASSERT_EQUAL_HEX8(0x0C, g_chip.reg[0x26]);
 
@@ -299,7 +299,7 @@ void test_driver_entry_points_reject_null_bus()
     uint8_t buf[8];
     int16_t rssi = 0;
 
-    proto_bool lora_ok = Lora.send(lora_work, NULL, frame, sizeof(frame));
+    embed_bool lora_ok = Lora.send(lora_work, NULL, frame, sizeof(frame));
     TEST_ASSERT_FALSE(lora_ok);
     lora_ok = Lora.send(lora_work, &g_bus, NULL, sizeof(frame));
     TEST_ASSERT_FALSE(lora_ok);

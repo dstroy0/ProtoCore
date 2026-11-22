@@ -37,7 +37,7 @@
 
 #if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS)
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake - both run the same TLS 1.3 key
 // schedule (see protocore_tls13_msg.h for the matching guard on the message layer).
@@ -99,7 +99,7 @@ typedef struct
     const Tls13Kdf *kdf; ///< variant (label prefix) bound by @ref Tls13KsNs::early
     uint8_t *s;          ///< PROTOCORE_TLS13_KS_BORROW secure bytes: the terms, then the HKDF's own
     size_t len;          ///< the bound hash's secret length, 32 or 48
-    proto_bool is384;    ///< true when the suite's hash is SHA-384
+    embed_bool is384;    ///< true when the suite's hash is SHA-384
 } Tls13KeySchedule;
 
 /** @brief The variant a call runs under, and the schedule it advances. */
@@ -108,7 +108,7 @@ typedef struct
     const Tls13Kdf *kdf;  ///< variant (label prefix) an early step binds
     Tls13KeySchedule *ks; ///< the schedule a step advances
     uint8_t *s;           ///< PROTOCORE_TLS13_KS_BORROW secure bytes the schedule runs out of
-    proto_bool is384;     ///< the negotiated suite's hash: true for SHA-384, false for SHA-256
+    embed_bool is384;     ///< the negotiated suite's hash: true for SHA-384, false for SHA-256
 } Tls13KsBind;
 
 /** @brief RFC 8446 sec 7.1 HKDF-Expand-Label / Derive-Secret: one derivation's terms. */
@@ -183,7 +183,7 @@ typedef struct
     Tls13KsStepArgs step;
     Tls13FinishedArgs finished_args;
     Tls13TranscriptArgs transcript_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t len;
 } Tls13KsVars;
 
@@ -232,7 +232,7 @@ static const Tls13KsNs Tls13Ks __attribute__((unused)) = {
     .transcript_peek = protocore_tls13_ks_transcript_peek,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_TLS
 

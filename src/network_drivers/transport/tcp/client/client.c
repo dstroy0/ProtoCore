@@ -22,7 +22,7 @@
 
 #include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "config/platform/platform.h" // the stack's TCP, under our names
-#include "memoria_anularis/memoria_anularis.h" // PROTOCORE_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include "memoria_anularis/memoria_anularis.h"                     // the SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
 #include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
 #include "server/clock/clock.h"                                    // Clock.millis
@@ -47,21 +47,21 @@ uint8_t *protocore_tcp_client_span(void)
     return s_own.span;
 }
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 typedef struct
 {
     protocore_pcb *pcb;
     // Written by the stack's callbacks in its own thread, read by the caller's task. Atomic for the
     // same reason the ring indices below are: volatile orders nothing and publishes nothing.
-    _Atomic proto_bool in_use;
-    _Atomic proto_bool connected;
-    _Atomic proto_bool closed; // peer FIN or error
-    const char *host;          // the caller's name, read each pump until it resolves
+    embed_atomic_u32 in_use;
+    embed_atomic_u32 connected;
+    embed_atomic_u32 closed; // peer FIN or error
+    const char *host;        // the caller's name, read each pump until it resolves
     uint16_t port;
     uint32_t timer;      // millis the open started at
     uint32_t timeout_ms; // what the whole open, resolve included, is given
-    proto_bool resolving;
+    embed_bool resolving;
     uint8_t rx[PROTOCORE_CLIENT_RX_BUF];
     mmgr_ring ring; // producer the stack recv cb, consumer the caller: SPSC, same as the server ring
 } ClientConn;
@@ -92,7 +92,10 @@ static_assert(TCP_CLIENT_OFF_CTX + sizeof(struct TcpClientStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TCP_CLIENT_CTX(w) ((struct TcpClientStorage *)(void *)((w) + TCP_CLIENT_OFF_CTX))
+#define TCP_CLIENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TcpClientStorage *)(const void *)((w) + TCP_CLIENT_OFF_CTX),                    \
+        default: (struct TcpClientStorage *)(void *)((w) + TCP_CLIENT_OFF_CTX))
 
 // Hostname resolution goes through @ref Resolver, the library's one DNS owner.
 
@@ -108,7 +111,8 @@ static protocore_net_err cc_recv(void *arg, protocore_pcb *tpcb, protocore_pbuf 
     }
     if (p == NULL)
     {
-        c->closed = PROTO_TRUE; // peer closed
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed,
+                   .value = EMBED_TRUE); // peer closed
         return PROTOCORE_NET_OK;
     }
     // Wire bytes -> ring (same as the server): if the whole segment will not fit, refuse it
@@ -124,7 +128,7 @@ static protocore_net_err cc_recv(void *arg, protocore_pcb *tpcb, protocore_pbuf 
                          .bytes = q->len);
     }
     // Do NOT tcp_recved() here. The window is reopened by protocore_client_read() as the
-    // caller drains (ack-on-consume), so it tracks ring occupancy and the peer can
+    // caller drains (ack-on-consume). So it tracks ring occupancy and the peer can
     // never overflow the ring - same model as the server transport. ACKing on copy
     // would decouple the window from drainage and deadlock a large inbound transfer
     // once PROTOCORE_CLIENT_RX_BUF < TCP_WND.
@@ -140,11 +144,12 @@ static protocore_net_err cc_connected(void *arg, protocore_pcb *tpcb, protocore_
     {
         if (err == PROTOCORE_NET_OK)
         {
-            c->connected = PROTO_TRUE;
+            EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->connected,
+                       .value = EMBED_TRUE);
         }
         else
         {
-            c->closed = PROTO_TRUE;
+            EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed, .value = EMBED_TRUE);
         }
     }
     return PROTOCORE_NET_OK;
@@ -157,7 +162,7 @@ static void cc_err(void *arg, protocore_net_err err)
     if (c)
     {
         c->pcb = NULL; // the stack already freed it
-        c->closed = PROTO_TRUE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed, .value = EMBED_TRUE);
     }
 }
 
@@ -176,14 +181,14 @@ typedef struct
     protocore_net_call base;
     ClientConn *c;
     const void *data;
-    proto_u16 len;
+    embed_u16 len;
     protocore_net_err result;
 } CcSendCall;
 typedef struct
 {
     protocore_net_call base;
     ClientConn *c;
-    proto_u16 len;
+    embed_u16 len;
 } CcRecvedCall;
 
 static protocore_net_err cc_do_connect(protocore_net_call *cd)
@@ -280,13 +285,16 @@ static uint32_t cc_now(void)
 static void cc_pump(uint8_t *work)
 {
     ClientConn *c = TCP_CLIENT_CTX(work)->conn;
-    if (!c->in_use || c->connected || c->closed)
+    if (!EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->in_use) ||
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->connected) ||
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->closed))
     {
         return;
     }
     if ((uint32_t)(cc_now() - c->timer) >= c->timeout_ms)
     {
-        c->closed = PROTO_TRUE; // out of time, whether it was still resolving or already connecting
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed,
+                   .value = EMBED_TRUE); // out of time, whether it was still resolving or already connecting
         return;
     }
     if (!c->resolving)
@@ -305,10 +313,10 @@ static void cc_pump(uint8_t *work)
     }
     if (s == PROTOCORE_DNS_FAILED)
     {
-        c->closed = PROTO_TRUE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed, .value = EMBED_TRUE);
         return;
     }
-    c->resolving = PROTO_FALSE;
+    c->resolving = EMBED_FALSE;
 
     CcConnCall k;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
@@ -318,7 +326,7 @@ static void cc_pump(uint8_t *work)
     protocore_net_call_marshal(cc_do_connect, &k.base);
     if (k.result != PROTOCORE_NET_OK)
     {
-        c->closed = PROTO_TRUE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed, .value = EMBED_TRUE);
     }
 }
 
@@ -332,7 +340,8 @@ void protocore_tcp_client_open(uint8_t *work)
     TcpClientV.i32 = -1;
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        if (!TCP_CLIENT_CTX(work)->cc[i].in_use)
+        if (!EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                        .word = &TCP_CLIENT_CTX(work)->cc[i].in_use))
         {
             TcpClientV.i32 = i;
             break;
@@ -345,16 +354,16 @@ void protocore_tcp_client_open(uint8_t *work)
 
     ClientConn *c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.i32];
     c->pcb = NULL;
-    c->connected = PROTO_FALSE;
-    c->closed = PROTO_FALSE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->connected, .value = EMBED_FALSE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed, .value = EMBED_FALSE);
     (void)EMBED_CALL(anularis.init, AnularisCfg, .ring = &c->ring, .buf = c->rx, .capacity = PROTOCORE_CLIENT_RX_BUF,
                      .segment_count = 1u);
     c->host = TcpClientV.dial.host;
     c->port = TcpClientV.dial.port;
     c->timeout_ms = TcpClientV.dial.timeout_ms;
     c->timer = cc_now();
-    c->resolving = PROTO_TRUE;
-    c->in_use = PROTO_TRUE;
+    c->resolving = EMBED_TRUE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->in_use, .value = EMBED_TRUE);
     TCP_CLIENT_CTX(work)->conn = c;
     cc_pump(work); // a name that needs no query connects here, in the opening call
 }
@@ -362,41 +371,47 @@ void protocore_tcp_client_open(uint8_t *work)
 void protocore_tcp_client_connected(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
-        !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
+        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                    .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
     {
-        TcpClientV.ok = PROTO_FALSE;
+        TcpClientV.ok = EMBED_FALSE;
         return;
     }
     TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     cc_pump(work);
-    TcpClientV.ok = TCP_CLIENT_CTX(work)->conn->connected && !TCP_CLIENT_CTX(work)->conn->closed;
+    TcpClientV.ok = (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                .word = &TCP_CLIENT_CTX(work)->conn->connected) != 0u) &&
+                    (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                .word = &TCP_CLIENT_CTX(work)->conn->closed) == 0u);
 }
 
 void protocore_tcp_client_is_closed(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS)
     {
-        TcpClientV.ok = PROTO_TRUE;
+        TcpClientV.ok = EMBED_TRUE;
         return;
     }
     TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     cc_pump(work);
-    TcpClientV.ok = TCP_CLIENT_CTX(work)->conn->closed;
+    TcpClientV.ok = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                               .word = &TCP_CLIENT_CTX(work)->conn->closed) != 0u;
 }
 
 void protocore_tcp_client_send(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
-        !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
+        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                    .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
     {
-        TcpClientV.ok = PROTO_FALSE;
+        TcpClientV.ok = EMBED_FALSE;
         return;
     }
     CcSendCall k;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
     k.c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     k.data = TcpClientV.io.data;
-    k.len = (proto_u16)(TcpClientV.io.len > 0xFFFF ? 0xFFFF : TcpClientV.io.len);
+    k.len = (embed_u16)(TcpClientV.io.len > 0xFFFF ? 0xFFFF : TcpClientV.io.len);
     protocore_net_call_marshal(cc_do_send, &k.base);
     TcpClientV.ok = k.result == PROTOCORE_NET_OK;
 }
@@ -433,7 +448,7 @@ void protocore_tcp_client_read(uint8_t *work)
         CcRecvedCall k;
         EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
         k.c = TCP_CLIENT_CTX(work)->conn;
-        k.len = (proto_u16)TcpClientV.n;
+        k.len = (embed_u16)TcpClientV.n;
         protocore_net_call_marshal(cc_do_recved, &k.base);
     }
 }
@@ -441,7 +456,8 @@ void protocore_tcp_client_read(uint8_t *work)
 void protocore_tcp_client_close(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
-        !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
+        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                    .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
     {
         return;
     }
@@ -449,13 +465,14 @@ void protocore_tcp_client_close(uint8_t *work)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
     k.c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     protocore_net_call_marshal(cc_do_close, &k.base);
-    TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use = PROTO_FALSE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg,
+               .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use, .value = EMBED_FALSE);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 TcpClientVars TcpClientV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TCP_CLIENT

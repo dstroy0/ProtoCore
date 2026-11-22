@@ -21,6 +21,8 @@ import nsconv as N
 from codemask import code_mask
 from funnel import find_context, funnel
 
+DECLS_OPEN = "EMBED_BEGIN_DECLS\n\n"
+
 R = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # --dry: every write goes through emit(), which prints the diff and leaves the file alone. The
@@ -152,7 +154,7 @@ def flag_unit_results(entries, notes):
 # a return type -> the namespace member its value lands in
 RESULT = {
     "void": None,
-    "proto_bool": "ok",
+    "embed_bool": "ok",
     "int": "n",
     "size_t": "n",
     "uint32_t": "ms",
@@ -161,7 +163,7 @@ RESULT = {
 }
 
 
-# widths and shapes protocore_config.h already brings in; anything else a parameter names has to be
+# widths and shapes protocore_config.h already brings in. Anything else a parameter names has to be
 # forward-declared, or the golden header would need a sibling include to see it.
 BUILTIN = {
     "void",
@@ -182,7 +184,7 @@ BUILTIN = {
     "int16_t",
     "int32_t",
     "int64_t",
-    "proto_bool",
+    "embed_bool",
     "protocore_span",
     "uintptr_t",
     "intptr_t",
@@ -404,10 +406,10 @@ def module_inlines(header_text):
     cia402.h, which showed up only as a link error from the suite that called them.
     """
     out, mask = [], code_mask(header_text)
-    # PROTOCORE_INLINE is `static inline` behind the always_inline attribute
+    # EMBED_INLINE is `static inline` behind the always_inline attribute
     # (config/platform/compiler_directives.h), and matching only the spelled-out form dropped
     # json.h's protocore_json_ok / _length / _c_str while eight call sites still used them.
-    for m in re.finditer(r"^(?:static\s+inline|PROTOCORE_INLINE)\b", header_text, re.M):
+    for m in re.finditer(r"^(?:static\s+inline|EMBED_INLINE)\b", header_text, re.M):
         if not mask[m.start()]:
             continue
         brace = header_text.find("{", m.end())
@@ -853,7 +855,7 @@ def wraps_body(s, at):
             depth -= 1
             continue
         # The gate's own #endif. Only the linkage close and the include guard's #endif may follow
-        # it - a declaration after it is one this condition does not cover, so it is not the gate.
+        # it - a declaration after it is one this condition does not cover. So it is not the gate.
         rest = re.sub(r"/\*.*?\*/|//[^\n]*", " ", s[at + m.end() :], flags=re.S)
         rest = re.sub(r"^[ \t]*PROTOCORE_(?:BEGIN|END)_DECLS[ \t]*$", "", rest, flags=re.M)
         return re.sub(r"^[ \t]*#[ \t]*endif\b[^\n]*$", "", rest, count=1, flags=re.M).strip() == ""
@@ -1042,7 +1044,7 @@ def gen_ns(spec):
     # a local, and handed straight to a helper as an argument.
     inst = re.search(r"static\s+(?:struct\s+)?\w+Internal\s+(s_\w+)\s*=", c)
     # A _Static_assert sized against a member of the storage instance outlives that instance, and
-    # has to stay a constant expression, so it asks the type rather than an object.
+    # has to stay a constant expression. So it asks the type rather than an object.
     store = re.search(r"static\s+(?:struct\s+)?(\w+Storage)\s+(s_\w+)\s*[=;]", c)
     # How the storage type is spelled, read from the ORIGINAL source: `struct <X>Storage { ... };`
     # carries a tag, `typedef struct { ... } <X>Storage;` does not, and naming a tagless one
@@ -1348,7 +1350,7 @@ def scan_vtable(hpath):
         result = RESULT.get(ret, "value")
         if ret not in RESULT and ret.endswith("*"):
             result = "ptr"
-        rtype = "proto_bool" if result == "ok" else ret
+        rtype = "embed_bool" if result == "ok" else ret
         params = parse_params(m.group("params"))
         entries.append(
             {
@@ -1413,7 +1415,7 @@ def scan(hpath):
             result = "ptr"
         # The member's TYPE is the return type verbatim: mapping size_t onto an int member
         # narrowed a count, and mapping an enum onto uint16_t threw its name away.
-        rtype = "proto_bool" if result == "ok" else ret
+        rtype = "embed_bool" if result == "ok" else ret
         brief, pdoc, rdoc = doc_tags(doc_above(s, m.start()))
         params = parse_params(m.group("params"))
         for p in params:
@@ -1432,7 +1434,7 @@ def scan(hpath):
         )
     moved, held = classify_includes(s)
     suites = find_suites(hpath, mod)
-    # A module with no file-static context holds nothing between calls, so it carves no borrow,
+    # A module with no file-static context holds nothing between calls. So it carves no borrow,
     # states none, and needs no span accessor - tls_policy is the shape. That is read off the .c
     # rather than chosen: the state is there or it is not.
     collide_notes = []
@@ -1672,7 +1674,7 @@ def gen_header(spec, original):
     for e, an in args_types:
         body.append("    %s %s_args;" % (an, e["entry"]))
     body.append("")
-    body.append("    proto_bool ok;")
+    body.append("    embed_bool ok;")
     for r in results:
         if r != "ok":
             t = next((x.get("result_type", "int") for x in spec["entries"] if x["result"] == r), "int")
@@ -1725,11 +1727,11 @@ def gen_header(spec, original):
         )
         + "\n"
         + "#if %s\n\n" % spec["gate"]
-        + "PROTOCORE_BEGIN_DECLS\n\n"
+        + DECLS_OPEN
         + note
         + "\n".join(lines)
         + "\n".join(body)
-        + "\n\nPROTOCORE_END_DECLS\n\n#endif // %s\n\n#endif // %s\n" % (spec["gate"], guard)
+        + "\n\nEMBED_END_DECLS\n\n#endif // %s\n\n#endif // %s\n" % (spec["gate"], guard)
     )
 
 
@@ -1753,7 +1755,7 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
 
     A vtable module is already called through its namespace - `Base64.decode(a, b, c)` - so what a
     caller writes is `<Obj>.<entry>`, not the flat name the .c defines. The entry states that
-    spelling as `call`, and it is what the pattern matches; the lookbehind that keeps a flat name off
+    spelling as `call`, and it is what the pattern matches. The lookbehind that keeps a flat name off
     `x.name(` is dropped for it, since the dot IS the call here.
     """
     obj = spec["object"]
@@ -1871,7 +1873,7 @@ def above_capability_split(s, pos):
     exist for the other arm, and the link fails on whichever arm the env actually builds:
     mdns_service's portable responder called a `protocore_mdns_service_span` that only the vendor
     arm defined. The outermost open `#if` at @p pos is the module's own gate and the accessor
-    belongs under it; the next one in is a capability split and the accessor belongs above it.
+    belongs under it. The next one in is a capability split and the accessor belongs above it.
     """
     open_ifs = []
     for m in re.finditer(r"^[ \t]*#[ \t]*(if\w*|endif)\b[^\n]*\n", s[:pos], re.M):
@@ -2219,7 +2221,7 @@ def restructure_source(spec):
                 s = s[:ci] + s[s.index("\n", ci) + 1 :]
                 gi = s.find(gate)
             s = s[:gi] + cfg + " // the entry point: the enable gate below, and the widths\n\n" + s[gi:]
-        if "PROTOCORE_BEGIN_DECLS" not in s:
+        if "EMBED_BEGIN_DECLS" not in s:
             gi = s.find(gate)
             eol = s.index("\n", gi) + 1
             # after the gate and the includes that follow it
@@ -2229,10 +2231,10 @@ def restructure_source(spec):
                 if not m2:
                     break
                 k += m2.end()
-            s = s[:k] + "PROTOCORE_BEGIN_DECLS\n\n" + s[k:]
+            s = s[:k] + DECLS_OPEN + s[k:]
 
     # a module that called its own flat names now stages the args and calls the static entry: the
-    # borrow is already in hand, so there is no span to fetch.
+    # borrow is already in hand. So there is no span to fetch.
     # A module with no flat entries left has no self-calls to rewrite. The guard is not cosmetic:
     # "|".join over an empty set is the EMPTY STRING, so the alternation below becomes `()` - which
     # matches at every `(` in the file with an empty group - and the first lookup raises KeyError on
@@ -2378,8 +2380,8 @@ def restructure_source(spec):
     # http_parser's accessors both went that way. A source with no gate yet takes the end of the
     # file, and the shape pass below wraps it.
     end = gate_endif(s)
-    s = s[:end] + defn + "\n\nPROTOCORE_END_DECLS\n\n" + s[end:]
-    # the golden file shape is the same pass `shape` runs, so it runs here rather than being a
+    s = s[:end] + defn + "\n\nEMBED_END_DECLS\n\n" + s[end:]
+    # the golden file shape is the same pass `shape` runs. So it runs here rather than being a
     # second command a conversion can forget: config alone above the gate, everything else below
     s, how = shape_text(s, p, spec.get("gate"))
     notes.append("shape: " + how)
@@ -2476,9 +2478,9 @@ def shape_text(s, p, gate=None):
 
     # a header opens DECLS inside the gate, so what it wraps is what the gate compiles
     decls = ""
-    if p.endswith(".h") and "PROTOCORE_BEGIN_DECLS" in moved:
-        moved = moved.replace("PROTOCORE_BEGIN_DECLS", "").strip("\n")
-        decls = "\nPROTOCORE_BEGIN_DECLS\n"
+    if p.endswith(".h") and "EMBED_BEGIN_DECLS" in moved:
+        moved = moved.replace("EMBED_BEGIN_DECLS", "").strip("\n")
+        decls = "\nEMBED_BEGIN_DECLS\n"
 
     tail = order_includes(tail)
 
@@ -2759,7 +2761,7 @@ def handle_members(data_lines):
     A function-pointer member is read from INSIDE its parentheses. Taking the last identifier on the
     line gives the last PARAMETER instead: presentation.h stores an application callback as
     `void (*poll)(uint8_t slot);`, which came back as `slot`, so every `HttpConn.poll` call site was
-    left behind pointing at a member that had moved.
+    left behind pointing at a member that moved.
     """
     out = []
     for line in data_lines:
@@ -3164,7 +3166,7 @@ def insert_align_asserts(src, regions):
 #   - the dispatch table is `PROTOCORE_NS` - static const - and lives in the HEADER, so every
 #     translation unit gets its own copy and gcc devirtualises the call through it.
 #   - `PROTOCORE_NS_LAYOUT` pins every member to its dispatch slot at compile time.
-#   - the @file block sits AFTER PROTOCORE_BEGIN_DECLS, and the .c has no BEGIN_DECLS at all.
+#   - the @file block sits AFTER EMBED_BEGIN_DECLS, and the .c has no BEGIN_DECLS at all.
 #
 # The work-taking shape this tree is in was a lossy encoding of exactly that signature: the args
 # struct IS the parameter list and the Vars result member IS the return type. So the conversion is
@@ -3287,7 +3289,7 @@ def scan_worked(hpath):
         # Aes128GcmV.key_args, whose type is Aes128GcmKeyArgs, not Aes128GcmKeyInitArgs. Guessing
         # found no struct, so every entry read as taking no operands at all.
         #
-        # The prefix guess is still the fallback, and it uses the TABLE TYPE'S name rather than the
+        # The prefix guess is still the fallback. It uses the TABLE TYPE'S name rather than the
         # module name through camel() - aes128gcm.h declares Aes128GcmKeyArgs and camel("aes128gcm")
         # gives "Aes128gcm", one letter apart.
         params, group = [], name
@@ -3389,7 +3391,7 @@ def entry_doc(spec, e):
         # operands object - "a call's true/false outcome" - and there is no such member now.
         r = one_line(e.get("returns") or "", 100)
         if not r:
-            r = "PROTO_TRUE on success." if e["ret"] == "proto_bool" else "The %s." % e["ret"]
+            r = "EMBED_TRUE on success." if e["ret"] == "embed_bool" else "The %s." % e["ret"]
         out.append(" * @return %s" % (r[0].upper() + r[1:] if r else r))
     out.append(" */")
     return out
@@ -3521,7 +3523,7 @@ def gen_header_ns(spec, original):
         #     mmgr_spat (*from)(uint8_t *p, size_t cap);
         #     mmgr_fspat (*read)(mmgr_spat s, size_t len);
         #
-        # against the bare `proto_bool (*update)(uint8_t *, const uint8_t *, size_t);` this
+        # against the bare `embed_bool (*update)(uint8_t *, const uint8_t *, size_t);` this
         # used to emit, where the reader has to go and find the prototype to learn what the two
         # pointers are.
         lines.append("    %s (*%s)(%s);" % (e["ret"], e["entry"], sig_params(spec, e, names=True)))
@@ -3592,12 +3594,12 @@ def gen_header_ns(spec, original):
         + "".join("#include %s\n" % h for h in spec.get("moved_includes", []) if h not in spec.get("held_includes", []))
         + "\n"
         + ("#if %s\n\n" % gate if gate else "")
-        + "PROTOCORE_BEGIN_DECLS\n\n"
+        + DECLS_OPEN
         + filedoc
         + note
         + "\n"
         + "\n".join(lines)
-        + "\n\nPROTOCORE_END_DECLS\n\n"
+        + "\n\nEMBED_END_DECLS\n\n"
         + ("#endif // %s\n\n" % gate if gate else "")
         + "#endif // %s\n" % guard
     )
@@ -3651,7 +3653,7 @@ DECLARED_FN = re.compile(r"^\s*(?:[A-Za-z_][\w ]*?[\s*])(\w+)\s*\([^;{]*\)\s*;",
 def dropped_declarations(original, converted, spec):
     """Function names the old header declared and the new one does not, minus the entries.
 
-    An entry's flat declaration is REPLACED by the converted one, so it is expected to move; any
+    An entry's flat declaration is REPLACED by the converted one, so it is expected to move. Any
     other name that disappears is a published function this conversion would delete.
     """
     keep = {e["flat"] for e in spec["entries"]} | {e["entry"] for e in spec["entries"]}
@@ -3779,7 +3781,7 @@ def fold_comma_calls(s, spec, byname, pat, mask):
               Ed25519.verify(work), Ed25519V.ok);
 
     This form is easier to convert than the statement one and gives a better result: the whole
-    parenthesised expression IS the call plus its result, so it becomes the call, with no local and
+    parenthesised expression IS the call plus its result. So it becomes the call, with no local and
     nothing hoisted.
 
         ok = parse_ed25519_pubkey(...) && raw_len == 64 &&
@@ -3890,7 +3892,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
 
         Sha256V.hash_args.data = msg;
         Sha256V.hash_args.len = mlen;
-        Sha256V.hash_args.out = out;          ->   proto_bool sha256_ok =
+        Sha256V.hash_args.out = out;          ->   embed_bool sha256_ok =
         Sha256.hash(ECDSA_HASH(work));                 Sha256.hash(ECDSA_HASH(work), msg, mlen, out);
         if (!Sha256V.ok) { ... }                   if (!sha256_ok) { ... }
 
@@ -4118,7 +4120,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                             out = "%s%s %s = %s;" % (indent, e["ret"], local, call)
                             s = s[:stmt_end] + rd.sub(local, window) + s[stop:]
                         else:
-                            # Nothing reads it. The rule is that a result becomes a local; where
+                            # Nothing reads it. The rule is that a result becomes a local. Where
                             # there is no result to carry, a local is a variable the compiler warns
                             # about and a reader has to work out is unused.
                             out = "%s%s;" % (indent, call)
@@ -4198,8 +4200,8 @@ def remaining_vars_reads(spec, texts=None, roots=("src", "test", "examples", "ve
 def unwork_source(spec, write=True, text=None):
     """Give each entry in the .c its real signature back, and turn the operands into parameters.
 
-    `Sha256V.update_args.data` is the parameter `data`; `Sha256V.ok = PROTO_TRUE;` is
-    `return PROTO_TRUE;`. Where the outcome is written more than once - a default set at the top and
+    `Sha256V.update_args.data` is the parameter `data`; `Sha256V.ok = EMBED_TRUE;` is
+    `return EMBED_TRUE;`. Where the outcome is written more than once - a default set at the top and
     settled later - a local carries it, because folding the first write into a return would leave
     the function early.
     """
@@ -4213,7 +4215,7 @@ def unwork_source(spec, write=True, text=None):
     objv, notes = spec.get("objv", ""), []
 
     # A standalone prototype of an entry inside the .c. robotics.c forward-declares
-    # protocore_robotics_bind above its own definition; the definition gets its real signature back
+    # protocore_robotics_bind above its own definition. The definition gets its real signature back
     # and the prototype keeps the old one, so the two conflict and the module does not compile. The
     # header declares every entry, so a second declaration in the .c has nothing to say.
     for e in spec["entries"]:
@@ -4286,7 +4288,7 @@ def unwork_source(spec, write=True, text=None):
                 # A local named for the outcome, so a bare `return;` still reports it.
                 body = re.sub(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)), res, body)
                 body = re.sub(r"\breturn\s*;", "return %s;" % res, body)
-                decl = "    %s %s = %s;\n" % (e["ret"], res, "PROTO_FALSE" if e["ret"] == "proto_bool" else "0")
+                decl = "    %s %s = %s;\n" % (e["ret"], res, "EMBED_FALSE" if e["ret"] == "embed_bool" else "0")
                 # The first write is the initialiser, so it does not need to be a statement too.
                 first = re.search(r"[ \t]*\b%s\b\s*=(?!=)\s*([^;]+);[ \t]*\n" % re.escape(res), body)
                 if first and not body[: first.start()].strip():
@@ -4341,8 +4343,8 @@ def unwork_source(spec, write=True, text=None):
     )
 
     # MMgr's .c files carry no BEGIN_DECLS: the header already gave the declarations linkage.
-    s = re.sub(r"^PROTOCORE_BEGIN_DECLS[ \t]*\n+", "", s, flags=re.M)
-    s = re.sub(r"\n*^PROTOCORE_END_DECLS[ \t]*\n", "\n", s, flags=re.M)
+    s = re.sub(r"^EMBED_BEGIN_DECLS[ \t]*\n+", "", s, flags=re.M)
+    s = re.sub(r"\n*^EMBED_END_DECLS[ \t]*\n", "\n", s, flags=re.M)
 
     # The enable gate around the whole translation unit goes, unless it names hardware. CMake
     # already decides whether this file is compiled; gating it as well compiles it to nothing
@@ -4772,7 +4774,7 @@ def main():
                 if obj + "." not in s:
                     continue
                 out, n = move_operands(s, obj, objv, members)
-                # A pointer to this namespace reaches the operands too, and they have moved.
+                # A pointer to this namespace reaches the operands too, and they moved.
                 out, n2 = move_ptr_operands(out, ns, objv, members, ptr_names)
                 n += n2
                 if n:
@@ -4803,7 +4805,7 @@ def main():
     if cmd == "align":
         # State, per region reached through a cast, that its OFFSET is a multiple of the alignment
         # the cast requires. The arena aligns the base up to PROTOCORE_ARENA_MAX_ALIGN, so the
-        # offset is the whole claim - and it is a compile-time constant, so it is a static_assert
+        # offset is the whole claim - and it is a compile-time constant. So it is a static_assert
         # and never a runtime branch. The size assert already in each file bounds the far end of the
         # chain and says nothing about where any region BEGINS: one odd-sized region inserted
         # earlier leaves every later cast misaligned while the total still fits.

@@ -17,7 +17,7 @@
 #include "spatium/spatium.h"                                 // spat.ok: whether the pool had the bytes
 #include "sse.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 SseConn protocore_sse_pool[MAX_SSE_CONNS];
 
@@ -50,7 +50,10 @@ static_assert(SSE_OFF_CTX % _Alignof(SseCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSE_CTX(w) ((SseCtx *)(void *)((w) + SSE_OFF_CTX))
+#define SSE_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SseCtx *)(const void *)((w) + SSE_OFF_CTX),                                            \
+        default: (SseCtx *)(void *)((w) + SSE_OFF_CTX))
 
 void protocore_sse_route_add(uint8_t *work)
 {
@@ -97,7 +100,7 @@ void protocore_sse_alloc(uint8_t *work)
             protocore_sse_pool[i] = (SseConn){0};
             protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
             protocore_sse_pool[i].slot_id = SseV.slot;
-            protocore_sse_pool[i].active = PROTO_TRUE;
+            protocore_sse_pool[i].active = EMBED_TRUE;
             EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = protocore_sse_pool[i].path, .src = SseV.route.path,
                        .cap = sizeof(protocore_sse_pool[i].path));
             protocore_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
@@ -138,15 +141,15 @@ void protocore_sse_free(uint8_t *work)
 // Append `len` bytes of `src` at *pos if the whole record still leaves room for a trailing NUL (content must
 // fit in n-1). Returns false the moment it would not fit, so a record that overflows reports 0 rather than a
 // truncated frame. memcpy of a known-length span, no format parsing.
-static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char *src, size_t len)
+static inline embed_bool sse_append(char *buf, size_t n, size_t *pos, const char *src, size_t len)
 {
     if (*pos + len > n - 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + *pos, .src = src, .bytes = len);
     *pos += len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_sse_format(uint8_t *work)
@@ -195,7 +198,7 @@ void protocore_sse_format(uint8_t *work)
 
 void protocore_sse_write(uint8_t *work)
 {
-    SseV.ok = PROTO_FALSE;
+    SseV.ok = EMBED_FALSE;
     ConnPoolV.slot = SseV.stream->slot_id;
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPoolV.ok)
@@ -212,9 +215,9 @@ void protocore_sse_write(uint8_t *work)
     }
 
     ConnPoolV.io.data = SSE_CTX(work)->buf;
-    ConnPoolV.io.len = (proto_u16)SseV.n;
+    ConnPoolV.io.len = (embed_u16)SseV.n;
     ConnPool.send(protocore_conn_pool_span());
-    SseV.ok = PROTO_TRUE;
+    SseV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -233,6 +236,6 @@ uint8_t *protocore_sse_span(void)
 /** @brief The operands and the outcome. */
 SseVars SseV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSE

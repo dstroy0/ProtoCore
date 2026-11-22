@@ -26,7 +26,7 @@
 
 #include "protocore_config.h" // PROTOCORE_ENABLE_CBOR / PROTOCORE_ENABLE_MSGPACK gate the instances below
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The next item's type, reported by protocore_codec::peek without consuming it.
@@ -35,19 +35,11 @@ PROTOCORE_BEGIN_DECLS
  * "bin"; CBOR has "null" and MessagePack "nil". They are the same item, so they get one name here
  * and the format maps its own tag onto it.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_CODEC_UINT = 0,
-    PROTOCORE_CODEC_INT,
-    PROTOCORE_CODEC_BYTES,
-    PROTOCORE_CODEC_STR,
-    PROTOCORE_CODEC_ARRAY,
-    PROTOCORE_CODEC_MAP,
-    PROTOCORE_CODEC_BOOL,
-    PROTOCORE_CODEC_NULL,
-    PROTOCORE_CODEC_FLOAT,
-    PROTOCORE_CODEC_INVALID ///< end of buffer, a prior error, or an item this format does not carry
-} protocore_codec_type;
+EMBED_ENUM_BYTE(protocore_codec_type, PROTOCORE_CODEC_UINT = 0, PROTOCORE_CODEC_INT, PROTOCORE_CODEC_BYTES,
+                PROTOCORE_CODEC_STR, PROTOCORE_CODEC_ARRAY, PROTOCORE_CODEC_MAP, PROTOCORE_CODEC_BOOL,
+                PROTOCORE_CODEC_NULL, PROTOCORE_CODEC_FLOAT,
+                PROTOCORE_CODEC_INVALID ///< end of buffer, a prior error, or an item this format does not carry
+);
 
 /**
  * @brief A wire encoding: the ten writes, the peek, and the nine reads.
@@ -64,7 +56,7 @@ typedef struct
     void (*put_bytes)(mmgr_span *w, const uint8_t *data, size_t len);
     void (*put_str)(mmgr_span *w, const char *s);
     void (*put_str_n)(mmgr_span *w, const char *s, size_t len);
-    void (*put_bool)(mmgr_span *w, proto_bool b);
+    void (*put_bool)(mmgr_span *w, embed_bool b);
     void (*put_null)(mmgr_span *w);
     void (*put_float)(mmgr_span *w, float f);
     void (*put_array)(mmgr_span *w, size_t count);
@@ -82,21 +74,21 @@ typedef struct
 
     // --- decode from a caller-bound mmgr_cspan ---
     protocore_codec_type (*peek)(mmgr_cspan *r);
-    proto_bool (*get_uint)(mmgr_cspan *r, uint64_t *out);
-    proto_bool (*get_int)(mmgr_cspan *r, int64_t *out);
-    proto_bool (*get_bytes)(mmgr_cspan *r, const uint8_t **out, size_t *len);
-    proto_bool (*get_str)(mmgr_cspan *r, const char **out, size_t *len);
-    proto_bool (*get_array)(mmgr_cspan *r, size_t *count);
-    proto_bool (*get_map)(mmgr_cspan *r, size_t *count);
-    proto_bool (*get_bool)(mmgr_cspan *r, proto_bool *out);
-    proto_bool (*get_null)(mmgr_cspan *r);
-    proto_bool (*get_float)(mmgr_cspan *r, float *out);
+    embed_bool (*get_uint)(mmgr_cspan *r, uint64_t *out);
+    embed_bool (*get_int)(mmgr_cspan *r, int64_t *out);
+    embed_bool (*get_bytes)(mmgr_cspan *r, const uint8_t **out, size_t *len);
+    embed_bool (*get_str)(mmgr_cspan *r, const char **out, size_t *len);
+    embed_bool (*get_array)(mmgr_cspan *r, size_t *count);
+    embed_bool (*get_map)(mmgr_cspan *r, size_t *count);
+    embed_bool (*get_bool)(mmgr_cspan *r, embed_bool *out);
+    embed_bool (*get_null)(mmgr_cspan *r);
+    embed_bool (*get_float)(mmgr_cspan *r, float *out);
 } protocore_codec;
 
 // Each format declares its own instance in its own header: cbor.h has Cbor, msgpack.h has
 // MsgPack. The instance is the storage, so the format that owns the operations owns the
 // table built from them, and a build that compiles a format out has neither.
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CODEC_H

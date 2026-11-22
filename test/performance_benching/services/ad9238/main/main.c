@@ -35,7 +35,7 @@ void dbench_run(void)
 
         // Each entry call stays inside DBENCH_OP so the timed loop measures the encode, not the
         // read that follows it. The args do not change across iterations, so they are staged once.
-        Ad9238V.build_instruction_args.read = PROTO_FALSE;
+        Ad9238V.build_instruction_args.read = EMBED_FALSE;
         Ad9238V.build_instruction_args.reg_addr = (uint16_t)AD9238_REG_POWER_DOWN;
         Ad9238V.build_instruction_args.nbytes = 1;
         Ad9238V.build_instruction_args.out2 = out2;

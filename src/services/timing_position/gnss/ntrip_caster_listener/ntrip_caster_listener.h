@@ -41,7 +41,7 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
 
@@ -54,7 +54,7 @@ PROTOCORE_BEGIN_DECLS
  *                     access. Referenced, not copied.
  * @return true; false if @p mount / its mountpoint is null or too long, or the mount table is full.
  */
-proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64);
+embed_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64);
 
 /**
  * @brief Push RTCM bytes to every rover currently streaming @p mountpoint.
@@ -68,7 +68,7 @@ int protocore_ntrip_caster_subscriber_count(const char *mountpoint);
 /** @brief Clear all mounts and drop all rover state (start from empty). */
 void protocore_ntrip_caster_reset(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER
 

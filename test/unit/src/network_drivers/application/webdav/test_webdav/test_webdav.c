@@ -39,28 +39,28 @@ void test_rfc4918_lock_compatibility_table(void)
 
     // Row "None".
     Webdav.lock_init(webdav_work, &t);
-    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s", PROTO_FALSE, PROTO_FALSE, 0);
+    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s", EMBED_FALSE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
 
     // Row "Shared Lock": another shared is granted, an exclusive is not.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s1", PROTO_FALSE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s1", EMBED_FALSE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s2", PROTO_FALSE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s2", EMBED_FALSE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 
     // Row "Exclusive Lock": neither is granted.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x1", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x1", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s", PROTO_FALSE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-s", EMBED_FALSE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x2", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok-x2", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 }
 
@@ -72,36 +72,36 @@ void test_lock_scope_follows_depth_and_segment_boundaries(void)
     DavLockTable t;
 
     Webdav.lock_init(webdav_work, &t);
-    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a", "tok-inf", PROTO_TRUE, PROTO_TRUE, 0);
+    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a", "tok-inf", EMBED_TRUE, EMBED_TRUE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b", "tok2", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b", "tok2", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b/c", "tok3", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b/c", "tok3", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/ab", "tok4", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/ab", "tok4", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/b", "tok5", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/b", "tok5", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
 
     // A Depth-0 lock reaches no further than itself.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a", "tok0", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a", "tok0", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b", "tok6", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b", "tok6", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
 
     // A new Depth-infinity lock over an existing lock inside its subtree conflicts too.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b", "tokx", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a/b", "tokx", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a", "toky", PROTO_TRUE, PROTO_TRUE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/a", "toky", EMBED_TRUE, EMBED_TRUE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 
     // A Depth-infinity lock on the root covers every path below it.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/", "root", PROTO_TRUE, PROTO_TRUE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/", "root", EMBED_TRUE, EMBED_TRUE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/anything/at/all", "tokz", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/anything/at/all", "tokz", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 }
 
@@ -111,18 +111,18 @@ void test_lock_paths_normalize_the_trailing_slash(void)
 {
     DavLockTable t;
     Webdav.lock_init(webdav_work, &t);
-    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/dir/", "tok", PROTO_TRUE, PROTO_FALSE, 0);
+    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/dir/", "tok", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
     webdav_ptr = Webdav.lock_find(webdav_work, &t, "/dir");
     TEST_ASSERT_NOT_NULL(webdav_ptr);
     webdav_ptr = Webdav.lock_find(webdav_work, &t, "/dir/");
     TEST_ASSERT_NOT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/dir", "tok2", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/dir", "tok2", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 
     // The root keeps its single slash rather than normalizing to nothing.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/", "root", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/", "root", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
     webdav_ptr = Webdav.lock_find(webdav_work, &t, "/");
     TEST_ASSERT_NOT_NULL(webdav_ptr);
@@ -135,11 +135,11 @@ void test_write_needs_the_covering_lock_token(void)
 {
     DavLockTable t;
     Webdav.lock_init(webdav_work, &t);
-    proto_bool webdav_ok = Webdav.lock_can_write(webdav_work, &t, "/r", NULL);
+    embed_bool webdav_ok = Webdav.lock_can_write(webdav_work, &t, "/r", NULL);
     TEST_ASSERT_TRUE(webdav_ok); // nothing locked yet
 
     const DavLock *webdav_ptr =
-        Webdav.lock_acquire(webdav_work, &t, "/r", "opaquelocktoken:1", PROTO_TRUE, PROTO_FALSE, 0);
+        Webdav.lock_acquire(webdav_work, &t, "/r", "opaquelocktoken:1", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
     webdav_ok = Webdav.lock_can_write(webdav_work, &t, "/r", NULL);
     TEST_ASSERT_FALSE(webdav_ok);
@@ -152,7 +152,7 @@ void test_write_needs_the_covering_lock_token(void)
 
     // A Depth-infinity lock gates its whole subtree the same way.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/c", "opaquelocktoken:9", PROTO_TRUE, PROTO_TRUE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/c", "opaquelocktoken:9", EMBED_TRUE, EMBED_TRUE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
     webdav_ok = Webdav.lock_can_write(webdav_work, &t, "/c/deep/file", NULL);
     TEST_ASSERT_FALSE(webdav_ok);
@@ -174,7 +174,7 @@ void test_lock_timeout_and_refresh(void)
 {
     DavLockTable t;
     Webdav.lock_init(webdav_work, &t);
-    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok", PROTO_TRUE, PROTO_FALSE, 100);
+    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "tok", EMBED_TRUE, EMBED_FALSE, 100);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
 
     size_t webdav_n = Webdav.lock_sweep(webdav_work, &t, 99);
@@ -201,7 +201,7 @@ void test_lock_timeout_and_refresh(void)
 
     // Expiry 0 means no timeout.
     Webdav.lock_init(webdav_work, &t);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "forever", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", "forever", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
     webdav_n = Webdav.lock_sweep(webdav_work, &t, 0xFFFFFFFFu);
     TEST_ASSERT_EQUAL_size_t(0, webdav_n);
@@ -225,16 +225,16 @@ void test_lock_table_is_bounded(void)
         token[0] = 't';
         token[1] = (char)('a' + i);
         token[2] = '\0';
-        const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, path, token, PROTO_TRUE, PROTO_FALSE, 0);
+        const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, path, token, EMBED_TRUE, EMBED_FALSE, 0);
         TEST_ASSERT_NOT_NULL(webdav_ptr);
     }
-    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/zz", "tzz", PROTO_TRUE, PROTO_FALSE, 0);
+    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/zz", "tzz", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 
     // Freeing one slot makes room again.
-    proto_bool webdav_ok = Webdav.lock_release(webdav_work, &t, "ta");
+    embed_bool webdav_ok = Webdav.lock_release(webdav_work, &t, "ta");
     TEST_ASSERT_TRUE(webdav_ok);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/zz", "tzz", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/zz", "tzz", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NOT_NULL(webdav_ptr);
 }
 
@@ -249,26 +249,26 @@ void test_lock_oversized_path_and_token_are_refused(void)
     memset(long_path, 'p', sizeof(long_path) - 1);
     long_path[0] = '/';
     long_path[sizeof(long_path) - 1] = '\0';
-    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, long_path, "tok", PROTO_TRUE, PROTO_FALSE, 0);
+    const DavLock *webdav_ptr = Webdav.lock_acquire(webdav_work, &t, long_path, "tok", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 
     char long_token[PROTOCORE_DAV_LOCK_TOKEN_MAX + 8];
     memset(long_token, 't', sizeof(long_token) - 1);
     long_token[sizeof(long_token) - 1] = '\0';
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", long_token, PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", long_token, EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
 
-    webdav_ptr = Webdav.lock_acquire(webdav_work, NULL, "/r", "tok", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, NULL, "/r", "tok", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, NULL, "tok", PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, NULL, "tok", EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
-    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", NULL, PROTO_TRUE, PROTO_FALSE, 0);
+    webdav_ptr = Webdav.lock_acquire(webdav_work, &t, "/r", NULL, EMBED_TRUE, EMBED_FALSE, 0);
     TEST_ASSERT_NULL(webdav_ptr);
     webdav_ptr = Webdav.lock_find(webdav_work, NULL, "/r");
     TEST_ASSERT_NULL(webdav_ptr);
     webdav_ptr = Webdav.lock_find(webdav_work, &t, NULL);
     TEST_ASSERT_NULL(webdav_ptr);
-    proto_bool webdav_ok = Webdav.lock_release(webdav_work, NULL, "tok");
+    embed_bool webdav_ok = Webdav.lock_release(webdav_work, NULL, "tok");
     TEST_ASSERT_FALSE(webdav_ok);
     webdav_ok = Webdav.lock_release(webdav_work, &t, NULL);
     TEST_ASSERT_FALSE(webdav_ok);
@@ -285,7 +285,7 @@ void test_if_header_state_token(void)
 {
     char out[64];
 
-    proto_bool webdav_ok = Webdav.if_token(
+    embed_bool webdav_ok = Webdav.if_token(
         webdav_work, "(<urn:uuid:181d4fae-7d8c-11d0-a765-00a0c91e6bf2> [\"I am an ETag\"])", out, sizeof(out));
     TEST_ASSERT_TRUE(webdav_ok);
     TEST_ASSERT_EQUAL_STRING("urn:uuid:181d4fae-7d8c-11d0-a765-00a0c91e6bf2", out);
@@ -428,7 +428,7 @@ void test_destination_header_path(void)
 {
     char out[128];
 
-    proto_bool webdav_ok = Webdav.dest_path(webdav_work, "http://host/p/q", out, sizeof(out));
+    embed_bool webdav_ok = Webdav.dest_path(webdav_work, "http://host/p/q", out, sizeof(out));
     TEST_ASSERT_TRUE(webdav_ok);
     TEST_ASSERT_EQUAL_STRING("/p/q", out);
     webdav_ok = Webdav.dest_path(webdav_work, "https://host:8080/p/q", out, sizeof(out));
@@ -487,12 +487,12 @@ void test_multistatus_document_shape(void)
     TEST_ASSERT_NOT_NULL(strstr(buf, "<?xml version=\"1.0\" encoding=\"utf-8\"?>"));
     TEST_ASSERT_NOT_NULL(strstr(buf, "<D:multistatus xmlns:D=\"DAV:\">"));
 
-    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dir/", PROTO_TRUE, 0, "", "");
+    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dir/", EMBED_TRUE, 0, "", "");
     len = webdav_n;
     TEST_ASSERT_NOT_NULL(strstr(buf, "<D:href>/dir/</D:href>"));
     TEST_ASSERT_NOT_NULL(strstr(buf, "<D:collection/>"));
 
-    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dir/f.txt", PROTO_FALSE, 1234,
+    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dir/f.txt", EMBED_FALSE, 1234,
                                "Sun, 06 Nov 1994 08:49:37 GMT", "text/plain");
     len = webdav_n;
     TEST_ASSERT_NOT_NULL(strstr(buf, "<D:href>/dir/f.txt</D:href>"));
@@ -513,7 +513,7 @@ void test_multistatus_document_shape(void)
     // An href with XML metacharacters is escaped where it lands in the document.
     webdav_n = Webdav.ms_begin(webdav_work, buf, sizeof(buf), 0);
     len = webdav_n;
-    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/a&b<c>", PROTO_FALSE, 1, "", "");
+    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/a&b<c>", EMBED_FALSE, 1, "", "");
     len = webdav_n;
     TEST_ASSERT_NOT_NULL(strstr(buf, "<D:href>/a&amp;b&lt;c&gt;</D:href>"));
 }
@@ -526,7 +526,7 @@ void test_multistatus_entry_is_atomic(void)
     size_t webdav_n = Webdav.ms_begin(webdav_work, buf, sizeof(buf), 0);
     size_t len = webdav_n;
     size_t before = len;
-    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dir/some-long-name.txt", PROTO_FALSE, 1234,
+    webdav_n = Webdav.ms_entry(webdav_work, buf, sizeof(buf), len, "/dir/some-long-name.txt", EMBED_FALSE, 1234,
                                "Sun, 06 Nov 1994 08:49:37 GMT", "text/plain");
     size_t after = webdav_n;
     TEST_ASSERT_EQUAL_size_t(before, after);

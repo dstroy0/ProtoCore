@@ -12,7 +12,7 @@
  *   - ::TelemetryWindow     the arithmetic mean, the population variance, the standard deviation,
  *                           the minimum and the maximum of the last @c cap samples. The mean and
  *                           the variance come off running sums, so a push and either read are each
- *                           a fixed number of operations; the minimum and the maximum scan the
+ *                           a fixed number of operations. The minimum and the maximum scan the
  *                           samples held.
  *   - ::TelemetryRate       the first difference between successive samples, in units per second.
  *   - ::TelemetryTotalizer  the trapezoidal integral of a rate over time. Its value is the quantity
@@ -40,7 +40,7 @@
 
 #if PROTOCORE_ENABLE_TELEMETRY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief A moving window over the last @c cap samples, in storage the caller provides.
@@ -63,7 +63,7 @@ typedef struct
 {
     float last_value;  ///< the previous sample
     uint32_t last_ms;  ///< the monotonic millisecond count it arrived at
-    proto_bool primed; ///< a first sample has been seen
+    embed_bool primed; ///< a first sample has been seen
 } TelemetryRate;
 
 /** @brief The trapezoidal integral of a rate over time: SenML's Sum (RFC 8428 sec 4.2). */
@@ -72,7 +72,7 @@ typedef struct
     double total;      ///< the accumulated total, in rate units multiplied by seconds
     float last_rate;   ///< the previous rate sample
     uint32_t last_ms;  ///< the monotonic millisecond count it arrived at
-    proto_bool primed; ///< a first rate sample has been seen
+    embed_bool primed; ///< a first rate sample has been seen
 } TelemetryTotalizer;
 
 /** @brief The window a call acts on, the storage an init binds to it, and the sample a push adds. */
@@ -139,7 +139,7 @@ typedef struct
     TelemetryWindowArgs window;       ///< what a window call acts on and reads
     TelemetryRateArgs rate;           ///< what a rate call acts on and reads
     TelemetryTotalizerArgs totalizer; ///< what a totalizer call acts on and reads
-    proto_bool ok;
+    embed_bool ok;
     uint16_t u16;
     float f32;
     double f64;
@@ -151,37 +151,37 @@ extern TelemetryVars TelemetryV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const window_init)(uint8_t *work);
-    void (*const window_push)(uint8_t *work);
-    void (*const window_count)(uint8_t *work);
-    void (*const window_mean)(uint8_t *work);
-    void (*const window_variance)(uint8_t *work);
-    void (*const window_stddev)(uint8_t *work);
-    void (*const window_min)(uint8_t *work);
-    void (*const window_max)(uint8_t *work);
-    void (*const rate_init)(uint8_t *work);
-    void (*const rate_update)(uint8_t *work);
-    void (*const totalizer_init)(uint8_t *work);
-    void (*const totalizer_add)(uint8_t *work);
-    void (*const totalizer_total)(uint8_t *work);
-    void (*const totalizer_reset)(uint8_t *work);
+    void (*const window_init)(const uint8_t *work);
+    void (*const window_push)(const uint8_t *work);
+    void (*const window_count)(const uint8_t *work);
+    void (*const window_mean)(const uint8_t *work);
+    void (*const window_variance)(const uint8_t *work);
+    void (*const window_stddev)(const uint8_t *work);
+    void (*const window_min)(const uint8_t *work);
+    void (*const window_max)(const uint8_t *work);
+    void (*const rate_init)(const uint8_t *work);
+    void (*const rate_update)(const uint8_t *work);
+    void (*const totalizer_init)(const uint8_t *work);
+    void (*const totalizer_add)(const uint8_t *work);
+    void (*const totalizer_total)(const uint8_t *work);
+    void (*const totalizer_reset)(const uint8_t *work);
 } TelemetryNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TelemetryV or a region of the borrow at a fixed offset.
-void protocore_telemetry_window_init(uint8_t *work);
-void protocore_telemetry_window_push(uint8_t *work);
-void protocore_telemetry_window_count(uint8_t *work);
-void protocore_telemetry_window_mean(uint8_t *work);
-void protocore_telemetry_window_variance(uint8_t *work);
-void protocore_telemetry_window_stddev(uint8_t *work);
-void protocore_telemetry_window_min(uint8_t *work);
-void protocore_telemetry_window_max(uint8_t *work);
-void protocore_telemetry_rate_init(uint8_t *work);
-void protocore_telemetry_rate_update(uint8_t *work);
-void protocore_telemetry_totalizer_init(uint8_t *work);
-void protocore_telemetry_totalizer_add(uint8_t *work);
-void protocore_telemetry_totalizer_total(uint8_t *work);
+void protocore_telemetry_window_init(const uint8_t *work);
+void protocore_telemetry_window_push(const uint8_t *work);
+void protocore_telemetry_window_count(const uint8_t *work);
+void protocore_telemetry_window_mean(const uint8_t *work);
+void protocore_telemetry_window_variance(const uint8_t *work);
+void protocore_telemetry_window_stddev(const uint8_t *work);
+void protocore_telemetry_window_min(const uint8_t *work);
+void protocore_telemetry_window_max(const uint8_t *work);
+void protocore_telemetry_rate_init(const uint8_t *work);
+void protocore_telemetry_rate_update(const uint8_t *work);
+void protocore_telemetry_totalizer_init(const uint8_t *work);
+void protocore_telemetry_totalizer_add(const uint8_t *work);
+void protocore_telemetry_totalizer_total(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -204,7 +204,7 @@ static const TelemetryNs Telemetry __attribute__((unused)) = {
     .totalizer_reset = protocore_telemetry_totalizer_init,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TELEMETRY
 

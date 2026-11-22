@@ -17,7 +17,7 @@
 #include "diffserv.h"
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The two code points this server marks with, held where only this file describes them.
@@ -41,7 +41,10 @@ static_assert(DIFFSERV_OFF_CTX + sizeof(struct DiffServStorage) <= PROTOCORE_DIF
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define DIFFSERV_CTX(w) ((struct DiffServStorage *)(void *)((w) + DIFFSERV_OFF_CTX))
+#define DIFFSERV_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct DiffServStorage *)(const void *)((w) + DIFFSERV_OFF_CTX),                       \
+        default: (struct DiffServStorage *)(void *)((w) + DIFFSERV_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -102,6 +105,6 @@ uint8_t protocore_diffserv_udp_dscp(void)
 /** @brief The operands and the outcome. */
 DiffServVars DiffServV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DIFFSERV

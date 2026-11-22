@@ -57,12 +57,12 @@ static void wr_tag_len(uint8_t *out, size_t *p, uint8_t tag, size_t clen)
 
 // Read one DER TLV at *pos in [buf,buf+len): set tag / content length / content offset and advance
 // *pos past the whole TLV. Definite short/long form only. Returns false on truncation / bad length.
-static proto_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t *tag, size_t *clen, size_t *cstart)
+static embed_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t *tag, size_t *clen, size_t *cstart)
 {
     size_t p = *pos;
     if (p + 2 > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *tag = buf[p++];
     size_t l = buf[p++];
@@ -71,7 +71,7 @@ static proto_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t 
         size_t nb = l & 0x7f;
         if (nb == 0 || nb > 4 || p + nb > len)
         {
-            return PROTO_FALSE; // indefinite / oversized length not supported
+            return EMBED_FALSE; // indefinite / oversized length not supported
         }
         l = 0;
         for (size_t i = 0; i < nb; i++)
@@ -81,12 +81,12 @@ static proto_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t 
     }
     if (p + l > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *cstart = p;
     *clen = l;
     *pos = p + l;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the entries -----------------------------------------------------------
@@ -94,8 +94,8 @@ static proto_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_spnego_wrap_negotiate(uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out,
-                                       size_t cap)
+size_t protocore_spnego_wrap_negotiate(const uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len,
+                                       uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -133,8 +133,8 @@ size_t protocore_spnego_wrap_negotiate(uint8_t *work, const uint8_t *ntlm, size_
     return p;
 }
 
-size_t protocore_spnego_wrap_authenticate(uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out,
-                                          size_t cap)
+size_t protocore_spnego_wrap_authenticate(const uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len,
+                                          uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -161,14 +161,14 @@ size_t protocore_spnego_wrap_authenticate(uint8_t *work, const uint8_t *ntlm, si
     return p;
 }
 
-proto_bool protocore_spnego_parse_response(uint8_t *work, const uint8_t *blob, size_t len,
+embed_bool protocore_spnego_parse_response(const uint8_t *work, const uint8_t *blob, size_t len,
                                            const uint8_t **protocore_resp_token, size_t *protocore_resp_len)
 {
     (void)work;
 
     if (!blob || !protocore_resp_token || !protocore_resp_len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t pos = 0;
     size_t cstart;
@@ -177,14 +177,14 @@ proto_bool protocore_spnego_parse_response(uint8_t *work, const uint8_t *blob, s
     // [1] NegTokenResp
     if (!der_read(blob, len, &pos, &tag, &clen, &cstart) || tag != 0xa1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t neg_end = cstart + clen;
     size_t p = cstart;
     // SEQUENCE
     if (!der_read(blob, neg_end, &p, &tag, &clen, &cstart) || tag != 0x30)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t seq_end = cstart + clen;
     p = cstart;
@@ -193,7 +193,7 @@ proto_bool protocore_spnego_parse_response(uint8_t *work, const uint8_t *blob, s
     {
         if (!der_read(blob, seq_end, &p, &tag, &clen, &cstart))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (tag == 0xa2)
         {
@@ -203,14 +203,14 @@ proto_bool protocore_spnego_parse_response(uint8_t *work, const uint8_t *blob, s
             uint8_t t2;
             if (!der_read(blob, cstart + clen, &q, &t2, &cl2, &cs2) || t2 != 0x04)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             *protocore_resp_token = blob + cs2;
             *protocore_resp_len = cl2;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 #endif // PROTOCORE_ENABLE_SMB

@@ -20,7 +20,7 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len / cellul.starts: the bounded length and the attribute-name match
 #include "memoria_operor/memoria_operor.h" // memor.cpy: a literal and an entity move whole
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // RFC 6120 sec 8.1: the common attribute names, and RFC 6120 sec 4.7 the stream header's two.
 #define PROTOCORE_XMPP_ATTR_TO "to"
@@ -49,13 +49,13 @@ static const XmppEntity s_entities[PROTOCORE_XMPP_ENTITY_COUNT] = {
 };
 
 // XML 1.0 sec 2.3 production [3]: S is one or more of space, tab, carriage return and line feed.
-static proto_bool xml_space(char c)
+static embed_bool xml_space(char c)
 {
     if (c == ' ' || c == '\t' || c == '\r' || c == '\n')
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // The entity reference XML 1.0 sec 4.6 gives for c, or NULL when c stands as itself.
@@ -72,19 +72,19 @@ static const char *entity_of(char c)
 }
 
 // Open a run at the head of the caller's buffer. A missing buffer or no room fails it here.
-static void start(uint8_t *work)
+static void start(const uint8_t *work)
 {
     (void)work;
     XmppV.n = 0;
-    XmppV.ok = PROTO_TRUE;
+    XmppV.ok = EMBED_TRUE;
     if (XmppV.out.buf == NULL || XmppV.out.cap == 0)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
     }
 }
 
 // Terminate the run, or report nothing written.
-static void finish(uint8_t *work)
+static void finish(const uint8_t *work)
 {
     (void)work;
     if (!XmppV.ok)
@@ -104,7 +104,7 @@ static void put_char(uint8_t *work, char c)
     }
     if (XmppV.n + 1 >= XmppV.out.cap)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
         return;
     }
     XmppV.out.buf[XmppV.n] = c;
@@ -122,7 +122,7 @@ static void put(uint8_t *work, const char *s)
     const size_t sl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = cap);
     if (XmppV.n + sl >= cap)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = XmppV.out.buf + XmppV.n, .src = s, .bytes = sl);
@@ -172,7 +172,7 @@ void protocore_xmpp_escape(uint8_t *work)
     start(work);
     if (XmppV.text.in == NULL)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
     }
     put_escaped(work, XmppV.text.in, XmppV.text.len);
     finish(work);
@@ -247,7 +247,7 @@ void protocore_xmpp_stanza_name(uint8_t *work)
     const size_t len = XmppV.stanza.len;
     if (xml == NULL)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
     }
     if (!XmppV.ok)
     {
@@ -258,12 +258,12 @@ void protocore_xmpp_stanza_name(uint8_t *work)
     // A '<' opens a start-tag only when what follows is a Name: '<?' opens a processing instruction
     // (sec 2.6), '<!' a comment or a declaration (sec 2.5, sec 2.8), and '</' an end-tag (sec 3.1).
     size_t i = 0;
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     while (i + 1 < len && !found)
     {
         if (xml[i] == '<' && xml[i + 1] != '?' && xml[i + 1] != '!' && xml[i + 1] != '/')
         {
-            found = PROTO_TRUE;
+            found = EMBED_TRUE;
         }
         else
         {
@@ -272,7 +272,7 @@ void protocore_xmpp_stanza_name(uint8_t *work)
     }
     if (!found)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
         finish(work);
         return;
     }
@@ -298,7 +298,7 @@ void protocore_xmpp_attr(uint8_t *work)
     const char *name = XmppV.stanza.attr;
     if (xml == NULL || name == NULL)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
     }
     if (!XmppV.ok)
     {
@@ -317,24 +317,24 @@ void protocore_xmpp_attr(uint8_t *work)
     // Production [40] puts S in front of every attribute specification and production [41] puts Eq
     // straight after its Name, so a name that is only the tail of another one never matches.
     size_t i = 0;
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     while (i + nl + 2 < end && !found)
     {
-        proto_bool sep = PROTO_FALSE;
+        embed_bool sep = EMBED_FALSE;
         if (i == 0)
         {
-            sep = PROTO_TRUE;
+            sep = EMBED_TRUE;
         }
         else if (xml_space(xml[i - 1]))
         {
-            sep = PROTO_TRUE;
+            sep = EMBED_TRUE;
         }
         if (sep &&
             EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = xml + i, .other = name, .cap = nl + 1,
-                       .ci = PROTO_FALSE) &&
+                       .ci = EMBED_FALSE) &&
             xml[i + nl] == '=')
         {
-            found = PROTO_TRUE;
+            found = EMBED_TRUE;
         }
         else
         {
@@ -343,7 +343,7 @@ void protocore_xmpp_attr(uint8_t *work)
     }
     if (!found)
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
         finish(work);
         return;
     }
@@ -352,7 +352,7 @@ void protocore_xmpp_attr(uint8_t *work)
     const char q = xml[i + nl + 1];
     if (q != '"' && q != '\'')
     {
-        XmppV.ok = PROTO_FALSE;
+        XmppV.ok = EMBED_FALSE;
         finish(work);
         return;
     }
@@ -369,6 +369,6 @@ void protocore_xmpp_attr(uint8_t *work)
 /** @brief The operands and the outcome. */
 XmppVars XmppV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_XMPP

@@ -74,16 +74,16 @@ static void wn(W *w, const uint8_t *b, size_t n)
 // Options that make an otherwise valid ClientHello miss one thing the server requires.
 typedef struct
 {
-    proto_bool tls13;   ///< supported_versions carries 0x0304
-    proto_bool suite;   ///< cipher_suites carries TLS_AES_128_GCM_SHA256
-    proto_bool group;   ///< supported_groups carries x25519
-    proto_bool share;   ///< key_share carries an x25519 entry
-    proto_bool ed25519; ///< signature_algorithms carries ed25519
-    proto_bool alpn_h3; ///< ALPN carries "h3"
-    proto_bool quic_tp; ///< the quic_transport_parameters extension is present
+    embed_bool tls13;   ///< supported_versions carries 0x0304
+    embed_bool suite;   ///< cipher_suites carries TLS_AES_128_GCM_SHA256
+    embed_bool group;   ///< supported_groups carries x25519
+    embed_bool share;   ///< key_share carries an x25519 entry
+    embed_bool ed25519; ///< signature_algorithms carries ed25519
+    embed_bool alpn_h3; ///< ALPN carries "h3"
+    embed_bool quic_tp; ///< the quic_transport_parameters extension is present
 } ChOpts;
 
-static const ChOpts CH_FULL = {PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE};
+static const ChOpts CH_FULL = {EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE};
 
 // RFC 8446 sec 4.1.2 ClientHello, with the extensions this server reads.
 static size_t build_client_hello(uint8_t *out, const ChOpts *o)
@@ -246,27 +246,27 @@ void test_rfc8446_server_flight_order(void)
     // RFC 9001 sec 4.1: Initial keys are not derived here; Handshake and 1-RTT keys are, both ways
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.is_server = EMBED_TRUE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_NULL(QuicTlsServerV.pkt_keys);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.is_server = EMBED_TRUE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
+    QuicTlsServerV.keys_args.is_server = EMBED_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.is_server = EMBED_TRUE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
+    QuicTlsServerV.keys_args.is_server = EMBED_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
 }
@@ -369,13 +369,13 @@ void test_handshake_interop_round_trip(void)
     QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_CLIENT_HS, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
+    QuicTlsServerV.keys_args.is_server = EMBED_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
     QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_SERVER_HS, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.is_server = EMBED_TRUE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
 
@@ -409,13 +409,13 @@ void test_handshake_interop_round_trip(void)
     QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_CLIENT_AP, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
+    QuicTlsServerV.keys_args.is_server = EMBED_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
     QuicCrypto.keys_from_secret(quic_crypto_work, keys_work, ks.s + TLS13_KS_SERVER_AP, &mine);
     QuicTlsServerV.keys_args.qt = &g_qt;
     QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.is_server = EMBED_TRUE;
     QuicTlsServer.keys(quic_tls_work);
     TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
 
@@ -490,17 +490,17 @@ void test_negotiation_failures(void)
     {
         CASES[i].o = CH_FULL;
     }
-    CASES[0].o.tls13 = PROTO_FALSE;
+    CASES[0].o.tls13 = EMBED_FALSE;
     CASES[0].alert = 70; // protocol_version
-    CASES[1].o.suite = PROTO_FALSE;
+    CASES[1].o.suite = EMBED_FALSE;
     CASES[1].alert = 40; // handshake_failure
-    CASES[2].o.ed25519 = PROTO_FALSE;
+    CASES[2].o.ed25519 = EMBED_FALSE;
     CASES[2].alert = 40;
-    CASES[3].o.group = PROTO_FALSE;
+    CASES[3].o.group = EMBED_FALSE;
     CASES[3].alert = 40;
-    CASES[4].o.share = PROTO_FALSE;
+    CASES[4].o.share = EMBED_FALSE;
     CASES[4].alert = 40;
-    CASES[5].o.alpn_h3 = PROTO_FALSE;
+    CASES[5].o.alpn_h3 = EMBED_FALSE;
     CASES[5].alert = 120; // no_application_protocol, RFC 7301 sec 3.2
 
     for (size_t i = 0; i < 6; i++)
@@ -524,7 +524,7 @@ void test_negotiation_failures(void)
 void test_rfc9001_missing_transport_parameters(void)
 {
     ChOpts o = CH_FULL;
-    o.quic_tp = PROTO_FALSE;
+    o.quic_tp = EMBED_FALSE;
     (void)feed_client_hello(&o);
     TEST_ASSERT_EQUAL_INT(QTLS_FAILED, g_qt.state);
     TEST_ASSERT_EQUAL_UINT8(109, g_qt.alert); // missing_extension

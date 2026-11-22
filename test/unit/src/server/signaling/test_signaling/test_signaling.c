@@ -21,9 +21,9 @@
 static int g_close_calls;
 static uint8_t g_close_slot;
 
-// The double this env links in place of protocol.c: it builds the signaling half only, so the pool
+// The double this env links in place of protocol.c. It builds the signaling half only, so the pool
 // is the one symbol it has to supply. Every entry takes the borrow, and this one never reads it.
-void protocore_conn_pool_close(uint8_t *work)
+void protocore_conn_pool_close(const uint8_t *work)
 {
     (void)work;
     g_close_calls++;
@@ -81,7 +81,7 @@ void tearDown(void)
 }
 
 // RFC 9110 sec 15: the first digit is the class. Every code is counted once in the total, and once
-// more in the tally its leading digit names - 1xx and 3xx have no tally, so they reach the total
+// more in the tally its leading digit names - 1xx and 3xx have no tally. So they reach the total
 // alone.
 void test_rfc9110_first_digit_selects_the_class(void)
 {

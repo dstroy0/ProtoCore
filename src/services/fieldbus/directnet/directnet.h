@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_DIRECTNET
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -113,7 +113,7 @@ typedef struct
     DirectnetHeaderArgs header_args;
     DirectnetDataArgs data_args;
     DirectnetDataParseArgs data_parse_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     size_t n;
 } DirectnetVars;
@@ -124,7 +124,7 @@ extern DirectnetVars DirectnetV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const lrc)(uint8_t *work);
+    void (*const lrc)(const uint8_t *work);
     void (*const header)(uint8_t *work);
     void (*const data)(uint8_t *work);
     void (*const data_parse)(uint8_t *work);
@@ -132,7 +132,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DirectnetV or a region of the borrow at a fixed offset.
-void protocore_directnet_lrc(uint8_t *work);
+void protocore_directnet_lrc(const uint8_t *work);
 void protocore_directnet_header(uint8_t *work);
 void protocore_directnet_data(uint8_t *work);
 void protocore_directnet_data_parse(uint8_t *work);
@@ -148,7 +148,7 @@ static const DirectnetNs Directnet __attribute__((unused)) = {
     .data_parse = protocore_directnet_data_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DIRECTNET
 

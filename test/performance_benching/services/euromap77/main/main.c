@@ -8,7 +8,7 @@
 // encoder (protocore_ua_w_variant, services/fieldbus/opcua) serializing a resolved UInt64 counter to wire bytes -
 // every call here is pure struct-field lookup / table walk / byte packing (no heap, no sockets).
 // Worked-example precedent: like performance_benching/device/modbus (a pure protocol codec), everything benched here
-// runs the real production code path; contrast performance_benching/device/ads1115, where the hardware-facing half is
+// runs the real production code path. Contrast performance_benching/device/ads1115, where the hardware-facing half is
 // out of scope. This rig has no OPC UA client attached, so the TCP transport half of services/fieldbus/opcua
 // (protocore_opcua_rx and friends, compiled in by the Library Dependency Finder because euromap77.h pulls in
 // opcua.h) is never exercised - only the deterministic model + codec calls above are ever benched.

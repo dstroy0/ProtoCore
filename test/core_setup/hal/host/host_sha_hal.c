@@ -14,7 +14,7 @@
 
 #if PROTOCORE_HOST && PROTOCORE_HAS_HW_SHA
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const uint32_t IV1[5] = {0x67452301u, 0xefcdab89u, 0x98badcfeu, 0x10325476u, 0xc3d2e1f0u};
 
@@ -234,7 +234,7 @@ void protocore_sha_hw_release(void)
 }
 
 void protocore_sha_hw_block(uint32_t mode, uint32_t *h, unsigned hwords, const uint32_t *blk, unsigned bwords,
-                            proto_bool first)
+                            embed_bool first)
 {
     (void)bwords;
     if (!h || !blk)
@@ -282,6 +282,6 @@ void protocore_sha_hw_block(uint32_t mode, uint32_t *h, unsigned hwords, const u
     sha256_compress(h, blk);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST && PROTOCORE_HAS_HW_SHA

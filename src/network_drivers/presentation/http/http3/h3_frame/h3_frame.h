@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file h3_frame.h
@@ -87,11 +87,11 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*parse_header)(uint8_t *, const uint8_t *, size_t, H3FrameHeader *);
+    embed_bool (*parse_header)(uint8_t *, const uint8_t *, size_t, H3FrameHeader *);
     size_t (*write_header)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t);
-    proto_bool (*type_reserved)(uint8_t *, uint64_t);
-    void (*settings_defaults)(uint8_t *, H3Settings *);
-    proto_bool (*parse_settings)(uint8_t *, const uint8_t *, size_t, H3Settings *);
+    embed_bool (*type_reserved)(const uint8_t *, uint64_t);
+    void (*settings_defaults)(const uint8_t *, H3Settings *);
+    embed_bool (*parse_settings)(uint8_t *, const uint8_t *, size_t, H3Settings *);
     size_t (*build_data)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
     size_t (*build_headers)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
     size_t (*build_settings)(uint8_t *, uint8_t *, size_t, const uint64_t *, const uint64_t *, size_t);
@@ -106,9 +106,9 @@ PROTOCORE_NS_LAYOUT(H3FrameNs, parse_header, write_header, type_reserved, settin
  * @param buf Buf
  * @param len Len
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out);
+embed_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out);
 /**
  * @brief Write a frame header (type + length varints). bytes written, or 0 .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -123,24 +123,24 @@ size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, 
  * @brief True if type is a reserved HTTP/2 frame type (0x02/0x06/0x08/0x09) .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
  * @param type Type
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type);
+embed_bool protocore_h3_frame_type_reserved(const uint8_t *work, uint64_t type);
 /**
  * @brief Fill s with the RFC default settings.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
  * @param s S
  */
-void protocore_h3_frame_settings_defaults(uint8_t *work, H3Settings *s);
+void protocore_h3_frame_settings_defaults(const uint8_t *work, H3Settings *s);
 /**
  * @brief Apply a SETTINGS payload (id, value varint pairs) to s. false if .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
  * @param payload Payload
  * @param len Len
  * @param s S
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s);
+embed_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s);
 /**
  * @brief DATA frame wrapping data.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -194,6 +194,6 @@ PROTOCORE_NS H3FrameNs H3Frame PROTOCORE_UNUSED = {.parse_header = protocore_h3_
                                                    .build_settings = protocore_h3_frame_build_settings,
                                                    .build_goaway = protocore_h3_frame_build_goaway};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_H3_FRAME_H

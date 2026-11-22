@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_MMS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief MMS PDU tags (context-specific) + the service tags used here. */
 // MMS PDU / service / BER tags: wire bytes, so integer constants in a namespacing struct.
@@ -66,9 +66,9 @@ typedef struct
 } MmsPdu;
 
 /** @brief Parse an MMS confirmed PDU header (pdu tag + invokeID + service tag). @return true if well-formed. */
-proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out);
+embed_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MMS
 

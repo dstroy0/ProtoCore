@@ -46,7 +46,7 @@ return (token && strcmp(token, ADMIN_TOKEN) == 0);
 **A clean deferred reboot.** This is the key trick: you must not call
 `ESP.restart()` inside the handler, or the HTTP response never flushes. Instead
 the handler acknowledges (`200`), arms a flag, and `loop()` reboots ~1 s later
-once lwIP has drained the response:
+once lwIP drained the response:
 
 ```cpp
 // in the handler:

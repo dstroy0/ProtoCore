@@ -11,7 +11,7 @@
 
 #if PROTOCORE_ENABLE_ED25519
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const fe ED_COMB[32][8][3] = {
     {
@@ -848,7 +848,7 @@ static const fe ED_COMB[32][8][3] = {
     },
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ED25519
 

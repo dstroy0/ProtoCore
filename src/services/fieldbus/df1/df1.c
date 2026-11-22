@@ -13,7 +13,7 @@
 #include "services/fieldbus/df1/df1.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -21,9 +21,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_df1_bcc(uint8_t *work);
+void protocore_df1_bcc(const uint8_t *work);
 
-void protocore_df1_bcc(uint8_t *work)
+void protocore_df1_bcc(const uint8_t *work)
 {
     (void)work;
     const uint8_t *data = Df1V.bcc_args.data;
@@ -140,25 +140,25 @@ void protocore_df1_parse_frame(uint8_t *work)
     size_t checklen = (check == DF1_CHECK_CRC) ? 2 : 1;
     if (!buf || !out || len < 4 + checklen) // DLE STX DLE ETX + check
     {
-        Df1V.ok = PROTO_FALSE;
+        Df1V.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != DF1_DLE || buf[1] != DF1_STX)
     {
-        Df1V.ok = PROTO_FALSE;
+        Df1V.ok = EMBED_FALSE;
         return;
     }
 
     size_t i = 2;
     size_t o = 0;
-    proto_bool ended = PROTO_FALSE;
+    embed_bool ended = EMBED_FALSE;
     while (i < len)
     {
         if (buf[i] == DF1_DLE)
         {
             if (i + 1 >= len)
             {
-                Df1V.ok = PROTO_FALSE;
+                Df1V.ok = EMBED_FALSE;
                 return;
             }
             uint8_t next = buf[i + 1];
@@ -166,7 +166,7 @@ void protocore_df1_parse_frame(uint8_t *work)
             {
                 if (o >= out_cap)
                 {
-                    Df1V.ok = PROTO_FALSE;
+                    Df1V.ok = EMBED_FALSE;
                     return;
                 }
                 out[o++] = DF1_DLE;
@@ -175,12 +175,12 @@ void protocore_df1_parse_frame(uint8_t *work)
             else if (next == DF1_ETX) // end of data
             {
                 i += 2;
-                ended = PROTO_TRUE;
+                ended = EMBED_TRUE;
                 break;
             }
             else
             {
-                Df1V.ok = PROTO_FALSE;
+                Df1V.ok = EMBED_FALSE;
                 return; // an unexpected control symbol inside the data
             }
         }
@@ -188,7 +188,7 @@ void protocore_df1_parse_frame(uint8_t *work)
         {
             if (o >= out_cap)
             {
-                Df1V.ok = PROTO_FALSE;
+                Df1V.ok = EMBED_FALSE;
                 return;
             }
             out[o++] = buf[i++];
@@ -196,7 +196,7 @@ void protocore_df1_parse_frame(uint8_t *work)
     }
     if (!ended)
     {
-        Df1V.ok = PROTO_FALSE;
+        Df1V.ok = EMBED_FALSE;
         return;
     }
 
@@ -204,14 +204,14 @@ void protocore_df1_parse_frame(uint8_t *work)
     {
         if (i + 2 > len)
         {
-            Df1V.ok = PROTO_FALSE;
+            Df1V.ok = EMBED_FALSE;
             return;
         }
         uint16_t c = df1_crc_data_plus_etx(work, out, o, DF1_ETX);
         uint16_t got = (uint16_t)(buf[i] | ((uint16_t)buf[i + 1] << 8)); // low byte first
         if (c != got)
         {
-            Df1V.ok = PROTO_FALSE;
+            Df1V.ok = EMBED_FALSE;
             return;
         }
     }
@@ -219,7 +219,7 @@ void protocore_df1_parse_frame(uint8_t *work)
     {
         if (i + 1 > len)
         {
-            Df1V.ok = PROTO_FALSE;
+            Df1V.ok = EMBED_FALSE;
             return;
         }
         Df1V.bcc_args.data = out;
@@ -227,7 +227,7 @@ void protocore_df1_parse_frame(uint8_t *work)
         protocore_df1_bcc(work);
         if (Df1V.value != buf[i])
         {
-            Df1V.ok = PROTO_FALSE;
+            Df1V.ok = EMBED_FALSE;
             return;
         }
     }
@@ -235,12 +235,12 @@ void protocore_df1_parse_frame(uint8_t *work)
     {
         *out_len = o;
     }
-    Df1V.ok = PROTO_TRUE;
+    Df1V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Df1Vars Df1V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DF1

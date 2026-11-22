@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file sen0192.h
@@ -33,14 +33,14 @@ PROTOCORE_BEGIN_DECLS
 /**
  * @brief Debounced motion-presence tracker over a single digital line.
  *
- * Presence asserts on an active-level sample and is held for @c hold_ms after the last active sample; an
+ * Presence asserts on an active-level sample and is held for @c hold_ms after the last active sample. An
  * inactive stretch longer than @c hold_ms clears it. Pure: time is passed in, so it is fully host-testable.
  */
 typedef struct
 {
-    proto_bool present;      ///< presence currently asserted (respecting the hold window)
-    proto_bool seeded;       ///< a first sample has been fed (so the hold timing is meaningful)
-    proto_bool active_high;  ///< the active (motion) state is a logic HIGH
+    embed_bool present;      ///< presence currently asserted (respecting the hold window)
+    embed_bool seeded;       ///< a first sample has been fed (so the hold timing is meaningful)
+    embed_bool active_high;  ///< the active (motion) state is a logic HIGH
     uint32_t hold_ms;        ///< presence is held this long after the last active sample
     uint32_t last_active_ms; ///< timestamp of the last active-level sample
     uint32_t motion_events;  ///< count of clear -> present transitions (rising edges of presence)
@@ -49,15 +49,15 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*motion_init)(uint8_t *, Sen0192Motion *, uint32_t, proto_bool);
-    proto_bool (*motion_update)(uint8_t *, Sen0192Motion *, proto_bool, uint32_t);
-    proto_bool (*motion_tick)(uint8_t *, Sen0192Motion *, uint32_t);
-    proto_bool (*motion_present)(uint8_t *, const Sen0192Motion *);
-    uint32_t (*motion_events)(uint8_t *, const Sen0192Motion *);
-    uint32_t (*motion_active_age_ms)(uint8_t *, const Sen0192Motion *, uint32_t);
-    proto_bool (*begin)(uint8_t *);
-    proto_bool (*poll)(uint8_t *);
-    proto_bool (*present)(uint8_t *);
+    void (*motion_init)(const uint8_t *, Sen0192Motion *, uint32_t, embed_bool);
+    embed_bool (*motion_update)(uint8_t *, Sen0192Motion *, embed_bool, uint32_t);
+    embed_bool (*motion_tick)(const uint8_t *, Sen0192Motion *, uint32_t);
+    embed_bool (*motion_present)(const uint8_t *, const Sen0192Motion *);
+    uint32_t (*motion_events)(const uint8_t *, const Sen0192Motion *);
+    uint32_t (*motion_active_age_ms)(const uint8_t *, const Sen0192Motion *, uint32_t);
+    embed_bool (*begin)(uint8_t *);
+    embed_bool (*poll)(uint8_t *);
+    embed_bool (*present)(uint8_t *);
     uint32_t (*motion_count)(uint8_t *);
 } Sen0192Ns;
 PROTOCORE_NS_LAYOUT(Sen0192Ns, motion_init, motion_update, motion_tick, motion_present, motion_events,
@@ -70,38 +70,38 @@ PROTOCORE_NS_LAYOUT(Sen0192Ns, motion_init, motion_update, motion_tick, motion_p
  * @param hold_ms Hold ms
  * @param active_high Active high
  */
-void protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high);
+void protocore_sen0192_motion_init(const uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high);
 /**
  * @brief Feed one sampled line level at now_ms.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
  * @param level_high Level high
  * @param now_ms Now ms
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, proto_bool level_high, uint32_t now_ms);
+embed_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, embed_bool level_high, uint32_t now_ms);
 /**
  * @brief Re-evaluate presence against the hold window at now_ms without a .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
  * @param now_ms Now ms
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sen0192_motion_tick(uint8_t *work, Sen0192Motion *m, uint32_t now_ms);
+embed_bool protocore_sen0192_motion_tick(const uint8_t *work, Sen0192Motion *m, uint32_t now_ms);
 /**
  * @brief Current presence (respecting the hold window).
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sen0192_motion_present(uint8_t *work, const Sen0192Motion *m);
+embed_bool protocore_sen0192_motion_present(const uint8_t *work, const Sen0192Motion *m);
 /**
  * @brief Number of clear -> present transitions since init.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
  * @return The uint32_t.
  */
-uint32_t protocore_sen0192_motion_events(uint8_t *work, const Sen0192Motion *m);
+uint32_t protocore_sen0192_motion_events(const uint8_t *work, const Sen0192Motion *m);
 /**
  * @brief Milliseconds since the last active-level sample (0 if none yet).
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
@@ -109,25 +109,25 @@ uint32_t protocore_sen0192_motion_events(uint8_t *work, const Sen0192Motion *m);
  * @param now_ms Now ms
  * @return The uint32_t.
  */
-uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *work, const Sen0192Motion *m, uint32_t now_ms);
+uint32_t protocore_sen0192_motion_active_age_ms(const uint8_t *work, const Sen0192Motion *m, uint32_t now_ms);
 /**
  * @brief Configure PROTOCORE_SEN0192_PIN as an input and start tracking .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sen0192_begin(uint8_t *work);
+embed_bool protocore_sen0192_begin(uint8_t *work);
 /**
  * @brief Sample the pin now (via protocore_millis()). true iff a new .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sen0192_poll(uint8_t *work);
+embed_bool protocore_sen0192_poll(uint8_t *work);
 /**
  * @brief Current presence.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
- * @return PROTO_TRUE while presence is asserted, the hold window included.
+ * @return EMBED_TRUE while presence is asserted, the hold window included.
  */
-proto_bool protocore_sen0192_present(uint8_t *work);
+embed_bool protocore_sen0192_present(uint8_t *work);
 /**
  * @brief Count of motion events (clear -> present transitions) since .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
@@ -158,6 +158,6 @@ PROTOCORE_NS Sen0192Ns Sen0192 PROTOCORE_UNUSED = {.motion_init = protocore_sen0
                                                    .present = protocore_sen0192_present,
                                                    .motion_count = protocore_sen0192_motion_count};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SEN0192_H

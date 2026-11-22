@@ -37,7 +37,7 @@ found by any of those, so the column is a floor, not a ceiling.
 
 | I need to                                        | Run                                                                |
 | ------------------------------------------------ | ------------------------------------------------------------------ |
-| **read a module at all — do this first**         | `tools/harness.py view read blind <module.h>`                      |
+| **read a module at all - do this first**         | `tools/harness.py view read blind <module.h>`                      |
 | read it again with the names attached            | `tools/harness.py view read code <module.h>`                       |
 | check the prose against the code, last           | `tools/harness.py view read claims <module.h>`                     |
 | find the tool for a job at all                   | `tools/harness.py list`                                            |
@@ -193,6 +193,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `accept_style_conflicts.py` |   | `--dry-run`         |                     |
 | `gen_compiledb.sh`          | W |                     | cmake, python3, sed |
 | `merge_compiledb.py`        | W | `--baseline --root` |                     |
+| `trim_coverage.py`          |   |                     |                     |
 
 ## assets/
 

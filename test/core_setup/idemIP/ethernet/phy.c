@@ -16,17 +16,17 @@ typedef struct
 } IdemIpPhyCtx;
 static IdemIpPhyCtx s_phy;
 
-proto_bool idemip_phy_bind(const IdemIpPhyDriver *drv)
+embed_bool idemip_phy_bind(const IdemIpPhyDriver *drv)
 {
     // Every member is called without a null test on the hot path, so an incomplete driver is
     // refused here rather than faulting at the first frame.
     if (drv == NULL || drv->link == NULL || drv->send == NULL || drv->recv == NULL || drv->mac == NULL ||
         drv->mdio_read == NULL || drv->mdio_write == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s_phy.drv = drv;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 const IdemIpPhyDriver *idemip_phy_driver(void)

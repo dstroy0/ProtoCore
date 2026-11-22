@@ -35,7 +35,7 @@ protocore_rk512_build_send(t, sizeof(t), Rk512Area::MB, 0, 0x0010, words, 4);
 ## Run it (no second device needed)
 
 The sketch runs **two** link stations on one board - A (high priority) and B (low priority) - and
-cross-wires their byte sinks, so it drives the whole 3964R handshake + an RK512 FETCH round-trip against
+cross-wires their byte sinks. So it drives the whole 3964R handshake + an RK512 FETCH round-trip against
 itself. A completed round increments a counter served at `GET /simatic`:
 
 ```sh

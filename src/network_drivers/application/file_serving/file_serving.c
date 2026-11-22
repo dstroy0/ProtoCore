@@ -28,17 +28,17 @@
 #include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
 #include "protocore.h"
 #include "server/storage/filesystem/filesystem.h" // protocore_fs_* - the accessor owns the root, the join, and the .. guard
+#include "shared/http_date/http_date.h"           // HttpDate.format: the IMF-fixdate of a file
 #include "shared/mime/mime.h"                     // mime_type, PROTOCORE_MIME_*
 #include "shared/time_compat/time_compat.h"       // protocore_gmtime_r (portable reentrant UTC)
 #include "verba_scribo/verba_scribo.h"            // verba_scribo frame builder
-#include <stdio.h>                                // snprintf, sscanf
-#include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
+#include <time.h>                                 // time_t and struct tm: the dates of a file
 
 // ---------------------------------------------------------------------------
 // File serving
 // ---------------------------------------------------------------------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // File-send state - owned here
@@ -76,7 +76,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define FILE_SERVING_CTX(w) ((FileCtx *)(void *)((w) + FILE_SERVING_OFF_CTX))
+#define FILE_SERVING_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const FileCtx *)(const void *)((w) + FILE_SERVING_OFF_CTX),                                  \
+        default: (FileCtx *)(void *)((w) + FILE_SERVING_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -120,11 +123,11 @@ static int file_root(uint8_t *work)
 }
 
 // The entries this file calls before reaching their definitions.
-void protocore_file_serving_file_send_pump(uint8_t *work);
+void protocore_file_serving_file_send_pump(const uint8_t *work);
 void protocore_file_serving_http_rfc1123(uint8_t *work);
 void protocore_file_serving_serve_file_internal(uint8_t *work);
 
-void protocore_file_serving_holds_slot(uint8_t *work)
+void protocore_file_serving_holds_slot(const uint8_t *work)
 {
     (void)work;
     uint8_t slot = FileServingV.holds_slot_args.slot;
@@ -148,17 +151,95 @@ void protocore_file_serving_http_rfc1123(uint8_t *work)
     {
         return;
     }
-    // The API states its own width; time_t is whatever the toolchain picked (32 or 64 bit) and
-    // only the conversion seam is allowed to name it.
-    struct tm tmv;
-    TimeCompatV.args.epoch = epoch;
-    TimeCompatV.args.out = &tmv;
-    TimeCompat.gmtime(work); // reentrant: never the shared static buffer (worker-safe)
-    if (!TimeCompatV.tm_out)
+    // HttpDate writes the IMF-fixdate of RFC 9110 sec 5.6.7, and it writes nothing when the date does not fit.
+    HttpDateV.args.epoch = (time_t)epoch;
+    HttpDateV.args.out = out;
+    // Explicit cast narrows the room of the caller, which an HTTP date never reaches past 32 bits
+    HttpDateV.args.out_cap = (uint32_t)cap;
+    HttpDate.format(work);
+}
+
+// The unsigned decimal at @p text, after the spaces before it, as sscanf reads "%d". The cursor moves past it.
+static embed_bool http_date_number(const char **text, int *out)
+{
+    const char *at = *text;
+    while (*at == ' ')
     {
-        return;
+        at++;
     }
-    strftime(out, cap, "%a, %d %b %Y %H:%M:%S GMT", &tmv);
+    if (*at < '0' || *at > '9')
+    {
+        return EMBED_FALSE;
+    }
+    int value = 0;
+    while (*at >= '0' && *at <= '9' && value <= 99999)
+    {
+        value = (value * 10) + (*at - '0');
+        at++;
+    }
+    *out = value;
+    *text = at;
+    return EMBED_TRUE;
+}
+
+// One literal character at @p text, as sscanf matches a character of its format. The cursor moves past it.
+static embed_bool http_date_literal(const char **text, char literal)
+{
+    if (literal == ' ')
+    {
+        while (**text == ' ')
+        {
+            (*text)++;
+        }
+        return EMBED_TRUE;
+    }
+    if (**text != literal)
+    {
+        return EMBED_FALSE;
+    }
+    (*text)++;
+    return EMBED_TRUE;
+}
+
+// The run of at most @p cap characters at @p text that are not spaces, after the spaces before it, as sscanf
+// reads "%3s". @p out takes the run when it is not NULL.
+static embed_bool http_date_word(const char **text, char *out, size_t cap)
+{
+    const char *at = *text;
+    while (*at == ' ')
+    {
+        at++;
+    }
+    size_t taken = 0;
+    while (taken < cap && at[taken] != '\0' && at[taken] != ' ')
+    {
+        if (out != NULL)
+        {
+            out[taken] = at[taken];
+        }
+        taken++;
+    }
+    if (taken == 0)
+    {
+        return EMBED_FALSE;
+    }
+    if (out != NULL)
+    {
+        out[taken] = '\0';
+    }
+    *text = at + taken;
+    return EMBED_TRUE;
+}
+
+// The time of day of an RFC 9110 sec 5.6.7 IMF-fixdate, "08:49:37": the hour, a colon, the minute, a colon,
+// the second.
+static embed_bool http_date_clock(const char **text, int *hour, int *minute, int *second)
+{
+    if (!http_date_number(text, hour) || !http_date_literal(text, ':') || !http_date_number(text, minute))
+    {
+        return EMBED_FALSE;
+    }
+    return http_date_literal(text, ':') && http_date_number(text, second);
 }
 
 // True if a resource last modified at @p mtime is NOT newer than the client's
@@ -167,11 +248,11 @@ void protocore_file_serving_http_rfc1123(uint8_t *work)
 // broken-down times field by field, so no timegm()/epoch round-trip is needed.
 // Returns false (serve 200) when there is no usable date - mtime is 0 (no clock),
 // @p ims is absent, or it does not parse.
-static proto_bool http_not_modified_since(time_t mtime, const char *ims)
+static embed_bool http_not_modified_since(time_t mtime, const char *ims)
 {
     if (mtime <= 0 || !ims)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     char mon[4] = {0};
     int day = 0;
@@ -180,18 +261,20 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     int mm = 0;
     int ss = 0;
     // "Sun, 06 Nov 1994 08:49:37 GMT" - skip the weekday, read the rest.
-    if (sscanf(ims, "%*3s, %d %3s %d %d:%d:%d", &day, mon, &year, &hh, &mm, &ss) != 6)
+    const char *at = ims;
+    if (!http_date_word(&at, NULL, 3u) || !http_date_literal(&at, ',') || !http_date_number(&at, &day) ||
+        !http_date_word(&at, mon, 3u) || !http_date_number(&at, &year) || !http_date_clock(&at, &hh, &mm, &ss))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     static const char MONTHS[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
     const char *mp = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = MONTHS, .cap = sizeof(MONTHS), .other = mon,
-                                .other_cap = sizeof(mon), .ci = PROTO_FALSE);
+                                .other_cap = sizeof(mon), .ci = EMBED_FALSE);
     // Must align to a 3-char month boundary: a malformed token like "ebM" appears in
     // the table at a non-multiple-of-3 offset and would otherwise mis-parse as a month.
     if (!mp || ((mp - MONTHS) % 3) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int imon = (int)(mp - MONTHS) / 3; // 0-based, matches struct tm tm_mon
 
@@ -201,7 +284,7 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     TimeCompat.gmtime(protocore_file_serving_span()); // reentrant: never the shared static buffer (worker-safe)
     if (!TimeCompatV.tm_out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // Compare file (tf) vs If-Modified-Since fields, most significant first.
     int fy = tf.tm_year + 1900;
@@ -231,7 +314,7 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
 // RFC 9110 13.1.2: If-None-Match comparison. Supports "*" (matches any current
 // representation), a comma-separated list of entity-tags, and weak comparison
 // (an inbound W/"x" matches our strong "x"). @p etag is our tag, quotes included.
-static proto_bool inm_matches(const char *inm, const char *etag)
+static embed_bool inm_matches(const char *inm, const char *etag)
 {
     // Leading OWS is stripped by the HTTP/1.x byte parser, but NOT on a semantic ingress
     // (HTTP/2 / HTTP/3): those hand over HPACK/QPACK-decoded values verbatim, so a
@@ -242,7 +325,7 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     }
     if (inm[0] == '*')
     {
-        return PROTO_TRUE; // "*" matches the existing representation
+        return EMBED_TRUE; // "*" matches the existing representation
     }
     size_t etlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = etag, .cap = 40);
     const char *p = inm;
@@ -266,31 +349,31 @@ static proto_bool inm_matches(const char *inm, const char *etag)
             const char *end =
                 EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = tag + 1,
                            .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = tag + 1, .cap = MAX_VAL_LEN) + 1u,
-                           .other = "\"", .other_cap = sizeof("\""), .ci = PROTO_FALSE);
+                           .other = "\"", .other_cap = sizeof("\""), .ci = EMBED_FALSE);
             if (end && (size_t)(end - tag + 1) == etlen &&
-                EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = tag, .other = etag, .cap = etlen, .ci = PROTO_FALSE) ==
+                EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = tag, .other = etag, .cap = etlen, .ci = EMBED_FALSE) ==
                     etlen)
             {
-                return PROTO_TRUE;
+                return EMBED_TRUE;
             }
         }
         const char *comma =
             EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p,
                        .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = p, .cap = MAX_VAL_LEN) + 1u, .other = ",",
-                       .other_cap = sizeof(","), .ci = PROTO_FALSE);
+                       .other_cap = sizeof(","), .ci = EMBED_FALSE);
         if (!comma)
         {
             break;
         }
         p = comma + 1;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void protocore_file_serving_serve_file_internal(uint8_t *work)
 {
     uint8_t slot_id = FileServingV.serve_file_internal_args.slot_id;
-    proto_bool head = FileServingV.serve_file_internal_args.head;
+    embed_bool head = FileServingV.serve_file_internal_args.head;
     const protocore_mnt_backend *file_sys = FileServingV.serve_file_internal_args.file_sys;
     const char *fs_path = FileServingV.serve_file_internal_args.fs_path;
     const char *content_type = FileServingV.serve_file_internal_args.content_type;
@@ -335,7 +418,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     }
     size_t file_size = (size_t)(st.size);
 
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     // Optional Content-Encoding line (e.g. gzip for pre-compressed assets).
@@ -411,7 +494,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     const char *http_parser_text2 =
         HttpParser.get_header(protocore_http_parser_span(), &http_pool[slot_id], "If-Modified-Since");
     const char *ims = http_parser_text2;
-    proto_bool not_modified = inm ? inm_matches(inm, etag) : http_not_modified_since(mtime, ims);
+    embed_bool not_modified = inm ? inm_matches(inm, etag) : http_not_modified_since(mtime, ims);
     if (not_modified)
     {
         Fs.io.handle = fh;
@@ -437,9 +520,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
         int n304 = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = h304, .cap = sizeof(h304), .at = sb_h304);
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = h304;
-        ConnPoolV.io.len = (proto_u16)n304;
+        ConnPoolV.io.len = (embed_u16)n304;
         ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
-        protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+        protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/EMBED_TRUE);
         return;
     }
     char etag_line[48];
@@ -497,9 +580,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
         int n416 = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = h416, .cap = sizeof(h416), .at = sb_h416);
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = h416;
-        ConnPoolV.io.len = (proto_u16)n416;
+        ConnPoolV.io.len = (embed_u16)n416;
         ConnPool.send_flush(protocore_conn_pool_span());
-        protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+        protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/EMBED_TRUE);
         return;
     }
     if (rr > 0)
@@ -593,7 +676,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = header;
-    ConnPoolV.io.len = (proto_u16)hlen;
+    ConnPoolV.io.len = (embed_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
 
     // HEAD or empty body: headers only, finish now.
@@ -601,7 +684,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     {
         Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
-        protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+        protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/EMBED_FALSE);
         return;
     }
 
@@ -616,16 +699,16 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
     s->status = status;
     s->total = (int)body_len;
     s->keep = keep;
-    s->active = PROTO_TRUE;
+    s->active = EMBED_TRUE;
     FileServingV.file_send_pump_args.slot_id = slot_id;
     protocore_file_serving_file_send_pump(work);
 }
 
 // Page out a pending file response across worker loops: send up to ConnPool.sndbuf()
-// bytes now and return; the next loop resumes (woken by the sent callback) until the
+// bytes now and return. The next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
-void protocore_file_serving_file_send_pump(uint8_t *work)
+void protocore_file_serving_file_send_pump(const uint8_t *work)
 {
     (void)work;
     uint8_t slot_id = FileServingV.file_send_pump_args.slot_id;
@@ -643,7 +726,7 @@ void protocore_file_serving_file_send_pump(uint8_t *work)
         // Connection went away mid-transfer: drop the source and the continuation.
         Fs.io.handle = s->fh;
         Fs.close(protocore_filesystem_span());
-        s->active = PROTO_FALSE;
+        s->active = EMBED_FALSE;
         return;
     }
 
@@ -657,7 +740,7 @@ void protocore_file_serving_file_send_pump(uint8_t *work)
     {
         ConnPoolV.slot = slot_id;
         ConnPool.sndbuf(protocore_conn_pool_span());
-        proto_u16 avail = ConnPoolV.u16;
+        embed_u16 avail = ConnPoolV.u16;
         if (avail == 0)
         {
             ConnPoolV.slot = slot_id;
@@ -669,7 +752,7 @@ void protocore_file_serving_file_send_pump(uint8_t *work)
         {
             want = avail;
         }
-        // The backend reports a fault as -1 and end-of-data as 0; both stop the transfer, and the
+        // The backend reports a fault as -1 and end-of-data as 0. Both stop the transfer, and the
         // comparison is <= so a fault can never be added to the offset as a negative count.
         Fs.io.handle = s->fh;
         Fs.io.buf = chunk;
@@ -683,7 +766,7 @@ void protocore_file_serving_file_send_pump(uint8_t *work)
         }
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = chunk;
-        ConnPoolV.io.len = (proto_u16)n;
+        ConnPoolV.io.len = (embed_u16)n;
         ConnPool.send(protocore_conn_pool_span());
         if (!ConnPoolV.ok)
         {
@@ -696,7 +779,7 @@ void protocore_file_serving_file_send_pump(uint8_t *work)
             {
                 Fs.io.handle = s->fh;
                 Fs.close(protocore_filesystem_span());
-                s->active = PROTO_FALSE;
+                s->active = EMBED_FALSE;
                 s->remaining = 0;
             }
             ConnPoolV.slot = slot_id;
@@ -710,10 +793,10 @@ void protocore_file_serving_file_send_pump(uint8_t *work)
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
     Fs.io.handle = s->fh;
     Fs.close(protocore_filesystem_span());
-    s->active = PROTO_FALSE;
+    s->active = EMBED_FALSE;
     ConnPoolV.slot = slot_id;
     ConnPool.flush(protocore_conn_pool_span());
-    protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
+    protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/EMBED_FALSE);
 }
 
 void protocore_file_serving_serve_file(uint8_t *work)
@@ -803,7 +886,7 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
 
     // Reject path traversal before touching the filesystem.
     if (EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = sub, .cap = MAX_PATH_LEN - plen, .other = "..",
-                   .other_cap = sizeof(".."), .ci = PROTO_FALSE))
+                   .other_cap = sizeof(".."), .ci = EMBED_FALSE))
     {
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
@@ -813,17 +896,17 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
     Mnt.root_of(work);
     const char *root = MntV.text;
     size_t rlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = root, .cap = MAX_PATH_LEN);
-    proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
+    embed_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
     {
         sub++;
     }
-    proto_bool sub_slash = (sub[0] == '/');
+    embed_bool sub_slash = (sub[0] == '/');
     const char *sep = (root_slash || sub_slash) ? "" : "/";
 
     // Directory or bare-prefix request → index.html.
     size_t slen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = sub, .cap = MAX_PATH_LEN);
-    proto_bool dir = (slen == 0) || (sub[slen - 1] == '/');
+    embed_bool dir = (slen == 0) || (sub[slen - 1] == '/');
 
     // A path that does not fit is refused, not truncated: a clipped path names a different file,
     // and serving one the caller never asked for is worse than a 404.
@@ -849,14 +932,14 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
     const char *ctype = mime_type(fs_path);
     HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    proto_bool head = HttpV.ok;
+    embed_bool head = HttpV.ok;
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Accept-Encoding");
     const char *ae = http_parser_text;
     if (ae && EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = ae, .cap = MAX_VAL_LEN, .other = "gzip",
-                         .other_cap = sizeof("gzip"), .ci = PROTO_FALSE))
+                         .other_cap = sizeof("gzip"), .ci = EMBED_FALSE))
     {
         char gz[260];
         size_t sb_gz = 0;
@@ -900,6 +983,6 @@ void protocore_file_serving_serve_static_request(uint8_t *work)
 /** @brief The operands and the outcome. */
 FileServingVars FileServingV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FILE_SERVING

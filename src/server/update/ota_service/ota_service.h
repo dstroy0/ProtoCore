@@ -22,7 +22,7 @@
 
 #if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Register an authenticated streaming OTA endpoint.
@@ -80,7 +80,7 @@ static const OtaServiceNs OtaService __attribute__((unused)) = {
     .begin = protocore_ota_service_begin,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA
 

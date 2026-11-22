@@ -827,43 +827,43 @@ static long stall_size(const char *path)
     (void)path;
     return 8;
 }
-static proto_bool stall_true(const char *path)
+static embed_bool stall_true(const char *path)
 {
     (void)path;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
-static proto_bool stall_rename(const char *from, const char *to)
+static embed_bool stall_rename(const char *from, const char *to)
 {
     (void)from;
     (void)to;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
-static proto_bool stall_seek(int handle, uint64_t off)
+static embed_bool stall_seek(int handle, uint64_t off)
 {
     (void)handle;
     (void)off;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
-static proto_bool stall_stat(const char *path, protocore_mnt_stat *out)
+static embed_bool stall_stat(const char *path, protocore_mnt_stat *out)
 {
     (void)path;
-    out->is_dir = PROTO_FALSE;
+    out->is_dir = EMBED_FALSE;
     out->size = 8;
     out->mtime = 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 static int stall_opendir(const char *path)
 {
     (void)path;
     return 0;
 }
-static proto_bool stall_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
+static embed_bool stall_readdir(int handle, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     (void)handle;
     (void)out;
     (void)name;
     (void)name_cap;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 static const protocore_mnt_backend s_stall_backend = {stall_open, stall_read, stall_write,   stall_close,  stall_seek,
                                                       stall_size, stall_true, stall_true,    stall_rename, stall_true,

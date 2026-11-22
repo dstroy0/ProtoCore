@@ -263,7 +263,7 @@ void test_data_and_data_end(void)
     uint8_t buf[64];
     HislipHeader h;
 
-    size_t n = protocore_hislip_build_data(buf, sizeof(buf), PROTO_TRUE, 0, 0xFFFFFF00u, SCPI, sizeof(SCPI));
+    size_t n = protocore_hislip_build_data(buf, sizeof(buf), EMBED_TRUE, 0, 0xFFFFFF00u, SCPI, sizeof(SCPI));
     TEST_ASSERT_EQUAL_UINT(16u + sizeof(SCPI), n);
     TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_INT(HISLIP_MSG_DATA_END, h.type);
@@ -271,7 +271,7 @@ void test_data_and_data_end(void)
     TEST_ASSERT_EQUAL_UINT64(sizeof(SCPI), h.payload_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SCPI, buf + 16, sizeof(SCPI));
 
-    n = protocore_hislip_build_data(buf, sizeof(buf), PROTO_FALSE, PROTOCORE_HISLIP_DATA_RMT_DELIVERED, 2, SCPI,
+    n = protocore_hislip_build_data(buf, sizeof(buf), EMBED_FALSE, PROTOCORE_HISLIP_DATA_RMT_DELIVERED, 2, SCPI,
                                     sizeof(SCPI));
     TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_INT(HISLIP_MSG_DATA, h.type);
@@ -279,7 +279,7 @@ void test_data_and_data_end(void)
     TEST_ASSERT_EQUAL_HEX8(0x01, PROTOCORE_HISLIP_DATA_RMT_DELIVERED);
 
     // an empty payload is legal and the length field says so
-    n = protocore_hislip_build_data(buf, sizeof(buf), PROTO_TRUE, 0, 0, NULL, 0);
+    n = protocore_hislip_build_data(buf, sizeof(buf), EMBED_TRUE, 0, 0, NULL, 0);
     TEST_ASSERT_EQUAL_UINT(16u, n);
     TEST_ASSERT_TRUE(protocore_hislip_parse_header(buf, n, &h));
     TEST_ASSERT_EQUAL_UINT64(0u, h.payload_len);
@@ -316,10 +316,10 @@ void test_builders_refuse_a_short_buffer(void)
     TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_header(buf, 15, HISLIP_MSG_DATA, 0, 0, 0));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_header(NULL, 16, HISLIP_MSG_DATA, 0, 0, 0));
 
-    TEST_ASSERT_EQUAL_UINT(20u, protocore_hislip_build_data(buf, 20, PROTO_TRUE, 0, 0, P, sizeof(P)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_data(buf, 19, PROTO_TRUE, 0, 0, P, sizeof(P)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_data(buf, 64, PROTO_TRUE, 0, 0, NULL, 4));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_data(NULL, 64, PROTO_TRUE, 0, 0, P, sizeof(P)));
+    TEST_ASSERT_EQUAL_UINT(20u, protocore_hislip_build_data(buf, 20, EMBED_TRUE, 0, 0, P, sizeof(P)));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_data(buf, 19, EMBED_TRUE, 0, 0, P, sizeof(P)));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_data(buf, 64, EMBED_TRUE, 0, 0, NULL, 4));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_data(NULL, 64, EMBED_TRUE, 0, 0, P, sizeof(P)));
 
     TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_initialize_response(buf, 15, 0, 0, 0));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_hislip_build_async_initialize(buf, 15, 0));

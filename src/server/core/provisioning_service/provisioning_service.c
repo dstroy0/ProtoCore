@@ -53,7 +53,7 @@ uint8_t *protocore_provisioning_service_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap)
+embed_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap)
 {
     if (out && cap)
     {
@@ -61,7 +61,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
     }
     if (!body || !key || !out || cap == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     size_t blen = 0;
@@ -76,7 +76,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
     {
         // Match the key only as a whole field name: at the start or after '&'.
         if ((p == body || p[-1] == '&') &&
-            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = key, .cap = klen, .ci = PROTO_FALSE) &&
+            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = key, .cap = klen, .ci = EMBED_FALSE) &&
             p[klen] == '=')
         {
             val = p + klen + 1;
@@ -85,7 +85,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
     }
     if (!val)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     size_t o = 0;
@@ -124,7 +124,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
         }
     }
     out[o] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +156,10 @@ static_assert(PROVISIONING_SERVICE_OFF_CTX % _Alignof(ProvCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define PROVISIONING_SERVICE_CTX(w) ((ProvCtx *)(void *)((w) + PROVISIONING_SERVICE_OFF_CTX))
+#define PROVISIONING_SERVICE_CTX(w)                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const ProvCtx *)(const void *)((w) + PROVISIONING_SERVICE_OFF_CTX),                          \
+        default: (ProvCtx *)(void *)((w) + PROVISIONING_SERVICE_OFF_CTX))
 
 // One octet of the softAP address the catch-all DNS answers with. All-zero is "begin() has not
 // stamped one yet", which reads as the 192.168.4.1 a softAP comes up on - stated here rather than as
@@ -169,7 +172,7 @@ static uint8_t ap_octet(uint8_t *work, uint32_t i)
 }
 
 // The NVS namespace + credential keys (PROTOCORE_PROV_NVS_NAMESPACE / _KEY_SSID / _KEY_PSK) live in
-// protocore_config.h under PROTOCORE_ENABLE_PROVISIONING so a deployment can override them; used across
+// protocore_config.h under PROTOCORE_ENABLE_PROVISIONING so a deployment can override them. Used across
 // the read / clear / save paths (and, for ssid/psk, as the HTML form field names).
 
 // Catch-all DNS: answer every query with our softAP IP (captive-portal hijack).
@@ -234,7 +237,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     UdpListener.reply(protocore_udp_listener_span());
 }
 
-proto_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+embed_bool protocore_prov_load(const uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     (void)work;
 
@@ -249,17 +252,17 @@ proto_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char 
     if (!ssid || ssid_cap == 0 ||
         protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (psk && psk_cap)
     {
         (void)protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk,
                                     psk_cap); // an open AP has none
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-void protocore_prov_clear(uint8_t *work)
+void protocore_prov_clear(const uint8_t *work)
 {
     (void)work;
 
@@ -280,8 +283,8 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 
     char ssid[33];
     char psk[64];
-    proto_bool prov_ok = Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_SSID, ssid, sizeof(ssid));
-    proto_bool have_ssid = prov_ok && ssid[0] != '\0';
+    embed_bool prov_ok = Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_SSID, ssid, sizeof(ssid));
+    embed_bool have_ssid = prov_ok && ssid[0] != '\0';
     Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_PSK, psk, sizeof(psk));
     if (!have_ssid)
     {

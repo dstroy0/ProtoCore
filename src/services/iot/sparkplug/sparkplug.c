@@ -22,7 +22,7 @@
 #include "memoria_operor/memoria_operor.h"       // memor.cpy / memor.set: the spans a topic and a decode move
 #include "services/iot/protobuf/protobuf.h"      // the wire codec a Payload and a Metric are written with
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Sparkplug 3.0.0 sec 4.1: the namespace element and the MQTT topic level separator that follows it.
 #define SPB_TOPIC_PREFIX SPB_NAMESPACE "/"
@@ -70,7 +70,10 @@ static_assert(SPARKPLUG_OFF_CTX + sizeof(struct SparkplugStorage) <= PROTOCORE_S
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SPARKPLUG_CTX(w) ((struct SparkplugStorage *)(void *)((w) + SPARKPLUG_OFF_CTX))
+#define SPARKPLUG_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SparkplugStorage *)(const void *)((w) + SPARKPLUG_OFF_CTX),                     \
+        default: (struct SparkplugStorage *)(void *)((w) + SPARKPLUG_OFF_CTX))
 
 // Append a VARINT record carrying v under field, on the encoder row slot names.
 static void pb_varint(uint8_t slot, uint32_t field, uint64_t v)
@@ -181,11 +184,11 @@ uint8_t *protocore_sparkplug_span(void)
 
 // Join `spBv1.0/group_id/message_type/edge_node_id[/device_id]` (Sparkplug 3.0.0 sec 4.1) into
 // ns->topic_out, and report its length in ns->n. A topic that does not fit writes nothing.
-void protocore_sparkplug_build_topic(uint8_t *work)
+void protocore_sparkplug_build_topic(const uint8_t *work)
 {
     (void)work;
     SparkplugV.n = 0;
-    SparkplugV.ok = PROTO_FALSE;
+    SparkplugV.ok = EMBED_FALSE;
     char *out = SparkplugV.topic_out.out;
     const size_t cap = SparkplugV.topic_out.cap;
     const char *group = SparkplugV.topic.group_id;
@@ -230,15 +233,15 @@ void protocore_sparkplug_build_topic(uint8_t *work)
     }
     out[p] = '\0';
     SparkplugV.n = p;
-    SparkplugV.ok = PROTO_TRUE;
+    SparkplugV.ok = EMBED_TRUE;
 }
 
 // Serialize ns->metrics.list[0] as one Metric message into ns->out, reporting its length in ns->n.
-void protocore_sparkplug_build_metric(uint8_t *work)
+void protocore_sparkplug_build_metric(const uint8_t *work)
 {
     (void)work;
     SparkplugV.n = 0;
-    SparkplugV.ok = PROTO_FALSE;
+    SparkplugV.ok = EMBED_FALSE;
     if (!SparkplugV.out.buf || !SparkplugV.metrics.list)
     {
         return;
@@ -253,7 +256,7 @@ void protocore_sparkplug_build_metric(uint8_t *work)
 void protocore_sparkplug_build_payload(uint8_t *work)
 {
     SparkplugV.n = 0;
-    SparkplugV.ok = PROTO_FALSE;
+    SparkplugV.ok = EMBED_FALSE;
     const size_t count = SparkplugV.metrics.count;
     if (!SparkplugV.out.buf || (count && !SparkplugV.metrics.list))
     {
@@ -283,10 +286,10 @@ void protocore_sparkplug_build_payload(uint8_t *work)
 
 // Read a Payload's timestamp(1) and seq(3) from ns->source into ns->header. metrics(2), uuid(4) and
 // body(5) are stepped over.
-void protocore_sparkplug_parse_payload(uint8_t *work)
+void protocore_sparkplug_parse_payload(const uint8_t *work)
 {
     (void)work;
-    SparkplugV.ok = PROTO_FALSE;
+    SparkplugV.ok = EMBED_FALSE;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &SparkplugV.header, .val = 0, .bytes = sizeof(SparkplugV.header));
     if (!SparkplugV.source.buf)
     {
@@ -311,25 +314,25 @@ void protocore_sparkplug_parse_payload(uint8_t *work)
         if (ProtobufV.record.field_number == SPB_PAYLOAD_TIMESTAMP &&
             ProtobufV.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            SparkplugV.header.has_timestamp = PROTO_TRUE;
+            SparkplugV.header.has_timestamp = EMBED_TRUE;
             SparkplugV.header.timestamp = ProtobufV.record.value;
         }
         else if (ProtobufV.record.field_number == SPB_PAYLOAD_SEQ &&
                  ProtobufV.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            SparkplugV.header.has_seq = PROTO_TRUE;
+            SparkplugV.header.has_seq = EMBED_TRUE;
             SparkplugV.header.seq = ProtobufV.record.value;
         }
     }
-    SparkplugV.ok = PROTO_TRUE;
+    SparkplugV.ok = EMBED_TRUE;
 }
 
 // Report the next metrics(2) sub-message of a Payload in ns->metric_bytes / ns->metric_len and
 // advance ns->source.cursor past it. False at the end of the Payload or on a malformed field.
-void protocore_sparkplug_next_metric(uint8_t *work)
+void protocore_sparkplug_next_metric(const uint8_t *work)
 {
     (void)work;
-    SparkplugV.ok = PROTO_FALSE;
+    SparkplugV.ok = EMBED_FALSE;
     SparkplugV.metric_bytes = NULL;
     SparkplugV.metric_len = 0;
     if (!SparkplugV.source.buf)
@@ -356,7 +359,7 @@ void protocore_sparkplug_next_metric(uint8_t *work)
         {
             SparkplugV.metric_bytes = ProtobufV.record.data;
             SparkplugV.metric_len = ProtobufV.record.len;
-            SparkplugV.ok = PROTO_TRUE;
+            SparkplugV.ok = EMBED_TRUE;
             return;
         }
     }
@@ -377,14 +380,14 @@ static void spb_apply_meta_field(SpbMetricDecoded *out, const ProtobufRecord *f)
     case SPB_METRIC_ALIAS:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            out->has_alias = PROTO_TRUE;
+            out->has_alias = EMBED_TRUE;
             out->alias = f->value;
         }
         break;
     case SPB_METRIC_TIMESTAMP:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            out->has_timestamp = PROTO_TRUE;
+            out->has_timestamp = EMBED_TRUE;
             out->timestamp = f->value;
         }
         break;
@@ -407,7 +410,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
     case SPB_METRIC_INT_VALUE:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            out->has_value = PROTO_TRUE;
+            out->has_value = EMBED_TRUE;
             out->kind = SPB_M_INT;
             out->int_value = (uint32_t)f->value;
         }
@@ -415,7 +418,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
     case SPB_METRIC_LONG_VALUE:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            out->has_value = PROTO_TRUE;
+            out->has_value = EMBED_TRUE;
             out->kind = SPB_M_LONG;
             out->long_value = f->value;
         }
@@ -423,7 +426,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
     case SPB_METRIC_FLOAT_VALUE:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_I32)
         {
-            out->has_value = PROTO_TRUE;
+            out->has_value = EMBED_TRUE;
             out->kind = SPB_M_FLOAT;
             ProtobufV.value.u32 = (uint32_t)f->value;
             Protobuf.float_bits(protocore_protobuf_span());
@@ -433,7 +436,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
     case SPB_METRIC_DOUBLE_VALUE:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_I64)
         {
-            out->has_value = PROTO_TRUE;
+            out->has_value = EMBED_TRUE;
             out->kind = SPB_M_DOUBLE;
             ProtobufV.value.u64 = f->value;
             Protobuf.double_bits(protocore_protobuf_span());
@@ -443,7 +446,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
     case SPB_METRIC_BOOLEAN_VALUE:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            out->has_value = PROTO_TRUE;
+            out->has_value = EMBED_TRUE;
             out->kind = SPB_M_BOOL;
             out->bool_value = f->value != 0;
         }
@@ -451,7 +454,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
     case SPB_METRIC_STRING_VALUE:
         if (f->wire_type == PROTOCORE_PROTOBUF_WT_LEN)
         {
-            out->has_value = PROTO_TRUE;
+            out->has_value = EMBED_TRUE;
             out->kind = SPB_M_STRING;
             out->string_value = (const char *)f->data;
             out->string_value_len = f->len;
@@ -463,10 +466,10 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
 }
 
 // Decode the Metric in ns->source into ns->metric: the metadata fields and the value oneof member.
-void protocore_sparkplug_parse_metric(uint8_t *work)
+void protocore_sparkplug_parse_metric(const uint8_t *work)
 {
     (void)work;
-    SparkplugV.ok = PROTO_FALSE;
+    SparkplugV.ok = EMBED_FALSE;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &SparkplugV.metric, .val = 0, .bytes = sizeof(SparkplugV.metric));
     if (!SparkplugV.source.buf)
     {
@@ -492,13 +495,13 @@ void protocore_sparkplug_parse_metric(uint8_t *work)
         spb_apply_meta_field(&SparkplugV.metric, &rec);  // name / alias / timestamp / datatype
         spb_apply_value_field(&SparkplugV.metric, &rec); // the value oneof member
     }
-    SparkplugV.ok = PROTO_TRUE;
+    SparkplugV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SparkplugVars SparkplugV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SPARKPLUG

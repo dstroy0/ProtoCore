@@ -14,7 +14,7 @@
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/fieldbus/simatic/simatic.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Big-endian word helpers (Siemens words are big-endian; no stdlib)
@@ -57,10 +57,10 @@ uint8_t *protocore_simatic_span(void)
     return s_own.span;
 }
 
-void protocore_simatic_bcc_3964r(uint8_t *work);
+void protocore_simatic_bcc_3964r(const uint8_t *work);
 void protocore_simatic_build_block_3964r(uint8_t *work);
 
-void protocore_simatic_bcc_3964r(uint8_t *work)
+void protocore_simatic_bcc_3964r(const uint8_t *work)
 {
     (void)work;
     const uint8_t *data = SimaticV.bcc_3964r_args.data;
@@ -80,7 +80,7 @@ void protocore_simatic_build_block_3964r(uint8_t *work)
     size_t cap = SimaticV.build_block_3964r_args.cap;
     const uint8_t *data = SimaticV.build_block_3964r_args.data;
     size_t len = SimaticV.build_block_3964r_args.len;
-    proto_bool with_bcc = SimaticV.build_block_3964r_args.with_bcc;
+    embed_bool with_bcc = SimaticV.build_block_3964r_args.with_bcc;
 
     if (!buf || (!data && len))
     {
@@ -130,14 +130,14 @@ void protocore_simatic_build_block_3964r(uint8_t *work)
 }
 
 // Append one destuffed payload byte; false when the caller's buffer is full.
-static proto_bool put_byte(uint8_t *out, size_t out_cap, size_t *oo, uint8_t b)
+static embed_bool put_byte(uint8_t *out, size_t out_cap, size_t *oo, uint8_t b)
 {
     if (*oo >= out_cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[(*oo)++] = b;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The operands the private helpers below read, all of them: the widest set any one caller supplies.
@@ -148,7 +148,7 @@ typedef struct
     size_t i;             ///< the walk position the DLE ETX was consumed at
     size_t len;           ///< the block length
     uint32_t now_ms;      ///< the instant a received byte arrived
-    proto_bool with_bcc;  ///< the "R" (BCC) variant
+    embed_bool with_bcc;  ///< the "R" (BCC) variant
     uint8_t b;            ///< the received byte
 } SimaticCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -168,19 +168,22 @@ static_assert(SIMATIC_OFF_CTX % _Alignof(SimaticCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SIMATIC_CTX(w) ((SimaticCtx *)(void *)((w) + SIMATIC_OFF_CTX))
+#define SIMATIC_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SimaticCtx *)(const void *)((w) + SIMATIC_OFF_CTX),                                    \
+        default: (SimaticCtx *)(void *)((w) + SIMATIC_OFF_CTX))
 
 // DLE ETX consumed at the walk position: the trailing BCC must be present and match the XOR over
 // the stuffed data + DLE ETX.
-static proto_bool bcc_ok(uint8_t *work)
+static embed_bool bcc_ok(uint8_t *work)
 {
     if (!SIMATIC_CTX(work)->with_bcc)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (SIMATIC_CTX(work)->i >= SIMATIC_CTX(work)->len)
     {
-        return PROTO_FALSE; // missing BCC
+        return EMBED_FALSE; // missing BCC
     }
     SimaticV.bcc_3964r_args.data = SIMATIC_CTX(work)->buf;
     SimaticV.bcc_3964r_args.len = SIMATIC_CTX(work)->i;
@@ -192,14 +195,14 @@ void protocore_simatic_parse_block_3964r(uint8_t *work)
 {
     const uint8_t *buf = SimaticV.parse_block_3964r_args.buf;
     size_t len = SimaticV.parse_block_3964r_args.len;
-    proto_bool with_bcc = SimaticV.parse_block_3964r_args.with_bcc;
+    embed_bool with_bcc = SimaticV.parse_block_3964r_args.with_bcc;
     uint8_t *out = SimaticV.parse_block_3964r_args.out;
     size_t out_cap = SimaticV.parse_block_3964r_args.out_cap;
     size_t *out_len = SimaticV.parse_block_3964r_args.out_len;
 
     if (!buf || !out || !out_len)
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     size_t oo = 0;
@@ -211,7 +214,7 @@ void protocore_simatic_parse_block_3964r(uint8_t *work)
         {
             if (!put_byte(out, out_cap, &oo, b))
             {
-                SimaticV.ok = PROTO_FALSE;
+                SimaticV.ok = EMBED_FALSE;
                 return;
             }
             i++;
@@ -219,7 +222,7 @@ void protocore_simatic_parse_block_3964r(uint8_t *work)
         }
         if (i + 1 >= len)
         {
-            SimaticV.ok = PROTO_FALSE; // dangling DLE (truncated)
+            SimaticV.ok = EMBED_FALSE; // dangling DLE (truncated)
             return;
         }
         uint8_t n = buf[i + 1];
@@ -227,7 +230,7 @@ void protocore_simatic_parse_block_3964r(uint8_t *work)
         {
             if (!put_byte(out, out_cap, &oo, SIMATIC_DLE))
             {
-                SimaticV.ok = PROTO_FALSE;
+                SimaticV.ok = EMBED_FALSE;
                 return;
             }
             i += 2;
@@ -235,7 +238,7 @@ void protocore_simatic_parse_block_3964r(uint8_t *work)
         }
         if (n != SIMATIC_ETX)
         {
-            SimaticV.ok = PROTO_FALSE; // DLE + illegal control byte
+            SimaticV.ok = EMBED_FALSE; // DLE + illegal control byte
             return;
         }
         i += 2; // terminator
@@ -245,14 +248,14 @@ void protocore_simatic_parse_block_3964r(uint8_t *work)
         SIMATIC_CTX(work)->with_bcc = with_bcc;
         if (!bcc_ok(work))
         {
-            SimaticV.ok = PROTO_FALSE;
+            SimaticV.ok = EMBED_FALSE;
             return;
         }
         *out_len = oo;
-        SimaticV.ok = PROTO_TRUE;
+        SimaticV.ok = EMBED_TRUE;
         return;
     }
-    SimaticV.ok = PROTO_FALSE; // no DLE ETX terminator
+    SimaticV.ok = EMBED_FALSE; // no DLE ETX terminator
 }
 
 // ---------------------------------------------------------------------------
@@ -289,17 +292,17 @@ static void begin_receive(Simatic3964Ctx *ctx, uint32_t now_ms)
     emit(ctx, SIMATIC_DLE); // ready
     ctx->state = SIMATIC3964_STATE_RX_COLLECT;
     ctx->rxpos = 0;
-    ctx->prev_dle = PROTO_FALSE;
-    ctx->await_bcc = PROTO_FALSE;
+    ctx->prev_dle = EMBED_FALSE;
+    ctx->await_bcc = EMBED_FALSE;
     ctx->deadline_ms = now_ms + PROTOCORE_SIMATIC_ZVZ_MS;
 }
 
-void protocore_simatic_init_3964r(uint8_t *work)
+void protocore_simatic_init_3964r(const uint8_t *work)
 {
     (void)work;
     Simatic3964Ctx *ctx = SimaticV.init_3964r_args.ctx;
-    proto_bool high_priority = SimaticV.init_3964r_args.high_priority;
-    proto_bool with_bcc = SimaticV.init_3964r_args.with_bcc;
+    embed_bool high_priority = SimaticV.init_3964r_args.high_priority;
+    embed_bool with_bcc = SimaticV.init_3964r_args.with_bcc;
     Simatic3964TxFn tx = SimaticV.init_3964r_args.tx;
     Simatic3964RxFn rx = SimaticV.init_3964r_args.rx;
     void *user = SimaticV.init_3964r_args.user;
@@ -322,7 +325,7 @@ void protocore_simatic_send_3964r(uint8_t *work)
 
     if (ctx->state != SIMATIC3964_STATE_IDLE)
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     SimaticV.build_block_3964r_args.buf = ctx->txbuf;
@@ -334,14 +337,14 @@ void protocore_simatic_send_3964r(uint8_t *work)
     size_t n = SimaticV.n;
     if (n == 0)
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     ctx->txlen = n;
     ctx->block_retries = 0;
     ctx->conn_retries = 0;
     send_stx_await_conn(ctx, now_ms);
-    SimaticV.ok = PROTO_TRUE;
+    SimaticV.ok = EMBED_TRUE;
 }
 
 static void deliver_or_nak(uint8_t *work)
@@ -356,6 +359,8 @@ static void deliver_or_nak(uint8_t *work)
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
     protocore_simatic_parse_block_3964r(work);
+    SimaticV.parse_block_3964r_args.out_len = NULL;
+    SimaticV.parse_block_3964r_args.out = NULL;
     if (SimaticV.ok)
     {
         emit(ctx, SIMATIC_DLE); // ack the received block
@@ -396,7 +401,7 @@ static void rx_collect_byte(uint8_t *work)
     }
     if (ctx->prev_dle)
     {
-        ctx->prev_dle = PROTO_FALSE;
+        ctx->prev_dle = EMBED_FALSE;
         if (b == SIMATIC_DLE)
         {
             return; // doubled literal DLE
@@ -405,7 +410,7 @@ static void rx_collect_byte(uint8_t *work)
         {
             if (ctx->with_bcc)
             {
-                ctx->await_bcc = PROTO_TRUE; // one more byte (BCC) then finalize
+                ctx->await_bcc = EMBED_TRUE; // one more byte (BCC) then finalize
             }
             else
             {
@@ -421,7 +426,7 @@ static void rx_collect_byte(uint8_t *work)
     }
     if (b == SIMATIC_DLE)
     {
-        ctx->prev_dle = PROTO_TRUE;
+        ctx->prev_dle = EMBED_TRUE;
     }
 }
 
@@ -490,7 +495,7 @@ void protocore_simatic_rx_byte_3964r(uint8_t *work)
     }
 }
 
-void protocore_simatic_tick_3964r(uint8_t *work)
+void protocore_simatic_tick_3964r(const uint8_t *work)
 {
     (void)work;
     Simatic3964Ctx *ctx = SimaticV.tick_3964r_args.ctx;
@@ -535,7 +540,7 @@ void protocore_simatic_tick_3964r(uint8_t *work)
     }
 }
 
-void protocore_simatic_idle_3964r(uint8_t *work)
+void protocore_simatic_idle_3964r(const uint8_t *work)
 {
     (void)work;
     const Simatic3964Ctx *ctx = SimaticV.idle_3964r_args.ctx;
@@ -551,7 +556,7 @@ void protocore_simatic_idle_3964r(uint8_t *work)
 // Request header: [cmd, coord=0, area, dbnr, addr_hi, addr_lo, count_hi, count_lo]  (8 bytes)
 #define RK512_HDR_LEN 8
 
-void protocore_simatic_build_send_rk512(uint8_t *work)
+void protocore_simatic_build_send_rk512(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_send_rk512_args.buf;
@@ -586,7 +591,7 @@ void protocore_simatic_build_send_rk512(uint8_t *work)
     SimaticV.n = need;
 }
 
-void protocore_simatic_build_fetch_rk512(uint8_t *work)
+void protocore_simatic_build_fetch_rk512(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_fetch_rk512_args.buf;
@@ -611,7 +616,7 @@ void protocore_simatic_build_fetch_rk512(uint8_t *work)
 }
 
 // Reaction: [cmd=REACTION, status_hi, status_lo]  (+ FETCH-response data words appended by the caller)
-void protocore_simatic_build_reaction_rk512(uint8_t *work)
+void protocore_simatic_build_reaction_rk512(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_reaction_rk512_args.buf;
@@ -628,12 +633,12 @@ void protocore_simatic_build_reaction_rk512(uint8_t *work)
     SimaticV.n = 3;
 }
 
-static proto_bool area_valid(uint8_t a)
+static embed_bool area_valid(uint8_t a)
 {
     return a >= (uint8_t)RK512_AREA_DB && a <= (uint8_t)RK512_AREA_TB;
 }
 
-void protocore_simatic_parse_header_rk512(uint8_t *work)
+void protocore_simatic_parse_header_rk512(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = SimaticV.parse_header_rk512_args.buf;
@@ -642,18 +647,18 @@ void protocore_simatic_parse_header_rk512(uint8_t *work)
 
     if (!buf || !out || len < RK512_HDR_LEN)
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     uint8_t cmd = buf[0];
     if (cmd != (uint8_t)RK512_CMD_SEND && cmd != (uint8_t)RK512_CMD_FETCH)
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     if (!area_valid(buf[2]))
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     out->cmd = (Rk512Cmd)cmd;
@@ -661,10 +666,10 @@ void protocore_simatic_parse_header_rk512(uint8_t *work)
     out->dbnr = buf[3];
     out->addr = rd_u16(buf + 4);
     out->count = rd_u16(buf + 6);
-    SimaticV.ok = PROTO_TRUE;
+    SimaticV.ok = EMBED_TRUE;
 }
 
-void protocore_simatic_parse_reaction_rk512(uint8_t *work)
+void protocore_simatic_parse_reaction_rk512(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = SimaticV.parse_reaction_rk512_args.buf;
@@ -675,12 +680,12 @@ void protocore_simatic_parse_reaction_rk512(uint8_t *work)
 
     if (!buf || !status || len < 3)
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != (uint8_t)RK512_CMD_REACTION)
     {
-        SimaticV.ok = PROTO_FALSE;
+        SimaticV.ok = EMBED_FALSE;
         return;
     }
     *status = rd_u16(buf + 1);
@@ -692,12 +697,12 @@ void protocore_simatic_parse_reaction_rk512(uint8_t *work)
     {
         *dlen = len - 3;
     }
-    SimaticV.ok = PROTO_TRUE;
+    SimaticV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 SimaticVars SimaticV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SIMATIC

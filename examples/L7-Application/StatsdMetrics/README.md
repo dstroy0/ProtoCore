@@ -66,7 +66,7 @@ protocore_statsd_count_sampled("chatty.event", 1, 0.1f); // only sending 1-in-10
 ## Troubleshooting
 
 - **Nothing arrives at the collector.** StatsD is fire-and-forget UDP - the ESP32 never
-  knows if it landed. Double-check `STATSD_HOST` and that the collector is listening on UDP 8125. Also, many home routers **isolate wireless clients** from each other; if the
+  knows if it landed. Double-check `STATSD_HOST` and that the collector is listening on UDP 8125. Also, many home routers **isolate wireless clients** from each other. If the
   collector is on WiFi too, put it on a wired port or disable that isolation.
 - **Numbers look wrong in the graph.** A gauge (`|g`) is the value _right now_; a counter
   (`|c`) is a _running total_ the collector sums per interval - pick the right type for what

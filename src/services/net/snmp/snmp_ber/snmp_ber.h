@@ -36,38 +36,29 @@
 
 #if PROTOCORE_ENABLE_SNMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The identifier octets SNMP puts on the wire. */
-typedef enum PROTO_ENUM_PACKED
-{
-    // ASN.1 simple types, encoded primitive (RFC 3417 sec 8 item 2).
-    SNMP_TAG_BER_INTEGER = 0x02,
-    SNMP_TAG_BER_OCTET_STRING = 0x04,
-    SNMP_TAG_BER_NULL = 0x05,
-    SNMP_TAG_BER_OID = 0x06,
-    SNMP_TAG_BER_SEQUENCE = 0x30,
-    // SMIv2 application-wide types (RFC 2578 sec 7.1.5 through 7.1.10).
-    SNMP_TAG_SNMP_IPADDRESS = 0x40,
-    SNMP_TAG_SNMP_COUNTER32 = 0x41,
-    SNMP_TAG_SNMP_GAUGE32 = 0x42,
-    SNMP_TAG_SNMP_TIMETICKS = 0x43,
-    SNMP_TAG_SNMP_OPAQUE = 0x44,
-    SNMP_TAG_SNMP_COUNTER64 = 0x46,
-    // VarBind CHOICE exception markers (RFC 3416 sec 3; used per sec 4.2.1 and sec 4.2.2).
-    SNMP_TAG_SNMP_NO_SUCH_OBJECT = 0x80,
-    SNMP_TAG_SNMP_NO_SUCH_INSTANCE = 0x81,
-    SNMP_TAG_SNMP_END_OF_MIB_VIEW = 0x82,
-    // PDU tags, context-specific constructed (RFC 3416 sec 3).
-    SNMP_TAG_SNMP_PDU_GET = 0xA0,      ///< GetRequest-PDU ::= [0] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1,  ///< GetNextRequest-PDU ::= [1] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2, ///< Response-PDU ::= [2] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_SET = 0xA3,      ///< SetRequest-PDU ::= [3] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,  ///< GetBulkRequest-PDU ::= [5] IMPLICIT BulkPDU
-    SNMP_TAG_SNMP_PDU_INFORM = 0xA6,   ///< InformRequest-PDU ::= [6] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,   ///< SNMPv2-Trap-PDU ::= [7] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_REPORT = 0xA8,   ///< Report-PDU ::= [8] IMPLICIT PDU
-} SnmpTag;
+EMBED_ENUM_BYTE(SnmpTag,
+                // ASN.1 simple types, encoded primitive (RFC 3417 sec 8 item 2).
+                SNMP_TAG_BER_INTEGER = 0x02, SNMP_TAG_BER_OCTET_STRING = 0x04, SNMP_TAG_BER_NULL = 0x05,
+                SNMP_TAG_BER_OID = 0x06, SNMP_TAG_BER_SEQUENCE = 0x30,
+                // SMIv2 application-wide types (RFC 2578 sec 7.1.5 through 7.1.10).
+                SNMP_TAG_SNMP_IPADDRESS = 0x40, SNMP_TAG_SNMP_COUNTER32 = 0x41, SNMP_TAG_SNMP_GAUGE32 = 0x42,
+                SNMP_TAG_SNMP_TIMETICKS = 0x43, SNMP_TAG_SNMP_OPAQUE = 0x44, SNMP_TAG_SNMP_COUNTER64 = 0x46,
+                // VarBind CHOICE exception markers (RFC 3416 sec 3; used per sec 4.2.1 and sec 4.2.2).
+                SNMP_TAG_SNMP_NO_SUCH_OBJECT = 0x80, SNMP_TAG_SNMP_NO_SUCH_INSTANCE = 0x81,
+                SNMP_TAG_SNMP_END_OF_MIB_VIEW = 0x82,
+                // PDU tags, context-specific constructed (RFC 3416 sec 3).
+                SNMP_TAG_SNMP_PDU_GET = 0xA0,      ///< GetRequest-PDU ::= [0] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1,  ///< GetNextRequest-PDU ::= [1] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2, ///< Response-PDU ::= [2] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_SET = 0xA3,      ///< SetRequest-PDU ::= [3] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,  ///< GetBulkRequest-PDU ::= [5] IMPLICIT BulkPDU
+                SNMP_TAG_SNMP_PDU_INFORM = 0xA6,   ///< InformRequest-PDU ::= [6] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,   ///< SNMPv2-Trap-PDU ::= [7] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_REPORT = 0xA8,   ///< Report-PDU ::= [8] IMPLICIT PDU
+);
 
 /**
  * @brief An encoder's cursor: the caller buffer, how far it is written, and whether it still fits.
@@ -80,16 +71,16 @@ typedef struct BerEnc
     uint8_t *buf;  ///< the buffer octets are written into
     size_t cap;    ///< how many it holds
     size_t len;    ///< how many are written
-    proto_bool ok; ///< no write has run past cap
+    embed_bool ok; ///< no write has run past cap
 } BerEnc;
 
-/** @brief A decoder's cursor: the octets being read, and how far the read has walked. */
+/** @brief A decoder's cursor: the octets being read, and how far the read walked. */
 typedef struct
 {
     const uint8_t *buf; ///< the octets being read
     size_t len;         ///< how many
     size_t pos;         ///< the next octet a read takes
-    proto_bool ok;      ///< no read has run past len
+    embed_bool ok;      ///< no read has run past len
 } BerDec;
 
 /** @brief The caller buffer a codec runs over. */
@@ -164,7 +155,7 @@ typedef struct
     SnmpBerBufArgs buf;        ///< the caller buffer an init binds
     SnmpBerTlvArgs tlv;        ///< what a write carries
     SnmpBerReadArgs read_args; ///< where a read lands
-    proto_bool ok;
+    embed_bool ok;
     uint8_t tag;
     size_t vlen;
     long ival;
@@ -177,39 +168,39 @@ extern SnmpBerVars SnmpBerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const enc_init)(uint8_t *work);
-    void (*const put_integer)(uint8_t *work);
-    void (*const put_uint)(uint8_t *work);
-    void (*const put_octet_string)(uint8_t *work);
-    void (*const put_null)(uint8_t *work);
-    void (*const put_oid)(uint8_t *work);
-    void (*const put_tlv)(uint8_t *work);
-    void (*const put_raw)(uint8_t *work);
-    void (*const seq_begin)(uint8_t *work);
-    void (*const seq_end)(uint8_t *work);
-    void (*const dec_init)(uint8_t *work);
-    void (*const read_header)(uint8_t *work);
-    void (*const read_integer)(uint8_t *work);
-    void (*const read_oid)(uint8_t *work);
-    void (*const skip)(uint8_t *work);
+    void (*const enc_init)(const uint8_t *work);
+    void (*const put_integer)(const uint8_t *work);
+    void (*const put_uint)(const uint8_t *work);
+    void (*const put_octet_string)(const uint8_t *work);
+    void (*const put_null)(const uint8_t *work);
+    void (*const put_oid)(const uint8_t *work);
+    void (*const put_tlv)(const uint8_t *work);
+    void (*const put_raw)(const uint8_t *work);
+    void (*const seq_begin)(const uint8_t *work);
+    void (*const seq_end)(const uint8_t *work);
+    void (*const dec_init)(const uint8_t *work);
+    void (*const read_header)(const uint8_t *work);
+    void (*const read_integer)(const uint8_t *work);
+    void (*const read_oid)(const uint8_t *work);
+    void (*const skip)(const uint8_t *work);
 } SnmpBerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SnmpBerV or a region of the borrow at a fixed offset.
-void protocore_snmp_ber_enc_init(uint8_t *work);
-void protocore_snmp_ber_put_integer(uint8_t *work);
-void protocore_snmp_ber_put_uint(uint8_t *work);
-void protocore_snmp_ber_put_octet_string(uint8_t *work);
-void protocore_snmp_ber_put_null(uint8_t *work);
-void protocore_snmp_ber_put_oid(uint8_t *work);
-void protocore_snmp_ber_put_raw(uint8_t *work);
-void protocore_snmp_ber_seq_begin(uint8_t *work);
-void protocore_snmp_ber_seq_end(uint8_t *work);
-void protocore_snmp_ber_dec_init(uint8_t *work);
-void protocore_snmp_ber_read_header(uint8_t *work);
-void protocore_snmp_ber_read_integer(uint8_t *work);
-void protocore_snmp_ber_read_oid(uint8_t *work);
-void protocore_snmp_ber_skip(uint8_t *work);
+void protocore_snmp_ber_enc_init(const uint8_t *work);
+void protocore_snmp_ber_put_integer(const uint8_t *work);
+void protocore_snmp_ber_put_uint(const uint8_t *work);
+void protocore_snmp_ber_put_octet_string(const uint8_t *work);
+void protocore_snmp_ber_put_null(const uint8_t *work);
+void protocore_snmp_ber_put_oid(const uint8_t *work);
+void protocore_snmp_ber_put_raw(const uint8_t *work);
+void protocore_snmp_ber_seq_begin(const uint8_t *work);
+void protocore_snmp_ber_seq_end(const uint8_t *work);
+void protocore_snmp_ber_dec_init(const uint8_t *work);
+void protocore_snmp_ber_read_header(const uint8_t *work);
+void protocore_snmp_ber_read_integer(const uint8_t *work);
+void protocore_snmp_ber_read_oid(const uint8_t *work);
+void protocore_snmp_ber_skip(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -233,7 +224,7 @@ static const SnmpBerNs SnmpBer __attribute__((unused)) = {
     .skip = protocore_snmp_ber_skip,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP
 

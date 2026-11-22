@@ -17,11 +17,13 @@
 
 #include "network_drivers/session/session.h"
 #include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
+#if PROTOCORE_ENABLE_SSH_SCP || PROTOCORE_ENABLE_SSH_SFTP
 #include "network_drivers/presentation/ssh/network/network.h" // SshNetwork.owns: which SSH slot this stream carries
-#include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the slot an event names
-#include "network_drivers/transport/tcp/server/server.h"      // TcpListener: the queues this tick drains
-#include "network_drivers/transport/udp/server/server.h"      // UdpListener: the datagram rings this tick drains
-#include "server/clock/clock.h"                               // Clock.ms: the pass stamp an arm takes
+#endif
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot an event names
+#include "network_drivers/transport/tcp/server/server.h"     // TcpListener: the queues this tick drains
+#include "network_drivers/transport/udp/server/server.h"     // UdpListener: the datagram rings this tick drains
+#include "server/clock/clock.h"                              // Clock.ms: the pass stamp an arm takes
 #include "server/core/proto_handler/proto_handler.h"
 #include "server/core/worker/worker.h"
 #include "server/storage/filesystem/filesystem.h" // Fs: the source a released transfer still holds open
@@ -75,7 +77,10 @@ static_assert(SESSION_OFF_CTX + sizeof(struct SessionStorage) <= PROTOCORE_SESSI
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SESSION_CTX(w) ((struct SessionStorage *)(void *)((w) + SESSION_OFF_CTX))
+#define SESSION_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SessionStorage *)(const void *)((w) + SESSION_OFF_CTX),                         \
+        default: (struct SessionStorage *)(void *)((w) + SESSION_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -97,7 +102,7 @@ uint8_t *protocore_session_span(void)
     return s_own.span;
 }
 
-void protocore_protocols_register_builtins(uint8_t *work)
+void protocore_protocols_register_builtins(const uint8_t *work)
 {
     (void)work;
     protocore_register_builtins();
@@ -121,7 +126,7 @@ void protocore_protocols_get(uint8_t *work)
 
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in protocore_builtins.c -
-    // this dispatcher names no protocol; it just knows PROTO_HTTP is always registered, and
+    // this dispatcher names no protocol. It just knows PROTO_HTTP is always registered, and
     // uses that as the "already bootstrapped" sentinel.
     if (!SESSION_CTX(work)->proto_handlers[(unsigned)PROTO_HTTP])
     {
@@ -146,7 +151,7 @@ static void conn_release(uint8_t slot)
     {
         Fs.io.handle = file_send[slot].fh; // the source outlived the connection reading it
         Fs.close(protocore_filesystem_span());
-        file_send[slot].active = PROTO_FALSE;
+        file_send[slot].active = EMBED_FALSE;
     }
 #endif
 #if PROTOCORE_ENABLE_SSH_SCP || PROTOCORE_ENABLE_SSH_SFTP
@@ -168,7 +173,7 @@ static void conn_release(uint8_t slot)
             Fs.io.handle = scp_conns[i].fh; // the destination outlived the transfer writing it
             Fs.close(protocore_filesystem_span());
             scp_conns[i].fh = -1;
-            scp_conns[i].active = PROTO_FALSE;
+            scp_conns[i].active = EMBED_FALSE;
         }
 #endif
 #if PROTOCORE_ENABLE_SSH_SFTP
@@ -179,7 +184,7 @@ static void conn_release(uint8_t slot)
             Fs.close(protocore_filesystem_span());
             sftp_sess[i].open_mask &= ~(1u << h);
         }
-        sftp_sess[i].active = PROTO_FALSE;
+        sftp_sess[i].active = EMBED_FALSE;
 #endif
     }
 #endif
@@ -189,12 +194,6 @@ static void conn_release(uint8_t slot)
 // single-queue (N=1) and per-worker-queue (N>1) drain paths below.
 static inline void dispatch_event(const TcpEvt *evt)
 {
-    // Per-dispatch reset of the calling worker's scratch arena: every handler
-    // runs with the whole arena available, and any scratch it borrows is
-    // reclaimed before the next event - the backstop that stops a forgotten
-    // release from accumulating across events.
-    protocore_plain_guard()->temporary_buf_reset();
-
     // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
     ConnPoolV.slot = evt->slot_id;
@@ -251,7 +250,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     }
 }
 
-void protocore_session_tick(uint8_t *work)
+void protocore_session_tick(const uint8_t *work)
 {
     (void)work;
     /*

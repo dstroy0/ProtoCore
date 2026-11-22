@@ -12,9 +12,9 @@
 
 #include "server/core/sleep_sched/sleep_sched.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
-void protocore_sleep_sched_next(uint8_t *work)
+void protocore_sleep_sched_next(const uint8_t *work)
 {
     (void)work;
     const protocore_sleep_cfg *cfg = SleepSchedV.ask.cfg;
@@ -25,7 +25,7 @@ void protocore_sleep_sched_next(uint8_t *work)
         return;
     }
 
-    uint32_t idle = (uint32_t)(SleepSchedV.ask.now - SleepSchedV.ask.last_active_ms); // wrap-safe unsigned delta
+    uint32_t idle = (SleepSchedV.ask.now - SleepSchedV.ask.last_active_ms); // wrap-safe unsigned delta
     if (idle < cfg->idle_ms)
     {
         return; // active recently: stay awake
@@ -65,6 +65,6 @@ void protocore_sleep_sched_next(uint8_t *work)
 /** @brief The operands and the outcome. */
 SleepSchedVars SleepSchedV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SLEEP_SCHED

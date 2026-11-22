@@ -173,12 +173,12 @@ void test_connect_matches_figure_3_6(void)
     MqttV.session.user_name = "u";
     MqttV.session.password = "p";
     MqttV.session.keep_alive = 10;
-    MqttV.session.clean_session = PROTO_TRUE;
+    MqttV.session.clean_session = EMBED_TRUE;
     MqttV.will.topic = "wt";
     MqttV.will.message = WILL;
     MqttV.will.message_len = sizeof(WILL);
     MqttV.will.qos = 1;
-    MqttV.will.retain = PROTO_FALSE;
+    MqttV.will.retain = EMBED_FALSE;
     Mqtt.build_connect(mqtt_work());
     TEST_ASSERT_TRUE(MqttV.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttV.n);
@@ -203,12 +203,12 @@ void test_connect_flags_follow_the_fields_present(void)
     MqttV.session.user_name = NULL;
     MqttV.session.password = NULL;
     MqttV.session.keep_alive = 0;
-    MqttV.session.clean_session = PROTO_FALSE;
+    MqttV.session.clean_session = EMBED_FALSE;
     MqttV.will.topic = NULL;
     MqttV.will.message = NULL;
     MqttV.will.message_len = 0;
     MqttV.will.qos = 2;
-    MqttV.will.retain = PROTO_TRUE;
+    MqttV.will.retain = EMBED_TRUE;
     Mqtt.build_connect(mqtt_work());
     TEST_ASSERT_TRUE(MqttV.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttV.n);
@@ -239,8 +239,8 @@ void test_publish_matches_figure_3_11(void)
     MqttV.message.payload = NULL;
     MqttV.message.payload_len = 0;
     MqttV.message.qos = 1;
-    MqttV.message.retain = PROTO_FALSE;
-    MqttV.message.dup = PROTO_FALSE;
+    MqttV.message.retain = EMBED_FALSE;
+    MqttV.message.dup = EMBED_FALSE;
     MqttV.packet.packet_id = 10;
     Mqtt.build_publish(mqtt_work());
     TEST_ASSERT_TRUE(MqttV.ok);
@@ -256,17 +256,17 @@ void test_publish_fixed_header_flags(void)
     struct
     {
         uint8_t qos;
-        proto_bool retain;
-        proto_bool dup;
+        embed_bool retain;
+        embed_bool dup;
         uint8_t byte1;
         size_t total;
     } static const CASES[] = {
-        {0, PROTO_FALSE, PROTO_FALSE, 0x30, 9},  // no Packet Identifier at QoS 0
-        {0, PROTO_TRUE, PROTO_FALSE, 0x31, 9},   // RETAIN, bit 0
-        {1, PROTO_FALSE, PROTO_FALSE, 0x32, 11}, // QoS 1, bits 2-1
-        {2, PROTO_FALSE, PROTO_FALSE, 0x34, 11}, // QoS 2
-        {1, PROTO_FALSE, PROTO_TRUE, 0x3A, 11},  // DUP, bit 3
-        {2, PROTO_TRUE, PROTO_TRUE, 0x3D, 11},   // all three at once
+        {0, EMBED_FALSE, EMBED_FALSE, 0x30, 9},  // no Packet Identifier at QoS 0
+        {0, EMBED_TRUE, EMBED_FALSE, 0x31, 9},   // RETAIN, bit 0
+        {1, EMBED_FALSE, EMBED_FALSE, 0x32, 11}, // QoS 1, bits 2-1
+        {2, EMBED_FALSE, EMBED_FALSE, 0x34, 11}, // QoS 2
+        {1, EMBED_FALSE, EMBED_TRUE, 0x3A, 11},  // DUP, bit 3
+        {2, EMBED_TRUE, EMBED_TRUE, 0x3D, 11},   // all three at once
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -303,8 +303,8 @@ void test_publish_refuses_wildcards(void)
         MqttV.message.payload = NULL;
         MqttV.message.payload_len = 0;
         MqttV.message.qos = 0;
-        MqttV.message.retain = PROTO_FALSE;
-        MqttV.message.dup = PROTO_FALSE;
+        MqttV.message.retain = EMBED_FALSE;
+        MqttV.message.dup = EMBED_FALSE;
         Mqtt.build_publish(mqtt_work());
         TEST_ASSERT_FALSE_MESSAGE(MqttV.ok, BAD[i]);
     }
@@ -436,8 +436,8 @@ void test_parse_fixed_header(void)
     MqttV.message.payload = NULL;
     MqttV.message.payload_len = 0;
     MqttV.message.qos = 2;
-    MqttV.message.retain = PROTO_TRUE;
-    MqttV.message.dup = PROTO_FALSE;
+    MqttV.message.retain = EMBED_TRUE;
+    MqttV.message.dup = EMBED_FALSE;
     MqttV.packet.packet_id = 10;
     Mqtt.build_publish(mqtt_work());
     const size_t total = MqttV.n;
@@ -480,8 +480,8 @@ void test_parse_publish_round_trip(void)
     MqttV.message.payload = PAYLOAD;
     MqttV.message.payload_len = sizeof(PAYLOAD);
     MqttV.message.qos = 1;
-    MqttV.message.retain = PROTO_TRUE;
-    MqttV.message.dup = PROTO_TRUE;
+    MqttV.message.retain = EMBED_TRUE;
+    MqttV.message.dup = EMBED_TRUE;
     MqttV.packet.packet_id = 0x0102;
     Mqtt.build_publish(mqtt_work());
     TEST_ASSERT_TRUE(MqttV.ok);
@@ -515,8 +515,8 @@ void test_parse_publish_round_trip(void)
     MqttV.message.payload = PAYLOAD;
     MqttV.message.payload_len = sizeof(PAYLOAD);
     MqttV.message.qos = 0;
-    MqttV.message.retain = PROTO_FALSE;
-    MqttV.message.dup = PROTO_FALSE;
+    MqttV.message.retain = EMBED_FALSE;
+    MqttV.message.dup = EMBED_FALSE;
     Mqtt.build_publish(mqtt_work());
     MqttV.buf.in = g_out + 2;
     MqttV.buf.avail = MqttV.n - 2;
@@ -697,8 +697,8 @@ void test_builds_refuse_short_buffers(void)
     MqttV.message.payload = NULL;
     MqttV.message.payload_len = 0;
     MqttV.message.qos = 1;
-    MqttV.message.retain = PROTO_FALSE;
-    MqttV.message.dup = PROTO_FALSE;
+    MqttV.message.retain = EMBED_FALSE;
+    MqttV.message.dup = EMBED_FALSE;
     MqttV.packet.packet_id = 10;
     Mqtt.build_publish(mqtt_work()); // needs 9
     TEST_ASSERT_FALSE(MqttV.ok);

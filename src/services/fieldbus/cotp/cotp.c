@@ -13,14 +13,14 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/cotp/cotp.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cotp_tpkt_build(uint8_t *work)
+void protocore_cotp_tpkt_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.tpkt_build_args.buf;
@@ -50,7 +50,7 @@ void protocore_cotp_tpkt_build(uint8_t *work)
     CotpV.n = total;
 }
 
-void protocore_cotp_tpkt_parse(uint8_t *work)
+void protocore_cotp_tpkt_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = CotpV.tpkt_parse_args.buf;
@@ -61,18 +61,18 @@ void protocore_cotp_tpkt_parse(uint8_t *work)
 
     if (!buf || len < TPKT_HEADER_SIZE)
     {
-        CotpV.ok = PROTO_FALSE;
+        CotpV.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != TPKT_VERSION)
     {
-        CotpV.ok = PROTO_FALSE;
+        CotpV.ok = EMBED_FALSE;
         return;
     }
     size_t total = ((size_t)buf[2] << 8) | buf[3];
     if (total < TPKT_HEADER_SIZE || total > len)
     {
-        CotpV.ok = PROTO_FALSE;
+        CotpV.ok = EMBED_FALSE;
         return; // invalid / not fully buffered
     }
     if (payload)
@@ -87,17 +87,17 @@ void protocore_cotp_tpkt_parse(uint8_t *work)
     {
         *consumed = total;
     }
-    CotpV.ok = PROTO_TRUE;
+    CotpV.ok = EMBED_TRUE;
 }
 
-void protocore_cotp_build_dt(uint8_t *work)
+void protocore_cotp_build_dt(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.build_dt_args.buf;
     size_t cap = CotpV.build_dt_args.cap;
     const uint8_t *data = CotpV.build_dt_args.data;
     size_t data_len = CotpV.build_dt_args.data_len;
-    proto_bool eot = CotpV.build_dt_args.eot;
+    embed_bool eot = CotpV.build_dt_args.eot;
 
     if (!buf || (data_len && !data))
     {
@@ -120,7 +120,7 @@ void protocore_cotp_build_dt(uint8_t *work)
     CotpV.n = total;
 }
 
-void protocore_cotp_build_cr(uint8_t *work)
+void protocore_cotp_build_cr(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.build_cr_args.buf;
@@ -163,7 +163,7 @@ void protocore_cotp_build_cr(uint8_t *work)
     CotpV.n = p;
 }
 
-void protocore_cotp_build_cc(uint8_t *work)
+void protocore_cotp_build_cc(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.build_cc_args.buf;
@@ -207,7 +207,7 @@ void protocore_cotp_build_cc(uint8_t *work)
     CotpV.n = p;
 }
 
-void protocore_cotp_parse(uint8_t *work)
+void protocore_cotp_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = CotpV.parse_args.buf;
@@ -216,21 +216,21 @@ void protocore_cotp_parse(uint8_t *work)
 
     if (!buf || !out || len < 2)
     {
-        CotpV.ok = PROTO_FALSE;
+        CotpV.ok = EMBED_FALSE;
         return;
     }
     uint8_t li = buf[0];
     size_t header = (size_t)li + 1; // LI counts the octets after itself
     if (header > len || li < 1)
     {
-        CotpV.ok = PROTO_FALSE;
+        CotpV.ok = EMBED_FALSE;
         return;
     }
 
     out->code = (uint8_t)(buf[1] & 0xF0); // type is the high nibble
     out->dst_ref = 0;
     out->src_ref = 0;
-    out->eot = PROTO_FALSE;
+    out->eot = EMBED_FALSE;
     out->data = NULL;
     out->data_len = 0;
 
@@ -238,34 +238,34 @@ void protocore_cotp_parse(uint8_t *work)
     {
         if (li < 2) // need the TPDU-NR/EOT octet
         {
-            CotpV.ok = PROTO_FALSE;
+            CotpV.ok = EMBED_FALSE;
             return;
         }
         out->eot = (buf[2] & COTP_EOT) != 0;
         out->data = buf + header;
         out->data_len = len - header;
-        CotpV.ok = PROTO_TRUE;
+        CotpV.ok = EMBED_TRUE;
         return;
     }
     if (out->code == COTP_CR || out->code == COTP_CC)
     {
         if (li < 6) // code + dst-ref(2) + src-ref(2) + class(1)
         {
-            CotpV.ok = PROTO_FALSE;
+            CotpV.ok = EMBED_FALSE;
             return;
         }
         out->dst_ref = (uint16_t)((buf[2] << 8) | buf[3]);
         out->src_ref = (uint16_t)((buf[4] << 8) | buf[5]);
-        CotpV.ok = PROTO_TRUE;
+        CotpV.ok = EMBED_TRUE;
         return;
     }
     // Other TPDU types (DR/DC/ER/...): the type code is reported; no body extracted.
-    CotpV.ok = PROTO_TRUE;
+    CotpV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 CotpVars CotpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_COTP

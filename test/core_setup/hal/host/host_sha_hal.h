@@ -27,7 +27,7 @@
 
 #if PROTOCORE_HOST && PROTOCORE_HAS_HW_SHA
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // -- SHA_MODE values, the same numbering the peripheral uses --------------------------------------
 #ifndef PROTOCORE_SHA_MODE_1
@@ -59,9 +59,9 @@ void protocore_sha_hw_release(void);
  *                compress onto the state @p h carries.
  */
 void protocore_sha_hw_block(uint32_t mode, uint32_t *h, unsigned hwords, const uint32_t *blk, unsigned bwords,
-                            proto_bool first);
+                            embed_bool first);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST && PROTOCORE_HAS_HW_SHA
 

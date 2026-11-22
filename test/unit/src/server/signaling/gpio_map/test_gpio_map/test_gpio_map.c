@@ -486,7 +486,7 @@ static const char *dir_name(protocore_gpio_dir dir)
     return GpioMapV.text;
 }
 
-static proto_bool is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin)
+static embed_bool is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin)
 {
     GpioMapV.args.pins = pins;
     GpioMapV.args.count = count;
@@ -495,7 +495,7 @@ static proto_bool is_output(const protocore_gpio_pin *pins, uint8_t count, uint8
     return GpioMapV.ok;
 }
 
-static proto_bool parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
+static embed_bool parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
 {
     GpioMapV.parse_args.body = body;
     GpioMapV.parse_args.len = len;
@@ -812,7 +812,7 @@ void test_a_pin_the_field_cannot_hold_is_not_delivered_as_another_pin(void)
     {
         uint8_t pin = 0xAA;
         uint8_t level = 0xAA;
-        const proto_bool ok = parse_set(BODY[i], strlen(BODY[i]), &pin, &level);
+        const embed_bool ok = parse_set(BODY[i], strlen(BODY[i]), &pin, &level);
         TEST_ASSERT_TRUE_MESSAGE(!ok || pin != 2u, BODY[i]);
     }
 }

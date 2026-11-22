@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file aesccm.h
@@ -43,9 +43,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*seal)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
+    embed_bool (*seal)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
                        const uint8_t *, size_t, uint8_t *, uint8_t *);
-    proto_bool (*open)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
+    embed_bool (*open)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
                        const uint8_t *, size_t, const uint8_t *, uint8_t *);
 } AesCcmNs;
 PROTOCORE_NS_LAYOUT(AesCcmNs, seal, open);
@@ -63,9 +63,9 @@ PROTOCORE_NS_LAYOUT(AesCcmNs, seal, open);
  * @param pt_len its length
  * @param ct_out pt_len ciphertext bytes; may alias pt
  * @param tag_out PROTOCORE_AESCCM_TAG_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_aes_ccm_seal(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+embed_bool protocore_aes_ccm_seal(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
                                   size_t pt_len, uint8_t *ct_out, uint8_t *tag_out);
 /**
@@ -81,15 +81,15 @@ proto_bool protocore_aes_ccm_seal(uint8_t *work, const uint8_t *key, size_t key_
  * @param ct_len its length
  * @param tag PROTOCORE_AESCCM_TAG_LEN bytes to verify against
  * @param out ct_len plaintext bytes; may alias ct
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_aes_ccm_open(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+embed_bool protocore_aes_ccm_open(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
                                   size_t ct_len, const uint8_t *tag, uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS AesCcmNs AesCcm PROTOCORE_UNUSED = {.seal = protocore_aes_ccm_seal, .open = protocore_aes_ccm_open};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_AESCCM_H

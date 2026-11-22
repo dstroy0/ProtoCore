@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/http/websocket/websocket.h" // Ws: the channel table and its numbers
 #include "network_drivers/session/ws/ws.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Take a channel for the connection the caller named, then run the route's connect. RFC 4254
 // sec 5.1: a side that opens "allocates a local number for the channel"; a table with no free
@@ -63,6 +63,6 @@ void protocore_session_ws_close(uint8_t *work)
 /** @brief The operands and the outcome. */
 SessionWsVars SessionWsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBSOCKET

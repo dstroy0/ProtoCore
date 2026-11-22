@@ -28,31 +28,28 @@
 
 #if PROTOCORE_ENABLE_HW_HEALTH
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Rail sample verdict (the sole return of protocore_hwhealth_rail_sample). */
-typedef enum PROTO_ENUM_PACKED
-{
-    HW_RAIL_OK = 0,      ///< at or above the warn threshold.
-    HW_RAIL_SAG = 1,     ///< below warn, at or above crit.
-    HW_RAIL_BROWNOUT = 2 ///< below the crit threshold.
-} HwRailVerdict;
+EMBED_ENUM_BYTE(HwRailVerdict,
+                HW_RAIL_OK = 0,      ///< at or above the warn threshold.
+                HW_RAIL_SAG = 1,     ///< below warn, at or above crit.
+                HW_RAIL_BROWNOUT = 2 ///< below the crit threshold.
+);
 
 /** @brief GPIO short-circuit verdict (the sole return of protocore_hwhealth_gpio_short). */
-typedef enum PROTO_ENUM_PACKED
-{
-    HW_GPIO_OK = 0,        ///< readback matches the driven level.
-    HW_GPIO_SHORT_GND = 1, ///< drove high, read low: shorted to ground.
-    HW_GPIO_SHORT_VCC = 2  ///< drove low, read high: shorted to Vcc.
-} HwGpioVerdict;
+EMBED_ENUM_BYTE(HwGpioVerdict,
+                HW_GPIO_OK = 0,        ///< readback matches the driven level.
+                HW_GPIO_SHORT_GND = 1, ///< drove high, read low: shorted to ground.
+                HW_GPIO_SHORT_VCC = 2  ///< drove low, read high: shorted to Vcc.
+);
 
 /** @brief Capacitor-leakage verdict (the sole return of protocore_hwhealth_cap_leak). */
-typedef enum PROTO_ENUM_PACKED
-{
-    HW_CAP_OK = 0,      ///< decay time within tolerance of expected.
-    HW_CAP_LEAK = 1,    ///< decays too fast: leaky capacitor.
-    HW_CAP_HIGH_ESR = 2 ///< decays too slow: high-ESR / open charge path.
-} HwCapVerdict;
+EMBED_ENUM_BYTE(HwCapVerdict,
+                HW_CAP_OK = 0,      ///< decay time within tolerance of expected.
+                HW_CAP_LEAK = 1,    ///< decays too fast: leaky capacitor.
+                HW_CAP_HIGH_ESR = 2 ///< decays too slow: high-ESR / open charge path.
+);
 
 /** @brief Rolling monitor for one power rail (in millivolts). */
 typedef struct
@@ -97,14 +94,14 @@ typedef struct
     uint32_t max_hz;    ///< its ceiling
     uint16_t fail_trip; ///< consecutive failures before it halves
     uint16_t ok_trip;   ///< consecutive successes before it doubles
-    proto_bool crc_ok;  ///< the transfer just completed checked out
+    embed_bool crc_ok;  ///< the transfer just completed checked out
 } HwSpiArgs;
 
 /** @brief A pin driven against what it read back, and a discharge against what was expected. */
 typedef struct
 {
-    proto_bool driven_high; ///< the level the pin was driven to
-    proto_bool read_high;   ///< the level it read back
+    embed_bool driven_high; ///< the level the pin was driven to
+    embed_bool read_high;   ///< the level it read back
     uint32_t measured_ms;   ///< the discharge just timed
     uint32_t expected_ms;   ///< what it should have been
     uint8_t tol_pct;        ///< the tolerance band around that, as a percentage
@@ -161,24 +158,24 @@ extern HwHealthVars HwHealthV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const rail_init)(uint8_t *work);
-    void (*const rail_sample)(uint8_t *work);
-    void (*const rail_json)(uint8_t *work);
-    void (*const spi_init)(uint8_t *work);
-    void (*const spi_result)(uint8_t *work);
-    void (*const gpio_short)(uint8_t *work);
-    void (*const cap_leak)(uint8_t *work);
+    void (*const rail_init)(const uint8_t *work);
+    void (*const rail_sample)(const uint8_t *work);
+    void (*const rail_json)(const uint8_t *work);
+    void (*const spi_init)(const uint8_t *work);
+    void (*const spi_result)(const uint8_t *work);
+    void (*const gpio_short)(const uint8_t *work);
+    void (*const cap_leak)(const uint8_t *work);
 } HwHealthNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HwHealthV or a region of the borrow at a fixed offset.
-void protocore_hw_health_rail_init(uint8_t *work);
-void protocore_hw_health_rail_sample(uint8_t *work);
-void protocore_hw_health_rail_json(uint8_t *work);
-void protocore_hw_health_spi_init(uint8_t *work);
-void protocore_hw_health_spi_result(uint8_t *work);
-void protocore_hw_health_gpio_short(uint8_t *work);
-void protocore_hw_health_cap_leak(uint8_t *work);
+void protocore_hw_health_rail_init(const uint8_t *work);
+void protocore_hw_health_rail_sample(const uint8_t *work);
+void protocore_hw_health_rail_json(const uint8_t *work);
+void protocore_hw_health_spi_init(const uint8_t *work);
+void protocore_hw_health_spi_result(const uint8_t *work);
+void protocore_hw_health_gpio_short(const uint8_t *work);
+void protocore_hw_health_cap_leak(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -194,7 +191,7 @@ static const HwHealthNs HwHealth __attribute__((unused)) = {
     .cap_leak = protocore_hw_health_cap_leak,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH
 

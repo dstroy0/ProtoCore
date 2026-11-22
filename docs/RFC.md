@@ -236,7 +236,7 @@ auth, HTTPS, and the accept throttles.
 
 Optional ([`PROTOCORE_ENABLE_MODBUS`](@ref PROTOCORE_ENABLE_MODBUS), default off) Modbus
 TCP server on port 502. The MBAP header (Transaction Id, Protocol Id = 0, Length,
-Unit Id) is validated and echoed; the PDU is dispatched against a fixed BSS data
+Unit Id) is validated and echoed. The PDU is dispatched against a fixed BSS data
 model of coils, discrete inputs, holding registers, and input registers. Supported
 function codes: 0x01 Read Coils, 0x02 Read Discrete Inputs, 0x03 Read Holding
 Registers, 0x04 Read Input Registers, 0x05 Write Single Coil, 0x06 Write Single
@@ -244,7 +244,7 @@ Register, 0x0F Write Multiple Coils, 0x10 Write Multiple Registers. An unsupport
 function returns exception 0x01 (Illegal Function), an out-of-range address 0x02
 (Illegal Data Address), and a bad quantity/value 0x03 (Illegal Data Value). The
 codec ([`protocore_modbus_process_adu()`](@ref protocore_modbus_process_adu)) is transport-independent
-and host-tested; the TCP framing (one ADU per MBAP length, pipelined out of the rx
+and host-tested. The TCP framing (one ADU per MBAP length, pipelined out of the rx
 ring) is dispatched through the PROTO_MODBUS connection handler. The application
 reads and writes the model with the accessor functions and is notified of client
 writes via [`protocore_modbus_on_write()`](@ref protocore_modbus_on_write). Modbus has no

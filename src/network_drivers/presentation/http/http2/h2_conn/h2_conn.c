@@ -17,25 +17,22 @@
 #include "network_drivers/presentation/http/http2/hpack/hpack.h"       // the dynamic table this context carries
 #include "verba_scribo/verba_scribo.h"                                 // verba_scribo frame builder
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Per-stream state (RFC 9113 sec 5.1, server side of a client-initiated stream). A
  *  mutually-exclusive internal lifecycle state, not a wire value. */
-typedef enum PROTO_ENUM_PACKED
-{
-    H2_ST_IDLE = 0,
-    H2_ST_OPEN,        ///< receiving (headers seen, no END_STREAM yet)
-    H2_ST_HALF_CLOSED, ///< client finished (END_STREAM); we may still respond
-    H2_ST_CLOSED,
-} H2StreamState;
+EMBED_ENUM_BYTE(H2StreamState, H2_ST_IDLE = 0,
+                H2_ST_OPEN,        ///< receiving (headers seen, no END_STREAM yet)
+                H2_ST_HALF_CLOSED, ///< client finished (END_STREAM); we may still respond
+                H2_ST_CLOSED, );
 
 typedef struct
 {
     uint32_t id;                   ///< stream identifier (0 = free slot)
     H2StreamState state;           ///< lifecycle state
     int32_t send_window;           ///< our remaining DATA flow window for this stream
-    proto_bool has_content_length; ///< the request declared a content-length
-    proto_bool content_length_bad; ///< that declaration was not a plain decimal number
+    embed_bool has_content_length; ///< the request declared a content-length
+    embed_bool content_length_bad; ///< that declaration was not a plain decimal number
     uint32_t content_length;       ///< the declared value
     uint32_t data_seen;            ///< DATA payload octets received on this stream
 } H2Stream;
@@ -53,10 +50,10 @@ typedef struct
 
     size_t hblock_len;
     uint32_t hblock_stream;
-    proto_bool hblock_end_stream;
-    proto_bool hblock_trailers; ///< the block is a sec 8.1 trailer section, not the request
-    uint8_t hblock_frames;      ///< CONTINUATION frames this block has spanned
-    proto_bool in_header_block; ///< between a non-END_HEADERS HEADERS and its END_HEADERS CONTINUATION
+    embed_bool hblock_end_stream;
+    embed_bool hblock_trailers; ///< the block is a sec 8.1 trailer section, not the request
+    uint8_t hblock_frames;      ///< CONTINUATION frames this block spanned
+    embed_bool in_header_block; ///< between a non-END_HEADERS HEADERS and its END_HEADERS CONTINUATION
 
     uint8_t hdec[PROTOCORE_HPACK_BORROW]; ///< HPACK decoder table (the peer encoder's state)
 
@@ -92,10 +89,16 @@ static_assert(H2_CONN_OFF_CTX % _Alignof(H2ConnCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define H2_CONN_CTX(w) ((H2ConnCtx *)(void *)((w) + H2_CONN_OFF_CTX))
+#define H2_CONN_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const H2ConnCtx *)(const void *)((w) + H2_CONN_OFF_CTX),                                     \
+        default: (H2ConnCtx *)(void *)((w) + H2_CONN_OFF_CTX))
 #define H2_CONN_FBUF(w) ((w) + H2_CONN_OFF_FBUF)
 #define H2_CONN_HBLOCK(w) ((w) + H2_CONN_OFF_HBLOCK)
-#define H2_CONN_HSCRATCH(w) ((char *)(void *)((w) + H2_CONN_OFF_HSCRATCH))
+#define H2_CONN_HSCRATCH(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const char *)(const void *)((w) + H2_CONN_OFF_HSCRATCH),                                     \
+        default: (char *)(void *)((w) + H2_CONN_OFF_HSCRATCH))
 #define H2_CONN_FHDR(w) ((w) + H2_CONN_OFF_FHDR)
 #define H2_CONN_CTL(w) ((w) + H2_CONN_OFF_CTL)
 
@@ -149,10 +152,13 @@ static void send_our_settings(uint8_t *work)
                                     H2_SETTINGS_INITIAL_WINDOW_SIZE, H2_SETTINGS_MAX_FRAME_SIZE};
     static const uint32_t vals[4] = {0, PROTOCORE_H2_MAX_STREAMS, 65535, PROTOCORE_H2_MAX_FRAME};
     uint8_t buf[H2_FRAME_HEADER_LEN + 4 * 6];
-    size_t n = (H2FrameV.build_settings_args.buf = buf, H2FrameV.build_settings_args.cap = sizeof buf,
-                H2FrameV.build_settings_args.ids = ids, H2FrameV.build_settings_args.vals = vals,
-                H2FrameV.build_settings_args.n = 4, H2Frame.build_settings(work), H2FrameV.n);
-    printf("DIAG_H2 settings n=%u write=%p\n", (unsigned)n, (void *)(uintptr_t)H2_CONN_CTX(work)->cb.write);
+    H2FrameV.build_settings_args.buf = buf;
+    H2FrameV.build_settings_args.cap = sizeof buf;
+    H2FrameV.build_settings_args.ids = ids;
+    H2FrameV.build_settings_args.vals = vals;
+    H2FrameV.build_settings_args.n = 4;
+    H2Frame.build_settings(work);
+    size_t n = H2FrameV.n;
     wr(work, buf, n);
 }
 
@@ -164,8 +170,12 @@ static void send_our_settings(uint8_t *work)
 // wrong places, which showed up as two unrelated-looking assertion failures in the h2_conn suite.
 static size_t build_rst_refuse(uint8_t *work, uint8_t *b, size_t cap)
 {
-    return (H2FrameV.rst_args.buf = b, H2FrameV.rst_args.cap = cap, H2FrameV.rst_args.stream_id = 0,
-            H2FrameV.rst_args.error = 0, H2Frame.build_rst_stream(work), H2FrameV.n);
+    H2FrameV.rst_args.buf = b;
+    H2FrameV.rst_args.cap = cap;
+    H2FrameV.rst_args.stream_id = 0;
+    H2FrameV.rst_args.error = 0;
+    H2Frame.build_rst_stream(work);
+    return H2FrameV.n;
 }
 
 // send_control takes a plain builder, so the entry is reached through one.
@@ -196,9 +206,12 @@ static void send_control(uint8_t *work, size_t (*build)(uint8_t *, uint8_t *, si
 // frame is built in the dispatcher's borrow, which is where every outbound control frame is staged.
 static void send_rst(uint8_t *work, uint32_t stream_id, uint32_t err)
 {
-    size_t n = (H2FrameV.rst_args.buf = H2_CONN_CTL(work), H2FrameV.rst_args.cap = H2_CTL_FRAME_MAX,
-                H2FrameV.rst_args.stream_id = stream_id, H2FrameV.rst_args.error = err, H2Frame.build_rst_stream(work),
-                H2FrameV.n);
+    H2FrameV.rst_args.buf = H2_CONN_CTL(work);
+    H2FrameV.rst_args.cap = H2_CTL_FRAME_MAX;
+    H2FrameV.rst_args.stream_id = stream_id;
+    H2FrameV.rst_args.error = err;
+    H2Frame.build_rst_stream(work);
+    size_t n = H2FrameV.n;
     wr(work, H2_CONN_CTL(work), n);
 }
 
@@ -206,28 +219,28 @@ static void send_rst(uint8_t *work, uint32_t stream_id, uint32_t err)
 // have been a number to begin with. A body past the declared length settles the moment it goes
 // over; a short one settles when the stream ends. Either way the request is malformed, which is a
 // stream error. @return false when the stream has been reset.
-static proto_bool content_length_holds(uint8_t *work, H2Stream *s, proto_bool end_stream)
+static embed_bool content_length_holds(uint8_t *work, H2Stream *s, embed_bool end_stream)
 {
     if (!s->has_content_length)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    proto_bool malformed = s->content_length_bad;
+    embed_bool malformed = s->content_length_bad;
     if (s->data_seen > s->content_length)
     {
-        malformed = PROTO_TRUE;
+        malformed = EMBED_TRUE;
     }
     if (end_stream && s->data_seen != s->content_length)
     {
-        malformed = PROTO_TRUE;
+        malformed = EMBED_TRUE;
     }
     if (!malformed)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     send_rst(work, s->id, H2_PROTOCOL_ERROR);
     s->id = 0; // free the slot
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // One header block being decoded: the connection, the stream it arrived on, the dispatcher's borrow
@@ -237,9 +250,9 @@ typedef struct
 {
     uint8_t *work; ///< the connection's borrow this block is being read into
     uint32_t stream_id;
-    proto_bool end_stream;
-    proto_bool trailers;
-    proto_bool pseudo_in_trailer;
+    embed_bool end_stream;
+    embed_bool trailers;
+    embed_bool pseudo_in_trailer;
 } H2Block;
 
 // A trailer section is decoded but never delivered: the HPACK dynamic table has to track every
@@ -256,13 +269,13 @@ static void note_content_length(uint8_t *work, uint32_t stream_id, const char *v
     }
     if (s->has_content_length)
     {
-        s->content_length_bad = PROTO_TRUE; // sec 8.1.1: at most one content-length
+        s->content_length_bad = EMBED_TRUE; // sec 8.1.1: at most one content-length
         return;
     }
-    s->has_content_length = PROTO_TRUE;
+    s->has_content_length = EMBED_TRUE;
     if (vl == 0)
     {
-        s->content_length_bad = PROTO_TRUE;
+        s->content_length_bad = EMBED_TRUE;
         return;
     }
     uint32_t n = 0;
@@ -271,7 +284,7 @@ static void note_content_length(uint8_t *work, uint32_t stream_id, const char *v
         const uint8_t d = (uint8_t)(val[i] - '0');
         if (d > 9u || n > (0xFFFFFFFFu - d) / 10u)
         {
-            s->content_length_bad = PROTO_TRUE;
+            s->content_length_bad = EMBED_TRUE;
             return;
         }
         n = n * 10u + d;
@@ -279,16 +292,16 @@ static void note_content_length(uint8_t *work, uint32_t stream_id, const char *v
     s->content_length = n;
 }
 
-static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char *val, size_t vl)
+static embed_bool emit_header(void *ctx, const char *name, size_t nl, const char *val, size_t vl)
 {
     H2Block *b = (H2Block *)ctx;
     if (b->trailers)
     {
         if (nl > 0 && name[0] == ':')
         {
-            b->pseudo_in_trailer = PROTO_TRUE; // sec 8.1: no pseudo-header may appear in a trailer
+            b->pseudo_in_trailer = EMBED_TRUE; // sec 8.1: no pseudo-header may appear in a trailer
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (nl == 14 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = name, .other = "content-length", .bytes = 14) == 0)
     {
@@ -298,21 +311,25 @@ static proto_bool emit_header(void *ctx, const char *name, size_t nl, const char
     {
         H2_CONN_CTX(b->work)->cb.on_header(H2_CONN_CTX(b->work)->cb.app, b->stream_id, name, nl, val, vl);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Decode a complete request header block and deliver it to the application.
-static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
+static embed_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
 {
     uint8_t *work = b->work;
-    if (!(HpackV.decode_args.block = block, HpackV.decode_args.len = len,
-          HpackV.decode_args.scratch = H2_CONN_HSCRATCH(work), HpackV.decode_args.scratch_cap = PROTOCORE_H2_HDR_BLOCK,
-          HpackV.decode_args.emit = emit_header, HpackV.decode_args.ctx = b, Hpack.decode(H2_CONN_CTX(work)->hdec),
-          HpackV.ok))
+    HpackV.decode_args.block = block;
+    HpackV.decode_args.len = len;
+    HpackV.decode_args.scratch = H2_CONN_HSCRATCH(work);
+    HpackV.decode_args.scratch_cap = PROTOCORE_H2_HDR_BLOCK;
+    HpackV.decode_args.emit = emit_header;
+    HpackV.decode_args.ctx = b;
+    Hpack.decode(H2_CONN_CTX(work)->hdec);
+    if (!(HpackV.ok))
     {
-        return PROTO_FALSE; // COMPRESSION_ERROR
+        return EMBED_FALSE; // COMPRESSION_ERROR
     }
-    proto_bool well_formed = !b->pseudo_in_trailer;
+    embed_bool well_formed = !b->pseudo_in_trailer;
     if (!b->trailers && H2_CONN_CTX(work)->cb.on_headers_end)
     {
         well_formed = H2_CONN_CTX(work)->cb.on_headers_end(H2_CONN_CTX(work)->cb.app, b->stream_id, b->end_stream);
@@ -326,7 +343,7 @@ static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
         {
             dead->id = 0; // free the slot
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     H2Stream *s = find_stream(work, b->stream_id);
     if (s)
@@ -336,21 +353,21 @@ static proto_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
             s->state = H2_ST_HALF_CLOSED;
             // A request that ends with its headers carries no body, so a declared content-length
             // has to be zero (sec 8.1.1).
-            content_length_holds(work, s, PROTO_TRUE);
+            content_length_holds(work, s, EMBED_TRUE);
         }
         else
         {
             s->state = H2_ST_OPEN;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
+static embed_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
 {
     if (h->stream_id == 0 || (h->stream_id & 1) == 0)
     {
-        return PROTO_FALSE; // requests are client-initiated odd stream ids (RFC 9113 sec 5.1.1)
+        return EMBED_FALSE; // requests are client-initiated odd stream ids (RFC 9113 sec 5.1.1)
     }
     const uint8_t *p = payload;
     size_t plen = h->length;
@@ -359,7 +376,7 @@ static proto_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const ui
     {
         if (plen < 1)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         pad = p[0];
         p++;
@@ -369,35 +386,35 @@ static proto_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const ui
     {
         if (plen < 5)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         p += 5;
         plen -= 5; // priority info accepted and ignored
     }
     if (pad > plen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     plen -= pad; // strip trailing padding
 
-    proto_bool end_stream = (h->flags & H2_FLAG_END_STREAM) != 0;
-    proto_bool trailers = PROTO_FALSE;
+    embed_bool end_stream = (h->flags & H2_FLAG_END_STREAM) != 0;
+    embed_bool trailers = EMBED_FALSE;
     if (h->stream_id <= H2_CONN_CTX(work)->last_peer_stream)
     {
         // sec 5.1.1 governs a new stream; sec 8.1 lets a second HEADERS trail an open one.
         H2Stream *open = find_stream(work, h->stream_id);
         if (!open || open->state != H2_ST_OPEN)
         {
-            return PROTO_FALSE; // a new stream id must exceed every one already seen
+            return EMBED_FALSE; // a new stream id must exceed every one already seen
         }
         if (!end_stream)
         {
             // sec 8.1: a trailer section is the last thing the peer sends on the stream.
             send_rst(work, h->stream_id, H2_PROTOCOL_ERROR);
             open->id = 0;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
-        trailers = PROTO_TRUE;
+        trailers = EMBED_TRUE;
     }
     else
     {
@@ -405,19 +422,19 @@ static proto_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const ui
         if (!alloc_stream(work, h->stream_id))
         {
             send_control(work, build_rst_refuse);
-            return PROTO_TRUE; // refuse quietly is fine; keep the connection
+            return EMBED_TRUE; // refuse quietly is fine; keep the connection
         }
     }
 
     if (h->flags & H2_FLAG_END_HEADERS)
     {
-        H2Block b = {work, h->stream_id, end_stream, trailers, PROTO_FALSE};
+        H2Block b = {work, h->stream_id, end_stream, trailers, EMBED_FALSE};
         return decode_block(&b, p, plen);
     }
     // Spans CONTINUATION frames: buffer the fragment.
     if (plen > PROTOCORE_H2_HDR_BLOCK)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H2_CONN_HBLOCK(work), .src = p, .bytes = plen);
     H2_CONN_CTX(work)->hblock_len = plen;
@@ -425,43 +442,43 @@ static proto_bool handle_headers(uint8_t *work, const H2FrameHeader *h, const ui
     H2_CONN_CTX(work)->hblock_end_stream = end_stream;
     H2_CONN_CTX(work)->hblock_trailers = trailers;
     H2_CONN_CTX(work)->hblock_frames = 0;
-    H2_CONN_CTX(work)->in_header_block = PROTO_TRUE;
-    return PROTO_TRUE;
+    H2_CONN_CTX(work)->in_header_block = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool handle_continuation(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
+static embed_bool handle_continuation(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
 {
     if (!H2_CONN_CTX(work)->in_header_block || h->stream_id != H2_CONN_CTX(work)->hblock_stream)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     H2_CONN_CTX(work)->hblock_frames++;
     if (H2_CONN_CTX(work)->hblock_frames > PROTOCORE_H2_MAX_CONTINUATION)
     {
-        return PROTO_FALSE; // sec 6.10: an empty CONTINUATION adds no bytes, so cap the count too
+        return EMBED_FALSE; // sec 6.10: an empty CONTINUATION adds no bytes, so cap the count too
     }
     if (H2_CONN_CTX(work)->hblock_len + h->length > PROTOCORE_H2_HDR_BLOCK)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H2_CONN_HBLOCK(work) + H2_CONN_CTX(work)->hblock_len, .src = payload,
                .bytes = h->length);
     H2_CONN_CTX(work)->hblock_len += h->length;
     if (h->flags & H2_FLAG_END_HEADERS)
     {
-        H2_CONN_CTX(work)->in_header_block = PROTO_FALSE;
+        H2_CONN_CTX(work)->in_header_block = EMBED_FALSE;
         H2Block b = {work, H2_CONN_CTX(work)->hblock_stream, H2_CONN_CTX(work)->hblock_end_stream,
-                     H2_CONN_CTX(work)->hblock_trailers, PROTO_FALSE};
+                     H2_CONN_CTX(work)->hblock_trailers, EMBED_FALSE};
         return decode_block(&b, H2_CONN_HBLOCK(work), H2_CONN_CTX(work)->hblock_len);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
+static embed_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8_t *payload)
 {
     if (h->stream_id == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *p = payload;
     size_t plen = h->length;
@@ -470,7 +487,7 @@ static proto_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8
     {
         if (plen < 1)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         pad = p[0];
         p++;
@@ -478,7 +495,7 @@ static proto_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8
     }
     if (pad > plen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     plen -= pad;
 
@@ -490,21 +507,21 @@ static proto_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8
     H2Stream *s = find_stream(work, h->stream_id);
     if (!s)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (s->state != H2_ST_OPEN)
     {
         send_rst(work, h->stream_id, H2_STREAM_CLOSED);
-        return PROTO_TRUE; // the stream dies, the connection lives
+        return EMBED_TRUE; // the stream dies, the connection lives
     }
 
-    proto_bool end_stream = (h->flags & H2_FLAG_END_STREAM) != 0;
+    embed_bool end_stream = (h->flags & H2_FLAG_END_STREAM) != 0;
     // The body is measured against the declared content-length before any of it is delivered: a
     // request whose two accounts of its own length disagree is what a smuggling attempt looks like.
     s->data_seen += (uint32_t)plen;
     if (!content_length_holds(work, s, end_stream))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (H2_CONN_CTX(work)->cb.on_data)
     {
@@ -517,62 +534,74 @@ static proto_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8
     // Replenish flow-control windows for the bytes we consumed (whole frame length).
     if (h->length > 0)
     {
-        size_t n = (H2FrameV.window_args.buf = H2_CONN_CTL(work), H2FrameV.window_args.cap = H2_CTL_FRAME_MAX,
-                    H2FrameV.window_args.stream_id = 0, H2FrameV.window_args.increment = h->length,
-                    H2Frame.build_window_update(work), H2FrameV.n);
+        H2FrameV.window_args.buf = H2_CONN_CTL(work);
+        H2FrameV.window_args.cap = H2_CTL_FRAME_MAX;
+        H2FrameV.window_args.stream_id = 0;
+        H2FrameV.window_args.increment = h->length;
+        H2Frame.build_window_update(work);
+        size_t n = H2FrameV.n;
         wr(work, H2_CONN_CTL(work), n);
-        n = (H2FrameV.window_args.buf = H2_CONN_CTL(work), H2FrameV.window_args.cap = H2_CTL_FRAME_MAX,
-             H2FrameV.window_args.stream_id = h->stream_id, H2FrameV.window_args.increment = h->length,
-             H2Frame.build_window_update(work), H2FrameV.n);
+        H2FrameV.window_args.buf = H2_CONN_CTL(work);
+        H2FrameV.window_args.cap = H2_CTL_FRAME_MAX;
+        H2FrameV.window_args.stream_id = h->stream_id;
+        H2FrameV.window_args.increment = h->length;
+        H2Frame.build_window_update(work);
+        n = H2FrameV.n;
         wr(work, H2_CONN_CTL(work), n);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // the dispatcher below takes for this frame.
-static proto_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *payload)
+static embed_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *payload)
 {
     switch (h.type)
     {
     case H2_SETTINGS:
         if (h.stream_id != 0)
         {
-            return PROTO_FALSE; // sec 6.5: SETTINGS belongs to the connection, stream 0
+            return EMBED_FALSE; // sec 6.5: SETTINGS belongs to the connection, stream 0
         }
         if (h.flags & H2_FLAG_ACK)
         {
             return h.length == 0; // ACK of our settings
         }
-        if (!(H2FrameV.settings_args.payload = payload, H2FrameV.settings_args.len = h.length,
-              H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.parse_settings(work), H2FrameV.ok))
+        H2FrameV.settings_args.payload = payload;
+        H2FrameV.settings_args.len = h.length;
+        H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer;
+        H2Frame.parse_settings(work);
+        if (!(H2FrameV.ok))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         send_control(work, build_settings_ack);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case H2_PING:
         if (h.stream_id != 0)
         {
-            return PROTO_FALSE; // sec 6.7: PING belongs to the connection, stream 0
+            return EMBED_FALSE; // sec 6.7: PING belongs to the connection, stream 0
         }
         if (h.flags & H2_FLAG_ACK)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         if (h.length != 8)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         {
-            size_t n = (H2FrameV.ping_args.buf = H2_CONN_CTL(work), H2FrameV.ping_args.cap = H2_CTL_FRAME_MAX,
-                        H2FrameV.ping_args.opaque = payload, H2Frame.build_ping_ack(work), H2FrameV.n);
+            H2FrameV.ping_args.buf = H2_CONN_CTL(work);
+            H2FrameV.ping_args.cap = H2_CTL_FRAME_MAX;
+            H2FrameV.ping_args.opaque = payload;
+            H2Frame.build_ping_ack(work);
+            size_t n = H2FrameV.n;
             wr(work, H2_CONN_CTL(work), n);
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case H2_WINDOW_UPDATE: {
         if (h.length != 4)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint32_t inc = rd32(payload) & 0x7FFFFFFF;
         // RFC 9113 sec 6.9: a zero increment is an error, and sec 6.9.1 caps a window at 2^31-1 - a
@@ -583,7 +612,7 @@ static proto_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *
         {
             if (inc == 0 || H2_CONN_CTX(work)->conn_send_window > (int32_t)(0x7FFFFFFFu - inc))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             H2_CONN_CTX(work)->conn_send_window += (int32_t)inc;
         }
@@ -594,7 +623,7 @@ static proto_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *
             // where sec 6.9 allows the frame to arrive late and be ignored.
             if (h.stream_id > H2_CONN_CTX(work)->last_peer_stream)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             H2Stream *s = find_stream(work, h.stream_id);
             if (s)
@@ -607,12 +636,12 @@ static proto_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *
                         err = H2_PROTOCOL_ERROR;
                     }
                     send_rst(work, h.stream_id, err);
-                    return PROTO_TRUE; // the stream dies, the connection lives
+                    return EMBED_TRUE; // the stream dies, the connection lives
                 }
                 s->send_window += (int32_t)inc;
             }
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     case H2_HEADERS:
         return handle_headers(work, &h, payload);
@@ -626,42 +655,42 @@ static proto_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *
         // Each is a connection error.
         if (h.stream_id == 0 || h.stream_id > H2_CONN_CTX(work)->last_peer_stream || h.length != 4)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         H2Stream *s = find_stream(work, h.stream_id);
         if (s)
         {
             s->id = 0; // free the slot
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     case H2_PRIORITY:
         if (h.stream_id == 0)
         {
-            return PROTO_FALSE; // sec 6.3: PRIORITY on stream 0 is a connection error
+            return EMBED_FALSE; // sec 6.3: PRIORITY on stream 0 is a connection error
         }
         if (h.length != 5)
         {
             // sec 6.3: a wrong length is a stream error, so the connection survives it.
             send_rst(work, h.stream_id, H2_FRAME_SIZE_ERROR);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
-        return PROTO_TRUE; // priority info accepted and ignored
+        return EMBED_TRUE; // priority info accepted and ignored
     case H2_GOAWAY:
         if (h.stream_id != 0 || h.length < 8)
         {
-            return PROTO_FALSE; // sec 6.8: stream 0, and at least the two 32-bit fields
+            return EMBED_FALSE; // sec 6.8: stream 0, and at least the two 32-bit fields
         }
         H2_CONN_CTX(work)->phase = 2;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case H2_PUSH_PROMISE:
-        return PROTO_FALSE; // a server never receives PUSH_PROMISE (sec 8.4)
+        return EMBED_FALSE; // a server never receives PUSH_PROMISE (sec 8.4)
     default:
-        return PROTO_TRUE; // unknown frame types are ignored (sec 4.1)
+        return EMBED_TRUE; // unknown frame types are ignored (sec 4.1)
     }
 }
 
-static proto_bool process_frame(uint8_t *work)
+static embed_bool process_frame(uint8_t *work)
 {
     H2FrameHeader h;
     H2FrameV.parse_args.buf = H2_CONN_FHDR(work);
@@ -673,12 +702,12 @@ static proto_bool process_frame(uint8_t *work)
     // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).
     if (H2_CONN_CTX(work)->in_header_block && h.type != H2_CONTINUATION)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // The one borrow for whatever this frame provokes us to send. It belongs here, at the frame's
     // owner, so no handler below stages a frame of its own.
-    const proto_bool ok = dispatch_frame(work, h, payload);
+    const embed_bool ok = dispatch_frame(work, h, payload);
     return ok;
 }
 
@@ -687,13 +716,15 @@ void protocore_h2_conn_init(uint8_t *work)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = H2_CONN_CTX(work), .val = 0, .bytes = sizeof(H2ConnCtx));
     H2_CONN_CTX(work)->cb = *H2ConnV.init_args.cb;
     H2_CONN_CTX(work)->phase = 0;
-    (H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.settings_defaults(work));
+    H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer;
+    H2Frame.settings_defaults(work);
     H2_CONN_CTX(work)->conn_send_window = 65535;
-    (HpackV.init_args.max_bytes = PROTOCORE_HPACK_TABLE_BYTES, Hpack.dyn_init(H2_CONN_CTX(work)->hdec));
+    HpackV.init_args.max_bytes = PROTOCORE_HPACK_TABLE_BYTES;
+    Hpack.dyn_init(H2_CONN_CTX(work)->hdec);
     send_our_settings(work);
 }
 
-static proto_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
+static embed_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
 {
     size_t off = 0;
     if (H2_CONN_CTX(work)->phase == 0)
@@ -702,20 +733,20 @@ static proto_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
         {
             if (data[off] != (uint8_t)H2_PREFACE[H2_CONN_CTX(work)->pre])
             {
-                return PROTO_FALSE; // malformed preface
+                return EMBED_FALSE; // malformed preface
             }
             H2_CONN_CTX(work)->pre++;
             off++;
         }
         if (H2_CONN_CTX(work)->pre < H2_PREFACE_LEN)
         {
-            return PROTO_TRUE; // preface still incomplete
+            return EMBED_TRUE; // preface still incomplete
         }
         H2_CONN_CTX(work)->phase = 1;
     }
     if (H2_CONN_CTX(work)->phase == 2)
     {
-        return PROTO_TRUE; // closing; ignore further input
+        return EMBED_TRUE; // closing; ignore further input
     }
 
     while (off < len)
@@ -733,14 +764,14 @@ static proto_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
             off += take;
             if (H2_CONN_CTX(work)->fhave < H2_FRAME_HEADER_LEN)
             {
-                return PROTO_TRUE;
+                return EMBED_TRUE;
             }
         }
         uint32_t plen =
             ((uint32_t)H2_CONN_FHDR(work)[0] << 16) | ((uint32_t)H2_CONN_FHDR(work)[1] << 8) | H2_CONN_FHDR(work)[2];
         if (plen > PROTOCORE_H2_MAX_FRAME)
         {
-            return PROTO_FALSE; // FRAME_SIZE_ERROR
+            return EMBED_FALSE; // FRAME_SIZE_ERROR
         }
         size_t total = H2_FRAME_HEADER_LEN + plen;
         size_t take = total - H2_CONN_CTX(work)->fhave;
@@ -754,24 +785,24 @@ static proto_bool h2_recv_run(uint8_t *work, const uint8_t *data, size_t len)
         off += take;
         if (H2_CONN_CTX(work)->fhave < total)
         {
-            return PROTO_TRUE; // frame incomplete
+            return EMBED_TRUE; // frame incomplete
         }
         if (!process_frame(work))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         H2_CONN_CTX(work)->fhave = 0;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, const char *content_type,
+static embed_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, const char *content_type,
                                  const char *body, size_t body_len)
 {
     H2Stream *s = find_stream(work, stream_id);
     if (!s)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Build the HPACK header block: :status, optional content-type, content-length.
@@ -782,12 +813,17 @@ static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
     sb_num = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = num, .cap = sizeof num, .at = sb_num,
                         .sval = (int64_t)(status));
     int nl = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = num, .cap = sizeof num, .at = sb_num);
-    size_t w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
-                HpackV.encode_args.name = ":status", HpackV.encode_args.name_len = 7, HpackV.encode_args.value = num,
-                HpackV.encode_args.value_len = (size_t)nl, Hpack.encode_header(work), HpackV.n);
+    HpackV.encode_args.out = block + bo;
+    HpackV.encode_args.cap = sizeof block - bo;
+    HpackV.encode_args.name = ":status";
+    HpackV.encode_args.name_len = 7;
+    HpackV.encode_args.value = num;
+    HpackV.encode_args.value_len = (size_t)nl;
+    Hpack.encode_header(work);
+    size_t w = HpackV.n;
     if (!w)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     bo += w;
     if (content_type)
@@ -795,15 +831,18 @@ static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
         // Cap above the largest content-type that can fit this block even at HPACK-Huffman's best
         // 5-bit/char (~sizeof block * 8/5): a longer value can never fit, so measuring it as `2*block`
         // still trips the encode's reject below instead of being truncated into a fittable length.
-        w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
-             HpackV.encode_args.name = "content-type", HpackV.encode_args.name_len = 12,
-             HpackV.encode_args.value = content_type,
-             HpackV.encode_args.value_len =
-                 EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content_type, .cap = sizeof block * 2),
-             Hpack.encode_header(work), HpackV.n);
+        HpackV.encode_args.out = block + bo;
+        HpackV.encode_args.cap = sizeof block - bo;
+        HpackV.encode_args.name = "content-type";
+        HpackV.encode_args.name_len = 12;
+        HpackV.encode_args.value = content_type;
+        HpackV.encode_args.value_len =
+            EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content_type, .cap = sizeof block * 2);
+        Hpack.encode_header(work);
+        w = HpackV.n;
         if (!w)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         bo += w;
     }
@@ -811,25 +850,34 @@ static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
     sb_num2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = num, .cap = sizeof num, .at = sb_num2,
                          .val = (uint32_t)((unsigned)body_len));
     int cl = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = num, .cap = sizeof num, .at = sb_num2);
-    w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
-         HpackV.encode_args.name = "content-length", HpackV.encode_args.name_len = 14, HpackV.encode_args.value = num,
-         HpackV.encode_args.value_len = (size_t)cl, Hpack.encode_header(work), HpackV.n);
+    HpackV.encode_args.out = block + bo;
+    HpackV.encode_args.cap = sizeof block - bo;
+    HpackV.encode_args.name = "content-length";
+    HpackV.encode_args.name_len = 14;
+    HpackV.encode_args.value = num;
+    HpackV.encode_args.value_len = (size_t)cl;
+    Hpack.encode_header(work);
+    w = HpackV.n;
     // Reachable: bo has already been advanced by the caller-supplied content-type, which can consume nearly
     // the whole block, leaving too little room for content-length even though it is only a few octets.
     if (!w)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     bo += w;
 
     uint8_t frame[H2_FRAME_HEADER_LEN + sizeof block];
-    size_t n = (H2FrameV.headers_args.buf = frame, H2FrameV.headers_args.cap = sizeof frame,
-                H2FrameV.headers_args.stream_id = stream_id, H2FrameV.headers_args.block = block,
-                H2FrameV.headers_args.block_len = bo, H2FrameV.headers_args.end_stream = body_len == 0,
-                H2Frame.build_headers(work), H2FrameV.n);
+    H2FrameV.headers_args.buf = frame;
+    H2FrameV.headers_args.cap = sizeof frame;
+    H2FrameV.headers_args.stream_id = stream_id;
+    H2FrameV.headers_args.block = block;
+    H2FrameV.headers_args.block_len = bo;
+    H2FrameV.headers_args.end_stream = body_len == 0;
+    H2Frame.build_headers(work);
+    size_t n = H2FrameV.n;
     if (!n)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     wr(work, frame, n);
 
@@ -843,15 +891,19 @@ static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
         {
             chunk = chunk_max;
         }
-        proto_bool last = (sent + chunk == body_len);
+        embed_bool last = (sent + chunk == body_len);
         uint8_t dh[H2_FRAME_HEADER_LEN];
-        size_t hn = (H2FrameV.write_args.buf = dh, H2FrameV.write_args.cap = sizeof dh,
-                     H2FrameV.write_args.length = (uint32_t)chunk, H2FrameV.write_args.type = H2_DATA,
-                     H2FrameV.write_args.flags = last ? H2_FLAG_END_STREAM : 0,
-                     H2FrameV.write_args.stream_id = stream_id, H2Frame.write_header(work), H2FrameV.n);
+        H2FrameV.write_args.buf = dh;
+        H2FrameV.write_args.cap = sizeof dh;
+        H2FrameV.write_args.length = (uint32_t)chunk;
+        H2FrameV.write_args.type = H2_DATA;
+        H2FrameV.write_args.flags = last ? H2_FLAG_END_STREAM : 0;
+        H2FrameV.write_args.stream_id = stream_id;
+        H2Frame.write_header(work);
+        size_t hn = H2FrameV.n;
         if (!hn)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         wr(work, dh, hn);
         wr(work, (const uint8_t *)(body + sent), chunk);
@@ -860,15 +912,18 @@ static proto_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
         sent += chunk;
     }
     s->id = 0; // stream complete; free the slot
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void h2_goaway_run(uint8_t *work, uint32_t error)
 {
     uint8_t buf[H2_FRAME_HEADER_LEN + 8];
-    size_t n = (H2FrameV.goaway_args.buf = buf, H2FrameV.goaway_args.cap = sizeof buf,
-                H2FrameV.goaway_args.last_stream_id = H2_CONN_CTX(work)->last_peer_stream,
-                H2FrameV.goaway_args.error = error, H2Frame.build_goaway(work), H2FrameV.n);
+    H2FrameV.goaway_args.buf = buf;
+    H2FrameV.goaway_args.cap = sizeof buf;
+    H2FrameV.goaway_args.last_stream_id = H2_CONN_CTX(work)->last_peer_stream;
+    H2FrameV.goaway_args.error = error;
+    H2Frame.build_goaway(work);
+    size_t n = H2FrameV.n;
     wr(work, buf, n);
     H2_CONN_CTX(work)->phase = 2;
 }
@@ -890,13 +945,13 @@ void protocore_h2_conn_respond(uint8_t *work)
 void protocore_h2_conn_goaway(uint8_t *work)
 {
     h2_goaway_run(work, H2ConnV.goaway_args.error);
-    H2ConnV.ok = PROTO_TRUE;
+    H2ConnV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 H2ConnVars H2ConnV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2

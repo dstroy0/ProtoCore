@@ -44,7 +44,7 @@
 
 #if PROTOCORE_ENABLE_TRACE_CAPTURE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One completed pre/post-trigger sample window, handed to the sink inline. */
 typedef struct
@@ -108,7 +108,7 @@ typedef struct
 {
     const protocore_tc_config *cfg;
     TcFeedArgs feed;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t accepted;
 } TraceCaptureVars;
 
@@ -159,7 +159,7 @@ static const TraceCaptureNs TraceCapture __attribute__((unused)) = {
  */
 uint8_t *protocore_trace_capture_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TRACE_CAPTURE
 

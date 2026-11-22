@@ -31,7 +31,7 @@ protocore_lsv2_error(&r, &err_class, &err_code);                             // 
 ```
 
 Access is privilege-gated: log in to a group (`INSPECT` to read, `FILE` for the file system, `DNC`
-for DNC functions, ...) with `A_LG`, then issue commands; the control answers `T_OK` / `T_FD`, a
+for DNC functions, ...) with `A_LG`, then issue commands. The control answers `T_OK` / `T_FD`, a
 `S_*` data reply, or `T_ER` / `T_BD` carrying a two-byte error-class + error-code.
 
 ## Prerequisites (a Heidenhain control, or a simulator)
@@ -62,7 +62,7 @@ IP: 192.168.1.42
 ## Annotated source
 
 The complete sketch is [HeidenhainLsv2.ino](HeidenhainLsv2.ino). The codec itself is in
-[src/services/machine_tool/lsv2/lsv2.h](../../../src/services/machine_tool/lsv2/lsv2.h); the telegram framing, the command /
+[src/services/machine_tool/lsv2/lsv2.h](../../../src/services/machine_tool/lsv2/lsv2.h). The telegram framing, the command /
 response mnemonic set, and the login / filename / run-info payload layouts are cross-checked
 byte-for-byte against the [pyLSV2](https://github.com/drunsinn/pyLSV2) reference. Pairs with the
 [HaasMdc](../HaasMdc/README.md) and Fanuc FOCAS machine-tool examples.

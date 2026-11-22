@@ -29,7 +29,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the ring and the raw write
 #include "server/core/worker/worker.h"                       // the persistent end this module's state is taken from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The layer's compile-time storage: one connection per slot, and what a handshake needs.
@@ -47,7 +47,7 @@ struct TlsStorage
     uint8_t out[PROTOCORE_TLS_SEAM_OUT_CAP]; ///< what one pump owes the wire, built then sent
     uint8_t ed_seed[32];                     ///< the Ed25519 signing seed this end presents (RFC 7250)
     uint8_t ed_pub[32];                      ///< the raw public key that matches it
-    proto_bool ready;                        ///< a credential is installed
+    embed_bool ready;                        ///< a credential is installed
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every region is
@@ -59,7 +59,10 @@ static_assert(TLS_OFF_CTX + sizeof(struct TlsStorage) <= PROTOCORE_TLS_BORROW,
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TLS_CTX(w) ((struct TlsStorage *)(void *)((w) + TLS_OFF_CTX))
+#define TLS_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TlsStorage *)(const void *)((w) + TLS_OFF_CTX),                                 \
+        default: (struct TlsStorage *)(void *)((w) + TLS_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -101,7 +104,7 @@ const char *protocore_tls_alpn(uint8_t slot)
 // carries the fragment length (RFC 8446 sec 5.1), so a record that has not fully arrived is left
 // where it is and read again on the next pump - the ring is not consumed until the whole record is
 // there. Reports the record's total length, or 0 when it is not yet complete.
-static size_t frame_one(uint8_t *work, uint8_t slot, TlsConn *c)
+static size_t frame_one(const uint8_t *work, uint8_t slot, TlsConn *c)
 {
     ConnPoolV.slot = slot;
     ConnPool.available(protocore_conn_pool_span());
@@ -139,20 +142,20 @@ static size_t frame_one(uint8_t *work, uint8_t slot, TlsConn *c)
 
 // Whatever the handshake owes, through the transport's context-safe raw write. The pump runs on a
 // worker, not in the stack's thread, so this is the one write it may make.
-static proto_bool emit(uint8_t *work, uint8_t slot, size_t len)
+static embed_bool emit(uint8_t *work, uint8_t slot, size_t len)
 {
     if (len == 0)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     protocore_pcb *pcb = TLS_CTX(work)->pcb[slot];
     if (pcb == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     ConnPoolV.pcb = pcb;
     ConnPoolV.io.data = TLS_CTX(work)->out;
-    ConnPoolV.io.len = (proto_u16)len;
+    ConnPoolV.io.len = (embed_u16)len;
     ConnPool.raw_send(protocore_conn_pool_span());
     return ConnPoolV.ok;
 }
@@ -161,33 +164,33 @@ static proto_bool emit(uint8_t *work, uint8_t slot, size_t len)
 // The slot-indexed surface
 // ---------------------------------------------------------------------------
 
-proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
+embed_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
 {
     uint8_t *work = protocore_tls_span();
     // RFC 7250 raw public keys: this engine presents an Ed25519 key, not an X.509 chain, so the
     // credential is the 32-byte public key and the 32-byte signing seed that matches it.
     if (cert == NULL || key == NULL || cert_len != 32u || key_len != 32u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(proxim.read, ProximusCfg, .dst = TLS_CTX(work)->ed_pub, .at = cert, .size = 32u);
     EMBED_CALL(proxim.read, ProximusCfg, .dst = TLS_CTX(work)->ed_seed, .at = key, .size = 32u);
-    TLS_CTX(work)->ready = PROTO_TRUE;
-    return PROTO_TRUE;
+    TLS_CTX(work)->ready = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_tls_ready(void)
+embed_bool protocore_tls_ready(void)
 {
     uint8_t *work = protocore_tls_span();
-    return work ? TLS_CTX(work)->ready : PROTO_FALSE;
+    return work ? TLS_CTX(work)->ready : EMBED_FALSE;
 }
 
-proto_bool protocore_tls_conn_begin(uint8_t slot)
+embed_bool protocore_tls_conn_begin(uint8_t slot)
 {
     uint8_t *work = protocore_tls_span();
     if (slot >= MAX_CONNS || !TLS_CTX(work)->ready)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Fresh per handshake, from the one generator: the X25519 ephemeral private key (sec 4.2.8) and
@@ -258,12 +261,12 @@ int protocore_tls_handshake(uint8_t slot)
     return TlsConnectionV.ok ? 1 : 0;
 }
 
-proto_bool protocore_tls_established(uint8_t slot)
+embed_bool protocore_tls_established(uint8_t slot)
 {
     uint8_t *work = protocore_tls_span();
     if (slot >= MAX_CONNS)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     TlsConnectionV.conn = &TLS_CTX(work)->conn[slot];
     TlsConnection.established(protocore_tls_span());
@@ -362,8 +365,8 @@ void protocore_tls_conn_free(uint8_t slot)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = TLS_CTX(work)->rnd[slot], .val = 0, .bytes = 32u);
     TLS_CTX(work)->pcb[slot] = NULL;
     c->state = TLS_CONN_START;
-    c->hs_keys_ready = PROTO_FALSE;
-    c->ap_keys_ready = PROTO_FALSE;
+    c->hs_keys_ready = EMBED_FALSE;
+    c->ap_keys_ready = EMBED_FALSE;
 }
 
 size_t protocore_tls_arena_peak(void)
@@ -371,6 +374,6 @@ size_t protocore_tls_arena_peak(void)
     return mmgr_owner_hw(protocore_secure_owner());
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TLS

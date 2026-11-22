@@ -8,7 +8,7 @@
 #
 #   tools/dev_env/gen_x509_fixture.sh
 #
-# The certificates carry fixed serials and a fixed SAN so the suite can assert on them; the keys and
+# The certificates carry fixed serials and a fixed SAN so the suite can assert on them. The keys and
 # validity dates change per run, which is why the header records the dates alongside the bytes.
 set -e
 

@@ -14,7 +14,7 @@
 #include "services/machine_tool/atc/atc.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static size_t put_json_str(char *out, size_t cap, size_t at, const char *s)
 {
@@ -53,10 +53,10 @@ static size_t put_u8(char *out, size_t cap, size_t at, uint8_t v)
 }
 
 // Append the points of one direction (outputs or inputs) as a JSON array.
-static size_t put_array(char *out, size_t cap, size_t at, const AtcFieldIo *io, proto_bool outputs)
+static size_t put_array(char *out, size_t cap, size_t at, const AtcFieldIo *io, embed_bool outputs)
 {
     at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "[");
-    proto_bool first = PROTO_TRUE;
+    embed_bool first = EMBED_TRUE;
     for (size_t i = 0; i < io->count; i++)
     {
         if (io->points[i].is_output != outputs)
@@ -67,7 +67,7 @@ static size_t put_array(char *out, size_t cap, size_t at, const AtcFieldIo *io, 
         {
             at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = ",");
         }
-        first = PROTO_FALSE;
+        first = EMBED_FALSE;
         at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = "{\"name\":");
         at = put_json_str(out, cap, at, io->points[i].name);
         at = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = at, .text = ",\"value\":");
@@ -85,9 +85,9 @@ size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
     }
     size_t b = 0;
     b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "{\"inputs\":");
-    b = put_array(out, cap, b, io, PROTO_FALSE);
+    b = put_array(out, cap, b, io, EMBED_FALSE);
     b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = ",\"outputs\":");
-    b = put_array(out, cap, b, io, PROTO_TRUE);
+    b = put_array(out, cap, b, io, EMBED_TRUE);
     b = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = b, .text = "}");
     if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .cap = cap, .at = b))
     {
@@ -97,30 +97,30 @@ size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap)
     return b;
 }
 
-proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value)
+embed_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value)
 {
     if (!io || !name || !io->points)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < io->count; i++)
     {
         if (io->points[i].is_output && io->points[i].name &&
             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = io->points[i].name, .other = name, .cap = MAX_KEY_LEN,
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             io->points[i].value = value;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found)
+uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, embed_bool *found)
 {
     if (found)
     {
-        *found = PROTO_FALSE;
+        *found = EMBED_FALSE;
     }
     if (!io || !name || !io->points)
     {
@@ -129,11 +129,11 @@ uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *fo
     for (size_t i = 0; i < io->count; i++)
     {
         if (io->points[i].name && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = io->points[i].name, .other = name,
-                                             .cap = MAX_KEY_LEN, .ci = PROTO_FALSE))
+                                             .cap = MAX_KEY_LEN, .ci = EMBED_FALSE))
         {
             if (found)
             {
-                *found = PROTO_TRUE;
+                *found = EMBED_TRUE;
             }
             return io->points[i].value;
         }
@@ -141,6 +141,6 @@ uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *fo
     return 0;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ATC

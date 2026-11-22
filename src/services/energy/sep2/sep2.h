@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_SEP2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Build a DeviceCapability document with hrefs to the EndDeviceList and the DER-program list.
@@ -55,7 +55,7 @@ size_t protocore_sep2_end_device(uint64_t sfdi, const char *lfdi, const char *hr
 size_t protocore_sep2_der_control(const char *mrid, uint32_t start, uint32_t duration, int32_t opmod_target_w,
                                   char *out, size_t cap);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SEP2
 

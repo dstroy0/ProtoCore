@@ -32,7 +32,7 @@ The CRC is CRC-16/CCITT; the codec is host-tested against the documented RST fra
 (`C0 38 BC 7E`) and the byte-stuffing in `test/test_zigbee`.
 
 Interpreting the EZSP command _inside_ a DATA frame - version negotiation, the ACK/sequence
-numbers, the `incomingMessageHandler` fields - is application work; this sketch bridges the
+numbers, the `incomingMessageHandler` fields - is application work. This sketch bridges the
 raw EZSP payload to show the transport path.
 
 ## Wiring (ESP32 <-> Zigbee NCP)

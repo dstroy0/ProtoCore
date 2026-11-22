@@ -42,7 +42,7 @@
 
 #if PROTOCORE_ENABLE_SNMP_V3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 #include "services/net/snmp/snmp_notify/snmp_notify.h" // SnmpVarbind: the bindings a v3 notification carries
@@ -121,7 +121,7 @@ typedef struct
 #if PROTOCORE_ENABLE_SNMP_TRAP
     SnmpV3NotifyArgs notify; ///< what an outgoing notification carries
 #endif
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint32_t u32;
 #if PROTOCORE_ENABLE_SNMP_TRAP
@@ -178,7 +178,7 @@ static const SnmpV3Ns SnmpV3 __attribute__((unused)) = {
  */
 uint8_t *protocore_snmp_v3_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP_V3
 

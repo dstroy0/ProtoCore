@@ -7,7 +7,7 @@
 // allocation, no sockets - so like performance_benching/device/modbus (and unlike a peripheral driver such as
 // performance_benching/device/ads1115) each call exercises the real production code path directly. There is no
 // hardware or transport to stub: the caching proxy/tier (RAM/SD storage, cache key, invalidation)
-// is a separate, out-of-scope piece; only the standards-mechanics text codec is benched.
+// is a separate, out-of-scope piece. Only the standards-mechanics text codec is benched.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/httpcache -t upload --upload-port COM7

@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_CCLINK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -86,7 +86,7 @@ typedef struct
     uint8_t *bits;
     size_t bit_len;
     size_t index;
-    proto_bool value;
+    embed_bool value;
 } CclinkSetBitArgs;
 
 /** @brief What get_word takes: words, word_len, index. */
@@ -136,7 +136,7 @@ typedef struct
     CclinkGetBitArgs get_bit_args;
     CclinkSetBitArgs set_bit_args;
     CclinkGetWordArgs get_word_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value; ///< the checksum a sum reports
     uint16_t u16;  ///< the word a get_word reports: its own member, since value is an octet
     size_t n;
@@ -148,22 +148,22 @@ extern CclinkVars CclinkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const sum)(uint8_t *work);
+    void (*const sum)(const uint8_t *work);
     void (*const build)(uint8_t *work);
     void (*const parse)(uint8_t *work);
-    void (*const get_bit)(uint8_t *work);
-    void (*const set_bit)(uint8_t *work);
-    void (*const get_word)(uint8_t *work);
+    void (*const get_bit)(const uint8_t *work);
+    void (*const set_bit)(const uint8_t *work);
+    void (*const get_word)(const uint8_t *work);
 } CclinkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CclinkV or a region of the borrow at a fixed offset.
-void protocore_cclink_sum(uint8_t *work);
+void protocore_cclink_sum(const uint8_t *work);
 void protocore_cclink_build(uint8_t *work);
 void protocore_cclink_parse(uint8_t *work);
-void protocore_cclink_get_bit(uint8_t *work);
-void protocore_cclink_set_bit(uint8_t *work);
-void protocore_cclink_get_word(uint8_t *work);
+void protocore_cclink_get_bit(const uint8_t *work);
+void protocore_cclink_set_bit(const uint8_t *work);
+void protocore_cclink_get_word(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -178,7 +178,7 @@ static const CclinkNs Cclink __attribute__((unused)) = {
     .get_word = protocore_cclink_get_word,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CCLINK
 

@@ -98,7 +98,7 @@ void test_rfc8259_section_13_example_document(void)
     Json.end_object(json_work);
     JsonV.kv_bool_args.w = w;
     JsonV.kv_bool_args.k = "Animated";
-    JsonV.kv_bool_args.v = PROTO_FALSE;
+    JsonV.kv_bool_args.v = EMBED_FALSE;
     Json.kv_bool(json_work);
     JsonV.key_args.w = w;
     JsonV.key_args.k = "IDs";
@@ -174,12 +174,12 @@ void test_rfc8259_literal_names(void)
     JsonV.begin_array_args.w = w;
     Json.begin_array(json_work);
     JsonV.put_bool_args.w = w;
-    JsonV.put_bool_args.v = PROTO_FALSE;
+    JsonV.put_bool_args.v = EMBED_FALSE;
     Json.put_bool(json_work);
     JsonV.put_null_args.w = w;
     Json.put_null(json_work);
     JsonV.put_bool_args.w = w;
-    JsonV.put_bool_args.v = PROTO_TRUE;
+    JsonV.put_bool_args.v = EMBED_TRUE;
     Json.put_bool(json_work);
     JsonV.end_array_args.w = w;
     Json.end_array(json_work);
@@ -187,7 +187,7 @@ void test_rfc8259_literal_names(void)
 }
 
 // Read one string member into @p out; returns what the reader reported.
-static proto_bool get_str(const char *doc, const char *key, char *out, size_t cap)
+static embed_bool get_str(const char *doc, const char *key, char *out, size_t cap)
 {
     JsonV.get_str_args.json = doc;
     JsonV.get_str_args.key = key;
@@ -269,7 +269,7 @@ void test_reader_matches_only_top_level_members(void)
 {
     char out[64];
     long n = 12345;
-    proto_bool b = PROTO_TRUE;
+    embed_bool b = EMBED_TRUE;
 
     JsonV.get_int_args.json = RFC8259_DOC;
     JsonV.get_int_args.key = "Width";
@@ -303,7 +303,7 @@ void test_reader_skips_insignificant_whitespace(void)
 {
     char out[32];
     long n = 0;
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
     static const char *const SPACED = "  {  \"s\" :  \"v\" ,  \"n\" : -7 ,  \"b\" : true  }  ";
     JsonV.get_str_args.json = SPACED;
     JsonV.get_str_args.key = "s";
@@ -346,7 +346,7 @@ void test_write_read_round_trip(void)
     Json.kv_uint(json_work);
     JsonV.kv_bool_args.w = w;
     JsonV.kv_bool_args.k = "b";
-    JsonV.kv_bool_args.v = PROTO_FALSE;
+    JsonV.kv_bool_args.v = EMBED_FALSE;
     Json.kv_bool(json_work);
     JsonV.end_object_args.w = w;
     Json.end_object(json_work);
@@ -354,7 +354,7 @@ void test_write_read_round_trip(void)
 
     char out[32];
     long n = 0;
-    proto_bool b = PROTO_TRUE;
+    embed_bool b = EMBED_TRUE;
     const char *doc = protocore_json_c_str(w);
     JsonV.get_str_args.json = doc;
     JsonV.get_str_args.key = "s";
@@ -388,7 +388,7 @@ void test_write_read_round_trip(void)
 void test_reader_refuses_a_mismatched_type(void)
 {
     long n = 0;
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
     JsonV.get_int_args.json = "{\"n\":\"42\"}";
     JsonV.get_int_args.key = "n";
     JsonV.get_int_args.out = &n;
@@ -421,7 +421,7 @@ void test_reader_guards(void)
 {
     char out[8];
     long n = 0;
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
     JsonV.get_str_args.json = "{\"a\":\"x\"}";
     JsonV.get_str_args.key = "b";
     JsonV.get_str_args.out = out;

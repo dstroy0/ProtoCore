@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_HART
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -159,7 +159,7 @@ typedef struct
     HartParseArgs parse_args;
     HartIpBuildHeaderArgs ip_build_header_args;
     HartIpParseHeaderArgs ip_parse_header_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     size_t n;
 } HartVars;
@@ -170,20 +170,20 @@ extern HartVars HartV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const checksum)(uint8_t *work);
+    void (*const checksum)(const uint8_t *work);
     void (*const build)(uint8_t *work);
     void (*const parse)(uint8_t *work);
-    void (*const ip_build_header)(uint8_t *work);
-    void (*const ip_parse_header)(uint8_t *work);
+    void (*const ip_build_header)(const uint8_t *work);
+    void (*const ip_parse_header)(const uint8_t *work);
 } HartNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HartV or a region of the borrow at a fixed offset.
-void protocore_hart_checksum(uint8_t *work);
+void protocore_hart_checksum(const uint8_t *work);
 void protocore_hart_build(uint8_t *work);
 void protocore_hart_parse(uint8_t *work);
-void protocore_hart_ip_build_header(uint8_t *work);
-void protocore_hart_ip_parse_header(uint8_t *work);
+void protocore_hart_ip_build_header(const uint8_t *work);
+void protocore_hart_ip_parse_header(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -197,7 +197,7 @@ static const HartNs Hart __attribute__((unused)) = {
     .ip_parse_header = protocore_hart_ip_parse_header,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HART
 

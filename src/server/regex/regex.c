@@ -63,7 +63,7 @@ static size_t re_atom_len(const char *p)
     return 1;
 }
 
-static proto_bool re_class_member(char lo, char hi, char ch)
+static embed_bool re_class_member(char lo, char hi, char ch)
 {
     return ch >= lo && ch <= hi;
 }
@@ -84,7 +84,7 @@ static char re_read_atom(const char **q, const char *end)
 }
 
 // Match a backslash-escape class (\d \D \w \W \s \S) or an escaped literal against ch.
-static proto_bool re_match_escape(char e, char ch)
+static embed_bool re_match_escape(char e, char ch)
 {
     switch (e)
     {
@@ -106,17 +106,17 @@ static proto_bool re_match_escape(char e, char ch)
 }
 
 // Match a '[...]' character class (optional '^' negation, a-z ranges) at [p, p+len) against ch.
-static proto_bool re_match_class(const char *p, size_t len, char ch)
+static embed_bool re_match_class(const char *p, size_t len, char ch)
 {
     const char *q = p + 1;
     const char *end = p + len - 1; // points at the closing ']'
-    proto_bool neg = PROTO_FALSE;
+    embed_bool neg = EMBED_FALSE;
     if (q < end && *q == '^')
     {
-        neg = PROTO_TRUE;
+        neg = EMBED_TRUE;
         q++;
     }
-    proto_bool m = PROTO_FALSE;
+    embed_bool m = EMBED_FALSE;
     while (q < end)
     {
         char lo = re_read_atom(&q, end);
@@ -132,18 +132,18 @@ static proto_bool re_match_class(const char *p, size_t len, char ch)
         }
         else if (ch == lo)
         {
-            m = PROTO_TRUE;
+            m = EMBED_TRUE;
         }
     }
     return neg ? !m : m;
 }
 
 // Does the atom [p, p+len) match the single character ch (ch != '\0')?
-static proto_bool re_atom_matches(const char *p, size_t len, char ch)
+static embed_bool re_atom_matches(const char *p, size_t len, char ch)
 {
     if (ch == '\0')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (*p == '\\')
     {
@@ -151,7 +151,7 @@ static proto_bool re_atom_matches(const char *p, size_t len, char ch)
     }
     if (*p == '.')
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (*p == '[')
     {
@@ -160,29 +160,29 @@ static proto_bool re_atom_matches(const char *p, size_t len, char ch)
     return ch == *p; // literal
 }
 
-static proto_bool re_match(ReCtx *c, const char *pat, const char *text);
+static embed_bool re_match(ReCtx *c, const char *pat, const char *text);
 
 // Greedy "(atom)* rest" against text.
-static proto_bool re_star(ReCtx *c, const char *atom, size_t al, const char *rest, const char *text)
+static embed_bool re_star(ReCtx *c, const char *atom, size_t al, const char *rest, const char *text)
 {
     c->steps++;
     if (c->steps > c->max_steps)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (re_atom_matches(atom, al, *text) && re_star(c, atom, al, rest, text + 1))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     return re_match(c, rest, text);
 }
 
-static proto_bool re_match(ReCtx *c, const char *pat, const char *text)
+static embed_bool re_match(ReCtx *c, const char *pat, const char *text)
 {
     c->steps++;
     if (c->steps > c->max_steps)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (*pat == '\0')
     {
@@ -201,7 +201,7 @@ static proto_bool re_match(ReCtx *c, const char *pat, const char *text)
     {
         if (!re_atom_matches(pat, al, *text))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         return re_star(c, pat, al, rest, text + 1);
     }
@@ -209,7 +209,7 @@ static proto_bool re_match(ReCtx *c, const char *pat, const char *text)
     {
         if (re_atom_matches(pat, al, *text) && re_match(c, rest, text + 1))
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         return re_match(c, rest, text);
     }
@@ -218,12 +218,12 @@ static proto_bool re_match(ReCtx *c, const char *pat, const char *text)
     {
         return re_match(c, rest, text + 1);
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Whole-path regex match (implicitly anchored at both ends). External linkage
 // (declared in protocore.h): the route dispatcher calls it.
-proto_bool regex_match(const char *pattern, const char *path)
+embed_bool regex_match(const char *pattern, const char *path)
 {
     ReCtx c;
     c.steps = 0;

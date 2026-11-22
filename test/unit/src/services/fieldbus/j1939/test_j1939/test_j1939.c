@@ -597,7 +597,7 @@ void test_transport_protocol_rejects_bad_sequences(void)
     J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
     TEST_ASSERT_TRUE(J1939V.ok);
-    f.extended = PROTO_FALSE;
+    f.extended = EMBED_FALSE;
     J1939V.tp_feed_args.rx = &rx;
     J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());

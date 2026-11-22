@@ -80,12 +80,12 @@ void test_rpk_certificate_round_trip(void)
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_TLS13_ED25519_SPKI_LEN, cert_len);
 
     const uint8_t *got = NULL;
-    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, cert, cert_len, &got);
+    embed_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, cert, cert_len, &got);
     TEST_ASSERT_TRUE(tls13_rpk_ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pub, got, 32);
 }
 
-// An X.509 Certificate parses as a Certificate; only the SubjectPublicKeyInfo reader refuses it,
+// An X.509 Certificate parses as a Certificate. Only the SubjectPublicKeyInfo reader refuses it,
 // because a DER chain is not the RFC 8410 encoding an RPK credential has.
 void test_x509_certificate_is_not_read_as_a_raw_public_key(void)
 {
@@ -111,7 +111,7 @@ void test_x509_certificate_is_not_read_as_a_raw_public_key(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(DER, cert, sizeof(DER));
 
     const uint8_t *got = NULL;
-    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, cert, cert_len, &got);
+    embed_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, cert, cert_len, &got);
     TEST_ASSERT_FALSE(tls13_rpk_ok);
 }
 
@@ -125,7 +125,7 @@ void test_spki_reader_refuses_a_wrong_prefix(void)
     TEST_ASSERT_NOT_EQUAL(0u, tls13_rpk_n);
 
     const uint8_t *got = NULL;
-    proto_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, spki, sizeof(spki), &got);
+    embed_bool tls13_rpk_ok = Tls13Rpk.ed25519_from_spki(tls13_rpk_work, spki, sizeof(spki), &got);
     TEST_ASSERT_TRUE(tls13_rpk_ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pub, got, 32);
 

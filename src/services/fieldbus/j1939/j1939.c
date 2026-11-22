@@ -15,7 +15,7 @@
 
 #if PROTOCORE_ENABLE_J1939
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -39,11 +39,11 @@ uint8_t *protocore_j1939_span(void)
     return s_own.span;
 }
 
-void protocore_j1939_decode_id(uint8_t *work);
-void protocore_j1939_tp_num_packets(uint8_t *work);
-void protocore_j1939_tp_reset(uint8_t *work);
+void protocore_j1939_decode_id(const uint8_t *work);
+void protocore_j1939_tp_num_packets(const uint8_t *work);
+void protocore_j1939_tp_reset(const uint8_t *work);
 
-void protocore_j1939_encode_id(uint8_t *work)
+void protocore_j1939_encode_id(const uint8_t *work)
 {
     (void)work;
     uint32_t *id = J1939V.encode_id_args.id;
@@ -54,7 +54,7 @@ void protocore_j1939_encode_id(uint8_t *work)
 
     if (!id || priority > 7 || pgn > 0x3FFFFu)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     uint8_t edp = (uint8_t)((pgn >> 17) & 1u);
@@ -65,10 +65,10 @@ void protocore_j1939_encode_id(uint8_t *work)
     uint8_t ps = (pf < J1939_PDU2_THRESHOLD) ? da : (uint8_t)(pgn & 0xFFu);
     *id = ((uint32_t)(priority & 7u) << 26) | ((uint32_t)edp << 25) | ((uint32_t)dp << 24) | ((uint32_t)pf << 16) |
           ((uint32_t)ps << 8) | (uint32_t)sa;
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_id(uint8_t *work)
+void protocore_j1939_decode_id(const uint8_t *work)
 {
     (void)work;
     uint32_t id = J1939V.decode_id_args.id;
@@ -76,7 +76,7 @@ void protocore_j1939_decode_id(uint8_t *work)
 
     if (!out)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     id &= PROTOCORE_CAN_EXT_ID_MASK;
@@ -97,7 +97,7 @@ void protocore_j1939_decode_id(uint8_t *work)
         out->da = J1939_ADDR_GLOBAL;
         out->pgn = ((uint32_t)edp << 17) | ((uint32_t)dp << 16) | ((uint32_t)out->pf << 8) | out->ps;
     }
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 // The operands the private helper below reads, all of them: the widest set any one caller supplies.
@@ -127,10 +127,13 @@ static_assert(J1939_OFF_CTX % _Alignof(J1939Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define J1939_CTX(w) ((J1939Ctx *)(void *)((w) + J1939_OFF_CTX))
+#define J1939_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const J1939Ctx *)(const void *)((w) + J1939_OFF_CTX),                                        \
+        default: (J1939Ctx *)(void *)((w) + J1939_OFF_CTX))
 
 // Fill a CanFrame as a 29-bit extended frame, from the operands on the context.
-static proto_bool ext_frame(uint8_t *work)
+static embed_bool ext_frame(uint8_t *work)
 {
     uint32_t id;
     J1939V.encode_id_args.id = &id;
@@ -139,18 +142,19 @@ static proto_bool ext_frame(uint8_t *work)
     J1939V.encode_id_args.sa = J1939_CTX(work)->sa;
     J1939V.encode_id_args.da = J1939_CTX(work)->da;
     protocore_j1939_encode_id(work);
+    J1939V.encode_id_args.id = NULL;
     if (!J1939V.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     J1939_CTX(work)->f->id = id;
-    J1939_CTX(work)->f->extended = PROTO_TRUE;
-    J1939_CTX(work)->f->rtr = PROTO_FALSE;
+    J1939_CTX(work)->f->extended = EMBED_TRUE;
+    J1939_CTX(work)->f->rtr = EMBED_FALSE;
     J1939_CTX(work)->f->dlc = J1939_CTX(work)->dlc;
     // J1939 pads unused octets with 0xFF (not available)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = J1939_CTX(work)->f->data, .val = 0xFF,
                .bytes = sizeof(J1939_CTX(work)->f->data));
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_j1939_build_message(uint8_t *work)
@@ -165,7 +169,7 @@ void protocore_j1939_build_message(uint8_t *work)
 
     if (!out || len > PROTOCORE_CAN_MAX_DLC || (len && !data))
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939_CTX(work)->f = out;
@@ -176,14 +180,14 @@ void protocore_j1939_build_message(uint8_t *work)
     J1939_CTX(work)->dlc = len;
     if (!ext_frame(work))
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     if (len)
     {
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data, .src = data, .bytes = len);
     }
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_build_request(uint8_t *work)
@@ -195,7 +199,7 @@ void protocore_j1939_build_request(uint8_t *work)
 
     if (!out || requested_pgn > 0x3FFFFu)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     // Request PGN (priority 6): 3-octet little-endian requested PGN.
@@ -208,20 +212,20 @@ void protocore_j1939_build_request(uint8_t *work)
     if (!ext_frame(work))
     // J1939_PGN_REQUEST (<=0x3FFFF), encode can't fail
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
         // can't fail
     }
     out->data[0] = (uint8_t)requested_pgn;
     out->data[1] = (uint8_t)(requested_pgn >> 8);
     out->data[2] = (uint8_t)(requested_pgn >> 16);
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_build_name(uint8_t *work)
+void protocore_j1939_build_name(const uint8_t *work)
 {
     (void)work;
-    proto_bool arbitrary_address_capable = J1939V.build_name_args.arbitrary_address_capable;
+    embed_bool arbitrary_address_capable = J1939V.build_name_args.arbitrary_address_capable;
     uint8_t industry_group = J1939V.build_name_args.industry_group;
     uint8_t vehicle_system_instance = J1939V.build_name_args.vehicle_system_instance;
     uint8_t vehicle_system = J1939V.build_name_args.vehicle_system;
@@ -265,7 +269,7 @@ void protocore_j1939_build_address_claim(uint8_t *work)
     // priority 6 + PGN_ADDRESS_CLAIM
     // (<=0x3FFFF), encode can't fail
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
         // encode can't fail
     }
@@ -273,10 +277,10 @@ void protocore_j1939_build_address_claim(uint8_t *work)
     {
         out->data[i] = (uint8_t)(name >> (8 * i));
     }
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_tp_num_packets(uint8_t *work)
+void protocore_j1939_tp_num_packets(const uint8_t *work)
 {
     (void)work;
     uint16_t total_size = J1939V.tp_num_packets_args.total_size;
@@ -293,7 +297,7 @@ void protocore_j1939_build_bam_cm(uint8_t *work)
 
     if (!out || total_size < 9 || total_size > PROTOCORE_J1939_TP_MAX || pgn > 0x3FFFFu)
     {
-        J1939V.ok = PROTO_FALSE; // BAM is for 9..1785 octet messages
+        J1939V.ok = EMBED_FALSE; // BAM is for 9..1785 octet messages
         return;
     }
     J1939_CTX(work)->f = out;
@@ -306,7 +310,7 @@ void protocore_j1939_build_bam_cm(uint8_t *work)
     // 7 + J1939_PGN_TP_CM (<=0x3FFFF), encode
     // can't fail
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
         // can't fail
     }
@@ -320,7 +324,7 @@ void protocore_j1939_build_bam_cm(uint8_t *work)
     out->data[5] = (uint8_t)pgn; // transported PGN, little-endian
     out->data[6] = (uint8_t)(pgn >> 8);
     out->data[7] = (uint8_t)(pgn >> 16);
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_build_tp_dt(uint8_t *work)
@@ -334,7 +338,7 @@ void protocore_j1939_build_tp_dt(uint8_t *work)
 
     if (!out || seq == 0 || chunk_len == 0 || chunk_len > J1939_TP_DT_LEN || !chunk)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939_CTX(work)->f = out;
@@ -346,17 +350,17 @@ void protocore_j1939_build_tp_dt(uint8_t *work)
     if (!ext_frame(work))
     // J1939_PGN_TP_DT (<=0x3FFFF), encode can't fail
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
         // can't fail
     }
     out->data[0] = seq; // sequence number, 1-based
     // remaining octets stay 0xFF padding
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 1, .src = chunk, .bytes = chunk_len);
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_tp_reset(uint8_t *work)
+void protocore_j1939_tp_reset(const uint8_t *work)
 {
     (void)work;
     J1939TpRx *rx = J1939V.tp_reset_args.rx;
@@ -381,6 +385,7 @@ void protocore_j1939_tp_feed(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok)
     // is non-null
     {
@@ -414,7 +419,7 @@ void protocore_j1939_tp_feed(uint8_t *work)
             J1939V.tp = J1939_TP_ERROR;
             return;
         }
-        rx->active = PROTO_TRUE;
+        rx->active = EMBED_TRUE;
         rx->sa = id.sa;
         rx->pgn = pgn;
         rx->total_size = total;
@@ -447,7 +452,7 @@ void protocore_j1939_tp_feed(uint8_t *work)
         rx->next_seq++;
         if (rx->received >= rx->total_size)
         {
-            rx->active = PROTO_FALSE;
+            rx->active = EMBED_FALSE;
             J1939V.tp = J1939_TP_COMPLETE;
             return;
         }
@@ -467,16 +472,17 @@ void protocore_j1939_decode_eec1(uint8_t *work)
 
     if (!f || !out || f->dlc < 8)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939Id id;
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_EEC1)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     out->torque_mode = (uint8_t)(f->data[0] & 0x0Fu);
@@ -486,7 +492,7 @@ void protocore_j1939_decode_eec1(uint8_t *work)
     uint16_t raw = (uint16_t)(f->data[3] | ((uint16_t)f->data[4] << 8)); // little-endian
     out->engine_speed_valid = (raw <= 0xFAFFu);                          // >= 0xFB00 is error / not-available
     out->engine_speed_rpm = (float)raw * 0.125f;
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_decode_et1(uint8_t *work)
@@ -496,16 +502,17 @@ void protocore_j1939_decode_et1(uint8_t *work)
 
     if (!f || !out || f->dlc < 8)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939Id id;
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_ET1)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     out->coolant_valid = (f->data[0] <= 0xFAu);
@@ -515,7 +522,7 @@ void protocore_j1939_decode_et1(uint8_t *work)
     uint16_t oilraw = (uint16_t)(f->data[2] | ((uint16_t)f->data[3] << 8));
     out->oil_valid = (oilraw <= 0xFAFFu);
     out->oil_temp_c = (float)oilraw * 0.03125f - 273.0f; // 0.03125 degC/bit, -273 offset
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_decode_lfe(uint8_t *work)
@@ -525,16 +532,17 @@ void protocore_j1939_decode_lfe(uint8_t *work)
 
     if (!f || !out || f->dlc < 8)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939Id id;
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_LFE)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     uint16_t fr = (uint16_t)(f->data[0] | ((uint16_t)f->data[1] << 8)); // SPN 183, 0.05 L/h/bit
@@ -548,7 +556,7 @@ void protocore_j1939_decode_lfe(uint8_t *work)
     out->avg_econ_kmpl = (float)ae * (1.0f / 512.0f);
     out->throttle_valid = (f->data[6] <= 0xFAu); // SPN 51, 0.4 %/bit
     out->throttle_pct = (float)f->data[6] * 0.4f;
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_decode_amb(uint8_t *work)
@@ -558,16 +566,17 @@ void protocore_j1939_decode_amb(uint8_t *work)
 
     if (!f || !out || f->dlc < 8)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939Id id;
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_AMB)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     out->baro_valid = (f->data[0] <= 0xFAu); // SPN 108, 0.5 kPa/bit
@@ -583,7 +592,7 @@ void protocore_j1939_decode_amb(uint8_t *work)
     uint16_t road = (uint16_t)(f->data[6] | ((uint16_t)f->data[7] << 8)); // SPN 79
     out->road_temp_valid = (road <= 0xFAFFu);
     out->road_temp_c = (float)road * 0.03125f - 273.0f;
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_decode_ic1(uint8_t *work)
@@ -593,16 +602,17 @@ void protocore_j1939_decode_ic1(uint8_t *work)
 
     if (!f || !out || f->dlc < 8)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939Id id;
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_IC1)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     out->trap_inlet_valid = (f->data[0] <= 0xFAu); // SPN 81, 0.5 kPa/bit
@@ -620,7 +630,7 @@ void protocore_j1939_decode_ic1(uint8_t *work)
     out->exhaust_temp_c = (float)egt * 0.03125f - 273.0f; // 0.03125 degC/bit, -273 offset
     out->coolant_filter_valid = (f->data[7] <= 0xFAu);    // SPN 112, 0.5 kPa/bit
     out->coolant_filter_kpa = (float)f->data[7] * 0.5f;
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_decode_vd(uint8_t *work)
@@ -630,16 +640,17 @@ void protocore_j1939_decode_vd(uint8_t *work)
 
     if (!f || !out || f->dlc < 8)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939Id id;
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_VD)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     // SPN 244 trip distance + SPN 245 total distance: 4-octet little-endian, 0.125 km/bit.
@@ -651,7 +662,7 @@ void protocore_j1939_decode_vd(uint8_t *work)
                      ((uint32_t)f->data[7] << 24);
     out->total_valid = (total <= 0xFAFFFFFFu);
     out->total_km = (double)total * 0.125;
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 void protocore_j1939_decode_ccvs(uint8_t *work)
@@ -661,16 +672,17 @@ void protocore_j1939_decode_ccvs(uint8_t *work)
 
     if (!f || !out || f->dlc < 8)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     J1939Id id;
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_CCVS)
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     // SPN 84 Wheel-Based Vehicle Speed: bytes 2-3, little-endian, 1/256 km/h per bit, 0 offset.
@@ -679,10 +691,10 @@ void protocore_j1939_decode_ccvs(uint8_t *work)
     out->wheel_speed_kmh = (float)ws * (1.0f / 256.0f);
     // SPN 595 Cruise Control Active: byte 4, bits 1-2 (the low 2 bits) - a 2-bit state.
     out->cruise_active = (uint8_t)(f->data[3] & 0x03u);
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_dm1(uint8_t *work)
+void protocore_j1939_decode_dm1(const uint8_t *work)
 {
     (void)work;
     const uint8_t *body = J1939V.decode_dm1_args.body;
@@ -693,7 +705,7 @@ void protocore_j1939_decode_dm1(uint8_t *work)
 
     if (!body || !out || len < 2) // the lamp-status + flash-status octets
     {
-        J1939V.ok = PROTO_FALSE;
+        J1939V.ok = EMBED_FALSE;
         return;
     }
     // Lamp status (J1939-73): 2 bits each, protect (0-1) / amber (2-3) / red-stop (4-5) / MIL (6-7).
@@ -727,12 +739,12 @@ void protocore_j1939_decode_dm1(uint8_t *work)
         stored++;
     }
     out->dtc_count = stored;
-    J1939V.ok = PROTO_TRUE;
+    J1939V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 J1939Vars J1939V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_J1939

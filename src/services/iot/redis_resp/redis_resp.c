@@ -19,11 +19,11 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a NUL-terminated argument
 #include "memoria_operor/memoria_operor.h"       // memor.cpy: the argument octets an encode moves
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Write "<first_byte><decimal n>\r\n" into buf at *pos and advance it. The digits fall out low first
 // into tmp and are emitted reversed. False when the prefix would reach cap with the NUL reserved.
-static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char first_byte, size_t n)
+static embed_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char first_byte, size_t n)
 {
     char tmp[20];
     int t = 0;
@@ -38,7 +38,7 @@ static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char first_
     }
     if (*pos + 1u + (size_t)t + 2u >= cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     buf[(*pos)++] = first_byte;
     while (t)
@@ -47,7 +47,7 @@ static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char first_
     }
     buf[(*pos)++] = '\r';
     buf[(*pos)++] = '\n';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Index of the '\r' of the CRLF terminator that ends the line starting at buf[from], or len when no
@@ -65,44 +65,44 @@ static size_t find_crlf(const uint8_t *buf, size_t len, size_t from)
 }
 
 // Read a base-10 integer, an optional leading '-' included, from [buf+from, buf+end).
-static proto_bool parse_int(const uint8_t *buf, size_t from, size_t end, int64_t *out)
+static embed_bool parse_int(const uint8_t *buf, size_t from, size_t end, int64_t *out)
 {
     if (from >= end)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool neg = PROTO_FALSE;
+    embed_bool neg = EMBED_FALSE;
     size_t i = from;
     if (buf[i] == '-')
     {
-        neg = PROTO_TRUE;
+        neg = EMBED_TRUE;
         i++;
     }
     if (i >= end)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint64_t v = 0; // accumulated unsigned, so a digit run past the signed maximum still wraps defined
     for (; i < end; i++)
     {
         if (buf[i] < '0' || buf[i] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = v * 10u + (uint64_t)(buf[i] - '0');
     }
     *out = neg ? (int64_t)(0ULL - v) : (int64_t)v; // negated in two's complement, then reinterpreted
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Compare the slice [buf+from, buf+end) to the NUL-terminated s, folding ASCII letters to lower case.
-static proto_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const char *s)
+static embed_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const char *s)
 {
     for (size_t i = from; i < end; i++, s++)
     {
         if (*s == '\0')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint8_t a = buf[i];
         if (a >= 'A' && a <= 'Z')
@@ -116,7 +116,7 @@ static proto_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const c
         }
         if (a != (uint8_t)b)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     return *s == '\0';
@@ -124,86 +124,86 @@ static proto_bool slice_ieq(const uint8_t *buf, size_t from, size_t end, const c
 
 // The Doubles special forms `,inf\r\n`, `,-inf\r\n` and `,nan\r\n`, the leading '+' accepted. True with
 // *out set when [from,end) is one of them, false with *out untouched otherwise.
-static proto_bool parse_double_special(const uint8_t *buf, size_t from, size_t end, double *out)
+static embed_bool parse_double_special(const uint8_t *buf, size_t from, size_t end, double *out)
 {
     if (slice_ieq(buf, from, end, "inf") || slice_ieq(buf, from, end, "+inf"))
     {
         *out = 1e308 * 10.0; // overflows to +infinity
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (slice_ieq(buf, from, end, "-inf"))
     {
         *out = -1e308 * 10.0;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (slice_ieq(buf, from, end, "nan"))
     {
         double inf = 1e308 * 10.0;
         *out = inf * 0.0; // infinity times zero is NaN
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Read the optional [(E|e) [sign] digits] exponent at *i, advancing it. No exponent leaves *exp at 0
 // and returns true; an 'E' with no digits after it returns false.
-static proto_bool parse_exponent(const uint8_t *buf, size_t *i, size_t end, int *exp)
+static embed_bool parse_exponent(const uint8_t *buf, size_t *i, size_t end, int *exp)
 {
     *exp = 0;
     if (!(*i < end && (buf[*i] == 'e' || buf[*i] == 'E')))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     (*i)++;
-    proto_bool eneg = PROTO_FALSE;
+    embed_bool eneg = EMBED_FALSE;
     if (*i < end && (buf[*i] == '+' || buf[*i] == '-'))
     {
         eneg = (buf[*i] == '-');
         (*i)++;
     }
-    proto_bool edig = PROTO_FALSE;
+    embed_bool edig = EMBED_FALSE;
     while (*i < end && buf[*i] >= '0' && buf[*i] <= '9')
     {
         if (*exp < 1000000) // clamped: anything larger saturates the double to infinity or zero
         {
             *exp = *exp * 10 + (buf[*i] - '0');
         }
-        edig = PROTO_TRUE;
+        edig = EMBED_TRUE;
         (*i)++;
     }
     if (!edig)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (eneg)
     {
         *exp = -*exp;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Decode a Doubles line, `,[<+|->]<integral>[.<fractional>][<E|e>[sign]<exponent>]\r\n` or one of the
 // special forms, into a double. The raw text stays authoritative in str.
-static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, double *out)
+static embed_bool parse_double(const uint8_t *buf, size_t from, size_t end, double *out)
 {
     if (parse_double_special(buf, from, end, out))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 
     size_t i = from;
-    proto_bool neg = PROTO_FALSE;
+    embed_bool neg = EMBED_FALSE;
     if (i < end && (buf[i] == '+' || buf[i] == '-'))
     {
         neg = (buf[i] == '-');
         i++;
     }
     double mant = 0.0;
-    proto_bool any = PROTO_FALSE;
+    embed_bool any = EMBED_FALSE;
     for (; i < end && buf[i] >= '0' && buf[i] <= '9'; i++)
     {
         mant = mant * 10.0 + (buf[i] - '0');
-        any = PROTO_TRUE;
+        any = EMBED_TRUE;
     }
     if (i < end && buf[i] == '.')
     {
@@ -213,21 +213,21 @@ static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
         {
             mant += (buf[i] - '0') * scale;
             scale *= 0.1;
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
     }
     if (!any)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int exp = 0;
     if (!parse_exponent(buf, &i, end, &exp))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (i != end)
     {
-        return PROTO_FALSE; // octets left over after the number
+        return EMBED_FALSE; // octets left over after the number
     }
     double scale = 1.0;
     int e = exp < 0 ? -exp : exp;
@@ -237,12 +237,12 @@ static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
     }
     mant = (exp < 0) ? (mant / scale) : (mant * scale);
     *out = neg ? -mant : mant;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The length-prefixed bodies: Bulk strings ($), Bulk errors (!), Verbatim strings (=). Checks the
 // declared length and its trailing CRLF against the buffered octets; `$-1` is the Null bulk string.
-static proto_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
+static embed_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
     const uint8_t *buf = RespV.wire.buf;
@@ -250,29 +250,29 @@ static proto_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t head
     int64_t blen;
     if (!parse_int(buf, header_from, header_to, &blen))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    // The Null bulk string is the length -1 exactly ("Null bulk strings"); no other negative length
+    // The Null bulk string is the length -1 exactly ("Null bulk strings"). No other negative length
     // has an encoding, so it is a malformed reply rather than another spelling of null.
     if (first_byte == '$' && blen == -1)
     {
         RespV.reply.type = RESP_NULL;
         RespV.n = after_header;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (blen < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // Compares the declared length against what remains, never forming after_header + blen + 2,
     // which wraps a 32-bit size_t.
     if (after_header + 2 > len || (uint64_t)blen > (uint64_t)(len - after_header - 2))
     {
-        return PROTO_FALSE; // the body and its CRLF are not fully buffered
+        return EMBED_FALSE; // the body and its CRLF are not fully buffered
     }
     if (buf[after_header + (size_t)blen] != '\r' || buf[after_header + (size_t)blen + 1] != '\n')
     {
-        return PROTO_FALSE; // the terminator is not where the length puts it
+        return EMBED_FALSE; // the terminator is not where the length puts it
     }
     if (first_byte == '$')
     {
@@ -289,30 +289,30 @@ static proto_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t head
     RespV.reply.str = (const char *)(buf + after_header);
     RespV.reply.str_len = (size_t)blen;
     RespV.n = after_header + (size_t)blen + 2; // the body and its trailing CRLF
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The aggregate headers whose children follow: Arrays (*), Sets (~), Pushes (>). Only the count is
 // read here, and the caller parses each element next; `*-1` is the Null array.
-static proto_bool parse_aggregate(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
+static embed_bool parse_aggregate(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
     const uint8_t *buf = RespV.wire.buf;
     int64_t elements;
     if (!parse_int(buf, header_from, header_to, &elements))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The Null array is the length -1 exactly ("Null arrays"), as for the Null bulk string above.
     if (first_byte == '*' && elements == -1)
     {
         RespV.reply.type = RESP_NULL;
         RespV.n = after_header;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (elements < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (first_byte == '*')
     {
@@ -329,12 +329,12 @@ static proto_bool parse_aggregate(uint8_t *work, uint8_t first_byte, size_t head
     RespV.reply.ival = elements;
     RespV.reply.count = elements;
     RespV.n = after_header; // the header alone
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Build the array of bulk strings a client sends ("Sending commands to a Redis server") from
 // ns->command into ns->out, NUL-terminate it, and report its length in ns->n.
-void protocore_resp_encode_command(uint8_t *work)
+void protocore_resp_encode_command(const uint8_t *work)
 {
     (void)work;
     char *buf = RespV.out.buf;
@@ -343,7 +343,7 @@ void protocore_resp_encode_command(uint8_t *work)
     const size_t *argv_len = RespV.command.argv_len;
     const size_t argc = RespV.command.argc;
 
-    RespV.ok = PROTO_FALSE;
+    RespV.ok = EMBED_FALSE;
     RespV.n = 0;
     if (!buf || cap == 0 || !argv || argc == 0)
     {
@@ -377,7 +377,7 @@ void protocore_resp_encode_command(uint8_t *work)
     }
     buf[pos] = '\0';
     RespV.n = pos;
-    RespV.ok = PROTO_TRUE;
+    RespV.ok = EMBED_TRUE;
 }
 
 // Decode the value at the head of ns->wire into ns->reply, and report the octets it occupied in
@@ -387,7 +387,7 @@ void protocore_resp_parse_reply(uint8_t *work)
     const uint8_t *buf = RespV.wire.buf;
     const size_t len = RespV.wire.len;
 
-    RespV.ok = PROTO_FALSE;
+    RespV.ok = EMBED_FALSE;
     RespV.n = 0;
     if (!buf || len < 3) // the shortest value is a first byte and its CRLF
     {
@@ -418,7 +418,7 @@ void protocore_resp_parse_reply(uint8_t *work)
         RespV.reply.str = (const char *)(buf + header_from);
         RespV.reply.str_len = header_to - header_from;
         RespV.n = after_header;
-        RespV.ok = PROTO_TRUE;
+        RespV.ok = EMBED_TRUE;
         return;
 
     case ':': { // Integers: a signed, base-10, 64-bit value
@@ -430,7 +430,7 @@ void protocore_resp_parse_reply(uint8_t *work)
         RespV.reply.type = RESP_INTEGER;
         RespV.reply.ival = v;
         RespV.n = after_header;
-        RespV.ok = PROTO_TRUE;
+        RespV.ok = EMBED_TRUE;
         return;
     }
 
@@ -459,14 +459,14 @@ void protocore_resp_parse_reply(uint8_t *work)
         RespV.reply.ival = children;
         RespV.reply.count = children;
         RespV.n = after_header;
-        RespV.ok = PROTO_TRUE;
+        RespV.ok = EMBED_TRUE;
         return;
     }
 
     case '_': // Nulls
         RespV.reply.type = RESP_NULL;
         RespV.n = after_header;
-        RespV.ok = PROTO_TRUE;
+        RespV.ok = EMBED_TRUE;
         return;
 
     case '#': { // Booleans: exactly one octet, 't' or 'f'
@@ -477,7 +477,7 @@ void protocore_resp_parse_reply(uint8_t *work)
         RespV.reply.type = RESP_BOOLEAN;
         RespV.reply.ival = (buf[header_from] == 't') ? 1 : 0;
         RespV.n = after_header;
-        RespV.ok = PROTO_TRUE;
+        RespV.ok = EMBED_TRUE;
         return;
     }
 
@@ -487,7 +487,7 @@ void protocore_resp_parse_reply(uint8_t *work)
         RespV.reply.str_len = header_to - header_from;
         parse_double(buf, header_from, header_to, &RespV.reply.dval);
         RespV.n = after_header;
-        RespV.ok = PROTO_TRUE;
+        RespV.ok = EMBED_TRUE;
         return;
 
     case '(': // Big numbers: the digits stay text
@@ -495,7 +495,7 @@ void protocore_resp_parse_reply(uint8_t *work)
         RespV.reply.str = (const char *)(buf + header_from);
         RespV.reply.str_len = header_to - header_from;
         RespV.n = after_header;
-        RespV.ok = PROTO_TRUE;
+        RespV.ok = EMBED_TRUE;
         return;
 
     default: // no RESP type claims this first byte
@@ -507,6 +507,6 @@ void protocore_resp_parse_reply(uint8_t *work)
 /** @brief The operands and the outcome. */
 RespVars RespV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_REDIS

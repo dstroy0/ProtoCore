@@ -24,7 +24,7 @@ static void client_end(void)
 
 // The client, reached through its namespace. Inside the gate: client.h declares SshClient only when
 // the feature is compiled in, and this file is empty without it.
-static proto_bool client_begin(const protocore_ssh_client_cfg *cfg)
+static embed_bool client_begin(const protocore_ssh_client_cfg *cfg)
 {
     SshClient.cfg = cfg;
     SshClient.begin(protocore_ssh_client_span());

@@ -37,7 +37,10 @@ static_assert(SSH_OFF_CTX % _Alignof(SshMemCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_CTX(w) ((SshMemCtx *)(void *)((w) + SSH_OFF_CTX))
+#define SSH_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshMemCtx *)(const void *)((w) + SSH_OFF_CTX),                                         \
+        default: (SshMemCtx *)(void *)((w) + SSH_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

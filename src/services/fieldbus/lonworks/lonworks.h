@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_LONWORKS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -142,7 +142,7 @@ typedef struct
     LonworksSnvtTempDecodeArgs snvt_temp_decode_args;
     LonworksSnvtSwitchEncodeArgs snvt_switch_encode_args;
     LonworksSnvtSwitchDecodeArgs snvt_switch_decode_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     double value;
 } LonworksVars;
@@ -153,22 +153,22 @@ extern LonworksVars LonworksV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_nv)(uint8_t *work);
-    void (*const parse_nv)(uint8_t *work);
-    void (*const snvt_temp_encode)(uint8_t *work);
-    void (*const snvt_temp_decode)(uint8_t *work);
-    void (*const snvt_switch_encode)(uint8_t *work);
-    void (*const snvt_switch_decode)(uint8_t *work);
+    void (*const build_nv)(const uint8_t *work);
+    void (*const parse_nv)(const uint8_t *work);
+    void (*const snvt_temp_encode)(const uint8_t *work);
+    void (*const snvt_temp_decode)(const uint8_t *work);
+    void (*const snvt_switch_encode)(const uint8_t *work);
+    void (*const snvt_switch_decode)(const uint8_t *work);
 } LonworksNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in LonworksV or a region of the borrow at a fixed offset.
-void protocore_lonworks_build_nv(uint8_t *work);
-void protocore_lonworks_parse_nv(uint8_t *work);
-void protocore_lonworks_snvt_temp_encode(uint8_t *work);
-void protocore_lonworks_snvt_temp_decode(uint8_t *work);
-void protocore_lonworks_snvt_switch_encode(uint8_t *work);
-void protocore_lonworks_snvt_switch_decode(uint8_t *work);
+void protocore_lonworks_build_nv(const uint8_t *work);
+void protocore_lonworks_parse_nv(const uint8_t *work);
+void protocore_lonworks_snvt_temp_encode(const uint8_t *work);
+void protocore_lonworks_snvt_temp_decode(const uint8_t *work);
+void protocore_lonworks_snvt_switch_encode(const uint8_t *work);
+void protocore_lonworks_snvt_switch_decode(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -183,7 +183,7 @@ static const LonworksNs Lonworks __attribute__((unused)) = {
     .snvt_switch_decode = protocore_lonworks_snvt_switch_decode,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LONWORKS
 

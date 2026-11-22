@@ -14,7 +14,7 @@
 
 static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len)
 {
@@ -51,27 +51,27 @@ size_t protocore_nema_ts2_build(uint8_t address, uint8_t control, uint8_t frame_
     return n;
 }
 
-proto_bool protocore_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out)
+embed_bool protocore_nema_ts2_parse(const uint8_t *frame, size_t len, NemaTs2Frame *out)
 {
     if (!frame || !out || len < 5) // address + control + frame_type + 2-byte FCS
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t body = len - 2;
     uint16_t want = protocore_nema_ts2_crc(frame, body);
     uint16_t got = (uint16_t)(frame[body] | (frame[body + 1] << 8));
     if (want != got)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->address = frame[0];
     out->control = frame[1];
     out->frame_type = frame[2];
     out->data = (body > 3) ? (frame + 3) : NULL;
     out->data_len = body - 3;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NEMA_TS2

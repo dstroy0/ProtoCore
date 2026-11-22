@@ -38,7 +38,7 @@ typedef uint32_t (*TimeSourceFn)(void);
 
 #if PROTOCORE_ENABLE_TIME_SOURCE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Register a time source.
@@ -49,7 +49,7 @@ PROTOCORE_BEGIN_DECLS
  * @param fn        the source callback.
  * @return true if registered; false if @p fn is null or the table is full.
  */
-proto_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn);
+embed_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn);
 
 /**
  * @brief Current best time.
@@ -65,7 +65,7 @@ const char *protocore_time_source_active(void);
 /** @brief Clear all registered sources. */
 void protocore_time_source_reset(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TIME_SOURCE
 

@@ -10,7 +10,7 @@
 //
 // test_datasheet_prescale_example is the load-bearing case: equation (2) works 200 Hz out to 30,
 // and Table 7 independently gives PRE_SCALE a reset value of 0001 1110. Two places in the data
-// sheet agree on that number, so it pins the rounding of the prescaler without a second
+// sheet agree on that number. So it pins the rounding of the prescaler without a second
 // implementation to be wrong about.
 
 // The bus cases at the bottom drive a datasheet model of the part (test/core_setup/hal/host/devices/
@@ -208,7 +208,7 @@ void test_set_pwm_bytes_layout(void)
     TEST_ASSERT_EQUAL_HEX8(0x0F, buf[4]);
 }
 
-// Section 7.3.3: LEDn_ON_H[4] set is "always ON" and LEDn_OFF_H[4] set is "always OFF"; bits 7:5 of
+// Section 7.3.3: LEDn_ON_H[4] set is "always ON" and LEDn_OFF_H[4] set is "always OFF". Bits 7:5 of
 // both _H registers are reserved and non-writable, so nothing above bit 4 may be emitted.
 void test_full_on_and_full_off_flags(void)
 {
@@ -322,7 +322,7 @@ void test_rev4_a_prescale_write_while_awake_is_dropped(void)
     TEST_ASSERT_EQUAL_HEX8(0x79u, s_part.reg[0xFEu]);
 }
 
-// The sequence begin() runs is the one the part requires: it sleeps first, so the PRE_SCALE write
+// The sequence begin() runs is the one the part requires. It sleeps first, so the PRE_SCALE write
 // takes, and 7.3.5 Eq 1 turns the programmed prescale back into the frequency that was asked for.
 void test_rev4_begin_leaves_the_part_at_the_frequency_it_was_given(void)
 {

@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_MPR121
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_MPR121_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -140,7 +140,7 @@ typedef struct
     Mpr121BuildInitArgs build_init_args;
     Mpr121BeginArgs begin_args;
     Mpr121ReadFilteredArgs read_filtered_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t value;
     size_t n;
 } Mpr121Vars;
@@ -151,12 +151,12 @@ extern Mpr121Vars Mpr121V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const touched)(uint8_t *work);
-    void (*const is_touched)(uint8_t *work);
-    void (*const proximity)(uint8_t *work);
-    void (*const overcurrent)(uint8_t *work);
-    void (*const word10)(uint8_t *work);
-    void (*const build_init)(uint8_t *work);
+    void (*const touched)(const uint8_t *work);
+    void (*const is_touched)(const uint8_t *work);
+    void (*const proximity)(const uint8_t *work);
+    void (*const overcurrent)(const uint8_t *work);
+    void (*const word10)(const uint8_t *work);
+    void (*const build_init)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read_touched)(uint8_t *work);
     void (*const read_filtered)(uint8_t *work);
@@ -164,12 +164,12 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Mpr121V or a region of the borrow at a fixed offset.
-void protocore_mpr121_touched(uint8_t *work);
-void protocore_mpr121_is_touched(uint8_t *work);
-void protocore_mpr121_proximity(uint8_t *work);
-void protocore_mpr121_overcurrent(uint8_t *work);
-void protocore_mpr121_word10(uint8_t *work);
-void protocore_mpr121_build_init(uint8_t *work);
+void protocore_mpr121_touched(const uint8_t *work);
+void protocore_mpr121_is_touched(const uint8_t *work);
+void protocore_mpr121_proximity(const uint8_t *work);
+void protocore_mpr121_overcurrent(const uint8_t *work);
+void protocore_mpr121_word10(const uint8_t *work);
+void protocore_mpr121_build_init(const uint8_t *work);
 void protocore_mpr121_begin(uint8_t *work);
 void protocore_mpr121_read_touched(uint8_t *work);
 void protocore_mpr121_read_filtered(uint8_t *work);
@@ -201,7 +201,7 @@ static const Mpr121Ns Mpr121 __attribute__((unused)) = {
  */
 uint8_t *protocore_mpr121_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MPR121
 

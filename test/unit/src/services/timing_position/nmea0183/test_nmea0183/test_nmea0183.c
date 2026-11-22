@@ -37,7 +37,7 @@ static const char *const DPT = "$INDPT,2.3,0.0*46";
 
 static const char *const PUBLISHED[8] = {GGA, RMC, GSV, ZDA, VTG, GSA, GLL, DPT};
 
-static proto_bool parse(const char *s, Nmea0183 *out)
+static embed_bool parse(const char *s, Nmea0183 *out)
 {
     return protocore_nmea0183_parse(s, strlen(s), out);
 }

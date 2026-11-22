@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_LD2410
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_LD2410_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -139,7 +139,7 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    proto_bool on;
+    embed_bool on;
 } Ld2410CmdEngineeringArgs;
 
 /** @brief What cmd_restart takes: buf, cap. */
@@ -154,7 +154,7 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    proto_bool on;
+    embed_bool on;
 } Ld2410CmdBluetoothArgs;
 
 /** @brief What cmd_get_mac takes: buf, cap. */
@@ -203,7 +203,7 @@ typedef struct
 /** @brief What set_engineering takes: on. */
 typedef struct
 {
-    proto_bool on;
+    embed_bool on;
 } Ld2410SetEngineeringArgs;
 
 /**
@@ -284,26 +284,26 @@ typedef struct
     Ld2410BeginArgs begin_args;
     Ld2410SetEngineeringArgs set_engineering_args;
 
-    proto_bool ok;
+    embed_bool ok;
     uint16_t cm;
     size_t n;
     const Ld2410Report *report;
 
-    void (*const parse_report)(uint8_t *work);
-    void (*const stream_reset)(uint8_t *work);
+    void (*const parse_report)(const uint8_t *work);
+    void (*const stream_reset)(const uint8_t *work);
     void (*const stream_push)(uint8_t *work);
-    void (*const present)(uint8_t *work);
-    void (*const distance_cm)(uint8_t *work);
-    void (*const cmd_config_enable)(uint8_t *work);
-    void (*const cmd_config_end)(uint8_t *work);
-    void (*const cmd_engineering)(uint8_t *work);
-    void (*const cmd_restart)(uint8_t *work);
-    void (*const cmd_bluetooth)(uint8_t *work);
-    void (*const cmd_get_mac)(uint8_t *work);
-    void (*const cmd_set_bt_password)(uint8_t *work);
-    void (*const parse_ack)(uint8_t *work);
-    void (*const ack_ok)(uint8_t *work);
-    void (*const ack_mac)(uint8_t *work);
+    void (*const present)(const uint8_t *work);
+    void (*const distance_cm)(const uint8_t *work);
+    void (*const cmd_config_enable)(const uint8_t *work);
+    void (*const cmd_config_end)(const uint8_t *work);
+    void (*const cmd_engineering)(const uint8_t *work);
+    void (*const cmd_restart)(const uint8_t *work);
+    void (*const cmd_bluetooth)(const uint8_t *work);
+    void (*const cmd_get_mac)(const uint8_t *work);
+    void (*const cmd_set_bt_password)(const uint8_t *work);
+    void (*const parse_ack)(const uint8_t *work);
+    void (*const ack_ok)(const uint8_t *work);
+    void (*const ack_mac)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const poll)(uint8_t *work);
     void (*const last)(uint8_t *work);
@@ -325,7 +325,7 @@ extern Ld2410Ns Ld2410;
  */
 uint8_t *protocore_ld2410_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LD2410
 

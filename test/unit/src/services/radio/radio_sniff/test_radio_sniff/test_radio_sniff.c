@@ -71,7 +71,7 @@ void test_ieee754_binary32_rss_encoding(void)
 }
 
 // A magnitude wider than the 23-bit significand keeps its exponent and drops the low bits, which
-// is what rounding toward zero does; the value must still be the right power of two.
+// is what rounding toward zero does. The value must still be the right power of two.
 void test_ieee754_binary32_wide_magnitude(void)
 {
     // 2^24 = 1.0 * 2^24 -> exponent field 151 = 0x97, significand 0

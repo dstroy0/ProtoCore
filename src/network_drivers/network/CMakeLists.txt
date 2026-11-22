@@ -11,5 +11,6 @@ protocore_add_module(network_drivers/network
 
 add_subdirectory(dns)
 add_subdirectory(forward)
+add_subdirectory(stack)
 
 

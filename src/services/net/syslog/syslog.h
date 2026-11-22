@@ -42,38 +42,36 @@
 
 #if PROTOCORE_ENABLE_SYSLOG
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief RFC 5424 sec 6.2.1 Severity, the low three bits of PRIVAL (lower is more severe).
  *
  * The section states these values "are not normative but often used".
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    SYSLOG_EMERG = 0,   ///< Emergency: system is unusable
-    SYSLOG_ALERT = 1,   ///< Alert: action must be taken immediately
-    SYSLOG_CRIT = 2,    ///< Critical: critical conditions
-    SYSLOG_ERR = 3,     ///< Error: error conditions
-    SYSLOG_WARNING = 4, ///< Warning: warning conditions
-    SYSLOG_NOTICE = 5,  ///< Notice: normal but significant condition
-    SYSLOG_INFO = 6,    ///< Informational: informational messages
-    SYSLOG_DEBUG = 7,   ///< Debug: debug-level messages
-} SyslogSeverity;
+EMBED_ENUM_BYTE(SyslogSeverity,
+                SYSLOG_EMERG = 0,   ///< Emergency: system is unusable
+                SYSLOG_ALERT = 1,   ///< Alert: action must be taken immediately
+                SYSLOG_CRIT = 2,    ///< Critical: critical conditions
+                SYSLOG_ERR = 3,     ///< Error: error conditions
+                SYSLOG_WARNING = 4, ///< Warning: warning conditions
+                SYSLOG_NOTICE = 5,  ///< Notice: normal but significant condition
+                SYSLOG_INFO = 6,    ///< Informational: informational messages
+                SYSLOG_DEBUG = 7,   ///< Debug: debug-level messages
+);
 
 /**
  * @brief RFC 5424 sec 6.2.1 Facility, the value PRIVAL multiplies by 8.
  *
  * The section states these values "are not normative but often used".
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    SYSLOG_FAC_USER = 1,    ///< user-level messages
-    SYSLOG_FAC_DAEMON = 3,  ///< system daemons
-    SYSLOG_FAC_LOCAL0 = 16, ///< local use 0 (local0)
-    SYSLOG_FAC_LOCAL1 = 17, ///< local use 1 (local1)
-    SYSLOG_FAC_LOCAL7 = 23, ///< local use 7 (local7)
-} SyslogFacility;
+EMBED_ENUM_BYTE(SyslogFacility,
+                SYSLOG_FAC_USER = 1,    ///< user-level messages
+                SYSLOG_FAC_DAEMON = 3,  ///< system daemons
+                SYSLOG_FAC_LOCAL0 = 16, ///< local use 0 (local0)
+                SYSLOG_FAC_LOCAL1 = 17, ///< local use 1 (local1)
+                SYSLOG_FAC_LOCAL7 = 23, ///< local use 7 (local7)
+);
 
 /** @brief RFC 5426 sec 3.3: the collector endpoint every datagram is sent to. */
 typedef struct
@@ -129,7 +127,7 @@ typedef struct
     SyslogHeaderArgs header;       ///< what every line's HEADER says
     SyslogRecordArgs record;       ///< what one record says
     SyslogLineArgs line;           ///< where the formatted line lands
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } SyslogVars;
 
@@ -140,14 +138,14 @@ extern SyslogVars SyslogV;
 typedef struct
 {
     void (*const init)(uint8_t *work);
-    void (*const format)(uint8_t *work);
+    void (*const format)(const uint8_t *work);
     void (*const log)(uint8_t *work);
 } SyslogNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SyslogV or a region of the borrow at a fixed offset.
 void protocore_syslog_init(uint8_t *work);
-void protocore_syslog_format(uint8_t *work);
+void protocore_syslog_format(const uint8_t *work);
 void protocore_syslog_log(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -171,7 +169,7 @@ static const SyslogNs Syslog __attribute__((unused)) = {
  */
 uint8_t *protocore_syslog_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SYSLOG
 

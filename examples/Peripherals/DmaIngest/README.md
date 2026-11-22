@@ -23,7 +23,7 @@ peripheral --DMA--> ping-pong buffer --complete--> callback (ISR)
 ```
 
 RX is **double-buffered (ping-pong)**: the completed buffer is handed up while the
-DMA engine fills the other, so there is a full transfer of headroom to consume it.
+DMA engine fills the other. So there is a full transfer of headroom to consume it.
 
 ## No loopback wire? Simulate the peripheral
 

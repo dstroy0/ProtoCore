@@ -14,7 +14,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/energy/mms/mms.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // BER definite-length octet count for a length value < 64 KiB.
 static size_t len_octets(size_t len)
@@ -112,11 +112,11 @@ static size_t int_content(uint32_t v, uint8_t *buf)
 // Decode a BER definite length at pdu[at]. Sets *value and *hdr (octets the length field spans: 1 for
 // short form, 1+nb for long form). Returns false for an out-of-bounds field or an unsupported long form
 // (nb outside 1..2). Only short/2-byte lengths occur in the PDUs this codec accepts.
-static proto_bool protocore_ber_len(const uint8_t *pdu, size_t len, size_t at, size_t *value, size_t *hdr)
+static embed_bool protocore_ber_len(const uint8_t *pdu, size_t len, size_t at, size_t *value, size_t *hdr)
 {
     if (at >= len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t v = pdu[at];
     if (v & 0x80)
@@ -124,7 +124,7 @@ static proto_bool protocore_ber_len(const uint8_t *pdu, size_t len, size_t at, s
         size_t nb = v & 0x7F;
         if (nb == 0 || nb > 2 || at + 1 + nb > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = 0;
         for (size_t i = 0; i < nb; i++)
@@ -138,7 +138,7 @@ static proto_bool protocore_ber_len(const uint8_t *pdu, size_t len, size_t at, s
         *hdr = 1;
     }
     *value = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *out, size_t cap)
@@ -245,17 +245,17 @@ size_t protocore_mms_read_response(uint32_t invoke_id, const uint8_t *data, size
     return tlv(MMS_PDU_CONFIRMED_RESPONSE, body, bn, out, cap);
 }
 
-proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
+embed_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
 {
     if (!pdu || !out || len < 2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->pdu_tag = pdu[0];
     if (out->pdu_tag != MMS_PDU_CONFIRMED_REQUEST && out->pdu_tag != MMS_PDU_CONFIRMED_RESPONSE &&
         out->pdu_tag != MMS_PDU_CONFIRMED_ERROR)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // Decode the outer length.
     size_t off = 1;
@@ -263,18 +263,18 @@ proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     size_t lhdr = 0;
     if (!protocore_ber_len(pdu, len, off, &body_len, &lhdr))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     off += lhdr;
     if (off + body_len > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // First inner element must be the invokeID INTEGER.
     if (off + 2 > len || pdu[off] != MMS_TAG_INVOKE_ID)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // An invokeID is an Unsigned32, and BER INTEGER contents are signed, so a value at or above
     // 0x80000000 carries a leading 0x00 sign octet and spans 5. X.690 sec 8.3.1 forbids an empty
@@ -282,11 +282,11 @@ proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
     size_t idlen = pdu[off + 1];
     if (idlen == 0 || idlen > 5 || off + 2 + idlen > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (idlen == 5 && pdu[off + 2] != 0x00)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t id = 0;
     for (size_t i = 0; i < idlen; i++)
@@ -308,11 +308,11 @@ proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
         size_t hdr = 0;
         if (!protocore_ber_len(pdu, len, sp, &slen, &hdr))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (sp + hdr + slen > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->service_body = pdu + sp + hdr;
         out->service_len = slen;
@@ -323,9 +323,9 @@ proto_bool protocore_mms_parse(const uint8_t *pdu, size_t len, MmsPdu *out)
         out->service_body = NULL;
         out->service_len = 0;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MMS

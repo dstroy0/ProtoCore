@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file radio_sniff.h
@@ -38,7 +38,7 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     size_t (*global_header)(uint8_t *, uint8_t *, size_t);
-    uint32_t (*i2f32)(uint8_t *, int32_t);
+    uint32_t (*i2f32)(const uint8_t *, int32_t);
     size_t (*tap_record)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t, int32_t, uint16_t, uint32_t, uint32_t);
 } RadioSniffNs;
 PROTOCORE_NS_LAYOUT(RadioSniffNs, global_header, i2f32, tap_record);
@@ -57,7 +57,7 @@ size_t protocore_radio_sniff_global_header(uint8_t *work, uint8_t *out, size_t c
  * @param dbm Dbm
  * @return The uint32_t.
  */
-uint32_t protocore_radio_sniff_i2f32(uint8_t *work, int32_t dbm);
+uint32_t protocore_radio_sniff_i2f32(const uint8_t *work, int32_t dbm);
 /**
  * @brief Write one capture record: a pcap record header, the 802.15.4 TAP .
  * @param work PROTOCORE_RADIO_SNIFF_BORROW bytes the caller took. Not held past the call.
@@ -79,6 +79,6 @@ PROTOCORE_NS RadioSniffNs RadioSniff PROTOCORE_UNUSED = {.global_header = protoc
                                                          .i2f32 = protocore_radio_sniff_i2f32,
                                                          .tap_record = protocore_radio_sniff_tap_record};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_RADIO_SNIFF_H

@@ -95,7 +95,7 @@ void test_rfc8448_server_hello_bytes(void)
     Tls13MsgV.build_server_hello_args.share_len = sizeof(RFC8448_SERVER_SHARE);
     Tls13MsgV.build_server_hello_args.group = TLS_GROUP_X25519;
     Tls13MsgV.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
-    Tls13MsgV.build_server_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_server_hello_args.dtls = EMBED_FALSE;
     Tls13MsgV.build_server_hello_args.conn_id = NULL;
     Tls13MsgV.build_server_hello_args.conn_id_len = 0;
     Tls13Msg.build_server_hello(tls13_msg_work);
@@ -121,7 +121,7 @@ void test_server_hello_echoes_the_session_id(void)
     Tls13MsgV.build_server_hello_args.share_len = 32;
     Tls13MsgV.build_server_hello_args.group = TLS_GROUP_X25519;
     Tls13MsgV.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
-    Tls13MsgV.build_server_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_server_hello_args.dtls = EMBED_FALSE;
     Tls13MsgV.build_server_hello_args.conn_id = NULL;
     Tls13MsgV.build_server_hello_args.conn_id_len = 0;
     Tls13Msg.build_server_hello(tls13_msg_work);
@@ -148,7 +148,7 @@ void test_rfc8448_client_hello_parse(void)
     Tls13MsgV.parse_client_hello_args.msg = RFC8448_CLIENT_HELLO;
     Tls13MsgV.parse_client_hello_args.len = sizeof(RFC8448_CLIENT_HELLO);
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
 
@@ -171,7 +171,7 @@ void test_rfc8448_client_hello_parse(void)
 }
 
 // RFC 8446 sec 4.1.2: "legacy_compression_methods: ... this vector MUST contain exactly one byte,
-// set to zero"; sec 4.1.3 fixes legacy_session_id at 0..32 octets; and a truncated or mistyped
+// set to zero"; sec 4.1.3 fixes legacy_session_id at 0..32 octets. And a truncated or mistyped
 // message is not a ClientHello at all.
 void test_malformed_client_hello_is_refused(void)
 {
@@ -184,7 +184,7 @@ void test_malformed_client_hello_is_refused(void)
     Tls13MsgV.parse_client_hello_args.msg = buf;
     Tls13MsgV.parse_client_hello_args.len = sizeof(buf);
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
 
@@ -194,7 +194,7 @@ void test_malformed_client_hello_is_refused(void)
     Tls13MsgV.parse_client_hello_args.msg = buf;
     Tls13MsgV.parse_client_hello_args.len = sizeof(buf);
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
 
@@ -204,7 +204,7 @@ void test_malformed_client_hello_is_refused(void)
     Tls13MsgV.parse_client_hello_args.msg = buf;
     Tls13MsgV.parse_client_hello_args.len = sizeof(buf);
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
 
@@ -214,7 +214,7 @@ void test_malformed_client_hello_is_refused(void)
     Tls13MsgV.parse_client_hello_args.msg = buf;
     Tls13MsgV.parse_client_hello_args.len = sizeof(buf);
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
 
@@ -222,13 +222,13 @@ void test_malformed_client_hello_is_refused(void)
     Tls13MsgV.parse_client_hello_args.msg = RFC8448_CLIENT_HELLO;
     Tls13MsgV.parse_client_hello_args.len = 0;
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
     Tls13MsgV.parse_client_hello_args.msg = RFC8448_CLIENT_HELLO;
     Tls13MsgV.parse_client_hello_args.len = 4;
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
 
@@ -238,7 +238,7 @@ void test_malformed_client_hello_is_refused(void)
     Tls13MsgV.parse_client_hello_args.msg = buf;
     Tls13MsgV.parse_client_hello_args.len = sizeof(buf);
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
 }
@@ -267,7 +267,7 @@ void test_rfc8446_4_4_3_signed_content(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(out);
     Tls13MsgV.cert_verify_content_args.transcript_hash = HASH;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
@@ -280,7 +280,7 @@ void test_rfc8446_4_4_3_signed_content(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(cli);
     Tls13MsgV.cert_verify_content_args.transcript_hash = HASH;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_FALSE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_FALSE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Tls13MsgV.n);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(cli, out, sizeof(WANT)));
@@ -293,7 +293,7 @@ void test_rfc8446_4_4_3_signed_content(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(WANT) - 1;
     Tls13MsgV.cert_verify_content_args.transcript_hash = HASH;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(0u, Tls13MsgV.n);
 }
@@ -331,12 +331,12 @@ void test_cert_verify_signature_round_trip(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
     Tls13MsgV.cert_verify_content_args.transcript_hash = HASH;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
     Ed25519.pubkey(g_work, SEED, pub);
-    proto_bool ed25519_ok = Ed25519.verify(g_work, pub, content, clen, msg + 8);
+    embed_bool ed25519_ok = Ed25519.verify(g_work, pub, content, clen, msg + 8);
     TEST_ASSERT_TRUE(ed25519_ok);
 
     // The signature is over that content and nothing else: a different transcript hash does not
@@ -348,7 +348,7 @@ void test_cert_verify_signature_round_trip(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
     Tls13MsgV.cert_verify_content_args.transcript_hash = other;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t olen = Tls13MsgV.n;
     ed25519_ok = Ed25519.verify(g_work, pub, content, olen, msg + 8);
@@ -444,7 +444,7 @@ void test_rfc8446_4_1_3_hello_retry_request(void)
     Tls13MsgV.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
     Tls13MsgV.build_hello_retry_request_args.cookie = COOKIE;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = sizeof(COOKIE);
-    Tls13MsgV.build_hello_retry_request_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_hello_retry_request_args.dtls = EMBED_FALSE;
     Tls13Msg.build_hello_retry_request(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_TRUE(n > 0);
@@ -465,7 +465,7 @@ void test_rfc8446_4_1_3_hello_retry_request(void)
     Tls13MsgV.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
     Tls13MsgV.build_hello_retry_request_args.cookie = COOKIE;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = 0xFFFE;
-    Tls13MsgV.build_hello_retry_request_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_hello_retry_request_args.dtls = EMBED_FALSE;
     Tls13Msg.build_hello_retry_request(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(0u, Tls13MsgV.n);
 }
@@ -481,7 +481,7 @@ void test_encrypted_extensions_carries_alpn_and_transport_params(void)
     Tls13MsgV.build_encrypted_extensions_args.cap = sizeof(out);
     Tls13MsgV.build_encrypted_extensions_args.quic_tp = TP;
     Tls13MsgV.build_encrypted_extensions_args.quic_tp_len = sizeof(TP);
-    Tls13MsgV.build_encrypted_extensions_args.rpk_server_cert = PROTO_FALSE;
+    Tls13MsgV.build_encrypted_extensions_args.rpk_server_cert = EMBED_FALSE;
     Tls13Msg.build_encrypted_extensions(tls13_msg_work);
     size_t n = Tls13MsgV.n;
 
@@ -506,7 +506,7 @@ void test_encrypted_extensions_carries_alpn_and_transport_params(void)
     // The DTLS profile of the same message carries no extensions at all.
     Tls13MsgV.build_encrypted_extensions_empty_args.out = out;
     Tls13MsgV.build_encrypted_extensions_empty_args.cap = sizeof(out);
-    Tls13MsgV.build_encrypted_extensions_empty_args.rpk_server_cert = PROTO_FALSE;
+    Tls13MsgV.build_encrypted_extensions_empty_args.rpk_server_cert = EMBED_FALSE;
     Tls13MsgV.build_encrypted_extensions_empty_args.alpn = NULL;
     Tls13Msg.build_encrypted_extensions_empty(tls13_msg_work);
     size_t m = Tls13MsgV.n;
@@ -542,7 +542,7 @@ void test_quic_client_hello_extensions(void)
     Tls13MsgV.parse_client_hello_args.msg = CH;
     Tls13MsgV.parse_client_hello_args.len = sizeof(CH);
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
     TEST_ASSERT_TRUE(ch.offers_tls13);
@@ -580,7 +580,7 @@ void test_builders_refuse_a_short_buffer(void)
     Tls13MsgV.build_server_hello_args.share_len = 32;
     Tls13MsgV.build_server_hello_args.group = TLS_GROUP_X25519;
     Tls13MsgV.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
-    Tls13MsgV.build_server_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_server_hello_args.dtls = EMBED_FALSE;
     Tls13MsgV.build_server_hello_args.conn_id = NULL;
     Tls13MsgV.build_server_hello_args.conn_id_len = 0;
     Tls13Msg.build_server_hello(tls13_msg_work);
@@ -606,7 +606,7 @@ void test_builders_refuse_a_short_buffer(void)
     Tls13MsgV.build_encrypted_extensions_args.cap = sizeof(small);
     Tls13MsgV.build_encrypted_extensions_args.quic_tp = der;
     Tls13MsgV.build_encrypted_extensions_args.quic_tp_len = sizeof(der);
-    Tls13MsgV.build_encrypted_extensions_args.rpk_server_cert = PROTO_FALSE;
+    Tls13MsgV.build_encrypted_extensions_args.rpk_server_cert = EMBED_FALSE;
     Tls13Msg.build_encrypted_extensions(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(0u, Tls13MsgV.n);
     Tls13MsgV.build_cert_verify_args.sign_work = g_work;
@@ -625,7 +625,7 @@ void test_builders_refuse_a_short_buffer(void)
     Tls13MsgV.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
     Tls13MsgV.build_hello_retry_request_args.cookie = NULL;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = 0;
-    Tls13MsgV.build_hello_retry_request_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_hello_retry_request_args.dtls = EMBED_FALSE;
     Tls13Msg.build_hello_retry_request(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(0u, Tls13MsgV.n);
 
@@ -658,7 +658,7 @@ void test_rfc8448_server_hello_parse(void)
     Tls13MsgV.parse_server_hello_args.msg = RFC8448_SERVER_HELLO;
     Tls13MsgV.parse_server_hello_args.len = sizeof(RFC8448_SERVER_HELLO);
     Tls13MsgV.parse_server_hello_args.out = &sh;
-    Tls13MsgV.parse_server_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_server_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_server_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
     TEST_ASSERT_FALSE(sh.is_hrr);
@@ -681,13 +681,13 @@ void test_server_hello_parse_refuses_truncation(void)
         Tls13MsgV.parse_server_hello_args.msg = RFC8448_SERVER_HELLO;
         Tls13MsgV.parse_server_hello_args.len = n;
         Tls13MsgV.parse_server_hello_args.out = &sh;
-        Tls13MsgV.parse_server_hello_args.dtls = PROTO_FALSE;
+        Tls13MsgV.parse_server_hello_args.dtls = EMBED_FALSE;
         Tls13Msg.parse_server_hello(tls13_msg_work);
         TEST_ASSERT_FALSE(Tls13MsgV.ok);
     }
 }
 
-// A HelloRetryRequest is a ServerHello carrying the fixed Random, so it comes back through the same
+// A HelloRetryRequest is a ServerHello carrying the fixed Random. So it comes back through the same
 // parser with is_hrr set, the selected_group in place of a share, and the cookie to echo.
 void test_hello_retry_request_parses_as_a_server_hello(void)
 {
@@ -702,7 +702,7 @@ void test_hello_retry_request_parses_as_a_server_hello(void)
     Tls13MsgV.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
     Tls13MsgV.build_hello_retry_request_args.cookie = COOKIE;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = sizeof(COOKIE);
-    Tls13MsgV.build_hello_retry_request_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_hello_retry_request_args.dtls = EMBED_FALSE;
     Tls13Msg.build_hello_retry_request(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_NOT_EQUAL(0u, n);
@@ -711,7 +711,7 @@ void test_hello_retry_request_parses_as_a_server_hello(void)
     Tls13MsgV.parse_server_hello_args.msg = out;
     Tls13MsgV.parse_server_hello_args.len = n;
     Tls13MsgV.parse_server_hello_args.out = &sh;
-    Tls13MsgV.parse_server_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_server_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_server_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
     TEST_ASSERT_TRUE(sh.is_hrr);
@@ -747,8 +747,8 @@ void test_client_hello_round_trips_through_the_server_parser(void)
     Tls13MsgV.build_client_hello_args.alpn = "h2";
     Tls13MsgV.build_client_hello_args.cookie = NULL;
     Tls13MsgV.build_client_hello_args.cookie_len = 0;
-    Tls13MsgV.build_client_hello_args.rpk_server_cert = PROTO_TRUE;
-    Tls13MsgV.build_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_client_hello_args.rpk_server_cert = EMBED_TRUE;
+    Tls13MsgV.build_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.build_client_hello(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_NOT_EQUAL(0u, n);
@@ -762,7 +762,7 @@ void test_client_hello_round_trips_through_the_server_parser(void)
     Tls13MsgV.parse_client_hello_args.msg = out;
     Tls13MsgV.parse_client_hello_args.len = n;
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
     TEST_ASSERT_TRUE(ch.offers_tls13);
@@ -771,7 +771,7 @@ void test_client_hello_round_trips_through_the_server_parser(void)
     TEST_ASSERT_TRUE(ch.offers_ed25519);
     TEST_ASSERT_TRUE(ch.has_key_share);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SHARE, ch.client_x25519, 32);
-    TEST_ASSERT_TRUE(ch.offers_h3_alpn == PROTO_FALSE); // "h2" was offered, not "h3"
+    TEST_ASSERT_TRUE(ch.offers_h3_alpn == EMBED_FALSE); // "h2" was offered, not "h3"
     TEST_ASSERT_EQUAL_UINT(11u, ch.sni_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("example.com", ch.sni, 11);
     TEST_ASSERT_TRUE(ch.has_server_cert_type);
@@ -796,8 +796,8 @@ void test_client_hello_offers_the_alpn_it_was_given(void)
     Tls13MsgV.build_client_hello_args.alpn = "h3";
     Tls13MsgV.build_client_hello_args.cookie = NULL;
     Tls13MsgV.build_client_hello_args.cookie_len = 0;
-    Tls13MsgV.build_client_hello_args.rpk_server_cert = PROTO_FALSE;
-    Tls13MsgV.build_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_client_hello_args.rpk_server_cert = EMBED_FALSE;
+    Tls13MsgV.build_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.build_client_hello(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_NOT_EQUAL(0u, n);
@@ -806,7 +806,7 @@ void test_client_hello_offers_the_alpn_it_was_given(void)
     Tls13MsgV.parse_client_hello_args.msg = out;
     Tls13MsgV.parse_client_hello_args.len = n;
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
     TEST_ASSERT_TRUE(ch.offers_h3_alpn);
@@ -834,8 +834,8 @@ void test_client_hello_echoes_a_cookie(void)
     Tls13MsgV.build_client_hello_args.alpn = NULL;
     Tls13MsgV.build_client_hello_args.cookie = COOKIE;
     Tls13MsgV.build_client_hello_args.cookie_len = sizeof(COOKIE);
-    Tls13MsgV.build_client_hello_args.rpk_server_cert = PROTO_FALSE;
-    Tls13MsgV.build_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_client_hello_args.rpk_server_cert = EMBED_FALSE;
+    Tls13MsgV.build_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.build_client_hello(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_NOT_EQUAL(0u, n);
@@ -844,7 +844,7 @@ void test_client_hello_echoes_a_cookie(void)
     Tls13MsgV.parse_client_hello_args.msg = out;
     Tls13MsgV.parse_client_hello_args.len = n;
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(COOKIE), ch.cookie_len);
@@ -870,8 +870,8 @@ void test_client_hello_refuses_a_short_buffer(void)
     Tls13MsgV.build_client_hello_args.alpn = NULL;
     Tls13MsgV.build_client_hello_args.cookie = NULL;
     Tls13MsgV.build_client_hello_args.cookie_len = 0;
-    Tls13MsgV.build_client_hello_args.rpk_server_cert = PROTO_FALSE;
-    Tls13MsgV.build_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_client_hello_args.rpk_server_cert = EMBED_FALSE;
+    Tls13MsgV.build_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.build_client_hello(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_NOT_EQUAL(0u, n);
@@ -889,8 +889,8 @@ void test_client_hello_refuses_a_short_buffer(void)
     Tls13MsgV.build_client_hello_args.alpn = NULL;
     Tls13MsgV.build_client_hello_args.cookie = NULL;
     Tls13MsgV.build_client_hello_args.cookie_len = 0;
-    Tls13MsgV.build_client_hello_args.rpk_server_cert = PROTO_FALSE;
-    Tls13MsgV.build_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.build_client_hello_args.rpk_server_cert = EMBED_FALSE;
+    Tls13MsgV.build_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.build_client_hello(tls13_msg_work);
     TEST_ASSERT_EQUAL_UINT(0u, Tls13MsgV.n);
 }
@@ -915,8 +915,8 @@ void test_dtls_client_hello_carries_the_legacy_cookie(void)
     Tls13MsgV.build_client_hello_args.alpn = NULL;
     Tls13MsgV.build_client_hello_args.cookie = NULL;
     Tls13MsgV.build_client_hello_args.cookie_len = 0;
-    Tls13MsgV.build_client_hello_args.rpk_server_cert = PROTO_FALSE;
-    Tls13MsgV.build_client_hello_args.dtls = PROTO_TRUE;
+    Tls13MsgV.build_client_hello_args.rpk_server_cert = EMBED_FALSE;
+    Tls13MsgV.build_client_hello_args.dtls = EMBED_TRUE;
     Tls13Msg.build_client_hello(tls13_msg_work);
     size_t n = Tls13MsgV.n;
     TEST_ASSERT_NOT_EQUAL(0u, n);
@@ -925,7 +925,7 @@ void test_dtls_client_hello_carries_the_legacy_cookie(void)
     Tls13MsgV.parse_client_hello_args.msg = out;
     Tls13MsgV.parse_client_hello_args.len = n;
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_TRUE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_TRUE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_TRUE(Tls13MsgV.ok);
     TEST_ASSERT_TRUE(ch.offers_x25519);
@@ -934,7 +934,7 @@ void test_dtls_client_hello_carries_the_legacy_cookie(void)
     Tls13MsgV.parse_client_hello_args.msg = out;
     Tls13MsgV.parse_client_hello_args.len = n;
     Tls13MsgV.parse_client_hello_args.out = &as_tls;
-    Tls13MsgV.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.dtls = EMBED_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
     TEST_ASSERT_FALSE(Tls13MsgV.ok);
 }
@@ -987,10 +987,10 @@ void test_cert_verify_round_trip(void)
     Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
     Tls13MsgV.cert_verify_content_args.transcript_hash = HASH;
     Tls13MsgV.cert_verify_content_args.hash_len = 32;
-    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.is_server = EMBED_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
     size_t clen = Tls13MsgV.n;
-    proto_bool ed25519_ok = Ed25519.verify(g_work, pub, content, clen, sig);
+    embed_bool ed25519_ok = Ed25519.verify(g_work, pub, content, clen, sig);
     TEST_ASSERT_TRUE(ed25519_ok);
 }
 

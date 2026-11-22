@@ -26,12 +26,12 @@ void dbench_run(void)
         uint32_t t = 0;
         // Alternate the pin each call so both edges + debounce/hold paths are exercised.
         DBENCH_OP("protocore_presence_core_update", 200000, {
-            proto_bool rcwl0516_ok = Rcwl0516.presence_update(protocore_rcwl0516_span(), &c, (t & 64) != 0, t);
+            embed_bool rcwl0516_ok = Rcwl0516.presence_update(protocore_rcwl0516_span(), &c, (t & 64) != 0, t);
             sink += rcwl0516_ok;
             t += 3;
         });
         DBENCH_OP("Rcwl0516.presence_get", 200000, {
-            proto_bool rcwl0516_ok = Rcwl0516.presence_get(protocore_rcwl0516_span(), &c);
+            embed_bool rcwl0516_ok = Rcwl0516.presence_get(protocore_rcwl0516_span(), &c);
             sink += rcwl0516_ok;
         });
         (void)sink;

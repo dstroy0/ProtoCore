@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_CIP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -72,7 +72,7 @@ typedef struct
     uint16_t class_id;
     uint16_t instance_id;
     uint16_t attribute_id;
-    proto_bool with_attribute; ///< include the attribute segment
+    embed_bool with_attribute; ///< include the attribute segment
 } CipBuildEpathArgs;
 
 /** @brief What build_request takes: buf, cap, service, epath, ... */
@@ -169,7 +169,7 @@ typedef struct
     CipBuildGetAttrAllArgs build_get_attr_all_args;
     CipBuildSetAttrSingleArgs build_set_attr_single_args;
     CipParseResponseArgs parse_response_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } CipVars;
 
@@ -179,22 +179,22 @@ extern CipVars CipV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_epath)(uint8_t *work);
-    void (*const build_request)(uint8_t *work);
+    void (*const build_epath)(const uint8_t *work);
+    void (*const build_request)(const uint8_t *work);
     void (*const build_get_attr_single)(uint8_t *work);
     void (*const build_get_attr_all)(uint8_t *work);
     void (*const build_set_attr_single)(uint8_t *work);
-    void (*const parse_response)(uint8_t *work);
+    void (*const parse_response)(const uint8_t *work);
 } CipNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CipV or a region of the borrow at a fixed offset.
-void protocore_cip_build_epath(uint8_t *work);
-void protocore_cip_build_request(uint8_t *work);
+void protocore_cip_build_epath(const uint8_t *work);
+void protocore_cip_build_request(const uint8_t *work);
 void protocore_cip_build_get_attr_single(uint8_t *work);
 void protocore_cip_build_get_attr_all(uint8_t *work);
 void protocore_cip_build_set_attr_single(uint8_t *work);
-void protocore_cip_parse_response(uint8_t *work);
+void protocore_cip_parse_response(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -209,7 +209,7 @@ static const CipNs Cip __attribute__((unused)) = {
     .parse_response = protocore_cip_parse_response,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CIP
 

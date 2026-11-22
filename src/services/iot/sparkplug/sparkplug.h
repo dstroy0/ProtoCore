@@ -49,7 +49,7 @@
 
 #if PROTOCORE_ENABLE_SPARKPLUG
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Sparkplug 3.0.0 sec 4.1.1: the namespace element for the Sparkplug B payload definition. */
 #define SPB_NAMESPACE "spBv1.0"
@@ -103,23 +103,22 @@ PROTOCORE_BEGIN_DECLS
 #define SPB_DT_DATETIME_ARRAY 34
 
 /** @brief Which member of the Metric value oneof carries the value (Sparkplug 3.0.0 sec 6.4.1). */
-typedef enum PROTO_ENUM_PACKED
-{
-    SPB_M_INT,    ///< int_value, field 10, uint32
-    SPB_M_LONG,   ///< long_value, field 11, uint64
-    SPB_M_FLOAT,  ///< float_value, field 12
-    SPB_M_DOUBLE, ///< double_value, field 13
-    SPB_M_BOOL,   ///< boolean_value, field 14
-    SPB_M_STRING, ///< string_value, field 15
-} SpbMetricKind;
+EMBED_ENUM_BYTE(SpbMetricKind,
+                SPB_M_INT,    ///< int_value, field 10, uint32
+                SPB_M_LONG,   ///< long_value, field 11, uint64
+                SPB_M_FLOAT,  ///< float_value, field 12
+                SPB_M_DOUBLE, ///< double_value, field 13
+                SPB_M_BOOL,   ///< boolean_value, field 14
+                SPB_M_STRING, ///< string_value, field 15
+);
 
 /** @brief One Metric to encode (Sparkplug 3.0.0 sec 6.4.6). A null name and a false has_* omit the field. */
 typedef struct
 {
     const char *name; ///< name, field 1; omit on a DATA metric addressed by alias
-    proto_bool has_alias;
+    embed_bool has_alias;
     uint64_t alias; ///< alias, field 2
-    proto_bool has_timestamp;
+    embed_bool has_timestamp;
     uint64_t timestamp;       ///< timestamp, field 3, milliseconds since epoch in UTC
     uint32_t datatype;        ///< datatype, field 4, an SPB_DT_* code
     SpbMetricKind kind;       ///< which value oneof member below is written
@@ -127,16 +126,16 @@ typedef struct
     uint64_t long_value;      ///< long_value, field 11
     float float_value;        ///< float_value, field 12
     double double_value;      ///< double_value, field 13
-    proto_bool bool_value;    ///< boolean_value, field 14
+    embed_bool bool_value;    ///< boolean_value, field 14
     const char *string_value; ///< string_value, field 15
 } SpbMetric;
 
 /** @brief A decoded Payload's top-level fields (Sparkplug 3.0.0 sec 6.4.5); metrics are iterated separately. */
 typedef struct
 {
-    proto_bool has_timestamp;
+    embed_bool has_timestamp;
     uint64_t timestamp; ///< timestamp, field 1, milliseconds since epoch in UTC
-    proto_bool has_seq;
+    embed_bool has_seq;
     uint64_t seq; ///< seq, field 3
 } SpbPayloadHeader;
 
@@ -145,18 +144,18 @@ typedef struct
 {
     const char *name; ///< name, field 1, or nullptr when the metric is addressed by alias
     size_t name_len;
-    proto_bool has_alias;
+    embed_bool has_alias;
     uint64_t alias; ///< alias, field 2
-    proto_bool has_timestamp;
+    embed_bool has_timestamp;
     uint64_t timestamp;       ///< timestamp, field 3
     uint32_t datatype;        ///< datatype, field 4, an SPB_DT_* code
-    proto_bool has_value;     ///< false when no value oneof member was present
+    embed_bool has_value;     ///< false when no value oneof member was present
     SpbMetricKind kind;       ///< which value member is set, valid when @ref has_value
     uint32_t int_value;       ///< int_value, field 10
     uint64_t long_value;      ///< long_value, field 11
     float float_value;        ///< float_value, field 12
     double double_value;      ///< double_value, field 13
-    proto_bool bool_value;    ///< boolean_value, field 14
+    embed_bool bool_value;    ///< boolean_value, field 14
     const char *string_value; ///< string_value bytes, field 15, un-terminated, or nullptr
     size_t string_value_len;
 } SpbMetricDecoded;
@@ -241,7 +240,7 @@ typedef struct
     SpbPayloadArgs payload;    ///< what a Payload header says
     SpbMetricsArgs metrics;    ///< what a build serializes
     SpbSourceArgs source;      ///< what a decode reads
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     SpbPayloadHeader header;
     SpbMetricDecoded metric;
@@ -255,22 +254,22 @@ extern SparkplugVars SparkplugV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_topic)(uint8_t *work);
-    void (*const build_metric)(uint8_t *work);
+    void (*const build_topic)(const uint8_t *work);
+    void (*const build_metric)(const uint8_t *work);
     void (*const build_payload)(uint8_t *work);
-    void (*const parse_payload)(uint8_t *work);
-    void (*const next_metric)(uint8_t *work);
-    void (*const parse_metric)(uint8_t *work);
+    void (*const parse_payload)(const uint8_t *work);
+    void (*const next_metric)(const uint8_t *work);
+    void (*const parse_metric)(const uint8_t *work);
 } SparkplugNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SparkplugV or a region of the borrow at a fixed offset.
-void protocore_sparkplug_build_topic(uint8_t *work);
-void protocore_sparkplug_build_metric(uint8_t *work);
+void protocore_sparkplug_build_topic(const uint8_t *work);
+void protocore_sparkplug_build_metric(const uint8_t *work);
 void protocore_sparkplug_build_payload(uint8_t *work);
-void protocore_sparkplug_parse_payload(uint8_t *work);
-void protocore_sparkplug_next_metric(uint8_t *work);
-void protocore_sparkplug_parse_metric(uint8_t *work);
+void protocore_sparkplug_parse_payload(const uint8_t *work);
+void protocore_sparkplug_next_metric(const uint8_t *work);
+void protocore_sparkplug_parse_metric(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -296,7 +295,7 @@ static const SparkplugNs Sparkplug __attribute__((unused)) = {
  */
 uint8_t *protocore_sparkplug_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SPARKPLUG
 

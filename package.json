@@ -18,8 +18,8 @@
     "spell": "cspell --config cspell.json \"**/*.md\""
   },
   "devDependencies": {
-    "cspell": "^10.3.3",
-    "prettier": "^3.10.1"
+    "cspell": "^10.5.1",
+    "prettier": "^3.9.9"
   },
   "engines": {
     "node": ">=18"

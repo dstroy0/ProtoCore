@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for the byte relay (server/net/relay): protocore_relay_step() pumps bytes
 // between two ends (client <-> origin) through the per-direction carry buffers - the per-poll hot op
 // of a TCP proxy. Driven here over in-memory mock ends (recv always supplies a chunk, send always
-// accepts), so it measures the pure relay bookkeeping + copy cost; the real sockets are elsewhere.
+// accepts), so it measures the pure relay bookkeeping + copy cost. The real sockets are elsewhere.
 //
 // Build/flash:  idf.py -C test/performance_benching/relay -t upload --upload-port COM7
 #include "device_bench.h"

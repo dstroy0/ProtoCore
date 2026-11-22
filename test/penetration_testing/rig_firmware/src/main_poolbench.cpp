@@ -35,7 +35,7 @@ static inline uint32_t cyc_now()
 }
 
 // CCOUNT ticks at the CPU clock, which differs per die (S3 240 MHz, P4 360 MHz), so the conversion
-// must read the live frequency; the raw cycle counts are frequency-independent.
+// must read the live frequency. The raw cycle counts are frequency-independent.
 static double g_mhz = 240.0;
 
 // Per-call op. Warm once, then N iters, average cycles. These calls are tens of cycles, so N is large

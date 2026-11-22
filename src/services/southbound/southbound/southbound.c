@@ -14,7 +14,7 @@
 #include "server/core/worker/worker.h"           // the cellblock this module's state is taken from
 #include "services/southbound/southbound/southbound.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #ifndef PROTOCORE_SOUTHBOUND_MAX_DRIVERS
 #define PROTOCORE_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.
@@ -40,7 +40,10 @@ static_assert(SOUTHBOUND_OFF_CTX + sizeof(struct SouthboundStorage) <= PROTOCORE
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SOUTHBOUND_CTX(w) ((struct SouthboundStorage *)(void *)((w) + SOUTHBOUND_OFF_CTX))
+#define SOUTHBOUND_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SouthboundStorage *)(const void *)((w) + SOUTHBOUND_OFF_CTX),                   \
+        default: (struct SouthboundStorage *)(void *)((w) + SOUTHBOUND_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -82,7 +85,7 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
     {
         if (store->drivers[i] && store->drivers[i]->name &&
             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = store->drivers[i]->name, .other = name, .cap = MAX_KEY_LEN,
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             return store->drivers[i];
         }
@@ -220,6 +223,6 @@ void protocore_southbound_write_block(uint8_t *work)
 /** @brief The operands and the outcome. */
 SouthboundVars SouthboundV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND

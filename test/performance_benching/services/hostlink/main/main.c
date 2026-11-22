@@ -7,7 +7,7 @@
 // (Hostlink.end_code). Every operation here is pure - no heap, no sockets, no UART - so this is
 // like performance_benching/device/modbus, a pure protocol codec where each call exercises the real production code
 // path. The RS-232/485 serial transport is the application's responsibility and is deliberately out
-// of scope (nothing is wired to this rig); only the deterministic CPU-side framing is benched.
+// of scope (nothing is wired to this rig). Only the deterministic CPU-side framing is benched.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/hostlink -t upload --upload-port COM7

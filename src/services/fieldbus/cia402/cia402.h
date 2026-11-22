@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_CIA402
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -73,73 +73,63 @@ PROTOCORE_BEGIN_DECLS
 #define CIA402_SW_INTERNAL_LIMIT 0x0800
 
 /// @return true if the Statusword's Target Reached flag (bit 10) is set.
-static inline proto_bool protocore_cia402_target_reached(uint16_t sw)
+static inline embed_bool protocore_cia402_target_reached(uint16_t sw)
 {
     return (sw & CIA402_SW_TARGET_REACHED) != 0;
 }
 /// @return true if the drive reports a fault (bit 3).
-static inline proto_bool protocore_cia402_has_fault(uint16_t sw)
+static inline embed_bool protocore_cia402_has_fault(uint16_t sw)
 {
     return (sw & CIA402_SW_FAULT) != 0;
 }
 /// @return true if a warning is present (bit 7).
-static inline proto_bool protocore_cia402_warning(uint16_t sw)
+static inline embed_bool protocore_cia402_warning(uint16_t sw)
 {
     return (sw & CIA402_SW_WARNING) != 0;
 }
 /// @return true if the drive's power stage voltage is applied (bit 4).
-static inline proto_bool protocore_cia402_voltage_enabled(uint16_t sw)
+static inline embed_bool protocore_cia402_voltage_enabled(uint16_t sw)
 {
     return (sw & CIA402_SW_VOLTAGE_ENABLED) != 0;
 }
 /// @return true if the drive follows the Controlword (bit 9 remote).
-static inline proto_bool protocore_cia402_remote(uint16_t sw)
+static inline embed_bool protocore_cia402_remote(uint16_t sw)
 {
     return (sw & CIA402_SW_REMOTE) != 0;
 }
 /// @return true if a set-point was internally limited (bit 11).
-static inline proto_bool protocore_cia402_internal_limit(uint16_t sw)
+static inline embed_bool protocore_cia402_internal_limit(uint16_t sw)
 {
     return (sw & CIA402_SW_INTERNAL_LIMIT) != 0;
 }
 
-typedef enum PROTO_ENUM_PACKED
-{
-    CIA402_MODE_NO_MODE = 0,
-    CIA402_MODE_PROFILE_POSITION = 1,      ///< PP
-    CIA402_MODE_VELOCITY = 2,              ///< VL (frequency-converter CIA402_MODE_VELOCITY)
-    CIA402_MODE_PROFILE_VELOCITY = 3,      ///< PV
-    CIA402_MODE_PROFILE_TORQUE = 4,        ///< TQ
-    CIA402_MODE_HOMING = 6,                ///< HM
-    CIA402_MODE_INTERPOLATED_POSITION = 7, ///< IP
-    CIA402_MODE_CYCLIC_SYNC_POSITION = 8,  ///< CSP
-    CIA402_MODE_CYCLIC_SYNC_VELOCITY = 9,  ///< CSV
-    CIA402_MODE_CYCLIC_SYNC_TORQUE = 10,   ///< CST
-} Cia402Mode;
+EMBED_ENUM_BYTE(Cia402Mode, CIA402_MODE_NO_MODE = 0,
+                CIA402_MODE_PROFILE_POSITION = 1,      ///< PP
+                CIA402_MODE_VELOCITY = 2,              ///< VL (frequency-converter CIA402_MODE_VELOCITY)
+                CIA402_MODE_PROFILE_VELOCITY = 3,      ///< PV
+                CIA402_MODE_PROFILE_TORQUE = 4,        ///< TQ
+                CIA402_MODE_HOMING = 6,                ///< HM
+                CIA402_MODE_INTERPOLATED_POSITION = 7, ///< IP
+                CIA402_MODE_CYCLIC_SYNC_POSITION = 8,  ///< CSP
+                CIA402_MODE_CYCLIC_SYNC_VELOCITY = 9,  ///< CSV
+                CIA402_MODE_CYCLIC_SYNC_TORQUE = 10,   ///< CST
+);
 
-typedef enum PROTO_ENUM_PACKED
-{
-    CIA402_STATE_NOT_READY_TO_SWITCH_ON,
-    CIA402_STATE_SWITCH_ON_DISABLED,
-    CIA402_STATE_READY_TO_SWITCH_ON,
-    CIA402_STATE_SWITCHED_ON,
-    CIA402_STATE_OPERATION_ENABLED,
-    CIA402_STATE_QUICK_STOP_ACTIVE,
-    CIA402_STATE_FAULT_REACTION_ACTIVE,
-    CIA402_STATE_FAULT,
-    CIA402_STATE_UNKNOWN, ///< Statusword matched no defined state
-} Cia402State;
+EMBED_ENUM_BYTE(Cia402State, CIA402_STATE_NOT_READY_TO_SWITCH_ON, CIA402_STATE_SWITCH_ON_DISABLED,
+                CIA402_STATE_READY_TO_SWITCH_ON, CIA402_STATE_SWITCHED_ON, CIA402_STATE_OPERATION_ENABLED,
+                CIA402_STATE_QUICK_STOP_ACTIVE, CIA402_STATE_FAULT_REACTION_ACTIVE, CIA402_STATE_FAULT,
+                CIA402_STATE_UNKNOWN, ///< Statusword matched no defined state
+);
 
-typedef enum PROTO_ENUM_PACKED
-{
-    CIA402_COMMAND_SHUTDOWN,          ///< -> Ready to switch on
-    CIA402_COMMAND_SWITCH_ON,         ///< -> Switched on
-    CIA402_COMMAND_ENABLE_OPERATION,  ///< -> Operation enabled
-    CIA402_COMMAND_DISABLE_VOLTAGE,   ///< -> Switch on disabled
-    CIA402_COMMAND_QUICK_STOP,        ///< -> Quick stop active
-    CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
-    CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
-} Cia402Command;
+EMBED_ENUM_BYTE(Cia402Command,
+                CIA402_COMMAND_SHUTDOWN,          ///< -> Ready to switch on
+                CIA402_COMMAND_SWITCH_ON,         ///< -> Switched on
+                CIA402_COMMAND_ENABLE_OPERATION,  ///< -> Operation enabled
+                CIA402_COMMAND_DISABLE_VOLTAGE,   ///< -> Switch on disabled
+                CIA402_COMMAND_QUICK_STOP,        ///< -> Quick stop active
+                CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
+                CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
+);
 
 /** @brief What state takes: statusword. */
 typedef struct
@@ -302,7 +292,7 @@ typedef struct
     Cia402SdoGetI32Args sdo_get_i32_args;
     Cia402PackCommandArgs pack_command_args;
     Cia402UnpackStatusArgs unpack_status_args;
-    proto_bool ok;
+    embed_bool ok;
     Cia402State value;
     uint16_t u16;
     size_t n;
@@ -314,8 +304,8 @@ extern Cia402Vars Cia402V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const state)(uint8_t *work);
-    void (*const controlword)(uint8_t *work);
+    void (*const state)(const uint8_t *work);
+    void (*const controlword)(const uint8_t *work);
     void (*const enable_sequence)(uint8_t *work);
     void (*const sdo_set_controlword)(uint8_t *work);
     void (*const sdo_set_mode)(uint8_t *work);
@@ -325,14 +315,14 @@ typedef struct
     void (*const sdo_read)(uint8_t *work);
     void (*const sdo_get_u16)(uint8_t *work);
     void (*const sdo_get_i32)(uint8_t *work);
-    void (*const pack_command)(uint8_t *work);
-    void (*const unpack_status)(uint8_t *work);
+    void (*const pack_command)(const uint8_t *work);
+    void (*const unpack_status)(const uint8_t *work);
 } Cia402Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Cia402V or a region of the borrow at a fixed offset.
-void protocore_cia402_state(uint8_t *work);
-void protocore_cia402_controlword(uint8_t *work);
+void protocore_cia402_state(const uint8_t *work);
+void protocore_cia402_controlword(const uint8_t *work);
 void protocore_cia402_enable_sequence(uint8_t *work);
 void protocore_cia402_sdo_set_controlword(uint8_t *work);
 void protocore_cia402_sdo_set_mode(uint8_t *work);
@@ -342,8 +332,8 @@ void protocore_cia402_sdo_set_target_torque(uint8_t *work);
 void protocore_cia402_sdo_read(uint8_t *work);
 void protocore_cia402_sdo_get_u16(uint8_t *work);
 void protocore_cia402_sdo_get_i32(uint8_t *work);
-void protocore_cia402_pack_command(uint8_t *work);
-void protocore_cia402_unpack_status(uint8_t *work);
+void protocore_cia402_pack_command(const uint8_t *work);
+void protocore_cia402_unpack_status(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -365,7 +355,7 @@ static const Cia402Ns Cia402 __attribute__((unused)) = {
     .unpack_status = protocore_cia402_unpack_status,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CIA402
 

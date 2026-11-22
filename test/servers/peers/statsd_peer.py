@@ -13,7 +13,7 @@ independent receiver:
   2. trigger GET /statsd/probe on the device -> {sent:1}
   3. the received datagram parses as StatsD with the metric name / value / type we asked it to emit
 
-The collector is stdlib (a raw UDP socket + a StatsD line parser); no external server is needed (the
+The collector is stdlib (a raw UDP socket + a StatsD line parser). No external server is needed (the
 independent check is the wire-format validation - Graphite/StatsD, Telegraf, Datadog are production peers).
 """
 

@@ -35,8 +35,8 @@ inline const char *&_mock_open_fail_path()
 struct MockNode
 {
     char path[160];
-    proto_bool used;
-    proto_bool is_dir;
+    embed_bool used;
+    embed_bool is_dir;
     size_t len;
     uint8_t data[2048];
 };
@@ -46,9 +46,9 @@ inline MockNode *_tree_nodes()
     static MockNode n[64];
     return n;
 }
-inline proto_bool &_tree_on()
+inline embed_bool &_tree_on()
 {
-    static proto_bool on = PROTO_FALSE;
+    static embed_bool on = EMBED_FALSE;
     return on;
 }
 inline MockNode *_tree_find(const char *path)
@@ -63,7 +63,7 @@ inline MockNode *_tree_find(const char *path)
     }
     return NULL;
 }
-inline MockNode *_tree_add(const char *path, proto_bool is_dir)
+inline MockNode *_tree_add(const char *path, embed_bool is_dir)
 {
     MockNode *e = _tree_find(path);
     if (e)
@@ -75,7 +75,7 @@ inline MockNode *_tree_add(const char *path, proto_bool is_dir)
     {
         if (!n[i].used)
         {
-            n[i].used = PROTO_TRUE;
+            n[i].used = EMBED_TRUE;
             n[i].is_dir = is_dir;
             n[i].len = 0;
             snprintf(n[i].path, sizeof(n[i].path), "%s", path);
@@ -85,28 +85,28 @@ inline MockNode *_tree_add(const char *path, proto_bool is_dir)
     return NULL;
 }
 // True when `path` is a direct child of directory `dir` (exactly one level deeper).
-inline proto_bool _tree_is_child(const char *dir, const char *path)
+inline embed_bool _tree_is_child(const char *dir, const char *path)
 {
     size_t dl = strlen(dir);
     if (strncmp(path, dir, dl) != 0 || path[dl] != '/')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return strchr(path + dl + 1, '/') == NULL; // no further separator -> direct child
 }
 inline void mock_fs_tree_enable()
 {
-    _tree_on() = PROTO_TRUE;
+    _tree_on() = EMBED_TRUE;
     _mock_open_fail_path() = ""; // clear a forced open-failure a prior test may have set
     MockNode *n = _tree_nodes();
     for (int i = 0; i < 64; i++)
     {
-        n[i].used = PROTO_FALSE;
+        n[i].used = EMBED_FALSE;
     }
 }
 inline void mock_fs_tree_disable()
 {
-    _tree_on() = PROTO_FALSE;
+    _tree_on() = EMBED_FALSE;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,9 +123,9 @@ inline size_t &_mock_size()
     static size_t s = 0;
     return s;
 }
-inline proto_bool &_mock_valid()
+inline embed_bool &_mock_valid()
 {
-    static proto_bool v = PROTO_FALSE;
+    static embed_bool v = EMBED_FALSE;
     return v;
 }
 
@@ -133,21 +133,21 @@ inline void mock_fs_set(const uint8_t *data, size_t size)
 {
     _mock_data() = data;
     _mock_size() = size;
-    _mock_valid() = PROTO_TRUE;
+    _mock_valid() = EMBED_TRUE;
 }
 
 inline void mock_fs_set(const char *text)
 {
     _mock_data() = (const uint8_t *)(text);
     _mock_size() = strlen(text);
-    _mock_valid() = PROTO_TRUE;
+    _mock_valid() = EMBED_TRUE;
 }
 
 inline void mock_fs_clear()
 {
     _mock_data() = NULL;
     _mock_size() = 0;
-    _mock_valid() = PROTO_FALSE;
+    _mock_valid() = EMBED_FALSE;
 }
 
 // Test hook: cap the total bytes File::read() will yield, regardless of file size -
@@ -196,37 +196,37 @@ class File
     const uint8_t *_data;
     size_t _size;
     size_t _pos;
-    proto_bool _open;
+    embed_bool _open;
     time_t _mtime;
     // Tree-mode extensions (all null/false in legacy mode).
     MockNode *_wnode;   ///< write target node (tree open "w"/"a")
-    proto_bool _is_dir; ///< this File is a directory
+    embed_bool _is_dir; ///< this File is a directory
     char _dir[160];     ///< directory path, for openNextFile iteration
     int _cursor;        ///< next node index to scan for openNextFile
 
   public:
     File()
-        : _data(NULL), _size(0), _pos(0), _open(PROTO_FALSE), _mtime(0), _wnode(NULL), _is_dir(PROTO_FALSE), _cursor(0)
+        : _data(NULL), _size(0), _pos(0), _open(EMBED_FALSE), _mtime(0), _wnode(NULL), _is_dir(EMBED_FALSE), _cursor(0)
     {
         _dir[0] = '\0';
     }
     File(const uint8_t *data, size_t size, time_t mtime = 0)
-        : _data(data), _size(size), _pos(0), _open(PROTO_TRUE), _mtime(mtime), _wnode(NULL), _is_dir(PROTO_FALSE),
+        : _data(data), _size(size), _pos(0), _open(EMBED_TRUE), _mtime(mtime), _wnode(NULL), _is_dir(EMBED_FALSE),
           _cursor(0)
     {
         _dir[0] = '\0';
     }
     // Writable sink: bytes go to the shared write-capture buffer.
-    explicit File(proto_bool open_writable)
-        : _data(NULL), _size(0), _pos(0), _open(open_writable), _mtime(0), _wnode(NULL), _is_dir(PROTO_FALSE),
+    explicit File(embed_bool open_writable)
+        : _data(NULL), _size(0), _pos(0), _open(open_writable), _mtime(0), _wnode(NULL), _is_dir(EMBED_FALSE),
           _cursor(0)
     {
         _dir[0] = '\0';
     }
     // Tree-backed file: read from / write to an in-memory node.
-    File(MockNode *node, proto_bool writing)
+    File(MockNode *node, embed_bool writing)
         : _data(node ? node->data : NULL), _size(node ? node->len : 0), _pos(0), _open(node != NULL), _mtime(0),
-          _wnode(writing ? node : NULL), _is_dir(node ? node->is_dir : PROTO_FALSE), _cursor(0)
+          _wnode(writing ? node : NULL), _is_dir(node ? node->is_dir : EMBED_FALSE), _cursor(0)
     {
         snprintf(_dir, sizeof(_dir), "%s", node ? node->path : "");
     }
@@ -278,7 +278,7 @@ class File
         return n;
     }
 
-    proto_bool isDirectory() const
+    embed_bool isDirectory() const
     {
         return _is_dir;
     }
@@ -301,21 +301,21 @@ class File
             if (c->used && _tree_is_child(_dir, c->path))
             {
                 _cursor++;
-                return File(c, PROTO_FALSE);
+                return File(c, EMBED_FALSE);
             }
         }
         return File();
     }
 
     // Mirrors fs::File::seek(pos, SeekSet) for Range request tests.
-    proto_bool seek(uint32_t pos)
+    embed_bool seek(uint32_t pos)
     {
         if (!_open || pos > _size)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         _pos = pos;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 
     size_t size() const
@@ -328,9 +328,9 @@ class File
     }
     void close()
     {
-        _open = PROTO_FALSE;
+        _open = EMBED_FALSE;
     }
-    explicit operator proto_bool() const
+    explicit operator embed_bool() const
     {
         return _open;
     }
@@ -413,27 +413,27 @@ class FS
         }
         if (_tree_on())
         {
-            proto_bool writing = mode && (mode[0] == 'w' || mode[0] == 'a');
+            embed_bool writing = mode && (mode[0] == 'w' || mode[0] == 'a');
             if (writing)
             {
                 MockNode *n = _tree_find(path);
                 if (!n)
                 {
-                    n = _tree_add(path, PROTO_FALSE);
+                    n = _tree_add(path, EMBED_FALSE);
                 }
                 if (n && mode[0] == 'w')
                 {
                     n->len = 0; // truncate
                 }
-                return File(n, PROTO_TRUE);
+                return File(n, EMBED_TRUE);
             }
             MockNode *n = _tree_find(path);
-            return n ? File(n, PROTO_FALSE) : File();
+            return n ? File(n, EMBED_FALSE) : File();
         }
         // Write/append mode -> a writable sink (captured via mock_fs_written()).
         if (mode && (mode[0] == 'w' || mode[0] == 'a'))
         {
-            return File(PROTO_TRUE);
+            return File(EMBED_TRUE);
         }
         if (_mock_entry_count() > 0)
         {
@@ -448,7 +448,7 @@ class FS
         return File(); // invalid - signals file-not-found
     }
 
-    proto_bool exists(const char *path)
+    embed_bool exists(const char *path)
     {
         if (_tree_on())
         {
@@ -462,46 +462,46 @@ class FS
     }
 
     // Directory operations - only meaningful in tree mode; no-ops/false otherwise.
-    proto_bool mkdir(const char *path)
+    embed_bool mkdir(const char *path)
     {
         if (!_tree_on())
         {
-            return PROTO_TRUE; // legacy callers don't model dirs
+            return EMBED_TRUE; // legacy callers don't model dirs
         }
         if (_tree_find(path))
         {
-            return PROTO_FALSE; // already exists
+            return EMBED_FALSE; // already exists
         }
-        return _tree_add(path, PROTO_TRUE) != NULL;
+        return _tree_add(path, EMBED_TRUE) != NULL;
     }
-    proto_bool rmdir(const char *path)
+    embed_bool rmdir(const char *path)
     {
         return remove(path);
     }
-    proto_bool remove(const char *path)
+    embed_bool remove(const char *path)
     {
         if (!_tree_on())
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         MockNode *n = _tree_find(path);
         if (!n)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
-        n->used = PROTO_FALSE;
-        return PROTO_TRUE;
+        n->used = EMBED_FALSE;
+        return EMBED_TRUE;
     }
-    proto_bool rename(const char *from, const char *to)
+    embed_bool rename(const char *from, const char *to)
     {
         if (!_tree_on())
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         MockNode *n = _tree_find(from);
         if (!n)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         // Re-path the node and (for a directory) every descendant under it.
         size_t fl = strlen(from);
@@ -520,7 +520,7 @@ class FS
                 snprintf(c->path, sizeof(c->path), "%s", np);
             }
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 };
 

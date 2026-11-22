@@ -60,11 +60,11 @@ typedef struct
     FieldList req_headers;
     uint32_t headers_end[SID_MAX];
     size_t headers_end_n;
-    proto_bool last_end_stream;
-    proto_bool hend_malformed;
+    embed_bool last_end_stream;
+    embed_bool hend_malformed;
     char body[BODY_MAX];
     size_t body_len;
-    proto_bool data_end;
+    embed_bool data_end;
 } Cap;
 
 static void cap_write(void *io, const uint8_t *d, size_t n)
@@ -81,7 +81,7 @@ static void cap_hdr(void *app, uint32_t sid, const char *n, size_t nl, const cha
     (void)sid;
     field_add(&((Cap *)app)->req_headers, n, nl, v, vl);
 }
-static proto_bool cap_hend(void *app, uint32_t sid, proto_bool es)
+static embed_bool cap_hend(void *app, uint32_t sid, embed_bool es)
 {
     Cap *c = (Cap *)app;
     if (c->headers_end_n < SID_MAX)
@@ -91,7 +91,7 @@ static proto_bool cap_hend(void *app, uint32_t sid, proto_bool es)
     c->last_end_stream = es;
     return !c->hend_malformed;
 }
-static void cap_data(void *app, uint32_t sid, const uint8_t *d, size_t n, proto_bool es)
+static void cap_data(void *app, uint32_t sid, const uint8_t *d, size_t n, embed_bool es)
 {
     (void)sid;
     Cap *c = (Cap *)app;
@@ -204,7 +204,7 @@ void test_init_and_request(void)
     in_add(hf,
            (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf, H2FrameV.headers_args.stream_id = 1,
             H2FrameV.headers_args.block = block, H2FrameV.headers_args.block_len = blen,
-            H2FrameV.headers_args.end_stream = PROTO_TRUE, H2Frame.build_headers(NULL), H2FrameV.n));
+            H2FrameV.headers_args.end_stream = EMBED_TRUE, H2Frame.build_headers(NULL), H2FrameV.n));
 
     cap.out_len = 0;
     TEST_ASSERT_TRUE(
@@ -226,10 +226,10 @@ void test_init_and_request(void)
     TEST_ASSERT_EQUAL_INT(1, acks2);
 }
 
-static proto_bool rh_emit(void *ctx, const char *n, size_t nl, const char *v, size_t vl)
+static embed_bool rh_emit(void *ctx, const char *n, size_t nl, const char *v, size_t vl)
 {
     field_add((FieldList *)ctx, n, nl, v, vl);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void test_respond_roundtrip(void)
@@ -245,7 +245,7 @@ void test_respond_roundtrip(void)
     in_add(hf,
            (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf, H2FrameV.headers_args.stream_id = 1,
             H2FrameV.headers_args.block = block, H2FrameV.headers_args.block_len = blen,
-            H2FrameV.headers_args.end_stream = PROTO_TRUE, H2Frame.build_headers(NULL), H2FrameV.n));
+            H2FrameV.headers_args.end_stream = EMBED_TRUE, H2Frame.build_headers(NULL), H2FrameV.n));
     TEST_ASSERT_TRUE(
         (H2ConnV.recv_args.data = g_in, H2ConnV.recv_args.len = g_in_len, H2Conn.recv(g_conn), H2ConnV.ok));
 
@@ -264,7 +264,7 @@ void test_respond_roundtrip(void)
     char data[BODY_MAX];
     size_t data_len = 0;
     data[0] = 0;
-    proto_bool data_end = PROTO_FALSE;
+    embed_bool data_end = EMBED_FALSE;
     size_t i = 0;
     while (i + 9 <= cap.out_len)
     {
@@ -329,7 +329,7 @@ void test_ping_and_split_recv(void)
     TEST_ASSERT_EQUAL_INT(1, acks);
 
     size_t i = 0;
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     while (i + 9 <= cap.out_len)
     {
         H2FrameHeader h;
@@ -338,7 +338,7 @@ void test_ping_and_split_recv(void)
         if (h.type == H2_PING && (h.flags & H2_FLAG_ACK))
         {
             TEST_ASSERT_EQUAL_MEMORY(op, &cap.out[i + 9], 8);
-            found = PROTO_TRUE;
+            found = EMBED_TRUE;
         }
         i += 9 + h.length;
     }
@@ -367,7 +367,7 @@ static void establish(uint8_t *c, Cap *cap)
 }
 
 static uint8_t g_frame[IN_MAX];
-static proto_bool feed_frame(uint8_t *c, uint8_t type, uint8_t flags, uint32_t sid, const uint8_t *pl, size_t pn)
+static embed_bool feed_frame(uint8_t *c, uint8_t type, uint8_t flags, uint32_t sid, const uint8_t *pl, size_t pn)
 {
     TEST_ASSERT_TRUE(9 + pn <= IN_MAX);
     (H2FrameV.write_args.buf = g_frame, H2FrameV.write_args.cap = 9, H2FrameV.write_args.length = (uint32_t)pn,
@@ -389,7 +389,7 @@ static void open_stream(uint8_t *c, uint32_t id)
                       H2ConnV.recv_args.len =
                           (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                            H2FrameV.headers_args.stream_id = id, H2FrameV.headers_args.block = block,
-                           H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_FALSE,
+                           H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_FALSE,
                            H2Frame.build_headers(NULL), H2FrameV.n),
                       H2Conn.recv(c), H2ConnV.ok));
 }
@@ -439,14 +439,14 @@ void test_h2_stream_id_must_increase(void)
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 3, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
     TEST_ASSERT_FALSE(
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
 }
@@ -463,7 +463,7 @@ void test_h2_headers_rfc7541_c31_block(void)
                       H2ConnV.recv_args.len =
                           (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                            H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = c31,
-                           H2FrameV.headers_args.block_len = sizeof c31, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                           H2FrameV.headers_args.block_len = sizeof c31, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                            H2Frame.build_headers(NULL), H2FrameV.n),
                       H2Conn.recv(g_conn), H2ConnV.ok));
 
@@ -497,7 +497,7 @@ void test_h2_trailers_on_open_stream(void)
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
 
@@ -522,7 +522,7 @@ void test_h2_trailers_without_end_stream_reset_the_stream(void)
                       H2ConnV.recv_args.len =
                           (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                            H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = block,
-                           H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_FALSE,
+                           H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_FALSE,
                            H2Frame.build_headers(NULL), H2FrameV.n),
                       H2Conn.recv(g_conn), H2ConnV.ok));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
@@ -544,7 +544,7 @@ void test_h2_trailers_reject_pseudo_headers(void)
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
@@ -561,14 +561,14 @@ void test_h2_headers_on_ended_stream_is_a_connection_error(void)
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
     TEST_ASSERT_FALSE(
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
 }
@@ -584,7 +584,7 @@ void test_h2_headers_bad_stream_id(void)
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 2, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
 }
@@ -600,7 +600,7 @@ void test_h2_stream_table_full_rst(void)
         uint8_t hf[160];
         size_t hn = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                      H2FrameV.headers_args.stream_id = (uint32_t)(1 + 2 * i), H2FrameV.headers_args.block = block,
-                     H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_FALSE,
+                     H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_FALSE,
                      H2Frame.build_headers(NULL), H2FrameV.n);
         TEST_ASSERT_TRUE((H2ConnV.recv_args.data = hf, H2ConnV.recv_args.len = hn, H2Conn.recv(g_conn), H2ConnV.ok));
     }
@@ -609,7 +609,7 @@ void test_h2_stream_table_full_rst(void)
     size_t hn = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                  H2FrameV.headers_args.stream_id = (uint32_t)(1 + 2 * PROTOCORE_H2_MAX_STREAMS),
                  H2FrameV.headers_args.block = block, H2FrameV.headers_args.block_len = blen,
-                 H2FrameV.headers_args.end_stream = PROTO_FALSE, H2Frame.build_headers(NULL), H2FrameV.n);
+                 H2FrameV.headers_args.end_stream = EMBED_FALSE, H2Frame.build_headers(NULL), H2FrameV.n);
     TEST_ASSERT_TRUE((H2ConnV.recv_args.data = hf, H2ConnV.recv_args.len = hn, H2Conn.recv(g_conn), H2ConnV.ok));
     TEST_ASSERT_TRUE(count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL) >= 1);
 }
@@ -767,7 +767,7 @@ void test_h2_respond_paths_and_goaway(void)
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_GOAWAY, NULL));
 }
 
-static proto_bool fresh_feed(uint8_t type, uint8_t flags, uint32_t sid, const uint8_t *pl, size_t pn)
+static embed_bool fresh_feed(uint8_t type, uint8_t flags, uint32_t sid, const uint8_t *pl, size_t pn)
 {
     static Cap cap;
     establish(g_conn, &cap);
@@ -842,7 +842,7 @@ void test_h2_null_callbacks(void)
     in_add(hf,
            (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf, H2FrameV.headers_args.stream_id = 1,
             H2FrameV.headers_args.block = block, H2FrameV.headers_args.block_len = blen,
-            H2FrameV.headers_args.end_stream = PROTO_FALSE, H2Frame.build_headers(NULL), H2FrameV.n));
+            H2FrameV.headers_args.end_stream = EMBED_FALSE, H2Frame.build_headers(NULL), H2FrameV.n));
     TEST_ASSERT_TRUE(
         (H2ConnV.recv_args.data = g_in, H2ConnV.recv_args.len = g_in_len, H2Conn.recv(g_conn), H2ConnV.ok));
 
@@ -863,7 +863,7 @@ void test_h2_headers_stream_zero(void)
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 0, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = blen, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
 }
@@ -937,7 +937,7 @@ static void open_stream_with_content_length(uint8_t *c, uint32_t id, const char 
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = id, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = bo, H2FrameV.headers_args.end_stream = PROTO_FALSE,
+                                  H2FrameV.headers_args.block_len = bo, H2FrameV.headers_args.end_stream = EMBED_FALSE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(c), H2ConnV.ok));
 }
@@ -979,7 +979,7 @@ void test_h2_content_length_must_match_the_data(void)
         (H2ConnV.recv_args.data = hf,
          H2ConnV.recv_args.len = (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf,
                                   H2FrameV.headers_args.stream_id = 1, H2FrameV.headers_args.block = block,
-                                  H2FrameV.headers_args.block_len = bo, H2FrameV.headers_args.end_stream = PROTO_TRUE,
+                                  H2FrameV.headers_args.block_len = bo, H2FrameV.headers_args.end_stream = EMBED_TRUE,
                                   H2Frame.build_headers(NULL), H2FrameV.n),
          H2Conn.recv(g_conn), H2ConnV.ok));
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_RST_STREAM, NULL));
@@ -1003,16 +1003,16 @@ void test_h2_continuation_flood_is_bounded(void)
     size_t hn =
         (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf, H2FrameV.headers_args.stream_id = 1,
          H2FrameV.headers_args.block = block, H2FrameV.headers_args.block_len = blen,
-         H2FrameV.headers_args.end_stream = PROTO_FALSE, H2Frame.build_headers(NULL), H2FrameV.n);
+         H2FrameV.headers_args.end_stream = EMBED_FALSE, H2Frame.build_headers(NULL), H2FrameV.n);
     hf[4] &= (uint8_t)~H2_FLAG_END_HEADERS;
     TEST_ASSERT_TRUE((H2ConnV.recv_args.data = hf, H2ConnV.recv_args.len = hn, H2Conn.recv(g_conn), H2ConnV.ok));
 
-    proto_bool refused = PROTO_FALSE;
+    embed_bool refused = EMBED_FALSE;
     for (int i = 0; i < PROTOCORE_H2_MAX_CONTINUATION + 4; i++)
     {
         if (!feed_frame(g_conn, H2_CONTINUATION, 0, 1, NULL, 0))
         {
-            refused = PROTO_TRUE;
+            refused = EMBED_TRUE;
             break;
         }
     }

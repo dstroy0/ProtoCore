@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Opening and closing one WebSocket connection.
@@ -40,7 +40,7 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-    proto_bool ok; ///< whether the channel opened, or whether a close had one to release
+    embed_bool ok; ///< whether the channel opened, or whether a close had one to release
 } SessionWsVars;
 
 /** @brief The operands and the outcome. */
@@ -67,7 +67,7 @@ static const SessionWsNs SessionWs __attribute__((unused)) = {
     .close = protocore_session_ws_close,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBSOCKET
 

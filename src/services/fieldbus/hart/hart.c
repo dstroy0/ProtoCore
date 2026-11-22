@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/hart/hart.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -21,9 +21,9 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_hart_checksum(uint8_t *work);
+void protocore_hart_checksum(const uint8_t *work);
 
-void protocore_hart_checksum(uint8_t *work)
+void protocore_hart_checksum(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = HartV.checksum_args.bytes;
@@ -93,7 +93,7 @@ void protocore_hart_parse(uint8_t *work)
 
     if (!frame || !out)
     {
-        HartV.ok = PROTO_FALSE;
+        HartV.ok = EMBED_FALSE;
         return;
     }
     size_t addr_len = (frame[0] & HART_DELIM_LONG_ADDR) ? 5 : 1;
@@ -101,7 +101,7 @@ void protocore_hart_parse(uint8_t *work)
     size_t min = 1 + addr_len + 1 + 1 + 1;
     if (len < min)
     {
-        HartV.ok = PROTO_FALSE;
+        HartV.ok = EMBED_FALSE;
         return;
     }
 
@@ -110,7 +110,7 @@ void protocore_hart_parse(uint8_t *work)
     size_t expect = 1 + addr_len + 1 + 1 + byte_count + 1; // full frame incl checksum
     if (len < expect)
     {
-        HartV.ok = PROTO_FALSE;
+        HartV.ok = EMBED_FALSE;
         return;
     }
 
@@ -120,7 +120,7 @@ void protocore_hart_parse(uint8_t *work)
     uint8_t want = HartV.value;
     if (want != frame[expect - 1])
     {
-        HartV.ok = PROTO_FALSE;
+        HartV.ok = EMBED_FALSE;
         return;
     }
 
@@ -131,10 +131,10 @@ void protocore_hart_parse(uint8_t *work)
     out->byte_count = byte_count;
     out->data = byte_count ? (frame + bc_idx + 1) : NULL;
     out->data_len = byte_count;
-    HartV.ok = PROTO_TRUE;
+    HartV.ok = EMBED_TRUE;
 }
 
-void protocore_hart_ip_build_header(uint8_t *work)
+void protocore_hart_ip_build_header(const uint8_t *work)
 {
     (void)work;
     uint8_t msg_type = HartV.ip_build_header_args.msg_type;
@@ -161,7 +161,7 @@ void protocore_hart_ip_build_header(uint8_t *work)
     HartV.n = HARTIP_HEADER_LEN;
 }
 
-void protocore_hart_ip_parse_header(uint8_t *work)
+void protocore_hart_ip_parse_header(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = HartV.ip_parse_header_args.buf;
@@ -170,13 +170,13 @@ void protocore_hart_ip_parse_header(uint8_t *work)
 
     if (!buf || !out || len < HARTIP_HEADER_LEN)
     {
-        HartV.ok = PROTO_FALSE;
+        HartV.ok = EMBED_FALSE;
         return;
     }
     uint16_t total = (uint16_t)((buf[6] << 8) | buf[7]);
     if (total < HARTIP_HEADER_LEN || total > len) // the byte count must include the header and be present
     {
-        HartV.ok = PROTO_FALSE;
+        HartV.ok = EMBED_FALSE;
         return;
     }
     out->version = buf[0];
@@ -187,12 +187,12 @@ void protocore_hart_ip_parse_header(uint8_t *work)
     out->total_len = total;
     out->payload_len = (size_t)(total - HARTIP_HEADER_LEN);
     out->payload = out->payload_len ? buf + HARTIP_HEADER_LEN : NULL;
-    HartV.ok = PROTO_TRUE;
+    HartV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 HartVars HartV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HART

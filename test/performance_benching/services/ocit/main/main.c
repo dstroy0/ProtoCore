@@ -5,7 +5,7 @@
 // OCIT object message ([msg-type][object-type:2][instance:2][data-type][value...]), the SET-uint16
 // convenience builder, parsing a message back into an OcitMsg, and the typed uint16 value accessor -
 // all pure (no sockets, no heap, no OCIT transport). A pure protocol codec with no hardware involved,
-// so every call here exercises the real production code path; the OCIT-O BTPPL/TCP transport is
+// so every call here exercises the real production code path. The OCIT-O BTPPL/TCP transport is
 // deliberately out of scope (this rig has no network peer attached).
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

@@ -9,7 +9,7 @@
  * The AD9238 (12-bit, 20/40/65 MSPS dual ADC) has TWO interfaces that must not be confused:
  *  - The **sample data path**: a parallel CMOS/LVDS bus (12 data lines + DCO/output clock per
  *    channel) run far beyond what a microcontroller can bit-bang at 20-65 MSPS. That path is
- *    NOT this file - it is out of scope for direct MCU capture; see reverse_engineering/README.md
+ *    NOT this file - it is out of scope for direct MCU capture. See reverse_engineering/README.md
  *    for the FPGA/CPLD-buffered burst-drain architecture this project actually uses.
  *  - The **SPI configuration port** (SCLK / SDIO / CSB, 3-wire, MSB first): a low-speed,
  *    low-throughput control channel for power-down, output data format, output test patterns,
@@ -17,7 +17,7 @@
  *    it builds the 16-bit instruction word (R/W + 2-bit byte-count + 13-bit address) and the
  *    shadow-register "device update" transfer that the whole ADI high-speed-ADC generation of
  *    this era (AD9238 and its close siblings) share, per AN-877's SPI register map. Pure codec
- *    (builds/parses byte sequences); the SPI clocking is the app's - same contract as every other
+ *    (builds/parses byte sequences). The SPI clocking is the app's - same contract as every other
  *    codec in this library (see services/instrumentation/scpi, services/instrumentation/gpib).
  *
  * **Confidence note.** The instruction-word framing, the transfer-register mechanism and every
@@ -42,7 +42,7 @@
 
 #if PROTOCORE_ENABLE_AD9238
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -58,56 +58,40 @@ PROTOCORE_BEGIN_DECLS
  * (0x018) and the Transfer Register (0x0FF). A device may not implement all of them - check the
  * part's own datasheet for which are present and what the fields mean.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    AD9238_REG_CHIP_PORT_CONFIG = 0x000, ///< SDIO active, LSB first, soft reset (mirrored nibbles)
-    AD9238_REG_CHIP_ID = 0x001,          ///< read-only device id
-    AD9238_REG_CHIP_GRADE = 0x002,       ///< read-only speed-grade id
-    AD9238_REG_CHANNEL_INDEX = 0x005,    ///< device indexing, ADC0..ADC3 (0x004 indexes ADC4..ADC7)
-    AD9238_REG_POWER_DOWN = 0x008,       ///< modes: bits 2:0 the internal power-down mode
-    AD9238_REG_TEST_IO = 0x00D,          ///< output test modes: bits 3:0 select the pattern (see Ad9238TestPattern)
-    AD9238_REG_ANALOG_INPUT = 0x00F,     ///< analog input: low-pass corner, disconnect, single-ended
-    AD9238_REG_OFFSET_ADJUST = 0x010,    ///< digital offset trim, twos complement about midscale
-    AD9238_REG_OUTPUT_MODE = 0x014,      ///< output logic type, invert, and bits 1:0 the data format
-    AD9238_REG_OUTPUT_PHASE = 0x016,     ///< clock divider phase: which phase latches the data
-    AD9238_REG_OUTPUT_DELAY = 0x017,     ///< fine delay on the output latch
-    AD9238_REG_VREF = 0x018,             ///< reference adjust: bits 7:6 select VREF, bits 5:0 trim it
-    AD9238_REG_DEVICE_UPDATE = 0x0FF,    ///< transfer: bit0 latches every shadowed write into effect
-} Ad9238Reg;
+EMBED_ENUM_BYTE(Ad9238Reg,
+                AD9238_REG_CHIP_PORT_CONFIG = 0x000, ///< SDIO active, LSB first, soft reset (mirrored nibbles)
+                AD9238_REG_CHIP_ID = 0x001,          ///< read-only device id
+                AD9238_REG_CHIP_GRADE = 0x002,       ///< read-only speed-grade id
+                AD9238_REG_CHANNEL_INDEX = 0x005,    ///< device indexing, ADC0..ADC3 (0x004 indexes ADC4..ADC7)
+                AD9238_REG_POWER_DOWN = 0x008,       ///< modes: bits 2:0 the internal power-down mode
+                AD9238_REG_TEST_IO = 0x00D, ///< output test modes: bits 3:0 select the pattern (see Ad9238TestPattern)
+                AD9238_REG_ANALOG_INPUT = 0x00F,  ///< analog input: low-pass corner, disconnect, single-ended
+                AD9238_REG_OFFSET_ADJUST = 0x010, ///< digital offset trim, twos complement about midscale
+                AD9238_REG_OUTPUT_MODE = 0x014,   ///< output logic type, invert, and bits 1:0 the data format
+                AD9238_REG_OUTPUT_PHASE = 0x016,  ///< clock divider phase: which phase latches the data
+                AD9238_REG_OUTPUT_DELAY = 0x017,  ///< fine delay on the output latch
+                AD9238_REG_VREF = 0x018,          ///< reference adjust: bits 7:6 select VREF, bits 5:0 trim it
+                AD9238_REG_DEVICE_UPDATE = 0x0FF, ///< transfer: bit0 latches every shadowed write into effect
+);
 
 /** @brief AD9238_REG_TEST_IO[3:0] - the output test pattern (AN-877 Table 8, register 0x00D). */
-typedef enum PROTO_ENUM_PACKED
-{
-    AD9238_TEST_OFF = 0x00, ///< normal operation
-    AD9238_TEST_MIDSCALE_SHORT = 0x01,
-    AD9238_TEST_POS_FULLSCALE = 0x02,
-    AD9238_TEST_NEG_FULLSCALE = 0x03,
-    AD9238_TEST_CHECKERBOARD = 0x04, ///< alternating 0xAAA/0x555 - the pipeline's self-test pattern
-    AD9238_TEST_PN23 = 0x05,
-    AD9238_TEST_PN9 = 0x06,
-    AD9238_TEST_ONE_ZERO_TOGGLE = 0x07,
-} Ad9238TestPattern;
+EMBED_ENUM_BYTE(Ad9238TestPattern,
+                AD9238_TEST_OFF = 0x00, ///< normal operation
+                AD9238_TEST_MIDSCALE_SHORT = 0x01, AD9238_TEST_POS_FULLSCALE = 0x02, AD9238_TEST_NEG_FULLSCALE = 0x03,
+                AD9238_TEST_CHECKERBOARD = 0x04, ///< alternating 0xAAA/0x555 - the pipeline's self-test pattern
+                AD9238_TEST_PN23 = 0x05, AD9238_TEST_PN9 = 0x06, AD9238_TEST_ONE_ZERO_TOGGLE = 0x07, );
 
 /** @brief AD9238_REG_OUTPUT_MODE[1:0] - the output data format (AN-877 Table 11, register 0x014). */
-typedef enum PROTO_ENUM_PACKED
-{
-    AD9238_FORMAT_OFFSET_BINARY = 0x00,
-    AD9238_FORMAT_TWOS_COMPLEMENT = 0x01,
-    AD9238_FORMAT_GRAY_CODE = 0x02,
-} Ad9238OutputFormat;
+EMBED_ENUM_BYTE(Ad9238OutputFormat, AD9238_FORMAT_OFFSET_BINARY = 0x00, AD9238_FORMAT_TWOS_COMPLEMENT = 0x01,
+                AD9238_FORMAT_GRAY_CODE = 0x02, );
 
 /** @brief Which channel a per-channel register write targets (AD9238_REG_CHANNEL_INDEX bits). */
-typedef enum PROTO_ENUM_PACKED
-{
-    AD9238_CHAN_A = 0x01,
-    AD9238_CHAN_B = 0x02,
-    AD9238_CHAN_BOTH = 0x03,
-} Ad9238Channel;
+EMBED_ENUM_BYTE(Ad9238Channel, AD9238_CHAN_A = 0x01, AD9238_CHAN_B = 0x02, AD9238_CHAN_BOTH = 0x03, );
 
 /** @brief What build_instruction takes: read, reg_addr, nbytes, out2. */
 typedef struct
 {
-    proto_bool read;   ///< true for a read transaction, false for a write
+    embed_bool read;   ///< true for a read transaction, false for a write
     uint16_t reg_addr; ///< 13-bit register address (Ad9238Reg or a raw value)
     uint8_t nbytes;    ///< number of data bytes to follow (1-4; encoded as W1:W0 = nbytes-1, so 4 means "streaming" ...
     uint8_t *out2;     ///< receives the 2-byte instruction word
@@ -171,7 +155,7 @@ typedef struct
     Ad9238BuildWriteArgs build_write_args;
     Ad9238BuildReadArgs build_read_args;
     Ad9238BuildTransferArgs build_transfer_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } Ad9238Vars;
 
@@ -181,7 +165,7 @@ extern Ad9238Vars Ad9238V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_instruction)(uint8_t *work);
+    void (*const build_instruction)(const uint8_t *work);
     void (*const build_write)(uint8_t *work);
     void (*const build_read)(uint8_t *work);
     void (*const build_transfer)(uint8_t *work);
@@ -189,7 +173,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Ad9238V or a region of the borrow at a fixed offset.
-void protocore_ad9238_build_instruction(uint8_t *work);
+void protocore_ad9238_build_instruction(const uint8_t *work);
 void protocore_ad9238_build_write(uint8_t *work);
 void protocore_ad9238_build_read(uint8_t *work);
 void protocore_ad9238_build_transfer(uint8_t *work);
@@ -205,7 +189,7 @@ static const Ad9238Ns Ad9238 __attribute__((unused)) = {
     .build_transfer = protocore_ad9238_build_transfer,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AD9238
 

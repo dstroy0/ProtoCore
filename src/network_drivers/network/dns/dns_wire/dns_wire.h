@@ -29,7 +29,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Longest label a name may carry, the six bits a length octet leaves (RFC 1035 sec 2.3.4). */
 #define PROTOCORE_DNS_LABEL_MAX 63u
@@ -47,7 +47,7 @@ typedef struct
     size_t off;           ///< where the name's first length octet sits
     char *out;            ///< where the dotted, NUL-terminated name is written
     size_t out_cap;       ///< octets that buffer holds
-    proto_bool allow_ptr; ///< follow a pointer (RFC 1035 sec 4.1.4); false makes one a decode failure
+    embed_bool allow_ptr; ///< follow a pointer (RFC 1035 sec 4.1.4); false makes one a decode failure
 } DnsWireMsgArgs;
 
 /**
@@ -106,7 +106,7 @@ typedef struct
     DnsWireMsgArgs msg;   ///< what a decode reads (RFC 1035 sec 4.1.4)
     DnsWireTextArgs text; ///< what an encode writes (RFC 1035 sec 3.1)
     DnsWireCmpArgs cmp;   ///< what a compare judges (RFC 1035 sec 2.3.3)
-    proto_bool ok;
+    embed_bool ok;
     size_t next;
     size_t n;
 } DnsWireVars;
@@ -117,16 +117,16 @@ extern DnsWireVars DnsWireV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const decode)(uint8_t *work);
-    void (*const encode)(uint8_t *work);
-    void (*const eq)(uint8_t *work);
+    void (*const decode)(const uint8_t *work);
+    void (*const encode)(const uint8_t *work);
+    void (*const eq)(const uint8_t *work);
 } DnsWireNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DnsWireV or a region of the borrow at a fixed offset.
-void protocore_dns_wire_decode(uint8_t *work);
-void protocore_dns_wire_encode(uint8_t *work);
-void protocore_dns_wire_eq(uint8_t *work);
+void protocore_dns_wire_decode(const uint8_t *work);
+void protocore_dns_wire_encode(const uint8_t *work);
+void protocore_dns_wire_eq(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -138,6 +138,6 @@ static const DnsWireNs DnsWire __attribute__((unused)) = {
     .eq = protocore_dns_wire_eq,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_DNS_WIRE_H

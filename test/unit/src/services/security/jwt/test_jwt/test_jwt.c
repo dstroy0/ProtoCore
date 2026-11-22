@@ -40,7 +40,7 @@ static const uint8_t RFC7515_A1_KEY[64] = {0x03, 0x23, 0x35, 0x4B, 0x2B, 0x0F, 0
                                            0xEF, 0x96, 0x8A, 0xB4, 0xC3, 0x77, 0x62, 0x3D, 0x22, 0x3D, 0x2E, 0x21, 0x72,
                                            0x05, 0x2E, 0x4F, 0x08, 0xC0, 0xCD, 0x9A, 0xF5, 0x67, 0xD0, 0x80, 0xA3};
 
-static proto_bool verify(const char *jws, const uint8_t *key, size_t key_len)
+static embed_bool verify(const char *jws, const uint8_t *key, size_t key_len)
 {
     JwtV.token.jws = jws;
     JwtV.token.jws_len = strlen(jws);
@@ -224,7 +224,7 @@ static const char TIMED[] = "eyJhbGciOiJIUzI1NiJ9"
                             "ImIifQ"
                             ".AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-static proto_bool time_valid(long now, long leeway)
+static embed_bool time_valid(long now, long leeway)
 {
     JwtV.token.jws = TIMED;
     JwtV.token.jws_len = strlen(TIMED);
@@ -340,20 +340,20 @@ void test_scope_matches_whole_tokens(void)
     {
         const char *claim;
         const char *required;
-        proto_bool want;
+        embed_bool want;
     } static const CASES[] = {
-        {"read write admin", "read", PROTO_TRUE},
-        {"read write admin", "write", PROTO_TRUE},
-        {"read write admin", "admin", PROTO_TRUE},
-        {"read write admin", "rea", PROTO_FALSE},  // a prefix of a token
-        {"read write admin", "ead", PROTO_FALSE},  // a suffix of a token
-        {"read write admin", "READ", PROTO_FALSE}, // case sensitive
-        {"read write admin", "read write", PROTO_FALSE},
-        {"readonly", "read", PROTO_FALSE},
-        {"read", "read", PROTO_TRUE},
-        {"  read   write  ", "write", PROTO_TRUE}, // runs of spaces are still delimiters
-        {"", "read", PROTO_FALSE},
-        {"read", "", PROTO_FALSE},
+        {"read write admin", "read", EMBED_TRUE},
+        {"read write admin", "write", EMBED_TRUE},
+        {"read write admin", "admin", EMBED_TRUE},
+        {"read write admin", "rea", EMBED_FALSE},  // a prefix of a token
+        {"read write admin", "ead", EMBED_FALSE},  // a suffix of a token
+        {"read write admin", "READ", EMBED_FALSE}, // case sensitive
+        {"read write admin", "read write", EMBED_FALSE},
+        {"readonly", "read", EMBED_FALSE},
+        {"read", "read", EMBED_TRUE},
+        {"  read   write  ", "write", EMBED_TRUE}, // runs of spaces are still delimiters
+        {"", "read", EMBED_FALSE},
+        {"read", "", EMBED_FALSE},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {

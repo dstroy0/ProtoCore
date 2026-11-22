@@ -39,7 +39,7 @@
 
 #if PROTOCORE_ENABLE_POWER_MGMT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Governor limits. Temperatures in whole degrees C; frequencies in MHz. */
 typedef struct
@@ -56,8 +56,8 @@ typedef struct
 typedef struct
 {
     uint16_t cpu_mhz;      ///< clock to apply.
-    proto_bool throttled;  ///< the thermal limit is holding the clock down.
-    proto_bool recovering; ///< still inside the post-brownout settle window.
+    embed_bool throttled;  ///< the thermal limit holds the clock down.
+    embed_bool recovering; ///< still inside the post-brownout settle window.
 } PowerPlan;
 
 /** @brief What the pure plan reads. */
@@ -66,9 +66,9 @@ typedef struct
     const PowerCfg *cfg;      ///< the thresholds
     uint8_t load_pct;         ///< how busy the loop has been
     int16_t temp_c;           ///< the die temperature, or INT16_MIN when there is no sensor
-    proto_bool brownout_boot; ///< this boot followed a brownout
+    embed_bool brownout_boot; ///< this boot followed a brownout
     uint32_t since_boot_ms;   ///< how long it has been running
-    proto_bool was_throttled; ///< the plan's own previous output, which is what gives it hysteresis
+    embed_bool was_throttled; ///< the plan's own previous output, which is what gives it hysteresis
 } PowerPlanArgs;
 
 /** @brief The plan a call acts on, and where a report is written. */
@@ -113,7 +113,7 @@ typedef struct
     PowerOutArgs out_args;
     PowerCfg *cfg_out;
     PowerPlan plan;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     int16_t temp_c;
     uint16_t mhz;
@@ -129,26 +129,26 @@ extern PowerVars PowerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const defaults)(uint8_t *work);
-    void (*const decide)(uint8_t *work);
+    void (*const defaults)(const uint8_t *work);
+    void (*const decide)(const uint8_t *work);
     void (*const json)(uint8_t *work);
     void (*const brownout)(uint8_t *work);
-    void (*const die_temp)(uint8_t *work);
-    void (*const cpu_mhz)(uint8_t *work);
-    void (*const apply)(uint8_t *work);
+    void (*const die_temp)(const uint8_t *work);
+    void (*const cpu_mhz)(const uint8_t *work);
+    void (*const apply)(const uint8_t *work);
     void (*const gate_bt)(uint8_t *work);
 } PowerMgmtNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PowerV or a region of the borrow at a fixed offset.
-void protocore_power_defaults(uint8_t *work);
-void protocore_power_decide(uint8_t *work);
+void protocore_power_defaults(const uint8_t *work);
+void protocore_power_decide(const uint8_t *work);
 void protocore_power_json(uint8_t *work);
 #if PROTOCORE_HAS_VENDOR_PM
 void protocore_power_brownout(uint8_t *work);
-void protocore_power_die_temp(uint8_t *work);
-void protocore_power_cpu_mhz(uint8_t *work);
-void protocore_power_apply(uint8_t *work);
+void protocore_power_die_temp(const uint8_t *work);
+void protocore_power_cpu_mhz(const uint8_t *work);
+void protocore_power_apply(const uint8_t *work);
 #endif
 #if PROTOCORE_HAS_VENDOR_BT
 void protocore_power_gate_bt(uint8_t *work);
@@ -184,7 +184,7 @@ static const PowerMgmtNs Power __attribute__((unused)) = {
  */
 uint8_t *protocore_power_mgmt_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_POWER_MGMT
 

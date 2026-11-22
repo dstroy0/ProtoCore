@@ -8,7 +8,7 @@
  * One decision in one place: a build with the multi-source time registry takes the epoch from
  * protocore_time_now(), a build with only the NTP client takes it from that, and a build with
  * neither has no wall clock and emits no `Date` at all. ::HttpDate does the rendering; this module
- * says what instant to render and holds the result until the caller has copied it.
+ * says what instant to render and holds the result until the caller copied it.
  *
  * It exists because that decision used to live in two escape hatches - `protocore_time_http_date`
  * in time_source and `protocore_ntp_http_date` in ntp_service - each defined OUTSIDE its own
@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLOCK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The operands and the outcome.
@@ -84,7 +84,7 @@ static const HttpClockNs HttpClock __attribute__((unused)) = {
     .date = protocore_http_clock_date,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CLOCK
 

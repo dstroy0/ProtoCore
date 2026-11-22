@@ -29,7 +29,7 @@ void setUp(void)
     Oauth2V.request.token_endpoint = NULL;
     Oauth2V.response.json = NULL;
     Oauth2V.response.tokens = NULL;
-    Oauth2V.ok = PROTO_FALSE;
+    Oauth2V.ok = EMBED_FALSE;
     Oauth2V.i32 = 0;
 }
 void tearDown(void)

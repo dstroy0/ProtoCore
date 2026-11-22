@@ -37,7 +37,7 @@ void protocore_hex_digit(uint8_t *work)
     HexV.ch = digits[HexV.args.nibble & 0x0Fu];
 }
 
-void protocore_hex_val(uint8_t *work)
+void protocore_hex_val(const uint8_t *work)
 {
     (void)work;
     HexV.i8 = hex_value(HexV.args.ch);
@@ -78,7 +78,7 @@ void protocore_hex_encode(uint8_t *work)
     out[2 * n] = '\0';
 }
 
-void protocore_hex_decode(uint8_t *work)
+void protocore_hex_decode(const uint8_t *work)
 {
     (void)work;
     const char *in = HexV.io.text;

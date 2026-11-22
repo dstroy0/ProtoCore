@@ -20,7 +20,7 @@
 
 #if PROTOCORE_ENABLE_TLS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // The connection resource (RFC 8446): what a handshake and a record layer act on
@@ -32,22 +32,17 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/tls/record/record.h"
 
 /** @brief Handshake progress. A client and a server walk the same phases from opposite ends. */
-typedef enum PROTO_ENUM_PACKED
-{
-    TLS_CONN_START,         ///< server: awaiting ClientHello; client: nothing sent yet
-    TLS_CONN_WAIT_SH,       ///< client only: ClientHello sent, awaiting ServerHello
-    TLS_CONN_WAIT_FLIGHT,   ///< client only: awaiting the encrypted server flight
-    TLS_CONN_WAIT_FINISHED, ///< server only: flight sent, awaiting the client Finished
-    TLS_CONN_DONE,          ///< handshake complete; application keys installed
-    TLS_CONN_FAILED         ///< fatal (see @ref TlsConnNs::alert)
-} TlsConnState;
+EMBED_ENUM_BYTE(TlsConnState,
+                TLS_CONN_START,         ///< server: awaiting ClientHello; client: nothing sent yet
+                TLS_CONN_WAIT_SH,       ///< client only: ClientHello sent, awaiting ServerHello
+                TLS_CONN_WAIT_FLIGHT,   ///< client only: awaiting the encrypted server flight
+                TLS_CONN_WAIT_FINISHED, ///< server only: flight sent, awaiting the client Finished
+                TLS_CONN_DONE,          ///< handshake complete; application keys installed
+                TLS_CONN_FAILED         ///< fatal (see @ref TlsConnNs::alert)
+);
 
 /** @brief Which end of the handshake this connection drives. */
-typedef enum PROTO_ENUM_PACKED
-{
-    TLS_ROLE_SERVER = 0,
-    TLS_ROLE_CLIENT
-} TlsRole;
+EMBED_ENUM_BYTE(TlsRole, TLS_ROLE_SERVER = 0, TLS_ROLE_CLIENT);
 
 /**
  * @brief The long-lived credential plus this handshake's fresh randomness.
@@ -108,9 +103,9 @@ typedef struct
     TlsRecordKeys hs_rx;      ///< handshake traffic keys, this end reading
     TlsRecordKeys ap_tx;      ///< application traffic keys, this end writing
     TlsRecordKeys ap_rx;      ///< application traffic keys, this end reading
-    proto_bool hrr_sent;      ///< a HelloRetryRequest has been answered on this connection (sec 4.1.4)
-    proto_bool hs_keys_ready; ///< the handshake traffic keys are installed
-    proto_bool ap_keys_ready; ///< the application traffic keys are installed
+    embed_bool hrr_sent;      ///< a HelloRetryRequest has been answered on this connection (sec 4.1.4)
+    embed_bool hs_keys_ready; ///< the handshake traffic keys are installed
+    embed_bool ap_keys_ready; ///< the application traffic keys are installed
 
     uint8_t *tx; ///< PROTOCORE_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
     uint8_t *rx; ///< PROTOCORE_TLS_CONN_REC_CAP: the record the worker filled
@@ -172,7 +167,7 @@ typedef struct
  * @var TlsConnNs::start        client only: write the ClientHello; bytes written, or 0
  * @var TlsConnNs::process      the worker filled @ref TlsConn::rx with one record of @c io.rx_len
  *                              bytes; consume it, writing whatever it owes into @c out_args.out
- * @var TlsConnNs::established  whether the handshake has completed
+ * @var TlsConnNs::established  whether the handshake completed
  * @var TlsConnNs::alert        the alert that ended the connection, or 0
  * @var TlsConnNs::seal_app     seal application data into one record; bytes written, or 0
  * @var TlsConnNs::open_app     open one received application record; false on an AEAD failure
@@ -186,7 +181,7 @@ typedef struct
     TlsInitArgs init_args;
     TlsConnIoArgs io;
     TlsConnOut out_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     int i32;
     uint8_t u8;
@@ -242,12 +237,11 @@ TlsConn *protocore_tls_conn_at(uint8_t slot);
 const char *protocore_tls_alpn(uint8_t slot);
 
 /** @brief Where a stepped TLS exchange stands. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_TLS_READY = 0, ///< the move landed
-    PROTOCORE_TLS_BUSY,      ///< the peer's bytes are still in flight; ask again on the next tick
-    PROTOCORE_TLS_FAILED,    ///< the session did not stand up, or it is closed / fatal
-} protocore_tls_state;
+EMBED_ENUM_BYTE(protocore_tls_state,
+                PROTOCORE_TLS_READY = 0, ///< the move landed
+                PROTOCORE_TLS_BUSY,      ///< the peer's bytes are still in flight; ask again on the next tick
+                PROTOCORE_TLS_FAILED,    ///< the session did not stand up, or it is closed / fatal
+);
 
 /**
  * @brief Install the credential this end presents, before any connection begins.
@@ -258,29 +252,29 @@ typedef enum PROTO_ENUM_PACKED
  *
  * @return true once a connection may begin.
  */
-proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
+embed_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
 
 /** @brief Whether a credential is installed and a connection may begin. */
-proto_bool protocore_tls_ready(void);
+embed_bool protocore_tls_ready(void);
 
 /** @brief Stand a TLS connection up on @p slot, taking the pcb it will write through. */
-proto_bool protocore_tls_conn_begin(uint8_t slot);
+embed_bool protocore_tls_conn_begin(uint8_t slot);
 
 /**
- * @brief Pump the handshake on @p slot with whatever ciphertext has arrived.
+ * @brief Pump the handshake on @p slot with whatever ciphertext arrived.
  *
  * @return < 0 the connection failed and must be aborted; 0 still handshaking, ask again when more
  *         ciphertext lands; > 0 the handshake completed.
  */
 int protocore_tls_handshake(uint8_t slot);
 
-/** @brief Whether the handshake on @p slot has completed. */
-proto_bool protocore_tls_established(uint8_t slot);
+/** @brief Whether the handshake on @p slot completed. */
+embed_bool protocore_tls_established(uint8_t slot);
 
 /**
  * @brief Open one received application record on @p slot into @p buf.
  *
- * @return the plaintext length, 0 when no whole record has arrived, or < 0 on an AEAD failure,
+ * @return the plaintext length, 0 when no whole record arrived, or < 0 on an AEAD failure,
  *         which RFC 8446 sec 5.2 makes fatal to the connection.
  */
 int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len);
@@ -302,7 +296,7 @@ void protocore_tls_conn_free(uint8_t slot);
 /** @brief The high-water mark of the pool this engine's connections are taken from. */
 size_t protocore_tls_arena_peak(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TLS
 

@@ -7,7 +7,7 @@
 // exactly one IMF-fixdate example, and reproducing it octet for octet from the epoch a registered
 // source reported is what proves the registry and the formatter are joined correctly rather than
 // each being right alone. These cases used to live in test_time_source and test_ntp_service,
-// because the joining lived in an escape hatch inside each of those modules; it is one module with
+// because the joining lived in an escape hatch inside each of those modules. It is one module with
 // one consumer now, so the cases are here.
 //
 // The other half - "no clock yet means no header rather than a wrong one" - is RFC 9110's rule,
@@ -27,7 +27,7 @@
 #define RFC9110_TEXT "Sun, 06 Nov 1994 08:49:37 GMT"
 
 // What the mock source reports. Zero is "no valid time yet", which is what a source answers before
-// it has synced.
+// it synced.
 static uint32_t g_epoch;
 
 static uint32_t src(void)

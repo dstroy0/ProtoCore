@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_WEBHOOK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 9110 sec 7.1 / sec 6.4: what a POST names and what it carries. */
 typedef struct
@@ -97,17 +97,17 @@ extern WebhookVars WebhookV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const ifttt_url)(uint8_t *work);
-    void (*const ifttt_payload)(uint8_t *work);
-    void (*const post)(uint8_t *work);
+    void (*const ifttt_url)(const uint8_t *work);
+    void (*const ifttt_payload)(const uint8_t *work);
+    void (*const post)(const uint8_t *work);
     void (*const ifttt_trigger)(uint8_t *work);
 } WebhookNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WebhookV or a region of the borrow at a fixed offset.
-void protocore_webhook_ifttt_url(uint8_t *work);
-void protocore_webhook_ifttt_payload(uint8_t *work);
-void protocore_webhook_post(uint8_t *work);
+void protocore_webhook_ifttt_url(const uint8_t *work);
+void protocore_webhook_ifttt_payload(const uint8_t *work);
+void protocore_webhook_post(const uint8_t *work);
 void protocore_webhook_ifttt_trigger(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -121,7 +121,7 @@ static const WebhookNs Webhook __attribute__((unused)) = {
     .ifttt_trigger = protocore_webhook_ifttt_trigger,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBHOOK
 

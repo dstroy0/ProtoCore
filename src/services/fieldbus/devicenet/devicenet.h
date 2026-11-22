@@ -8,7 +8,7 @@
  *
  * DeviceNet (ODVA) carries CIP over classic CAN. The CIP application layer (services, EPATH,
  * data) is the same one the EtherNet/IP codec uses, so build the message body with the
- * existing `Cip.*` functions (`PROTOCORE_ENABLE_CIP`); this module supplies the DeviceNet-specific
+ * existing `Cip.*` functions (`PROTOCORE_ENABLE_CIP`). This module supplies the DeviceNet-specific
  * link adaptation that is NOT part of CIP:
  *
  *  - The 11-bit CAN **identifier** as a Message Group (1..4) + Message ID + MAC ID, per the
@@ -37,7 +37,7 @@
 
 #if PROTOCORE_ENABLE_DEVICENET
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -69,13 +69,8 @@ PROTOCORE_BEGIN_DECLS
 #define DEVICENET_FRAG_COUNT_MASK 0x3Fu
 
 /** @brief DeviceNet message groups. */
-typedef enum PROTO_ENUM_PACKED
-{
-    DEVICENET_GROUP_1 = 1,
-    DEVICENET_GROUP_2 = 2,
-    DEVICENET_GROUP_3 = 3,
-    DEVICENET_GROUP_4 = 4,
-} DeviceNetGroup;
+EMBED_ENUM_BYTE(DeviceNetGroup, DEVICENET_GROUP_1 = 1, DEVICENET_GROUP_2 = 2, DEVICENET_GROUP_3 = 3,
+                DEVICENET_GROUP_4 = 4, );
 
 /** @brief A decoded DeviceNet identifier. */
 typedef struct
@@ -86,19 +81,13 @@ typedef struct
 } DeviceNetId;
 
 /** @brief Result of feeding a frame to the fragmentation reassembler. */
-typedef enum PROTO_ENUM_PACKED
-{
-    DEVICENET_FRAG_IGNORED = 0,
-    DEVICENET_FRAG_STARTED,
-    DEVICENET_FRAG_PROGRESS,
-    DEVICENET_FRAG_COMPLETE,
-    DEVICENET_FRAG_ERR,
-} DeviceNetFragResult;
+EMBED_ENUM_BYTE(DeviceNetFragResult, DEVICENET_FRAG_IGNORED = 0, DEVICENET_FRAG_STARTED, DEVICENET_FRAG_PROGRESS,
+                DEVICENET_FRAG_COMPLETE, DEVICENET_FRAG_ERR, );
 
 /** @brief Fragmented-message reassembly context. */
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t next_count;                       ///< next expected modulo-64 fragment count
     uint16_t len;                             ///< octets stored so far
     uint8_t buf[PROTOCORE_DEVICENET_MSG_MAX]; ///< reassembled body (excludes the fragmentation octets)
@@ -125,8 +114,8 @@ typedef struct
 /** @brief What msg_header takes: frag, xid, mac_id. */
 typedef struct
 {
-    proto_bool frag;
-    proto_bool xid;
+    embed_bool frag;
+    embed_bool xid;
     uint8_t mac_id;
 } DevicenetMsgHeaderArgs;
 
@@ -155,7 +144,7 @@ typedef struct
     DeviceNetGroup group;
     uint8_t msg_id;
     uint8_t mac_id;
-    proto_bool xid;
+    embed_bool xid;
     uint8_t frag_type;
     uint8_t frag_count;
     const uint8_t *data;
@@ -224,7 +213,7 @@ typedef struct
     DevicenetBuildFragmentArgs build_fragment_args;
     DevicenetFragResetArgs frag_reset_args;
     DevicenetFragFeedArgs frag_feed_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     DeviceNetFragResult frag;
 } DevicenetVars;
@@ -235,25 +224,25 @@ extern DevicenetVars DevicenetV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_id)(uint8_t *work);
-    void (*const decode_id)(uint8_t *work);
-    void (*const msg_header)(uint8_t *work);
-    void (*const frag_octet)(uint8_t *work);
+    void (*const encode_id)(const uint8_t *work);
+    void (*const decode_id)(const uint8_t *work);
+    void (*const msg_header)(const uint8_t *work);
+    void (*const frag_octet)(const uint8_t *work);
     void (*const build_explicit)(uint8_t *work);
     void (*const build_fragment)(uint8_t *work);
-    void (*const frag_reset)(uint8_t *work);
+    void (*const frag_reset)(const uint8_t *work);
     void (*const frag_feed)(uint8_t *work);
 } DevicenetNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DevicenetV or a region of the borrow at a fixed offset.
-void protocore_devicenet_encode_id(uint8_t *work);
-void protocore_devicenet_decode_id(uint8_t *work);
-void protocore_devicenet_msg_header(uint8_t *work);
-void protocore_devicenet_frag_octet(uint8_t *work);
+void protocore_devicenet_encode_id(const uint8_t *work);
+void protocore_devicenet_decode_id(const uint8_t *work);
+void protocore_devicenet_msg_header(const uint8_t *work);
+void protocore_devicenet_frag_octet(const uint8_t *work);
 void protocore_devicenet_build_explicit(uint8_t *work);
 void protocore_devicenet_build_fragment(uint8_t *work);
-void protocore_devicenet_frag_reset(uint8_t *work);
+void protocore_devicenet_frag_reset(const uint8_t *work);
 void protocore_devicenet_frag_feed(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -271,7 +260,7 @@ static const DevicenetNs Devicenet __attribute__((unused)) = {
     .frag_feed = protocore_devicenet_frag_feed,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEVICENET
 

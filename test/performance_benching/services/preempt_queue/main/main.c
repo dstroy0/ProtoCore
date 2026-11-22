@@ -5,7 +5,7 @@
 // real-time ingest primitive: a producer posts a fixed-size item onto a fixed-capacity, zero-heap
 // lane and a dedicated, core-pinned task drains it. This bench times the PRODUCER hot path - the
 // three post entry points (back / urgent-to-front / ISR-style) plus the pure per-lane priority
-// lookup the scheduler uses. Every op here is in-memory FreeRTOS queue work; there is NO hardware,
+// lookup the scheduler uses. Every op here is in-memory FreeRTOS queue work. There is NO hardware,
 // bus, or socket involved, so nothing is stubbed - the real production code path runs.
 //
 // To keep the fixed PROTOCORE_PQ_DEPTH=4 lane from saturating (which would collapse every post into the

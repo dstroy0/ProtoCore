@@ -18,7 +18,7 @@
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/transport/tcp/tcp.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The per-slot engines are large (~28 KB each), so the pool does not fit internal DRAM alongside
 // TLS - it lives in PSRAM (PROTOCORE_H2_POOL_IN_PSRAM). Same mechanism/caveat as the TLS arena: it
@@ -102,7 +102,10 @@ static uint8_t s_conn[MAX_CONNS][PROTOCORE_H2_CONN_BORROW];
 static uint8_t s_work[PROTOCORE_H2_SERVER_BORROW];
 
 // The region, at its offset in the caller's borrow.
-#define H2_SERVER_CTX(w) ((H2ServerCtx *)(void *)((w) + H2_SERVER_OFF_CTX))
+#define H2_SERVER_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const H2ServerCtx *)(const void *)((w) + H2_SERVER_OFF_CTX),                                 \
+        default: (H2ServerCtx *)(void *)((w) + H2_SERVER_OFF_CTX))
 
 // The bytes a field name may carry: an RFC 9110 token minus the uppercase letters RFC 9113 sec 8.2.1
 // forbids, so lowercase, digits and !#$%&'*+-.^_`|~ - one bit each over the 256 byte values. A byte
@@ -111,11 +114,11 @@ static uint8_t s_work[PROTOCORE_H2_SERVER_BORROW];
 static const uint32_t H2_NAME_BYTE_OK[8] = {0x00000000u, 0x03FF6CFAu, 0xC0000000u, 0x57FFFFFFu,
                                             0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u};
 
-static proto_bool name_ok(const char *n, size_t nl)
+static embed_bool name_ok(const char *n, size_t nl)
 {
     if (nl == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < nl; i++)
     {
@@ -124,28 +127,28 @@ static proto_bool name_ok(const char *n, size_t nl)
         {
             if (i != 0)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             continue;
         }
         if (((H2_NAME_BYTE_OK[ch >> 5] >> (ch & 31u)) & 1u) == 0u)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // RFC 9113 sec 8.2.1: a field value carries no NUL, CR or LF, and neither leads nor trails with a
 // space or a horizontal tab.
-static proto_bool value_ok(const char *v, size_t vl)
+static embed_bool value_ok(const char *v, size_t vl)
 {
     for (size_t i = 0; i < vl; i++)
     {
         const uint8_t ch = (uint8_t)v[i];
         if (ch == 0x00u || ch == 0x0Au || ch == 0x0Du)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     if (vl > 0)
@@ -154,15 +157,15 @@ static proto_bool value_ok(const char *v, size_t vl)
         const uint8_t last = (uint8_t)v[vl - 1];
         if (first == ' ' || first == '\t' || last == ' ' || last == '\t')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // RFC 9113 sec 8.2.2: these are connection-specific and make a message malformed. TE is legal but
 // only with the value "trailers".
-static proto_bool connection_specific(const char *n, size_t nl)
+static embed_bool connection_specific(const char *n, size_t nl)
 {
     return (nl == 10 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "connection", .bytes = 10) == 0) ||
            (nl == 16 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = n, .other = "proxy-connection", .bytes = 16) == 0) ||
@@ -323,7 +326,7 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
     }
 }
 
-static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
+static embed_bool cb_headers_end(void *app, uint32_t sid, embed_bool end_stream)
 {
     (void)end_stream;
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
@@ -338,14 +341,14 @@ static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
     if (((mask & H2_PH_REQUIRED) ^ H2_PH_REQUIRED) != 0 || (mask & H2_HDR_BAD) != 0)
     {
         HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]); // never dispatch a malformed request
-        return PROTO_FALSE;                                               // the engine resets the stream
+        return EMBED_FALSE;                                               // the engine resets the stream
     }
     http_h2_stream[slot] = sid;
     http_pool[slot].parse_state = PARSE_COMPLETE; // the worker's handle() loop dispatches it
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t len, proto_bool end_stream)
+static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t len, embed_bool end_stream)
 {
     (void)stream_id;
     (void)end_stream;
@@ -376,7 +379,7 @@ static void open_conn(uint8_t *work)
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
 }
 
-static void data(uint8_t *work)
+static void data(const uint8_t *work)
 {
     (void)work;
     const uint8_t slot = H2Server.slot;
@@ -410,7 +413,7 @@ static void respond(uint8_t *work)
                      &http_pool[slot]); // ready for the next stream; keep the connection open
 }
 
-static void close_conn(uint8_t *work)
+static void close_conn(const uint8_t *work)
 {
     (void)work;
     const uint8_t slot = H2Server.slot;
@@ -420,7 +423,7 @@ static void close_conn(uint8_t *work)
 }
 
 // The presentation layer installs this at ALPN; its shape is the seam's, not this module's.
-proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
+embed_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
 {
     H2Server.slot = slot;
     H2Server.resp.code = code;
@@ -441,6 +444,6 @@ uint8_t *protocore_h2_server_span(void)
 
 H2ServerNs H2Server = {.open = open_conn, .data = data, .respond = respond, .close = close_conn};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS

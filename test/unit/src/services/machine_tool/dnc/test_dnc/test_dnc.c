@@ -172,13 +172,13 @@ void test_iso_block_framing(void)
     static const char LINE[] = "G01X10.5";
     uint8_t out[32];
 
-    DncCfg cfg = {DNC_CODE_ISO, PROTO_FALSE, PROTO_FALSE, 0};
+    DncCfg cfg = {DNC_CODE_ISO, EMBED_FALSE, EMBED_FALSE, 0};
     size_t n = protocore_dnc_encode_block(&cfg, LINE, sizeof(LINE) - 1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(sizeof(LINE) - 1 + 1, n);
     TEST_ASSERT_EQUAL_MEMORY(LINE, out, sizeof(LINE) - 1);
     TEST_ASSERT_EQUAL_HEX8(0x0A, out[n - 1]);
 
-    cfg.crlf = PROTO_TRUE;
+    cfg.crlf = EMBED_TRUE;
     n = protocore_dnc_encode_block(&cfg, LINE, sizeof(LINE) - 1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(sizeof(LINE) - 1 + 2, n);
     TEST_ASSERT_EQUAL_HEX8(0x0D, out[n - 2]);
@@ -190,7 +190,7 @@ void test_iso_block_carries_parity(void)
 {
     static const char LINE[] = "N10G01";
     uint8_t out[32];
-    DncCfg cfg = {DNC_CODE_ISO, PROTO_TRUE, PROTO_TRUE, 0};
+    DncCfg cfg = {DNC_CODE_ISO, EMBED_TRUE, EMBED_TRUE, 0};
     const size_t n = protocore_dnc_encode_block(&cfg, LINE, sizeof(LINE) - 1, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(sizeof(LINE) - 1 + 2, n);
     for (size_t i = 0; i < n; i++)
@@ -208,7 +208,7 @@ void test_eia_block_framing(void)
 {
     static const char LINE[] = "G01";
     uint8_t out[32];
-    DncCfg cfg = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
+    DncCfg cfg = {DNC_CODE_EIA, EMBED_FALSE, EMBED_FALSE, 0};
     const size_t n = protocore_dnc_encode_block(&cfg, LINE, sizeof(LINE) - 1, out, sizeof(out));
 
     TEST_ASSERT_EQUAL_UINT(4u, n);
@@ -223,7 +223,7 @@ void test_eia_block_framing(void)
 void test_eia_block_fails_closed(void)
 {
     uint8_t out[32];
-    DncCfg cfg = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
+    DncCfg cfg = {DNC_CODE_EIA, EMBED_FALSE, EMBED_FALSE, 0};
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnc_encode_block(&cfg, "G01(comment)", 12, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnc_encode_block(&cfg, "g01", 3, out, sizeof(out)));
 }
@@ -232,12 +232,12 @@ void test_eia_block_fails_closed(void)
 void test_block_refuses_a_short_buffer(void)
 {
     uint8_t out[4];
-    DncCfg iso = {DNC_CODE_ISO, PROTO_FALSE, PROTO_FALSE, 0};
+    DncCfg iso = {DNC_CODE_ISO, EMBED_FALSE, EMBED_FALSE, 0};
     TEST_ASSERT_EQUAL_UINT(4u, protocore_dnc_encode_block(&iso, "G01", 3, out, sizeof(out)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnc_encode_block(&iso, "G01", 3, out, 3)); // no room for the LF
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnc_encode_block(&iso, "G01", 3, out, 0));
 
-    DncCfg eia = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
+    DncCfg eia = {DNC_CODE_EIA, EMBED_FALSE, EMBED_FALSE, 0};
     TEST_ASSERT_EQUAL_UINT(0u, protocore_dnc_encode_block(&eia, "G01", 3, out, 3));
 }
 
@@ -247,16 +247,16 @@ void test_program_marker(void)
 {
     uint8_t out[8];
 
-    DncCfg iso = {DNC_CODE_ISO, PROTO_FALSE, PROTO_FALSE, 0};
+    DncCfg iso = {DNC_CODE_ISO, EMBED_FALSE, EMBED_FALSE, 0};
     TEST_ASSERT_EQUAL_UINT(2u, protocore_dnc_encode_marker(&iso, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8('%', out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x0A, out[1]);
 
-    iso.even_parity = PROTO_TRUE; // '%' is 0x25, three bits, so its parity bit is set
+    iso.even_parity = EMBED_TRUE; // '%' is 0x25, three bits, so its parity bit is set
     TEST_ASSERT_EQUAL_UINT(2u, protocore_dnc_encode_marker(&iso, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0xA5, out[0]);
 
-    DncCfg eia = {DNC_CODE_EIA, PROTO_FALSE, PROTO_FALSE, 0};
+    DncCfg eia = {DNC_CODE_EIA, EMBED_FALSE, EMBED_FALSE, 0};
     TEST_ASSERT_EQUAL_UINT(2u, protocore_dnc_encode_marker(&eia, out, sizeof(out)));
     TEST_ASSERT_EQUAL_HEX8(0x0B, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x80, out[1]);
@@ -268,7 +268,7 @@ void test_program_marker(void)
 void test_leader_runout(void)
 {
     uint8_t out[16];
-    DncCfg cfg = {DNC_CODE_ISO, PROTO_FALSE, PROTO_FALSE, 8};
+    DncCfg cfg = {DNC_CODE_ISO, EMBED_FALSE, EMBED_FALSE, 8};
     memset(out, 0xAA, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(8u, protocore_dnc_encode_leader(&cfg, out, sizeof(out)));
     for (size_t i = 0; i < 8; i++)
@@ -382,7 +382,7 @@ void test_decoder_strips_iso_parity(void)
 {
     static const char LINE[] = "N10G01X5.5";
     uint8_t tape[32];
-    DncCfg cfg = {DNC_CODE_ISO, PROTO_TRUE, PROTO_TRUE, 0};
+    DncCfg cfg = {DNC_CODE_ISO, EMBED_TRUE, EMBED_TRUE, 0};
     const size_t n = protocore_dnc_encode_block(&cfg, LINE, sizeof(LINE) - 1, tape, sizeof(tape));
     TEST_ASSERT_TRUE(n > 0);
 
@@ -408,7 +408,7 @@ void test_program_round_trip(void)
     {
         uint8_t tape[512];
         size_t n = 0;
-        DncCfg cfg = {CODES[c], (proto_bool)(CODES[c] == DNC_CODE_ISO), PROTO_FALSE, 4};
+        DncCfg cfg = {CODES[c], (embed_bool)(CODES[c] == DNC_CODE_ISO), EMBED_FALSE, 4};
 
         n += protocore_dnc_encode_leader(&cfg, tape + n, sizeof(tape) - n);
         n += protocore_dnc_encode_marker(&cfg, tape + n, sizeof(tape) - n);

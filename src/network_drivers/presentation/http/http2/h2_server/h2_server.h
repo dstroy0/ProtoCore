@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 9113 sec 8.3: what one HEADERS + DATA response carries. */
 typedef struct
@@ -49,7 +49,7 @@ typedef struct
  * @var H2ServerNs::open     start the engine after ALPN "h2"; sends our initial SETTINGS
  * @var H2ServerNs::data     feed the slot's decrypted inbound bytes in; drives requests via HttpReq
  * @var H2ServerNs::respond  serialize a response for the slot's current stream (HEADERS + DATA),
- *                           then ready the slot's HttpReq for the next stream; the connection stays
+ *                           then ready the slot's HttpReq for the next stream. The connection stays
  *                           open
  * @var H2ServerNs::close    release per-slot state on connection close
  *
@@ -62,12 +62,12 @@ typedef struct
 
     H2RespArgs resp; ///< what a serialized response carries
 
-    proto_bool ok;
+    embed_bool ok;
 
     void (*const open)(uint8_t *work);
-    void (*const data)(uint8_t *work);
+    void (*const data)(const uint8_t *work);
     void (*const respond)(uint8_t *work);
-    void (*const close)(uint8_t *work);
+    void (*const close)(const uint8_t *work);
 
 } H2ServerNs;
 
@@ -83,9 +83,9 @@ uint8_t *protocore_h2_server_span(void);
  * Its shape is the seam's (::protocore_resp_sink_fn), not this module's, so it stays a plain
  * function and carries its arguments onto the handle before the call that does the work.
  */
-proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len);
+embed_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
 

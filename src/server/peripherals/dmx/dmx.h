@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_DMX
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -252,7 +252,7 @@ typedef struct
     DmxRdmBuildDiscResponseArgs rdm_build_disc_response_args;
     DmxRdmBuildDeviceInfoArgs rdm_build_device_info_args;
     DmxRdmParseDeviceInfoArgs rdm_parse_device_info_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint8_t u8;
     uint64_t uid;
@@ -265,30 +265,30 @@ extern DmxVars DmxV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build)(uint8_t *work);
-    void (*const get_channel)(uint8_t *work);
-    void (*const rdm_uid)(uint8_t *work);
-    void (*const rdm_checksum)(uint8_t *work);
+    void (*const build)(const uint8_t *work);
+    void (*const get_channel)(const uint8_t *work);
+    void (*const rdm_uid)(const uint8_t *work);
+    void (*const rdm_checksum)(const uint8_t *work);
     void (*const rdm_build)(uint8_t *work);
     void (*const rdm_parse)(uint8_t *work);
-    void (*const rdm_decode_disc_response)(uint8_t *work);
-    void (*const rdm_build_disc_response)(uint8_t *work);
-    void (*const rdm_build_device_info)(uint8_t *work);
-    void (*const rdm_parse_device_info)(uint8_t *work);
+    void (*const rdm_decode_disc_response)(const uint8_t *work);
+    void (*const rdm_build_disc_response)(const uint8_t *work);
+    void (*const rdm_build_device_info)(const uint8_t *work);
+    void (*const rdm_parse_device_info)(const uint8_t *work);
 } DmxNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DmxV or a region of the borrow at a fixed offset.
-void protocore_dmx_build(uint8_t *work);
-void protocore_dmx_get_channel(uint8_t *work);
-void protocore_dmx_rdm_uid(uint8_t *work);
-void protocore_dmx_rdm_checksum(uint8_t *work);
+void protocore_dmx_build(const uint8_t *work);
+void protocore_dmx_get_channel(const uint8_t *work);
+void protocore_dmx_rdm_uid(const uint8_t *work);
+void protocore_dmx_rdm_checksum(const uint8_t *work);
 void protocore_dmx_rdm_build(uint8_t *work);
 void protocore_dmx_rdm_parse(uint8_t *work);
-void protocore_dmx_rdm_decode_disc_response(uint8_t *work);
-void protocore_dmx_rdm_build_disc_response(uint8_t *work);
-void protocore_dmx_rdm_build_device_info(uint8_t *work);
-void protocore_dmx_rdm_parse_device_info(uint8_t *work);
+void protocore_dmx_rdm_decode_disc_response(const uint8_t *work);
+void protocore_dmx_rdm_build_disc_response(const uint8_t *work);
+void protocore_dmx_rdm_build_device_info(const uint8_t *work);
+void protocore_dmx_rdm_parse_device_info(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -307,7 +307,7 @@ static const DmxNs Dmx __attribute__((unused)) = {
     .rdm_parse_device_info = protocore_dmx_rdm_parse_device_info,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DMX
 

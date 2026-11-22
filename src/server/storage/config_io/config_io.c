@@ -20,7 +20,7 @@
 #include "cellularum_laboro/cellularum_laboro.h"
 #include "server/storage/config_store/config_store.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // An exported u32 field is one number.
 static const mmgr_field CFG_U32[] = {MMGR_U32, MMGR_END};
@@ -29,7 +29,7 @@ static const mmgr_field CFG_U32[] = {MMGR_U32, MMGR_END};
 #define PROTOCORE_KEY_MAX 16  // NVS key cap (15 + null)
 
 // Look up a key in the schema; write its protocore_cfg_type to *out and return true, or return false if absent.
-static proto_bool field_type(const protocore_cfg_field *fields, size_t n, const char *key, protocore_cfg_type *out)
+static embed_bool field_type(const protocore_cfg_field *fields, size_t n, const char *key, protocore_cfg_type *out)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -37,24 +37,24 @@ static proto_bool field_type(const protocore_cfg_field *fields, size_t n, const 
                                         .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = fields[i].key,
                                                           .cap = PROTOCORE_KEY_MAX - 1u) +
                                                1u,
-                                        .ci = PROTO_FALSE))
+                                        .ci = EMBED_FALSE))
         {
             *out = fields[i].type;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Append "<key>=<val>\n" to out at *pos, overflow-safe. Returns false on overflow.
-static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key, const char *val)
+static embed_bool append_kv(char *out, size_t cap, size_t *pos, const char *key, const char *val)
 {
     size_t kn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = cap + 1),
            vn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = val, .cap = cap + 1);
     size_t need = kn + 1 + vn + 1; // key '=' val '\n'
     if (*pos + need >= cap)        // keep room for the null terminator
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = key, .bytes = kn);
     *pos += kn;
@@ -63,7 +63,7 @@ static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
     *pos += vn;
     out[(*pos)++] = '\n';
     out[*pos] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the entries -----------------------------------------------------------
@@ -71,7 +71,7 @@ static proto_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_config_io_export(uint8_t *work)
+void protocore_config_io_export(const uint8_t *work)
 {
     (void)work;
     const char *ns = ConfigIoV.export_args.ns;
@@ -128,12 +128,12 @@ void protocore_config_io_export(uint8_t *work)
 
 // Set one key=val pair against the field table; returns true iff a matching field was found and its
 // setter accepted the value. Extracted so the import loop stays flat (one dispatch, no nested type switch).
-static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n, const char *key, const char *val)
+static embed_bool config_apply_field(const protocore_cfg_field *fields, size_t n, const char *key, const char *val)
 {
     protocore_cfg_type t;
     if (!field_type(fields, n, key, &t))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (t == PROTOCORE_CFG_U32)
     {
@@ -149,10 +149,10 @@ static proto_bool config_apply_field(const protocore_cfg_field *fields, size_t n
         ConfigStore.set_str(protocore_config_store_span());
         return ConfigStoreV.ok;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-void protocore_config_io_import(uint8_t *work)
+void protocore_config_io_import(const uint8_t *work)
 {
     (void)work;
     const char *ns = ConfigIoV.import_args.ns;
@@ -215,6 +215,6 @@ void protocore_config_io_import(uint8_t *work)
 /** @brief The operands and the outcome. */
 ConfigIoVars ConfigIoV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CONFIG_IO

@@ -47,7 +47,7 @@ static uint32_t epoch_of(int y, int mo, int d, int h, int mi, int s)
     uint8_t r[RTC_REG_COUNT];
     uint32_t e = 0;
     regs24(r, y, mo, d, h, mi, s);
-    proto_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &e);
+    embed_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &e);
     TEST_ASSERT_TRUE(rtc_ok);
     return e;
 }
@@ -94,17 +94,17 @@ void test_twelve_hour_encoding(void)
     struct
     {
         uint8_t h12;
-        proto_bool pm;
+        embed_bool pm;
         int hour24;
     } static const CASES[8] = {
-        {12, PROTO_FALSE, 0},  // 12:00 AM is midnight
-        {1, PROTO_FALSE, 1},   //
-        {11, PROTO_FALSE, 11}, //
-        {12, PROTO_TRUE, 12},  // 12:00 PM is noon
-        {1, PROTO_TRUE, 13},   //
-        {6, PROTO_TRUE, 18},   //
-        {11, PROTO_TRUE, 23},  //
-        {9, PROTO_FALSE, 9},   //
+        {12, EMBED_FALSE, 0},  // 12:00 AM is midnight
+        {1, EMBED_FALSE, 1},   //
+        {11, EMBED_FALSE, 11}, //
+        {12, EMBED_TRUE, 12},  // 12:00 PM is noon
+        {1, EMBED_TRUE, 13},   //
+        {6, EMBED_TRUE, 18},   //
+        {11, EMBED_TRUE, 23},  //
+        {9, EMBED_FALSE, 9},   //
     };
     for (size_t i = 0; i < 8; i++)
     {
@@ -112,7 +112,7 @@ void test_twelve_hour_encoding(void)
         uint32_t got = 0;
         regs24(r, 2000, 1, 1, 0, 0, 0);
         r[2] = (uint8_t)(0x40 | (CASES[i].pm ? 0x20 : 0x00) | bcd(CASES[i].h12));
-        proto_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &got);
+        embed_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &got);
         TEST_ASSERT_TRUE(rtc_ok);
         TEST_ASSERT_EQUAL_UINT32(946684800u + (uint32_t)CASES[i].hour24 * 3600u, got);
     }
@@ -127,7 +127,7 @@ void test_clock_halt_and_century_bits_are_masked(void)
     uint32_t plain = 0;
     uint32_t flagged = 0;
     regs24(r, 2024, 6, 15, 10, 30, 45);
-    proto_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &plain);
+    embed_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &plain);
     TEST_ASSERT_TRUE(rtc_ok);
 
     r[0] |= 0x80; // DS1307 CH
@@ -146,7 +146,7 @@ void test_out_of_range_fields_are_refused(void)
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
     r[0] = bcd(60); // seconds 00-59
-    proto_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &e);
+    embed_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &e);
     TEST_ASSERT_FALSE(rtc_ok);
 
     regs24(r, 2020, 1, 1, 0, 0, 0);
@@ -245,7 +245,7 @@ void test_round_trip_over_the_register_range(void)
         uint8_t r[RTC_REG_COUNT];
         uint32_t back = 0;
         Rtc.epoch_to_regs(protocore_rtc_span(), e, r);
-        proto_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &back);
+        embed_bool rtc_ok = Rtc.regs_to_epoch(protocore_rtc_span(), r, &back);
         TEST_ASSERT_TRUE(rtc_ok);
         TEST_ASSERT_EQUAL_UINT32(e, back);
     }

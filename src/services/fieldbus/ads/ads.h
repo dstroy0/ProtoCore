@@ -28,7 +28,7 @@
  * @endcode
  *
  * AMS header field order (target-before-source), command ids, and state flags verified against
- * the Beckhoff InfoSys AMS/ADS specification; payload layouts cross-checked with Beckhoff's own
+ * the Beckhoff InfoSys AMS/ADS specification. Payload layouts cross-checked with Beckhoff's own
  * open-source ADS library, `pyads`, and Apache PLC4X. Pure codec, host-tested - the caller owns
  * the TCP connection (`protocore_client_*`) and the AMS route registration on the target router.
  *
@@ -43,7 +43,7 @@
 
 #if PROTOCORE_ENABLE_ADS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -82,49 +82,23 @@ PROTOCORE_BEGIN_DECLS
 #define ADS_IGRP_PLC_RW_M 0x4020       ///< %M flag memory, byte offset
 #define ADS_IGRP_PLC_RW_RB 0x4030      ///< retain memory
 
-typedef enum PROTO_ENUM_PACKED
-{
-    ADS_COMMAND_INVALID = 0x0000,
-    ADS_COMMAND_READ_DEVICE_INFO = 0x0001,
-    ADS_COMMAND_READ = 0x0002,
-    ADS_COMMAND_WRITE = 0x0003,
-    ADS_COMMAND_READ_STATE = 0x0004,
-    ADS_COMMAND_WRITE_CONTROL = 0x0005,
-    ADS_COMMAND_ADD_NOTIFICATION = 0x0006,
-    ADS_COMMAND_DEL_NOTIFICATION = 0x0007,
-    ADS_COMMAND_NOTIFICATION = 0x0008,
-    ADS_COMMAND_READ_WRITE = 0x0009,
-} AdsCommand;
+EMBED_ENUM_BYTE(AdsCommand, ADS_COMMAND_INVALID = 0x0000, ADS_COMMAND_READ_DEVICE_INFO = 0x0001,
+                ADS_COMMAND_READ = 0x0002, ADS_COMMAND_WRITE = 0x0003, ADS_COMMAND_READ_STATE = 0x0004,
+                ADS_COMMAND_WRITE_CONTROL = 0x0005, ADS_COMMAND_ADD_NOTIFICATION = 0x0006,
+                ADS_COMMAND_DEL_NOTIFICATION = 0x0007, ADS_COMMAND_NOTIFICATION = 0x0008,
+                ADS_COMMAND_READ_WRITE = 0x0009, );
 
-typedef enum PROTO_ENUM_PACKED
-{
-    ADS_STATE_INVALID = 0,
-    ADS_STATE_IDLE = 1,
-    ADS_STATE_RESET = 2,
-    ADS_STATE_INIT = 3,
-    ADS_STATE_START = 4,
-    ADS_STATE_RUN = 5,
-    ADS_STATE_STOP = 6,
-    ADS_STATE_SAVE_CONFIG = 7,
-    ADS_STATE_LOAD_CONFIG = 8,
-    ADS_STATE_POWER_FAILURE = 9,
-    ADS_STATE_POWER_GOOD = 10,
-    ADS_STATE_ERROR = 11,
-    ADS_STATE_SHUTDOWN = 12,
-    ADS_STATE_SUSPEND = 13,
-    ADS_STATE_RESUME = 14,
-    ADS_STATE_CONFIG = 15,
-    ADS_STATE_RECONFIG = 16,
-} AdsState;
+EMBED_ENUM_BYTE(AdsState, ADS_STATE_INVALID = 0, ADS_STATE_IDLE = 1, ADS_STATE_RESET = 2, ADS_STATE_INIT = 3,
+                ADS_STATE_START = 4, ADS_STATE_RUN = 5, ADS_STATE_STOP = 6, ADS_STATE_SAVE_CONFIG = 7,
+                ADS_STATE_LOAD_CONFIG = 8, ADS_STATE_POWER_FAILURE = 9, ADS_STATE_POWER_GOOD = 10, ADS_STATE_ERROR = 11,
+                ADS_STATE_SHUTDOWN = 12, ADS_STATE_SUSPEND = 13, ADS_STATE_RESUME = 14, ADS_STATE_CONFIG = 15,
+                ADS_STATE_RECONFIG = 16, );
 
-typedef enum PROTO_ENUM_PACKED
-{
-    ADS_TRANS_MODE_NO_TRANS = 0,
-    ADS_TRANS_MODE_CLIENT_CYCLE = 1,
-    ADS_TRANS_MODE_CLIENT_ON_CHANGE = 2,
-    ADS_TRANS_MODE_SERVER_CYCLE = 3,     ///< server sends every CycleTime
-    ADS_TRANS_MODE_SERVER_ON_CHANGE = 4, ///< server sends when the value changes
-} AdsTransMode;
+EMBED_ENUM_BYTE(AdsTransMode, ADS_TRANS_MODE_NO_TRANS = 0, ADS_TRANS_MODE_CLIENT_CYCLE = 1,
+                ADS_TRANS_MODE_CLIENT_ON_CHANGE = 2,
+                ADS_TRANS_MODE_SERVER_CYCLE = 3,     ///< server sends every CycleTime
+                ADS_TRANS_MODE_SERVER_ON_CHANGE = 4, ///< server sends when the value changes
+);
 
 typedef struct
 {
@@ -389,7 +363,7 @@ typedef struct
     AdsParseReadDeviceInfoArgs parse_read_device_info_args;
     AdsParseAddNotificationArgs parse_add_notification_args;
     AdsParseNotificationArgs parse_notification_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } AdsVars;
 
@@ -399,40 +373,40 @@ extern AdsVars AdsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_read_device_info)(uint8_t *work);
-    void (*const build_read_state)(uint8_t *work);
-    void (*const build_read)(uint8_t *work);
-    void (*const build_write)(uint8_t *work);
-    void (*const build_read_write)(uint8_t *work);
-    void (*const build_write_control)(uint8_t *work);
-    void (*const build_add_notification)(uint8_t *work);
-    void (*const build_del_notification)(uint8_t *work);
-    void (*const parse_ams_header)(uint8_t *work);
-    void (*const parse_read)(uint8_t *work);
-    void (*const parse_result)(uint8_t *work);
-    void (*const parse_read_state)(uint8_t *work);
-    void (*const parse_read_device_info)(uint8_t *work);
-    void (*const parse_add_notification)(uint8_t *work);
-    void (*const parse_notification)(uint8_t *work);
+    void (*const build_read_device_info)(const uint8_t *work);
+    void (*const build_read_state)(const uint8_t *work);
+    void (*const build_read)(const uint8_t *work);
+    void (*const build_write)(const uint8_t *work);
+    void (*const build_read_write)(const uint8_t *work);
+    void (*const build_write_control)(const uint8_t *work);
+    void (*const build_add_notification)(const uint8_t *work);
+    void (*const build_del_notification)(const uint8_t *work);
+    void (*const parse_ams_header)(const uint8_t *work);
+    void (*const parse_read)(const uint8_t *work);
+    void (*const parse_result)(const uint8_t *work);
+    void (*const parse_read_state)(const uint8_t *work);
+    void (*const parse_read_device_info)(const uint8_t *work);
+    void (*const parse_add_notification)(const uint8_t *work);
+    void (*const parse_notification)(const uint8_t *work);
 } AdsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in AdsV or a region of the borrow at a fixed offset.
-void protocore_ads_build_read_device_info(uint8_t *work);
-void protocore_ads_build_read_state(uint8_t *work);
-void protocore_ads_build_read(uint8_t *work);
-void protocore_ads_build_write(uint8_t *work);
-void protocore_ads_build_read_write(uint8_t *work);
-void protocore_ads_build_write_control(uint8_t *work);
-void protocore_ads_build_add_notification(uint8_t *work);
-void protocore_ads_build_del_notification(uint8_t *work);
-void protocore_ads_parse_ams_header(uint8_t *work);
-void protocore_ads_parse_read(uint8_t *work);
-void protocore_ads_parse_result(uint8_t *work);
-void protocore_ads_parse_read_state(uint8_t *work);
-void protocore_ads_parse_read_device_info(uint8_t *work);
-void protocore_ads_parse_add_notification(uint8_t *work);
-void protocore_ads_parse_notification(uint8_t *work);
+void protocore_ads_build_read_device_info(const uint8_t *work);
+void protocore_ads_build_read_state(const uint8_t *work);
+void protocore_ads_build_read(const uint8_t *work);
+void protocore_ads_build_write(const uint8_t *work);
+void protocore_ads_build_read_write(const uint8_t *work);
+void protocore_ads_build_write_control(const uint8_t *work);
+void protocore_ads_build_add_notification(const uint8_t *work);
+void protocore_ads_build_del_notification(const uint8_t *work);
+void protocore_ads_parse_ams_header(const uint8_t *work);
+void protocore_ads_parse_read(const uint8_t *work);
+void protocore_ads_parse_result(const uint8_t *work);
+void protocore_ads_parse_read_state(const uint8_t *work);
+void protocore_ads_parse_read_device_info(const uint8_t *work);
+void protocore_ads_parse_add_notification(const uint8_t *work);
+void protocore_ads_parse_notification(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -456,7 +430,7 @@ static const AdsNs Ads __attribute__((unused)) = {
     .parse_notification = protocore_ads_parse_notification,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ADS
 

@@ -8,7 +8,7 @@
  * Some buffer sizes have a hard lower bound set by which features are compiled in, not by the
  * board. A ring smaller than that bound does not just waste a little RAM - it breaks the feature
  * (a handshake resets, a streamed upload deadlocks). That coupling is sizing logic, so it lives
- * here in the board-profile layer rather than inline in protocore_config.h, and it runs LAST: after
+ * here in the board-profile layer rather than inline in protocore_config.h. It runs LAST: after
  * the chip/PSRAM/flash profiles, the base `#ifndef` defaults, and every `PROTOCORE_ENABLE_*` feature
  * flag are resolved, so it can see the final values.
  *

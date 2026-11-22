@@ -38,9 +38,9 @@
 #ifndef PROTOCORE_CLOCK_H
 #define PROTOCORE_CLOCK_H
 
-#include "protocore_config.h" // the entry point: PROTOCORE_INLINE, protocore_types.h, and the platform time base
+#include "protocore_config.h" // the entry point: EMBED_INLINE, protocore_types.h, and the platform time base
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief User clock: returns a free-running monotonic tick count. */
 typedef uint32_t (*protocore_clock_fn)(void);
@@ -66,16 +66,16 @@ struct ClockInternal;
  * A caller sets the members a call takes, invokes it through ::Clock, and reads the outcome off the
  * same handle. The installed sources are behind @ref internal.
  *
- * @var ClockNs::src       a time source and the rate it counts at
- * @var ClockNs::ms        milliseconds since boot
- * @var ClockNs::us        microseconds since boot
- * @var ClockNs::cyc       the free-running CPU cycle count
- * @var ClockNs::set_ms    install the millisecond source
- * @var ClockNs::millis    read it, or the platform's when none is installed
- * @var ClockNs::set_us    install the microsecond source
- * @var ClockNs::micros    read it, or the platform's when none is installed
- * @var ClockNs::cycles    read the cycle counter
- * @var ClockNs::internal  the installed sources and the calls that read them
+ * @var ServerClockNs::src       a time source and the rate it counts at
+ * @var ServerClockNs::ms        milliseconds since boot
+ * @var ServerClockNs::us        microseconds since boot
+ * @var ServerClockNs::cyc       the count of CPU cycles, which never stops
+ * @var ServerClockNs::set_ms    install the millisecond source
+ * @var ServerClockNs::millis    read it, or the clock of the platform where the caller gave no source
+ * @var ServerClockNs::set_us    install the microsecond source
+ * @var ServerClockNs::micros    read it, or the clock of the platform where the caller gave no source
+ * @var ServerClockNs::cycles    read the cycle counter
+ * @var ServerClockNs::internal  the installed sources and the calls that read them
  *
  * The sources live behind the handle rather than in this header because a caller installing a clock
  * and the library reading it are different translation units and have to see the same value.
@@ -95,10 +95,10 @@ typedef struct
     void (*cycles)(struct ClockInternal *ctx);
 
     struct ClockInternal *internal;
-} ClockNs;
+} ServerClockNs;
 
 /** @brief The one symbol this module exports. */
-extern ClockNs Clock;
+extern ServerClockNs Clock;
 
 /** @brief The library's monotonic time at 1000 Hz (milliseconds). */
 
@@ -107,7 +107,7 @@ extern ClockNs Clock;
  *
  * Hands the core back for @p ms ticks. A tick is a millisecond, and zero is a bare yield.
  */
-PROTOCORE_INLINE void pcdelay(uint32_t ms)
+EMBED_INLINE void pcdelay(uint32_t ms)
 {
     protocore_platform_task_delay(ms);
 }
@@ -150,7 +150,7 @@ PROTOCORE_INLINE void pcdelay(uint32_t ms)
  * where the wait is part of bringing a device up. On the request path it stalls handle() for its
  * whole duration, which the pump's latency budget then records.
  */
-PROTOCORE_INLINE void protocore_delay_us(uint32_t us)
+EMBED_INLINE void protocore_delay_us(uint32_t us)
 {
     uint32_t start = protocore_platform_micros();
     while (protocore_platform_micros() - start < us)
@@ -178,7 +178,7 @@ typedef struct
 } protocore_latency_stat;
 
 /** @brief Zero a stat (min seeded high so the first sample sets it). */
-PROTOCORE_INLINE void protocore_lat_reset(protocore_latency_stat *s)
+EMBED_INLINE void protocore_lat_reset(protocore_latency_stat *s)
 {
     s->count = 0;
     s->over_budget = 0;
@@ -188,7 +188,7 @@ PROTOCORE_INLINE void protocore_lat_reset(protocore_latency_stat *s)
 }
 
 /** @brief Start of a measured span: capture the current microsecond time. */
-PROTOCORE_INLINE uint32_t protocore_lat_begin(void)
+EMBED_INLINE uint32_t protocore_lat_begin(void)
 {
     Clock.micros(Clock.internal);
     return Clock.us;
@@ -198,7 +198,7 @@ PROTOCORE_INLINE uint32_t protocore_lat_begin(void)
  * @brief End of a span started at @p start_us: record its latency, counting it as
  *        over-budget when @p budget_us is non-zero and exceeded. Wrap-safe.
  */
-PROTOCORE_INLINE void protocore_lat_end(protocore_latency_stat *s, uint32_t start_us, uint32_t budget_us)
+EMBED_INLINE void protocore_lat_end(protocore_latency_stat *s, uint32_t start_us, uint32_t budget_us)
 {
     Clock.micros(Clock.internal);
     uint32_t lat = Clock.us - start_us; // wrap-safe unsigned delta
@@ -219,7 +219,7 @@ PROTOCORE_INLINE void protocore_lat_end(protocore_latency_stat *s, uint32_t star
 }
 
 /** @brief Mean latency (us) over the recorded samples, 0 if none. */
-PROTOCORE_INLINE uint32_t protocore_lat_avg_us(const protocore_latency_stat *s)
+EMBED_INLINE uint32_t protocore_lat_avg_us(const protocore_latency_stat *s)
 {
     return s->count ? (uint32_t)(s->sum_us / s->count) : 0u;
 }
@@ -251,11 +251,11 @@ PROTOCORE_INLINE uint32_t protocore_lat_avg_us(const protocore_latency_stat *s)
  *        frequency, as the platform reports it). @p delta_cycles must come
  *        from a wrap-safe unsigned subtraction of two protocore_cycles() reads.
  */
-PROTOCORE_INLINE uint32_t protocore_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
+EMBED_INLINE uint32_t protocore_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
 {
     return cpu_mhz ? (uint32_t)(((uint64_t)delta_cycles * 1000u) / cpu_mhz) : 0u;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CLOCK_H

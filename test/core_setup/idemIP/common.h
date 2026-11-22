@@ -15,7 +15,7 @@
 
 #include "idemIP/endian.h" // the wire-integer accessors, and through them the fixed widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Smallest datagram every IPv4 host must be able to reassemble.
@@ -64,6 +64,6 @@ static_assert(IDEMIP_IPV6_MIN_MTU - IDEMIP_IPV6_HDR_LEN - IDEMIP_TCP_HDR_LEN == 
 static_assert(IDEMIP_IPV4_MIN_MTU - IDEMIP_IPV4_HDR_LEN - IDEMIP_TCP_HDR_LEN == IDEMIP_IPV4_DEFAULT_SEND_MSS,
               "RFC 9293 sec 3.7.1 MUST-15's IPv4 default of 536 is EMTU_R less 40");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_COMMON_H

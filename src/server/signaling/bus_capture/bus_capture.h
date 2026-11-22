@@ -29,7 +29,7 @@
 
 #include "shared/can/can.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_BUS_CAPTURE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -91,7 +91,7 @@ typedef struct
 {
     BusCaptureCanToSocketcanArgs can_to_socketcan_args;
     BusCaptureBeginArgs begin_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } BusCaptureVars;
 
@@ -101,7 +101,7 @@ extern BusCaptureVars BusCaptureV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const can_to_socketcan)(uint8_t *work);
+    void (*const can_to_socketcan)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const poll)(uint8_t *work);
     void (*const end)(uint8_t *work);
@@ -109,7 +109,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in BusCaptureV or a region of the borrow at a fixed offset.
-void protocore_bus_capture_can_to_socketcan(uint8_t *work);
+void protocore_bus_capture_can_to_socketcan(const uint8_t *work);
 void protocore_bus_capture_begin(uint8_t *work);
 void protocore_bus_capture_poll(uint8_t *work);
 void protocore_bus_capture_end(uint8_t *work);
@@ -136,7 +136,7 @@ static const BusCaptureNs BusCapture __attribute__((unused)) = {
  */
 uint8_t *protocore_bus_capture_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BUS_CAPTURE
 

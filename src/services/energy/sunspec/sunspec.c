@@ -14,7 +14,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/energy/sunspec/sunspec.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static uint16_t be16(const uint8_t *p)
 {
@@ -26,49 +26,49 @@ static uint32_t be32(const uint8_t *p)
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
 }
 
-proto_bool protocore_sunspec_check_marker(const uint8_t *regs, size_t len)
+embed_bool protocore_sunspec_check_marker(const uint8_t *regs, size_t len)
 {
     return regs && len >= 4 && be32(regs) == SUNSPEC_MARKER;
 }
 
-proto_bool protocore_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset)
+embed_bool protocore_sunspec_begin(const uint8_t *regs, size_t len, size_t *offset)
 {
     if (!offset || !protocore_sunspec_check_marker(regs, len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *offset = 4; // past the 2-register marker
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out)
+embed_bool protocore_sunspec_next_model(const uint8_t *regs, size_t len, size_t *offset, SunSpecModel *out)
 {
     if (!regs || !offset || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t o = *offset;
     if (o + 4 > len) // need the [id][length] header
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint16_t id = be16(regs + o);
     uint16_t length = be16(regs + o + 2);
     if (id == SUNSPEC_END_MODEL)
     {
-        return PROTO_FALSE; // map terminator
+        return EMBED_FALSE; // map terminator
     }
     size_t body_len = (size_t)length * 2;
     if (o + 4 + body_len > len) // body must be fully buffered
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->id = id;
     out->length = length;
     out->body = regs + o + 4;
     out->body_len = body_len;
     *offset = o + 4 + body_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 uint16_t protocore_sunspec_u16(const uint8_t *body, size_t reg)
@@ -91,11 +91,11 @@ int32_t protocore_sunspec_i32(const uint8_t *body, size_t reg)
     return (int32_t)be32(body + reg * 2);
 }
 
-proto_bool protocore_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap)
+embed_bool protocore_sunspec_string(const uint8_t *body, size_t reg, size_t nregs, char *out, size_t out_cap)
 {
     if (!body || !out || out_cap == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t avail = nregs * 2;
     size_t i = 0;
@@ -109,7 +109,7 @@ proto_bool protocore_sunspec_string(const uint8_t *body, size_t reg, size_t nreg
         out[i] = (char)p[i];
     }
     out[i] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---- writer ----
@@ -119,72 +119,72 @@ void protocore_sunspec_writer_init(SunSpecWriter *w, uint8_t *buf, size_t cap)
     w->buf = buf;
     w->cap = cap;
     w->pos = 0;
-    w->error = PROTO_FALSE;
+    w->error = EMBED_FALSE;
 }
 
-static proto_bool ss_put(SunSpecWriter *w, const uint8_t *p, size_t n)
+static embed_bool ss_put(SunSpecWriter *w, const uint8_t *p, size_t n)
 {
     if (w->error)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (w->pos + n > w->cap)
     {
-        w->error = PROTO_TRUE;
-        return PROTO_FALSE;
+        w->error = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = p, .bytes = n);
     w->pos += n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sunspec_write_u16(SunSpecWriter *w, uint16_t v)
+embed_bool protocore_sunspec_write_u16(SunSpecWriter *w, uint16_t v)
 {
     uint8_t b[2] = {(uint8_t)(v >> 8), (uint8_t)v};
     return ss_put(w, b, 2);
 }
 
-proto_bool protocore_sunspec_write_i16(SunSpecWriter *w, int16_t v)
+embed_bool protocore_sunspec_write_i16(SunSpecWriter *w, int16_t v)
 {
     return protocore_sunspec_write_u16(w, (uint16_t)v);
 }
 
-proto_bool protocore_sunspec_write_u32(SunSpecWriter *w, uint32_t v)
+embed_bool protocore_sunspec_write_u32(SunSpecWriter *w, uint32_t v)
 {
     uint8_t b[4] = {(uint8_t)(v >> 24), (uint8_t)(v >> 16), (uint8_t)(v >> 8), (uint8_t)v};
     return ss_put(w, b, 4);
 }
 
-proto_bool protocore_sunspec_write_i32(SunSpecWriter *w, int32_t v)
+embed_bool protocore_sunspec_write_i32(SunSpecWriter *w, int32_t v)
 {
     return protocore_sunspec_write_u32(w, (uint32_t)v);
 }
 
-proto_bool protocore_sunspec_write_marker(SunSpecWriter *w)
+embed_bool protocore_sunspec_write_marker(SunSpecWriter *w)
 {
     return protocore_sunspec_write_u32(w, SUNSPEC_MARKER);
 }
 
-proto_bool protocore_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length)
+embed_bool protocore_sunspec_write_model_header(SunSpecWriter *w, uint16_t id, uint16_t length)
 {
     return protocore_sunspec_write_u16(w, id) && protocore_sunspec_write_u16(w, length);
 }
 
-proto_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s, size_t nregs)
+embed_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s, size_t nregs)
 {
     if (!s)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t field = nregs * 2;
     if (w->error)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (w->pos + field > w->cap)
     {
-        w->error = PROTO_TRUE;
-        return PROTO_FALSE;
+        w->error = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     size_t slen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = field);
     for (size_t i = 0; i < field; i++)
@@ -192,19 +192,19 @@ proto_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s, size_
         w->buf[w->pos + i] = (i < slen) ? (uint8_t)s[i] : 0; // NUL-pad the remainder
     }
     w->pos += field;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sunspec_write_end_model(SunSpecWriter *w)
+embed_bool protocore_sunspec_write_end_model(SunSpecWriter *w)
 {
     return protocore_sunspec_write_u16(w, SUNSPEC_END_MODEL) && protocore_sunspec_write_u16(w, 0);
 }
 
-size_t protocore_sunspec_writer_finish(SunSpecWriter *w)
+size_t protocore_sunspec_writer_finish(const SunSpecWriter *w)
 {
     return w->error ? 0 : w->pos;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SUNSPEC

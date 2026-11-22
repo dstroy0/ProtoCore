@@ -28,19 +28,18 @@
 
 #if PROTOCORE_ENABLE_FTP_SESSION
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_FTP_SESSION_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
 // are carved is this module's and is never named here.
 
 /** @brief Where a transfer stands. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_FTP_READY = 0, ///< the server confirmed the completed transfer
-    PROTOCORE_FTP_BUSY,      ///< the sockets have no more to give; ask again on the next tick
-    PROTOCORE_FTP_FAILED,    ///< the sequence broke, or a reply passed its deadline
-} protocore_ftp_state;
+EMBED_ENUM_BYTE(protocore_ftp_state,
+                PROTOCORE_FTP_READY = 0, ///< the server confirmed the completed transfer
+                PROTOCORE_FTP_BUSY,      ///< the sockets have no more to give; ask again on the next tick
+                PROTOCORE_FTP_FAILED,    ///< the sequence broke, or a reply passed its deadline
+);
 
 /** @brief Where to connect and who to log in as. */
 typedef struct
@@ -98,7 +97,7 @@ typedef struct
 typedef struct
 {
     FtpSessionStoreArgs store_args;
-    proto_bool ok;
+    embed_bool ok;
     protocore_ftp_state value;
 } FtpSessionVars;
 
@@ -134,7 +133,7 @@ static const FtpSessionNs FtpSession __attribute__((unused)) = {
  */
 uint8_t *protocore_ftp_session_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FTP_SESSION
 

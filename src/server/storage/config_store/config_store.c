@@ -21,7 +21,7 @@
 
 #include "test/core_setup/hal/nvs.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The namespace every call below addresses, owned by one instance (internal linkage): the seam
 // names a namespace per operation, so the one this store was opened on is what it holds.
@@ -47,7 +47,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define CONFIG_STORE_CTX(w) ((ConfigStoreCtx *)(void *)((w) + CONFIG_STORE_OFF_CTX))
+#define CONFIG_STORE_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const ConfigStoreCtx *)(const void *)((w) + CONFIG_STORE_OFF_CTX),                           \
+        default: (ConfigStoreCtx *)(void *)((w) + CONFIG_STORE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -78,13 +81,13 @@ void protocore_config_store_begin(uint8_t *work)
         EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = ns, .cap = PROTOCORE_CONFIG_KEY_MAX) >= PROTOCORE_CONFIG_KEY_MAX)
     {
         CONFIG_STORE_CTX(work)->ns[0] = '\0';
-        ConfigStoreV.ok = PROTO_FALSE;
+        ConfigStoreV.ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = CONFIG_STORE_CTX(work)->ns, .src = ns,
                .cap = sizeof(CONFIG_STORE_CTX(work)->ns));
     CONFIG_STORE_CTX(work)->ns[PROTOCORE_CONFIG_KEY_MAX - 1] = '\0';
-    ConfigStoreV.ok = PROTO_TRUE;
+    ConfigStoreV.ok = EMBED_TRUE;
     return;
 }
 
@@ -197,6 +200,6 @@ void protocore_config_store_clear(uint8_t *work)
 /** @brief The operands and the outcome. */
 ConfigStoreVars ConfigStoreV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CONFIG_STORE

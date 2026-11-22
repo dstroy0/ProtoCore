@@ -9,6 +9,10 @@
  * sends the caller's bytes from where they already are.
  */
 
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_UDP
+
 #include "network_drivers/transport/udp/client/client.h"
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
@@ -17,7 +21,7 @@
 #include "network_drivers/transport/net_addr/net_addr.h" // NetAddr: the stack's address as a protocore_ip
 #include "proximus_operor/proximus_operor.h"             // proxim.read: the caller's bytes into the pbuf
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The sending side's compile-time storage: the one control block every datagram leaves
@@ -39,7 +43,10 @@ static_assert(UDP_CLIENT_OFF_CTX + sizeof(struct UdpClientStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define UDP_CLIENT_CTX(w) ((struct UdpClientStorage *)(void *)((w) + UDP_CLIENT_OFF_CTX))
+#define UDP_CLIENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct UdpClientStorage *)(const void *)((w) + UDP_CLIENT_OFF_CTX),                    \
+        default: (struct UdpClientStorage *)(void *)((w) + UDP_CLIENT_OFF_CTX))
 
 // The datagram, carried to the stack's thread by pointer. The caller's buffer is the send buffer,
 // so nothing is copied into this and it holds no storage of its own.
@@ -50,12 +57,12 @@ typedef struct
     const uint8_t *data;
     size_t len;
     uint16_t port;
-    proto_bool ok;
+    embed_bool ok;
 } protocore_udp_send_call;
 
 // Stamp the control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
 // change reaches the next datagram.
-static void apply_dscp(protocore_udp_pcb *pcb)
+static void apply_dscp(const protocore_udp_pcb *pcb)
 {
 #if PROTOCORE_ENABLE_DIFFSERV
     uint8_t dscp = protocore_diffserv_udp_dscp();
@@ -69,18 +76,18 @@ static void apply_dscp(protocore_udp_pcb *pcb)
 }
 
 // Take a pbuf, hand the bytes over, release it. Runs in the stack's thread only.
-static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
+static embed_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
                             size_t len)
 {
     protocore_net_ip dst;
     if (!protocore_net_addr_from_ip(a, &dst))
     {
-        return PROTO_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
+        return EMBED_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
     }
-    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (proto_u16)len, PROTOCORE_NET_PBUF_RAM);
+    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (embed_u16)len, PROTOCORE_NET_PBUF_RAM);
     if (p == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)p->payload, .at = data, .size = len);
     protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
@@ -133,18 +140,18 @@ uint8_t *protocore_udp_client_span(void)
     return s_own.span;
 }
 
-void protocore_udp_client_sendto(uint8_t *work)
+void protocore_udp_client_sendto(const uint8_t *work)
 {
     (void)work;
     if (UdpClientV.data == NULL || UdpClientV.len == 0 || UdpClientV.len > PROTOCORE_UDP_RX_BUF_SIZE ||
         UdpClientV.dst == NULL || UdpClientV.dst->family == PROTOCORE_IP_NONE)
     {
-        UdpClientV.ok = PROTO_FALSE;
+        UdpClientV.ok = EMBED_FALSE;
         return;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
     protocore_udp_send_call k = {{0},        UdpClientV.dst, UdpClientV.data, UdpClientV.len, UdpClientV.dst_port,
-                                 PROTO_FALSE};
+                                 EMBED_FALSE};
     (void)protocore_net_call_marshal(send_do, &k.base);
     UdpClientV.ok = k.ok;
 }
@@ -153,4 +160,6 @@ void protocore_udp_client_sendto(uint8_t *work)
 /** @brief The operands and the outcome. */
 UdpClientVars UdpClientV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
+
+#endif // PROTOCORE_ENABLE_UDP

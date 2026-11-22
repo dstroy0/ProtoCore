@@ -229,7 +229,7 @@ docker run --rm -e CMAKE_BUILD_PARALLEL_LEVEL=2 -v "$PWD/out":/out \
 
 > **GCC internal compiler error = lower `CMAKE_BUILD_PARALLEL_LEVEL`.** The heavy C++ template
 > libraries (esp-tflite-micro/TensorFlow, Matter) crash GCC with an `internal compiler error`
-> under parallel load - the crash point moves between files run-to-run, so it looks random, but
+> under parallel load - the crash point moves between files run-to-run. So it looks random, but
 > it is memory/parallelism pressure (seen at 6 jobs even with 31 GB free; **2 jobs builds clean
 > to 2965/2965**). It is not a code bug and `EXCLUDE_COMPONENTS` does not skip these managed
 > components. If you see it, drop to `=2`.

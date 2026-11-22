@@ -18,7 +18,7 @@
  *
  * **HttpRoute table**
  * Routes are stored in a fixed-size array of `HttpRoute` structs.  Both exact
- * and wildcard (suffix `*`) routes are supported; exact routes always take
+ * and wildcard (suffix `*`) routes are supported. Exact routes always take
  * priority because the loop checks them in insertion order and returns on
  * the first match.
  *
@@ -99,7 +99,7 @@ typedef struct
 
     uint16_t listen_ports[MAX_LISTENERS];   ///< Ports registered via listen() / begin_http().
     ProtoConn listen_protos[MAX_LISTENERS]; ///< Protocol for each registered listener.
-    proto_bool listen_tls[MAX_LISTENERS];   ///< True for TLS listeners (listen_tls()).
+    embed_bool listen_tls[MAX_LISTENERS];   ///< True for TLS listeners (listen_tls()).
     uint8_t listener_count;                 ///< Registered listeners.
 
 #if PROTOCORE_ENABLE_HTTP3
@@ -107,7 +107,7 @@ typedef struct
     size_t h3_cert_len;
     uint8_t h3_seed[32];
     uint16_t h3_port;
-    proto_bool h3_enabled;
+    embed_bool h3_enabled;
 #endif
 } ServerCtx;
 
@@ -117,7 +117,7 @@ static ServerCtx s_inst;
 void protocore_server_reset(void)
 {
     // The server's state is spread across the files that own it, which is the point - but "start
-    // over" is one concern, so it is one call rather than a checklist each caller has to keep in
+    // over" is one concern. So it is one call rather than a checklist each caller has to keep in
     // agreement. The blank template lives in rodata, so the reset is a plain copy and never
     // materializes a sizeof(ServerCtx) temporary on the caller's stack.
     static const ServerCtx blank = {0};
@@ -179,7 +179,7 @@ int32_t listen(uint16_t port, ProtoConn proto)
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = proto;
-    s_inst.listen_tls[s_inst.listener_count] = PROTO_FALSE;
+    s_inst.listen_tls[s_inst.listener_count] = EMBED_FALSE;
     s_inst.listener_count++;
     // Return the listener id (its index), not PROTOCORE_OK: begin() binds listener_pool[i] from
     // s_inst.listen_ports[i] and the accept path stamps that same index onto the slot, so this id is what
@@ -220,7 +220,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     {
         return (int32_t)PROTOCORE_ERR_NO_LISTENERS;
     }
-    // The connection's idle deadline is its lifetime, which this layer owns; the pool is told the
+    // The connection's idle deadline is its lifetime, which this layer owns. The pool is told the
     // number rather than handed the config to read it out of.
     SessionV.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
     ConnPoolV.life.conn_timeout_ms = SessionV.conn_timeout_ms;
@@ -306,24 +306,24 @@ int32_t begin_http(uint16_t port, const WebServerConfig *cfg)
 }
 
 #if PROTOCORE_ENABLE_HTTP3
-proto_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port)
+embed_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port)
 {
     if (!cert_der || cert_len == 0 || !ed25519_seed)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s_inst.h3_cert = cert_der;
     s_inst.h3_cert_len = cert_len;
     EMBED_CALL(proxim.read, ProximusCfg, .dst = s_inst.h3_seed, .at = ed25519_seed, .size = sizeof(s_inst.h3_seed));
     s_inst.h3_port = port;
-    s_inst.h3_enabled = PROTO_TRUE;
-    return PROTO_TRUE;
+    s_inst.h3_enabled = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_HTTP3
 
 #if PROTOCORE_ENABLE_TLS
-proto_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
+embed_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
 {
     return protocore_tls_global_init(cert, cert_len, key, key_len);
 }
@@ -336,7 +336,7 @@ int32_t listen_tls(uint16_t port)
     }
     s_inst.listen_ports[s_inst.listener_count] = port;
     s_inst.listen_protos[s_inst.listener_count] = PROTO_HTTP;
-    s_inst.listen_tls[s_inst.listener_count] = PROTO_TRUE;
+    s_inst.listen_tls[s_inst.listener_count] = EMBED_TRUE;
     s_inst.listener_count++;
     return (int32_t)PROTOCORE_OK;
 }
@@ -405,13 +405,13 @@ void fill_route_base(HttpRoute *r, const char *path)
     // The copy terminates the destination itself and hands back what it wrote, so the length the
     // two shape tests need comes out of the move rather than from a second walk over those bytes.
     size_t len = EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = r->path, .src = path, .cap = MAX_PATH_LEN);
-    r->is_active = PROTO_TRUE;
+    r->is_active = EMBED_TRUE;
     r->is_wildcard = (len > 0 && r->path[len - 1] == '*');
     // Whether, not where: the sieve sweeps the whole field for a fixed cost rather than stopping at
     // the first `/`, which a route path is full of.
     r->is_param = EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = r->path, .cap = MAX_PATH_LEN,
-                             .other = "/:", .other_cap = sizeof("/:"), .ci = PROTO_FALSE);
-    r->is_regex = PROTO_FALSE;
+                             .other = "/:", .other_cap = sizeof("/:"), .ci = EMBED_FALSE);
+    r->is_regex = EMBED_FALSE;
     r->iface_filter = PROTOCORE_IF_ANY;
 #if PROTOCORE_ENABLE_AUTH
     // Stated, not inherited from the zeroed slot: zero is a valid credential id, so a route that
@@ -479,12 +479,12 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback)
     r->type = ROUTE_HTTP;
     r->method = method;
     r->callback = callback;
-    r->is_regex = PROTO_TRUE;
+    r->is_regex = EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_AUTH
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
-                  const char *pass, proto_bool digest)
+                  const char *pass, embed_bool digest)
 {
     HttpRoute *http_routes_ptr = HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = http_routes_ptr;
@@ -554,7 +554,7 @@ void on_not_found(Handler callback)
 // set_cors() / set_cache_control() live in server/response.cpp, with the buffers they fill.
 
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
-proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
+embed_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 {
     // Build the directive with the RFC 5861 core so the header and the protocore_delivery_swr decision
     // can never drift apart.
@@ -566,10 +566,10 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
     HttpDelivery.cache_control(http_delivery_work);
     if (HttpDeliveryV.n == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     set_cache_control(directive);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 #endif
 
@@ -579,7 +579,7 @@ void ws_dispatch_message(const WsConn *ws)
     uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
     for (uint8_t r = 0; r < http_routes_value; r++)
     {
-        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
+        const HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
         const HttpRoute *rt = http_routes_ptr;
         if (rt->type != ROUTE_WS)
         {
@@ -600,7 +600,7 @@ void ws_dispatch_close(const WsConn *ws)
     uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
     for (uint8_t r = 0; r < http_routes_value; r++)
     {
-        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
+        const HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
         const HttpRoute *rt = http_routes_ptr;
         if (rt->type != ROUTE_WS)
         {
@@ -698,11 +698,11 @@ void service_once(int worker_id)
     SessionV.workers->run_deferred(protocore_worker_span());
 }
 
-proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
+embed_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
 {
     if (slot >= MAX_CONNS)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // HttpRoute to the worker that owns the slot so the callback runs single-threaded
     // alongside that slot's own processing.
@@ -723,7 +723,7 @@ proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
 // runtime: each flag selects one of two literals and each sizing constant renders as a decimal.
 // A frame spec like every other here, so the conversions come from the shared engine.
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // A flag indexes this; !!flag is 0 or 1, so the selection is a load rather than a branch.
 static const char *const PROTOCORE_DIAG_BOOL[2] = {"false", "true"};
@@ -839,9 +839,7 @@ static_assert(PROTOCORE_PLAINTEXT_WORK_DIAG <= PROTOCORE_PLAINTEXT_ARENA_SIZE, "
 
 void diag(uint8_t slot_id)
 {
-    // Mark before the borrow and release on every exit: the document is transient, and the
-    // per-dispatch reset is only the backstop.
-    const size_t mark = protocore_plain_guard()->temporary_buf_mark();
+    // Every exit releases the cell, because the document is transient.
     char *doc =
         (char *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_PLAINTEXT_WORK_DIAG, protocore_plain_owner());
     if (doc == NULL ||
@@ -897,13 +895,13 @@ void diag(uint8_t slot_id)
                                                MMGR_VU32((uint32_t)EVT_QUEUE_DEPTH)},
                    .nvals = 49) == 0)
     {
-        protocore_plain_guard()->temporary_buf_release(mark);
+        protocore_plain_guard()->persistent_buf_release(doc, protocore_plain_owner());
         send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, ""); // fail closed: no partial document reaches the wire
         return;
     }
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, doc); // reads doc, so it runs before the release
-    protocore_plain_guard()->temporary_buf_release(mark);
+    protocore_plain_guard()->persistent_buf_release(doc, protocore_plain_owner());
 }
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif

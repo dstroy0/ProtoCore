@@ -25,7 +25,7 @@
 #include "network_drivers/presentation/http/route/http_route/http_route.h" // the complete type a public struct below holds by value
 #include "server/storage/mnt/mnt.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_FILE_SERVING_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -57,7 +57,7 @@ typedef struct
 typedef struct
 {
     uint8_t slot_id;
-    proto_bool head;
+    embed_bool head;
     const protocore_mnt_backend *file_sys;
     const char *fs_path;
     const char *content_type;
@@ -135,7 +135,7 @@ typedef struct
     FileServingHoldsSlotArgs holds_slot_args;
     FileServingServeFileArgs serve_file_args;
     FileServingServeStaticArgs serve_static_args;
-    proto_bool ok;
+    embed_bool ok;
 } FileServingVars;
 
 /** @brief The operands and the outcome. */
@@ -147,8 +147,8 @@ typedef struct
     void (*const http_rfc1123)(uint8_t *work);
     void (*const serve_static_request)(uint8_t *work);
     void (*const serve_file_internal)(uint8_t *work);
-    void (*const file_send_pump)(uint8_t *work);
-    void (*const holds_slot)(uint8_t *work);
+    void (*const file_send_pump)(const uint8_t *work);
+    void (*const holds_slot)(const uint8_t *work);
     void (*const serve_file)(uint8_t *work);
     void (*const serve_static)(uint8_t *work);
 } FileServingNs;
@@ -158,8 +158,8 @@ typedef struct
 void protocore_file_serving_http_rfc1123(uint8_t *work);
 void protocore_file_serving_serve_static_request(uint8_t *work);
 void protocore_file_serving_serve_file_internal(uint8_t *work);
-void protocore_file_serving_file_send_pump(uint8_t *work);
-void protocore_file_serving_holds_slot(uint8_t *work);
+void protocore_file_serving_file_send_pump(const uint8_t *work);
+void protocore_file_serving_holds_slot(const uint8_t *work);
 void protocore_file_serving_serve_file(uint8_t *work);
 void protocore_file_serving_serve_static(uint8_t *work);
 
@@ -188,7 +188,7 @@ static const FileServingNs FileServing __attribute__((unused)) = {
  */
 uint8_t *protocore_file_serving_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FILE_SERVING
 

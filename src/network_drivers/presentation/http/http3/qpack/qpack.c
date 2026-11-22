@@ -127,7 +127,7 @@ static const char *const QPACK_STATIC[99][2] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_qpack_encode_prefix(uint8_t *work, uint8_t *out, size_t cap)
+size_t protocore_qpack_encode_prefix(const uint8_t *work, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -145,7 +145,8 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
 {
     size_t n = 0;
 
-    int name_idx = -1, full_idx = -1;
+    int name_idx = -1;
+    int full_idx = -1;
     for (int i = 0; i < 99; i++)
     {
         if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = QPACK_STATIC[i][0], .cap = name_len + 1) == name_len &&
@@ -189,7 +190,7 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
     // Literal Field Line with Literal Name: 001 N=0 H NameLen(3), name string, value string.
     size_t hpack_prim_n3 = HpackPrim.huff_len(work, name, name_len);
     size_t hl = hpack_prim_n3;
-    proto_bool huff = hl < name_len;
+    embed_bool huff = hl < name_len;
     size_t nbytes = huff ? hl : name_len;
     size_t hpack_prim_n4 =
         HpackPrim.encode_int(work, out, cap, 3, (uint8_t)(0x20 | (huff ? 0x08 : 0x00)), (uint32_t)nbytes);
@@ -226,28 +227,28 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
     return o + vs;
 }
 
-proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
+embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
                                   QpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.
     size_t c = 0;
     uint32_t ric = 0;
-    proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 8, &c, &ric);
+    embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 8, &c, &ric);
     if (!hpack_prim_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     pos += c;
     if (ric != 0) // a non-zero Required Insert Count references the dynamic table (capacity 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t base = 0;
-    proto_bool hpack_prim_ok2 = HpackPrim.decode_int(work, block + pos, len - pos, 7, &c, &base);
+    embed_bool hpack_prim_ok2 = HpackPrim.decode_int(work, block + pos, len - pos, 7, &c, &base);
     if (!hpack_prim_ok2) // S bit + Delta Base; ignored when RIC = 0
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     pos += c;
 
@@ -258,13 +259,13 @@ proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
         {                    // Indexed Field Line (sec 4.5.2): 1 T i(6)
             if (!(b & 0x40)) // T = 0 -> dynamic table
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             uint32_t idx = 0;
-            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 6, &c, &idx);
+            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 6, &c, &idx);
             if (!hpack_prim_ok || idx >= 99)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             pos += c;
             const char *nm = QPACK_STATIC[idx][0];
@@ -272,94 +273,94 @@ proto_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
             if (!emit(ctx, nm, EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = nm, .cap = scratch_cap + 1), vl,
                       EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = vl, .cap = scratch_cap + 1)))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         else if ((b & 0xC0) == 0x40)
         { // Literal Field Line with Name Reference (sec 4.5.4): 01 N T i(4)
-            proto_bool is_static = (b & 0x10) != 0;
+            embed_bool is_static = (b & 0x10) != 0;
             uint32_t idx = 0;
-            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 4, &c, &idx);
+            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 4, &c, &idx);
             if (!hpack_prim_ok)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             pos += c;
             if (!is_static || idx >= 99) // dynamic name reference
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             const char *nm = QPACK_STATIC[idx][0];
             size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = nm, .cap = scratch_cap + 1);
             if (nlen > scratch_cap)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = nm, .bytes = nlen);
             size_t vlen = 0;
-            proto_bool hpack_prim_ok2 =
+            embed_bool hpack_prim_ok2 =
                 HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
             if (!hpack_prim_ok2)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         else if ((b & 0xE0) == 0x20)
         { // Literal Field Line with Literal Name (sec 4.5.6): 001 N H NameLen(3)
-            proto_bool huff = (b & 0x08) != 0;
+            embed_bool huff = (b & 0x08) != 0;
             uint32_t nlen32 = 0;
-            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 3, &c, &nlen32);
+            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 3, &c, &nlen32);
             if (!hpack_prim_ok)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             pos += c;
             if (pos + nlen32 > len)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             size_t nlen = 0;
             if (huff)
             {
-                proto_bool hpack_prim_ok =
+                embed_bool hpack_prim_ok =
                     HpackPrim.huff_decode(work, block + pos, nlen32, scratch, scratch_cap, &nlen);
                 if (!hpack_prim_ok)
                 {
-                    return PROTO_FALSE;
+                    return EMBED_FALSE;
                 }
             }
             else
             {
                 if (nlen32 > scratch_cap)
                 {
-                    return PROTO_FALSE;
+                    return EMBED_FALSE;
                 }
                 EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = block + pos, .bytes = nlen32);
                 nlen = nlen32;
             }
             pos += nlen32;
             size_t vlen = 0;
-            proto_bool hpack_prim_ok2 =
+            embed_bool hpack_prim_ok2 =
                 HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
             if (!hpack_prim_ok2)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         else
         { // 0001 xxxx Indexed Post-Base / 0000 xxxx Literal Post-Base Name Ref: both dynamic
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_HTTP3

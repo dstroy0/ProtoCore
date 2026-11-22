@@ -44,7 +44,7 @@ struct HttpStorage
 {
     Handler not_found; ///< what a request runs when no route matched
 #if PROTOCORE_ENABLE_EDGE_CACHE
-    proto_bool (*edge_poll)(uint8_t slot); ///< the edge-cache async-fetch pump
+    embed_bool (*edge_poll)(uint8_t slot); ///< the edge-cache async-fetch pump
 #endif
 };
 
@@ -57,7 +57,10 @@ static_assert(HTTP_OFF_CTX + sizeof(struct HttpStorage) <= PROTOCORE_HTTP_BORROW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define HTTP_CTX(w) ((struct HttpStorage *)(void *)((w) + HTTP_OFF_CTX))
+#define HTTP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct HttpStorage *)(const void *)((w) + HTTP_OFF_CTX),                               \
+        default: (struct HttpStorage *)(void *)((w) + HTTP_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -84,7 +87,7 @@ void protocore_http_set_not_found(uint8_t *work)
     HTTP_CTX(work)->not_found = HttpV.cb;
 }
 
-// Every other owner protocore_server_reset() calls exposes this; without it a handler registered here
+// Every other owner protocore_server_reset() calls exposes this. Without it a handler registered here
 // outlives the reset and answers requests the route table no longer knows about.
 void protocore_http_reset(uint8_t *work)
 {
@@ -110,7 +113,7 @@ void protocore_http_set_edge_poll(uint8_t *work)
  * @param code HTTP status integer.
  * @return Pointer to a string-literal reason phrase; never null.
  */
-void protocore_http_status_text(uint8_t *work)
+void protocore_http_status_text(const uint8_t *work)
 {
     (void)work;
     const int code = HttpV.code;
@@ -220,7 +223,7 @@ void protocore_http_status_text(uint8_t *work)
  * @param m Null-terminated method string, e.g. "POST".
  * @return Matching HttpMethod enum value, or HTTP_METHOD_UNKNOWN.
  */
-void protocore_http_parse_method(uint8_t *work)
+void protocore_http_parse_method(const uint8_t *work)
 {
     (void)work;
     const char *m = HttpV.method_args.token;
@@ -228,38 +231,38 @@ void protocore_http_parse_method(uint8_t *work)
     // from: one more byte than the literal is already enough to decide, because a longer method
     // scans to the bound without finding its terminator and fails on length before any byte is
     // compared. That keeps this function honest about a caller it does not otherwise constrain.
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "GET", .cap = sizeof("GET"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "GET", .cap = sizeof("GET"), .ci = EMBED_FALSE))
     {
         HttpV.method_of = HTTP_GET;
         return;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "POST", .cap = sizeof("POST"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "POST", .cap = sizeof("POST"), .ci = EMBED_FALSE))
     {
         HttpV.method_of = HTTP_POST;
         return;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PUT", .cap = sizeof("PUT"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PUT", .cap = sizeof("PUT"), .ci = EMBED_FALSE))
     {
         HttpV.method_of = HTTP_PUT;
         return;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "DELETE", .cap = sizeof("DELETE"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "DELETE", .cap = sizeof("DELETE"), .ci = EMBED_FALSE))
     {
         HttpV.method_of = HTTP_DELETE;
         return;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PATCH", .cap = sizeof("PATCH"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "PATCH", .cap = sizeof("PATCH"), .ci = EMBED_FALSE))
     {
         HttpV.method_of = HTTP_PATCH;
         return;
     }
-    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "HEAD", .cap = sizeof("HEAD"), .ci = PROTO_FALSE))
+    if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "HEAD", .cap = sizeof("HEAD"), .ci = EMBED_FALSE))
     {
         HttpV.method_of = HTTP_HEAD;
         return;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m, .other = "OPTIONS", .cap = sizeof("OPTIONS"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         HttpV.method_of = HTTP_OPTIONS;
         return;
@@ -271,7 +274,7 @@ void protocore_http_parse_method(uint8_t *work)
 /**
  * @brief Canonical method token for an HttpMethod (for the Allow header).
  */
-void protocore_http_method_name(uint8_t *work)
+void protocore_http_method_name(const uint8_t *work)
 {
     (void)work;
     const HttpMethod m = HttpV.method_args.method;
@@ -315,16 +318,16 @@ void protocore_http_method_name(uint8_t *work)
  * @param req_path    Incoming request path from the parsed HTTP request line.
  * @return True if the route matches the request path.
  */
-void protocore_http_path_matches(uint8_t *work)
+void protocore_http_path_matches(const uint8_t *work)
 {
     (void)work;
     const char *route = HttpV.route_args.route;
-    const proto_bool is_wildcard = HttpV.route_args.is_wildcard;
+    const embed_bool is_wildcard = HttpV.route_args.is_wildcard;
     const char *req_path = HttpV.route_args.path;
     if (!is_wildcard)
     {
         HttpV.ok = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = route, .other = req_path, .cap = MAX_PATH_LEN,
-                              .ci = PROTO_FALSE);
+                              .ci = EMBED_FALSE);
         return;
     }
 
@@ -332,7 +335,7 @@ void protocore_http_path_matches(uint8_t *work)
     // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
     size_t prefix_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = route, .cap = MAX_PATH_LEN) - 1;
     HttpV.ok = EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = route, .other = req_path, .cap = prefix_len,
-                          .ci = PROTO_FALSE) == prefix_len;
+                          .ci = EMBED_FALSE) == prefix_len;
 }
 
 // Record one `:name` path parameter (key from the route segment, value from the path segment).
@@ -369,7 +372,7 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
  *
  * @return True on a full match (params captured); false otherwise.
  */
-void protocore_http_match_path_params(uint8_t *work)
+void protocore_http_match_path_params(const uint8_t *work)
 {
     (void)work;
     const char *route = HttpV.route_args.route;
@@ -400,15 +403,15 @@ void protocore_http_match_path_params(uint8_t *work)
         {
             if (plen == 0)
             {
-                HttpV.ok = PROTO_FALSE;
+                HttpV.ok = EMBED_FALSE;
                 return; // a `:name` segment must capture a non-empty value
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
         else if (rlen != plen || EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = rseg, .other = pseg, .cap = rlen,
-                                            .ci = PROTO_FALSE) != rlen)
+                                            .ci = EMBED_FALSE) != rlen)
         {
-            HttpV.ok = PROTO_FALSE;
+            HttpV.ok = EMBED_FALSE;
             return; // literal segment mismatch
         }
     }
@@ -420,15 +423,15 @@ void protocore_http_match_path_params(uint8_t *work)
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
 // linkage (declared in protocore.h): the split handler TUs call it.
-void protocore_http_req_is_head(uint8_t *work)
+void protocore_http_req_is_head(const uint8_t *work)
 {
     (void)work;
     HttpV.ok = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = http_pool[HttpV.slot].method, .other = "HEAD",
-                          .cap = sizeof("HEAD"), .ci = PROTO_FALSE);
+                          .cap = sizeof("HEAD"), .ci = EMBED_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
-void protocore_http_allow_append(uint8_t *work)
+void protocore_http_allow_append(const uint8_t *work)
 {
     (void)work;
     char *buf = HttpV.allow.buf;
@@ -442,7 +445,7 @@ void protocore_http_allow_append(uint8_t *work)
     // appended and return early, and the Allow header would silently lose one.
     size_t len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = buf, .cap = cap);
     if (!m[0] || EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = buf, .cap = len, .other = m,
-                            .other_cap = sizeof("OPTIONS"), .ci = PROTO_FALSE))
+                            .other_cap = sizeof("OPTIONS"), .ci = EMBED_FALSE))
     {
         return;
     }
@@ -479,7 +482,8 @@ void protocore_http_allow_append(uint8_t *work)
 static void send_error_close(uint8_t slot_id, const char *status, const char *extra_hdr, const char *body)
 {
     TcpConn *conn = &conn_pool[slot_id];
-    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
+        conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -520,17 +524,17 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     {
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPoolV.io.len = (embed_u16)hlen;
         ConnPool.send(protocore_conn_pool_span());
         ConnPoolV.io.data = body;
-        ConnPoolV.io.len = (proto_u16)blen;
+        ConnPoolV.io.len = (embed_u16)blen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPoolV.io.len = (embed_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     ConnPoolV.slot = slot_id;
@@ -591,21 +595,36 @@ static void send_too_many_requests(uint8_t slot_id, uint32_t retry_after_s)
 }
 #endif // PROTOCORE_ENABLE_AUTH_LOCKOUT
 
-static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req)
+static embed_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req)
 {
     if (!r->is_active)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool matched = r->is_regex ? regex_match(r->path, req->path)
-                                     : (HttpV.route_args.route = r->path, HttpV.route_args.path = req->path,
-                                        HttpV.route_args.req = req, HttpV.route_args.is_wildcard = r->is_wildcard,
-                                        r->is_param ? Http.match_path_params(protocore_http_span())
-                                                    : Http.path_matches(protocore_http_span()),
-                                        HttpV.ok);
+    embed_bool matched = EMBED_FALSE;
+    if (r->is_regex)
+    {
+        matched = regex_match(r->path, req->path);
+    }
+    else
+    {
+        HttpV.route_args.route = r->path;
+        HttpV.route_args.path = req->path;
+        HttpV.route_args.req = req;
+        HttpV.route_args.is_wildcard = r->is_wildcard;
+        if (r->is_param)
+        {
+            Http.match_path_params(protocore_http_span());
+        }
+        else
+        {
+            Http.path_matches(protocore_http_span());
+        }
+        matched = HttpV.ok;
+    }
     if (!matched)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
@@ -613,18 +632,18 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     ConnPool.iface(protocore_conn_pool_span());
     if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPoolV.if_kind)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_CSRF
-static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
+static embed_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod method)
 {
     // Built-in token endpoint: GET /csrf issues a signed token (also set as the
     // csrf cookie) for clients to echo in X-CSRF-Token on state-changing requests.
     if (method == HTTP_GET && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->path, .other = "/csrf",
-                                         .cap = sizeof("/csrf"), .ci = PROTO_FALSE))
+                                         .cap = sizeof("/csrf"), .ci = EMBED_FALSE))
     {
         char tok[CSRF_TOKEN_BUF];
         CsrfV.issue_args.out = tok;
@@ -651,7 +670,7 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
         {
             send_text(slot_id, 500, PROTOCORE_MIME_TEXT_PLAIN, "CSRF unavailable");
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 
     // Enforce CSRF on every state-changing method: require a valid signed
@@ -665,10 +684,10 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
         if (!tok || !CsrfV.valid)
         {
             send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "CSRF token missing or invalid");
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 #endif // PROTOCORE_ENABLE_CSRF
 
@@ -683,9 +702,9 @@ static void handle_ws_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMe
     HttpConnV.hdr_args.hdr = http_parser_text2;
     HttpConnV.hdr_args.token = "upgrade";
     HttpConn.has_token(protocore_http_conn_span());
-    proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
+    embed_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
                                EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = upgrade_hdr, .other = "websocket",
-                                          .cap = sizeof("websocket"), .ci = PROTO_TRUE) &&
+                                          .cap = sizeof("websocket"), .ci = EMBED_TRUE) &&
                                HttpConnV.ok;
     if (!is_ws_upgrade)
     {
@@ -696,7 +715,7 @@ static void handle_ws_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMe
     const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Version");
     const char *ws_ver = http_parser_text3;
     if (ws_ver == NULL ||
-        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = ws_ver, .other = "13", .cap = sizeof("13"), .ci = PROTO_FALSE))
+        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = ws_ver, .other = "13", .cap = sizeof("13"), .ci = EMBED_FALSE))
     {
         ws_send_version_required(slot_id);
         return;
@@ -719,7 +738,7 @@ static void handle_ws_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMe
 #endif // PROTOCORE_ENABLE_WEBSOCKET
 
 #if PROTOCORE_ENABLE_AUTH
-static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
+static embed_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 {
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
     protocore_ip cip = lockout_client_ip(slot_id);
@@ -729,7 +748,7 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // spoofed header can neither evade a lockout nor frame another address.
     {
         char fbuf[PROTOCORE_IP_STR_MAX];
-        proto_bool http_parser_ok =
+        embed_bool http_parser_ok =
             HttpParser.forwarded_client(protocore_http_parser_span(), req, fbuf, sizeof(fbuf), NULL);
         const char *fwd = http_parser_ok ? fbuf : NULL;
         protocore_ip eff;
@@ -749,7 +768,7 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     {
         // Address is locked out: 429 + Retry-After, no credential check.
         send_too_many_requests(slot_id, (remain + 999) / 1000);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 #endif
     // The auth module's own borrow: the credential table this decision reads and the bytes its
@@ -758,15 +777,15 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     uint8_t *auth_ws = protocore_http_auth_span();
     if (auth_ws == NULL)
     {
-        return PROTO_FALSE; // pool exhausted: fail closed
+        return EMBED_FALSE; // pool exhausted: fail closed
     }
     AuthV.slot = slot_id;
     AuthV.req = req;
     AuthV.id = r->auth_id;
-    AuthV.nonce_args.stale = PROTO_FALSE;
+    AuthV.nonce_args.stale = EMBED_FALSE;
     Auth.check(auth_ws);
-    proto_bool stale = AuthV.nonce_args.stale;
-    proto_bool ok = AuthV.ok;
+    embed_bool stale = AuthV.nonce_args.stale;
+    embed_bool ok = AuthV.ok;
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
@@ -788,20 +807,21 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         AuthV.id = r->auth_id;
         AuthV.nonce_args.stale = stale;
         Auth.challenge(auth_ws);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
-static proto_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
-                                         proto_bool *path_matched, char *allow_buf, size_t allow_cap)
+static embed_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMethod method,
+                                         const HttpRoute *r, embed_bool *path_matched, char *allow_buf,
+                                         size_t allow_cap)
 {
 #if PROTOCORE_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)
     {
         handle_ws_route(work, slot_id, req, method, r);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 #endif // PROTOCORE_ENABLE_WEBSOCKET
 
@@ -812,7 +832,7 @@ static proto_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq
         {
             send_text(slot_id, 503, PROTOCORE_MIME_TEXT_PLAIN, "Service Unavailable");
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 #endif // PROTOCORE_ENABLE_SSE
 
@@ -822,30 +842,30 @@ static proto_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq
         // Static mounts answer GET (and HEAD via GET); other methods → 405.
         if (method != HTTP_GET && method != HTTP_HEAD)
         {
-            *path_matched = PROTO_TRUE;
+            *path_matched = EMBED_TRUE;
             HttpV.allow.buf = allow_buf;
             HttpV.allow.cap = allow_cap;
             HttpV.method_args.token = "GET";
             Http.allow_append(protocore_http_span());
             HttpV.method_args.token = "HEAD";
             Http.allow_append(protocore_http_span());
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         FileServingV.serve_static_request_args.slot_id = slot_id;
         FileServingV.serve_static_request_args.req = req;
         FileServingV.serve_static_request_args.r = r;
         FileServing.serve_static_request(protocore_file_serving_span());
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 #endif // PROTOCORE_ENABLE_FILE_SERVING
 
     // ROUTE_HTTP - a HEAD request is served by the GET handler with the
     // response body suppressed (RFC 7231 §4.3.2).
-    proto_bool method_ok = (r->method == method) || (method == HTTP_HEAD && r->method == HTTP_GET);
+    embed_bool method_ok = (r->method == method) || (method == HTTP_HEAD && r->method == HTTP_GET);
     if (!method_ok)
     {
         // Path matches but method differs - record it for a 405 + Allow.
-        *path_matched = PROTO_TRUE;
+        *path_matched = EMBED_TRUE;
         HttpV.method_args.method = r->method;
         Http.method_name(protocore_http_span());
         HttpV.allow.buf = allow_buf;
@@ -860,16 +880,16 @@ static proto_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq
             HttpV.method_args.token = "HEAD";
             Http.allow_append(protocore_http_span());
         }
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 #if PROTOCORE_ENABLE_AUTH
     if (r->auth_id != PROTOCORE_AUTH_NONE && !proto_authorize_request(slot_id, req, r))
     {
-        return PROTO_TRUE; // 401/429 already sent
+        return EMBED_TRUE; // 401/429 already sent
     }
 #endif // PROTOCORE_ENABLE_AUTH
     r->callback(slot_id, req);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_http_match_and_execute(uint8_t *work)
@@ -940,7 +960,7 @@ void protocore_http_match_and_execute(uint8_t *work)
 
     // For RFC 7231 §6.5.5: if a path matches but no method does, answer 405
     // with an Allow header listing the methods registered for that path.
-    proto_bool path_matched = PROTO_FALSE;
+    embed_bool path_matched = EMBED_FALSE;
     char allow_buf[64];
     allow_buf[0] = '\0';
 
@@ -1108,7 +1128,7 @@ void protocore_http_poll_slot(uint8_t *work)
     // skipped - their ring holds ciphertext, decrypted in the session layer.
     ConnPoolV.slot = i;
     ConnPool.active(protocore_conn_pool_span());
-    proto_bool live = ConnPoolV.ok;
+    embed_bool live = ConnPoolV.ok;
 #if PROTOCORE_ENABLE_TLS
     ConnPool.tls(protocore_conn_pool_span());
     live = live && !ConnPoolV.ok;

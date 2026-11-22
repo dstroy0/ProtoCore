@@ -5,6 +5,7 @@ protocore_add_module(services/iot/mqtt/mqtt
   GATE PROTOCORE_ENABLE_MQTT
   SOURCES mqtt.c
   PRIVATE_DEPS
+    shared/log
     server/core/worker
     mmgr
     network_drivers/transport/tcp/client

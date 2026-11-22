@@ -26,7 +26,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The nonce beside the seed, and the two together as one platform draw.
 #define RNG_IV_LEN 8
@@ -36,12 +36,12 @@ PROTOCORE_BEGIN_DECLS
 // never leaves this file and no consumer can name it.
 //
 // Only what is not derivable: the budget spent since the last platform draw, and whether that draw
-// has happened. The seed, its nonce and the ratchet copy live at fixed offsets in the borrow, so
+// happened. The seed, its nonce and the ratchet copy live at fixed offsets in the borrow, so
 // macros compute them from the pointer rather than the context holding them.
 typedef struct
 {
     size_t drawn;      ///< bytes handed out since the last platform draw
-    proto_bool seeded; ///< whether the seed has been drawn from the platform
+    embed_bool seeded; ///< whether the seed has been drawn from the platform
 } RngCtx;
 
 // The caller's borrow, split: the budget, the seed, its nonce, the ratchet's replacement copy, then
@@ -67,7 +67,10 @@ static_assert(RNG_OFF_CTX % _Alignof(RngCtx) == 0,
 
 // The regions, at their offsets in the caller's borrow. The key and the nonce are adjacent, so one
 // platform draw of RNG_SEEDED_LEN bytes at RNG_KEY fills both.
-#define RNG_CTX(w) ((RngCtx *)(void *)((w) + RNG_OFF_CTX))
+#define RNG_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RngCtx *)(const void *)((w) + RNG_OFF_CTX),                                            \
+        default: (RngCtx *)(void *)((w) + RNG_OFF_CTX))
 #define RNG_KEY(w) ((w) + RNG_OFF_KEY)
 #define RNG_IV(w) ((w) + RNG_OFF_IV)
 #define RNG_NEXT(w) ((w) + RNG_OFF_NEXT)
@@ -94,7 +97,7 @@ static void rng_platform_seed(uint8_t *work)
     RngCtx *ctx = RNG_CTX(work);
     protocore_platform_rand_fill(RNG_KEY(work), RNG_SEEDED_LEN);
     ctx->drawn = 0;
-    ctx->seeded = PROTO_TRUE;
+    ctx->seeded = EMBED_TRUE;
 }
 
 // --- the program's shared generator, beside the namespace not on it ---------
@@ -120,7 +123,7 @@ uint8_t *protocore_rng_span(void)
 
 void protocore_rng_fill(uint8_t *work)
 {
-    RngV.ok = PROTO_FALSE;
+    RngV.ok = EMBED_FALSE;
     if (!RngV.fill_args.out || RngV.fill_args.len == 0)
     {
         return;
@@ -139,19 +142,19 @@ void protocore_rng_fill(uint8_t *work)
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = key, .src = next, .bytes = PROTOCORE_RAND_SEED_LEN);
     mmgr_zero_buf(next, PROTOCORE_RAND_SEED_LEN);
     ctx->drawn += len;
-    RngV.ok = PROTO_TRUE;
+    RngV.ok = EMBED_TRUE;
 }
 
 void protocore_rng_reseed(uint8_t *work)
 {
-    RngV.ok = PROTO_FALSE;
+    RngV.ok = EMBED_FALSE;
     rng_platform_seed(work);
-    RngV.ok = PROTO_TRUE;
+    RngV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 RngVars RngV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RNG

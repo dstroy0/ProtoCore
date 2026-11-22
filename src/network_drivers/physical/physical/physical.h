@@ -16,7 +16,7 @@
  * Bring-up runs in the backend the PROTOCORE_VENDOR_* selector compiled
  * (test/core_setup/physical/<vendor>/), reached through the seam declared below. Failover between
  * interfaces belongs to the stack, which reselects the default route when a link drops, so this
- * layer adds no manager and no tick: it reads the live default route each time it is asked which
+ * layer adds no manager and no tick. It reads the live default route each time it is asked which
  * interface carries outbound traffic (RFC 1122 sec 3.3.1.2 gateway selection).
  *
  * @author  Douglas Quigg (dstroy0)
@@ -42,7 +42,7 @@
 
 // A backend may be written in C++ (it drives the platform's own WiFi and Ethernet objects), so the
 // seam below carries C linkage and links against either language unchanged.
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // The L1 backend seam. Not the caller API: every name here is defined once per build, by the
@@ -58,10 +58,10 @@ PROTOCORE_BEGIN_DECLS
  * @param ssid     network SSID, null-terminated (IEEE 802.11-2020 9.4.2.2, at most 32 octets).
  * @param password WPA2 passphrase, null-terminated (IEEE 802.11i, not an IETF protocol).
  */
-proto_bool init_wifi_physical(const char *ssid, const char *password);
+embed_bool init_wifi_physical(const char *ssid, const char *password);
 
 /** @brief True when the station link is associated and holds an IPv4 address. */
-proto_bool wifi_ready(void);
+embed_bool wifi_ready(void);
 
 /**
  * @brief Start the radio in station mode without associating.
@@ -70,7 +70,7 @@ proto_bool wifi_ready(void);
  * radio to @p channel (1..14) when non-zero; 0 leaves the channel to a capture layer that sets its
  * own (services/radio/promisc).
  */
-proto_bool init_wifi_radio_physical(uint8_t channel);
+embed_bool init_wifi_radio_physical(uint8_t channel);
 
 /**
  * @brief Start a softAP, with AP and station coexistence so a station link runs alongside it.
@@ -78,7 +78,7 @@ proto_bool init_wifi_radio_physical(uint8_t channel);
  * @param ssid     softAP SSID, null-terminated.
  * @param password softAP passphrase, null-terminated; >= 8 characters for WPA2, "" for an open AP.
  */
-proto_bool init_wifi_ap_physical(const char *ssid, const char *password);
+embed_bool init_wifi_ap_physical(const char *ssid, const char *password);
 
 /**
  * @brief Start a wired Ethernet link (PROTOCORE_ENABLE_ETHERNET).
@@ -86,10 +86,10 @@ proto_bool init_wifi_ap_physical(const char *ssid, const char *password);
  * The PHY pins, type and clock come from the platform's own Ethernet build flags. Returns
  * immediately; poll eth_ready(). A wired route classifies as PROTOCORE_IF_ETH (RFC 894 framing).
  */
-proto_bool init_eth_physical(void);
+embed_bool init_eth_physical(void);
 
 /** @brief True when the wired link is up and holds an IPv4 address. */
-proto_bool eth_ready(void);
+embed_bool eth_ready(void);
 
 /**
  * @brief Enable dual IP layer operation on the WiFi interface (RFC 4213 sec 2, PROTOCORE_ENABLE_IPV6).
@@ -98,16 +98,16 @@ proto_bool eth_ready(void);
  * advertises a prefix, a global unicast address (RFC 4862). Returns immediately; poll
  * protocore_ipv6_ready().
  */
-proto_bool init_ipv6_physical(void);
+embed_bool init_ipv6_physical(void);
 
 /**
  * @brief The interface's global unicast IPv6 address (RFC 4291 sec 2.5.4).
  * @param[out] out receives the address with family PROTOCORE_IP_V6 when true is returned.
  */
-proto_bool net_global_ipv6(protocore_ip *out);
+embed_bool net_global_ipv6(protocore_ip *out);
 
 /** @brief True once a global unicast IPv6 address is configured. */
-proto_bool protocore_ipv6_ready(void);
+embed_bool protocore_ipv6_ready(void);
 
 /**
  * @brief Which interface carries outbound traffic (RFC 1122 sec 3.3.1.2).
@@ -133,7 +133,7 @@ int8_t protocore_net_rssi(void);
  * The station address, valid once the WiFi driver is up; a wired-only part reads back zeros. For
  * the address in use on the wire right now whatever the link type, use protocore_net_egress_mac().
  */
-proto_bool protocore_net_mac(uint8_t out[6]);
+embed_bool protocore_net_mac(uint8_t out[6]);
 
 /**
  * @brief Copy the hardware address of the current default-route interface into @p out (6 octets).
@@ -141,7 +141,7 @@ proto_bool protocore_net_mac(uint8_t out[6]);
  * Link-neutral: the Ethernet PHY's address on a wired route, the station address on a wireless one,
  * whichever interface protocore_net_egress_ip() reports. False when no route is up.
  */
-proto_bool protocore_net_egress_mac(uint8_t out[6]);
+embed_bool protocore_net_egress_mac(uint8_t out[6]);
 
 /**
  * @brief Copy the associated SSID into @p out, null-terminated.
@@ -176,12 +176,11 @@ protocore_if_kind protocore_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip,
  * ------------------------------------------------------------------------------------------ */
 
 /** @brief Radio power-save mode, in the library's own vocabulary (IEEE 802.11 power management). */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_PHY_PS_NONE = 0,      ///< Radio always on: lowest latency, highest average draw.
-    PROTOCORE_PHY_PS_MIN_MODEM = 1, ///< Wake on every DTIM beacon.
-    PROTOCORE_PHY_PS_MAX_MODEM = 2, ///< Wake on a longer listen interval: lowest draw, highest latency.
-} protocore_phy_ps;
+EMBED_ENUM_BYTE(protocore_phy_ps,
+                PROTOCORE_PHY_PS_NONE = 0,      ///< Radio always on: lowest latency, highest average draw.
+                PROTOCORE_PHY_PS_MIN_MODEM = 1, ///< Wake on every DTIM beacon.
+                PROTOCORE_PHY_PS_MAX_MODEM = 2, ///< Wake on a longer listen interval: lowest draw, highest latency.
+);
 
 /**
  * @brief One received frame, delivered in neutral terms.
@@ -197,7 +196,7 @@ typedef enum PROTO_ENUM_PACKED
 typedef void (*protocore_phy_frame_fn)(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
 
 /** @brief Apply a power-save mode. False when there is no radio backend. */
-proto_bool protocore_phy_ps_set(protocore_phy_ps mode);
+embed_bool protocore_phy_ps_set(protocore_phy_ps mode);
 
 /** @brief The active power-save mode (PROTOCORE_PHY_PS_NONE when unsupported). */
 protocore_phy_ps protocore_phy_ps_get(void);
@@ -206,10 +205,10 @@ protocore_phy_ps protocore_phy_ps_get(void);
  * @brief Cap transmit power.
  * @param dbm maximum transmit power in whole dBm; the backend converts to its own unit.
  */
-proto_bool protocore_phy_tx_power_set(int8_t dbm);
+embed_bool protocore_phy_tx_power_set(int8_t dbm);
 
 /** @brief Enter monitor mode on @p channel, delivering frames to @p cb. */
-proto_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb);
+embed_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb);
 
 /** @brief Retune monitor mode to @p channel. */
 void protocore_phy_monitor_set_channel(uint8_t channel);
@@ -226,7 +225,7 @@ void protocore_phy_monitor_end(void);
  *
  * @return false when monitor mode is not running or the frame is empty.
  */
-proto_bool protocore_phy_mock_deliver(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
+embed_bool protocore_phy_mock_deliver(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
 #endif
 
 // ---------------------------------------------------------------------------
@@ -242,7 +241,7 @@ proto_bool protocore_phy_mock_deliver(const uint8_t *frame, uint16_t len, int8_t
  * @brief Put @p len octets on interface @p if_id.
  * @return true if the interface accepted them; false drops.
  */
-typedef proto_bool (*protocore_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
+typedef embed_bool (*protocore_if_send_fn)(uint8_t if_id, const uint8_t *data, uint16_t len, void *ctx);
 
 /** @brief No interface. Reported by PhysicalNs::iface_at for an empty row. */
 #define PROTOCORE_IF_NONE (-1)
@@ -335,7 +334,7 @@ typedef struct
     PhysicalReadArgs read;
     PhysicalRouteArgs route;
     PhysicalIfaceArgs iface;
-    proto_bool ok;
+    embed_bool ok;
     protocore_if_kind if_kind;
     uint32_t u32;
     size_t n;
@@ -350,24 +349,24 @@ extern PhysicalVars PhysicalV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const wifi_init)(uint8_t *work);
-    void (*const wifi_ready)(uint8_t *work);
-    void (*const wifi_radio_init)(uint8_t *work);
-    void (*const wifi_ap_init)(uint8_t *work);
-    void (*const wifi_ssid)(uint8_t *work);
-    void (*const wifi_channel)(uint8_t *work);
-    void (*const wifi_rssi)(uint8_t *work);
-    void (*const wifi_ap_ip)(uint8_t *work);
-    void (*const wifi_mac)(uint8_t *work);
-    void (*const eth_init)(uint8_t *work);
-    void (*const eth_ready)(uint8_t *work);
-    void (*const ip6_init)(uint8_t *work);
-    void (*const ip6_global)(uint8_t *work);
-    void (*const ip6_ready)(uint8_t *work);
-    void (*const egress)(uint8_t *work);
-    void (*const egress_ip)(uint8_t *work);
-    void (*const egress_mac)(uint8_t *work);
-    void (*const classify_ip)(uint8_t *work);
+    void (*const wifi_init)(const uint8_t *work);
+    void (*const wifi_ready)(const uint8_t *work);
+    void (*const wifi_radio_init)(const uint8_t *work);
+    void (*const wifi_ap_init)(const uint8_t *work);
+    void (*const wifi_ssid)(const uint8_t *work);
+    void (*const wifi_channel)(const uint8_t *work);
+    void (*const wifi_rssi)(const uint8_t *work);
+    void (*const wifi_ap_ip)(const uint8_t *work);
+    void (*const wifi_mac)(const uint8_t *work);
+    void (*const eth_init)(const uint8_t *work);
+    void (*const eth_ready)(const uint8_t *work);
+    void (*const ip6_init)(const uint8_t *work);
+    void (*const ip6_global)(const uint8_t *work);
+    void (*const ip6_ready)(const uint8_t *work);
+    void (*const egress)(const uint8_t *work);
+    void (*const egress_ip)(const uint8_t *work);
+    void (*const egress_mac)(const uint8_t *work);
+    void (*const classify_ip)(const uint8_t *work);
     void (*const iface_add)(uint8_t *work);
     void (*const iface_reset)(uint8_t *work);
     void (*const iface_present)(uint8_t *work);
@@ -379,24 +378,24 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PhysicalV or a region of the borrow at a fixed offset.
-void protocore_physical_wifi_init(uint8_t *work);
-void protocore_physical_wifi_ready(uint8_t *work);
-void protocore_physical_wifi_radio_init(uint8_t *work);
-void protocore_physical_wifi_ap_init(uint8_t *work);
-void protocore_physical_wifi_ssid(uint8_t *work);
-void protocore_physical_wifi_channel(uint8_t *work);
-void protocore_physical_wifi_rssi(uint8_t *work);
-void protocore_physical_wifi_ap_ip(uint8_t *work);
-void protocore_physical_wifi_mac(uint8_t *work);
-void protocore_physical_eth_init(uint8_t *work);
-void protocore_physical_eth_ready(uint8_t *work);
-void protocore_physical_ip6_init(uint8_t *work);
-void protocore_physical_ip6_global(uint8_t *work);
-void protocore_physical_ip6_ready(uint8_t *work);
-void protocore_physical_egress(uint8_t *work);
-void protocore_physical_egress_ip(uint8_t *work);
-void protocore_physical_egress_mac(uint8_t *work);
-void protocore_physical_classify_ip(uint8_t *work);
+void protocore_physical_wifi_init(const uint8_t *work);
+void protocore_physical_wifi_ready(const uint8_t *work);
+void protocore_physical_wifi_radio_init(const uint8_t *work);
+void protocore_physical_wifi_ap_init(const uint8_t *work);
+void protocore_physical_wifi_ssid(const uint8_t *work);
+void protocore_physical_wifi_channel(const uint8_t *work);
+void protocore_physical_wifi_rssi(const uint8_t *work);
+void protocore_physical_wifi_ap_ip(const uint8_t *work);
+void protocore_physical_wifi_mac(const uint8_t *work);
+void protocore_physical_eth_init(const uint8_t *work);
+void protocore_physical_eth_ready(const uint8_t *work);
+void protocore_physical_ip6_init(const uint8_t *work);
+void protocore_physical_ip6_global(const uint8_t *work);
+void protocore_physical_ip6_ready(const uint8_t *work);
+void protocore_physical_egress(const uint8_t *work);
+void protocore_physical_egress_ip(const uint8_t *work);
+void protocore_physical_egress_mac(const uint8_t *work);
+void protocore_physical_classify_ip(const uint8_t *work);
 void protocore_physical_iface_add(uint8_t *work);
 void protocore_physical_iface_reset(uint8_t *work);
 void protocore_physical_iface_present(uint8_t *work);
@@ -449,54 +448,54 @@ static const PhysicalNs Physical __attribute__((unused)) = {
 uint8_t *protocore_physical_span(void);
 
 /** @brief Physical.wifi_ready as an expression, for a bring-up loop to wait on. */
-PROTOCORE_INLINE proto_bool protocore_physical_wifi_up(void)
+EMBED_INLINE embed_bool protocore_physical_wifi_up(void)
 {
     Physical.wifi_ready(protocore_physical_span());
     return PhysicalV.ok;
 }
 
 /** @brief Physical.eth_ready as an expression, for a bring-up loop to wait on. */
-PROTOCORE_INLINE proto_bool protocore_physical_eth_up(void)
+EMBED_INLINE embed_bool protocore_physical_eth_up(void)
 {
     Physical.eth_ready(protocore_physical_span());
     return PhysicalV.ok;
 }
 
 /** @brief Physical.egress_ip as an expression: the address a sketch prints once its link is up. */
-PROTOCORE_INLINE uint32_t protocore_physical_egress_ipv4(void)
+EMBED_INLINE uint32_t protocore_physical_egress_ipv4(void)
 {
     Physical.egress_ip(protocore_physical_span());
     return PhysicalV.u32;
 }
 
 /** @brief Physical.egress as an expression: the kind of interface the default route leaves on. */
-PROTOCORE_INLINE protocore_if_kind protocore_physical_egress_kind(void)
+EMBED_INLINE protocore_if_kind protocore_physical_egress_kind(void)
 {
     Physical.egress(protocore_physical_span());
     return PhysicalV.if_kind;
 }
 
 /** @brief Physical.wifi_rssi as an expression: the station's received signal strength, in dBm. */
-PROTOCORE_INLINE int8_t protocore_physical_rssi(void)
+EMBED_INLINE int8_t protocore_physical_rssi(void)
 {
     Physical.wifi_rssi(protocore_physical_span());
     return PhysicalV.i8;
 }
 
 /** @brief Physical.wifi_channel as an expression: the 802.11 channel the radio is on. */
-PROTOCORE_INLINE uint8_t protocore_physical_channel(void)
+EMBED_INLINE uint8_t protocore_physical_channel(void)
 {
     Physical.wifi_channel(protocore_physical_span());
     return PhysicalV.u8;
 }
 
 /** @brief Physical.wifi_ap_ip as an expression: the softAP IPv4, network byte order; 0 if it is down. */
-PROTOCORE_INLINE uint32_t protocore_physical_ap_ipv4(void)
+EMBED_INLINE uint32_t protocore_physical_ap_ipv4(void)
 {
     Physical.wifi_ap_ip(protocore_physical_span());
     return PhysicalV.u32;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif

@@ -136,11 +136,11 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32])
     return b.n;
 }
 
-static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
+static embed_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
 {
     if (len < 44)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t o = 4 + 2 + 32;
     uint8_t sid = sh[o++];
@@ -148,7 +148,7 @@ static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
     o += 2 + 1;
     if (o + 2 > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
     o += 2;
@@ -160,11 +160,11 @@ static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
         if (et == 0x0033 && el >= 4 + 32)
         {
             memcpy(pub, sh + o + 4, 32);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         o += el;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)
@@ -283,7 +283,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
         TEST_ASSERT_TRUE(crl > 0);
         uint8_t inner[512];
         DtlsCiphertext info;
-        proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &srv_read, exp_seq, flight + off, crl, inner,
+        embed_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &srv_read, exp_seq, flight + off, crl, inner,
                                                          sizeof(inner), &info, NULL, 0);
         TEST_ASSERT_TRUE(dtls_record_ok);
         exp_seq = info.seq + 1;
@@ -364,7 +364,7 @@ void test_coap_over_dtls(void)
 
     uint8_t coap_resp[256];
     DtlsCiphertext info;
-    proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &cli_app_read, 1, out, (size_t)on, coap_resp,
+    embed_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &cli_app_read, 1, out, (size_t)on, coap_resp,
                                                      sizeof(coap_resp), &info, NULL, 0);
     TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);

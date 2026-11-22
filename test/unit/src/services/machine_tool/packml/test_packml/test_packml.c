@@ -173,7 +173,7 @@ void test_stop_is_legal_everywhere_but_the_stop_and_abort_branches(void)
     for (int v = PACK_ML_STATE_CLEARING; v <= PACK_ML_STATE_COMPLETE; v++)
     {
         PackMlState s = (PackMlState)v;
-        proto_bool exempt = (s == PACK_ML_STATE_ABORTING || s == PACK_ML_STATE_ABORTED || s == PACK_ML_STATE_STOPPING ||
+        embed_bool exempt = (s == PACK_ML_STATE_ABORTING || s == PACK_ML_STATE_ABORTED || s == PACK_ML_STATE_STOPPING ||
                              s == PACK_ML_STATE_STOPPED || s == PACK_ML_STATE_CLEARING);
         PackMlState want = exempt ? s : PACK_ML_STATE_STOPPING;
         TEST_ASSERT_EQUAL_INT_MESSAGE(want, protocore_packml_command(s, PACK_ML_COMMAND_STOP),
@@ -188,8 +188,8 @@ void test_clear_and_reset_are_state_specific(void)
     for (int v = PACK_ML_STATE_CLEARING; v <= PACK_ML_STATE_COMPLETE; v++)
     {
         PackMlState s = (PackMlState)v;
-        proto_bool want_clear = (s == PACK_ML_STATE_ABORTED);
-        proto_bool want_reset = (s == PACK_ML_STATE_STOPPED || s == PACK_ML_STATE_COMPLETE);
+        embed_bool want_clear = (s == PACK_ML_STATE_ABORTED);
+        embed_bool want_reset = (s == PACK_ML_STATE_STOPPED || s == PACK_ML_STATE_COMPLETE);
         TEST_ASSERT_EQUAL_INT_MESSAGE(want_clear, protocore_packml_command_valid(s, PACK_ML_COMMAND_CLEAR),
                                       protocore_packml_state_name(s));
         TEST_ASSERT_EQUAL_INT_MESSAGE(want_reset, protocore_packml_command_valid(s, PACK_ML_COMMAND_RESET),
@@ -207,7 +207,7 @@ void test_illegal_commands_leave_the_state_unchanged(void)
             PackMlState s = (PackMlState)v;
             PackMlCommand cmd = (PackMlCommand)c;
             PackMlState got = protocore_packml_command(s, cmd);
-            proto_bool changed = (got != s);
+            embed_bool changed = (got != s);
             TEST_ASSERT_EQUAL_INT_MESSAGE(changed, protocore_packml_command_valid(s, cmd),
                                           protocore_packml_command_name(cmd));
         }
@@ -292,7 +292,7 @@ void test_service_follows_the_engine(void)
 void test_service_counts_only_while_executing(void)
 {
     protocore_packml_svc_init(PACK_ML_MODE_PRODUCING);
-    protocore_packml_svc_count(PROTO_FALSE); // Stopped: ignored
+    protocore_packml_svc_count(EMBED_FALSE); // Stopped: ignored
     PackMlStatus st;
     protocore_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(0u, st.prod_processed);
@@ -301,9 +301,9 @@ void test_service_counts_only_while_executing(void)
     protocore_packml_svc_state_complete();
     TEST_ASSERT_TRUE(protocore_packml_svc_command(PACK_ML_COMMAND_START));
     protocore_packml_svc_state_complete();
-    protocore_packml_svc_count(PROTO_FALSE);
-    protocore_packml_svc_count(PROTO_TRUE);
-    protocore_packml_svc_count(PROTO_FALSE);
+    protocore_packml_svc_count(EMBED_FALSE);
+    protocore_packml_svc_count(EMBED_TRUE);
+    protocore_packml_svc_count(EMBED_FALSE);
     protocore_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(3u, st.prod_processed);
     TEST_ASSERT_EQUAL_UINT32(1u, st.prod_defective);
@@ -311,7 +311,7 @@ void test_service_counts_only_while_executing(void)
     // ending the run leaves Execute, so a further unit is not counted
     TEST_ASSERT_TRUE(protocore_packml_svc_complete_run());
     TEST_ASSERT_EQUAL_INT(PACK_ML_STATE_COMPLETING, protocore_packml_svc_state());
-    protocore_packml_svc_count(PROTO_FALSE);
+    protocore_packml_svc_count(EMBED_FALSE);
     protocore_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(3u, st.prod_processed);
     TEST_ASSERT_FALSE(protocore_packml_svc_complete_run()); // not in Execute any more

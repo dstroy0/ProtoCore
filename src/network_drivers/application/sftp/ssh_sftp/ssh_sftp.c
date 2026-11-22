@@ -40,7 +40,7 @@
 // buffer serves every session - none of them outlives the request that fills it.
 typedef struct
 {
-    proto_bool registered;
+    embed_bool registered;
     // The root this server works through, bound once in begin(). It is a handle, not a path: this
     // file cannot name where storage begins, and holding the handle is what lets SCP land on a card
     // while SFTP serves a RAM pool.
@@ -77,7 +77,10 @@ static_assert(SSH_SFTP_OFF_CTX % _Alignof(SshSftpCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_SFTP_CTX(w) ((SshSftpCtx *)(void *)((w) + SSH_SFTP_OFF_CTX))
+#define SSH_SFTP_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshSftpCtx *)(const void *)((w) + SSH_SFTP_OFF_CTX),                                   \
+        default: (SshSftpCtx *)(void *)((w) + SSH_SFTP_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -106,7 +109,7 @@ static_assert(PROTOCORE_SFTP_MAX_HANDLES > 0 && PROTOCORE_SFTP_MAX_HANDLES <= 32
               "the open-handle set is one 32-bit word, one bit per handle");
 #define PROTOCORE_SFTP_HANDLE_BITS ((uint32_t)(((uint64_t)1 << PROTOCORE_SFTP_MAX_HANDLES) - 1u))
 
-static proto_bool handle_open(const SftpSession *s, int h)
+static embed_bool handle_open(const SftpSession *s, int h)
 {
     return h >= 0 && h < PROTOCORE_SFTP_MAX_HANDLES && (s->open_mask & (1u << h)) != 0;
 }
@@ -119,7 +122,7 @@ static void free_handle(SftpSession *s, int h)
     Fs.io.handle = s->handles[h].fh; // the bit is what says fh is real, so it needs no second marker
     Fs.close(protocore_filesystem_span());
     s->open_mask &= ~(1u << h);
-    s->handles[h].has_pending = PROTO_FALSE;
+    s->handles[h].has_pending = EMBED_FALSE;
 }
 static void free_all_handles(SftpSession *s)
 {
@@ -129,13 +132,13 @@ static void free_all_handles(SftpSession *s)
         free_handle(s, __builtin_ctz(s->open_mask));
     }
 }
-static int alloc_handle(SftpSession *s)
+static int alloc_handle(const SftpSession *s)
 {
     uint32_t free_bits = ~s->open_mask & PROTOCORE_SFTP_HANDLE_BITS;
-    return (free_bits == 0) ? -1 : (int)__builtin_ctz(free_bits);
+    return (free_bits == 0) ? -1 : __builtin_ctz(free_bits);
 }
 // A handle string is our 4-byte big-endian table index. @return the valid index, or -1.
-static int handle_index(SftpSession *s, const uint8_t *h, uint32_t hl)
+static int handle_index(const SftpSession *s, const uint8_t *h, uint32_t hl)
 {
     if (hl != 4)
     {
@@ -192,7 +195,7 @@ static void send_resp(uint8_t *work, SftpSession *s, size_t n)
         SshConnectionV.chan.slot = s->slot;
         SshConnectionV.chan.channel = s->channel;
         SshConnection.channel_send_close(protocore_ssh_connection_span());
-        s->active = PROTO_FALSE;
+        s->active = EMBED_FALSE;
     }
 }
 static void send_status(uint8_t *work, SftpSession *s, uint32_t id, uint32_t code, const char *msg)
@@ -233,7 +236,7 @@ static void write_stream_bytes(SftpSession *s, const uint8_t *data, size_t n)
         Fs.write(protocore_filesystem_span());
         if (Fs.i32 != (int)n)
         {
-            s->wr_err = PROTO_TRUE;
+            s->wr_err = EMBED_TRUE;
         }
     }
     s->wr_off += n;
@@ -243,7 +246,7 @@ static void finish_write(uint8_t *work, SftpSession *s)
 {
     send_status(work, s, s->wr_id, s->wr_err ? PROTOCORE_SSH_FX_FAILURE : PROTOCORE_SSH_FX_OK,
                 s->wr_err ? "write failed" : "");
-    s->writing = PROTO_FALSE;
+    s->writing = EMBED_FALSE;
 }
 
 // --- READDIR --------------------------------------------------------------------------------------
@@ -321,7 +324,7 @@ static void do_readdir(uint8_t *work, SftpSession *s, uint32_t id, SftpHandle *H
         SftpV.wr_bytes_args.b = H->pend;
         SftpV.wr_bytes_args.n = H->pend_len;
         Sftp.wr_bytes(work);
-        H->has_pending = PROTO_FALSE;
+        H->has_pending = EMBED_FALSE;
         count++;
     }
     while (!H->readdir_done)
@@ -334,7 +337,7 @@ static void do_readdir(uint8_t *work, SftpSession *s, uint32_t id, SftpHandle *H
         Fs.readdir(protocore_filesystem_span());
         if (!Fs.ok)
         {
-            H->readdir_done = PROTO_TRUE;
+            H->readdir_done = EMBED_TRUE;
             break;
         }
         size_t el = build_entry(work, &st, SSH_SFTP_CTX(work)->nm,
@@ -360,7 +363,7 @@ static void do_readdir(uint8_t *work, SftpSession *s, uint32_t id, SftpHandle *H
             {
                 EMBED_CALL(memor.cpy, MemoriaCfg, .dst = H->pend, .src = SSH_SFTP_CTX(work)->ent, .bytes = el);
                 H->pend_len = (uint16_t)el;
-                H->has_pending = PROTO_TRUE;
+                H->has_pending = EMBED_TRUE;
             }
             break;
         }
@@ -456,7 +459,7 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
             send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        proto_bool writing = (pflags & PROTOCORE_SSH_FXF_WRITE) != 0;
+        embed_bool writing = (pflags & PROTOCORE_SSH_FXF_WRITE) != 0;
         protocore_mnt_mode mode = !writing                              ? PROTOCORE_MNT_READ
                                   : (pflags & PROTOCORE_SSH_FXF_APPEND) ? PROTOCORE_MNT_APPEND
                                                                         : PROTOCORE_MNT_WRITE;
@@ -482,7 +485,7 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
             Fs.path.name = "";
             Fs.io.stat = &st;
             Fs.stat(protocore_filesystem_span());
-            proto_bool is_dir = Fs.ok && st.is_dir;
+            embed_bool is_dir = Fs.ok && st.is_dir;
             // NO_SUCH_FILE only for a plain read that found nothing - that is the one case a client
             // acts on differently. A directory, or any failed write, is FAILURE.
             send_status(work, s, id, (is_dir || writing) ? PROTOCORE_SSH_FX_FAILURE : PROTOCORE_SSH_FX_NO_SUCH_FILE,
@@ -490,10 +493,10 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
             return;
         }
         s->open_mask |= (1u << hi);
-        s->handles[hi].is_dir = PROTO_FALSE;
+        s->handles[hi].is_dir = EMBED_FALSE;
         s->handles[hi].fh = fh;
-        s->handles[hi].readdir_done = PROTO_FALSE;
-        s->handles[hi].has_pending = PROTO_FALSE;
+        s->handles[hi].readdir_done = EMBED_FALSE;
+        s->handles[hi].has_pending = EMBED_FALSE;
         keep_req(&s->handles[hi], req);
         send_handle(work, s, id, hi);
         return;
@@ -602,10 +605,10 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
             return;
         }
         s->open_mask |= (1u << hi);
-        s->handles[hi].is_dir = PROTO_TRUE;
+        s->handles[hi].is_dir = EMBED_TRUE;
         s->handles[hi].fh = fh;
-        s->handles[hi].readdir_done = PROTO_FALSE;
-        s->handles[hi].has_pending = PROTO_FALSE;
+        s->handles[hi].readdir_done = EMBED_FALSE;
+        s->handles[hi].has_pending = EMBED_FALSE;
         keep_req(&s->handles[hi], req);
         send_handle(work, s, id, hi);
         return;
@@ -680,7 +683,7 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
         }
         int hi = handle_index(s, h, hl);
         protocore_mnt_stat st = {0};
-        proto_bool stat_ok = PROTO_FALSE;
+        embed_bool stat_ok = EMBED_FALSE;
         if (hi >= 0)
         {
             Fs.path.root = SSH_SFTP_CTX(work)->root;
@@ -830,7 +833,7 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
         a.permissions = PROTOCORE_SFTP_S_IFDIR | 0755;
         a.size = 0;
         a.atime = a.mtime = 0;
-        SftpV.format_longname_args.is_dir = PROTO_TRUE;
+        SftpV.format_longname_args.is_dir = EMBED_TRUE;
         SftpV.format_longname_args.perms = a.permissions;
         SftpV.format_longname_args.size = 0;
         SftpV.format_longname_args.mtime = 0;
@@ -850,7 +853,7 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
     }
     case PROTOCORE_SSH_FXP_SETSTAT:
     case PROTOCORE_SSH_FXP_FSETSTAT:
-        // We do not implement chmod/chown/truncate-via-setstat; accept it (OK) so `put` does not fail on the
+        // We do not implement chmod/chown/truncate-via-setstat. Accept it (OK) so `put` does not fail on the
         // trailing FSETSTAT that sets mode/mtime - the values are simply not applied.
         send_status(work, s, id, PROTOCORE_SSH_FX_OK, "");
         return;
@@ -863,18 +866,18 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
 // --- framing loop ---------------------------------------------------------------------------------
 // Consume complete packets from the accumulator. A WRITE switches to streaming mode. @return false to tear the
 // channel down (malformed / oversized non-WRITE packet).
-static proto_bool process_acc(uint8_t *work, SftpSession *s)
+static embed_bool process_acc(uint8_t *work, SftpSession *s)
 {
     for (;;)
     {
         if (s->acc_len < 5)
         {
-            return PROTO_TRUE; // need the length prefix + the type byte
+            return EMBED_TRUE; // need the length prefix + the type byte
         }
         uint32_t plen = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = s->acc, .width = MMGR_ENDIAN_32);
         if (plen == 0)
         {
-            return PROTO_FALSE; // malformed
+            return EMBED_FALSE; // malformed
         }
         size_t total = (size_t)plen + 4;
         uint8_t type = s->acc[4];
@@ -899,7 +902,7 @@ static proto_bool process_acc(uint8_t *work, SftpSession *s)
             Sftp.rd_string(work);
             if (!SftpV.ok)
             {
-                return PROTO_TRUE; // the handle has not fully arrived - wait
+                return EMBED_TRUE; // the handle has not fully arrived - wait
             }
             SftpV.rd_u64_args.r = &r;
             Sftp.rd_u64(work);
@@ -909,7 +912,7 @@ static proto_bool process_acc(uint8_t *work, SftpSession *s)
             uint32_t datalen = SftpV.u32;
             if (!r.ok)
             {
-                return PROTO_TRUE; // the WRITE header has not fully arrived - wait
+                return EMBED_TRUE; // the WRITE header has not fully arrived - wait
             }
 
             int hi = handle_index(s, h, hl);
@@ -924,7 +927,7 @@ static proto_bool process_acc(uint8_t *work, SftpSession *s)
                 Fs.io.off = off;
                 Fs.seek(protocore_filesystem_span());
             }
-            s->writing = PROTO_TRUE;
+            s->writing = EMBED_TRUE;
 
             size_t hdr = 4 + r.off; // header bytes of this packet (before the data payload)
             size_t have = s->acc_len - hdr;
@@ -940,18 +943,18 @@ static proto_bool process_acc(uint8_t *work, SftpSession *s)
             }
             if (s->writing)
             {
-                return PROTO_TRUE; // still streaming - the rest arrives as raw channel data
+                return EMBED_TRUE; // still streaming - the rest arrives as raw channel data
             }
             continue; // write finished within the accumulator; process the next packet
         }
 
         if (total > sizeof(s->acc))
         {
-            return PROTO_FALSE; // a non-WRITE packet larger than the buffer -> drop the channel
+            return EMBED_FALSE; // a non-WRITE packet larger than the buffer -> drop the channel
         }
         if (s->acc_len < total)
         {
-            return PROTO_TRUE; // wait for the rest
+            return EMBED_TRUE; // wait for the rest
         }
         handle_packet(work, s, s->acc, total);
         EMBED_CALL(memor.move_down, MemoriaCfg, .dst = s->acc, .src = s->acc + total, .bytes = s->acc_len - total);
@@ -968,11 +971,11 @@ static void protocore_sftp_on_open(uint8_t slot, uint32_t channel)
     }
     SftpSession *s = &sftp_sess[slot];
     free_all_handles(s); // clean any handles lingering from a prior session on this slot
-    s->active = PROTO_TRUE;
+    s->active = EMBED_TRUE;
     s->slot = slot;
     s->channel = channel;
     s->acc_len = 0;
-    s->writing = PROTO_FALSE;
+    s->writing = EMBED_FALSE;
     s->wr_remaining = 0;
     s->wr_handle = -1;
     // The SFTP VERSION reply is sent when the client's INIT packet arrives.
@@ -1013,7 +1016,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
             SshConnectionV.chan.slot = slot;
             SshConnectionV.chan.channel = s->channel; // a non-WRITE packet too big to buffer
             SshConnection.channel_send_close(protocore_ssh_connection_span());
-            s->active = PROTO_FALSE;
+            s->active = EMBED_FALSE;
             return;
         }
         size_t take = len < space ? len : space;
@@ -1026,7 +1029,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
             SshConnectionV.chan.slot = slot;
             SshConnectionV.chan.channel = s->channel;
             SshConnection.channel_send_close(protocore_ssh_connection_span());
-            s->active = PROTO_FALSE;
+            s->active = EMBED_FALSE;
             return;
         }
     }
@@ -1044,7 +1047,7 @@ void protocore_ssh_sftp_begin(uint8_t *work)
 
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
-        sftp_sess[i].active = PROTO_FALSE;
+        sftp_sess[i].active = EMBED_FALSE;
         // Close whatever a previous run left open, then the table is empty. BSS starts the mask at
         // zero, so a first call closes nothing - it never mistakes handle 0 for an open file.
         free_all_handles(&sftp_sess[i]);
@@ -1055,7 +1058,7 @@ void protocore_ssh_sftp_begin(uint8_t *work)
         SshConnection.set_sftp_open_cb(protocore_ssh_connection_span());
         SshConnectionV.sftp_data_cb = protocore_sftp_on_data;
         SshConnection.set_sftp_data_cb(protocore_ssh_connection_span());
-        SSH_SFTP_CTX(work)->registered = PROTO_TRUE;
+        SSH_SFTP_CTX(work)->registered = EMBED_TRUE;
     }
 }
 

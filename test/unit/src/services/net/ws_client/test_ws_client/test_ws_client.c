@@ -63,7 +63,7 @@ static size_t build_handshake(uint8_t *out, size_t cap, const char *host, const 
 // a writable buffer: a case that supplies its own expected value copies it in here first.
 static char g_expect[64];
 
-static proto_bool check_response(const char *response, const char *accept)
+static embed_bool check_response(const char *response, const char *accept)
 {
     WsClientV.buf.in = (const uint8_t *)response;
     WsClientV.buf.avail = strlen(response);
@@ -94,7 +94,7 @@ static size_t build_frame(uint8_t *out, size_t cap, uint8_t opcode, const uint8_
     return WsClientV.n;
 }
 
-static proto_bool parse_frame(const uint8_t *in, size_t avail)
+static embed_bool parse_frame(const uint8_t *in, size_t avail)
 {
     WsClientV.buf.in = in;
     WsClientV.buf.avail = avail;
@@ -361,7 +361,7 @@ void test_rfc6455_64kib_frame(void)
     TEST_ASSERT_EQUAL_size_t(65546, WsClientV.frame.consumed);
 }
 
-// A frame is delivered only once all of it has arrived: an announced length longer than what is
+// A frame is delivered only once all of it arrived: an announced length longer than what is
 // present is refused, in the short form and in both extended forms.
 void test_parse_refuses_an_incomplete_frame(void)
 {
@@ -475,7 +475,7 @@ void test_transport_reports_no_connection(void)
 
     WsClientV.handshake.host = "example.com";
     WsClientV.handshake.port = 80;
-    WsClientV.handshake.secure = PROTO_FALSE;
+    WsClientV.handshake.secure = EMBED_FALSE;
     WsClientV.handshake.resource_name = "/";
     WsClient.connect(ws_client_work());
     TEST_ASSERT_FALSE(WsClientV.ok);

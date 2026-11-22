@@ -15,7 +15,7 @@
  *    STX collision the low-priority station yields. The "R" variant appends a BCC - the longitudinal XOR
  *    (even parity) of every character of the block after STX, i.e. the stuffed data and the terminating
  *    DLE ETX. A payload byte equal to DLE (0x10) is doubled (transparency); a doubled DLE contributes
- *    0x10 ^ 0x10 = 0 to the XOR, so it does not change the BCC.
+ *    0x10 ^ 0x10 = 0 to the XOR. So it does not change the BCC.
  *
  *  - **RK512** - fixed-header request/reaction telegrams carried as the 3964R block payload: SEND (write
  *    words to the partner) and FETCH (read words from the partner), addressing a data block / flag / I-O
@@ -37,7 +37,7 @@
 
 #if PROTOCORE_ENABLE_SIMATIC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_SIMATIC_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -54,13 +54,12 @@ PROTOCORE_BEGIN_DECLS
 #define SIMATIC_MAX_CONN_RETRY 6
 
 /** @brief Link state (one job in flight; half-duplex). */
-typedef enum PROTO_ENUM_PACKED
-{
-    SIMATIC3964_STATE_IDLE,          ///< nothing in flight
-    SIMATIC3964_STATE_TX_AWAIT_CONN, ///< sent STX, awaiting the partner's connect DLE (QVZ)
-    SIMATIC3964_STATE_TX_AWAIT_END,  ///< sent the block, awaiting the partner's end DLE / NAK (QVZ)
-    SIMATIC3964_STATE_RX_COLLECT     ///< replied DLE to a partner STX, collecting the block (ZVZ per-char)
-} Simatic3964State;
+EMBED_ENUM_BYTE(Simatic3964State,
+                SIMATIC3964_STATE_IDLE,          ///< nothing in flight
+                SIMATIC3964_STATE_TX_AWAIT_CONN, ///< sent STX, awaiting the partner's connect DLE (QVZ)
+                SIMATIC3964_STATE_TX_AWAIT_END,  ///< sent the block, awaiting the partner's end DLE / NAK (QVZ)
+                SIMATIC3964_STATE_RX_COLLECT     ///< replied DLE to a partner STX, collecting the block (ZVZ per-char)
+);
 
 /** @brief Sink for one outbound byte (the state machine writes to the UART through this). */
 typedef void (*Simatic3964TxFn)(void *user, uint8_t byte);
@@ -75,8 +74,8 @@ typedef void (*Simatic3964RxFn)(void *user, const uint8_t *data, size_t len);
 typedef struct
 {
     Simatic3964State state;
-    proto_bool high_priority; ///< the priority bit; on an STX collision the low-priority side yields to receive
-    proto_bool with_bcc;      ///< the "R" (BCC) variant
+    embed_bool high_priority; ///< the priority bit; on an STX collision the low-priority side yields to receive
+    embed_bool with_bcc;      ///< the "R" (BCC) variant
     Simatic3964TxFn tx;       ///< outbound-byte sink
     Simatic3964RxFn rx;       ///< received-block delivery
     void *user;               ///< passed to tx / rx
@@ -89,30 +88,28 @@ typedef struct
     uint8_t block_retries; ///< block resends this connection (max 6)
     uint8_t conn_retries;  ///< connection reattempts (max 6)
     uint32_t deadline_ms;  ///< QVZ (handshake) / ZVZ (inter-char) expiry
-    proto_bool prev_dle;   ///< rx terminator scan: previous rx byte was an un-paired DLE
-    proto_bool await_bcc;  ///< rx: DLE ETX seen, the next byte is the BCC (R variant)
+    embed_bool prev_dle;   ///< rx terminator scan: previous rx byte was an un-paired DLE
+    embed_bool await_bcc;  ///< rx: DLE ETX seen, the next byte is the BCC (R variant)
 } Simatic3964Ctx;
 
 /** @brief RK512 job / telegram identifier (the "Kennung" command byte). */
-typedef enum PROTO_ENUM_PACKED
-{
-    RK512_CMD_SEND = 0x00,    ///< write words to the partner
-    RK512_CMD_FETCH = 0x01,   ///< read words from the partner
-    RK512_CMD_REACTION = 0x02 ///< the partner's reaction (acknowledge) telegram
-} Rk512Cmd;
+EMBED_ENUM_BYTE(Rk512Cmd,
+                RK512_CMD_SEND = 0x00,    ///< write words to the partner
+                RK512_CMD_FETCH = 0x01,   ///< read words from the partner
+                RK512_CMD_REACTION = 0x02 ///< the partner's reaction (acknowledge) telegram
+);
 
 /** @brief RK512 memory area code (the operand area a job addresses). */
-typedef enum PROTO_ENUM_PACKED
-{
-    RK512_AREA_DB = 0x01, ///< data block (DBNR selects which)
-    RK512_AREA_DX = 0x02, ///< extended data block
-    RK512_AREA_MB = 0x03, ///< flag / marker (M)
-    RK512_AREA_EB = 0x04, ///< process input image (E)
-    RK512_AREA_AB = 0x05, ///< process output image (A)
-    RK512_AREA_PB = 0x06, ///< peripheral / I-O
-    RK512_AREA_ZB = 0x07, ///< counter (Z)
-    RK512_AREA_TB = 0x08  ///< timer (T)
-} Rk512Area;
+EMBED_ENUM_BYTE(Rk512Area,
+                RK512_AREA_DB = 0x01, ///< data block (DBNR selects which)
+                RK512_AREA_DX = 0x02, ///< extended data block
+                RK512_AREA_MB = 0x03, ///< flag / marker (M)
+                RK512_AREA_EB = 0x04, ///< process input image (E)
+                RK512_AREA_AB = 0x05, ///< process output image (A)
+                RK512_AREA_PB = 0x06, ///< peripheral / I-O
+                RK512_AREA_ZB = 0x07, ///< counter (Z)
+                RK512_AREA_TB = 0x08  ///< timer (T)
+);
 
 /** @brief A decoded RK512 header. */
 typedef struct
@@ -138,7 +135,7 @@ typedef struct
     size_t cap;
     const uint8_t *data;
     size_t len;
-    proto_bool with_bcc;
+    embed_bool with_bcc;
 } SimaticBuildBlock3964rArgs;
 
 /** @brief What parse_block_3964r takes: buf, len, with_bcc, out, ... */
@@ -146,7 +143,7 @@ typedef struct
 {
     const uint8_t *buf;
     size_t len;
-    proto_bool with_bcc;
+    embed_bool with_bcc;
     uint8_t *out;    ///< receives the de-stuffed payload
     size_t out_cap;  ///< capacity of out
     size_t *out_len; ///< receives the payload length
@@ -156,8 +153,8 @@ typedef struct
 typedef struct
 {
     Simatic3964Ctx *ctx;
-    proto_bool high_priority;
-    proto_bool with_bcc;
+    embed_bool high_priority;
+    embed_bool with_bcc;
     Simatic3964TxFn tx;
     Simatic3964RxFn rx;
     void *user;
@@ -302,7 +299,7 @@ typedef struct
     SimaticBuildReactionRk512Args build_reaction_rk512_args;
     SimaticParseHeaderRk512Args parse_header_rk512_args;
     SimaticParseReactionRk512Args parse_reaction_rk512_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     size_t n;
 } SimaticVars;
@@ -313,36 +310,36 @@ extern SimaticVars SimaticV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const bcc_3964r)(uint8_t *work);
+    void (*const bcc_3964r)(const uint8_t *work);
     void (*const build_block_3964r)(uint8_t *work);
     void (*const parse_block_3964r)(uint8_t *work);
-    void (*const init_3964r)(uint8_t *work);
+    void (*const init_3964r)(const uint8_t *work);
     void (*const send_3964r)(uint8_t *work);
     void (*const rx_byte_3964r)(uint8_t *work);
-    void (*const tick_3964r)(uint8_t *work);
-    void (*const idle_3964r)(uint8_t *work);
-    void (*const build_send_rk512)(uint8_t *work);
-    void (*const build_fetch_rk512)(uint8_t *work);
-    void (*const build_reaction_rk512)(uint8_t *work);
-    void (*const parse_header_rk512)(uint8_t *work);
-    void (*const parse_reaction_rk512)(uint8_t *work);
+    void (*const tick_3964r)(const uint8_t *work);
+    void (*const idle_3964r)(const uint8_t *work);
+    void (*const build_send_rk512)(const uint8_t *work);
+    void (*const build_fetch_rk512)(const uint8_t *work);
+    void (*const build_reaction_rk512)(const uint8_t *work);
+    void (*const parse_header_rk512)(const uint8_t *work);
+    void (*const parse_reaction_rk512)(const uint8_t *work);
 } SimaticNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SimaticV or a region of the borrow at a fixed offset.
-void protocore_simatic_bcc_3964r(uint8_t *work);
+void protocore_simatic_bcc_3964r(const uint8_t *work);
 void protocore_simatic_build_block_3964r(uint8_t *work);
 void protocore_simatic_parse_block_3964r(uint8_t *work);
-void protocore_simatic_init_3964r(uint8_t *work);
+void protocore_simatic_init_3964r(const uint8_t *work);
 void protocore_simatic_send_3964r(uint8_t *work);
 void protocore_simatic_rx_byte_3964r(uint8_t *work);
-void protocore_simatic_tick_3964r(uint8_t *work);
-void protocore_simatic_idle_3964r(uint8_t *work);
-void protocore_simatic_build_send_rk512(uint8_t *work);
-void protocore_simatic_build_fetch_rk512(uint8_t *work);
-void protocore_simatic_build_reaction_rk512(uint8_t *work);
-void protocore_simatic_parse_header_rk512(uint8_t *work);
-void protocore_simatic_parse_reaction_rk512(uint8_t *work);
+void protocore_simatic_tick_3964r(const uint8_t *work);
+void protocore_simatic_idle_3964r(const uint8_t *work);
+void protocore_simatic_build_send_rk512(const uint8_t *work);
+void protocore_simatic_build_fetch_rk512(const uint8_t *work);
+void protocore_simatic_build_reaction_rk512(const uint8_t *work);
+void protocore_simatic_parse_header_rk512(const uint8_t *work);
+void protocore_simatic_parse_reaction_rk512(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -375,7 +372,7 @@ static const SimaticNs Simatic __attribute__((unused)) = {
  */
 uint8_t *protocore_simatic_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SIMATIC
 

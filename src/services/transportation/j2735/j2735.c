@@ -12,7 +12,7 @@
 
 #include "services/transportation/j2735/j2735.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap)
 {
@@ -30,7 +30,7 @@ void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap)
     }
 }
 
-size_t protocore_uper_writer_finish(UperWriter *w)
+size_t protocore_uper_writer_finish(const UperWriter *w)
 {
     if (!w->ok)
     {
@@ -47,7 +47,7 @@ void protocore_uper_put_bits(UperWriter *w, uint32_t value, unsigned nbits)
     }
     if (w->bit_pos + nbits > w->cap * 8)
     {
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     for (unsigned i = 0; i < nbits; i++)
@@ -62,7 +62,7 @@ void protocore_uper_put_bits(UperWriter *w, uint32_t value, unsigned nbits)
     w->bit_pos += nbits;
 }
 
-void protocore_uper_put_bool(UperWriter *w, proto_bool v)
+void protocore_uper_put_bool(UperWriter *w, embed_bool v)
 {
     protocore_uper_put_bits(w, v ? 1 : 0, 1);
 }
@@ -110,7 +110,7 @@ uint32_t protocore_uper_get_bits(UperReader *r, unsigned nbits)
     }
     if (r->bit_pos + nbits > r->nbits)
     {
-        r->ok = PROTO_FALSE;
+        r->ok = EMBED_FALSE;
         return 0;
     }
     uint32_t v = 0;
@@ -124,7 +124,7 @@ uint32_t protocore_uper_get_bits(UperReader *r, unsigned nbits)
     return v;
 }
 
-proto_bool protocore_uper_get_bool(UperReader *r)
+embed_bool protocore_uper_get_bool(UperReader *r)
 {
     return protocore_uper_get_bits(r, 1) != 0;
 }
@@ -159,11 +159,11 @@ size_t protocore_j2735_bsm_core_encode(const J2735BsmCore *c, uint8_t *out, size
     return protocore_uper_writer_finish(&w);
 }
 
-proto_bool protocore_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c)
+embed_bool protocore_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c)
 {
     if (!in || !c)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     UperReader r;
     protocore_uper_reader_init(&r, in, len * 8);
@@ -197,19 +197,19 @@ size_t protocore_j2735_spat_encode(const J2735MovementState *states, size_t coun
     return protocore_uper_writer_finish(&w);
 }
 
-proto_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
+embed_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
                                        size_t *out_count)
 {
     if (!in || !out_states || !out_count)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     UperReader r;
     protocore_uper_reader_init(&r, in, len * 8);
     size_t count = (size_t)protocore_uper_get_cint(&r, 0, 31);
     if (!r.ok || count > max_states)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < count; i++)
     {
@@ -220,10 +220,10 @@ proto_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735Movem
     }
     if (!r.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out_count = count;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735Lane *lanes, size_t count, uint8_t *out,
@@ -249,12 +249,12 @@ size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735
     return protocore_uper_writer_finish(&w);
 }
 
-proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
+embed_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
                                       size_t max_lanes, size_t *out_count)
 {
     if (!in || !isect || !out_lanes || !out_count)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     UperReader r;
     protocore_uper_reader_init(&r, in, len * 8);
@@ -264,7 +264,7 @@ proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapInt
     size_t count = (size_t)protocore_uper_get_cint(&r, 0, 31);
     if (!r.ok || count > max_lanes)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < count; i++)
     {
@@ -275,12 +275,12 @@ proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapInt
     }
     if (!r.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out_count = count;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_J2735

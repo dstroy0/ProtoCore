@@ -27,7 +27,7 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @name X.690 sec 8.1.2 identifier octets: the universal tags this profile reads.
  *  @{ */
@@ -105,7 +105,7 @@ typedef struct
     DerReadArgs read_args;
     DerOidArgs oid_args;
     DerTlv tlv;
-    proto_bool ok;
+    embed_bool ok;
     uint64_t u64;
 } DerVars;
 
@@ -115,7 +115,7 @@ extern DerVars DerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const read)(uint8_t *work);
+    void (*const read)(const uint8_t *work);
     void (*const enter)(uint8_t *work);
     void (*const uint)(uint8_t *work);
     void (*const bitstring)(uint8_t *work);
@@ -125,7 +125,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DerV or a region of the borrow at a fixed offset.
-void protocore_der_read(uint8_t *work);
+void protocore_der_read(const uint8_t *work);
 void protocore_der_enter(uint8_t *work);
 void protocore_der_uint(uint8_t *work);
 void protocore_der_bitstring(uint8_t *work);
@@ -145,6 +145,6 @@ static const DerNs Der __attribute__((unused)) = {
     .time = protocore_der_time,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_DER_H

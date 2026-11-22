@@ -193,7 +193,7 @@ static void crypto_bench_task(void *)
                     protocore_secure_release(_m);
                 } while (0));
             // The block alone, against a context already keyed - what the code does now. The difference
-            // between these two is what keeping the context actually buys; the block itself is required
+            // between these two is what keeping the context actually buys. The block itself is required
             // work and a single HW-AES ECB carries real per-call setup.
             static uint8_t hpws[PROTOCORE_WORK_AES128] __attribute__((aligned(8)));
             protocore_aes128_init(reinterpret_cast<protocore_aes128 *>(hpws), hp16);

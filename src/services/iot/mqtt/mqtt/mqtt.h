@@ -40,7 +40,7 @@
 
 #if PROTOCORE_ENABLE_MQTT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -60,23 +60,22 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief MQTT Control Packet type, byte 1 bits 7-4 (MQTT 3.1.1 sec 2.2.1, Table 2.1). */
-typedef enum PROTO_ENUM_PACKED
-{
-    MQTT_CONNECT = 1,      ///< Client request to connect to a Server
-    MQTT_CONNACK = 2,      ///< Connect acknowledgment
-    MQTT_PUBLISH = 3,      ///< Publish message
-    MQTT_PUBACK = 4,       ///< Publish acknowledgment
-    MQTT_PUBREC = 5,       ///< Publish received (QoS 2 publish received, part 1)
-    MQTT_PUBREL = 6,       ///< Publish release (QoS 2 publish received, part 2)
-    MQTT_PUBCOMP = 7,      ///< Publish complete (QoS 2 publish received, part 3)
-    MQTT_SUBSCRIBE = 8,    ///< Client subscribe request
-    MQTT_SUBACK = 9,       ///< Subscribe acknowledgment
-    MQTT_UNSUBSCRIBE = 10, ///< Unsubscribe request
-    MQTT_UNSUBACK = 11,    ///< Unsubscribe acknowledgment
-    MQTT_PINGREQ = 12,     ///< PING request
-    MQTT_PINGRESP = 13,    ///< PING response
-    MQTT_DISCONNECT = 14,  ///< Client is disconnecting
-} MqttType;
+EMBED_ENUM_BYTE(MqttType,
+                MQTT_CONNECT = 1,      ///< Client request to connect to a Server
+                MQTT_CONNACK = 2,      ///< Connect acknowledgment
+                MQTT_PUBLISH = 3,      ///< Publish message
+                MQTT_PUBACK = 4,       ///< Publish acknowledgment
+                MQTT_PUBREC = 5,       ///< Publish received (QoS 2 publish received, part 1)
+                MQTT_PUBREL = 6,       ///< Publish release (QoS 2 publish received, part 2)
+                MQTT_PUBCOMP = 7,      ///< Publish complete (QoS 2 publish received, part 3)
+                MQTT_SUBSCRIBE = 8,    ///< Client subscribe request
+                MQTT_SUBACK = 9,       ///< Subscribe acknowledgment
+                MQTT_UNSUBSCRIBE = 10, ///< Unsubscribe request
+                MQTT_UNSUBACK = 11,    ///< Unsubscribe acknowledgment
+                MQTT_PINGREQ = 12,     ///< PING request
+                MQTT_PINGRESP = 13,    ///< PING response
+                MQTT_DISCONNECT = 14,  ///< Client is disconnecting
+);
 
 /** @brief Where an inbound PUBLISH's Topic Name and Payload are delivered (MQTT 3.1.1 sec 3.3). */
 typedef void (*MqttMessageCb)(const char *topic_name, const uint8_t *payload, size_t payload_len);
@@ -86,7 +85,7 @@ typedef struct
 {
     const char *host;   ///< the Server's name; read on every connect step, so it outlives the call
     uint16_t port;      ///< its TCP port
-    proto_bool use_tls; ///< the Network Connection runs over TLS (`mqtts://`)
+    embed_bool use_tls; ///< the Network Connection runs over TLS (`mqtts://`)
 } MqttServerArgs;
 
 /**
@@ -101,7 +100,7 @@ typedef struct
     const char *user_name;    ///< User Name (sec 3.1.3.4), or null for none
     const char *password;     ///< Password (sec 3.1.3.5), or null for none
     uint16_t keep_alive;      ///< Keep Alive seconds (sec 3.1.2.10); 0 turns the mechanism off
-    proto_bool clean_session; ///< Clean Session (sec 3.1.2.4)
+    embed_bool clean_session; ///< Clean Session (sec 3.1.2.4)
 } MqttSessionArgs;
 
 /**
@@ -115,7 +114,7 @@ typedef struct
     const uint8_t *message; ///< Will Message (sec 3.1.3.3); may be null when @c message_len is 0
     size_t message_len;     ///< its octet count
     uint8_t qos;            ///< Will QoS, 0 to 2 (sec 3.1.2.6)
-    proto_bool retain;      ///< Will Retain (sec 3.1.2.7)
+    embed_bool retain;      ///< Will Retain (sec 3.1.2.7)
 } MqttWillArgs;
 
 /**
@@ -133,8 +132,8 @@ typedef struct
     const uint8_t *payload; ///< Payload a build writes, or where a parse found it inside @c in (sec 3.3.3)
     size_t payload_len;     ///< its octet count
     uint8_t qos;            ///< QoS level, 0 to 2 (sec 3.3.1.2)
-    proto_bool retain;      ///< RETAIN (sec 3.3.1.3)
-    proto_bool dup;         ///< DUP, set on a re-delivery (sec 3.3.1.1)
+    embed_bool retain;      ///< RETAIN (sec 3.3.1.3)
+    embed_bool dup;         ///< DUP, set on a re-delivery (sec 3.3.1.1)
 } MqttPublishArgs;
 
 /** @brief MQTT 3.1.1 sec 3.8.3, sec 3.10.3: the Topic Filter a SUBSCRIBE or UNSUBSCRIBE names. */
@@ -258,7 +257,7 @@ typedef struct
  * @c delivery.on_message and run the QoS 1 and QoS 2 acknowledgement flows, re-deliver unacknowledged
  * in-flight messages, and send PINGREQ when Keep Alive is due (sec 3.1.2.10). Call once per loop().
  * False once the Network Connection is gone.
- * @var MqttNs::connected  true while the Server has accepted the CONNECT
+ * @var MqttNs::connected  true while the Server accepted the CONNECT
  * @var MqttNs::disconnect
  * Send DISCONNECT and close the Network Connection (sec 3.14).
  */
@@ -272,11 +271,11 @@ typedef struct
     MqttPacketArgs packet;     ///< the fixed header a build stamps or a parse reads
     MqttBufArgs buf;           ///< the octets a codec call moves
     MqttDeliveryArgs delivery; ///< where an inbound Application Message is handed on
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     int32_t i32;
     uint8_t u8;
-    proto_bool session_present;
+    embed_bool session_present;
 } MqttVars;
 
 /** @brief The operands and the outcome. */
@@ -285,54 +284,54 @@ extern MqttVars MqttV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_remaining_length)(uint8_t *work);
-    void (*const decode_remaining_length)(uint8_t *work);
-    void (*const build_connect)(uint8_t *work);
-    void (*const build_publish)(uint8_t *work);
-    void (*const build_subscribe)(uint8_t *work);
-    void (*const build_unsubscribe)(uint8_t *work);
-    void (*const build_ack)(uint8_t *work);
-    void (*const build_pingreq)(uint8_t *work);
-    void (*const build_disconnect)(uint8_t *work);
-    void (*const parse_fixed_header)(uint8_t *work);
+    void (*const encode_remaining_length)(const uint8_t *work);
+    void (*const decode_remaining_length)(const uint8_t *work);
+    void (*const build_connect)(const uint8_t *work);
+    void (*const build_publish)(const uint8_t *work);
+    void (*const build_subscribe)(const uint8_t *work);
+    void (*const build_unsubscribe)(const uint8_t *work);
+    void (*const build_ack)(const uint8_t *work);
+    void (*const build_pingreq)(const uint8_t *work);
+    void (*const build_disconnect)(const uint8_t *work);
+    void (*const parse_fixed_header)(const uint8_t *work);
     void (*const parse_publish)(uint8_t *work);
-    void (*const parse_ack)(uint8_t *work);
-    void (*const parse_connack)(uint8_t *work);
-    void (*const parse_suback)(uint8_t *work);
-    void (*const on_message)(uint8_t *work);
-    void (*const connect)(uint8_t *work);
-    void (*const publish)(uint8_t *work);
-    void (*const subscribe)(uint8_t *work);
-    void (*const unsubscribe)(uint8_t *work);
-    void (*const loop)(uint8_t *work);
-    void (*const connected)(uint8_t *work);
-    void (*const disconnect)(uint8_t *work);
+    void (*const parse_ack)(const uint8_t *work);
+    void (*const parse_connack)(const uint8_t *work);
+    void (*const parse_suback)(const uint8_t *work);
+    void (*const on_message)(const uint8_t *work);
+    void (*const connect)(const uint8_t *work);
+    void (*const publish)(const uint8_t *work);
+    void (*const subscribe)(const uint8_t *work);
+    void (*const unsubscribe)(const uint8_t *work);
+    void (*const loop)(const uint8_t *work);
+    void (*const connected)(const uint8_t *work);
+    void (*const disconnect)(const uint8_t *work);
 } MqttNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MqttV or a region of the borrow at a fixed offset.
-void protocore_mqtt_encode_remaining_length(uint8_t *work);
-void protocore_mqtt_decode_remaining_length(uint8_t *work);
-void protocore_mqtt_build_connect(uint8_t *work);
-void protocore_mqtt_build_publish(uint8_t *work);
-void protocore_mqtt_build_subscribe(uint8_t *work);
-void protocore_mqtt_build_unsubscribe(uint8_t *work);
-void protocore_mqtt_build_ack(uint8_t *work);
-void protocore_mqtt_build_pingreq(uint8_t *work);
-void protocore_mqtt_build_disconnect(uint8_t *work);
-void protocore_mqtt_parse_fixed_header(uint8_t *work);
+void protocore_mqtt_encode_remaining_length(const uint8_t *work);
+void protocore_mqtt_decode_remaining_length(const uint8_t *work);
+void protocore_mqtt_build_connect(const uint8_t *work);
+void protocore_mqtt_build_publish(const uint8_t *work);
+void protocore_mqtt_build_subscribe(const uint8_t *work);
+void protocore_mqtt_build_unsubscribe(const uint8_t *work);
+void protocore_mqtt_build_ack(const uint8_t *work);
+void protocore_mqtt_build_pingreq(const uint8_t *work);
+void protocore_mqtt_build_disconnect(const uint8_t *work);
+void protocore_mqtt_parse_fixed_header(const uint8_t *work);
 void protocore_mqtt_parse_publish(uint8_t *work);
-void protocore_mqtt_parse_ack(uint8_t *work);
-void protocore_mqtt_parse_connack(uint8_t *work);
-void protocore_mqtt_parse_suback(uint8_t *work);
-void protocore_mqtt_on_message(uint8_t *work);
-void protocore_mqtt_connect(uint8_t *work);
-void protocore_mqtt_publish(uint8_t *work);
-void protocore_mqtt_subscribe(uint8_t *work);
-void protocore_mqtt_unsubscribe(uint8_t *work);
-void protocore_mqtt_loop(uint8_t *work);
-void protocore_mqtt_connected(uint8_t *work);
-void protocore_mqtt_disconnect(uint8_t *work);
+void protocore_mqtt_parse_ack(const uint8_t *work);
+void protocore_mqtt_parse_connack(const uint8_t *work);
+void protocore_mqtt_parse_suback(const uint8_t *work);
+void protocore_mqtt_on_message(const uint8_t *work);
+void protocore_mqtt_connect(const uint8_t *work);
+void protocore_mqtt_publish(const uint8_t *work);
+void protocore_mqtt_subscribe(const uint8_t *work);
+void protocore_mqtt_unsubscribe(const uint8_t *work);
+void protocore_mqtt_loop(const uint8_t *work);
+void protocore_mqtt_connected(const uint8_t *work);
+void protocore_mqtt_disconnect(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -376,7 +375,7 @@ static const MqttNs Mqtt __attribute__((unused)) = {
 uint8_t *protocore_mqtt_span(void);
 #endif // PROTOCORE_HAS_NET_STACK
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MQTT
 

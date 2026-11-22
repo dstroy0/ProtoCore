@@ -124,7 +124,7 @@ void test_memory_area_write_octets(void)
 }
 
 // RUN (0401) carries the program number 0xFFFF (all programs) then the one-octet mode code; STOP
-// (0402) carries no parameters at all, so it is header + MRC + SRC = 12 octets.
+// (0402) carries no parameters at all. So it is header + MRC + SRC = 12 octets.
 void test_operating_mode_commands(void)
 {
     FinsHeader h = master_header();
@@ -211,7 +211,7 @@ void test_header_round_trip(void)
 
 // A response inserts a two-octet end code between the echoed command code and the data. MRES = 0
 // and SRES = 0 is the only normal completion; anything else is an error the caller must see
-// verbatim rather than have folded into a single flag.
+// verbatim rather than folded into a single flag.
 void test_response_end_code(void)
 {
     static const uint8_t OK[16] = {

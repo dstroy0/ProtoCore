@@ -78,7 +78,7 @@ void test_bcc_covers_stuffed_data_and_terminator(void)
     SimaticV.build_block_3964r_args.cap = sizeof(buf);
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     size_t n = SimaticV.n;
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
@@ -116,7 +116,7 @@ void test_block_without_bcc_ends_at_dle_etx(void)
     SimaticV.build_block_3964r_args.cap = sizeof(buf);
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_FALSE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_FALSE;
     Simatic.build_block_3964r(protocore_simatic_span());
     size_t n = SimaticV.n;
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
@@ -136,7 +136,7 @@ void test_block_round_trip_is_transparent(void)
     {
         for (int r = 0; r < 2; r++)
         {
-            proto_bool with_bcc = r ? PROTO_TRUE : PROTO_FALSE;
+            embed_bool with_bcc = r ? EMBED_TRUE : EMBED_FALSE;
             uint8_t blk[32];
             uint8_t out[16];
             size_t olen = 0;
@@ -197,12 +197,12 @@ void test_parse_refuses_a_wrong_bcc(void)
     SimaticV.build_block_3964r_args.cap = sizeof(blk);
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     size_t n = SimaticV.n;
     SimaticV.parse_block_3964r_args.buf = blk;
     SimaticV.parse_block_3964r_args.len = n;
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = out;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -211,7 +211,7 @@ void test_parse_refuses_a_wrong_bcc(void)
     blk[n - 1] ^= 0xFF;
     SimaticV.parse_block_3964r_args.buf = blk;
     SimaticV.parse_block_3964r_args.len = n;
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = out;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -229,7 +229,7 @@ void test_parse_refuses_bad_framing(void)
     static const uint8_t DANGLING[] = {0x41, SIMATIC_DLE};
     SimaticV.parse_block_3964r_args.buf = DANGLING;
     SimaticV.parse_block_3964r_args.len = sizeof(DANGLING);
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_FALSE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_FALSE;
     SimaticV.parse_block_3964r_args.out = out;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -239,7 +239,7 @@ void test_parse_refuses_bad_framing(void)
     static const uint8_t ILLEGAL[] = {0x41, SIMATIC_DLE, SIMATIC_STX, SIMATIC_DLE, SIMATIC_ETX};
     SimaticV.parse_block_3964r_args.buf = ILLEGAL;
     SimaticV.parse_block_3964r_args.len = sizeof(ILLEGAL);
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_FALSE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_FALSE;
     SimaticV.parse_block_3964r_args.out = out;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -249,7 +249,7 @@ void test_parse_refuses_bad_framing(void)
     static const uint8_t NO_END[] = {0x41, 0x42, 0x43};
     SimaticV.parse_block_3964r_args.buf = NO_END;
     SimaticV.parse_block_3964r_args.len = sizeof(NO_END);
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_FALSE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_FALSE;
     SimaticV.parse_block_3964r_args.out = out;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -259,7 +259,7 @@ void test_parse_refuses_bad_framing(void)
     static const uint8_t NO_BCC[] = {0x41, SIMATIC_DLE, SIMATIC_ETX};
     SimaticV.parse_block_3964r_args.buf = NO_BCC;
     SimaticV.parse_block_3964r_args.len = sizeof(NO_BCC);
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = out;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -277,7 +277,7 @@ void test_bounds_are_refusals_not_truncations(void)
     SimaticV.build_block_3964r_args.cap = sizeof(blk);
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     size_t n = SimaticV.n;
 
@@ -285,7 +285,7 @@ void test_bounds_are_refusals_not_truncations(void)
     size_t olen = 0;
     SimaticV.parse_block_3964r_args.buf = blk;
     SimaticV.parse_block_3964r_args.len = n;
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = small;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(small);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -298,14 +298,14 @@ void test_bounds_are_refusals_not_truncations(void)
     SimaticV.build_block_3964r_args.cap = sizeof(tight);
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     TEST_ASSERT_EQUAL_UINT(7u, SimaticV.n);
     SimaticV.build_block_3964r_args.buf = tight;
     SimaticV.build_block_3964r_args.cap = 6;
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     TEST_ASSERT_EQUAL_UINT(0u, SimaticV.n);
 
@@ -313,19 +313,19 @@ void test_bounds_are_refusals_not_truncations(void)
     SimaticV.build_block_3964r_args.cap = 16;
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     TEST_ASSERT_EQUAL_UINT(0u, SimaticV.n);
     SimaticV.build_block_3964r_args.buf = blk;
     SimaticV.build_block_3964r_args.cap = sizeof(blk);
     SimaticV.build_block_3964r_args.data = NULL;
     SimaticV.build_block_3964r_args.len = 4;
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     TEST_ASSERT_EQUAL_UINT(0u, SimaticV.n);
     SimaticV.parse_block_3964r_args.buf = NULL;
     SimaticV.parse_block_3964r_args.len = 4;
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = small;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(small);
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -333,7 +333,7 @@ void test_bounds_are_refusals_not_truncations(void)
     TEST_ASSERT_FALSE(SimaticV.ok);
     SimaticV.parse_block_3964r_args.buf = blk;
     SimaticV.parse_block_3964r_args.len = n;
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = NULL;
     SimaticV.parse_block_3964r_args.out_cap = 4;
     SimaticV.parse_block_3964r_args.out_len = &olen;
@@ -341,7 +341,7 @@ void test_bounds_are_refusals_not_truncations(void)
     TEST_ASSERT_FALSE(SimaticV.ok);
     SimaticV.parse_block_3964r_args.buf = blk;
     SimaticV.parse_block_3964r_args.len = n;
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = small;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(small);
     SimaticV.parse_block_3964r_args.out_len = NULL;
@@ -360,8 +360,8 @@ void test_send_handshake_order(void)
     Simatic3964Ctx ctx;
     static const uint8_t DATA[] = {0x41, 0x42};
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -404,8 +404,8 @@ void test_receive_acks_and_delivers(void)
     static const uint8_t DATA[] = {0x41, SIMATIC_DLE, 0x42};
     uint8_t blk[16];
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_FALSE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_FALSE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -415,7 +415,7 @@ void test_receive_acks_and_delivers(void)
     SimaticV.build_block_3964r_args.cap = sizeof(blk);
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     size_t n = SimaticV.n;
     SimaticV.rx_byte_3964r_args.ctx = &ctx;
@@ -449,8 +449,8 @@ void test_receive_naks_a_bad_bcc(void)
     static const uint8_t DATA[] = {0x41, 0x42};
     uint8_t blk[16];
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_FALSE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_FALSE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -460,7 +460,7 @@ void test_receive_naks_a_bad_bcc(void)
     SimaticV.build_block_3964r_args.cap = sizeof(blk);
     SimaticV.build_block_3964r_args.data = DATA;
     SimaticV.build_block_3964r_args.len = sizeof(DATA);
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     size_t n = SimaticV.n;
     blk[n - 1] ^= 0x01;
@@ -490,8 +490,8 @@ void test_priority_arbitration_on_an_stx_collision(void)
     Simatic3964Ctx low;
     static const uint8_t DATA[] = {0x41};
     SimaticV.init_3964r_args.ctx = &low;
-    SimaticV.init_3964r_args.high_priority = PROTO_FALSE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_FALSE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -512,8 +512,8 @@ void test_priority_arbitration_on_an_stx_collision(void)
     setUp();
     Simatic3964Ctx high;
     SimaticV.init_3964r_args.ctx = &high;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -538,8 +538,8 @@ void test_block_nak_retries_are_bounded(void)
     Simatic3964Ctx ctx;
     static const uint8_t DATA[] = {0x41};
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -588,8 +588,8 @@ void test_qvz_timeout_retries_then_gives_up(void)
     Simatic3964Ctx ctx;
     static const uint8_t DATA[] = {0x41};
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -625,8 +625,8 @@ void test_zvz_inter_character_timeout_naks(void)
 {
     Simatic3964Ctx ctx;
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_FALSE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_FALSE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -664,8 +664,8 @@ void test_send_refuses_when_busy_or_unframeable(void)
     memset(big, 0x41, sizeof(big));
 
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -684,8 +684,8 @@ void test_send_refuses_when_busy_or_unframeable(void)
     TEST_ASSERT_FALSE(SimaticV.ok);
 
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -704,8 +704,8 @@ void test_init_is_idle_and_null_callbacks_are_safe(void)
     Simatic3964Ctx ctx;
     static const uint8_t DATA[] = {0x41};
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = NULL;
     SimaticV.init_3964r_args.rx = NULL;
     SimaticV.init_3964r_args.user = NULL;
@@ -738,8 +738,8 @@ void test_tick_while_idle_does_nothing(void)
 {
     Simatic3964Ctx ctx;
     SimaticV.init_3964r_args.ctx = &ctx;
-    SimaticV.init_3964r_args.high_priority = PROTO_TRUE;
-    SimaticV.init_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.init_3964r_args.high_priority = EMBED_TRUE;
+    SimaticV.init_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.init_3964r_args.tx = cap_tx;
     SimaticV.init_3964r_args.rx = cap_rx;
     SimaticV.init_3964r_args.user = NULL;
@@ -1071,13 +1071,13 @@ void test_rk512_telegram_survives_3964r_framing(void)
     SimaticV.build_block_3964r_args.cap = sizeof(blk);
     SimaticV.build_block_3964r_args.data = tel;
     SimaticV.build_block_3964r_args.len = tn;
-    SimaticV.build_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.build_block_3964r_args.with_bcc = EMBED_TRUE;
     Simatic.build_block_3964r(protocore_simatic_span());
     size_t bn = SimaticV.n;
     TEST_ASSERT_NOT_EQUAL(0, bn);
     SimaticV.parse_block_3964r_args.buf = blk;
     SimaticV.parse_block_3964r_args.len = bn;
-    SimaticV.parse_block_3964r_args.with_bcc = PROTO_TRUE;
+    SimaticV.parse_block_3964r_args.with_bcc = EMBED_TRUE;
     SimaticV.parse_block_3964r_args.out = out;
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;

@@ -54,12 +54,12 @@ void test_rfc9111_4_2_1_first_match(void)
     cc.s_maxage = 600;
     cc.max_age = 60;
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = 3600;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(600, (int)HttpcacheV.value);
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_FALSE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_FALSE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = 3600;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(60, (int)HttpcacheV.value);
@@ -69,12 +69,12 @@ void test_rfc9111_4_2_1_first_match(void)
     Httpcache.control_init(httpcache_work);
     cc.max_age = 60;
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = 3600;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(60, (int)HttpcacheV.value);
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_FALSE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_FALSE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = 3600;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(60, (int)HttpcacheV.value);
@@ -83,7 +83,7 @@ void test_rfc9111_4_2_1_first_match(void)
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = 3600;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(3600, (int)HttpcacheV.value);
@@ -92,12 +92,12 @@ void test_rfc9111_4_2_1_first_match(void)
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = -1;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(-1, (int)HttpcacheV.value);
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_FALSE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_FALSE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = -1;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(-1, (int)HttpcacheV.value);
@@ -107,7 +107,7 @@ void test_rfc9111_4_2_1_first_match(void)
     Httpcache.control_init(httpcache_work);
     cc.max_age = 0;
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_FALSE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_FALSE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = 3600;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(0, (int)HttpcacheV.value);
@@ -118,7 +118,7 @@ void test_rfc9111_4_2_1_first_match(void)
     cc.s_maxage = 0;
     cc.max_age = 60;
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = 3600;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(0, (int)HttpcacheV.value);
@@ -169,34 +169,34 @@ void test_build_emits_the_grammar(void)
 
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    cc.no_store = PROTO_TRUE;
+    cc.no_store = EMBED_TRUE;
     TEST_ASSERT_EQUAL_STRING("no-store", build(&cc));
 
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    cc.cc_public = PROTO_TRUE;
+    cc.cc_public = EMBED_TRUE;
     cc.max_age = 31536000;
-    cc.cc_immutable = PROTO_TRUE;
+    cc.cc_immutable = EMBED_TRUE;
     TEST_ASSERT_EQUAL_STRING("public, max-age=31536000, immutable", build(&cc));
 
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    cc.cc_private = PROTO_TRUE;
-    cc.no_cache = PROTO_TRUE;
-    cc.must_revalidate = PROTO_TRUE;
+    cc.cc_private = EMBED_TRUE;
+    cc.no_cache = EMBED_TRUE;
+    cc.must_revalidate = EMBED_TRUE;
     TEST_ASSERT_EQUAL_STRING("private, no-cache, must-revalidate", build(&cc));
 
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    cc.cc_public = PROTO_TRUE;
+    cc.cc_public = EMBED_TRUE;
     cc.max_age = 0;
     TEST_ASSERT_EQUAL_STRING("public, max-age=0", build(&cc));
 
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    cc.no_transform = PROTO_TRUE;
-    cc.must_understand = PROTO_TRUE;
-    cc.proxy_revalidate = PROTO_TRUE;
+    cc.no_transform = EMBED_TRUE;
+    cc.must_understand = EMBED_TRUE;
+    cc.proxy_revalidate = EMBED_TRUE;
     TEST_ASSERT_EQUAL_STRING("proxy-revalidate, no-transform, must-understand", build(&cc));
 
     // The RFC 5861 extensions.
@@ -210,7 +210,7 @@ void test_build_emits_the_grammar(void)
     // The request-side directives of sec 5.2.1.
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    cc.only_if_cached = PROTO_TRUE;
+    cc.only_if_cached = EMBED_TRUE;
     cc.max_stale = 10;
     cc.min_fresh = 5;
     TEST_ASSERT_EQUAL_STRING("only-if-cached, max-stale=10, min-fresh=5", build(&cc));
@@ -230,9 +230,9 @@ void test_build_reports_its_own_length(void)
     protocore_cache_control cc;
     HttpcacheV.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    cc.cc_public = PROTO_TRUE;
+    cc.cc_public = EMBED_TRUE;
     cc.max_age = 31536000;
-    cc.cc_immutable = PROTO_TRUE;
+    cc.cc_immutable = EMBED_TRUE;
 
     HttpcacheV.control_build_args.buf = g_buf;
     HttpcacheV.control_build_args.cap = sizeof(g_buf);
@@ -367,12 +367,12 @@ void test_build_parse_round_trip(void)
     protocore_cache_control out;
     HttpcacheV.control_init_args.cc = &out;
     Httpcache.control_init(httpcache_work);
-    out.cc_public = PROTO_TRUE;
-    out.no_transform = PROTO_TRUE;
-    out.must_revalidate = PROTO_TRUE;
-    out.proxy_revalidate = PROTO_TRUE;
-    out.must_understand = PROTO_TRUE;
-    out.cc_immutable = PROTO_TRUE;
+    out.cc_public = EMBED_TRUE;
+    out.no_transform = EMBED_TRUE;
+    out.must_revalidate = EMBED_TRUE;
+    out.proxy_revalidate = EMBED_TRUE;
+    out.must_understand = EMBED_TRUE;
+    out.cc_immutable = EMBED_TRUE;
     out.max_age = 300;
     out.s_maxage = 900;
     out.stale_while_revalidate = 60;
@@ -439,12 +439,12 @@ void test_presets_match_their_documented_directives(void)
     Httpcache.shared(httpcache_work);
     TEST_ASSERT_EQUAL_STRING("public, max-age=60, s-maxage=600", build(&cc));
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = -1;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(600, (int)HttpcacheV.value);
     HttpcacheV.freshness_lifetime_args.cc = &cc;
-    HttpcacheV.freshness_lifetime_args.shared = PROTO_FALSE;
+    HttpcacheV.freshness_lifetime_args.shared = EMBED_FALSE;
     HttpcacheV.freshness_lifetime_args.expires_minus_date = -1;
     Httpcache.freshness_lifetime(httpcache_work);
     TEST_ASSERT_EQUAL_INT(60, (int)HttpcacheV.value);

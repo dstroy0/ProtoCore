@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_HAPPY_EYEBALLS_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -86,7 +86,7 @@ typedef struct
     HappyEyeballsPrefArgs pref_args;
     HappyEyeballsOrderArgs order_args;
     HappyEyeballsAttemptDueArgs attempt_due_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
 } HappyEyeballsVars;
 
@@ -98,14 +98,14 @@ typedef struct
 {
     void (*const pref)(uint8_t *work);
     void (*const order)(uint8_t *work);
-    void (*const attempt_due)(uint8_t *work);
+    void (*const attempt_due)(const uint8_t *work);
 } HappyEyeballsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HappyEyeballsV or a region of the borrow at a fixed offset.
 void protocore_happy_eyeballs_pref(uint8_t *work);
 void protocore_happy_eyeballs_order(uint8_t *work);
-void protocore_happy_eyeballs_attempt_due(uint8_t *work);
+void protocore_happy_eyeballs_attempt_due(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -128,7 +128,7 @@ static const HappyEyeballsNs HappyEyeballs __attribute__((unused)) = {
  */
 uint8_t *protocore_happy_eyeballs_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HAPPY_EYEBALLS
 

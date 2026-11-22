@@ -25,7 +25,7 @@
 #include "server/core/proto_handler/proto_handler.h" // ProtoHandler: the record ::Protocols binds
 #include "server/core/worker/worker.h"               // WorkerNs: carried below as Session.workers
 
-#include "protocore_config.h" // CONN_POOL_SLOTS, proto_bool: the tables below
+#include "protocore_config.h" // CONN_POOL_SLOTS, embed_bool: the tables below
 
 // --- the protocol registry -------------------------------------------------------------
 //
@@ -61,14 +61,14 @@ extern ProtocolsVars ProtocolsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const register_builtins)(uint8_t *work);
+    void (*const register_builtins)(const uint8_t *work);
     void (*const add)(uint8_t *work);
     void (*const get)(uint8_t *work);
 } ProtoRegistryNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ProtocolsV or a region of the borrow at a fixed offset.
-void protocore_protocols_register_builtins(uint8_t *work);
+void protocore_protocols_register_builtins(const uint8_t *work);
 void protocore_protocols_add(uint8_t *work);
 void protocore_protocols_get(uint8_t *work);
 
@@ -96,7 +96,7 @@ static const ProtoRegistryNs Protocols __attribute__((unused)) = {
  *                         trickle byte cannot reset it.
  * @var http_resp_sink     where a response for the slot is written, per slot.
  */
-typedef proto_bool (*protocore_resp_sink_fn)(uint8_t slot, int code, const char *content_type, const char *body,
+typedef embed_bool (*protocore_resp_sink_fn)(uint8_t slot, int code, const char *content_type, const char *body,
                                              size_t len);
 
 extern uint32_t http_req_start_ms[CONN_POOL_SLOTS];
@@ -139,8 +139,8 @@ typedef struct
     size_t remaining;  ///< body bytes still to send.
     int status;        ///< response status (200 / 206) for note_response.
     int total;         ///< total body length, for the access log.
-    proto_bool keep;   ///< keep-alive vs close at completion.
-    proto_bool active; ///< a transfer is in progress on this slot.
+    embed_bool keep;   ///< keep-alive vs close at completion.
+    embed_bool active; ///< a transfer is in progress on this slot.
 } FileSend;
 
 extern FileSend file_send[CONN_POOL_SLOTS];
@@ -154,25 +154,23 @@ extern FileSend file_send[CONN_POOL_SLOTS];
  * A transfer spans many channel messages, so it is what the CONNECTION carries between them.
  * Session opens and closes the connection, so session holds it.
  */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_NONE,
-    WAIT_CLINE, ///< reading the C<mode> <size> <name> control line
-    RECV,       ///< streaming file data to disk
-    WAIT_END    ///< the file's bytes are in; awaiting the end-of-record byte
-} ScpSt;
+EMBED_ENUM_BYTE(ScpSt, PROTOCORE_NONE,
+                WAIT_CLINE, ///< reading the C<mode> <size> <name> control line
+                RECV,       ///< streaming file data to disk
+                WAIT_END    ///< the file's bytes are in; awaiting the end-of-record byte
+);
 
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t slot;
     uint32_t channel;
     ScpSt st;
     char dest[PROTOCORE_FILESYSTEM_PATH_MAX]; ///< the -t target (a file, or a dir if it ends with '/')
-    proto_bool dest_is_dir;
+    embed_bool dest_is_dir;
     int fh;             ///< open file handle, or -1
     uint64_t remaining; ///< data bytes still to receive
-    proto_bool err;
+    embed_bool err;
     uint16_t cl_len; ///< control-line accumulator length
     char cl[PROTOCORE_FILESYSTEM_PATH_MAX + 64];
 } ScpConn;
@@ -190,18 +188,18 @@ extern ScpConn scp_conns[MAX_SSH_CONNS];
  */
 typedef struct
 {
-    proto_bool is_dir;
+    embed_bool is_dir;
     int fh;                                  ///< the accessor's handle (a dir cursor when is_dir)
     char req[PROTOCORE_FILESYSTEM_PATH_MAX]; ///< the request path this was opened with; FSTAT stats it
-    proto_bool readdir_done;                 ///< the directory has been fully listed
-    proto_bool has_pending;                  ///< a READDIR entry that did not fit last time, emitted first next time
+    embed_bool readdir_done;                 ///< the directory has been fully listed
+    embed_bool has_pending;                  ///< a READDIR entry that did not fit last time, emitted first next time
     uint16_t pend_len;
     uint8_t pend[PROTOCORE_SFTP_ENTRY_MAX];
 } SftpHandle;
 
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t slot;
     uint32_t channel;
     // Which handles are open, one bit each. In-use state is a single bit, so the whole table's
@@ -211,12 +209,12 @@ typedef struct
     uint16_t acc_len; ///< bytes accumulated toward the next request packet
     uint8_t acc[PROTOCORE_SFTP_PKT_BUF];
     // streaming write: a WRITE whose data payload arrives across CHANNEL_DATA calls
-    proto_bool writing;
+    embed_bool writing;
     int wr_handle;
     uint64_t wr_off;
     uint32_t wr_remaining;
     uint32_t wr_id;
-    proto_bool wr_err;
+    embed_bool wr_err;
     SftpHandle handles[PROTOCORE_SFTP_MAX_HANDLES];
 } SftpSession;
 
@@ -244,8 +242,8 @@ extern SftpSession sftp_sess[MAX_SSH_CONNS];
 typedef struct
 {
     int worker_id;
-    proto_u32 conn_timeout_ms;
-    WorkerNs *workers;
+    embed_u32 conn_timeout_ms;
+    const WorkerNs *workers;
 } SessionVars;
 
 /** @brief The operands and the outcome. */
@@ -254,12 +252,12 @@ extern SessionVars SessionV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const tick)(uint8_t *work);
+    void (*const tick)(const uint8_t *work);
 } SessionNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SessionV or a region of the borrow at a fixed offset.
-void protocore_session_tick(uint8_t *work);
+void protocore_session_tick(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

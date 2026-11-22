@@ -11,7 +11,7 @@
 #include <string.h>
 #include <unity.h>
 
-static proto_bool pty_req_parse(const uint8_t *p, size_t len, size_t off, SshPtyRequest *req)
+static embed_bool pty_req_parse(const uint8_t *p, size_t len, size_t off, SshPtyRequest *req)
 {
     SshConnectionV.pty.p = p;
     SshConnectionV.chan.len = len;
@@ -21,7 +21,7 @@ static proto_bool pty_req_parse(const uint8_t *p, size_t len, size_t off, SshPty
     return SshConnectionV.ok;
 }
 
-static proto_bool req_strings_present(const uint8_t *p, size_t len, size_t off, uint8_t n)
+static embed_bool req_strings_present(const uint8_t *p, size_t len, size_t off, uint8_t n)
 {
     SshConnectionV.pty.p = p;
     SshConnectionV.chan.len = len;
@@ -31,7 +31,7 @@ static proto_bool req_strings_present(const uint8_t *p, size_t len, size_t off, 
     return SshConnectionV.ok;
 }
 
-static proto_bool window_change_parse(const uint8_t *p, size_t len, size_t off, SshPtyRequest *req)
+static embed_bool window_change_parse(const uint8_t *p, size_t len, size_t off, SshPtyRequest *req)
 {
     SshConnectionV.pty.p = p;
     SshConnectionV.chan.len = len;
@@ -103,7 +103,7 @@ static int channel_build_close(uint8_t slot, uint32_t channel, uint8_t *out, siz
 
 // Per-channel flow control, reached through the connection namespace. The window struct stays the
 // caller's; only the call moves onto the handle.
-static proto_bool flow_recv_take(SshFlow *f, uint32_t n)
+static embed_bool flow_recv_take(SshFlow *f, uint32_t n)
 {
     SshConnectionV.flow.f = f;
     SshConnectionV.flow.n = n;
@@ -111,7 +111,7 @@ static proto_bool flow_recv_take(SshFlow *f, uint32_t n)
     return SshConnectionV.ok;
 }
 
-static proto_bool flow_replenish_due(SshFlow *f, uint32_t *add)
+static embed_bool flow_replenish_due(SshFlow *f, uint32_t *add)
 {
     SshConnectionV.flow.f = f;
     SshConnection.flow_replenish_due(protocore_ssh_connection_span());
@@ -129,7 +129,7 @@ static void flow_local_credit(SshFlow *f, uint32_t add)
     SshConnection.flow_local_credit(protocore_ssh_connection_span());
 }
 
-static proto_bool flow_send_allows(SshFlow *f, size_t len)
+static embed_bool flow_send_allows(SshFlow *f, size_t len)
 {
     SshConnectionV.flow.f = f;
     SshConnectionV.chan.len = len;
@@ -191,7 +191,7 @@ static int channel_handle_eof(uint8_t slot, const uint8_t *payload, size_t len)
     return SshConnectionV.i32;
 }
 
-static proto_bool pty_modes_valid(const uint8_t *modes, uint32_t modes_len, uint32_t *consumed)
+static embed_bool pty_modes_valid(const uint8_t *modes, uint32_t modes_len, uint32_t *consumed)
 {
     SshConnectionV.pty.modes = modes;
     SshConnectionV.pty.modes_len = modes_len;

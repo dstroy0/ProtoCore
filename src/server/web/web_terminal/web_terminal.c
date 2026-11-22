@@ -15,7 +15,7 @@
 #include "server/web/web_terminal/web_terminal.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Dependency (WEB_TERMINAL requires WEBSOCKET) is enforced centrally in protocore_config.h.
 
@@ -33,7 +33,7 @@ typedef struct
 {
     TermCommandCb cb;
     char ws_path[MAX_PATH_LEN];
-    proto_bool is_client[MAX_WS_CONNS]; // which ws slots are terminal browsers
+    embed_bool is_client[MAX_WS_CONNS]; // which ws slots are terminal browsers
 } WebTerminalCtx;
 
 // Static storage duration zero-initializes every field: cb is null, ws_path is empty, and no slot
@@ -56,14 +56,17 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define WEB_TERMINAL_CTX(w) ((WebTerminalCtx *)(void *)((w) + WEB_TERMINAL_OFF_CTX))
+#define WEB_TERMINAL_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const WebTerminalCtx *)(const void *)((w) + WEB_TERMINAL_OFF_CTX),                           \
+        default: (WebTerminalCtx *)(void *)((w) + WEB_TERMINAL_OFF_CTX))
 
 // ---- internal route handlers ----------------------------------------------
 
 static void term_page_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    // This route only exists once protocore_web_terminal_begin() has installed it, so there is nothing to
+    // This route only exists once protocore_web_terminal_begin() installed it, so there is nothing to
     // test: the handler running IS the proof the service started.
     send_text(slot_id, 200, PROTOCORE_MIME_TEXT_HTML, PROTOCORE_TERMINAL_PAGE);
 }
@@ -78,7 +81,7 @@ static void term_ws_connect(uint8_t ws_id)
     // cannot fail. Same reasoning for the ws_id checks in term_ws_message / term_ws_close below.
     if (ws_id < MAX_WS_CONNS)
     {
-        WEB_TERMINAL_CTX(work)->is_client[ws_id] = PROTO_TRUE;
+        WEB_TERMINAL_CTX(work)->is_client[ws_id] = EMBED_TRUE;
     }
     // As in term_page_handler: this handler is only reachable once begin() registered the route.
     ws_send_text(ws_id, "ProtoCore terminal ready\n");
@@ -106,7 +109,7 @@ static void term_ws_close(uint8_t ws_id)
     uint8_t *work = protocore_web_terminal_span();
     if (ws_id < MAX_WS_CONNS)
     {
-        WEB_TERMINAL_CTX(work)->is_client[ws_id] = PROTO_FALSE;
+        WEB_TERMINAL_CTX(work)->is_client[ws_id] = EMBED_FALSE;
     }
 }
 
@@ -139,7 +142,7 @@ void protocore_web_terminal_begin(uint8_t *work)
 
     for (uint8_t i = 0; i < MAX_WS_CONNS; i++)
     {
-        WEB_TERMINAL_CTX(work)->is_client[i] = PROTO_FALSE;
+        WEB_TERMINAL_CTX(work)->is_client[i] = EMBED_FALSE;
     }
 
     if (!path || !path[0])
@@ -237,6 +240,6 @@ void protocore_web_terminal_client_count(uint8_t *work)
 /** @brief The operands and the outcome. */
 WebTerminalVars WebTerminalV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEB_TERMINAL

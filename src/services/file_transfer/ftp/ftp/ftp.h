@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_FTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -42,7 +42,7 @@ static inline int protocore_ftp_reply_class(int code)
 }
 
 /** @brief A 2xx positive-completion reply. */
-static inline proto_bool protocore_ftp_reply_ok(int code)
+static inline embed_bool protocore_ftp_reply_ok(int code)
 {
     return protocore_ftp_reply_class(code) == 2;
 }
@@ -71,7 +71,7 @@ typedef struct
     char *buf;
     size_t cap;
     const char *ip_str; ///< dotted-decimal IPv4 or RFC 4291 IPv6 text (copied verbatim)
-    proto_bool ipv6;    ///< false => net-prt 1 (IPv4), true => net-prt 2 (IPv6)
+    embed_bool ipv6;    ///< false => net-prt 1 (IPv4), true => net-prt 2 (IPv6)
     uint16_t port;
 } FtpBuildEprtArgs;
 
@@ -141,7 +141,7 @@ typedef struct
     FtpParseReplyArgs parse_reply_args;
     FtpParsePasvArgs parse_pasv_args;
     FtpParseEpsvArgs parse_epsv_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } FtpVars;
 
@@ -151,22 +151,22 @@ extern FtpVars FtpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_command)(uint8_t *work);
-    void (*const build_port)(uint8_t *work);
-    void (*const build_eprt)(uint8_t *work);
-    void (*const parse_reply)(uint8_t *work);
-    void (*const parse_pasv)(uint8_t *work);
-    void (*const parse_epsv)(uint8_t *work);
+    void (*const build_command)(const uint8_t *work);
+    void (*const build_port)(const uint8_t *work);
+    void (*const build_eprt)(const uint8_t *work);
+    void (*const parse_reply)(const uint8_t *work);
+    void (*const parse_pasv)(const uint8_t *work);
+    void (*const parse_epsv)(const uint8_t *work);
 } FtpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FtpV or a region of the borrow at a fixed offset.
-void protocore_ftp_build_command(uint8_t *work);
-void protocore_ftp_build_port(uint8_t *work);
-void protocore_ftp_build_eprt(uint8_t *work);
-void protocore_ftp_parse_reply(uint8_t *work);
-void protocore_ftp_parse_pasv(uint8_t *work);
-void protocore_ftp_parse_epsv(uint8_t *work);
+void protocore_ftp_build_command(const uint8_t *work);
+void protocore_ftp_build_port(const uint8_t *work);
+void protocore_ftp_build_eprt(const uint8_t *work);
+void protocore_ftp_parse_reply(const uint8_t *work);
+void protocore_ftp_parse_pasv(const uint8_t *work);
+void protocore_ftp_parse_epsv(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -181,7 +181,7 @@ static const FtpNs Ftp __attribute__((unused)) = {
     .parse_epsv = protocore_ftp_parse_epsv,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FTP
 

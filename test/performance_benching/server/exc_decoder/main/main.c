@@ -26,7 +26,7 @@
 static uint8_t exc_decoder_work[16]; // the borrow an entry takes; Exc never reads it
 
 /** @brief Decode the printed panic dump @p text into @p info. */
-static proto_bool exc_parse(const char *text, ExcInfo *info)
+static embed_bool exc_parse(const char *text, ExcInfo *info)
 {
     ExcV.parse_args.text = text;
     ExcV.parse_args.info = info;

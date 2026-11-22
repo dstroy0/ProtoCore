@@ -34,7 +34,7 @@
 
 #if PROTOCORE_ENABLE_WS_CLIENT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -51,15 +51,14 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief The 4-bit opcode a frame carries (RFC 6455 sec 5.2); sec 5.6 data, sec 5.5 control. */
-typedef enum PROTO_ENUM_PACKED
-{
-    WSC_OP_CONT = 0x0,   ///< continuation frame (RFC 6455 sec 5.4)
-    WSC_OP_TEXT = 0x1,   ///< text frame, UTF-8 Application data (RFC 6455 sec 5.6)
-    WSC_OP_BINARY = 0x2, ///< binary frame (RFC 6455 sec 5.6)
-    WSC_OP_CLOSE = 0x8,  ///< connection close (RFC 6455 sec 5.5.1)
-    WSC_OP_PING = 0x9,   ///< ping (RFC 6455 sec 5.5.2)
-    WSC_OP_PONG = 0xA,   ///< pong (RFC 6455 sec 5.5.3)
-} WsClientOpcode;
+EMBED_ENUM_BYTE(WsClientOpcode,
+                WSC_OP_CONT = 0x0,   ///< continuation frame (RFC 6455 sec 5.4)
+                WSC_OP_TEXT = 0x1,   ///< text frame, UTF-8 Application data (RFC 6455 sec 5.6)
+                WSC_OP_BINARY = 0x2, ///< binary frame (RFC 6455 sec 5.6)
+                WSC_OP_CLOSE = 0x8,  ///< connection close (RFC 6455 sec 5.5.1)
+                WSC_OP_PING = 0x9,   ///< ping (RFC 6455 sec 5.5.2)
+                WSC_OP_PONG = 0xA,   ///< pong (RFC 6455 sec 5.5.3)
+);
 
 /** @brief Where a reassembled Text or Binary message is delivered (RFC 6455 sec 5.6). */
 typedef void (*WsClientMessageCb)(uint8_t opcode, const uint8_t *payload, size_t len);
@@ -74,7 +73,7 @@ typedef struct
 {
     const char *host;          ///< /host/, the Host field's value (RFC 6455 sec 4.1, RFC 9110 sec 7.2)
     uint16_t port;             ///< /port/, the port dialed (RFC 6455 sec 3)
-    proto_bool secure;         ///< /secure/, the connection runs over TLS (RFC 6455 sec 3)
+    embed_bool secure;         ///< /secure/, the connection runs over TLS (RFC 6455 sec 3)
     const char *resource_name; ///< /resource name/, the request-line's target (RFC 6455 sec 3, RFC 9112 sec 3)
     const char *key;           ///< |Sec-WebSocket-Key|, base64 of 16 random octets (RFC 6455 sec 11.3.1)
     const char *subprotocol;   ///< |Sec-WebSocket-Protocol| offered; null or empty omits it (RFC 6455 sec 11.3.4)
@@ -86,7 +85,7 @@ typedef struct
 typedef struct
 {
     uint8_t opcode;             ///< the 4-bit opcode (RFC 6455 sec 5.2)
-    proto_bool fin;             ///< FIN, the final fragment of a message (RFC 6455 sec 5.2, sec 5.4)
+    embed_bool fin;             ///< FIN, the final fragment of a message (RFC 6455 sec 5.2, sec 5.4)
     const uint8_t *payload;     ///< the Payload data a build masks into the frame
     size_t payload_len;         ///< its octet count; a parse reports the Payload data length it found
     size_t payload_off;         ///< where a parse found Payload data inside the frame
@@ -161,7 +160,7 @@ typedef struct
     WsFrameArgs frame;         ///< the base framing protocol's fields
     WsBufArgs buf;             ///< the octets a codec call moves
     WsMessageArgs msg;         ///< the Application data a Data frame carries
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } WsClientVars;
 
@@ -172,33 +171,33 @@ extern WsClientVars WsClientV;
 typedef struct
 {
     void (*const accept_for_key)(uint8_t *work);
-    void (*const build_opening_handshake)(uint8_t *work);
-    void (*const check_server_handshake)(uint8_t *work);
-    void (*const build_frame)(uint8_t *work);
-    void (*const parse_frame)(uint8_t *work);
-    void (*const on_message)(uint8_t *work);
-    void (*const connect)(uint8_t *work);
-    void (*const send_text)(uint8_t *work);
-    void (*const send_binary)(uint8_t *work);
-    void (*const loop)(uint8_t *work);
-    void (*const connected)(uint8_t *work);
-    void (*const close)(uint8_t *work);
+    void (*const build_opening_handshake)(const uint8_t *work);
+    void (*const check_server_handshake)(const uint8_t *work);
+    void (*const build_frame)(const uint8_t *work);
+    void (*const parse_frame)(const uint8_t *work);
+    void (*const on_message)(const uint8_t *work);
+    void (*const connect)(const uint8_t *work);
+    void (*const send_text)(const uint8_t *work);
+    void (*const send_binary)(const uint8_t *work);
+    void (*const loop)(const uint8_t *work);
+    void (*const connected)(const uint8_t *work);
+    void (*const close)(const uint8_t *work);
 } WsClientNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WsClientV or a region of the borrow at a fixed offset.
 void protocore_ws_client_accept_for_key(uint8_t *work);
-void protocore_ws_client_build_opening_handshake(uint8_t *work);
-void protocore_ws_client_check_server_handshake(uint8_t *work);
-void protocore_ws_client_build_frame(uint8_t *work);
-void protocore_ws_client_parse_frame(uint8_t *work);
-void protocore_ws_client_on_message(uint8_t *work);
-void protocore_ws_client_connect(uint8_t *work);
-void protocore_ws_client_send_text(uint8_t *work);
-void protocore_ws_client_send_binary(uint8_t *work);
-void protocore_ws_client_loop(uint8_t *work);
-void protocore_ws_client_connected(uint8_t *work);
-void protocore_ws_client_close(uint8_t *work);
+void protocore_ws_client_build_opening_handshake(const uint8_t *work);
+void protocore_ws_client_check_server_handshake(const uint8_t *work);
+void protocore_ws_client_build_frame(const uint8_t *work);
+void protocore_ws_client_parse_frame(const uint8_t *work);
+void protocore_ws_client_on_message(const uint8_t *work);
+void protocore_ws_client_connect(const uint8_t *work);
+void protocore_ws_client_send_text(const uint8_t *work);
+void protocore_ws_client_send_binary(const uint8_t *work);
+void protocore_ws_client_loop(const uint8_t *work);
+void protocore_ws_client_connected(const uint8_t *work);
+void protocore_ws_client_close(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -232,7 +231,7 @@ static const WsClientNs WsClient __attribute__((unused)) = {
 uint8_t *protocore_ws_client_span(void);
 #endif // PROTOCORE_HAS_NET_STACK
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WS_CLIENT
 

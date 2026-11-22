@@ -52,7 +52,7 @@
 
 #if PROTOCORE_ENABLE_CLOUDEVENTS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the message a binary read parses
 
@@ -145,7 +145,7 @@ typedef struct
     CloudEventDataArgs data;         ///< what it carries
     CloudEventEnvelopeArgs envelope; ///< where a structured build writes
     CloudEventMessageArgs msg;       ///< what a binary read parses
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } CloudEventsVars;
 
@@ -156,13 +156,13 @@ extern CloudEventsVars CloudEventsV;
 typedef struct
 {
     void (*const build_structured)(uint8_t *work);
-    void (*const read_binary)(uint8_t *work);
+    void (*const read_binary)(const uint8_t *work);
 } CloudEventsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CloudEventsV or a region of the borrow at a fixed offset.
 void protocore_cloud_events_build_structured(uint8_t *work);
-void protocore_cloud_events_read_binary(uint8_t *work);
+void protocore_cloud_events_read_binary(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -173,7 +173,7 @@ static const CloudEventsNs CloudEvents __attribute__((unused)) = {
     .read_binary = protocore_cloud_events_read_binary,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CLOUDEVENTS
 

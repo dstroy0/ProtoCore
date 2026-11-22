@@ -121,13 +121,13 @@ uint16_t protocore_enocean_esp3_build(uint8_t *work, protocore_esp3_type type, c
     return (uint16_t)total;
 }
 
-proto_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out)
+embed_bool protocore_enocean_erp1_parse(const uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out)
 {
     (void)work;
 
     if (!data || !out || len < 6) // RORG(1) + sender id(4) + status(1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->rorg = data[0];
     out->payload = (len > 6) ? data + 1 : NULL;
@@ -136,11 +136,11 @@ proto_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint
     out->sender_id =
         ((uint32_t)id[0] << 24) | ((uint32_t)id[1] << 16) | ((uint32_t)id[2] << 8) | (uint32_t)id[3]; // big-endian
     out->status = data[len - 1];
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-uint16_t protocore_enocean_erp1_build(uint8_t *work, uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload,
-                                      uint8_t payload_len, uint32_t sender_id, uint8_t status)
+uint16_t protocore_enocean_erp1_build(const uint8_t *work, uint8_t *out, uint16_t cap, uint8_t rorg,
+                                      const uint8_t *payload, uint8_t payload_len, uint32_t sender_id, uint8_t status)
 {
     (void)work;
 

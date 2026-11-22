@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_C37118
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define C37118_SYNC_LEADER 0xAA  ///< SYNC byte 0 (frame leader)
 #define C37118_TYPE_SHIFT 4      ///< SYNC byte 1: frame type occupies bits 6-4
@@ -95,10 +95,10 @@ typedef struct
  * @return true on a complete, CRC-valid frame; false on a bad SYNC, truncation, an
  *         out-of-range FRAMESIZE, or a CHK mismatch.
  */
-proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Frame *out);
+embed_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Frame *out);
 
 /** @brief Read the command word from a parsed Command frame. */
-proto_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd);
+embed_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd);
 
 // --- DATA frame STAT word (IEEE C37.118.2-2011 Table 6): the 16-bit status opening a data frame ---
 
@@ -120,13 +120,13 @@ proto_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd);
 typedef struct
 {
     uint16_t raw;                 ///< the raw 16-bit STAT word
-    proto_bool data_valid;        ///< data is valid (STAT bit 15 == 0)
-    proto_bool pmu_error;         ///< PMU error, including configuration error (bit 14)
-    proto_bool in_sync;           ///< PMU is in sync with UTC (bit 13 == 0)
-    proto_bool sorted_by_arrival; ///< data sorting: false = by time stamp, true = by arrival (bit 12)
-    proto_bool trigger;           ///< PMU trigger detected (bit 11)
-    proto_bool config_change;     ///< configuration change effective within 1 min (bit 10)
-    proto_bool data_modified;     ///< data modified by post-processing (bit 9)
+    embed_bool data_valid;        ///< data is valid (STAT bit 15 == 0)
+    embed_bool pmu_error;         ///< PMU error, including configuration error (bit 14)
+    embed_bool in_sync;           ///< PMU is in sync with UTC (bit 13 == 0)
+    embed_bool sorted_by_arrival; ///< data sorting: false = by time stamp, true = by arrival (bit 12)
+    embed_bool trigger;           ///< PMU trigger detected (bit 11)
+    embed_bool config_change;     ///< configuration change effective within 1 min (bit 10)
+    embed_bool data_modified;     ///< data modified by post-processing (bit 9)
     uint8_t time_quality;         ///< PMU time quality (bits 8-6, 0..7)
     uint8_t unlocked_time;        ///< unlocked-time code (bits 5-4, @ref C37118_UNLOCKED_UNDER_10S etc.)
     uint8_t trigger_reason;       ///< trigger reason (bits 3-0, @ref C37118_TRIGGER_MANUAL etc.)
@@ -136,9 +136,9 @@ typedef struct
  * @brief Decode the 16-bit STAT word that opens a DATA frame's payload (IEEE C37.118.2-2011 Table 6).
  * @return true iff @p f is a data frame (type C37118_TYPE_DATA) carrying at least the 2-octet STAT word.
  */
-proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out);
+embed_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_C37118
 

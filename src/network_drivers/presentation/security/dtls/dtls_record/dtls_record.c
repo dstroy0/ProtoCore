@@ -65,7 +65,7 @@ static void expand_label(uint8_t *work, uint8_t *scratch, const uint8_t *secret,
                          size_t out_len)
 {
     Tls13KsV.bind.kdf = &DTLS13_KDF;
-    Tls13KsV.bind.is384 = PROTO_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection
+    Tls13KsV.bind.is384 = EMBED_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection
     Tls13KsV.derive_args.work = scratch;
     Tls13KsV.derive_args.secret = secret;
     Tls13KsV.derive_args.label = label;
@@ -88,7 +88,6 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     // carries the "dtls13" HKDF-Expand-Label prefix (RFC 9147 §4.2.3 / §5.9).
     // The key becomes a keyed context here and the raw bytes are wiped; nothing downstream wants them.
     // The borrow wipes on release, on every exit path.
-    size_t mark = protocore_secure_guard()->temporary_buf_mark();
     mmgr_span k = EMBED_CALL(spat.from, SpatiumCfg,
                              .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
                                  PROTOCORE_AES128GCM_KEY_LEN, protocore_secure_owner()),
@@ -104,7 +103,9 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = k) || !EMBED_CALL(spat.ok, SpatiumCfg, .span = ws) ||
         !EMBED_CALL(spat.ok, SpatiumCfg, .span = snk))
     {
-        protocore_secure_guard()->temporary_buf_release(mark);
+        protocore_secure_guard()->persistent_buf_release(snk.buf, protocore_secure_owner());
+        protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+        protocore_secure_guard()->persistent_buf_release(k.buf, protocore_secure_owner());
         EMBED_CALL(memor.set, MemoriaCfg, .dst = out->iv, .bytes = sizeof(out->iv), .val = 0);
         return; // unkeyed: every protect/unprotect over these keys refuses
     }
@@ -115,14 +116,16 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
     expand_label(work, ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
     Aes128GcmV.block_key_args.key = snk.buf;
     Aes128Gcm.block_init(out->gcm);
-    protocore_secure_guard()->temporary_buf_release(mark);
+    protocore_secure_guard()->persistent_buf_release(snk.buf, protocore_secure_owner());
+    protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
+    protocore_secure_guard()->persistent_buf_release(k.buf, protocore_secure_owner());
 }
 
 // ---------------------------------------------------------------------------
 // DTLSPlaintext
 // ---------------------------------------------------------------------------
 
-size_t protocore_dtls_record_plaintext_build(uint8_t *work, uint8_t content_type, uint16_t epoch, uint64_t seq,
+size_t protocore_dtls_record_plaintext_build(const uint8_t *work, uint8_t content_type, uint16_t epoch, uint64_t seq,
                                              const uint8_t *fragment, size_t frag_len, uint8_t *out, size_t out_cap)
 {
     (void)work;
@@ -153,7 +156,8 @@ size_t protocore_dtls_record_plaintext_build(uint8_t *work, uint8_t content_type
     return total;
 }
 
-size_t protocore_dtls_record_plaintext_parse(uint8_t *work, const uint8_t *rec, size_t rec_len, DtlsPlaintext *out)
+size_t protocore_dtls_record_plaintext_parse(const uint8_t *work, const uint8_t *rec, size_t rec_len,
+                                             DtlsPlaintext *out)
 {
     (void)work;
 
@@ -182,7 +186,7 @@ size_t protocore_dtls_record_plaintext_parse(uint8_t *work, const uint8_t *rec, 
 // DTLSCiphertext
 // ---------------------------------------------------------------------------
 
-size_t protocore_dtls_record_protect(uint8_t *work, DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
+size_t protocore_dtls_record_protect(const uint8_t *work, DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
                                      const uint8_t *plaintext, size_t pt_len, uint8_t *out, size_t out_cap,
                                      const uint8_t *cid, size_t cid_len)
 {
@@ -253,30 +257,30 @@ size_t protocore_dtls_record_protect(uint8_t *work, DtlsRecordKeys *keys, uint64
     return total;
 }
 
-proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec,
-                                           size_t rec_len, uint8_t *out, size_t out_cap, DtlsCiphertext *info,
-                                           const uint8_t *expected_cid, size_t expected_cid_len)
+embed_bool protocore_dtls_record_unprotect(const uint8_t *work, DtlsRecordKeys *keys, uint64_t next_seq,
+                                           const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
+                                           DtlsCiphertext *info, const uint8_t *expected_cid, size_t expected_cid_len)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     (void)work;
 
     if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256 || rec_len < 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (expected_cid_len > PROTOCORE_DTLS_CID_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t b0 = rec[0];
     if ((b0 & DTLS_UH_FIXED_MASK) != DTLS_UH_FIXED)
     {
-        ok = PROTO_FALSE; // top 3 bits must be 001
+        ok = EMBED_FALSE; // top 3 bits must be 001
         return ok;
     }
     if ((b0 & DTLS_UH_EPOCH_MASK) != (keys->epoch & DTLS_UH_EPOCH_MASK))
     {
-        ok = PROTO_FALSE; // wrong epoch keys for this record
+        ok = EMBED_FALSE; // wrong epoch keys for this record
         return ok;
     }
 
@@ -288,20 +292,20 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
         if (expected_cid_len == 0 || off + expected_cid_len > rec_len ||
             EMBED_CALL(memor.cmp, MemoriaCfg, .src = rec + off, .other = expected_cid, .bytes = expected_cid_len) != 0)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off += expected_cid_len;
     }
     else if (expected_cid_len != 0)
     {
-        ok = PROTO_FALSE; // a CID was negotiated for this direction but the record carries none
+        ok = EMBED_FALSE; // a CID was negotiated for this direction but the record carries none
         return ok;
     }
 
     size_t seq_len = (b0 & DTLS_UH_SEQ16) ? 2 : 1;
     if (off + seq_len > rec_len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t seq_off = off;
     off += seq_len;
@@ -311,7 +315,7 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
     {
         if (off + 2 > rec_len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         enc_len = ((size_t)rec[off] << 8) | rec[off + 1];
         off += 2;
@@ -322,7 +326,7 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
     }
     if (off + enc_len > rec_len || enc_len < 16 || enc_len < PROTOCORE_DTLS_TAG_LEN + 1)
     {
-        ok = PROTO_FALSE; // need >= 16 bytes for the SN sample and >= tag + one inner byte
+        ok = EMBED_FALSE; // need >= 16 bytes for the SN sample and >= tag + one inner byte
         return ok;
     }
 
@@ -354,12 +358,12 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
     // but that is an accident of a downstream comparison, not a check.
     if (enc_len < PROTOCORE_DTLS_TAG_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t inner_len = enc_len - PROTOCORE_DTLS_TAG_LEN; // == the ciphertext length the AEAD wants
     if (inner_len > out_cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint8_t nonce[12];
@@ -375,7 +379,7 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
     Aes128Gcm.open(keys->gcm);
     if (!Aes128GcmV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Strip zero padding: the last non-zero byte of the inner plaintext is the content type (RFC 8446 §5.2).
@@ -386,56 +390,56 @@ proto_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, 
     }
     if (n == 0)
     {
-        ok = PROTO_FALSE; // no content type -> invalid record
+        ok = EMBED_FALSE; // no content type -> invalid record
         return ok;
     }
     info->content_type = out[n - 1];
     info->pt_len = n - 1;
     info->seq = full_seq;
     info->epoch = keys->epoch;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // Anti-replay sliding window (RFC 9147 §4.5.1)
 // ---------------------------------------------------------------------------
 
-void protocore_dtls_record_replay_init(uint8_t *work, DtlsReplayWindow *w)
+void protocore_dtls_record_replay_init(const uint8_t *work, DtlsReplayWindow *w)
 {
     (void)work;
 
     w->highest = 0;
     w->bitmap = 0;
-    w->seeded = PROTO_FALSE;
+    w->seeded = EMBED_FALSE;
 }
 
-proto_bool protocore_dtls_record_replay_check(uint8_t *work, const DtlsReplayWindow *w, uint64_t seq)
+embed_bool protocore_dtls_record_replay_check(const uint8_t *work, const DtlsReplayWindow *w, uint64_t seq)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     (void)work;
 
     if (!w->seeded || seq > w->highest)
     {
-        ok = PROTO_TRUE; // first record, or ahead of the window
+        ok = EMBED_TRUE; // first record, or ahead of the window
         return ok;
     }
     uint64_t diff = w->highest - seq;
     if (diff >= 64)
     {
-        ok = PROTO_FALSE; // older than the window
+        ok = EMBED_FALSE; // older than the window
         return ok;
     }
     ok = ((w->bitmap >> diff) & 1u) == 0; // set bit => already seen (replay)
     return ok;
 }
 
-void protocore_dtls_record_replay_mark(uint8_t *work, DtlsReplayWindow *w, uint64_t seq)
+void protocore_dtls_record_replay_mark(const uint8_t *work, DtlsReplayWindow *w, uint64_t seq)
 {
     (void)work;
 
     if (!w->seeded)
     {
-        w->seeded = PROTO_TRUE;
+        w->seeded = EMBED_TRUE;
         w->highest = seq;
         w->bitmap = 1; // bit 0 = highest
         return;

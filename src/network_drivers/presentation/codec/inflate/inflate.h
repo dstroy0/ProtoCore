@@ -13,7 +13,7 @@
  * is independent) and bounds memory: a decompressed message must fit @p dst_cap.
  *
  * The only working memory is a Huffman-table scratch the caller supplies
- * (INFLATE_SCRATCH_SIZE bytes); the WebSocket layer borrows it from the
+ * (INFLATE_SCRATCH_SIZE bytes). The WebSocket layer borrows it from the
  * per-dispatch scratch arena, so INFLATE costs no dedicated buffer.
  *
  * Decoding terminates at a final block (BFINAL) or at a clean end-of-input on a
@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -47,13 +47,12 @@ PROTOCORE_BEGIN_DECLS
 #define INFLATE_SCRATCH_SIZE 1536
 
 /** @brief inflate_raw() return codes. */
-typedef enum PROTO_ENUM_PACKED
-{
-    INFLATE_OK = 0,             ///< success; *out_len holds the decompressed length
-    INFLATE_ERR_MALFORMED = -1, ///< invalid / truncated DEFLATE stream
-    INFLATE_ERR_OVERFLOW = -2,  ///< output would exceed dst_cap
-    INFLATE_ERR_SCRATCH = -3    ///< scratch_len < INFLATE_SCRATCH_SIZE
-} InflateResult;
+EMBED_ENUM_BYTE(InflateResult,
+                INFLATE_OK = 0,             ///< success; *out_len holds the decompressed length
+                INFLATE_ERR_MALFORMED = -1, ///< invalid / truncated DEFLATE stream
+                INFLATE_ERR_OVERFLOW = -2,  ///< output would exceed dst_cap
+                INFLATE_ERR_SCRATCH = -3    ///< scratch_len < INFLATE_SCRATCH_SIZE
+);
 
 /** @brief What raw takes: src, src_len, dst, dst_cap, out_len, ... */
 typedef struct
@@ -95,7 +94,7 @@ typedef struct
 typedef struct
 {
     InflateRawArgs raw_args;
-    proto_bool ok;
+    embed_bool ok;
     InflateResult value;
 } InflateVars;
 
@@ -105,12 +104,12 @@ extern InflateVars InflateV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const raw)(uint8_t *work);
+    void (*const raw)(const uint8_t *work);
 } InflateNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in InflateV or a region of the borrow at a fixed offset.
-void protocore_inflate_raw(uint8_t *work);
+void protocore_inflate_raw(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -120,7 +119,7 @@ static const InflateNs Inflate __attribute__((unused)) = {
     .raw = protocore_inflate_raw,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WS_DEFLATE
 

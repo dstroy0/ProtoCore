@@ -399,7 +399,7 @@ def render_source(assets):
         "",
         '#include "network_drivers/application/web_assets/web_assets.h"',
         "",
-        "PROTOCORE_BEGIN_DECLS",
+        "EMBED_BEGIN_DECLS",
         "",
     ]
     last_type = None
@@ -416,7 +416,7 @@ def render_source(assets):
             lines.append(decl.rstrip())
             lines.append('    "' + '"\n    "'.join(segs) + '";')
         lines.append("")
-    lines.append("PROTOCORE_END_DECLS")
+    lines.append("EMBED_END_DECLS")
     lines.append("")
     lines.append("#endif // " + GATE)
     return "\n".join(lines).rstrip("\n") + "\n"

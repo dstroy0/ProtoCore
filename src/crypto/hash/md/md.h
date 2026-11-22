@@ -22,7 +22,7 @@
 
 #if PROTOCORE_ENABLE_MD
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief MD digest length in bytes. MD4 and MD5 are both 128-bit. */
 #define PROTOCORE_MD_DIGEST_LEN 16
@@ -92,7 +92,7 @@ typedef struct
     MdUpdateArgs update_args;
     MdFinalArgs final_args;
     MdHmacArgs hmac_args;
-    proto_bool ok;
+    embed_bool ok;
 } MdVars;
 
 /** @brief The operands and the outcome. */
@@ -134,7 +134,7 @@ static const MdNs Md __attribute__((unused)) = {
     .hmac_md5 = protocore_md_hmac_md5,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MD
 

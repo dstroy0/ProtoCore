@@ -44,7 +44,7 @@
 
 #if PROTOCORE_ENABLE_DNS_RESOLVER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief RFC 1034 sec 5.3.1: what the platform's resolver hands back when an answer arrives.
@@ -55,24 +55,22 @@ PROTOCORE_BEGIN_DECLS
 typedef void (*protocore_net_dns_found_fn)(const char *name, const protocore_net_ip *addr, void *arg);
 
 /** @brief IPv4 address category: RFC 6890 sec 2.2.2 registry entries, plus RFC 1112 sec 4. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_IP_UNSPECIFIED = 0, ///< 0.0.0.0/8 "This host on this network" (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_LOOPBACK,        ///< 127.0.0.0/8 Loopback (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_PRIVATE,         ///< 10/8, 172.16/12, 192.168/16 Private-Use (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_LINKLOCAL,       ///< 169.254.0.0/16 Link Local (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_MULTICAST,       ///< 224.0.0.0 to 239.255.255.255 host group (RFC 1112 sec 4)
-    PROTOCORE_IP_BROADCAST,       ///< 255.255.255.255/32 Limited Broadcast (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_PUBLIC,          ///< globally-routable unicast
-} protocore_ip_class;
+EMBED_ENUM_BYTE(protocore_ip_class,
+                PROTOCORE_IP_UNSPECIFIED = 0, ///< 0.0.0.0/8 "This host on this network" (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_LOOPBACK,        ///< 127.0.0.0/8 Loopback (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_PRIVATE,         ///< 10/8, 172.16/12, 192.168/16 Private-Use (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_LINKLOCAL,       ///< 169.254.0.0/16 Link Local (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_MULTICAST,       ///< 224.0.0.0 to 239.255.255.255 host group (RFC 1112 sec 4)
+                PROTOCORE_IP_BROADCAST,       ///< 255.255.255.255/32 Limited Broadcast (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_PUBLIC,          ///< globally-routable unicast
+);
 
 /** @brief Where a resolve stands. */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_DNS_READY = 0, ///< u32 holds the address
-    PROTOCORE_DNS_BUSY,      ///< a query is out; ask again on the next tick
-    PROTOCORE_DNS_FAILED,    ///< the query did not leave, or the one in flight passed its deadline
-} protocore_dns_state;
+EMBED_ENUM_BYTE(protocore_dns_state,
+                PROTOCORE_DNS_READY = 0, ///< u32 holds the address
+                PROTOCORE_DNS_BUSY,      ///< a query is out; ask again on the next tick
+                PROTOCORE_DNS_FAILED,    ///< the query did not leave, or the one in flight passed its deadline
+);
 
 /** @brief The address a classify or a verify judges, as a host-order word. */
 typedef struct
@@ -151,7 +149,7 @@ typedef struct
     DnsQueryArgs query;   ///< what a question names (RFC 1035 sec 4.1.2)
     DnsAnswerArgs answer; ///< what a parse reads (RFC 1035 sec 4.1.3)
     DnsServerArgs server; ///< where a portable query is sent (RFC 1035 sec 4.2.1)
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint32_t u32;
     protocore_ip_class cls;
@@ -164,9 +162,9 @@ extern ResolverVars ResolverV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const classify)(uint8_t *work);
-    void (*const verify)(uint8_t *work);
-    void (*const query_build)(uint8_t *work);
+    void (*const classify)(const uint8_t *work);
+    void (*const verify)(const uint8_t *work);
+    void (*const query_build)(const uint8_t *work);
     void (*const answer_parse)(uint8_t *work);
     void (*const resolve)(uint8_t *work);
     void (*const resolve_verified)(uint8_t *work);
@@ -176,9 +174,9 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ResolverV or a region of the borrow at a fixed offset.
-void protocore_resolver_classify(uint8_t *work);
-void protocore_resolver_verify(uint8_t *work);
-void protocore_resolver_query_build(uint8_t *work);
+void protocore_resolver_classify(const uint8_t *work);
+void protocore_resolver_verify(const uint8_t *work);
+void protocore_resolver_query_build(const uint8_t *work);
 void protocore_resolver_answer_parse(uint8_t *work);
 void protocore_resolver_resolve(uint8_t *work);
 void protocore_resolver_resolve_verified(uint8_t *work);
@@ -211,7 +209,7 @@ static const ResolverNs Resolver __attribute__((unused)) = {
  */
 uint8_t *protocore_dns_resolver_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNS_RESOLVER
 #endif // PROTOCORE_DNS_RESOLVER_H

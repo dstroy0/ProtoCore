@@ -14,7 +14,7 @@
 #include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const uint8_t kV2Sig[PROXY_V2_SIG_LEN] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D,
                                                  0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
@@ -30,7 +30,7 @@ static uint32_t rd32(const uint8_t *p)
 }
 
 // Parse a dotted-quad IPv4 in [s, s+n) into a host-order uint32; false on malformed.
-static proto_bool parse_ipv4(const char *s, size_t n, uint32_t *out)
+static embed_bool parse_ipv4(const char *s, size_t n, uint32_t *out)
 {
     uint32_t v = 0;
     int octets = 0;
@@ -39,23 +39,23 @@ static proto_bool parse_ipv4(const char *s, size_t n, uint32_t *out)
     {
         if (i >= n || s[i] < '0' || s[i] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint32_t o = 0;
         size_t digits = 0;
-        const proto_bool zero_first = s[i] == '0';
+        const embed_bool zero_first = s[i] == '0';
         while (i < n && s[i] >= '0' && s[i] <= '9')
         {
             o = o * 10 + (uint32_t)(s[i] - '0');
             i++;
             if (++digits > 3 || o > 255)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         if (zero_first && digits > 1) // sec 2.1: heading zeroes are not permitted
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = (v << 8) | o;
         octets++;
@@ -63,46 +63,46 @@ static proto_bool parse_ipv4(const char *s, size_t n, uint32_t *out)
         {
             if (i >= n || s[i] != '.')
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             i++;
         }
     }
     if (i != n) // trailing junk
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool parse_u16(const char *s, size_t n, uint16_t *out)
+static embed_bool parse_u16(const char *s, size_t n, uint16_t *out)
 {
     // n == 0 is never true here: both call sites (below, in parse_v1) pass a token produced by
     // parse_v1's own space-delimited tokenizer, which only ever records tokens of length >= 1.
     if (n == 0 || n > 5 || (n > 1 && s[0] == '0')) // sec 2.1: heading zeroes are not permitted
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t v = 0;
     for (size_t i = 0; i < n; i++)
     {
         if (s[i] < '0' || s[i] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = v * 10 + (uint32_t)(s[i] - '0');
     }
     if (v > 0xFFFF)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = (uint16_t)v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Parse the v1 text header (already known to start with "PROXY ").
-static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *consumed)
+static embed_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *consumed)
 {
     // Find the terminating CRLF (the line is bounded at 107 octets).
     size_t crlf = len;
@@ -117,11 +117,11 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
     }
     if (crlf == len)
     {
-        return PROTO_FALSE; // line not complete
+        return EMBED_FALSE; // line not complete
     }
     if (crlf + 2 > 107)
     {
-        return PROTO_FALSE; // the line, CRLF included, is bounded at 107 octets
+        return EMBED_FALSE; // the line, CRLF included, is bounded at 107 octets
     }
 
     const char *s = (const char *)buf;
@@ -150,21 +150,21 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
         ntok++;
     }
     out->version = 1;
-    out->has_addr = PROTO_FALSE;
+    out->has_addr = EMBED_FALSE;
     out->src_addr = out->dst_addr = 0;
     out->src_port = out->dst_port = 0;
     *consumed = crlf + 2;
     // "PROXY TCP4 <src> <dst> <sport> <dport>". TCP4, TCP6 and UNKNOWN are the published family
     // tokens; any other sequence does not match the protocol and is discarded.
-    proto_bool tcp4 = (ntok == 6 && tlen[1] == 4 &&
+    embed_bool tcp4 = (ntok == 6 && tlen[1] == 4 &&
                        EMBED_CALL(memor.cmp, MemoriaCfg, .src = tok[1], .other = "TCP4", .bytes = 4) == 0);
-    proto_bool tcp6 = (ntok == 6 && tlen[1] == 4 &&
+    embed_bool tcp6 = (ntok == 6 && tlen[1] == 4 &&
                        EMBED_CALL(memor.cmp, MemoriaCfg, .src = tok[1], .other = "TCP6", .bytes = 4) == 0);
-    proto_bool unknown = (ntok >= 2 && tlen[1] == 7 &&
+    embed_bool unknown = (ntok >= 2 && tlen[1] == 7 &&
                           EMBED_CALL(memor.cmp, MemoriaCfg, .src = tok[1], .other = "UNKNOWN", .bytes = 7) == 0);
     if (!tcp4 && !tcp6 && !unknown)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (tcp4)
     {
@@ -172,11 +172,11 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
         if (!parse_ipv4(tok[2], tlen[2], &out->src_addr) || !parse_ipv4(tok[3], tlen[3], &out->dst_addr) ||
             !parse_u16(tok[4], tlen[4], &out->src_port) || !parse_u16(tok[5], tlen[5], &out->dst_port))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
-        out->has_addr = PROTO_TRUE;
+        out->has_addr = EMBED_TRUE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the entries -----------------------------------------------------------
@@ -184,7 +184,7 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_proxy_protocol_parse(uint8_t *work)
+void protocore_proxy_protocol_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = ProxyProtocolV.parse_args.buf;
@@ -194,7 +194,7 @@ void protocore_proxy_protocol_parse(uint8_t *work)
 
     if (!buf || !out || !consumed)
     {
-        ProxyProtocolV.ok = PROTO_FALSE;
+        ProxyProtocolV.ok = EMBED_FALSE;
         return;
     }
 
@@ -204,7 +204,7 @@ void protocore_proxy_protocol_parse(uint8_t *work)
     {
         if (len < 16) // signature + ver_cmd + fam + 2-octet length
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocolV.ok = EMBED_FALSE;
             return;
         }
         uint8_t ver_cmd = buf[12];
@@ -213,27 +213,27 @@ void protocore_proxy_protocol_parse(uint8_t *work)
         size_t total = 16 + (size_t)addr_len;
         if (total > len)
         {
-            ProxyProtocolV.ok = PROTO_FALSE; // address block not fully buffered
+            ProxyProtocolV.ok = EMBED_FALSE; // address block not fully buffered
             return;
         }
         if ((ver_cmd & 0xF0) != 0x20) // must be version 2
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocolV.ok = EMBED_FALSE;
             return;
         }
         if ((ver_cmd & 0x0Fu) > 0x1u) // LOCAL and PROXY are the assigned commands
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocolV.ok = EMBED_FALSE;
             return;
         }
         // AF_UNSPEC/AF_INET/AF_INET6/AF_UNIX over UNSPEC/STREAM/DGRAM are the assigned pairs.
         if ((fam >> 4) > 0x3u || (fam & 0x0Fu) > 0x2u)
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocolV.ok = EMBED_FALSE;
             return;
         }
         out->version = 2;
-        out->has_addr = PROTO_FALSE;
+        out->has_addr = EMBED_FALSE;
         out->src_addr = out->dst_addr = 0;
         out->src_port = out->dst_port = 0;
         if (ver_cmd == PROXY_V2_VER_CMD_PROXY && fam == PROXY_V2_FAM_TCP4 && addr_len >= 12)
@@ -242,10 +242,10 @@ void protocore_proxy_protocol_parse(uint8_t *work)
             out->dst_addr = rd32(buf + 20);
             out->src_port = rd16(buf + 24);
             out->dst_port = rd16(buf + 26);
-            out->has_addr = PROTO_TRUE;
+            out->has_addr = EMBED_TRUE;
         }
         *consumed = total;
-        ProxyProtocolV.ok = PROTO_TRUE;
+        ProxyProtocolV.ok = EMBED_TRUE;
         return;
     }
 
@@ -256,10 +256,10 @@ void protocore_proxy_protocol_parse(uint8_t *work)
         return;
     }
 
-    ProxyProtocolV.ok = PROTO_FALSE; // no PROXY header present
+    ProxyProtocolV.ok = EMBED_FALSE; // no PROXY header present
 }
 
-void protocore_proxy_protocol_v1_build(uint8_t *work)
+void protocore_proxy_protocol_v1_build(const uint8_t *work)
 {
     (void)work;
     char *buf = ProxyProtocolV.v1_build_args.buf;
@@ -317,7 +317,7 @@ void protocore_proxy_protocol_v1_build(uint8_t *work)
     ProxyProtocolV.n = (size_t)n;
 }
 
-void protocore_proxy_protocol_v2_build(uint8_t *work)
+void protocore_proxy_protocol_v2_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = ProxyProtocolV.v2_build_args.buf;
@@ -356,6 +356,6 @@ void protocore_proxy_protocol_v2_build(uint8_t *work)
 /** @brief The operands and the outcome. */
 ProxyProtocolVars ProxyProtocolV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROXY_PROTOCOL

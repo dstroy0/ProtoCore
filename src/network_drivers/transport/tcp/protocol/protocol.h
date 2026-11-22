@@ -30,7 +30,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Event processing - the stack's callbacks (RFC 9293 sec 3.10.7 SEGMENT ARRIVES)
@@ -40,14 +40,14 @@ PROTOCORE_BEGIN_DECLS
 // is no real stack event to fire them.
 
 protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbuf *p, protocore_net_err err);
-protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len);
+protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, embed_u16 len);
 void lowlevel_err_cb(void *arg, protocore_net_err err);
 
 /** @brief RFC 9293 sec 3.9.1 SEND / RECEIVE: the bytes a call moves, and the room they move into. */
 typedef struct
 {
     const void *data; ///< bytes for a send
-    proto_u16 len;    ///< how many
+    embed_u16 len;    ///< how many
     uint8_t *buf;     ///< where a read or a peek lands
     size_t cap;       ///< how much room it has
     size_t off;       ///< a peek's offset from the tail
@@ -57,7 +57,7 @@ typedef struct
 /** @brief What a pool lifecycle call reads: the idle deadline it sweeps against, and whose slots. */
 typedef struct
 {
-    proto_u32 conn_timeout_ms; ///< milliseconds of inactivity before the sweep closes a slot
+    embed_u32 conn_timeout_ms; ///< milliseconds of inactivity before the sweep closes a slot
     int worker_id;             ///< whose slots the sweep reaps
 } ConnLifeArgs;
 
@@ -109,13 +109,13 @@ typedef struct
  * @var ConnPoolNs::timeout_ms        the idle deadline the sweep measures against
  * @var ConnPoolNs::send              queue bytes for transmission (RFC 9293 sec 3.9.1 SEND)
  * @var ConnPoolNs::send_flush        the same, pushed on the way out
- * @var ConnPoolNs::sndbuf            room the send buffer has left
+ * @var ConnPoolNs::sndbuf            room the send buffer left
  * @var ConnPoolNs::flush             push what is queued (RFC 9293 sec 3.9.1 PUSH)
  * @var ConnPoolNs::ack_consumed      reopen the receive window by what was drained
  * @var ConnPoolNs::raw_send          write already-encrypted bytes, no TLS re-entry
  * @var ConnPoolNs::close             tear the connection down (RFC 9293 sec 3.9.1 CLOSE)
  * @var ConnPoolNs::abort_slot        reset it (RFC 9293 sec 3.9.1 ABORT)
- * @var ConnPoolNs::closing_finalize  finish a slot whose TX has drained
+ * @var ConnPoolNs::closing_finalize  finish a slot whose TX drained
  * @var ConnPoolNs::closing_check     finalize it if it has
  * @var ConnPoolNs::begin_close       enter the dwell that precedes the close
  * @var ConnPoolNs::enqueue           post an event to the owning listener's queue
@@ -156,8 +156,8 @@ typedef struct
 #if PROTOCORE_ENABLE_OBSERVABILITY
     ConnObsArgs obs; ///< what an observability call records
 #endif
-    proto_bool ok;
-    proto_u16 u16;
+    embed_bool ok;
+    embed_u16 u16;
     uint32_t u32;
     uint8_t u8;
     int32_t i32;
@@ -177,27 +177,27 @@ extern ConnPoolVars ConnPoolV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const set_state)(uint8_t *work);
-    void (*const alloc_free)(uint8_t *work);
+    void (*const set_state)(const uint8_t *work);
+    void (*const alloc_free)(const uint8_t *work);
     void (*const timeout_ms)(uint8_t *work);
-    void (*const send)(uint8_t *work);
-    void (*const send_flush)(uint8_t *work);
-    void (*const sndbuf)(uint8_t *work);
-    void (*const flush)(uint8_t *work);
-    void (*const ack_consumed)(uint8_t *work);
-    void (*const raw_send)(uint8_t *work);
-    void (*const close)(uint8_t *work);
-    void (*const abort_slot)(uint8_t *work);
-    void (*const closing_finalize)(uint8_t *work);
+    void (*const send)(const uint8_t *work);
+    void (*const send_flush)(const uint8_t *work);
+    void (*const sndbuf)(const uint8_t *work);
+    void (*const flush)(const uint8_t *work);
+    void (*const ack_consumed)(const uint8_t *work);
+    void (*const raw_send)(const uint8_t *work);
+    void (*const close)(const uint8_t *work);
+    void (*const abort_slot)(const uint8_t *work);
+    void (*const closing_finalize)(const uint8_t *work);
     void (*const closing_check)(uint8_t *work);
-    void (*const begin_close)(uint8_t *work);
-    void (*const enqueue)(uint8_t *work);
+    void (*const begin_close)(const uint8_t *work);
+    void (*const enqueue)(const uint8_t *work);
     void (*const init)(uint8_t *work);
-    void (*const stop)(uint8_t *work);
-    void (*const active_count)(uint8_t *work);
-    void (*const remote_ip)(uint8_t *work);
-    void (*const remote_addr)(uint8_t *work);
-    void (*const touch_active)(uint8_t *work);
+    void (*const stop)(const uint8_t *work);
+    void (*const active_count)(const uint8_t *work);
+    void (*const remote_ip)(const uint8_t *work);
+    void (*const remote_addr)(const uint8_t *work);
+    void (*const touch_active)(const uint8_t *work);
     void (*const check_timeouts)(uint8_t *work);
     void (*const on_event)(uint8_t *work);
     void (*const counters_get)(uint8_t *work);
@@ -205,43 +205,43 @@ typedef struct
     void (*const obs_bump)(uint8_t *work);
     void (*const obs_transition)(uint8_t *work);
     void (*const obs_notice)(uint8_t *work);
-    void (*const available)(uint8_t *work);
-    void (*const read_byte)(uint8_t *work);
-    void (*const peek)(uint8_t *work);
-    void (*const consume)(uint8_t *work);
-    void (*const read)(uint8_t *work);
-    void (*const active)(uint8_t *work);
-    void (*const iface)(uint8_t *work);
-    void (*const listener_id)(uint8_t *work);
-    void (*const tls)(uint8_t *work);
-    void (*const owner)(uint8_t *work);
-    void (*const proto_of)(uint8_t *work);
-    void (*const pcb_of)(uint8_t *work);
+    void (*const available)(const uint8_t *work);
+    void (*const read_byte)(const uint8_t *work);
+    void (*const peek)(const uint8_t *work);
+    void (*const consume)(const uint8_t *work);
+    void (*const read)(const uint8_t *work);
+    void (*const active)(const uint8_t *work);
+    void (*const iface)(const uint8_t *work);
+    void (*const listener_id)(const uint8_t *work);
+    void (*const tls)(const uint8_t *work);
+    void (*const owner)(const uint8_t *work);
+    void (*const proto_of)(const uint8_t *work);
+    void (*const pcb_of)(const uint8_t *work);
 } ConnPoolNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ConnPoolV or a region of the borrow at a fixed offset.
-void protocore_conn_pool_set_state(uint8_t *work);
-void protocore_conn_pool_alloc_free(uint8_t *work);
+void protocore_conn_pool_set_state(const uint8_t *work);
+void protocore_conn_pool_alloc_free(const uint8_t *work);
 void protocore_conn_pool_timeout_ms(uint8_t *work);
-void protocore_conn_pool_send(uint8_t *work);
-void protocore_conn_pool_send_flush(uint8_t *work);
-void protocore_conn_pool_sndbuf(uint8_t *work);
-void protocore_conn_pool_flush(uint8_t *work);
-void protocore_conn_pool_ack_consumed(uint8_t *work);
-void protocore_conn_pool_raw_send(uint8_t *work);
-void protocore_conn_pool_close(uint8_t *work);
-void protocore_conn_pool_abort_slot(uint8_t *work);
-void protocore_conn_pool_closing_finalize(uint8_t *work);
+void protocore_conn_pool_send(const uint8_t *work);
+void protocore_conn_pool_send_flush(const uint8_t *work);
+void protocore_conn_pool_sndbuf(const uint8_t *work);
+void protocore_conn_pool_flush(const uint8_t *work);
+void protocore_conn_pool_ack_consumed(const uint8_t *work);
+void protocore_conn_pool_raw_send(const uint8_t *work);
+void protocore_conn_pool_close(const uint8_t *work);
+void protocore_conn_pool_abort_slot(const uint8_t *work);
+void protocore_conn_pool_closing_finalize(const uint8_t *work);
 void protocore_conn_pool_closing_check(uint8_t *work);
-void protocore_conn_pool_begin_close(uint8_t *work);
-void protocore_conn_pool_enqueue(uint8_t *work);
+void protocore_conn_pool_begin_close(const uint8_t *work);
+void protocore_conn_pool_enqueue(const uint8_t *work);
 void protocore_conn_pool_init(uint8_t *work);
-void protocore_conn_pool_stop(uint8_t *work);
-void protocore_conn_pool_active_count(uint8_t *work);
-void protocore_conn_pool_remote_ip(uint8_t *work);
-void protocore_conn_pool_remote_addr(uint8_t *work);
-void protocore_conn_pool_touch_active(uint8_t *work);
+void protocore_conn_pool_stop(const uint8_t *work);
+void protocore_conn_pool_active_count(const uint8_t *work);
+void protocore_conn_pool_remote_ip(const uint8_t *work);
+void protocore_conn_pool_remote_addr(const uint8_t *work);
+void protocore_conn_pool_touch_active(const uint8_t *work);
 void protocore_conn_pool_check_timeouts(uint8_t *work);
 #if PROTOCORE_ENABLE_OBSERVABILITY
 void protocore_conn_pool_on_event(uint8_t *work);
@@ -251,18 +251,18 @@ void protocore_conn_pool_obs_bump(uint8_t *work);
 void protocore_conn_pool_obs_transition(uint8_t *work);
 void protocore_conn_pool_obs_notice(uint8_t *work);
 #endif
-void protocore_conn_pool_available(uint8_t *work);
-void protocore_conn_pool_read_byte(uint8_t *work);
-void protocore_conn_pool_peek(uint8_t *work);
-void protocore_conn_pool_consume(uint8_t *work);
-void protocore_conn_pool_read(uint8_t *work);
-void protocore_conn_pool_active(uint8_t *work);
-void protocore_conn_pool_iface(uint8_t *work);
-void protocore_conn_pool_listener_id(uint8_t *work);
-void protocore_conn_pool_tls(uint8_t *work);
-void protocore_conn_pool_owner(uint8_t *work);
-void protocore_conn_pool_proto_of(uint8_t *work);
-void protocore_conn_pool_pcb_of(uint8_t *work);
+void protocore_conn_pool_available(const uint8_t *work);
+void protocore_conn_pool_read_byte(const uint8_t *work);
+void protocore_conn_pool_peek(const uint8_t *work);
+void protocore_conn_pool_consume(const uint8_t *work);
+void protocore_conn_pool_read(const uint8_t *work);
+void protocore_conn_pool_active(const uint8_t *work);
+void protocore_conn_pool_iface(const uint8_t *work);
+void protocore_conn_pool_listener_id(const uint8_t *work);
+void protocore_conn_pool_tls(const uint8_t *work);
+void protocore_conn_pool_owner(const uint8_t *work);
+void protocore_conn_pool_proto_of(const uint8_t *work);
+void protocore_conn_pool_pcb_of(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -324,6 +324,6 @@ static const ConnPoolNs ConnPool __attribute__((unused)) = {
  */
 uint8_t *protocore_conn_pool_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TCP_PROTOCOL_H

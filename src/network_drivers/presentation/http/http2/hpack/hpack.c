@@ -19,7 +19,7 @@
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
 #include "network_drivers/presentation/http/http2/hpack/hpack.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One dynamic-table entry descriptor (its bytes live in the table's byte ring). */
 typedef struct
@@ -62,7 +62,10 @@ static_assert(HPACK_OFF_CTX % _Alignof(HpackDynTable) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define HPACK_CTX(w) ((HpackDynTable *)(void *)((w) + HPACK_OFF_CTX))
+#define HPACK_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HpackDynTable *)(const void *)((w) + HPACK_OFF_CTX),                                   \
+        default: (HpackDynTable *)(void *)((w) + HPACK_OFF_CTX))
 
 #define HPACK_BYTES PROTOCORE_HPACK_TABLE_BYTES
 #define HPACK_ENTS PROTOCORE_HPACK_MAX_ENTRIES
@@ -230,33 +233,34 @@ static void dyn_insert(HpackDynTable *t, const char *name, size_t nlen, const ch
 // Copy an indexed header's name (idx>=1) into out; false if idx invalid / too big.
 // idx>=1 is always true here: the only caller (decode_literal) routes name_idx==0 to the inline-name
 // path and never calls resolve_name with it.
-static proto_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, size_t cap, size_t *out_len)
+static embed_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, size_t cap, size_t *out_len)
 {
     if (idx >= 1 && idx <= 61)
     {
         size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = STATIC[idx][0], .cap = cap + 1);
         if (nl > cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = STATIC[idx][0], .bytes = nl);
         *out_len = nl;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     const HpackEntry *e = dyn_entry(t, idx - 61);
     if (!e || e->name_len > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     ring_read(t, e->ring_pos, out, e->name_len);
     *out_len = e->name_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-// Emit a fully-indexed field (idx resolves to name+value); copies both into scratch.
+// Emit a fully-indexed field (idx resolves to name+value). Copies both into scratch.
 // idx>=1 is always true here: the only caller (protocore_hpack_decode's 6.1 Indexed Header Field case)
 // already rejects idx==0 before calling emit_indexed.
-static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, size_t cap, HpackEmitFn emit, void *ctx)
+static embed_bool emit_indexed(const HpackDynTable *t, uint32_t idx, char *scratch, size_t cap, HpackEmitFn emit,
+                               void *ctx)
 {
     size_t nl;
     size_t vl;
@@ -266,7 +270,7 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
         vl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = STATIC[idx][1], .cap = cap + 1);
         if (nl + vl > cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = STATIC[idx][0], .bytes = nl);
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch + nl, .src = STATIC[idx][1], .bytes = vl);
@@ -276,13 +280,13 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
         const HpackEntry *e = dyn_entry(t, idx - 61);
         if (!e)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         nl = e->name_len;
         vl = e->val_len;
         if (nl + vl > cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         ring_read(t, e->ring_pos, scratch, nl);
         ring_read(t, (uint16_t)((e->ring_pos + nl) % HPACK_BYTES), scratch + nl, vl);
@@ -291,37 +295,37 @@ static proto_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, si
 }
 
 // Decode a literal representation (name via index or inline, value inline; optional indexing).
-static proto_bool decode_literal(uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, size_t *pos,
-                                 uint8_t prefix_bits, proto_bool do_index, char *scratch, size_t cap, HpackEmitFn emit,
+static embed_bool decode_literal(uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, size_t *pos,
+                                 uint8_t prefix_bits, embed_bool do_index, char *scratch, size_t cap, HpackEmitFn emit,
                                  void *ctx)
 {
     size_t c = 0;
     uint32_t name_idx = 0;
-    proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + *pos, len - *pos, prefix_bits, &c, &name_idx);
+    embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + *pos, len - *pos, prefix_bits, &c, &name_idx);
     if (!hpack_prim_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *pos += c;
     size_t name_len = 0;
     if (name_idx == 0)
     {
-        proto_bool hpack_prim_ok = HpackPrim.decode_str(work, block, len, pos, scratch, cap, &name_len);
+        embed_bool hpack_prim_ok = HpackPrim.decode_str(work, block, len, pos, scratch, cap, &name_len);
         if (!hpack_prim_ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     else if (!resolve_name(t, name_idx, scratch, cap, &name_len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t val_len = 0;
-    proto_bool hpack_prim_ok2 =
+    embed_bool hpack_prim_ok2 =
         HpackPrim.decode_str(work, block, len, pos, scratch + name_len, cap - name_len, &val_len);
     if (!hpack_prim_ok2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (do_index)
     {
@@ -342,7 +346,7 @@ static void hpack_dyn_init_run(HpackDynTable *t, uint32_t max_bytes)
     }
 }
 
-static proto_bool hpack_decode_run(uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, char *scratch,
+static embed_bool hpack_decode_run(uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, char *scratch,
                                    size_t scratch_cap, HpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
@@ -353,32 +357,32 @@ static proto_bool hpack_decode_run(uint8_t *work, HpackDynTable *t, const uint8_
         { // 6.1 Indexed Header Field
             size_t c = 0;
             uint32_t idx = 0;
-            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 7, &c, &idx);
+            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 7, &c, &idx);
             if (!hpack_prim_ok || idx == 0)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             pos += c;
             if (!emit_indexed(t, idx, scratch, scratch_cap, emit, ctx))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         else if (b & 0x40)
         { // 6.2.1 Literal with incremental indexing (name prefix 6)
-            if (!decode_literal(work, t, block, len, &pos, 6, PROTO_TRUE, scratch, scratch_cap, emit, ctx))
+            if (!decode_literal(work, t, block, len, &pos, 6, EMBED_TRUE, scratch, scratch_cap, emit, ctx))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         else if ((b & 0xE0) == 0x20)
         { // 6.3 Dynamic table size update (prefix 5)
             size_t c = 0;
             uint32_t nm = 0;
-            proto_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 5, &c, &nm);
+            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 5, &c, &nm);
             if (!hpack_prim_ok)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             pos += c;
             // RFC 7541 sec 6.3: a size update above the limit the enclosing protocol set is a
@@ -387,19 +391,19 @@ static proto_bool hpack_decode_run(uint8_t *work, HpackDynTable *t, const uint8_
             // that HPACK_BYTES holds. Clamping would take a peer's illegal update as if it were legal.
             if (nm > HPACK_BYTES)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             dyn_set_max(t, nm);
         }
         else
         { // 6.2.2 without / 6.2.3 never indexed (name prefix 4, no table insert)
-            if (!decode_literal(work, t, block, len, &pos, 4, PROTO_FALSE, scratch, scratch_cap, emit, ctx))
+            if (!decode_literal(work, t, block, len, &pos, 4, EMBED_FALSE, scratch, scratch_cap, emit, ctx))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static size_t hpack_encode_header_run(uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
@@ -481,6 +485,6 @@ void protocore_hpack_encode_header(uint8_t *work)
 /** @brief The operands and the outcome. */
 HpackVars HpackV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2

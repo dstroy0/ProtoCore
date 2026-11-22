@@ -49,7 +49,7 @@ static uint32_t imbalance(const uint32_t *counts, size_t n)
 
 // The whole point of the policy: writing where pick says, then recording it, spreads the wear
 // perfectly. After 4000 writes over 8 slots every slot has taken exactly 500 and the imbalance is
-// zero, because a slot can only be chosen again once every other slot has caught up with it.
+// zero, because a slot can only be chosen again once every other slot caught up with it.
 void test_pick_then_mark_levels_the_region_exactly(void)
 {
     uint32_t counts[8] = {0};
@@ -128,7 +128,7 @@ void test_mark_bumps_exactly_one_slot(void)
     TEST_ASSERT_EQUAL_UINT32(2u, counts[1]);
 }
 
-// A count that has reached the 32-bit maximum stays there. Wrapping it to 0 would make the most
+// A count that reached the 32-bit maximum stays there. Wrapping it to 0 would make the most
 // worn slot look like the least worn one, and the policy would then write to it forever.
 void test_a_saturated_count_never_wraps(void)
 {

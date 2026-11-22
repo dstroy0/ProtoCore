@@ -48,7 +48,7 @@ A multi-protocol network server for microcontrollers with a fully deterministic 
 > [!WARNING]
 > **THIS LIBRARY HAS NOT BEEN AUDITED BY A 3RD PARTY**
 >
-> No third party has reviewed this library. The core is not yet locked; it needs that stability to make
+> No third party reviewed this library. The core is not yet locked; it needs that stability to make
 > contribution and collaboration practical, and there has been no time for outside ideas to flow in.
 > Current verification state is measured, not claimed:
 >
@@ -191,7 +191,7 @@ The technical reference documentation has been moved to a dedicated landing page
 
 <!-- prettier-ignore-start -->
 
-**260 features**, every one a compile-time `PROTOCORE_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
+**261 features**, every one a compile-time `PROTOCORE_ENABLE_*` flag that is off unless you ask for it. Core HTTP/1.1 parsing, routing, middleware, JSON, templating and chunked responses are always on and are not flags.
 
 <a href="https://dstroy0.github.io/ProtoCore/features.html" title="Browse every feature">
   <img alt="Feature map: the OSI stack and the feature groups on each layer" src="docs/diagrams/features_map.svg" width="100%">
@@ -205,7 +205,7 @@ The technical reference documentation has been moved to a dedicated landing page
 | **Transport (L4)** | 8 | Accept Throttle, IP Allowlist, Keep-Alive, Per IP Throttle, … |
 | **Session (L5)** | 5 | SSH, SSH Compression, SSH SCP, SSH SFTP, … |
 | **Presentation (L6)** | 21 | Auth, Auth Lockout, CBOR, CloudEvents, … |
-| **Application (L7)** | 171 | AD9238, Adaptive mDNS, ADS (Beckhoff), AMQP, … |
+| **Application (L7)** | 172 | AD9238, Adaptive mDNS, ADS (Beckhoff), AMQP, … |
 
 **[Browse all of them →](https://dstroy0.github.io/ProtoCore/features.html)** - filterable, grouped by layer, one line each. Full descriptions live in [FEATURES.md](docs/FEATURES.md); both are generated from it, so they cannot drift.
 
@@ -216,7 +216,7 @@ The technical reference documentation has been moved to a dedicated landing page
 ## Build-flag dependencies
 
 Most features are independent. A few build on another feature and will not
-compile without it; those hard dependencies are enforced at compile time with a
+compile without it. Those hard dependencies are enforced at compile time with a
 clear `#error` (so an illegal combination fails fast instead of producing a
 cryptic linker error). Enable a child flag only together with its parent.
 
@@ -250,7 +250,7 @@ The jump from a bare sketch to a running server is almost entirely the WiFi/lwIP
 
 Measured on `esp32dev` (Arduino core). The **default server** (HTTP + WebSocket + SSE + multipart + file serving + Basic auth) is **735 KB flash / 64.6 KB RAM** on a chip with 1,280 KB flash / 320 KB RAM. Everything past that is opt-in and links only what you name.
 
-**[Per-feature build footprints &rarr;](docs/FOOTPRINTS.md)** - 23 features that add measurable flash, each measured from isolated builds as a range: best case (its dependencies are already linked) to worst case (budget with this). Every example's absolute total is there too.
+**[Per-feature build footprints &rarr;](docs/FOOTPRINTS.md)** - 79 features that add measurable flash, each measured from isolated builds as a range: best case (its dependencies are already linked) to worst case (budget with this). Every example's absolute total is there too.
 
 <!-- prettier-ignore-end -->
 

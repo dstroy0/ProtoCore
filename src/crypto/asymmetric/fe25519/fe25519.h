@@ -37,7 +37,7 @@
 
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // 25519 has no dedicated ECC accelerator on any ESP32 die, so the RSA MODMULT is the field-layer win wherever
 // it exists - track the HAL's PROTOCORE_RSA_MODMUL_HW (S3, P4, ...). Classic ESP32 / native keep the software ladder.
@@ -418,7 +418,7 @@ typedef struct
     Fe25519Pow2523Args pow2523_args;
     Fe25519ParityArgs parity_args;
     Fe25519NeqArgs neq_args;
-    proto_bool ok;
+    embed_bool ok;
     int parity;
     int neq;
 } Fe25519Vars;
@@ -429,44 +429,44 @@ extern Fe25519Vars Fe25519V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const hw_enable)(uint8_t *work);
-    void (*const hw_disable)(uint8_t *work);
-    void (*const mul)(uint8_t *work);
-    void (*const sq)(uint8_t *work);
-    void (*const copy)(uint8_t *work);
-    void (*const zero)(uint8_t *work);
-    void (*const one)(uint8_t *work);
-    void (*const reduce_once)(uint8_t *work);
-    void (*const add)(uint8_t *work);
-    void (*const sub)(uint8_t *work);
-    void (*const cswap)(uint8_t *work);
-    void (*const frombytes)(uint8_t *work);
-    void (*const tobytes)(uint8_t *work);
-    void (*const invert)(uint8_t *work);
-    void (*const pow2523)(uint8_t *work);
-    void (*const get_parity)(uint8_t *work);
-    void (*const get_neq)(uint8_t *work);
+    void (*const hw_enable)(const uint8_t *work);
+    void (*const hw_disable)(const uint8_t *work);
+    void (*const mul)(const uint8_t *work);
+    void (*const sq)(const uint8_t *work);
+    void (*const copy)(const uint8_t *work);
+    void (*const zero)(const uint8_t *work);
+    void (*const one)(const uint8_t *work);
+    void (*const reduce_once)(const uint8_t *work);
+    void (*const add)(const uint8_t *work);
+    void (*const sub)(const uint8_t *work);
+    void (*const cswap)(const uint8_t *work);
+    void (*const frombytes)(const uint8_t *work);
+    void (*const tobytes)(const uint8_t *work);
+    void (*const invert)(const uint8_t *work);
+    void (*const pow2523)(const uint8_t *work);
+    void (*const get_parity)(const uint8_t *work);
+    void (*const get_neq)(const uint8_t *work);
 } Fe25519Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Fe25519V or a region of the borrow at a fixed offset.
-void protocore_fe25519_hw_enable(uint8_t *work);
-void protocore_fe25519_hw_disable(uint8_t *work);
-void protocore_fe25519_mul(uint8_t *work);
-void protocore_fe25519_sq(uint8_t *work);
-void protocore_fe25519_copy(uint8_t *work);
-void protocore_fe25519_zero(uint8_t *work);
-void protocore_fe25519_one(uint8_t *work);
-void protocore_fe25519_reduce_once(uint8_t *work);
-void protocore_fe25519_add(uint8_t *work);
-void protocore_fe25519_sub(uint8_t *work);
-void protocore_fe25519_cswap(uint8_t *work);
-void protocore_fe25519_frombytes(uint8_t *work);
-void protocore_fe25519_tobytes(uint8_t *work);
-void protocore_fe25519_invert(uint8_t *work);
-void protocore_fe25519_pow2523(uint8_t *work);
-void protocore_fe25519_get_parity(uint8_t *work);
-void protocore_fe25519_get_neq(uint8_t *work);
+void protocore_fe25519_hw_enable(const uint8_t *work);
+void protocore_fe25519_hw_disable(const uint8_t *work);
+void protocore_fe25519_mul(const uint8_t *work);
+void protocore_fe25519_sq(const uint8_t *work);
+void protocore_fe25519_copy(const uint8_t *work);
+void protocore_fe25519_zero(const uint8_t *work);
+void protocore_fe25519_one(const uint8_t *work);
+void protocore_fe25519_reduce_once(const uint8_t *work);
+void protocore_fe25519_add(const uint8_t *work);
+void protocore_fe25519_sub(const uint8_t *work);
+void protocore_fe25519_cswap(const uint8_t *work);
+void protocore_fe25519_frombytes(const uint8_t *work);
+void protocore_fe25519_tobytes(const uint8_t *work);
+void protocore_fe25519_invert(const uint8_t *work);
+void protocore_fe25519_pow2523(const uint8_t *work);
+void protocore_fe25519_get_parity(const uint8_t *work);
+void protocore_fe25519_get_neq(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -494,7 +494,7 @@ static const Fe25519Ns Fe25519 __attribute__((unused)) = {
 
 #endif // PROTOCORE_FE25519_MPI_HW
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FE25519
 

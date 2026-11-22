@@ -1,11 +1,11 @@
 # 77. SEN0192 microwave motion sensor
 
-Detect motion with a **DFRobot SEN0192** — a 10.525 GHz microwave Doppler sensor (`PROTOCORE_ENABLE_SEN0192`).
+Detect motion with a **DFRobot SEN0192** - a 10.525 GHz microwave Doppler sensor (`PROTOCORE_ENABLE_SEN0192`).
 It's a 3-pin part (V / G / digital OUT) whose OUT line asserts while it senses movement within its
 adjustable range. Unlike a PIR it works **through thin non-metal enclosures** and is unaffected by ambient
 light or temperature.
 
-The sensor has no protocol — just one digital line — so `services/sen0192` tracks it as a **debounced
+The sensor has no protocol - just one digital line - so `services/sen0192` tracks it as a **debounced
 presence signal**: presence asserts on motion and is held for `PROTOCORE_SEN0192_HOLD_MS` after the last
 motion sample, so brief gaps between Doppler returns don't make presence flap. The presence state machine
 is pure and host-tested (`native_sen0192`); only the GPIO read touches hardware.
@@ -21,11 +21,11 @@ This sketch lights the onboard LED while motion is present and prints each detec
 | GND     | GND                              |
 
 The input pin, hold time, and OUT polarity are **ServerConfig** knobs, so a driver's pin assignment lives
-in one place — override them with build flags, no code change:
+in one place - override them with build flags, no code change:
 
-- `PROTOCORE_SEN0192_PIN` (default `4`) — the GPIO the OUT line is on
-- `PROTOCORE_SEN0192_HOLD_MS` (default `2000`) — how long presence is held after the last motion
-- `PROTOCORE_SEN0192_ACTIVE_HIGH` (default `1`) — set `0` if your module's OUT idles high and drops on motion
+- `PROTOCORE_SEN0192_PIN` (default `4`) - the GPIO the OUT line is on
+- `PROTOCORE_SEN0192_HOLD_MS` (default `2000`) - how long presence is held after the last motion
+- `PROTOCORE_SEN0192_ACTIVE_HIGH` (default `1`) - set `0` if your module's OUT idles high and drops on motion
 
 ## Build and flash
 

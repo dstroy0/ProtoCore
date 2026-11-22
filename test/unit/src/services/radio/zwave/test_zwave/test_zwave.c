@@ -178,7 +178,7 @@ void test_control_octets(void)
     TEST_ASSERT_EQUAL_HEX8(0x15, ZWAVE_NAK);
     TEST_ASSERT_EQUAL_HEX8(0x18, ZWAVE_CAN);
 
-    proto_bool zwave_ok = Zwave.is_ack(zwave_work, ZWAVE_ACK);
+    embed_bool zwave_ok = Zwave.is_ack(zwave_work, ZWAVE_ACK);
     TEST_ASSERT_TRUE(zwave_ok);
     zwave_ok = Zwave.is_nak(zwave_work, ZWAVE_NAK);
     TEST_ASSERT_TRUE(zwave_ok);

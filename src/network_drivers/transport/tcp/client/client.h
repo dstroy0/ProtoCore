@@ -21,7 +21,7 @@
  * carries plaintext octets: there is no client-side TLS engine in the library, so nothing
  * BIO at protocore_client_send() / protocore_client_read().
  *
- * Nothing here blocks. open() takes a slot, starts the resolve and returns a cid straight away; the
+ * Nothing here blocks. open() takes a slot, starts the resolve and returns a cid straight away. The
  * slot carries its own timer and steps from resolving to connected each time the caller asks
  * connected() or is_closed(). The caller drives that from its own loop, and the whole open - the
  * name lookup included - is bounded by the timeout_ms it passed.
@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_TCP_CLIENT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 9293 sec 3.9.1.1 active OPEN: where a connection is dialled, and how long it may take. */
 typedef struct
@@ -79,7 +79,7 @@ typedef struct
     int cid;            ///< the slot every call names
     TcpDialArgs dial;   ///< what an active OPEN dials (RFC 9293 sec 3.9.1.1)
     TcpClientIoArgs io; ///< the bytes a send or a read moves
-    proto_bool ok;
+    embed_bool ok;
     int32_t i32;
     size_t n;
 } TcpClientVars;
@@ -134,7 +134,7 @@ static const TcpClientNs TcpClient __attribute__((unused)) = {
  */
 uint8_t *protocore_tcp_client_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TCP_CLIENT
 

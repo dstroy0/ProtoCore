@@ -7,7 +7,7 @@
  *
  * A reset handler does four things before C code is allowed to run: point the stack somewhere,
  * copy .data from the image to RAM, zero .bss, and paint the stack so its use can be measured
- * later. The first is a register write and lives in the per-arch startup; the other three are
+ * later. The first is a register write and lives in the per-arch startup. The other three are
  * loops over addresses the linker script exports, which is why they are here, in C, taking their
  * regions as an argument. A host test passes its own arrays and runs the same loops the silicon
  * runs.

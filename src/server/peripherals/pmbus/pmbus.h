@@ -15,7 +15,7 @@
  *   - **LINEAR11** for most telemetry: one word holding a 5-bit signed exponent in bits 15:11 and
  *     an 11-bit signed mantissa in bits 10:0. The value is mantissa * 2^exponent.
  *   - **LINEAR16** for output voltage: the word is a 16-bit unsigned mantissa and the exponent
- *     comes from the part's VOUT_MODE register, so it is read once and applied to every reading.
+ *     comes from the part's VOUT_MODE register. So it is read once and applied to every reading.
  *   - **DIRECT** where a part uses it: the value is (word / 10^R - b) / m, with m, b and R coming
  *     from the part's datasheet.
  *
@@ -37,7 +37,7 @@
 
 #if PROTOCORE_ENABLE_PMBUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -339,38 +339,38 @@ typedef struct
     PmbusClearFaultsArgs clear_faults_args;
     PmbusReadMfrStringArgs read_mfr_string_args;
 
-    proto_bool ok;
+    embed_bool ok;
     uint8_t kind;
     int8_t exp;
     int16_t mantissa;
     int32_t micro;
     uint16_t word;
 
-    void (*const vout_mode_kind)(uint8_t *work);
-    void (*const vout_exponent)(uint8_t *work);
-    void (*const l11_mantissa)(uint8_t *work);
-    void (*const l11_exponent)(uint8_t *work);
+    void (*const vout_mode_kind)(const uint8_t *work);
+    void (*const vout_exponent)(const uint8_t *work);
+    void (*const l11_mantissa)(const uint8_t *work);
+    void (*const l11_exponent)(const uint8_t *work);
     void (*const linear11_micro)(uint8_t *work);
-    void (*const linear11_encode)(uint8_t *work);
-    void (*const linear16_micro)(uint8_t *work);
-    void (*const linear16_encode)(uint8_t *work);
-    void (*const direct_micro)(uint8_t *work);
-    void (*const begin)(uint8_t *work);
-    void (*const set_page)(uint8_t *work);
-    void (*const read_vout_mode)(uint8_t *work);
+    void (*const linear11_encode)(const uint8_t *work);
+    void (*const linear16_micro)(const uint8_t *work);
+    void (*const linear16_encode)(const uint8_t *work);
+    void (*const direct_micro)(const uint8_t *work);
+    void (*const begin)(const uint8_t *work);
+    void (*const set_page)(const uint8_t *work);
+    void (*const read_vout_mode)(const uint8_t *work);
     void (*const read_linear11)(uint8_t *work);
     void (*const read_linear16)(uint8_t *work);
     void (*const write_linear16)(uint8_t *work);
-    void (*const status_byte)(uint8_t *work);
-    void (*const status_word)(uint8_t *work);
-    void (*const clear_faults)(uint8_t *work);
-    void (*const read_mfr_string)(uint8_t *work);
+    void (*const status_byte)(const uint8_t *work);
+    void (*const status_word)(const uint8_t *work);
+    void (*const clear_faults)(const uint8_t *work);
+    void (*const read_mfr_string)(const uint8_t *work);
 } PmbusNs;
 
 /** @brief The one symbol this module exports. */
 extern PmbusNs Pmbus;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PMBUS
 

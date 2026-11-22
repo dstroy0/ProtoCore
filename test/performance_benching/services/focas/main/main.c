@@ -6,7 +6,7 @@
 // and parsing a command-response frame (envelope -> echoed selector/status/length -> SysInfo
 // (ODBSYS) fields, plus the 8-octet `data / base^exp` numeric value decode). Pure codec, no
 // sockets - the caller owns the TCP 8193 connection (protocore_client_*), so that transport is out of
-// scope everywhere here; every call below exercises the real production build/parse path. Worked
+// scope everywhere here. Every call below exercises the real production build/parse path. Worked
 // example for performance_benching/device/<service>/: a pure protocol codec with no hardware involved, following
 // the same pattern as performance_benching/device/modbus.
 //

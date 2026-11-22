@@ -75,7 +75,7 @@ touches nothing. Never prune, remove, or write a side artifact on the check path
 
 The only exception is `gen_dep_graph.py`. Rebuilding `test/dep_graph.json` requires a
 full compile pass, so checking it on every pull request would cost more than the drift
-it would catch; its argparse rejects `--check` loudly rather than pretending. The two
+it would catch. Its argparse rejects `--check` loudly rather than pretending. The two
 subcommand tools (`feature_budget`, `example_footprints`) are driven by build logs and
 print usage rather than accepting a bare flag.
 

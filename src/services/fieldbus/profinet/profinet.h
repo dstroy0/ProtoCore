@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_PROFINET
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -144,7 +144,7 @@ typedef struct
     ProfinetDcpBlockArgs dcp_block_args;
     ProfinetDcpParseHeaderArgs dcp_parse_header_args;
     ProfinetDcpWalkArgs dcp_walk_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } ProfinetVars;
 
@@ -154,18 +154,18 @@ extern ProfinetVars ProfinetV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const dcp_header)(uint8_t *work);
-    void (*const dcp_block)(uint8_t *work);
-    void (*const dcp_parse_header)(uint8_t *work);
-    void (*const dcp_walk)(uint8_t *work);
+    void (*const dcp_header)(const uint8_t *work);
+    void (*const dcp_block)(const uint8_t *work);
+    void (*const dcp_parse_header)(const uint8_t *work);
+    void (*const dcp_walk)(const uint8_t *work);
 } ProfinetNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ProfinetV or a region of the borrow at a fixed offset.
-void protocore_profinet_dcp_header(uint8_t *work);
-void protocore_profinet_dcp_block(uint8_t *work);
-void protocore_profinet_dcp_parse_header(uint8_t *work);
-void protocore_profinet_dcp_walk(uint8_t *work);
+void protocore_profinet_dcp_header(const uint8_t *work);
+void protocore_profinet_dcp_block(const uint8_t *work);
+void protocore_profinet_dcp_parse_header(const uint8_t *work);
+void protocore_profinet_dcp_walk(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -178,7 +178,7 @@ static const ProfinetNs Profinet __attribute__((unused)) = {
     .dcp_walk = protocore_profinet_dcp_walk,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROFINET
 

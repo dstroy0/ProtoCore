@@ -30,7 +30,7 @@
 
 #if PROTOCORE_HOST && PROTOCORE_RSA_MODMUL_HW
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Limbs the widest operand this stand-in accepts: 2048-bit at 32 bits a limb. */
 #define PROTOCORE_RSA_HOST_MAX_WORDS 64
@@ -57,7 +57,7 @@ void protocore_rsa_hw_release(void);
 void protocore_rsa_modmul(uint32_t *z, const uint32_t *x, const uint32_t *y, const uint32_t *m, uint32_t mprime,
                           const uint32_t *rinv, unsigned words);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST && PROTOCORE_RSA_MODMUL_HW
 

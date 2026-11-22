@@ -38,7 +38,7 @@
 
 #if PROTOCORE_ENABLE_DDS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief DDSI-RTPS sec 9.4.5.1 SubmessageKind: the submessageId octet of a SubmessageHeader. */
 #define RTPS_SM_PAD 0x01
@@ -131,7 +131,7 @@ typedef struct
     RtpsOutArgs out;        ///< where a build lands
     RtpsMessageArgs msg;    ///< what a parse walks
     RtpsSinkArgs sink;      ///< where a parse reports
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } RtpsVars;
 
@@ -141,16 +141,16 @@ extern RtpsVars RtpsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const header)(uint8_t *work);
-    void (*const submessage)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const header)(const uint8_t *work);
+    void (*const submessage)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
 } RtpsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in RtpsV or a region of the borrow at a fixed offset.
-void protocore_rtps_header(uint8_t *work);
-void protocore_rtps_submessage(uint8_t *work);
-void protocore_rtps_parse(uint8_t *work);
+void protocore_rtps_header(const uint8_t *work);
+void protocore_rtps_submessage(const uint8_t *work);
+void protocore_rtps_parse(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -165,7 +165,7 @@ static const RtpsNs Rtps __attribute__((unused)) = {
 /** @brief The protocol version a built Header stamps, major then minor (sec 8.3.3.1). */
 extern const uint8_t RTPS_VERSION[2];
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DDS
 

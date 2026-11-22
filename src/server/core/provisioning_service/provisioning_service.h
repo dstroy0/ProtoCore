@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file provisioning_service.h
@@ -32,10 +32,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*form_field)(uint8_t *, const char *, const char *, char *, size_t);
-    proto_bool (*load)(uint8_t *, char *, size_t, char *, size_t);
+    embed_bool (*form_field)(uint8_t *, const char *, const char *, char *, size_t);
+    embed_bool (*load)(const uint8_t *, char *, size_t, char *, size_t);
     void (*begin)(uint8_t *, const char *);
-    void (*clear)(uint8_t *);
+    void (*clear)(const uint8_t *);
 } ProvNs;
 PROTOCORE_NS_LAYOUT(ProvNs, form_field, load, begin, clear);
 
@@ -46,9 +46,9 @@ PROTOCORE_NS_LAYOUT(ProvNs, form_field, load, begin, clear);
  * @param key Field name (e.g. "ssid")
  * @param out Destination buffer
  * @param cap Capacity of out (>= 1)
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap);
+embed_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap);
 /**
  * @brief Load stored WiFi credentials from NVS.
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
@@ -56,9 +56,9 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
  * @param ssid_cap Capacity of ssid
  * @param psk Destination for the stored passphrase (always null-terminated)
  * @param psk_cap Capacity of psk
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
+embed_bool protocore_prov_load(const uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
 /**
  * @brief Start the captive portal: softAP ap_ssid + catch-all DNS + form .
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
@@ -69,7 +69,7 @@ void protocore_prov_begin(uint8_t *work, const char *ap_ssid);
  * @brief Erase stored credentials (forces re-provisioning on next boot).
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_prov_clear(uint8_t *work);
+void protocore_prov_clear(const uint8_t *work);
 
 /**
  * @brief The PROTOCORE_PROVISIONING_BORROW bytes this module's state lives in.
@@ -88,6 +88,6 @@ PROTOCORE_NS ProvNs Prov PROTOCORE_UNUSED = {.form_field = protocore_prov_form_f
                                              .begin = protocore_prov_begin,
                                              .clear = protocore_prov_clear};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_PROVISIONING_H

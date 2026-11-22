@@ -18,7 +18,7 @@ static uint8_t partition_monitor_work[16]; // the borrow an entry takes; Partiti
 #include "protocore.h"
 #include "shared/mime/mime.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // All partition-monitor-routes state, owned by one instance (internal linkage): the server
 // handle. (The route handler is a fixed-signature callback, so it reaches this owner directly.)
@@ -47,6 +47,6 @@ void partition_route_handler(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PARTITION_MONITOR

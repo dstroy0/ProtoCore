@@ -15,7 +15,7 @@
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #include "endian/endian.h"
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // memset, memcpy
 
@@ -23,7 +23,7 @@ PROTOCORE_BEGIN_DECLS
 #include "server/clock/clock.h"                               // Clock.millis: the sub-second fraction
 #include "services/timing_position/time_source/time_source.h" // protocore_time_now: the seconds we serve
 
-void protocore_ntp_server_build_response(uint8_t *work)
+void protocore_ntp_server_build_response(const uint8_t *work)
 {
     (void)work;
     const uint8_t *req = NtpServerV.build_response_args.req;
@@ -110,7 +110,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define NTP_SERVER_CTX(w) ((NtpServerCtx *)(void *)((w) + NTP_SERVER_OFF_CTX))
+#define NTP_SERVER_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const NtpServerCtx *)(const void *)((w) + NTP_SERVER_OFF_CTX),                               \
+        default: (NtpServerCtx *)(void *)((w) + NTP_SERVER_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -191,6 +194,6 @@ void protocore_ntp_server_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 NtpServerVars NtpServerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTP_SERVER

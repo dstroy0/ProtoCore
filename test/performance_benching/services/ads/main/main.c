@@ -25,7 +25,7 @@
 
 static uint8_t ads_work[16]; // the borrow an entry takes; Ads never reads it
 
-// protocore_ads_parse_notification requires a real callback (it fails closed on a null one); this just
+// protocore_ads_parse_notification requires a real callback (it fails closed on a null one). This just
 // counts samples so the walk itself - not the callback body - is what gets timed.
 static volatile uint32_t g_notif_samples = 0;
 static void on_sample(uint32_t /*handle*/, const uint8_t * /*sample*/, uint32_t /*sample_len*/, uint64_t /*ts*/,

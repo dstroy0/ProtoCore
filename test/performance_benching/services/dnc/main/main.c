@@ -15,7 +15,7 @@
 // test/test_dnc_stream/test_dnc_stream.cpp uses for its mock controller, never a real UART/socket
 // transaction (this rig has no RS-232/Ethernet DNC controller attached). Sample lines are copied
 // from test/test_dnc/test_dnc.cpp (test_roundtrip_program, test_encode_block_eia) and
-// test/test_dnc_stream/test_dnc_stream.cpp (test_iso_roundtrip); out of scope: dnc_stream's
+// test/test_dnc_stream/test_dnc_stream.cpp (test_iso_roundtrip). Out of scope: dnc_stream's
 // higher-level callers (there are none in this library - it is the top of the DNC stack).
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

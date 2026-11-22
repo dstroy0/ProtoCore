@@ -220,7 +220,7 @@ void test_quantity_bounds(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         uint8_t pdu[5] = {CASES[i].fc, 0x00, 0x00, 0x00, 0x00};
-        proto_bool is_bit = (CASES[i].fc == MODBUS_FC_READ_COILS || CASES[i].fc == MODBUS_FC_READ_DISCRETE_INPUTS);
+        embed_bool is_bit = (CASES[i].fc == MODBUS_FC_READ_COILS || CASES[i].fc == MODBUS_FC_READ_DISCRETE_INPUTS);
 
         pdu[3] = 0x00; // a quantity of zero is below the 0001h floor
         pdu[4] = 0x00;
@@ -232,7 +232,7 @@ void test_quantity_bounds(void)
         TEST_ASSERT_EQUAL_UINT(2u, run_pdu(pdu, sizeof(pdu), &rsp));
         TEST_ASSERT_EQUAL_HEX8(MODBUS_EX_ILLEGAL_DATA_VALUE, rsp[1]);
 
-        // the top of the spec's range is never a data-value problem: it either reads, or it runs
+        // the top of the spec's range is never a data-value problem. It either reads, or it runs
         // off the end of this build's data model and is a data-address problem instead
         pdu[3] = (uint8_t)(CASES[i].hi_ok >> 8);
         pdu[4] = (uint8_t)CASES[i].hi_ok;
@@ -274,7 +274,7 @@ void test_write_single_coil_value_is_ff00_or_0000(void)
 {
     const uint8_t *rsp = NULL;
     ModbusV.set_coil_args.addr = 5;
-    ModbusV.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.on = EMBED_TRUE;
     Modbus.set_coil(protocore_modbus_span());
 
     static const uint8_t OFF[5] = {0x05, 0x00, 0x05, 0x00, 0x00};
@@ -489,10 +489,10 @@ void test_write_callback_reports_each_write(void)
 void test_data_model_bounds_and_reset(void)
 {
     ModbusV.set_coil_args.addr = PROTOCORE_MODBUS_COILS;
-    ModbusV.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.on = EMBED_TRUE;
     Modbus.set_coil(protocore_modbus_span());
     ModbusV.set_discrete_input_args.addr = PROTOCORE_MODBUS_DISCRETE_INPUTS;
-    ModbusV.set_discrete_input_args.on = PROTO_TRUE;
+    ModbusV.set_discrete_input_args.on = EMBED_TRUE;
     Modbus.set_discrete_input(protocore_modbus_span());
     ModbusV.set_holding_reg_args.addr = PROTOCORE_MODBUS_HOLDING_REGS;
     ModbusV.set_holding_reg_args.value = 0xBEEF;
@@ -514,7 +514,7 @@ void test_data_model_bounds_and_reset(void)
     TEST_ASSERT_EQUAL_HEX16(0, ModbusV.value);
 
     ModbusV.set_coil_args.addr = 1;
-    ModbusV.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.on = EMBED_TRUE;
     Modbus.set_coil(protocore_modbus_span());
     ModbusV.set_holding_reg_args.addr = 1;
     ModbusV.set_holding_reg_args.value = 0x1234;

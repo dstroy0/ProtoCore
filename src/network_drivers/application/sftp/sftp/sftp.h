@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -103,7 +103,7 @@ typedef struct
     const uint8_t *p;
     size_t len;
     size_t off;
-    proto_bool ok; ///< false once any read ran past the end (all further reads are no-ops)
+    embed_bool ok; ///< false once any read ran past the end (all further reads are no-ops)
 } SftpReader;
 
 typedef struct
@@ -111,7 +111,7 @@ typedef struct
     uint8_t *p;
     size_t cap;
     size_t off;     ///< current write position (starts at 4, past the reserved length prefix)
-    proto_bool ovf; ///< set once a write would exceed cap
+    embed_bool ovf; ///< set once a write would exceed cap
 } SftpWriter;
 
 /** @brief What rd_init takes: r, payload, len. */
@@ -295,7 +295,7 @@ typedef struct
 /** @brief What format_longname takes: is_dir, perms, size, mtime, ... */
 typedef struct
 {
-    proto_bool is_dir;
+    embed_bool is_dir;
     uint32_t perms;
     uint64_t size;
     uint32_t mtime;
@@ -400,7 +400,7 @@ typedef struct
     SftpBuildDataArgs build_data_args;
     SftpBuildName1Args build_name1_args;
     SftpFormatLongnameArgs format_longname_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     uint32_t u32;
     uint64_t u64;
@@ -413,23 +413,23 @@ extern SftpVars SftpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const rd_init)(uint8_t *work);
-    void (*const rd_u8)(uint8_t *work);
-    void (*const rd_u32)(uint8_t *work);
-    void (*const rd_u64)(uint8_t *work);
+    void (*const rd_init)(const uint8_t *work);
+    void (*const rd_u8)(const uint8_t *work);
+    void (*const rd_u32)(const uint8_t *work);
+    void (*const rd_u64)(const uint8_t *work);
     void (*const rd_string)(uint8_t *work);
     void (*const rd_attrs)(uint8_t *work);
-    void (*const wr_init)(uint8_t *work);
-    void (*const wr_u8)(uint8_t *work);
-    void (*const wr_u32)(uint8_t *work);
-    void (*const wr_u64)(uint8_t *work);
-    void (*const wr_bytes)(uint8_t *work);
+    void (*const wr_init)(const uint8_t *work);
+    void (*const wr_u8)(const uint8_t *work);
+    void (*const wr_u32)(const uint8_t *work);
+    void (*const wr_u64)(const uint8_t *work);
+    void (*const wr_bytes)(const uint8_t *work);
     void (*const wr_string)(uint8_t *work);
     void (*const wr_attrs)(uint8_t *work);
-    void (*const wr_finish)(uint8_t *work);
-    void (*const wr_pos)(uint8_t *work);
-    void (*const wr_patch_u32)(uint8_t *work);
-    void (*const frame_len)(uint8_t *work);
+    void (*const wr_finish)(const uint8_t *work);
+    void (*const wr_pos)(const uint8_t *work);
+    void (*const wr_patch_u32)(const uint8_t *work);
+    void (*const frame_len)(const uint8_t *work);
     void (*const build_version)(uint8_t *work);
     void (*const build_status)(uint8_t *work);
     void (*const build_handle)(uint8_t *work);
@@ -441,23 +441,23 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SftpV or a region of the borrow at a fixed offset.
-void protocore_sftp_rd_init(uint8_t *work);
-void protocore_sftp_rd_u8(uint8_t *work);
-void protocore_sftp_rd_u32(uint8_t *work);
-void protocore_sftp_rd_u64(uint8_t *work);
+void protocore_sftp_rd_init(const uint8_t *work);
+void protocore_sftp_rd_u8(const uint8_t *work);
+void protocore_sftp_rd_u32(const uint8_t *work);
+void protocore_sftp_rd_u64(const uint8_t *work);
 void protocore_sftp_rd_string(uint8_t *work);
 void protocore_sftp_rd_attrs(uint8_t *work);
-void protocore_sftp_wr_init(uint8_t *work);
-void protocore_sftp_wr_u8(uint8_t *work);
-void protocore_sftp_wr_u32(uint8_t *work);
-void protocore_sftp_wr_u64(uint8_t *work);
-void protocore_sftp_wr_bytes(uint8_t *work);
+void protocore_sftp_wr_init(const uint8_t *work);
+void protocore_sftp_wr_u8(const uint8_t *work);
+void protocore_sftp_wr_u32(const uint8_t *work);
+void protocore_sftp_wr_u64(const uint8_t *work);
+void protocore_sftp_wr_bytes(const uint8_t *work);
 void protocore_sftp_wr_string(uint8_t *work);
 void protocore_sftp_wr_attrs(uint8_t *work);
-void protocore_sftp_wr_finish(uint8_t *work);
-void protocore_sftp_wr_pos(uint8_t *work);
-void protocore_sftp_wr_patch_u32(uint8_t *work);
-void protocore_sftp_frame_len(uint8_t *work);
+void protocore_sftp_wr_finish(const uint8_t *work);
+void protocore_sftp_wr_pos(const uint8_t *work);
+void protocore_sftp_wr_patch_u32(const uint8_t *work);
+void protocore_sftp_frame_len(const uint8_t *work);
 void protocore_sftp_build_version(uint8_t *work);
 void protocore_sftp_build_status(uint8_t *work);
 void protocore_sftp_build_handle(uint8_t *work);
@@ -497,7 +497,7 @@ static const SftpNs Sftp __attribute__((unused)) = {
     .format_longname = protocore_sftp_format_longname,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_SFTP
 

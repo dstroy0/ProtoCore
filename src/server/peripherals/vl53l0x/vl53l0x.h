@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_VL53L0X
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_I2C_DEVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -120,7 +120,7 @@ typedef struct
     Vl53l0xRangeValidArgs range_valid_args;
     Vl53l0xBeginArgs begin_args;
     Vl53l0xReadMmArgs read_mm_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t mm;
     uint8_t status;
 } Vl53l0xVars;
@@ -131,9 +131,9 @@ extern Vl53l0xVars Vl53l0xV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const range_mm)(uint8_t *work);
-    void (*const data_ready)(uint8_t *work);
-    void (*const range_status)(uint8_t *work);
+    void (*const range_mm)(const uint8_t *work);
+    void (*const data_ready)(const uint8_t *work);
+    void (*const range_status)(const uint8_t *work);
     void (*const range_valid)(uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read_mm)(uint8_t *work);
@@ -141,9 +141,9 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Vl53l0xV or a region of the borrow at a fixed offset.
-void protocore_vl53l0x_range_mm(uint8_t *work);
-void protocore_vl53l0x_data_ready(uint8_t *work);
-void protocore_vl53l0x_range_status(uint8_t *work);
+void protocore_vl53l0x_range_mm(const uint8_t *work);
+void protocore_vl53l0x_data_ready(const uint8_t *work);
+void protocore_vl53l0x_range_status(const uint8_t *work);
 void protocore_vl53l0x_range_valid(uint8_t *work);
 void protocore_vl53l0x_begin(uint8_t *work);
 void protocore_vl53l0x_read_mm(uint8_t *work);
@@ -172,7 +172,7 @@ static const Vl53l0xNs Vl53l0x __attribute__((unused)) = {
  */
 uint8_t *protocore_vl53l0x_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_VL53L0X
 

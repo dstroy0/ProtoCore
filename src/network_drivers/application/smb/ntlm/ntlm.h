@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ntlm.h
@@ -40,13 +40,13 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*nt_hash)(uint8_t *, const char *, uint8_t *);
-    proto_bool (*ntowfv2)(uint8_t *, const uint8_t *, const char *, const char *, uint8_t *);
-    size_t (*v2_response)(uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *,
+    void (*nt_hash)(const uint8_t *, const char *, uint8_t *);
+    embed_bool (*ntowfv2)(const uint8_t *, const uint8_t *, const char *, const char *, uint8_t *);
+    size_t (*v2_response)(const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *,
                           const uint8_t *, size_t, uint8_t *, size_t, uint8_t *);
-    size_t (*set_mic_flag)(uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
-    void (*mic)(uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
-                uint8_t *);
+    size_t (*set_mic_flag)(const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
+    void (*mic)(const uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *,
+                size_t, uint8_t *);
 } NtlmNs;
 PROTOCORE_NS_LAYOUT(NtlmNs, nt_hash, ntowfv2, v2_response, set_mic_flag, mic);
 
@@ -56,7 +56,7 @@ PROTOCORE_NS_LAYOUT(NtlmNs, nt_hash, ntowfv2, v2_response, set_mic_flag, mic);
  * @param password Password
  * @param nt_hash 16 bytes
  */
-void protocore_ntlm_nt_hash(uint8_t *work, const char *password, uint8_t *nt_hash);
+void protocore_ntlm_nt_hash(const uint8_t *work, const char *password, uint8_t *nt_hash);
 /**
  * @brief NTOWFv2 = HMAC-MD5(NThash, UTF-16LE(Uppercase(user) + domain)). .
  * @param work PROTOCORE_NTLM_BORROW bytes the caller took. Not held past the call.
@@ -64,9 +64,9 @@ void protocore_ntlm_nt_hash(uint8_t *work, const char *password, uint8_t *nt_has
  * @param user User
  * @param domain Domain
  * @param owf 16 bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
+embed_bool protocore_ntlm_ntowfv2(const uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
                                   uint8_t *owf);
 /**
  * @brief Compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the .
@@ -82,7 +82,7 @@ proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const c
  * @param session_key receives the 16-byte SessionBaseKey (may be null) 16 bytes
  * @return The size_t.
  */
-size_t protocore_ntlm_v2_response(uint8_t *work, const uint8_t *owf, const uint8_t *server_challenge,
+size_t protocore_ntlm_v2_response(const uint8_t *work, const uint8_t *owf, const uint8_t *server_challenge,
                                   const uint8_t *client_challenge, const uint8_t *timestamp, const uint8_t *target_info,
                                   size_t ti_len, uint8_t *out, size_t out_cap, uint8_t *session_key);
 /**
@@ -94,7 +94,7 @@ size_t protocore_ntlm_v2_response(uint8_t *work, const uint8_t *owf, const uint8
  * @param out_cap Out cap
  * @return The size_t.
  */
-size_t protocore_ntlm_set_mic_flag(uint8_t *work, const uint8_t *target_info, size_t ti_len, uint8_t *out,
+size_t protocore_ntlm_set_mic_flag(const uint8_t *work, const uint8_t *target_info, size_t ti_len, uint8_t *out,
                                    size_t out_cap);
 /**
  * @brief The NTLMSSP AUTHENTICATE MIC (MS-NLMP §3.1.5.1.2): HMAC-MD5 over .
@@ -108,7 +108,7 @@ size_t protocore_ntlm_set_mic_flag(uint8_t *work, const uint8_t *target_info, si
  * @param auth_len Auth len
  * @param out 16 bytes
  */
-void protocore_ntlm_mic(uint8_t *work, const uint8_t *session_key, const uint8_t *neg, size_t neg_len,
+void protocore_ntlm_mic(const uint8_t *work, const uint8_t *session_key, const uint8_t *neg, size_t neg_len,
                         const uint8_t *chal, size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t *out);
 
 /** @brief Module namespace. */
@@ -118,6 +118,6 @@ PROTOCORE_NS NtlmNs Ntlm PROTOCORE_UNUSED = {.nt_hash = protocore_ntlm_nt_hash,
                                              .set_mic_flag = protocore_ntlm_set_mic_flag,
                                              .mic = protocore_ntlm_mic};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NTLM_H

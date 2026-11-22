@@ -39,19 +39,19 @@ void test_mc_octet_fields(void)
     TEST_ASSERT_EQUAL_UINT8(3u, IOL_CH_ISDU);
 
     // read, Page channel, address 0: 1 000 0 0000 -> 0x80 | (1 << 5) = 0xA0
-    IolinkV.mc_args.read = PROTO_TRUE;
+    IolinkV.mc_args.read = EMBED_TRUE;
     IolinkV.mc_args.channel = IOL_CH_PAGE;
     IolinkV.mc_args.address = 0;
     Iolink.mc(iolink_work);
     TEST_ASSERT_EQUAL_HEX8(0xA0u, IolinkV.value);
     // write, ISDU channel, address 0x1F: (3 << 5) | 0x1F = 0x60 | 0x1F = 0x7F
-    IolinkV.mc_args.read = PROTO_FALSE;
+    IolinkV.mc_args.read = EMBED_FALSE;
     IolinkV.mc_args.channel = IOL_CH_ISDU;
     IolinkV.mc_args.address = 0x1F;
     Iolink.mc(iolink_work);
     TEST_ASSERT_EQUAL_HEX8(0x7Fu, IolinkV.value);
     // the address field is five bits, so bit 5 of a wider argument never leaks into the channel
-    IolinkV.mc_args.read = PROTO_FALSE;
+    IolinkV.mc_args.read = EMBED_FALSE;
     IolinkV.mc_args.channel = IOL_CH_PROCESS;
     IolinkV.mc_args.address = 0x20;
     Iolink.mc(iolink_work);
@@ -65,7 +65,7 @@ void test_mc_octet_fields(void)
         // call lands on it.
         IolinkV.mc_is_read_args.mc = mc;
         Iolink.mc_is_read(iolink_work);
-        const proto_bool read = IolinkV.ok;
+        const embed_bool read = IolinkV.ok;
 
         IolinkV.mc_channel_args.mc = mc;
         Iolink.mc_channel(iolink_work);
@@ -123,28 +123,28 @@ void test_cks_octet_fields(void)
     TEST_ASSERT_EQUAL_HEX8(0x80u, IOL_CKS_EVENT);
     TEST_ASSERT_EQUAL_HEX8(0x40u, IOL_CKS_PD_INVALID);
 
-    IolinkV.cks_args.event = PROTO_FALSE;
-    IolinkV.cks_args.pd_invalid = PROTO_FALSE;
+    IolinkV.cks_args.event = EMBED_FALSE;
+    IolinkV.cks_args.pd_invalid = EMBED_FALSE;
     IolinkV.cks_args.checksum6 = 0;
     Iolink.cks(iolink_work);
     TEST_ASSERT_EQUAL_HEX8(0x00u, IolinkV.value);
-    IolinkV.cks_args.event = PROTO_TRUE;
-    IolinkV.cks_args.pd_invalid = PROTO_FALSE;
+    IolinkV.cks_args.event = EMBED_TRUE;
+    IolinkV.cks_args.pd_invalid = EMBED_FALSE;
     IolinkV.cks_args.checksum6 = 0;
     Iolink.cks(iolink_work);
     TEST_ASSERT_EQUAL_HEX8(0x80u, IolinkV.value);
-    IolinkV.cks_args.event = PROTO_FALSE;
-    IolinkV.cks_args.pd_invalid = PROTO_TRUE;
+    IolinkV.cks_args.event = EMBED_FALSE;
+    IolinkV.cks_args.pd_invalid = EMBED_TRUE;
     IolinkV.cks_args.checksum6 = 0;
     Iolink.cks(iolink_work);
     TEST_ASSERT_EQUAL_HEX8(0x40u, IolinkV.value);
-    IolinkV.cks_args.event = PROTO_TRUE;
-    IolinkV.cks_args.pd_invalid = PROTO_TRUE;
+    IolinkV.cks_args.event = EMBED_TRUE;
+    IolinkV.cks_args.pd_invalid = EMBED_TRUE;
     IolinkV.cks_args.checksum6 = 0;
     Iolink.cks(iolink_work);
     TEST_ASSERT_EQUAL_HEX8(0xC0u, IolinkV.value);
-    IolinkV.cks_args.event = PROTO_TRUE;
-    IolinkV.cks_args.pd_invalid = PROTO_TRUE;
+    IolinkV.cks_args.event = EMBED_TRUE;
+    IolinkV.cks_args.pd_invalid = EMBED_TRUE;
     IolinkV.cks_args.checksum6 = 0x3F;
     Iolink.cks(iolink_work);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, IolinkV.value);
@@ -165,7 +165,7 @@ void test_cks_octet_fields(void)
 void test_type0_read_checksum(void)
 {
     uint8_t msg[2];
-    IolinkV.mc_args.read = PROTO_TRUE;
+    IolinkV.mc_args.read = EMBED_TRUE;
     IolinkV.mc_args.channel = IOL_CH_PAGE;
     IolinkV.mc_args.address = 0;
     Iolink.mc(iolink_work);
@@ -205,7 +205,7 @@ void test_type0_read_checksum(void)
 void test_type0_write_checksum(void)
 {
     uint8_t msg[3];
-    IolinkV.mc_args.read = PROTO_FALSE;
+    IolinkV.mc_args.read = EMBED_FALSE;
     IolinkV.mc_args.channel = IOL_CH_ISDU;
     IolinkV.mc_args.address = 0x05;
     Iolink.mc(iolink_work);
@@ -240,8 +240,8 @@ void test_device_reply_checksum(void)
 {
     uint8_t msg[2];
     msg[0] = 0x5A;
-    IolinkV.cks_args.event = PROTO_TRUE;
-    IolinkV.cks_args.pd_invalid = PROTO_FALSE;
+    IolinkV.cks_args.event = EMBED_TRUE;
+    IolinkV.cks_args.pd_invalid = EMBED_FALSE;
     IolinkV.cks_args.checksum6 = 0;
     Iolink.cks(iolink_work);
     msg[1] = IolinkV.value;
@@ -300,7 +300,7 @@ void test_finalize_then_verify(void)
 void test_single_bit_corruption_is_refused(void)
 {
     uint8_t good[5];
-    IolinkV.mc_args.read = PROTO_TRUE;
+    IolinkV.mc_args.read = EMBED_TRUE;
     IolinkV.mc_args.channel = IOL_CH_PROCESS;
     IolinkV.mc_args.address = 0x03;
     Iolink.mc(iolink_work);

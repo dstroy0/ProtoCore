@@ -12,7 +12,7 @@
 //
 // test_length_field_switches_at_255 is load-bearing: sec 5.2.1 says the Length is one octet while the
 // whole message is at most 255 octets and otherwise the octet 0x01 followed by a big-endian uint16 of
-// that same total. Length is what separates one datagram's messages, and it is the one field whose
+// that same total. Length is what separates one datagram's messages. It is the one field whose
 // width changes with the message, so its boundary is where a codec silently desynchronizes.
 
 #include "services/iot/mqtt/mqtt_sn/mqtt_sn.h"
@@ -38,7 +38,7 @@ static void bind_out(void)
     MqttsnV.buf.cap = sizeof(g_out);
 }
 
-static uint8_t make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
+static uint8_t make_flags(embed_bool dup, uint8_t qos, embed_bool retain, embed_bool will, embed_bool clean,
                           uint8_t topic_id_type)
 {
     MqttsnV.flags.dup = dup;
@@ -51,7 +51,7 @@ static uint8_t make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_
     return MqttsnV.flags.octet;
 }
 
-static proto_bool parse_header(const uint8_t *msg, size_t len)
+static embed_bool parse_header(const uint8_t *msg, size_t len)
 {
     MqttsnV.buf.in = msg;
     MqttsnV.buf.avail = len;
@@ -80,7 +80,7 @@ void test_length_field_switches_at_255(void)
     {
         data[i] = (uint8_t)i;
     }
-    (void)make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_NORMAL);
+    (void)make_flags(EMBED_FALSE, 0, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, MQTTSN_TOPIC_NORMAL);
 
     // 248 octets of Data: total 1 + 1 + 1 + 2 + 2 + 248 = 255, the widest 1-octet form.
     bind_out();
@@ -134,25 +134,25 @@ void test_flags_octet_bit_positions(void)
     TEST_ASSERT_EQUAL_HEX8(0x04, MQTTSN_FLAG_CLEAN);
     TEST_ASSERT_EQUAL_HEX8(0x03, MQTTSN_FLAG_TOPICIDTYPE_MASK);
 
-    TEST_ASSERT_EQUAL_HEX8(0x00, make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x80, make_flags(PROTO_TRUE, 0, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x20, make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x40, make_flags(PROTO_FALSE, 2, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x60, make_flags(PROTO_FALSE, 3, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x10, make_flags(PROTO_FALSE, 0, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x08, make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_TRUE, PROTO_FALSE, 0));
-    TEST_ASSERT_EQUAL_HEX8(0x04, make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_FALSE, PROTO_TRUE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x00, make_flags(EMBED_FALSE, 0, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x80, make_flags(EMBED_TRUE, 0, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x20, make_flags(EMBED_FALSE, 1, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x40, make_flags(EMBED_FALSE, 2, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x60, make_flags(EMBED_FALSE, 3, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x10, make_flags(EMBED_FALSE, 0, EMBED_TRUE, EMBED_FALSE, EMBED_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x08, make_flags(EMBED_FALSE, 0, EMBED_FALSE, EMBED_TRUE, EMBED_FALSE, 0));
+    TEST_ASSERT_EQUAL_HEX8(0x04, make_flags(EMBED_FALSE, 0, EMBED_FALSE, EMBED_FALSE, EMBED_TRUE, 0));
 
     // TopicIdType: 0b00 normal, 0b01 pre-defined, 0b10 short topic name (sec 5.3.4).
     TEST_ASSERT_EQUAL_HEX8(0x00, MQTTSN_TOPIC_NORMAL);
     TEST_ASSERT_EQUAL_HEX8(0x01, MQTTSN_TOPIC_PREDEFINED);
     TEST_ASSERT_EQUAL_HEX8(0x02, MQTTSN_TOPIC_SHORT);
     TEST_ASSERT_EQUAL_HEX8(0x01,
-                           make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_PREDEFINED));
-    TEST_ASSERT_EQUAL_HEX8(0x02, make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_SHORT));
+                           make_flags(EMBED_FALSE, 0, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, MQTTSN_TOPIC_PREDEFINED));
+    TEST_ASSERT_EQUAL_HEX8(0x02, make_flags(EMBED_FALSE, 0, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, MQTTSN_TOPIC_SHORT));
 
     // Every field at once: DUP + QoS 2 + Retain + Will + CleanSession + short topic name.
-    TEST_ASSERT_EQUAL_HEX8(0xDE, make_flags(PROTO_TRUE, 2, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, MQTTSN_TOPIC_SHORT));
+    TEST_ASSERT_EQUAL_HEX8(0xDE, make_flags(EMBED_TRUE, 2, EMBED_TRUE, EMBED_TRUE, EMBED_TRUE, MQTTSN_TOPIC_SHORT));
 }
 
 // sec 5.4.4: CONNECT is Length, MsgType, Flags, ProtocolId, Duration, ClientId, with sec 5.3.8 fixing
@@ -161,7 +161,7 @@ void test_connect_variable_part(void)
 {
     TEST_ASSERT_EQUAL_HEX8(0x01, MQTTSN_PROTOCOL_ID);
     bind_out();
-    (void)make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_TRUE, PROTO_TRUE, MQTTSN_TOPIC_NORMAL);
+    (void)make_flags(EMBED_FALSE, 0, EMBED_FALSE, EMBED_TRUE, EMBED_TRUE, MQTTSN_TOPIC_NORMAL);
     MqttsnV.field.client_id = "node-1";
     MqttsnV.field.duration = 60;
     Mqttsn.build_connect(mqtt_sn_work);
@@ -243,7 +243,7 @@ void test_publish_and_puback(void)
 {
     static const uint8_t DATA[4] = {0xde, 0xad, 0xbe, 0xef};
     bind_out();
-    const uint8_t flags = make_flags(PROTO_TRUE, 1, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_PREDEFINED);
+    const uint8_t flags = make_flags(EMBED_TRUE, 1, EMBED_TRUE, EMBED_FALSE, EMBED_FALSE, MQTTSN_TOPIC_PREDEFINED);
     MqttsnV.topic.topic_id = 0x00AB;
     MqttsnV.field.msg_id = 0x0007;
     MqttsnV.data.data = DATA;
@@ -302,7 +302,7 @@ void test_publish_and_puback(void)
 void test_subscribe_by_name_and_by_id(void)
 {
     bind_out();
-    const uint8_t by_name = make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_NORMAL);
+    const uint8_t by_name = make_flags(EMBED_FALSE, 1, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, MQTTSN_TOPIC_NORMAL);
     MqttsnV.field.msg_id = 0x0002;
     MqttsnV.topic.topic_name = "a/b";
     Mqttsn.build_subscribe_name(mqtt_sn_work);
@@ -313,7 +313,7 @@ void test_subscribe_by_name_and_by_id(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT_NAME, g_out, sizeof(WANT_NAME));
 
     bind_out();
-    const uint8_t by_id = make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_PREDEFINED);
+    const uint8_t by_id = make_flags(EMBED_FALSE, 1, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, MQTTSN_TOPIC_PREDEFINED);
     MqttsnV.topic.topic_id = 0x0101;
     Mqttsn.build_subscribe_id(mqtt_sn_work);
     TEST_ASSERT_TRUE(MqttsnV.ok);
@@ -323,7 +323,7 @@ void test_subscribe_by_name_and_by_id(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT_ID, g_out, sizeof(WANT_ID));
 
     // SUBACK: eight octets, the granted QoS riding in the Flags octet (sec 5.4.16).
-    const uint8_t granted = make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_NORMAL);
+    const uint8_t granted = make_flags(EMBED_FALSE, 1, EMBED_FALSE, EMBED_FALSE, EMBED_FALSE, MQTTSN_TOPIC_NORMAL);
     const uint8_t SUBACK[8] = {8, MQTTSN_SUBACK, granted, 0x00, 0xAB, 0x00, 0x02, MQTTSN_RC_ACCEPTED};
     TEST_ASSERT_TRUE(parse_header(SUBACK, sizeof(SUBACK)));
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_SUBACK, MqttsnV.header.msg_type);
@@ -356,14 +356,14 @@ void test_pingreq_and_disconnect_optional_fields(void)
     TEST_ASSERT_EQUAL_MEMORY("node-1", g_out + 2, 6);
 
     bind_out();
-    MqttsnV.field.with_duration = PROTO_FALSE;
+    MqttsnV.field.with_duration = EMBED_FALSE;
     Mqttsn.build_disconnect(mqtt_sn_work);
     TEST_ASSERT_TRUE(MqttsnV.ok);
     TEST_ASSERT_EQUAL_UINT(2u, MqttsnV.n);
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_DISCONNECT, g_out[1]);
 
     bind_out();
-    MqttsnV.field.with_duration = PROTO_TRUE;
+    MqttsnV.field.with_duration = EMBED_TRUE;
     MqttsnV.field.duration = 3600;
     Mqttsn.build_disconnect(mqtt_sn_work);
     TEST_ASSERT_TRUE(MqttsnV.ok);

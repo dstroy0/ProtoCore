@@ -210,14 +210,14 @@ def mermaid(detailed=False):
     init = (
         # Root-level as well as under 'flowchart': the flowchart-scoped setting does not reach nodes
         # inside a subgraph, so the three SETUP boxes were still emitting foreignObject while every
-        # other node had switched to <text>. Both, or GitHub renders that panel empty.
+        # other node switched to <text>. Both, or GitHub renders that panel empty.
         "%%{init: {'htmlLabels':false,'themeVariables':{"
         # ONE font, and a generic one. A stack whose earlier entries the renderer does not have
         # (ui-sans-serif / system-ui / Segoe UI / Roboto are absent from a headless Chromium) makes
         # mermaid measure the label in the fallback and then draw it in whatever the rasterizer
         # picks - the box comes out narrower than its own text. All-caps labels overflow first,
         # which is how "YOUR HANDLER runs" rendered as "YOUR HANDLER ru". Measuring and drawing in
-        # the same font is the whole fix, and it also makes the PNGs identical across the three
+        # the same font is the whole fix. It also makes the PNGs identical across the three
         # machines that can render them.
         "'fontFamily':'sans-serif','fontSize':'13px',"
         "'lineColor':'#94a3b8'},"  # a soft slate-gray edge color, gentle on both light and dark (not harsh black)

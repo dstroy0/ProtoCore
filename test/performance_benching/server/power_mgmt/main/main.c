@@ -25,8 +25,8 @@
 #include <stdint.h>
 
 /** @brief The clock plan for @p load_pct at @p temp_c under @p cfg. */
-static PowerPlan power_decide(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
-                              uint32_t since_boot_ms, proto_bool was_throttled)
+static PowerPlan power_decide(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, embed_bool brownout_boot,
+                              uint32_t since_boot_ms, embed_bool was_throttled)
 {
     PowerV.plan_args.cfg = cfg;
     PowerV.plan_args.load_pct = load_pct;
@@ -74,23 +74,23 @@ void dbench_run(void)
 
         // Idle at a cool die: the load path drops to the floor (240 -> 80).
         DBENCH_OP("Power.decide idle->floor", 100000,
-                  sink_mhz += power_decide(&cfg, 0, 40, PROTO_FALSE, 60000, PROTO_FALSE).cpu_mhz);
+                  sink_mhz += power_decide(&cfg, 0, 40, EMBED_FALSE, 60000, EMBED_FALSE).cpu_mhz);
 
         // Busy at a cool die: the load path runs at the ceiling.
         DBENCH_OP("Power.decide busy->ceiling", 100000,
-                  sink_mhz += power_decide(&cfg, 90, 40, PROTO_FALSE, 60000, PROTO_FALSE).cpu_mhz);
+                  sink_mhz += power_decide(&cfg, 90, 40, EMBED_FALSE, 60000, EMBED_FALSE).cpu_mhz);
 
         // Hot die while busy: thermal outranks load and holds the floor (hysteresis branch, entering
         // throttle from was_throttled=false).
         DBENCH_OP("Power.decide hot->throttle", 100000,
-                  sink_flags += power_decide(&cfg, 100, 85, PROTO_FALSE, 60000, PROTO_FALSE).throttled);
+                  sink_flags += power_decide(&cfg, 100, 85, EMBED_FALSE, 60000, EMBED_FALSE).throttled);
 
         // Brownout boot inside the settle window: recovery outranks everything and holds the floor.
         DBENCH_OP("Power.decide brownout->recover", 100000,
-                  sink_flags += power_decide(&cfg, 100, 25, PROTO_TRUE, 0, PROTO_FALSE).recovering);
+                  sink_flags += power_decide(&cfg, 100, 25, EMBED_TRUE, 0, EMBED_FALSE).recovering);
 
         // Serialize a plan to the {"cpu_mhz":...} JSON object (snprintf-backed, so a touch heavier).
-        PowerPlan p = power_decide(&cfg, 90, 41, PROTO_FALSE, 60000, PROTO_FALSE);
+        PowerPlan p = power_decide(&cfg, 90, 41, EMBED_FALSE, 60000, EMBED_FALSE);
         DBENCH_OP("Power.json serialize", 20000, sink_len += power_json(&p, 41, json, sizeof(json)));
 
         (void)sink_mhz;

@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ntlmssp.h
@@ -69,10 +69,10 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*build_negotiate)(uint8_t *, uint8_t *, size_t, uint32_t);
-    proto_bool (*parse_challenge)(uint8_t *, const uint8_t *, size_t, NtlmChallenge *);
-    size_t (*build_authenticate)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
-                                 const char *, const char *, const char *, uint32_t, proto_bool);
+    size_t (*build_negotiate)(const uint8_t *, uint8_t *, size_t, uint32_t);
+    embed_bool (*parse_challenge)(const uint8_t *, const uint8_t *, size_t, NtlmChallenge *);
+    size_t (*build_authenticate)(const uint8_t *, uint8_t *, size_t, const uint8_t *, size_t, const uint8_t *, size_t,
+                                 const char *, const char *, const char *, uint32_t, embed_bool);
 } NtlmsspNs;
 PROTOCORE_NS_LAYOUT(NtlmsspNs, build_negotiate, parse_challenge, build_authenticate);
 
@@ -84,16 +84,16 @@ PROTOCORE_NS_LAYOUT(NtlmsspNs, build_negotiate, parse_challenge, build_authentic
  * @param flags Flags
  * @return The size_t.
  */
-size_t protocore_ntlmssp_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap, uint32_t flags);
+size_t protocore_ntlmssp_build_negotiate(const uint8_t *work, uint8_t *buf, size_t cap, uint32_t flags);
 /**
  * @brief Parse a CHALLENGE_MESSAGE (type 2): extract the flags, the 8-byte .
  * @param work PROTOCORE_NTLMSSP_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ntlmssp_parse_challenge(uint8_t *work, const uint8_t *msg, size_t len, NtlmChallenge *out);
+embed_bool protocore_ntlmssp_parse_challenge(const uint8_t *work, const uint8_t *msg, size_t len, NtlmChallenge *out);
 /**
  * @brief Build an AUTHENTICATE_MESSAGE (type 3) carrying the LM + NT .
  * @param work PROTOCORE_NTLMSSP_BORROW bytes the caller took. Not held past the call.
@@ -110,16 +110,16 @@ proto_bool protocore_ntlmssp_parse_challenge(uint8_t *work, const uint8_t *msg, 
  * @param with_mic when true, reserve the 8-byte Version + 16-byte MIC fields between the fixed header and the
  * @return The size_t.
  */
-size_t protocore_ntlmssp_build_authenticate(uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
+size_t protocore_ntlmssp_build_authenticate(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
                                             size_t lm_len, const uint8_t *nt_resp, size_t nt_len, const char *domain,
                                             const char *user, const char *workstation, uint32_t flags,
-                                            proto_bool with_mic);
+                                            embed_bool with_mic);
 
 /** @brief Module namespace. */
 PROTOCORE_NS NtlmsspNs Ntlmssp PROTOCORE_UNUSED = {.build_negotiate = protocore_ntlmssp_build_negotiate,
                                                    .parse_challenge = protocore_ntlmssp_parse_challenge,
                                                    .build_authenticate = protocore_ntlmssp_build_authenticate};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NTLMSSP_H

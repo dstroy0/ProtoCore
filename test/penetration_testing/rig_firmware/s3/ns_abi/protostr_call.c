@@ -13,5 +13,5 @@ void app_main(void);
 void app_main(void)
 {
     str_sink = (unsigned char)EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = "Content-Length", .other = "content-length",
-                                         .cap = 15u, .ci = PROTO_TRUE);
+                                         .cap = 15u, .ci = EMBED_TRUE);
 }

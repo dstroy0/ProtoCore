@@ -51,9 +51,9 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
     memcpy(d->buf + off, buf, len);
     return len;
 }
-static proto_bool ram_sync(void *)
+static embed_bool ram_sync(void *)
 {
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static uint8_t g_disk[128 * 1024];
@@ -85,12 +85,12 @@ static void fresh(void)
 {
     fresh_sized(sizeof(g_disk));
 }
-static proto_bool reboot(void)
+static embed_bool reboot(void)
 {
     g_dev = dev_over(&g_d);
     if (!protocore_wal_store_mount(&g_wal, &g_dev))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return protocore_dbm_open(&g_db, &g_wal);
 }
@@ -119,7 +119,7 @@ static void fill_entry(EdgeEntry *e, const char *canon, const char *etag, const 
     e->body_len = body_len;
 }
 
-static proto_bool digest_eq(const uint8_t a[32], const uint8_t b[32])
+static embed_bool digest_eq(const uint8_t a[32], const uint8_t b[32])
 {
     return memcmp(a, b, 32) == 0;
 }
@@ -552,7 +552,7 @@ static void put_path(const char *path)
     EdgeCacheSd.put(edge_cache_sd_work);
     TEST_ASSERT_TRUE(EdgeCacheSdV.ok);
 }
-static proto_bool has_path(const char *path)
+static embed_bool has_path(const char *path)
 {
     EdgeEntry in, out;
     char canon[PROTOCORE_EDGE_KEY_MAX];

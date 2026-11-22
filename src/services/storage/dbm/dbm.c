@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/storage/dbm/dbm.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // dbm record payload header: op u8 | key_len u16 | val_len u32.
 static const size_t DBM_HDR = 7;
@@ -75,7 +75,7 @@ static int find_live(const struct protocore_dbm *db, uint64_t hash, const char *
 
 // Find the slot to write (hash,key): an existing live match, or the first reusable slot (tombstone/empty).
 // Sets *is_new when the returned slot is not already this key. -1 if the table has no room for a new key.
-static int reserve(const struct protocore_dbm *db, uint64_t hash, const char *key, uint16_t key_len, proto_bool *is_new)
+static int reserve(const struct protocore_dbm *db, uint64_t hash, const char *key, uint16_t key_len, embed_bool *is_new)
 {
     const size_t n = PROTOCORE_DBM_SLOTS;
     size_t start = (size_t)(hash % n);
@@ -89,7 +89,7 @@ static int reserve(const struct protocore_dbm *db, uint64_t hash, const char *ke
             if (s->hash == hash && s->key_len == key_len &&
                 EMBED_CALL(memor.cmp, MemoriaCfg, .src = s->key, .other = key, .bytes = key_len) == 0)
             {
-                *is_new = PROTO_FALSE;
+                *is_new = EMBED_FALSE;
                 return (int)j;
             }
             continue;
@@ -103,18 +103,18 @@ static int reserve(const struct protocore_dbm *db, uint64_t hash, const char *ke
             continue;
         }
         // empty: the key is not present -> insert at the earliest reusable slot (tombstone or here)
-        *is_new = PROTO_TRUE;
+        *is_new = EMBED_TRUE;
         return first_free >= 0 ? first_free : (int)j;
     }
     // No empty slot seen (table saturated with live/tombstones); only a tombstone can hold a new key.
-    *is_new = PROTO_TRUE;
+    *is_new = EMBED_TRUE;
     return first_free;
 }
 
 typedef struct
 {
     struct protocore_dbm *db;
-    proto_bool overflow;
+    embed_bool overflow;
 } ReplayCtx;
 
 static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, uint32_t len, void *ctx)
@@ -141,11 +141,11 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
     uint64_t h = key_hash(key, klen);
     if (op == 0) // put
     {
-        proto_bool is_new = PROTO_FALSE;
+        embed_bool is_new = EMBED_FALSE;
         int slot = reserve(db, h, key, klen, &is_new);
         if (slot < 0)
         {
-            rc->overflow = PROTO_TRUE;
+            rc->overflow = EMBED_TRUE;
             return;
         }
         protocore_dbm_slot *s = &db->slots[slot];
@@ -171,29 +171,29 @@ static void replay_cb(uint64_t seq, uint64_t data_off, const uint8_t *payload, u
     }
 }
 
-proto_bool protocore_dbm_open(struct protocore_dbm *db, WalStore *wal)
+embed_bool protocore_dbm_open(struct protocore_dbm *db, WalStore *wal)
 {
     EMBED_CALL(memor.set, MemoriaCfg, .dst = db, .val = 0, .bytes = sizeof(*db));
     db->wal = wal;
-    ReplayCtx rc = {db, PROTO_FALSE};
+    ReplayCtx rc = {db, EMBED_FALSE};
     uint8_t scratch[WAL_RECORD_HEADER + DBM_HDR + PROTOCORE_DBM_KEY_MAX + PROTOCORE_DBM_VAL_MAX];
     protocore_wal_store_scan(wal, replay_cb, &rc, scratch, sizeof(scratch));
     return !rc.overflow;
 }
 
-proto_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t key_len, const uint8_t *val,
+embed_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t key_len, const uint8_t *val,
                              uint32_t val_len)
 {
     if (key_len == 0 || key_len > PROTOCORE_DBM_KEY_MAX || val_len > PROTOCORE_DBM_VAL_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint64_t h = key_hash(key, key_len);
-    proto_bool is_new = PROTO_FALSE;
+    embed_bool is_new = EMBED_FALSE;
     int slot = reserve(db, h, key, key_len, &is_new);
     if (slot < 0)
     {
-        return PROTO_FALSE; // index full: do not append an orphan record
+        return EMBED_FALSE; // index full: do not append an orphan record
     }
 
     uint8_t rec[DBM_HDR + PROTOCORE_DBM_KEY_MAX + PROTOCORE_DBM_VAL_MAX];
@@ -208,7 +208,7 @@ proto_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t
     uint64_t old_head = protocore_wal_store_used(db->wal);
     if (!protocore_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len + val_len)))
     {
-        return PROTO_FALSE; // WAL full: index unchanged
+        return EMBED_FALSE; // WAL full: index unchanged
     }
 
     protocore_dbm_slot *s = &db->slots[slot];
@@ -222,7 +222,7 @@ proto_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = s->key, .src = key, .bytes = key_len);
     s->val_off = old_head + WAL_RECORD_HEADER + DBM_HDR + key_len;
     s->val_len = val_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 long protocore_dbm_get(struct protocore_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap)
@@ -245,13 +245,13 @@ long protocore_dbm_get(struct protocore_dbm *db, const char *key, uint16_t key_l
     return (long)s->val_len;
 }
 
-proto_bool protocore_dbm_del(struct protocore_dbm *db, const char *key, uint16_t key_len)
+embed_bool protocore_dbm_del(struct protocore_dbm *db, const char *key, uint16_t key_len)
 {
     uint64_t h = key_hash(key, key_len);
     int slot = find_live(db, h, key, key_len);
     if (slot < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t rec[DBM_HDR + PROTOCORE_DBM_KEY_MAX];
     rec[0] = 1;
@@ -260,14 +260,14 @@ proto_bool protocore_dbm_del(struct protocore_dbm *db, const char *key, uint16_t
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rec + DBM_HDR, .src = key, .bytes = key_len);
     if (!protocore_wal_store_append(db->wal, rec, (uint32_t)(DBM_HDR + key_len)))
     {
-        return PROTO_FALSE; // WAL full: key stays live
+        return EMBED_FALSE; // WAL full: key stays live
     }
     db->slots[slot].state = 2;
     db->count--;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_dbm_contains(const struct protocore_dbm *db, const char *key, uint16_t key_len)
+embed_bool protocore_dbm_contains(const struct protocore_dbm *db, const char *key, uint16_t key_len)
 {
     return find_live(db, key_hash(key, key_len), key, key_len) >= 0;
 }
@@ -277,7 +277,7 @@ uint32_t protocore_dbm_count(const struct protocore_dbm *db)
     return db->count;
 }
 
-proto_bool protocore_dbm_sync(struct protocore_dbm *db)
+embed_bool protocore_dbm_sync(struct protocore_dbm *db)
 {
     return protocore_wal_store_checkpoint(db->wal);
 }
@@ -315,7 +315,7 @@ uint64_t protocore_dbm_live_bytes(const struct protocore_dbm *db)
     return bytes;
 }
 
-proto_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst)
+embed_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst)
 {
     // Copy each live key (latest value, no tombstones) into the fresh destination. Read the value straight
     // from the old log so this needs no per-key RAM beyond one record buffer, the same the put path uses.
@@ -334,20 +334,20 @@ proto_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst)
         // On any failure, return before rebinding so db keeps using its intact original log (no data loss).
         if (s->val_len && !protocore_wal_store_pread(db->wal, s->val_off, rec + DBM_HDR + s->key_len, s->val_len))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (!protocore_wal_store_append(dst, rec, (uint32_t)(DBM_HDR + s->key_len + s->val_len)))
         {
-            return PROTO_FALSE; // destination too small
+            return EMBED_FALSE; // destination too small
         }
     }
     if (!protocore_wal_store_checkpoint(dst))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return protocore_dbm_open(db, dst); // rebind to the compacted log + rebuild the index with fresh offsets
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DBM

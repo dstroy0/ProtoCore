@@ -57,7 +57,7 @@ void use(Middleware mw)
 
 // Run the chain in registration order. The first middleware to return MW_HALT stops dispatch; it is
 // responsible for having sent a response.
-proto_bool run_middleware(uint8_t slot_id, HttpReq *req)
+embed_bool run_middleware(uint8_t slot_id, HttpReq *req)
 {
     for (uint8_t i = 0; i < s_mw.middleware_count; i++)
     {
@@ -66,10 +66,10 @@ proto_bool run_middleware(uint8_t slot_id, HttpReq *req)
         // s_mw.middleware_count can never regress to null.
         if (s_mw.middleware[i] && s_mw.middleware[i](slot_id, req) == MW_HALT)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void enable_rate_limit(uint16_t max_requests, uint32_t window_ms)
@@ -82,15 +82,15 @@ void enable_rate_limit(uint16_t max_requests, uint32_t window_ms)
 
 // Fixed-window counter. Unsigned subtraction is rollover-safe across the millis()
 // wrap. On the request that tips past s_mw.rl_max, reply 429 + Retry-After and stop.
-proto_bool rate_limit_check(uint8_t slot_id)
+embed_bool rate_limit_check(uint8_t slot_id)
 {
     if (s_mw.rl_max == 0 || s_mw.rl_window_ms == 0)
     {
-        return PROTO_FALSE; // disabled
+        return EMBED_FALSE; // disabled
     }
 
     uint32_t now = Clock.ms;
-    if ((uint32_t)(now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
+    if ((now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
     {
         s_mw.rl_window_start = now; // new window
         s_mw.rl_count = 0;
@@ -99,11 +99,11 @@ proto_bool rate_limit_check(uint8_t slot_id)
     s_mw.rl_count++;
     if (s_mw.rl_count <= s_mw.rl_max)
     {
-        return PROTO_FALSE; // within budget
+        return EMBED_FALSE; // within budget
     }
 
     // Over budget: advertise how long until the window resets, then 429.
-    uint32_t elapsed = (uint32_t)(now - s_mw.rl_window_start);
+    uint32_t elapsed = (now - s_mw.rl_window_start);
     // The ":0" arm is unreachable: the check above either just reset s_mw.rl_window_start to `now`
     // (elapsed == 0) or left it in place because elapsed was already < s_mw.rl_window_ms - either way
     // elapsed < s_mw.rl_window_ms always holds here, so the ">" arm always taken.
@@ -114,5 +114,5 @@ proto_bool rate_limit_check(uint8_t slot_id)
                .vals = (const mmgr_fval[]){MMGR_VU32((uint32_t)((remain_ms + 999) / 1000))}, .nvals = 1);
     proto_add_response_header(slot_id, "Retry-After", secs);
     send_text(slot_id, 429, PROTOCORE_MIME_TEXT_PLAIN, "Too Many Requests");
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }

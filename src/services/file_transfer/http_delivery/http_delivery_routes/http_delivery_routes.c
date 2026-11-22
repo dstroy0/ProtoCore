@@ -19,7 +19,7 @@ static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDeliver
 #include "protocore.h"
 #include "shared/mime/mime.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // All service-worker route state, owned by one instance (internal linkage): the server handle plus
 // the borrowed precache list the manifest is rebuilt from on each request. The route handlers are
@@ -59,14 +59,14 @@ static void sw_manifest_handler(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-void protocore_http_delivery_serve_sw(uint8_t *work)
+void protocore_http_delivery_serve_sw(const uint8_t *work)
 {
     (void)work;
     const char *const *paths = HttpDeliveryV.serve_sw_args.paths;
     const size_t n = HttpDeliveryV.serve_sw_args.n;
     const char *version = HttpDeliveryV.serve_sw_args.version;
 
-    HttpDeliveryV.ok = PROTO_FALSE;
+    HttpDeliveryV.ok = EMBED_FALSE;
     if (!paths || n == 0 || n > PROTOCORE_DELIVERY_PRECACHE_MAX || !version)
     {
         return;
@@ -74,13 +74,13 @@ void protocore_http_delivery_serve_sw(uint8_t *work)
     s_delr.paths = paths;
     s_delr.n = n;
     s_delr.version = version;
-    // The worker's scope is the path it is served from, so it must sit at the root to control the
+    // The worker's scope is the path it is served from. So it must sit at the root to control the
     // whole origin - "/sw.js", not "/assets/sw.js".
     on_http("/sw.js", HTTP_GET, sw_script_handler);
     on_http("/precache.json", HTTP_GET, sw_manifest_handler);
-    HttpDeliveryV.ok = PROTO_TRUE;
+    HttpDeliveryV.ok = EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_DELIVERY

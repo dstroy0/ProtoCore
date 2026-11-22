@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_EXC_DECODER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "server/storage/mnt/mnt.h" // protocore_mnt_backend - the store a dump is offloaded to
 #ifndef PROTOCORE_EXC_MAX_FRAMES
@@ -45,7 +45,7 @@ typedef struct
     char cause[32];                            ///< exception cause text (e.g. "LoadProhibited"), "" if absent.
     uint32_t pc;                               ///< faulting PC (register-dump PC, else first backtrace frame).
     uint32_t excvaddr;                         ///< faulting data address (EXCVADDR), 0 if absent.
-    proto_bool has_excvaddr;                   ///< true if an EXCVADDR field was present.
+    embed_bool has_excvaddr;                   ///< true if an EXCVADDR field was present.
     ExcFrame frames[PROTOCORE_EXC_MAX_FRAMES]; ///< backtrace, outermost-first as printed.
     size_t frame_count;
 } ExcInfo;
@@ -108,7 +108,7 @@ typedef struct
     ExcParseArgs parse_args;
     ExcDumpArgs dump;
     ExcOutArgs out_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 #if PROTOCORE_HAS_VENDOR_COREDUMP
 #endif
@@ -120,25 +120,25 @@ extern ExcVars ExcV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse)(uint8_t *work);
-    void (*const json)(uint8_t *work);
-    void (*const present)(uint8_t *work);
-    void (*const summary)(uint8_t *work);
-    void (*const read)(uint8_t *work);
-    void (*const save)(uint8_t *work);
-    void (*const erase)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const json)(const uint8_t *work);
+    void (*const present)(const uint8_t *work);
+    void (*const summary)(const uint8_t *work);
+    void (*const read)(const uint8_t *work);
+    void (*const save)(const uint8_t *work);
+    void (*const erase)(const uint8_t *work);
 } ExcDecoderNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ExcV or a region of the borrow at a fixed offset.
-void protocore_exc_parse(uint8_t *work);
-void protocore_exc_json(uint8_t *work);
+void protocore_exc_parse(const uint8_t *work);
+void protocore_exc_json(const uint8_t *work);
 #if PROTOCORE_HAS_VENDOR_COREDUMP
-void protocore_exc_present(uint8_t *work);
-void protocore_exc_summary(uint8_t *work);
-void protocore_exc_read(uint8_t *work);
-void protocore_exc_save(uint8_t *work);
-void protocore_exc_erase(uint8_t *work);
+void protocore_exc_present(const uint8_t *work);
+void protocore_exc_summary(const uint8_t *work);
+void protocore_exc_read(const uint8_t *work);
+void protocore_exc_save(const uint8_t *work);
+void protocore_exc_erase(const uint8_t *work);
 #endif
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -157,7 +157,7 @@ static const ExcDecoderNs Exc __attribute__((unused)) = {
 #endif
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER
 

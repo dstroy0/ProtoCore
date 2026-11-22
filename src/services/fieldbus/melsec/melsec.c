@@ -15,14 +15,14 @@
 
 #include "endian/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_melsec_build_read(uint8_t *work)
+void protocore_melsec_build_read(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MelsecV.build_read_args.buf;
@@ -61,7 +61,7 @@ void protocore_melsec_build_read(uint8_t *work)
     MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN
 }
 
-void protocore_melsec_build_write(uint8_t *work)
+void protocore_melsec_build_write(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MelsecV.build_write_args.buf;
@@ -116,7 +116,7 @@ void protocore_melsec_build_write(uint8_t *work)
     MelsecV.n = p; // == MELSEC_3E_READ_REQ_LEN + data_len
 }
 
-void protocore_melsec_parse_response(uint8_t *work)
+void protocore_melsec_parse_response(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = MelsecV.parse_response_args.buf;
@@ -126,12 +126,12 @@ void protocore_melsec_parse_response(uint8_t *work)
     // subheader(2)+net(1)+pc(1)+io(2)+multidrop(1)+length(2)+endcode(2) = MELSEC_3E_RES_MIN_LEN
     if (!buf || !out || len < MELSEC_3E_RES_MIN_LEN)
     {
-        MelsecV.ok = PROTO_FALSE;
+        MelsecV.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != MELSEC_3E_RES_SUBHEADER0 || buf[1] != MELSEC_3E_RES_SUBHEADER1)
     {
-        MelsecV.ok = PROTO_FALSE;
+        MelsecV.ok = EMBED_FALSE;
         return;
     }
     // covers the end code + the response data
@@ -139,24 +139,24 @@ void protocore_melsec_parse_response(uint8_t *work)
                                                 .width = MMGR_ENDIAN_16);
     if (data_length < MELSEC_ENDCODE_LEN)
     {
-        MelsecV.ok = PROTO_FALSE;
+        MelsecV.ok = EMBED_FALSE;
         return;
     }
     if (MELSEC_3E_RES_DATALEN_BASE + (size_t)data_length > len)
     {
-        MelsecV.ok = PROTO_FALSE;
+        MelsecV.ok = EMBED_FALSE;
         return;
     }
     out->end_code = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + MELSEC_3E_RES_DATALEN_BASE,
                                          .width = MMGR_ENDIAN_16);
     out->data = buf + MELSEC_3E_RES_DATA_OFFSET;
     out->data_len = (size_t)data_length - MELSEC_ENDCODE_LEN; // minus the 2-octet end code
-    MelsecV.ok = PROTO_TRUE;
+    MelsecV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 MelsecVars MelsecV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MELSEC

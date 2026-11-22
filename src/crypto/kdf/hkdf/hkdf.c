@@ -43,7 +43,7 @@ static_assert(HKDF_OFF_INFO + HKDF_INFO_CAP <= PROTOCORE_HKDF_BORROW,
 // RFC 5869 sec 2.3 HKDF-Expand for the QUIC case: the info block is small and fixed and the
 // requested length never exceeds one hash block, but the general N-block loop is written out so a
 // future >32-byte caller stays correct. T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-static proto_bool hkdf_derive(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
+static embed_bool hkdf_derive(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
                               size_t out_len)
 {
     // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
@@ -52,7 +52,7 @@ static proto_bool hkdf_derive(uint8_t *work, const uint8_t *prk, const uint8_t *
     if (out_len > (size_t)255 * PROTOCORE_HKDF_HASH_LEN)
     {
         EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = out_len);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t *t = HKDF_T(work);
     size_t t_len = 0; // 0 for T(0) (empty), PROTOCORE_HKDF_HASH_LEN afterwards
@@ -76,11 +76,11 @@ static proto_bool hkdf_derive(uint8_t *work, const uint8_t *prk, const uint8_t *
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + done, .src = t, .bytes = take);
         done += take;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Compose the HkdfLabel in the borrow's info region and expand under it.
-static proto_bool hkdf_label_derive(uint8_t *work, const uint8_t *secret, const char *label, const uint8_t *context,
+static embed_bool hkdf_label_derive(uint8_t *work, const uint8_t *secret, const char *label, const uint8_t *context,
                                     size_t context_len, uint8_t *out, size_t out_len, const char *label_prefix)
 {
     // HkdfLabel (RFC 8446 sec 7.1): uint16 length | opaque label<..> = label_prefix + label | opaque context.
@@ -117,44 +117,44 @@ static proto_bool hkdf_label_derive(uint8_t *work, const uint8_t *secret, const 
 
 // RFC 5869 sec 2.2: PRK = HMAC-Hash(salt, IKM). HmacSha256 pre-hashes keys > 64 bytes and zero-pads
 // shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
-proto_bool protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
+embed_bool protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
                                   size_t ikm_len, uint8_t *prk)
 {
     if (!prk)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool hmac_sha256_ok = HmacSha256.mac(HKDF_HMAC(work), salt, salt_len, ikm, ikm_len, prk);
+    embed_bool hmac_sha256_ok = HmacSha256.mac(HKDF_HMAC(work), salt, salt_len, ikm, ikm_len, prk);
     return hmac_sha256_ok;
 }
 
-proto_bool protocore_hkdf_expand(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
+embed_bool protocore_hkdf_expand(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
                                  size_t out_len)
 {
     if (!prk || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return hkdf_derive(work, prk, info, info_len, out, out_len);
 }
 
-proto_bool protocore_hkdf_expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
+embed_bool protocore_hkdf_expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
                                        size_t out_len, const char *label_prefix)
 {
     if (!secret || !label || !label_prefix || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return hkdf_label_derive(work, secret, label, NULL, 0, out, out_len, label_prefix);
 }
 
-proto_bool protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t *secret, const char *label,
+embed_bool protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t *secret, const char *label,
                                            const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                                            const char *label_prefix)
 {
     if (!secret || !label || !label_prefix || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return hkdf_label_derive(work, secret, label, context, context_len, out, out_len, label_prefix);
 }

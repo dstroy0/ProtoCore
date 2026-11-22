@@ -25,7 +25,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool decode(const uint8_t *pkt, size_t len, size_t off, char *out, size_t cap, proto_bool allow_ptr)
+static embed_bool decode(const uint8_t *pkt, size_t len, size_t off, char *out, size_t cap, embed_bool allow_ptr)
 {
     DnsWireV.msg.pkt = pkt;
     DnsWireV.msg.len = len;
@@ -46,7 +46,7 @@ static size_t encode(const char *dotted, uint8_t *out, size_t cap)
     return DnsWireV.n;
 }
 
-static proto_bool eq(const char *a, const char *b)
+static embed_bool eq(const char *a, const char *b)
 {
     DnsWireV.cmp.a = a;
     DnsWireV.cmp.b = b;
@@ -95,19 +95,19 @@ void test_rfc1035_worked_message(void)
     build_rfc1035_message(msg, sizeof(msg));
     char out[256];
 
-    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 20, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 20, out, sizeof(out), EMBED_TRUE));
     TEST_ASSERT_EQUAL_STRING("F.ISI.ARPA", out);
     TEST_ASSERT_EQUAL_size_t(32, DnsWireV.next); // the zero octet at 31 ends it
 
-    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 40, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 40, out, sizeof(out), EMBED_TRUE));
     TEST_ASSERT_EQUAL_STRING("FOO.F.ISI.ARPA", out);
     TEST_ASSERT_EQUAL_size_t(46, DnsWireV.next); // two octets past the pointer, not past what it named
 
-    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 64, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 64, out, sizeof(out), EMBED_TRUE));
     TEST_ASSERT_EQUAL_STRING("ARPA", out);
     TEST_ASSERT_EQUAL_size_t(66, DnsWireV.next);
 
-    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 92, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 92, out, sizeof(out), EMBED_TRUE));
     TEST_ASSERT_EQUAL_STRING("", out); // "the root domain name has no labels"
     TEST_ASSERT_EQUAL_size_t(93, DnsWireV.next);
 }
@@ -145,7 +145,7 @@ void test_encode_decode_round_trip(void)
         char text[256];
         size_t n = encode(NAMES[i], wire, sizeof(wire));
         TEST_ASSERT_TRUE_MESSAGE(n > 0, NAMES[i]);
-        TEST_ASSERT_TRUE_MESSAGE(decode(wire, n, 0, text, sizeof(text), PROTO_FALSE), NAMES[i]);
+        TEST_ASSERT_TRUE_MESSAGE(decode(wire, n, 0, text, sizeof(text), EMBED_FALSE), NAMES[i]);
         TEST_ASSERT_EQUAL_STRING(NAMES[i], text);
         TEST_ASSERT_EQUAL_size_t(n, DnsWireV.next);
     }
@@ -173,11 +173,11 @@ void test_label_length_limit(void)
     memset(bad, 'a', sizeof(bad));
     bad[0] = 64; // 0x40: the reserved 01 type, not a 64-octet label
     bad[65] = 0;
-    TEST_ASSERT_FALSE(decode(bad, sizeof(bad), 0, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(bad, sizeof(bad), 0, out, sizeof(out), EMBED_FALSE));
 
     bad[0] = 63; // 0x3F: two zero bits, the longest label there is
     bad[64] = 0;
-    TEST_ASSERT_TRUE(decode(bad, 65, 0, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_TRUE(decode(bad, 65, 0, out, sizeof(out), EMBED_FALSE));
     TEST_ASSERT_EQUAL_size_t(63, strlen(out));
 }
 
@@ -189,8 +189,8 @@ void test_reserved_label_types_are_refused(void)
     char out[64];
     static const uint8_t TEN[4] = {0x80, 'a', 'b', 0};
     static const uint8_t OHONE[4] = {0x40, 'a', 'b', 0};
-    TEST_ASSERT_FALSE(decode(TEN, sizeof(TEN), 0, out, sizeof(out), PROTO_TRUE));
-    TEST_ASSERT_FALSE(decode(OHONE, sizeof(OHONE), 0, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_FALSE(decode(TEN, sizeof(TEN), 0, out, sizeof(out), EMBED_TRUE));
+    TEST_ASSERT_FALSE(decode(OHONE, sizeof(OHONE), 0, out, sizeof(out), EMBED_TRUE));
 }
 
 // sec 4.1.4 lets a pointer name any prior occurrence, which means a message can name itself. The
@@ -201,16 +201,16 @@ void test_pointer_loops_terminate(void)
 
     // A pointer at 0 aimed at 0.
     static const uint8_t SELF[2] = {0xC0, 0x00};
-    TEST_ASSERT_FALSE(decode(SELF, sizeof(SELF), 0, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_FALSE(decode(SELF, sizeof(SELF), 0, out, sizeof(out), EMBED_TRUE));
 
     // Two pointers aimed at each other.
     static const uint8_t PAIR[4] = {0xC0, 0x02, 0xC0, 0x00};
-    TEST_ASSERT_FALSE(decode(PAIR, sizeof(PAIR), 0, out, sizeof(out), PROTO_TRUE));
-    TEST_ASSERT_FALSE(decode(PAIR, sizeof(PAIR), 2, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_FALSE(decode(PAIR, sizeof(PAIR), 0, out, sizeof(out), EMBED_TRUE));
+    TEST_ASSERT_FALSE(decode(PAIR, sizeof(PAIR), 2, out, sizeof(out), EMBED_TRUE));
 
     // A pointer past the end of the message names nothing.
     static const uint8_t OFF_END[4] = {0xC0, 0xFF, 0, 0};
-    TEST_ASSERT_FALSE(decode(OFF_END, sizeof(OFF_END), 0, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_FALSE(decode(OFF_END, sizeof(OFF_END), 0, out, sizeof(out), EMBED_TRUE));
 }
 
 // The first name in a message has no prior occurrence to point at, so a caller reading a question
@@ -222,12 +222,12 @@ void test_pointers_are_refused_when_not_allowed(void)
     char out[64];
 
     // Offset 20 is pure labels, so it decodes either way.
-    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 20, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 20, out, sizeof(out), EMBED_FALSE));
     TEST_ASSERT_EQUAL_STRING("F.ISI.ARPA", out);
 
     // Offsets 40 and 64 end in / are a pointer.
-    TEST_ASSERT_FALSE(decode(msg, sizeof(msg), 40, out, sizeof(out), PROTO_FALSE));
-    TEST_ASSERT_FALSE(decode(msg, sizeof(msg), 64, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(msg, sizeof(msg), 40, out, sizeof(out), EMBED_FALSE));
+    TEST_ASSERT_FALSE(decode(msg, sizeof(msg), 64, out, sizeof(out), EMBED_FALSE));
 }
 
 // A name whose labels run past the end of the message, or whose length octet is the last octet, is
@@ -237,20 +237,20 @@ void test_truncated_names_are_refused(void)
     char out[64];
 
     static const uint8_t NO_ROOT[4] = {3, 'a', 'b', 'c'}; // labels but no terminating zero octet
-    TEST_ASSERT_FALSE(decode(NO_ROOT, sizeof(NO_ROOT), 0, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(NO_ROOT, sizeof(NO_ROOT), 0, out, sizeof(out), EMBED_FALSE));
 
     static const uint8_t PAST_END[3] = {5, 'a', 'b'}; // claims 5 octets, carries 2
-    TEST_ASSERT_FALSE(decode(PAST_END, sizeof(PAST_END), 0, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(PAST_END, sizeof(PAST_END), 0, out, sizeof(out), EMBED_FALSE));
 
     static const uint8_t LONE_LEN[1] = {3};
-    TEST_ASSERT_FALSE(decode(LONE_LEN, sizeof(LONE_LEN), 0, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(LONE_LEN, sizeof(LONE_LEN), 0, out, sizeof(out), EMBED_FALSE));
 
     static const uint8_t HALF_PTR[1] = {0xC0}; // a pointer needs two octets
-    TEST_ASSERT_FALSE(decode(HALF_PTR, sizeof(HALF_PTR), 0, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_FALSE(decode(HALF_PTR, sizeof(HALF_PTR), 0, out, sizeof(out), EMBED_TRUE));
 
     // Starting past the end of the message.
     static const uint8_t OK_NAME[5] = {3, 'a', 'b', 'c', 0};
-    TEST_ASSERT_FALSE(decode(OK_NAME, sizeof(OK_NAME), 5, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(OK_NAME, sizeof(OK_NAME), 5, out, sizeof(out), EMBED_FALSE));
 }
 
 // A name that does not fit the caller's buffer is refused, not clipped: half a domain name is a
@@ -263,16 +263,16 @@ void test_output_buffer_bounds(void)
     TEST_ASSERT_EQUAL_size_t(8, n);
 
     char exact[7];
-    TEST_ASSERT_TRUE(decode(wire, n, 0, exact, sizeof(exact), PROTO_FALSE));
+    TEST_ASSERT_TRUE(decode(wire, n, 0, exact, sizeof(exact), EMBED_FALSE));
     TEST_ASSERT_EQUAL_STRING("abc.de", exact);
 
     char one_short[6];
-    TEST_ASSERT_FALSE(decode(wire, n, 0, one_short, sizeof(one_short), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(wire, n, 0, one_short, sizeof(one_short), EMBED_FALSE));
 
     char none[1];
-    TEST_ASSERT_FALSE(decode(wire, n, 0, none, 0, PROTO_FALSE));
-    TEST_ASSERT_FALSE(decode(wire, n, 0, NULL, sizeof(none), PROTO_FALSE));
-    TEST_ASSERT_FALSE(decode(NULL, n, 0, none, sizeof(none), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(wire, n, 0, none, 0, EMBED_FALSE));
+    TEST_ASSERT_FALSE(decode(wire, n, 0, NULL, sizeof(none), EMBED_FALSE));
+    TEST_ASSERT_FALSE(decode(NULL, n, 0, none, sizeof(none), EMBED_FALSE));
 }
 
 // The encoder needs room for every length octet, every label and the root octet. One octet short of
@@ -292,7 +292,7 @@ void test_encode_buffer_bounds(void)
 // serialize to a name that ends after "a".
 //
 // The lone "." falls under the same rule here. RFC 1035 sec 5.1 spells the root as a single dot in
-// presentation format, so that spelling is one this encoder does not take; its input form for the
+// presentation format, so that spelling is one this encoder does not take. Its input form for the
 // root is the empty string, per the module's own contract.
 void test_empty_labels_inside_a_name_are_refused(void)
 {
@@ -349,12 +349,12 @@ void test_pointer_hop_cap(void)
 
     char out[64];
     // Entering at the second link follows eight pointers, exactly what the cap admits.
-    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 2, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 2, out, sizeof(out), EMBED_TRUE));
     TEST_ASSERT_EQUAL_STRING("z", out);
     TEST_ASSERT_EQUAL_size_t(4, DnsWireV.next);
 
     // Entering at the head follows nine, one past it.
-    TEST_ASSERT_FALSE(decode(msg, sizeof(msg), 0, out, sizeof(out), PROTO_TRUE));
+    TEST_ASSERT_FALSE(decode(msg, sizeof(msg), 0, out, sizeof(out), EMBED_TRUE));
 }
 
 // A failed decode reports next = 0 and a failed encode reports n = 0, so a caller that walks a
@@ -363,7 +363,7 @@ void test_failure_reports_zero_progress(void)
 {
     char out[8];
     static const uint8_t TRUNC[3] = {5, 'a', 'b'};
-    TEST_ASSERT_FALSE(decode(TRUNC, sizeof(TRUNC), 0, out, sizeof(out), PROTO_FALSE));
+    TEST_ASSERT_FALSE(decode(TRUNC, sizeof(TRUNC), 0, out, sizeof(out), EMBED_FALSE));
     TEST_ASSERT_EQUAL_size_t(0, DnsWireV.next);
 
     uint8_t wire[4];

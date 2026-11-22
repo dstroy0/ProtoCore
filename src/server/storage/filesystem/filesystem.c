@@ -37,7 +37,7 @@ typedef struct
     char dwalk[PROTOCORE_FILESYSTEM_PATH_MAX];
 
     // Where each level resumes. Remove re-opens and takes the first survivor every pass, so its
-    // cursor cannot be invalidated by its own removals; copy does not consume what it reads, so it
+    // cursor cannot be invalidated by its own removals. Copy does not consume what it reads, so it
     // re-opens and skips to where it left off.
     uint16_t idx[PROTOCORE_FS_MAX_DEPTH + 2];
 
@@ -45,7 +45,7 @@ typedef struct
     // partial one (see PROTOCORE_FS_BLOCK).
     uint8_t block[PROTOCORE_FS_BLOCK];
 
-    uint32_t status; ///< sticky reasons operations have failed (see the status block in filesystem.h).
+    uint32_t status; ///< sticky reasons operations failed (see the status block in filesystem.h).
 } FilesystemCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -65,7 +65,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define FILESYSTEM_CTX(w) ((FilesystemCtx *)(void *)((w) + FILESYSTEM_OFF_CTX))
+#define FILESYSTEM_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const FilesystemCtx *)(const void *)((w) + FILESYSTEM_OFF_CTX),                              \
+        default: (FilesystemCtx *)(void *)((w) + FILESYSTEM_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -107,7 +110,7 @@ static size_t walk_push(char *path, size_t len, const char *child)
 {
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = child, .cap = PROTOCORE_FILESYSTEM_PATH_MAX);
     // The root already IS the separator, so it is the one path that does not get another.
-    proto_bool need_sep = !(len == 1 && path[0] == '/');
+    embed_bool need_sep = !(len == 1 && path[0] == '/');
     if (len + (need_sep ? 1 : 0) + n + 1 > PROTOCORE_FILESYSTEM_PATH_MAX)
     {
         return 0;
@@ -147,7 +150,7 @@ static const char *resolve_into(uint8_t *work, int slot, int root, const char *d
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_BAD_ROOT;
         return NULL;
     }
-    // protocore_fs_resolve separates the two ways a path can be rejected; the mask keeps them separate for
+    // protocore_fs_resolve separates the two ways a path can be rejected. The mask keeps them separate for
     // the caller instead of flattening both into the same NULL.
     int rc = protocore_fs_resolve(FILESYSTEM_CTX(work)->root[root].path, dir, name, FILESYSTEM_CTX(work)->path[slot],
                                   PROTOCORE_FILESYSTEM_PATH_MAX);
@@ -173,7 +176,7 @@ static void fs_present(uint8_t *work)
 {
     (void)work;
 
-    // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
+    // Asked of the mount directly, not of the mask: the mask says what failed, this says what is
     // true now. A hotswap can attach a store between the two.
     Mnt.active(work);
     Fs.ok = MntV.backend != NULL;
@@ -186,12 +189,12 @@ static void fs_begin(uint8_t *work)
     const char *want = (name == NULL || name[0] == '\0') ? "/" : name;
 
     // Binding a name already bound hands back the same root. Two services naming the same storage
-    // is an arrangement the application is entitled to make, and it must not cost a second root or
+    // is an arrangement the application is entitled to make. It must not cost a second root or
     // give them two views of one thing.
     for (uint8_t i = 0; i < FILESYSTEM_CTX(work)->count; i++)
     {
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = FILESYSTEM_CTX(work)->root[i].name, .other = want,
-                       .cap = PROTOCORE_FS_ROOT_NAME_MAX, .ci = PROTO_FALSE))
+                       .cap = PROTOCORE_FS_ROOT_NAME_MAX, .ci = EMBED_FALSE))
         {
             Fs.i32 = (int)i;
             return;
@@ -294,7 +297,7 @@ static void fs_seek(uint8_t *work)
     const uint64_t off = Fs.io.off;
 
     const protocore_mnt_backend *b = store(work);
-    Fs.ok = (b == NULL) ? PROTO_FALSE : b->seek(handle, off);
+    Fs.ok = (b == NULL) ? EMBED_FALSE : b->seek(handle, off);
 }
 
 static void fs_size(uint8_t *work)
@@ -323,7 +326,7 @@ static void fs_exists(uint8_t *work)
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     Fs.ok = b->exists(p);
@@ -340,7 +343,7 @@ static void fs_stat(uint8_t *work)
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     Fs.ok = b->stat(p, out);
@@ -356,7 +359,7 @@ static void fs_remove(uint8_t *work)
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
 
@@ -380,7 +383,7 @@ static void fs_remove(uint8_t *work)
     if (plen == rlen && EMBED_CALL(memor.cmp, MemoriaCfg, .src = p, .other = rp, .bytes = plen) == 0)
     {
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_BAD_ROOT;
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
 
@@ -390,7 +393,7 @@ static void fs_remove(uint8_t *work)
     protocore_mnt_stat st;
     if (!b->stat(p, &st))
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     if (!st.is_dir)
@@ -408,7 +411,7 @@ static void fs_remove(uint8_t *work)
                    .spec = FILESYSTEM_ROOT, .vals = (const mmgr_fval[]){MMGR_VSTR(p)}, .nvals = 1);
     if (len == 0)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
 
@@ -418,15 +421,15 @@ static void fs_remove(uint8_t *work)
         int d = b->opendir(FILESYSTEM_CTX(work)->walk);
         if (d < 0)
         {
-            Fs.ok = PROTO_FALSE;
+            Fs.ok = EMBED_FALSE;
             return;
         }
         // The entry's name is read straight onto the end of the path, one byte past the separator,
         // so a matched child is already a full path and an empty directory costs no assembly.
-        proto_bool sep = !(len == 1 && FILESYSTEM_CTX(work)->walk[0] == '/');
+        embed_bool sep = !(len == 1 && FILESYSTEM_CTX(work)->walk[0] == '/');
         size_t at = len + (sep ? 1 : 0);
         protocore_mnt_stat cst;
-        proto_bool got = (at + 1 < PROTOCORE_FILESYSTEM_PATH_MAX) &&
+        embed_bool got = (at + 1 < PROTOCORE_FILESYSTEM_PATH_MAX) &&
                          b->readdir(d, &cst, FILESYSTEM_CTX(work)->walk + at, PROTOCORE_FILESYSTEM_PATH_MAX - at);
         b->close(d);
 
@@ -435,12 +438,12 @@ static void fs_remove(uint8_t *work)
             FILESYSTEM_CTX(work)->walk[len] = '\0'; // undo the probe, whatever readdir left there
             if (!b->rmdir(FILESYSTEM_CTX(work)->walk))
             {
-                Fs.ok = PROTO_FALSE;
+                Fs.ok = EMBED_FALSE;
                 return;
             }
             if (lvl == 0)
             {
-                Fs.ok = PROTO_TRUE;
+                Fs.ok = EMBED_TRUE;
                 return;
             }
             len = walk_pop(FILESYSTEM_CTX(work)->walk, len);
@@ -454,18 +457,18 @@ static void fs_remove(uint8_t *work)
 
         if (!cst.is_dir)
         {
-            proto_bool ok = b->remove(FILESYSTEM_CTX(work)->walk);
+            embed_bool ok = b->remove(FILESYSTEM_CTX(work)->walk);
             FILESYSTEM_CTX(work)->walk[len] = '\0'; // back to this level, whatever happened
             if (!ok)
             {
-                Fs.ok = PROTO_FALSE;
+                Fs.ok = EMBED_FALSE;
                 return;
             }
             continue; // same level, re-opened next pass
         }
         if (lvl + 1 > PROTOCORE_FS_MAX_DEPTH)
         {
-            Fs.ok = PROTO_FALSE;
+            Fs.ok = EMBED_FALSE;
             return; // refuse a pathologically deep tree rather than walk forever
         }
         len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = FILESYSTEM_CTX(work)->walk,
@@ -487,7 +490,7 @@ static void fs_rename(uint8_t *work)
     const char *tp = resolve_into(work, 1, root, to_dir, to_name); // the one op needing both paths live at once
     if (b == NULL || fp == NULL || tp == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     Fs.ok = b->rename(fp, tp);
@@ -495,20 +498,20 @@ static void fs_rename(uint8_t *work)
 
 // Copy one file's bytes through the chunk buffer. The only place in this file that holds two handles
 // at once, and the only reader of FILESYSTEM_CTX(work)->block.
-static proto_bool copy_one(uint8_t *work, const protocore_mnt_backend *b, const char *src, const char *dst)
+static embed_bool copy_one(uint8_t *work, const protocore_mnt_backend *b, const char *src, const char *dst)
 {
-    int in = b->open(src, (int)(PROTOCORE_MNT_READ));
+    int in = b->open(src, (PROTOCORE_MNT_READ));
     if (in < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    int out = b->open(dst, (int)(PROTOCORE_MNT_WRITE));
+    int out = b->open(dst, (PROTOCORE_MNT_WRITE));
     if (out < 0)
     {
         b->close(in);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     for (;;)
     {
         int n = b->read(in, FILESYSTEM_CTX(work)->block, sizeof(FILESYSTEM_CTX(work)->block));
@@ -518,7 +521,7 @@ static proto_bool copy_one(uint8_t *work, const protocore_mnt_backend *b, const 
         }
         if (b->write(out, FILESYSTEM_CTX(work)->block, (size_t)(n)) != n)
         {
-            ok = PROTO_FALSE; // out of space / write fault: reported, not left as a short copy
+            ok = EMBED_FALSE; // out of space / write fault: reported, not left as a short copy
             break;
         }
     }
@@ -540,14 +543,14 @@ static void fs_copy(uint8_t *work)
     const char *dp = resolve_into(work, 1, root, to_dir, to_name); // both paths live at once, as in rename
     if (b == NULL || sp == NULL || dp == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
 
     protocore_mnt_stat st;
     if (!b->stat(sp, &st))
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     if (!st.is_dir)
@@ -564,12 +567,12 @@ static void fs_copy(uint8_t *work)
                    .spec = FILESYSTEM_ROOT, .vals = (const mmgr_fval[]){MMGR_VSTR(dp)}, .nvals = 1);
     if (slen == 0 || dlen == 0)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     if (!b->mkdir(FILESYSTEM_CTX(work)->dwalk))
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     FILESYSTEM_CTX(work)->idx[0] = 0;
@@ -585,15 +588,15 @@ static void fs_copy(uint8_t *work)
         int d = b->opendir(FILESYSTEM_CTX(work)->walk);
         if (d < 0)
         {
-            Fs.ok = PROTO_FALSE;
+            Fs.ok = EMBED_FALSE;
             return;
         }
-        // The name is read onto the end of the source path; the destination takes the same name
+        // The name is read onto the end of the source path. The destination takes the same name
         // through walk_push once the entry is known to exist.
-        proto_bool sep = !(slen == 1 && FILESYSTEM_CTX(work)->walk[0] == '/');
+        embed_bool sep = !(slen == 1 && FILESYSTEM_CTX(work)->walk[0] == '/');
         size_t at = slen + (sep ? 1 : 0);
         protocore_mnt_stat cst;
-        proto_bool got = PROTO_FALSE;
+        embed_bool got = EMBED_FALSE;
         if (at + 1 < PROTOCORE_FILESYSTEM_PATH_MAX)
         {
             for (uint16_t i = 0; i <= FILESYSTEM_CTX(work)->idx[lvl]; i++)
@@ -612,7 +615,7 @@ static void fs_copy(uint8_t *work)
             FILESYSTEM_CTX(work)->walk[slen] = '\0';
             if (lvl == 0)
             {
-                Fs.ok = PROTO_TRUE;
+                Fs.ok = EMBED_TRUE;
                 return;
             }
             slen = walk_pop(FILESYSTEM_CTX(work)->walk, slen);
@@ -629,18 +632,18 @@ static void fs_copy(uint8_t *work)
         }
         if (ndlen == 0)
         {
-            Fs.ok = PROTO_FALSE;
+            Fs.ok = EMBED_FALSE;
             return;
         }
 
         if (!cst.is_dir)
         {
-            proto_bool ok = copy_one(work, b, FILESYSTEM_CTX(work)->walk, FILESYSTEM_CTX(work)->dwalk);
+            embed_bool ok = copy_one(work, b, FILESYSTEM_CTX(work)->walk, FILESYSTEM_CTX(work)->dwalk);
             FILESYSTEM_CTX(work)->walk[slen] = '\0';
             FILESYSTEM_CTX(work)->dwalk[dlen] = '\0';
             if (!ok)
             {
-                Fs.ok = PROTO_FALSE;
+                Fs.ok = EMBED_FALSE;
                 return;
             }
             FILESYSTEM_CTX(work)->idx[lvl]++;
@@ -648,12 +651,12 @@ static void fs_copy(uint8_t *work)
         }
         if (lvl + 1 > PROTOCORE_FS_MAX_DEPTH)
         {
-            Fs.ok = PROTO_FALSE;
+            Fs.ok = EMBED_FALSE;
             return;
         }
         if (!b->mkdir(FILESYSTEM_CTX(work)->dwalk))
         {
-            Fs.ok = PROTO_FALSE;
+            Fs.ok = EMBED_FALSE;
             return;
         }
         slen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = FILESYSTEM_CTX(work)->walk,
@@ -674,7 +677,7 @@ static void fs_mkdir(uint8_t *work)
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     Fs.ok = b->mkdir(p);
@@ -690,7 +693,7 @@ static void fs_rmdir(uint8_t *work)
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     Fs.ok = b->rmdir(p);
@@ -720,7 +723,7 @@ static void fs_readdir(uint8_t *work)
     const size_t name_cap = Fs.io.name_cap;
 
     const protocore_mnt_backend *b = store(work);
-    Fs.ok = (b == NULL) ? PROTO_FALSE : b->readdir(handle, out, name, name_cap);
+    Fs.ok = (b == NULL) ? EMBED_FALSE : b->readdir(handle, out, name, name_cap);
 }
 
 static void fs_read_file(uint8_t *work)
@@ -744,7 +747,7 @@ static void fs_read_file(uint8_t *work)
         Fs.len = -1;
         return;
     }
-    int h = b->open(p, (int)(PROTOCORE_MNT_READ));
+    int h = b->open(p, (PROTOCORE_MNT_READ));
     if (h < 0)
     {
         Fs.len = -1;
@@ -777,13 +780,13 @@ static void fs_write_file(uint8_t *work)
     const char *p = resolve_into(work, 0, root, dir, name);
     if (b == NULL || p == NULL)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
-    int h = b->open(p, (int)(PROTOCORE_MNT_WRITE));
+    int h = b->open(p, (PROTOCORE_MNT_WRITE));
     if (h < 0)
     {
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
     size_t total = 0;
@@ -804,10 +807,10 @@ static void fs_write_file(uint8_t *work)
         // a caller tests for "there is nowhere to put this", whether the cause is no store at all or
         // a store with no room left.
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_STORAGE_EXHAUSTED;
-        Fs.ok = PROTO_FALSE;
+        Fs.ok = EMBED_FALSE;
         return;
     }
-    Fs.ok = PROTO_TRUE;
+    Fs.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

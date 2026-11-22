@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_HOSTLINK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -150,7 +150,7 @@ typedef struct
     HostlinkBuildReadArgs build_read_args;
     HostlinkReadWordArgs read_word_args;
     HostlinkBuildWriteArgs build_write_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     size_t n;
 } HostlinkVars;
@@ -161,23 +161,23 @@ extern HostlinkVars HostlinkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const fcs)(uint8_t *work);
+    void (*const fcs)(const uint8_t *work);
     void (*const build)(uint8_t *work);
     void (*const parse)(uint8_t *work);
-    void (*const end_code)(uint8_t *work);
+    void (*const end_code)(const uint8_t *work);
     void (*const build_read)(uint8_t *work);
-    void (*const read_word)(uint8_t *work);
+    void (*const read_word)(const uint8_t *work);
     void (*const build_write)(uint8_t *work);
 } HostlinkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HostlinkV or a region of the borrow at a fixed offset.
-void protocore_hostlink_fcs(uint8_t *work);
+void protocore_hostlink_fcs(const uint8_t *work);
 void protocore_hostlink_build(uint8_t *work);
 void protocore_hostlink_parse(uint8_t *work);
-void protocore_hostlink_end_code(uint8_t *work);
+void protocore_hostlink_end_code(const uint8_t *work);
 void protocore_hostlink_build_read(uint8_t *work);
-void protocore_hostlink_read_word(uint8_t *work);
+void protocore_hostlink_read_word(const uint8_t *work);
 void protocore_hostlink_build_write(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -194,7 +194,7 @@ static const HostlinkNs Hostlink __attribute__((unused)) = {
     .build_write = protocore_hostlink_build_write,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HOSTLINK
 

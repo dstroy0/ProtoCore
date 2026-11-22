@@ -19,7 +19,7 @@ nRF24 RX --SPI--> protocore_nrf24_recv() -> pipe + payload -> protocore_gateway_
 ```
 
 The nRF24 does its own **hardware addressing**: a received frame's source is the **pipe
-number** it arrived on, so there is no in-payload header (no codec) - the pipe is the
+number** it arrived on. So there is no in-payload header (no codec) - the pipe is the
 address handed to `protocore_gateway_uplink()`. Payloads are a **static width**
 (`PROTOCORE_NRF24_PAYLOAD`, default 32); a short send is zero-padded.
 

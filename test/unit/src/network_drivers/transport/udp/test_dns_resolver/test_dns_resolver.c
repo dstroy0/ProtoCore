@@ -31,7 +31,7 @@ void setUp(void)
 }
 
 // The module holds one query across calls, so a case that left one in flight releases it here by
-// walking past its deadline; otherwise the next case inherits it.
+// walking past its deadline. Otherwise the next case inherits it.
 void tearDown(void)
 {
     Resolver.busy(protocore_dns_resolver_span());
@@ -57,7 +57,7 @@ static size_t query_build(uint8_t *out, size_t cap, uint16_t id, const char *hos
     return ResolverV.n;
 }
 
-static proto_bool answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out)
+static embed_bool answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out)
 {
     ResolverV.query.id = id;
     ResolverV.answer.pkt = pkt;
@@ -74,7 +74,7 @@ static protocore_ip_class classify(uint32_t ip)
     return ResolverV.cls;
 }
 
-static proto_bool verify(uint32_t ip)
+static embed_bool verify(uint32_t ip)
 {
     ResolverV.addr.ip = ip;
     Resolver.verify(protocore_dns_resolver_span());
@@ -95,13 +95,13 @@ static protocore_dns_state resolve_verified(const char *host)
     return ResolverV.state;
 }
 
-static proto_bool busy(void)
+static embed_bool busy(void)
 {
     Resolver.busy(protocore_dns_resolver_span());
     return ResolverV.ok;
 }
 
-static proto_bool set_server(const char *ip)
+static embed_bool set_server(const char *ip)
 {
     ResolverV.server.ip = ip;
     Resolver.set_server(protocore_dns_resolver_span());

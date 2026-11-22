@@ -14,7 +14,7 @@
 #include "services/instrumentation/gpib/gpib.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd)
 {
@@ -131,7 +131,7 @@ size_t protocore_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, s
     for (size_t i = 0; i < len; i++)
     {
         uint8_t c = src[i];
-        proto_bool esc = (c == 13 || c == 10 || c == 27 || c == 43); // CR / LF / ESC / '+'
+        embed_bool esc = (c == 13 || c == 10 || c == 27 || c == 43); // CR / LF / ESC / '+'
         size_t need = esc ? 2 : 1;
         if (o + need + 1 > cap) // + 1 reserves room for the trailing '\n'
         {
@@ -147,7 +147,7 @@ size_t protocore_gpib_build_data(uint8_t *buf, size_t cap, const uint8_t *src, s
     return o;
 }
 
-proto_bool protocore_gpib_is_command(const char *line, size_t len)
+embed_bool protocore_gpib_is_command(const char *line, size_t len)
 {
     return line && len >= 2 && line[0] == '+' && line[1] == '+';
 }
@@ -170,23 +170,23 @@ static void trim(const char **s, size_t *len)
     *len = n;
 }
 
-proto_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out)
+embed_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out)
 {
     if (!s)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     trim(&s, &len);
     if (len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t v = 0;
     for (size_t i = 0; i < len; i++)
     {
         if (s[i] < '0' || s[i] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = v * 10 + (uint32_t)(s[i] - '0');
     }
@@ -194,33 +194,33 @@ proto_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out
     {
         *out = v;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad)
+embed_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, int *sad)
 {
     if (!s)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     trim(&s, &len);
     if (len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // primary
     size_t i = 0;
     uint32_t p = 0;
-    proto_bool any = PROTO_FALSE;
+    embed_bool any = EMBED_FALSE;
     while (i < len && s[i] >= '0' && s[i] <= '9')
     {
         p = p * 10 + (uint32_t)(s[i] - '0');
         i++;
-        any = PROTO_TRUE;
+        any = EMBED_TRUE;
     }
     if (!any || p > 30)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // optional secondary after spaces
     int sad_val = -1;
@@ -231,22 +231,22 @@ proto_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, in
     if (i < len)
     {
         uint32_t sa = 0;
-        proto_bool sany = PROTO_FALSE;
+        embed_bool sany = EMBED_FALSE;
         while (i < len && s[i] >= '0' && s[i] <= '9')
         {
             sa = sa * 10 + (uint32_t)(s[i] - '0');
             i++;
-            sany = PROTO_TRUE;
+            sany = EMBED_TRUE;
         }
         if (!sany || i != len || sa < 96 || sa > 126)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         sad_val = (int)sa;
     }
     if (i != len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (pad)
     {
@@ -256,20 +256,20 @@ proto_bool protocore_gpib_parse_addr(const char *s, size_t len, uint8_t *pad, in
     {
         *sad = sad_val;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len)
+embed_bool protocore_gpib_parse_version(const char *s, size_t len, const char **ver, size_t *ver_len)
 {
     if (!s)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     static const char key[] = "version ";
     const size_t klen = sizeof(key) - 1;
     if (len < klen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i + klen <= len; i++)
     {
@@ -280,7 +280,7 @@ proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **
             trim(&v, &vlen);
             if (vlen == 0)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             if (ver)
             {
@@ -290,12 +290,12 @@ proto_bool protocore_gpib_parse_version(const char *s, size_t len, const char **
             {
                 *ver_len = vlen;
             }
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIB

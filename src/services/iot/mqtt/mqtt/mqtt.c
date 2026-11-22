@@ -13,6 +13,7 @@
  */
 
 #include "services/iot/mqtt/mqtt/mqtt.h"
+#include "shared/log/log.h" // PROTOCORE_LOGD: the debug lines
 
 #if PROTOCORE_ENABLE_MQTT
 
@@ -20,7 +21,7 @@
 #include "memoria_operor/memoria_operor.h" // memor.cpy / memor.chr / memor.move_down / memor.set: the spans a packet is built from
 #include "shared/utf8/utf8.h"              // Utf8.valid: a Topic Name is a UTF-8 encoded string (sec 1.5.3)
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport (L4)
@@ -30,7 +31,6 @@ PROTOCORE_BEGIN_DECLS
 #endif
 
 #ifdef PROTOCORE_MQTT_DEBUG
-#include <stdio.h>
 #endif
 
 // ---------------------------------------------------------------------------
@@ -71,11 +71,8 @@ PROTOCORE_BEGIN_DECLS
 
 #define MQ_FIELD_PREFIX 2 // every UTF-8 encoded string and binary field is length prefixed (sec 1.5.3)
 
-#ifdef PROTOCORE_MQTT_DEBUG
-#define MQ_DBG(...) printf(__VA_ARGS__)
-#else
-#define MQ_DBG(...) ((void)0)
-#endif
+static const mmgr_field MQ_LOG_CONNACK[] = {
+    {MMGR_FK_LIT, 0, sizeof("[mqtt] CONNACK return code=") - 1, "[mqtt] CONNACK return code="}, MMGR_I64, MMGR_END};
 
 // ---------------------------------------------------------------------------
 // Typedefs
@@ -84,12 +81,11 @@ PROTOCORE_BEGIN_DECLS
 #if PROTOCORE_HAS_NET_STACK
 
 /** @brief Where an outbound QoS 1 or QoS 2 exchange has got to (MQTT 3.1.1 sec 4.3.2, sec 4.3.3). */
-typedef enum PROTO_ENUM_PACKED
-{
-    MQTT_INFLIGHT_FREE = 0, ///< the slot holds no exchange
-    MQTT_INFLIGHT_ACK,      ///< sent, awaiting PUBACK (QoS 1) or PUBREC (QoS 2)
-    MQTT_INFLIGHT_COMP,     ///< PUBREC seen, awaiting PUBCOMP (QoS 2)
-} MqttInflightState;
+EMBED_ENUM_BYTE(MqttInflightState,
+                MQTT_INFLIGHT_FREE = 0, ///< the slot holds no exchange
+                MQTT_INFLIGHT_ACK,      ///< sent, awaiting PUBACK (QoS 1) or PUBREC (QoS 2)
+                MQTT_INFLIGHT_COMP,     ///< PUBREC seen, awaiting PUBCOMP (QoS 2)
+);
 
 // One outbound QoS 1 or QoS 2 exchange. The PUBLISH stays in tx - a re-delivery rewinds the worker
 // to the start of it - so this records what identifies and times the exchange, not the octets.
@@ -102,13 +98,12 @@ typedef struct
 } MqttInflight;
 
 /** @brief How far the Network Connection has come up. Anything but IDLE means a connect is in flight. */
-typedef enum PROTO_ENUM_PACKED
-{
-    MQTT_LINK_IDLE = 0, ///< no connect in flight
-    MQTT_LINK_TCP,      ///< the transport slot is coming up
-    MQTT_LINK_TLS,      ///< the TLS handshake advances one flight per step
-    MQTT_LINK_CONNACK,  ///< CONNECT is on the wire, its CONNACK has not arrived (sec 3.2)
-} MqttLinkState;
+EMBED_ENUM_BYTE(MqttLinkState,
+                MQTT_LINK_IDLE = 0, ///< no connect in flight
+                MQTT_LINK_TCP,      ///< the transport slot is coming up
+                MQTT_LINK_TLS,      ///< the TLS handshake advances one flight per step
+                MQTT_LINK_CONNACK,  ///< CONNECT is on the wire, its CONNACK has not arrived (sec 3.2)
+);
 
 /**
  * @brief The Client's compile-time storage: the one Network Connection and everything it holds.
@@ -121,7 +116,7 @@ typedef enum PROTO_ENUM_PACKED
 struct MqttStorage
 {
     int cid;           ///< the outbound transport slot, or < 0 when none is held
-    proto_bool closed; ///< the peer closed or errored, as the pump saw it
+    embed_bool closed; ///< the peer closed or errored, as the pump saw it
 
     MqttLinkState link;      ///< how far the Network Connection has come up
     uint32_t timer;          ///< when the connect started
@@ -132,15 +127,15 @@ struct MqttStorage
     uint8_t *tx;         ///< the wire buffer holding one framed Control Packet
     size_t tx_len;       ///< octets of the framed packet
     size_t tx_off;       ///< octets already put on the wire
-    proto_bool tx_ready; ///< a packet is framed and waiting for a worker
+    embed_bool tx_ready; ///< a packet is framed and waiting for a worker
 
-    proto_bool use_tls;    ///< the Network Connection runs over TLS
-    proto_bool session_up; ///< the Server accepted the CONNECT (sec 3.2.2.3)
+    embed_bool use_tls;    ///< the Network Connection runs over TLS
+    embed_bool session_up; ///< the Server accepted the CONNECT (sec 3.2.2.3)
     int connack_code;      ///< the Connect Return code the CONNACK carried, -1 until it arrives
 
     uint16_t keep_alive;     ///< the Keep Alive the CONNECT stated (sec 3.1.2.10)
     uint32_t last_tx_ms;     ///< when the last Control Packet finished going out
-    proto_bool ping_pending; ///< a PINGREQ is awaiting its PINGRESP (sec 3.12, sec 3.13)
+    embed_bool ping_pending; ///< a PINGREQ is awaiting its PINGRESP (sec 3.12, sec 3.13)
     uint32_t ping_sent_ms;   ///< when that PINGREQ went out
     uint16_t next_packet_id; ///< the next Packet Identifier to hand out (sec 2.3.1)
 
@@ -162,7 +157,10 @@ static_assert(MQTT_OFF_CTX + sizeof(struct MqttStorage) <= PROTOCORE_MQTT_BORROW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define MQTT_CTX(w) ((struct MqttStorage *)(void *)((w) + MQTT_OFF_CTX))
+#define MQTT_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct MqttStorage *)(const void *)((w) + MQTT_OFF_CTX),                               \
+        default: (struct MqttStorage *)(void *)((w) + MQTT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -248,7 +246,7 @@ static size_t encode_remlen(uint8_t *out, uint32_t len)
 
 // Decode a Remaining Length field, reporting the value and the octets it took. False when the field
 // is not all present or a fifth continuation octet follows (sec 2.2.3).
-static proto_bool decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, size_t *used)
+static embed_bool decode_remlen(const uint8_t *buf, size_t avail, uint32_t *value, size_t *used)
 {
     uint32_t v = 0;
     uint32_t mult = 1;
@@ -256,7 +254,7 @@ static proto_bool decode_remlen(const uint8_t *buf, size_t avail, uint32_t *valu
     {
         if (i >= avail)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint8_t b = buf[i];
         v += (uint32_t)(b & MQ_REMLEN_DATA) * mult;
@@ -264,11 +262,11 @@ static proto_bool decode_remlen(const uint8_t *buf, size_t avail, uint32_t *valu
         {
             *value = v;
             *used = i + 1;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         mult <<= MQ_REMLEN_BITS;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Compose byte 1, the Remaining Length over blen, and the body already assembled elsewhere. Returns
@@ -299,11 +297,11 @@ static size_t compose(uint8_t *out, size_t cap, uint8_t byte1, const uint8_t *bo
 // Codec: the calls
 // ---------------------------------------------------------------------------
 
-void protocore_mqtt_encode_remaining_length(uint8_t *work)
+void protocore_mqtt_encode_remaining_length(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.out)
     {
         return;
@@ -316,14 +314,14 @@ void protocore_mqtt_encode_remaining_length(uint8_t *work)
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = MqttV.buf.out, .src = rl, .bytes = used);
     MqttV.n = used;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
-void protocore_mqtt_decode_remaining_length(uint8_t *work)
+void protocore_mqtt_decode_remaining_length(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.in)
     {
         return;
@@ -336,16 +334,16 @@ void protocore_mqtt_decode_remaining_length(uint8_t *work)
     }
     MqttV.packet.remaining_length = value;
     MqttV.n = used;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 // CONNECT: Protocol Name, Protocol Level, Connect Flags, Keep Alive, then the payload's Client
 // Identifier, Will Topic, Will Message, User Name and Password, in that order (sec 3.1).
-void protocore_mqtt_build_connect(uint8_t *work)
+void protocore_mqtt_build_connect(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     uint8_t *body = MqttV.buf.body;
     if (!MqttV.buf.out || !body || !MqttV.session.client_id)
     {
@@ -427,11 +425,11 @@ void protocore_mqtt_build_connect(uint8_t *work)
 }
 
 // PUBLISH: Topic Name, the Packet Identifier when QoS is above 0, then the Payload (sec 3.3).
-void protocore_mqtt_build_publish(uint8_t *work)
+void protocore_mqtt_build_publish(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     uint8_t *body = MqttV.buf.body;
     const char *topic = MqttV.message.topic_name;
     if (!MqttV.buf.out || !body || !topic || MqttV.message.qos > 2)
@@ -481,11 +479,11 @@ void protocore_mqtt_build_publish(uint8_t *work)
 }
 
 // SUBSCRIBE: the Packet Identifier, then one Topic Filter and its Requested QoS (sec 3.8).
-void protocore_mqtt_build_subscribe(uint8_t *work)
+void protocore_mqtt_build_subscribe(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     uint8_t *body = MqttV.buf.body;
     const char *topic = MqttV.filter.topic_filter;
     if (!MqttV.buf.out || !body || !topic || MqttV.filter.qos > 2)
@@ -508,11 +506,11 @@ void protocore_mqtt_build_subscribe(uint8_t *work)
 }
 
 // UNSUBSCRIBE: the Packet Identifier, then one Topic Filter (sec 3.10).
-void protocore_mqtt_build_unsubscribe(uint8_t *work)
+void protocore_mqtt_build_unsubscribe(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     uint8_t *body = MqttV.buf.body;
     const char *topic = MqttV.filter.topic_filter;
     if (!MqttV.buf.out || !body || !topic)
@@ -534,11 +532,11 @@ void protocore_mqtt_build_unsubscribe(uint8_t *work)
 }
 
 // PUBACK, PUBREC, PUBREL or PUBCOMP: a Packet Identifier and nothing else (sec 3.4 - sec 3.7).
-void protocore_mqtt_build_ack(uint8_t *work)
+void protocore_mqtt_build_ack(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.out || MqttV.buf.cap < MQ_ACK_PACKET_LEN)
     {
         return;
@@ -548,14 +546,14 @@ void protocore_mqtt_build_ack(uint8_t *work)
     MqttV.buf.out[1] = MQ_ACK_REMAINING_LENGTH;
     put_u16(MqttV.buf.out + MQ_FIELD_PREFIX, MqttV.packet.packet_id);
     MqttV.n = MQ_ACK_PACKET_LEN;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
-void protocore_mqtt_build_pingreq(uint8_t *work)
+void protocore_mqtt_build_pingreq(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.out || MqttV.buf.cap < MQ_EMPTY_PACKET_LEN)
     {
         return;
@@ -563,14 +561,14 @@ void protocore_mqtt_build_pingreq(uint8_t *work)
     MqttV.buf.out[0] = (uint8_t)((uint8_t)MQTT_PINGREQ << MQ_TYPE_SHIFT);
     MqttV.buf.out[1] = 0x00;
     MqttV.n = MQ_EMPTY_PACKET_LEN;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
-void protocore_mqtt_build_disconnect(uint8_t *work)
+void protocore_mqtt_build_disconnect(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.out || MqttV.buf.cap < MQ_EMPTY_PACKET_LEN)
     {
         return;
@@ -578,15 +576,15 @@ void protocore_mqtt_build_disconnect(uint8_t *work)
     MqttV.buf.out[0] = (uint8_t)((uint8_t)MQTT_DISCONNECT << MQ_TYPE_SHIFT);
     MqttV.buf.out[1] = 0x00;
     MqttV.n = MQ_EMPTY_PACKET_LEN;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 // The fixed header: the type and flags of byte 1, then the Remaining Length behind it (sec 2.2).
-void protocore_mqtt_parse_fixed_header(uint8_t *work)
+void protocore_mqtt_parse_fixed_header(const uint8_t *work)
 {
     (void)work;
     MqttV.n = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.in || MqttV.buf.avail < MQ_EMPTY_PACKET_LEN)
     {
         return;
@@ -601,7 +599,7 @@ void protocore_mqtt_parse_fixed_header(uint8_t *work)
     MqttV.packet.flags = (uint8_t)(MqttV.buf.in[0] & MQ_FLAGS_MASK);
     MqttV.packet.remaining_length = rl;
     MqttV.n = 1 + used;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 // A PUBLISH variable header and payload: the Topic Name, the Packet Identifier when QoS is above 0,
@@ -609,7 +607,7 @@ void protocore_mqtt_parse_fixed_header(uint8_t *work)
 void protocore_mqtt_parse_publish(uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     const uint8_t *buf = MqttV.buf.in;
     const uint32_t rl = MqttV.packet.remaining_length;
     if (!buf || rl < MQ_FIELD_PREFIX || !MqttV.message.topic_out)
@@ -660,52 +658,52 @@ void protocore_mqtt_parse_publish(uint8_t *work)
     }
     MqttV.message.payload = buf + off;
     MqttV.message.payload_len = rl - off;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 // The Packet Identifier a PUBACK, PUBREC, PUBREL, PUBCOMP or UNSUBACK body carries (sec 2.3.1).
-void protocore_mqtt_parse_ack(uint8_t *work)
+void protocore_mqtt_parse_ack(const uint8_t *work)
 {
     (void)work;
     MqttV.packet.packet_id = 0;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.in || MqttV.packet.remaining_length < MQ_ACK_REMAINING_LENGTH)
     {
         return;
     }
     MqttV.packet.packet_id = get_u16(MqttV.buf.in);
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 // A CONNACK body: the Connect Acknowledge Flags then the Connect Return code (sec 3.2.2).
-void protocore_mqtt_parse_connack(uint8_t *work)
+void protocore_mqtt_parse_connack(const uint8_t *work)
 {
     (void)work;
     MqttV.i32 = -1;
-    MqttV.session_present = PROTO_FALSE;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.session_present = EMBED_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.in || MqttV.packet.remaining_length < MQ_ACK_REMAINING_LENGTH)
     {
         return;
     }
     MqttV.session_present = (MqttV.buf.in[0] & MQ_CONNACK_SESSION_PRESENT) != 0;
     MqttV.i32 = MqttV.buf.in[1];
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 // A SUBACK body: the Packet Identifier then the payload's return-code list (sec 3.9.2, sec 3.9.3).
-void protocore_mqtt_parse_suback(uint8_t *work)
+void protocore_mqtt_parse_suback(const uint8_t *work)
 {
     (void)work;
     MqttV.u8 = PROTOCORE_MQTT_SUBACK_FAILURE;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.buf.in || MqttV.packet.remaining_length < MQ_ACK_REMAINING_LENGTH + 1)
     {
         return;
     }
     MqttV.packet.packet_id = get_u16(MqttV.buf.in);
     MqttV.u8 = MqttV.buf.in[MQ_ACK_REMAINING_LENGTH];
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -736,28 +734,28 @@ static void bind_codec_buffers(uint8_t *work)
 
 // Take this module's storage on first use and hold it: one borrow from the secure pool's persistent
 // end - the end no mark walks - reused for every packet. One borrow and not two, because each
-// carries a block header rounded up to the arena alignment; the region is split at a stated offset,
+// carries a block header rounded up to the arena alignment. The region is split at a stated offset,
 // rx first and tx behind it.
-static proto_bool mem_bind(uint8_t *work)
+static embed_bool mem_bind(uint8_t *work)
 {
     if (MQTT_CTX(work)->rx != NULL)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     mmgr_span region =
         EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(2u * PROTOCORE_MQTT_BUF_SIZE),
                    .cap = 2u * PROTOCORE_MQTT_BUF_SIZE);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = region))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     MQTT_CTX(work)->rx = region.buf;
     MQTT_CTX(work)->tx = region.buf + PROTOCORE_MQTT_BUF_SIZE;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Send plaintext octets to the Server.
-static proto_bool tx_plain(uint8_t *work, const uint8_t *data, size_t len)
+static embed_bool tx_plain(uint8_t *work, const uint8_t *data, size_t len)
 {
     TcpClientV.cid = MQTT_CTX(work)->cid;
     TcpClientV.io.data = data;
@@ -787,7 +785,7 @@ static void fill_plain(uint8_t *work)
         TcpClient.is_closed(protocore_tcp_client_span());
         if (TcpClientV.ok)
         {
-            MQTT_CTX(work)->closed = PROTO_TRUE;
+            MQTT_CTX(work)->closed = EMBED_TRUE;
         }
         return;
     }
@@ -796,16 +794,16 @@ static void fill_plain(uint8_t *work)
 
 // Raise the flag over the Control Packet the codec just framed into tx. A packet offered while one
 // is still going out is refused rather than overwriting it. This layer never reaches the wire.
-static proto_bool tx_arm(uint8_t *work, size_t len)
+static embed_bool tx_arm(uint8_t *work, size_t len)
 {
     if (MQTT_CTX(work)->tx_ready || len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     MQTT_CTX(work)->tx_len = len;
     MQTT_CTX(work)->tx_off = 0;
-    MQTT_CTX(work)->tx_ready = PROTO_TRUE;
-    return PROTO_TRUE;
+    MQTT_CTX(work)->tx_ready = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
 // Put the flagged packet on the wire. The worker owns this connection and the pool the packet sits
@@ -825,7 +823,7 @@ static void tx_drain(uint8_t *work)
     if (MQTT_CTX(work)->tx_off >= MQTT_CTX(work)->tx_len)
     {
         MQTT_CTX(work)->last_tx_ms = Clock.ms;
-        MQTT_CTX(work)->tx_ready = PROTO_FALSE;
+        MQTT_CTX(work)->tx_ready = EMBED_FALSE;
     }
 }
 
@@ -838,7 +836,7 @@ static void link_close(uint8_t *work)
         TcpClient.close(protocore_tcp_client_span());
     }
     MQTT_CTX(work)->cid = -1;
-    MQTT_CTX(work)->session_up = PROTO_FALSE;
+    MQTT_CTX(work)->session_up = EMBED_FALSE;
     MQTT_CTX(work)->link = MQTT_LINK_IDLE;
 }
 
@@ -870,16 +868,16 @@ static void rx_id_add(uint8_t *work, uint16_t packet_id)
     }
 }
 
-static proto_bool rx_id_has(uint8_t *work, uint16_t packet_id)
+static embed_bool rx_id_has(uint8_t *work, uint16_t packet_id)
 {
     for (int i = 0; i < PROTOCORE_MQTT_RX_QOS2_SLOTS; i++)
     {
         if (MQTT_CTX(work)->rx_packet_id[i] == packet_id)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static void rx_id_del(uint8_t *work, uint16_t packet_id)
@@ -895,7 +893,7 @@ static void rx_id_del(uint8_t *work, uint16_t packet_id)
 
 // Frame one acknowledgement into tx and flag it for the worker (sec 3.4 - sec 3.7). False when a
 // packet is already going out and this one was refused rather than overwriting it.
-static proto_bool send_ack(uint8_t *work, MqttType type, uint16_t packet_id)
+static embed_bool send_ack(uint8_t *work, MqttType type, uint16_t packet_id)
 {
     bind_codec_buffers(work);
     MqttV.packet.type = type;
@@ -918,9 +916,9 @@ static void handle_packet(uint8_t *work, const uint8_t *body, MqttType type, uin
         MQTT_CTX(work)->connack_code = MqttV.i32;
         if (MQTT_CTX(work)->connack_code == 0)
         {
-            MQTT_CTX(work)->session_up = PROTO_TRUE;
+            MQTT_CTX(work)->session_up = EMBED_TRUE;
         }
-        MQ_DBG("[mqtt] CONNACK return code=%d\n", MQTT_CTX(work)->connack_code);
+        PROTOCORE_LOGD(MQ_LOG_CONNACK, ((const mmgr_fval[]){MMGR_VI64(MQTT_CTX(work)->connack_code)}), 1);
         break;
 
     case MQTT_PUBLISH: {
@@ -1000,7 +998,7 @@ static void handle_packet(uint8_t *work, const uint8_t *body, MqttType type, uin
     }
 
     case MQTT_PINGRESP: // sec 3.13
-        MQTT_CTX(work)->ping_pending = PROTO_FALSE;
+        MQTT_CTX(work)->ping_pending = EMBED_FALSE;
         break;
 
     case MQTT_SUBACK:
@@ -1019,7 +1017,7 @@ static void handle_packet(uint8_t *work, const uint8_t *body, MqttType type, uin
 }
 
 // Fill from the transport, then act on every whole Control Packet the buffer now holds. The loop is
-// bounded by the octets already received and never waits: it ends on the first packet that is not
+// bounded by the octets already received and never waits. It ends on the first packet that is not
 // all here, and what is left of it shifts down to wait for the next fill. Each packet is handled
 // where it landed, so nothing is copied out to parse it.
 static void process_rx(uint8_t *work)
@@ -1110,15 +1108,15 @@ static void link_step(uint8_t *work)
 // Transport: the calls
 // ---------------------------------------------------------------------------
 
-void protocore_mqtt_on_message(uint8_t *work)
+void protocore_mqtt_on_message(const uint8_t *work)
 {
     MQTT_CTX(work)->on_message = MqttV.delivery.on_message;
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
-void protocore_mqtt_connect(uint8_t *work)
+void protocore_mqtt_connect(const uint8_t *work)
 {
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MqttV.server.host || !MqttV.session.client_id)
     {
         return;
@@ -1140,10 +1138,10 @@ void protocore_mqtt_connect(uint8_t *work)
     MQTT_CTX(work)->rx_len = 0;
     MQTT_CTX(work)->tx_len = 0;
     MQTT_CTX(work)->tx_off = 0;
-    MQTT_CTX(work)->tx_ready = PROTO_FALSE;
-    MQTT_CTX(work)->closed = PROTO_FALSE;
-    MQTT_CTX(work)->session_up = PROTO_FALSE;
-    MQTT_CTX(work)->ping_pending = PROTO_FALSE;
+    MQTT_CTX(work)->tx_ready = EMBED_FALSE;
+    MQTT_CTX(work)->closed = EMBED_FALSE;
+    MQTT_CTX(work)->session_up = EMBED_FALSE;
+    MQTT_CTX(work)->ping_pending = EMBED_FALSE;
     MQTT_CTX(work)->connack_code = -1;
     MQTT_CTX(work)->keep_alive = MqttV.session.keep_alive;
     MQTT_CTX(work)->use_tls = MqttV.server.use_tls;
@@ -1171,18 +1169,18 @@ void protocore_mqtt_connect(uint8_t *work)
 
     MQTT_CTX(work)->link = MQTT_LINK_TCP;
     MQTT_CTX(work)->timer = Clock.ms;
-    MqttV.ok = PROTO_TRUE; // started, not connected: step the loop and read connected()
+    MqttV.ok = EMBED_TRUE; // started, not connected: step the loop and read connected()
 }
 
-void protocore_mqtt_publish(uint8_t *work)
+void protocore_mqtt_publish(const uint8_t *work)
 {
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MQTT_CTX(work)->session_up || MqttV.message.qos > 2)
     {
         return;
     }
     bind_codec_buffers(work);
-    MqttV.message.dup = PROTO_FALSE;
+    MqttV.message.dup = EMBED_FALSE;
 
     if (MqttV.message.qos == 0)
     {
@@ -1222,9 +1220,9 @@ void protocore_mqtt_publish(uint8_t *work)
     MqttV.ok = tx_arm(work, MqttV.n);
 }
 
-void protocore_mqtt_subscribe(uint8_t *work)
+void protocore_mqtt_subscribe(const uint8_t *work)
 {
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MQTT_CTX(work)->session_up)
     {
         return;
@@ -1235,9 +1233,9 @@ void protocore_mqtt_subscribe(uint8_t *work)
     MqttV.ok = MqttV.n != 0 && tx_arm(work, MqttV.n);
 }
 
-void protocore_mqtt_unsubscribe(uint8_t *work)
+void protocore_mqtt_unsubscribe(const uint8_t *work)
 {
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MQTT_CTX(work)->session_up)
     {
         return;
@@ -1248,10 +1246,10 @@ void protocore_mqtt_unsubscribe(uint8_t *work)
     MqttV.ok = MqttV.n != 0 && tx_arm(work, MqttV.n);
 }
 
-void protocore_mqtt_loop(uint8_t *work)
+void protocore_mqtt_loop(const uint8_t *work)
 {
     // A connect still coming up takes one step per call, and nothing below it runs until the Server
-    // has answered: this is the tick the connect hands the link to.
+    // answered: this is the tick the connect hands the link to.
     if (MQTT_CTX(work)->link != MQTT_LINK_IDLE)
     {
         tx_drain(work); // CONNECT is framed and flagged from the first step; carry it out
@@ -1259,7 +1257,7 @@ void protocore_mqtt_loop(uint8_t *work)
         MqttV.ok = MQTT_CTX(work)->session_up;
         return;
     }
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
     if (!MQTT_CTX(work)->session_up)
     {
         return;
@@ -1278,7 +1276,7 @@ void protocore_mqtt_loop(uint8_t *work)
 
     uint32_t now = Clock.ms;
 
-    // Keep Alive (sec 3.1.2.10): send PINGREQ once the interval has passed with nothing sent
+    // Keep Alive (sec 3.1.2.10): send PINGREQ once the interval passed with nothing sent
     // (sec 3.12), and close the Network Connection when no PINGRESP comes back within another
     // interval, which sec 3.1.2.10 says a Client SHOULD do after a reasonable time (sec 3.13).
     if (MQTT_CTX(work)->keep_alive)
@@ -1295,7 +1293,7 @@ void protocore_mqtt_loop(uint8_t *work)
             protocore_mqtt_build_pingreq(work);
             if (tx_arm(work, MqttV.n))
             {
-                MQTT_CTX(work)->ping_pending = PROTO_TRUE;
+                MQTT_CTX(work)->ping_pending = EMBED_TRUE;
                 MQTT_CTX(work)->ping_sent_ms = now;
             }
         }
@@ -1330,15 +1328,15 @@ void protocore_mqtt_loop(uint8_t *work)
         }
         MQTT_CTX(work)->inflight[i].sent_ms = now;
     }
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
-void protocore_mqtt_connected(uint8_t *work)
+void protocore_mqtt_connected(const uint8_t *work)
 {
     MqttV.ok = MQTT_CTX(work)->session_up;
 }
 
-void protocore_mqtt_disconnect(uint8_t *work)
+void protocore_mqtt_disconnect(const uint8_t *work)
 {
     if (MQTT_CTX(work)->cid >= 0 && MQTT_CTX(work)->session_up)
     {
@@ -1347,50 +1345,50 @@ void protocore_mqtt_disconnect(uint8_t *work)
         (void)tx_arm(work, MqttV.n);
     }
     link_close(work);
-    MqttV.ok = PROTO_TRUE;
+    MqttV.ok = EMBED_TRUE;
 }
 
 #else // no network stack: the codec still builds, the transport refuses
 
-void protocore_mqtt_on_message(uint8_t *work)
+void protocore_mqtt_on_message(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
-void protocore_mqtt_connect(uint8_t *work)
+void protocore_mqtt_connect(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
-void protocore_mqtt_publish(uint8_t *work)
+void protocore_mqtt_publish(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
-void protocore_mqtt_subscribe(uint8_t *work)
+void protocore_mqtt_subscribe(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
-void protocore_mqtt_unsubscribe(uint8_t *work)
+void protocore_mqtt_unsubscribe(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
-void protocore_mqtt_loop(uint8_t *work)
+void protocore_mqtt_loop(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
-void protocore_mqtt_connected(uint8_t *work)
+void protocore_mqtt_connected(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
-void protocore_mqtt_disconnect(uint8_t *work)
+void protocore_mqtt_disconnect(const uint8_t *work)
 {
     (void)work;
-    MqttV.ok = PROTO_FALSE;
+    MqttV.ok = EMBED_FALSE;
 }
 
 #endif // PROTOCORE_HAS_NET_STACK
@@ -1399,6 +1397,6 @@ void protocore_mqtt_disconnect(uint8_t *work)
 /** @brief The operands and the outcome. */
 MqttVars MqttV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MQTT

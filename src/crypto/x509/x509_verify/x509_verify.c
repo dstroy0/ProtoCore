@@ -6,6 +6,10 @@
  * @brief One link of a certification path. See x509_verify.h.
  */
 
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_X509
+
 #include "crypto/x509/x509_verify/x509_verify.h"
 
 #include "crypto/asymmetric/ecdsa/ecdsa.h"     // Ecdsa.verify: P-256 over the TBS
@@ -15,7 +19,7 @@
 #include "server/core/worker/worker.h"         // the persistent end a verification's bytes come from
 #include "shared/der/der.h"                    // the reader the key and the signature are decoded with
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief What a signature check needs a place to put, before the algorithm sees it.
@@ -49,7 +53,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define X509_VERIFY_CTX(w) ((X509VerifyCtx *)(void *)((w) + X509_VERIFY_OFF_CTX))
+#define X509_VERIFY_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const X509VerifyCtx *)(const void *)((w) + X509_VERIFY_OFF_CTX),                             \
+        default: (X509VerifyCtx *)(void *)((w) + X509_VERIFY_OFF_CTX))
 #define X509_VERIFY_ALG(w) ((w) + X509_VERIFY_OFF_ALG)
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -88,7 +95,7 @@ static void verdict(protocore_x509_status st)
 // The modulus is left-padded into a fixed PROTOCORE_RSA_KEY_BYTES field because that is what the
 // verifier takes, and the exponent into four octets. A modulus wider than the field is a key this
 // build cannot verify rather than one to truncate.
-static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, uint8_t *e_out)
+static embed_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, uint8_t *e_out)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -96,7 +103,7 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     Der.enter(protocore_x509_verify_span()); // into RSAPublicKey, landing on modulus
     if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *m = DerV.tlv.content;
     size_t mlen = DerV.tlv.len;
@@ -109,7 +116,7 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     }
     if (mlen == 0u || mlen > PROTOCORE_RSA_KEY_BYTES)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = n_out, .val = 0, .bytes = PROTOCORE_RSA_KEY_BYTES);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = n_out + (PROTOCORE_RSA_KEY_BYTES - mlen), .src = m, .bytes = mlen);
@@ -118,7 +125,7 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     Der.read(protocore_x509_verify_span());
     if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *e = DerV.tlv.content;
     size_t elen = DerV.tlv.len;
@@ -129,16 +136,16 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     }
     if (elen == 0u || elen > 4u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = e_out, .val = 0, .bytes = 4u);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e_out + (4u - elen), .src = e, .bytes = elen);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // RFC 3279 sec 2.2.3: an ECDSA signature is SEQUENCE { r INTEGER, s INTEGER }, and the verifier
 // takes r || s as two fixed 32-octet big-endian fields. Each is left-padded into its half.
-static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PROTOCORE_ECDSA_P256_SIG_LEN])
+static embed_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PROTOCORE_ECDSA_P256_SIG_LEN])
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -146,7 +153,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
     Der.enter(protocore_x509_verify_span()); // into the SEQUENCE, landing on r
     if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = PROTOCORE_ECDSA_P256_SIG_LEN);
 
@@ -157,7 +164,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
             Der.read(protocore_x509_verify_span());
             if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         const uint8_t *v = DerV.tlv.content;
@@ -169,7 +176,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
         }
         if (vlen == 0u || vlen > 32u)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + half * 32u + (32u - vlen), .src = v, .bytes = vlen);
         if (half == 0u)
@@ -177,7 +184,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
             DerV.read_args.pos = DerV.tlv.next;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +206,7 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
             return;
         }
-        proto_bool ed25519_ok = Ed25519.verify(X509_VERIFY_ALG(work), signer->key.p, msg, msg_len, sig);
+        embed_bool ed25519_ok = Ed25519.verify(X509_VERIFY_ALG(work), signer->key.p, msg, msg_len, sig);
         verdict(ed25519_ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
 
@@ -215,7 +222,7 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
             return;
         }
-        proto_bool ecdsa_ok = Ecdsa.verify(X509_VERIFY_ALG(work), signer->key.p, msg, msg_len, rs);
+        embed_bool ecdsa_ok = Ecdsa.verify(X509_VERIFY_ALG(work), signer->key.p, msg, msg_len, rs);
         verdict(ecdsa_ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
     }
@@ -288,7 +295,7 @@ void protocore_x509_verify_message(uint8_t *work)
                  X509VerifyV.message_args.sig_len, work);
 }
 
-void protocore_x509_verify_validity(uint8_t *work)
+void protocore_x509_verify_validity(const uint8_t *work)
 {
     (void)work;
     const X509Cert *cert = X509VerifyV.time_args.cert;
@@ -313,7 +320,7 @@ void protocore_x509_verify_validity(uint8_t *work)
     verdict(PROTOCORE_X509_OK);
 }
 
-void protocore_x509_verify_may_sign(uint8_t *work)
+void protocore_x509_verify_may_sign(const uint8_t *work)
 {
     (void)work;
     const X509Cert *issuer = X509VerifyV.issuer_args.issuer;
@@ -383,4 +390,6 @@ void protocore_x509_verify_link(uint8_t *work)
 /** @brief The operands and the outcome. */
 X509VerifyVars X509VerifyV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
+
+#endif // PROTOCORE_ENABLE_X509

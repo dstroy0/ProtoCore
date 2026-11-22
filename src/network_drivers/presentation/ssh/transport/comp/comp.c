@@ -36,9 +36,9 @@ typedef struct
     SshInflate inf;                         ///< streaming decompressor (bound to inf_window below).
     uint8_t inf_window[SSH_INFLATE_WINDOW]; ///< 32 KB context-takeover window for c2s inflate.
     SshCompAlg s2c_alg;                     ///< negotiated server-to-client algorithm.
-    proto_bool s2c_active;                  ///< true once the s2c (deflate) stream has started.
+    embed_bool s2c_active;                  ///< true once the s2c (deflate) stream started.
     SshCompAlg c2s_alg;                     ///< negotiated client-to-server algorithm.
-    proto_bool c2s_active;                  ///< true once the c2s (inflate) stream has started.
+    embed_bool c2s_active;                  ///< true once the c2s (inflate) stream started.
 } SshCompState;
 
 // All SSH compression state, owned by one instance (internal linkage): the per-connection
@@ -64,7 +64,10 @@ static_assert(COMP_OFF_CTX % _Alignof(SshCompCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define COMP_CTX(w) ((SshCompCtx *)(void *)((w) + COMP_OFF_CTX))
+#define COMP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshCompCtx *)(const void *)((w) + COMP_OFF_CTX),                                       \
+        default: (SshCompCtx *)(void *)((w) + COMP_OFF_CTX))
 
 // The one owned instance, private to this TU: the pointer to the bytes taken for the table.
 static uint8_t *s_span;
@@ -85,7 +88,7 @@ uint8_t *protocore_ssh_comp_span(void)
 static void start_s2c(SshCompState *c)
 {
     Zlib.init(protocore_ssh_comp_span(), &c->z, c->work, c->head, c->prev, c->ll_code, c->ll_len, c->d_code, c->d_len);
-    c->s2c_active = PROTO_TRUE;
+    c->s2c_active = EMBED_TRUE;
 }
 
 static void start_c2s(SshCompState *c)
@@ -93,7 +96,7 @@ static void start_c2s(SshCompState *c)
     InflateV.init_args.z = &c->inf;
     InflateV.init_args.window = c->inf_window;
     Inflate.init(protocore_ssh_comp_span());
-    c->c2s_active = PROTO_TRUE;
+    c->c2s_active = EMBED_TRUE;
 }
 
 // --- the entries -----------------------------------------------------------
@@ -110,9 +113,9 @@ void protocore_comp_reset(uint8_t *work, uint8_t i)
     }
     SshCompState *c = &COMP_CTX(work)->comp[i];
     c->s2c_alg = SSH_COMP_NONE;
-    c->s2c_active = PROTO_FALSE;
+    c->s2c_active = EMBED_FALSE;
     c->c2s_alg = SSH_COMP_NONE;
-    c->c2s_active = PROTO_FALSE;
+    c->c2s_active = EMBED_FALSE;
     // The deflate work buffer and the inflate window hold the session's decompressed plaintext.
     mmgr_zero_buf(c->work, sizeof(c->work));
     mmgr_zero_buf(c->inf_window, sizeof(c->inf_window));
@@ -177,7 +180,7 @@ void protocore_comp_on_auth_success(uint8_t *work, uint8_t i)
     }
 }
 
-proto_bool protocore_comp_s2c_active(uint8_t *work, uint8_t i)
+embed_bool protocore_comp_s2c_active(uint8_t *work, uint8_t i)
 {
 
     return i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].s2c_active;
@@ -194,7 +197,7 @@ int protocore_comp_s2c(uint8_t *work, uint8_t i, const uint8_t *src, size_t src_
     return zlib_n;
 }
 
-proto_bool protocore_comp_c2s_active(uint8_t *work, uint8_t i)
+embed_bool protocore_comp_c2s_active(uint8_t *work, uint8_t i)
 {
 
     return i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].c2s_active;

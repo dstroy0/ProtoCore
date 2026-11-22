@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file http_range.h
@@ -51,6 +51,6 @@ int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, s
 PROTOCORE_NS HttpRangeNs HttpRange PROTOCORE_UNUSED = {.http_parse_byte_range =
                                                            protocore_http_range_http_parse_byte_range};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HTTP_RANGE_H

@@ -256,7 +256,7 @@ void test_fileformat_btree_page_type_domain(void)
     for (unsigned t = 0; t < 256; t++)
     {
         page[0] = (uint8_t)t;
-        proto_bool want = (t == SQLITE_BTREE_INTERIOR_INDEX || t == SQLITE_BTREE_INTERIOR_TABLE ||
+        embed_bool want = (t == SQLITE_BTREE_INTERIOR_INDEX || t == SQLITE_BTREE_INTERIOR_TABLE ||
                            t == SQLITE_BTREE_LEAF_INDEX || t == SQLITE_BTREE_LEAF_TABLE);
         TEST_ASSERT_EQUAL_INT((int)want, (int)protocore_sqlite_parse_btree_header(page, sizeof(page), 0, &b));
     }
@@ -406,15 +406,15 @@ typedef struct
     uint32_t pages;
 } MemDb;
 
-static proto_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static embed_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     const MemDb *db = (const MemDb *)ctx;
     if (pgno < 1 || pgno > db->pages)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(page, db->image + (size_t)(pgno - 1) * page_size, page_size);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The multipage fixture holds 40 rows of t(a INTEGER, b TEXT) with a = 1..40 and b built from a, so
@@ -453,15 +453,15 @@ void test_table_cursor_walks_every_row_in_rowid_order(void)
     TEST_ASSERT_EQUAL_UINT64((uint64_t)DB_MP_ROWS, prev);
 }
 
-static proto_bool ovf_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
+static embed_bool ovf_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t page_size)
 {
     (void)ctx;
     if (pgno < 1 || pgno > OVF_PAGE_COUNT || page_size != OVF_PAGE_SIZE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(page, OVF_PAGES[pgno - 1], OVF_PAGE_SIZE);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // sec 1.6: a row too large for its leaf page keeps a prefix there and continues on a chain of
@@ -528,7 +528,7 @@ void test_overflow_without_a_buffer_yields_the_prefix(void)
 
     uint64_t rowid = 0;
     SqliteRecordCursor row;
-    proto_bool saw_truncated = PROTO_FALSE;
+    embed_bool saw_truncated = EMBED_FALSE;
     while (protocore_sqlite_table_cursor_next(&c, &rowid, &row))
     {
         uint64_t st = 0;
@@ -537,12 +537,12 @@ void test_overflow_without_a_buffer_yields_the_prefix(void)
         TEST_ASSERT_TRUE(protocore_sqlite_record_next(&row, &st, &val, &vlen));
         if (!protocore_sqlite_record_next(&row, &st, &val, &vlen))
         {
-            saw_truncated = PROTO_TRUE; // the text column did not fit the prefix at all
+            saw_truncated = EMBED_TRUE; // the text column did not fit the prefix at all
             continue;
         }
         if (st >= 13 && (st % 2) == 1 && vlen < (uint32_t)((st - 13) / 2))
         {
-            saw_truncated = PROTO_TRUE;
+            saw_truncated = EMBED_TRUE;
         }
     }
     TEST_ASSERT_TRUE(saw_truncated);

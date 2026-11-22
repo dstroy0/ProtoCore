@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_PCA9685
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_I2C_DEVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -143,7 +143,7 @@ typedef struct
     Pca9685BeginArgs begin_args;
     Pca9685SetPwmArgs set_pwm_args;
     Pca9685SetServoUsArgs set_servo_us_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     uint16_t count;
     size_t n;
@@ -155,9 +155,9 @@ extern Pca9685Vars Pca9685V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const prescale)(uint8_t *work);
-    void (*const channel_reg)(uint8_t *work);
-    void (*const us_to_count)(uint8_t *work);
+    void (*const prescale)(const uint8_t *work);
+    void (*const channel_reg)(const uint8_t *work);
+    void (*const us_to_count)(const uint8_t *work);
     void (*const set_pwm_bytes)(uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const set_pwm)(uint8_t *work);
@@ -166,9 +166,9 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Pca9685V or a region of the borrow at a fixed offset.
-void protocore_pca9685_prescale(uint8_t *work);
-void protocore_pca9685_channel_reg(uint8_t *work);
-void protocore_pca9685_us_to_count(uint8_t *work);
+void protocore_pca9685_prescale(const uint8_t *work);
+void protocore_pca9685_channel_reg(const uint8_t *work);
+void protocore_pca9685_us_to_count(const uint8_t *work);
 void protocore_pca9685_set_pwm_bytes(uint8_t *work);
 void protocore_pca9685_begin(uint8_t *work);
 void protocore_pca9685_set_pwm(uint8_t *work);
@@ -199,7 +199,7 @@ static const Pca9685Ns Pca9685 __attribute__((unused)) = {
  */
 uint8_t *protocore_pca9685_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PCA9685
 

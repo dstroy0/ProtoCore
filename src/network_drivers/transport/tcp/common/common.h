@@ -10,8 +10,8 @@
  * server (sec 3.9.1.1 passive OPEN), the client (active OPEN), the protocol engine (sec 3.10) and
  * the lower-level seam (sec 3.9.2) all read this header and none of them declares its own copy.
  *
- * The event record itself is in evt.h, which this includes: the slot state below is `_Atomic`,
- * which is C11 and not C++, so the header that reaches the sketches has to be the smaller one.
+ * The event record is in evt.h, which this header includes. The slot state below is an atomic word
+ * of embedded_types. The sketches reach evt.h alone, because they need the record and not the slot.
  *
  * **Concurrency model**
  * | Context          | Reads                        | Writes                   |
@@ -21,11 +21,11 @@
  *
  * The receive ring is a memoria_anularis ring over the slot's own aligned rx_buffer: one producer
  * (the stack callbacks) and one consumer (the owning worker), with the ordering inside the ring.
- * `state` is `_Atomic`, read and written through PROTOCORE_ATOMIC_LOAD / PROTOCORE_ATOMIC_STORE.
+ * `state` is an embed_atomic_u32 of embedded_types, and each access is an EMBED_CALL of embed_atomic_u32_table.
  *
  * **Backpressure (lossless)**
  * When a whole inbound segment will not fit the free ring space, the recv callback refuses it
- * without taking ownership of the segment; the stack holds it and redelivers once the main loop has
+ * without taking ownership of the segment. The stack holds it and redelivers once the main loop has
  * drained the ring, so no received byte is dropped. Requires RX_BUF_SIZE > one TCP segment
  * (TCP_MSS).
  *
@@ -40,11 +40,10 @@
 #include "memoria_anularis/memoria_anularis.h"     // mmgr_ring: the receive ring, and the loculi the slots are
 #include "network_drivers/transport/tcp/evt/evt.h" // EvtType, TcpEvt: what this layer posts to a listener queue
 #include "shared/ip/ip.h"                          // protocore_ip (family-tagged peer address)
-#include <stdatomic.h>                             // atomic_load_explicit / atomic_store_explicit on the slot state
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ConnState and the CONN_* names live in evt.h, which this header includes: the signaling layer
 // reads a slot's state and reaches this layer through protocore.h.
@@ -59,7 +58,7 @@ PROTOCORE_BEGIN_DECLS
 typedef struct TcpConn
 {
     uint8_t id;                ///< Fixed slot index (0 … MAX_CONNS-1).
-    _Atomic ConnState state;   ///< Lifecycle state; acquire/release for inter-task visibility.
+    embed_atomic_u32 state;    ///< Lifecycle state; acquire/release for inter-task visibility.
     protocore_pcb *pcb;        ///< Stack control block; null when slot is free.
     uint32_t last_activity_ms; ///< `protocore_millis()` timestamp of last TX/RX event.
 
@@ -149,8 +148,8 @@ typedef struct
     uint8_t _queue_storage[EVT_QUEUE_DEPTH * sizeof(TcpEvt)]; ///< Queue backing store.
     protocore_platform_queue queue;                           ///< Handle returned by protocore_platform_queue_create().
 #endif
-    proto_bool active; ///< True after listener_add(), false after listener_stop().
-    proto_bool tls;    ///< True when connections accepted here begin a TLS handshake.
+    embed_bool active; ///< True after listener_add(), false after listener_stop().
+    embed_bool tls;    ///< True when connections accepted here begin a TLS handshake.
     uint8_t dscp;      ///< Per-listener DiffServ DSCP for accepted connections; PROTOCORE_DSCP_UNSET = use the default.
 } Listener;
 
@@ -166,6 +165,6 @@ typedef struct
 /** @brief Static pool of listener contexts.  Defined in server.c. */
 extern Listener listener_pool[MAX_LISTENERS];
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TCP_COMMON_H

@@ -15,7 +15,7 @@
 
 // --- -104 APCI ---
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 size_t protocore_iec104_build_i(uint8_t *buf, size_t cap, uint16_t ns, uint16_t nr, const uint8_t *asdu,
                                 size_t asdu_len)
@@ -72,21 +72,21 @@ size_t protocore_iec104_build_u(uint8_t *buf, size_t cap, uint8_t u_cmd)
     return IEC104_APCI_LEN;
 }
 
-proto_bool protocore_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *out, size_t *consumed)
+embed_bool protocore_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *out, size_t *consumed)
 {
     if (!buf || !out || len < 2 || buf[0] != IEC_START_104)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t L = buf[1];
     if (L < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t total = (size_t)2 + L;
     if (len < total)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t c0 = buf[2];
     out->ns = out->nr = 0;
@@ -115,7 +115,7 @@ proto_bool protocore_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *ou
     {
         *consumed = total;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- ASDU header + IOA ---
@@ -135,11 +135,11 @@ size_t protocore_iec_asdu_build_header(uint8_t *buf, size_t cap, const IecAsduHe
     return 6;
 }
 
-proto_bool protocore_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAsduHeader *out, size_t *consumed)
+embed_bool protocore_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAsduHeader *out, size_t *consumed)
 {
     if (!buf || !out || len < 6)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->type_id = buf[0];
     out->sq = (buf[1] & 0x80u) != 0;
@@ -153,7 +153,7 @@ proto_bool protocore_iec_asdu_parse_header(const uint8_t *buf, size_t len, IecAs
     {
         *consumed = 6;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_iec_put_ioa(uint8_t *buf, size_t cap, uint32_t ioa)
@@ -175,7 +175,7 @@ uint32_t protocore_iec_get_ioa(const uint8_t *p)
 
 // --- typed information objects ---
 
-size_t protocore_iec_io_build_sp(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, uint8_t quality)
+size_t protocore_iec_io_build_sp(uint8_t *buf, size_t cap, uint32_t ioa, embed_bool on, uint8_t quality)
 {
     if (!buf || cap < 4)
     {
@@ -186,11 +186,11 @@ size_t protocore_iec_io_build_sp(uint8_t *buf, size_t cap, uint32_t ioa, proto_b
     return 4;
 }
 
-proto_bool protocore_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, uint8_t *quality)
+embed_bool protocore_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *ioa, embed_bool *on, uint8_t *quality)
 {
     if (!buf || len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -204,7 +204,7 @@ proto_bool protocore_iec_io_parse_sp(const uint8_t *buf, size_t len, uint32_t *i
     {
         *quality = (uint8_t)(buf[3] & 0xF0u);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds)
@@ -225,11 +225,11 @@ size_t protocore_iec_io_build_float(uint8_t *buf, size_t cap, uint32_t ioa, floa
     return 8;
 }
 
-proto_bool protocore_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
+embed_bool protocore_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
 {
     if (!buf || len < 8)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -245,7 +245,7 @@ proto_bool protocore_iec_io_parse_float(const uint8_t *buf, size_t len, uint32_t
     {
         *qds = buf[7];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_iec_io_build_scaled(uint8_t *buf, size_t cap, uint32_t ioa, int16_t value, uint8_t qds)
@@ -262,11 +262,11 @@ size_t protocore_iec_io_build_scaled(uint8_t *buf, size_t cap, uint32_t ioa, int
     return 6;
 }
 
-proto_bool protocore_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa, int16_t *value, uint8_t *qds)
+embed_bool protocore_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_t *ioa, int16_t *value, uint8_t *qds)
 {
     if (!buf || len < 6)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -280,7 +280,7 @@ proto_bool protocore_iec_io_parse_scaled(const uint8_t *buf, size_t len, uint32_
     {
         *qds = buf[5];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_iec_io_build_normalized(uint8_t *buf, size_t cap, uint32_t ioa, float value, uint8_t qds)
@@ -306,11 +306,11 @@ size_t protocore_iec_io_build_normalized(uint8_t *buf, size_t cap, uint32_t ioa,
     return 6;
 }
 
-proto_bool protocore_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
+embed_bool protocore_iec_io_parse_normalized(const uint8_t *buf, size_t len, uint32_t *ioa, float *value, uint8_t *qds)
 {
     if (!buf || len < 6)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -325,7 +325,7 @@ proto_bool protocore_iec_io_parse_normalized(const uint8_t *buf, size_t len, uin
     {
         *qds = buf[5];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_iec_io_build_counter(uint8_t *buf, size_t cap, uint32_t ioa, int32_t value, uint8_t seq)
@@ -344,11 +344,11 @@ size_t protocore_iec_io_build_counter(uint8_t *buf, size_t cap, uint32_t ioa, in
     return 8;
 }
 
-proto_bool protocore_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa, int32_t *value, uint8_t *seq)
+embed_bool protocore_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32_t *ioa, int32_t *value, uint8_t *seq)
 {
     if (!buf || len < 8)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -363,10 +363,10 @@ proto_bool protocore_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32
     {
         *seq = buf[7];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-size_t protocore_iec_io_build_sc(uint8_t *buf, size_t cap, uint32_t ioa, proto_bool on, proto_bool select)
+size_t protocore_iec_io_build_sc(uint8_t *buf, size_t cap, uint32_t ioa, embed_bool on, embed_bool select)
 {
     if (!buf || cap < 4)
     {
@@ -377,11 +377,11 @@ size_t protocore_iec_io_build_sc(uint8_t *buf, size_t cap, uint32_t ioa, proto_b
     return 4;
 }
 
-proto_bool protocore_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, proto_bool *on, proto_bool *select)
+embed_bool protocore_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *ioa, embed_bool *on, embed_bool *select)
 {
     if (!buf || len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -395,7 +395,7 @@ proto_bool protocore_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *i
     {
         *select = (buf[3] & IEC_SCO_SE) != 0;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_iec_io_build_dp(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dpi, uint8_t quality)
@@ -409,11 +409,11 @@ size_t protocore_iec_io_build_dp(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t
     return 4;
 }
 
-proto_bool protocore_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dpi, uint8_t *quality)
+embed_bool protocore_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dpi, uint8_t *quality)
 {
     if (!buf || len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -427,10 +427,10 @@ proto_bool protocore_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *i
     {
         *quality = (uint8_t)(buf[3] & 0xF0u);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-size_t protocore_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dcs, uint8_t qu, proto_bool select)
+size_t protocore_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t dcs, uint8_t qu, embed_bool select)
 {
     if (!buf || cap < 4)
     {
@@ -442,12 +442,12 @@ size_t protocore_iec_io_build_dc(uint8_t *buf, size_t cap, uint32_t ioa, uint8_t
     return 4;
 }
 
-proto_bool protocore_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dcs, uint8_t *qu,
-                                     proto_bool *select)
+embed_bool protocore_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *ioa, uint8_t *dcs, uint8_t *qu,
+                                     embed_bool *select)
 {
     if (!buf || len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (ioa)
     {
@@ -465,7 +465,7 @@ proto_bool protocore_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *i
     {
         *select = (buf[3] & IEC_DCO_SE) != 0;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- -101 FT1.2 link frames ---
@@ -522,13 +522,13 @@ size_t protocore_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control
     return total;
 }
 
-proto_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, size_t *consumed)
+embed_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *out, size_t *consumed)
 {
     if (!buf || !out || len < 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    out->fixed = PROTO_FALSE;
+    out->fixed = EMBED_FALSE;
     out->control = out->addr = 0;
     out->asdu = NULL;
     out->asdu_len = 0;
@@ -537,32 +537,32 @@ proto_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *o
     {
         if (len < 5 || buf[4] != IEC_STOP || buf[3] != (uint8_t)(buf[1] + buf[2]))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
-        out->fixed = PROTO_TRUE;
+        out->fixed = EMBED_TRUE;
         out->control = buf[1];
         out->addr = buf[2];
         if (consumed)
         {
             *consumed = 5;
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (buf[0] == IEC_START_104)
     {
         if (len < 4)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint8_t L = buf[1];
         if (L < 2 || buf[2] != L || buf[3] != IEC_START_104)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         size_t total = (size_t)6 + L;
         if (len < total || buf[5 + L] != IEC_STOP || sum8(buf + 4, L) != buf[4 + L])
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->control = buf[4];
         out->addr = buf[5];
@@ -572,11 +572,11 @@ proto_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *o
         {
             *consumed = total;
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IEC60870

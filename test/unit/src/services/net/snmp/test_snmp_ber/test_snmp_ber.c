@@ -87,19 +87,19 @@ static void seq_end(size_t token)
     SnmpBer.seq_end(snmp_ber_work);
 }
 
-static proto_bool read_header(void)
+static embed_bool read_header(void)
 {
     SnmpBer.read_header(snmp_ber_work);
     return SnmpBerV.ok;
 }
 
-static proto_bool read_integer(void)
+static embed_bool read_integer(void)
 {
     SnmpBer.read_integer(snmp_ber_work);
     return SnmpBerV.ok;
 }
 
-static proto_bool read_oid(uint32_t *out, size_t cap)
+static embed_bool read_oid(uint32_t *out, size_t cap)
 {
     SnmpBerV.read_args.arc_out = out;
     SnmpBerV.read_args.arc_cap = cap;
@@ -107,7 +107,7 @@ static proto_bool read_oid(uint32_t *out, size_t cap)
     return SnmpBerV.ok;
 }
 
-static proto_bool skip(size_t n)
+static embed_bool skip(size_t n)
 {
     SnmpBerV.read_args.skip = n;
     SnmpBer.skip(snmp_ber_work);

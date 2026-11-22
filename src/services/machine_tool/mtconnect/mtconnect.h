@@ -34,19 +34,19 @@
 
 #if PROTOCORE_ENABLE_MTCONNECT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_MTCONNECT_BORROW - the bytes a document runs out of - is stated in protocore_config.h,
 // which sums it into the plaintext arena. A caller takes them once and passes the pointer to every
 // call. The borrow IS the document, so two documents are two borrows and never collide.
 
 /** @brief The MTConnect DataItem category (which stream element wraps the value). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(
+    protocore_mtc_category,
     PROTOCORE_MTC_SAMPLE,   ///< a measured value (<Samples>).
     PROTOCORE_MTC_EVENT,    ///< a discrete state (<Events>).
     PROTOCORE_MTC_CONDITION ///< a condition (<Condition>): value is the sub-element name (Normal/Warning/Fault).
-} protocore_mtc_category;
+);
 
 /** @brief The buffer a document is built into, and the agent identity its Header carries. */
 typedef struct
@@ -219,7 +219,7 @@ typedef struct
     MtConnectLifeArgs life;
     MtConnectErrorArgs err;
     MtConnectQueryArgs query;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint64_t seq;
 } MtConnectVars;
@@ -298,7 +298,7 @@ static const MtConnectNs MtConnect __attribute__((unused)) = {
  */
 uint8_t *protocore_mtconnect_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MTCONNECT
 

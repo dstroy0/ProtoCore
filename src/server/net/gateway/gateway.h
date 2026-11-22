@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file gateway.h
@@ -41,21 +41,9 @@ nothing here aliases it. How those bytes are
  */
 
 /** @brief Southbound radio / bus kind a port bridges (informational + topic hint). */
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_GW_OTHER = 0,
-    PROTOCORE_GW_LORA,
-    PROTOCORE_GW_NRF24,
-    PROTOCORE_GW_CC1101,
-    PROTOCORE_GW_THREAD,
-    PROTOCORE_GW_ZIGBEE,
-    PROTOCORE_GW_ZWAVE,
-    PROTOCORE_GW_ENOCEAN,
-    PROTOCORE_GW_SIGFOX,
-    PROTOCORE_GW_WISUN,
-    PROTOCORE_GW_NFC,
-    PROTOCORE_GW_BLE,
-} protocore_gateway_kind;
+EMBED_ENUM_BYTE(protocore_gateway_kind, PROTOCORE_GW_OTHER = 0, PROTOCORE_GW_LORA, PROTOCORE_GW_NRF24,
+                PROTOCORE_GW_CC1101, PROTOCORE_GW_THREAD, PROTOCORE_GW_ZIGBEE, PROTOCORE_GW_ZWAVE, PROTOCORE_GW_ENOCEAN,
+                PROTOCORE_GW_SIGFOX, PROTOCORE_GW_WISUN, PROTOCORE_GW_NFC, PROTOCORE_GW_BLE, );
 
 /**
  * @brief A northbound message: a southbound frame enveloped with its routing metadata.
@@ -77,13 +65,13 @@ typedef struct
  * @brief Northbound publish: emit @p msg to MQTT / HTTP / WebSocket / UDP.
  * @return true if the northbound stack accepted it; false drops (counted).
  */
-typedef proto_bool (*protocore_gateway_uplink_fn)(const protocore_gateway_msg *msg, void *ctx);
+typedef embed_bool (*protocore_gateway_uplink_fn)(const protocore_gateway_msg *msg, void *ctx);
 
 /**
  * @brief Southbound transmit (downlink): send @p payload to @p dst_addr on @p port_id.
  * @return true if the radio accepted the frame; false drops (counted).
  */
-typedef proto_bool (*protocore_gateway_tx_fn)(uint8_t port_id, uint16_t dst_addr, const uint8_t *payload, uint16_t len,
+typedef embed_bool (*protocore_gateway_tx_fn)(uint8_t port_id, uint16_t dst_addr, const uint8_t *payload, uint16_t len,
                                               void *ctx);
 
 /** @brief Southbound port (radio / bus) configuration passed to protocore_gateway_add_port(). */
@@ -111,11 +99,11 @@ typedef struct
 typedef struct
 {
     void (*reset)(uint8_t *);
-    proto_bool (*add_port)(uint8_t *, const protocore_gateway_port_config *);
+    embed_bool (*add_port)(uint8_t *, const protocore_gateway_port_config *);
     void (*set_uplink_cb)(uint8_t *, protocore_gateway_uplink_fn, void *);
     void (*set_topic_prefix)(uint8_t *, const char *);
-    proto_bool (*uplink)(uint8_t *, uint8_t, uint16_t, const uint8_t *, uint16_t, int16_t);
-    proto_bool (*downlink)(uint8_t *, uint8_t, uint16_t, const uint8_t *, uint16_t);
+    embed_bool (*uplink)(uint8_t *, uint8_t, uint16_t, const uint8_t *, uint16_t, int16_t);
+    embed_bool (*downlink)(uint8_t *, uint8_t, uint16_t, const uint8_t *, uint16_t);
     uint16_t (*topic)(uint8_t *, const protocore_gateway_msg *, char *, uint16_t);
     void (*get_stats)(uint8_t *, protocore_gateway_stats *);
 } GatewayNs;
@@ -130,9 +118,9 @@ void protocore_gateway_reset(uint8_t *work);
  * @brief Register a southbound port.
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param cfg Cfg
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_gateway_add_port(uint8_t *work, const protocore_gateway_port_config *cfg);
+embed_bool protocore_gateway_add_port(uint8_t *work, const protocore_gateway_port_config *cfg);
 /**
  * @brief Install the northbound publish callback (required to publish .
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
@@ -154,9 +142,9 @@ void protocore_gateway_set_topic_prefix(uint8_t *work, const char *prefix);
  * @param payload Payload
  * @param len Len
  * @param rssi Rssi
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_gateway_uplink(uint8_t *work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
+embed_bool protocore_gateway_uplink(uint8_t *work, uint8_t port_id, uint16_t src_addr, const uint8_t *payload,
                                     uint16_t len, int16_t rssi);
 /**
  * @brief Bridge a northbound command southbound: transmit it on port_id's .
@@ -165,9 +153,9 @@ proto_bool protocore_gateway_uplink(uint8_t *work, uint8_t port_id, uint16_t src
  * @param dst_addr Dst addr
  * @param payload Payload
  * @param len Len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_gateway_downlink(uint8_t *work, uint8_t port_id, uint16_t dst_addr, const uint8_t *payload,
+embed_bool protocore_gateway_downlink(uint8_t *work, uint8_t port_id, uint16_t dst_addr, const uint8_t *payload,
                                       uint16_t len);
 /**
  * @brief Format a northbound routing key `<prefix>/<port>/<addr>` for msg .
@@ -189,7 +177,7 @@ void protocore_gateway_get_stats(uint8_t *work, protocore_gateway_stats *out);
  * @brief Northbound publish: emit @p msg to MQTT / HTTP / WebSocket / UDP.
  * @return true if the northbound stack accepted it; false drops (counted).
  */
-typedef proto_bool (*protocore_gateway_uplink_fn)(const protocore_gateway_msg *msg, void *ctx);
+typedef embed_bool (*protocore_gateway_uplink_fn)(const protocore_gateway_msg *msg, void *ctx);
 /**
  * @brief The PROTOCORE_GATEWAY_BORROW bytes this module's state lives in.
  *
@@ -211,6 +199,6 @@ PROTOCORE_NS GatewayNs Gateway PROTOCORE_UNUSED = {.reset = protocore_gateway_re
                                                    .topic = protocore_gateway_topic,
                                                    .get_stats = protocore_gateway_get_stats};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_GATEWAY_H

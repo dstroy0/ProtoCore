@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_J2735
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief A UPER bit writer over a caller buffer (MSB-first within each octet). */
 typedef struct
@@ -34,7 +34,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     size_t bit_pos; ///< bits written so far.
-    proto_bool ok;  ///< cleared on overflow.
+    embed_bool ok;  ///< cleared on overflow.
 } UperWriter;
 
 /** @brief A UPER bit reader over a caller buffer. */
@@ -43,24 +43,24 @@ typedef struct
     const uint8_t *buf;
     size_t nbits; ///< total bits available.
     size_t bit_pos;
-    proto_bool ok; ///< cleared on read past the end.
+    embed_bool ok; ///< cleared on read past the end.
 } UperReader;
 
 void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap);
 /** @return the number of whole octets produced (rounds the bit length up), or 0 if the writer overflowed. */
-size_t protocore_uper_writer_finish(UperWriter *w);
+size_t protocore_uper_writer_finish(const UperWriter *w);
 
 /** @brief Write @p nbits low bits of @p value, MSB-first. */
 void protocore_uper_put_bits(UperWriter *w, uint32_t value, unsigned nbits);
 /** @brief Write a BOOLEAN (1 bit). */
-void protocore_uper_put_bool(UperWriter *w, proto_bool v);
+void protocore_uper_put_bool(UperWriter *w, embed_bool v);
 /** @brief Write a constrained INTEGER in [lo, hi] as (value-lo) in ceil(log2(hi-lo+1)) bits. */
 void protocore_uper_put_cint(UperWriter *w, int64_t value, int64_t lo, int64_t hi);
 
 void protocore_uper_reader_init(UperReader *r, const uint8_t *buf, size_t nbits);
 /** @brief Read @p nbits bits, MSB-first, into the low bits of the result. */
 uint32_t protocore_uper_get_bits(UperReader *r, unsigned nbits);
-proto_bool protocore_uper_get_bool(UperReader *r);
+embed_bool protocore_uper_get_bool(UperReader *r);
 /** @brief Read a constrained INTEGER in [lo, hi]. */
 int64_t protocore_uper_get_cint(UperReader *r, int64_t lo, int64_t hi);
 
@@ -89,22 +89,21 @@ typedef struct
 size_t protocore_j2735_bsm_core_encode(const J2735BsmCore *c, uint8_t *out, size_t cap);
 
 /** @brief UPER-decode a BSMcore block. @return true on success. */
-proto_bool protocore_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c);
+embed_bool protocore_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735BsmCore *c);
 
 /** @brief J2735 MovementPhaseState (the signal-group state in a SPaT MovementState). */
-typedef enum PROTO_ENUM_PACKED
-{
-    J2735_PHASE_UNAVAILABLE = 0,                 ///< the phase is not known or not sent.
-    J2735_PHASE_DARK = 1,                        ///< dark, no indication.
-    J2735_PHASE_STOP_THEN_PROCEED = 2,           ///< flashing red.
-    J2735_PHASE_STOP_AND_REMAIN = 3,             ///< red.
-    J2735_PHASE_PRE_MOVEMENT = 4,                ///< red + yellow, about to change.
-    J2735_PHASE_PERMISSIVE_MOVEMENT_ALLOWED = 5, ///< permissive green.
-    J2735_PHASE_PROTECTED_MOVEMENT_ALLOWED = 6,  ///< protected green.
-    J2735_PHASE_PERMISSIVE_CLEARANCE = 7,        ///< permissive yellow.
-    J2735_PHASE_PROTECTED_CLEARANCE = 8,         ///< protected yellow.
-    J2735_PHASE_CAUTION_CONFLICTING_TRAFFIC = 9  ///< flashing yellow.
-} J2735PhaseState;
+EMBED_ENUM_BYTE(J2735PhaseState,
+                J2735_PHASE_UNAVAILABLE = 0,                 ///< the phase is not known or not sent.
+                J2735_PHASE_DARK = 1,                        ///< dark, no indication.
+                J2735_PHASE_STOP_THEN_PROCEED = 2,           ///< flashing red.
+                J2735_PHASE_STOP_AND_REMAIN = 3,             ///< red.
+                J2735_PHASE_PRE_MOVEMENT = 4,                ///< red + yellow, about to change.
+                J2735_PHASE_PERMISSIVE_MOVEMENT_ALLOWED = 5, ///< permissive green.
+                J2735_PHASE_PROTECTED_MOVEMENT_ALLOWED = 6,  ///< protected green.
+                J2735_PHASE_PERMISSIVE_CLEARANCE = 7,        ///< permissive yellow.
+                J2735_PHASE_PROTECTED_CLEARANCE = 8,         ///< protected yellow.
+                J2735_PHASE_CAUTION_CONFLICTING_TRAFFIC = 9  ///< flashing yellow.
+);
 
 /** @brief One SPaT MovementState: a signal group, its current phase, and the min/max end times. */
 typedef struct
@@ -133,14 +132,14 @@ size_t protocore_j2735_spat_encode(const J2735MovementState *states, size_t coun
  * @param out_count   set to the number decoded.
  * @return true on success (and the encoded count fit in @p max_states).
  */
-proto_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
+embed_bool protocore_j2735_spat_decode(const uint8_t *in, size_t len, J2735MovementState *out_states, size_t max_states,
                                        size_t *out_count);
 
 /** @brief One MAP lane: an id and an approach/egress flag (the minimal LaneID + directionalUse bit). */
 typedef struct
 {
     uint8_t lane_id;       ///< LaneID 0..255.
-    proto_bool is_ingress; ///< true = an approach (ingress) lane, false = egress.
+    embed_bool is_ingress; ///< true = an approach (ingress) lane, false = egress.
     int16_t node_x;        ///< first node offset X, -2048..2047 (cm, node-XY offset).
     int16_t node_y;        ///< first node offset Y, -2048..2047 (cm).
 } J2735Lane;
@@ -165,10 +164,10 @@ size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735
 /**
  * @brief UPER-decode a MAP intersection. @return true on success (and the lane count fit @p max_lanes).
  */
-proto_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
+embed_bool protocore_j2735_map_decode(const uint8_t *in, size_t len, J2735MapIntersection *isect, J2735Lane *out_lanes,
                                       size_t max_lanes, size_t *out_count);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_J2735
 

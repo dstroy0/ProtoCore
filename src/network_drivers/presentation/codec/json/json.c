@@ -15,7 +15,7 @@
 #include "shared/hex/hex.h"            // PROTOCORE_HEX: the shared digit tables
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Longest member name protocore_json_find_member will scan for.
 #define JSON_KEY_MAX 256
@@ -30,15 +30,15 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_json_key(uint8_t *work);
-void protocore_json_put_bool(uint8_t *work);
-void protocore_json_put_int(uint8_t *work);
-void protocore_json_put_null(uint8_t *work);
-void protocore_json_put_raw(uint8_t *work);
-void protocore_json_put_str(uint8_t *work);
-void protocore_json_put_uint(uint8_t *work);
+void protocore_json_key(const uint8_t *work);
+void protocore_json_put_bool(const uint8_t *work);
+void protocore_json_put_int(const uint8_t *work);
+void protocore_json_put_null(const uint8_t *work);
+void protocore_json_put_raw(const uint8_t *work);
+void protocore_json_put_str(const uint8_t *work);
+void protocore_json_put_uint(const uint8_t *work);
 
-void protocore_json_init(uint8_t *work)
+void protocore_json_init(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.init_args.w;
@@ -48,12 +48,12 @@ void protocore_json_init(uint8_t *work)
     w->buf = buf;
     w->cap = cap;
     w->len = 0;
-    w->ok = (buf != NULL && cap >= 1) ? PROTO_TRUE : PROTO_FALSE;
-    w->after_key = PROTO_FALSE;
+    w->ok = (buf != NULL && cap >= 1) ? EMBED_TRUE : EMBED_FALSE;
+    w->after_key = EMBED_FALSE;
     w->depth = 0;
     for (size_t i = 0; i < JSON_MAX_DEPTH; i++)
     {
-        w->need_comma[i] = PROTO_FALSE;
+        w->need_comma[i] = EMBED_FALSE;
     }
     if (w->ok)
     {
@@ -69,7 +69,7 @@ static void json_put(protocore_json_writer *w, char c)
     }
     if (w->len + 1 >= w->cap) // leave room for the NUL
     {
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     w->buf[w->len++] = c;
@@ -151,7 +151,7 @@ static void json_value_prefix(protocore_json_writer *w)
 {
     if (w->after_key)
     {
-        w->after_key = PROTO_FALSE; // a value right after protocore_json_key(w): the comma was its own
+        w->after_key = EMBED_FALSE; // a value right after protocore_json_key(w): the comma was its own
         return;
     }
     if (w->depth > 0)
@@ -161,7 +161,7 @@ static void json_value_prefix(protocore_json_writer *w)
         {
             json_put(w, ',');
         }
-        w->need_comma[lvl] = PROTO_TRUE;
+        w->need_comma[lvl] = EMBED_TRUE;
     }
 }
 
@@ -171,12 +171,12 @@ static void json_push(protocore_json_writer *w, char open)
     json_put(w, open);
     if (w->depth < JSON_MAX_DEPTH)
     {
-        w->need_comma[w->depth] = PROTO_FALSE;
+        w->need_comma[w->depth] = EMBED_FALSE;
         w->depth++;
     }
     else
     {
-        w->ok = PROTO_FALSE; // nesting too deep
+        w->ok = EMBED_FALSE; // nesting too deep
     }
 }
 
@@ -189,32 +189,32 @@ static void json_pop(protocore_json_writer *w, char close)
     }
     else
     {
-        w->ok = PROTO_FALSE; // unbalanced close
+        w->ok = EMBED_FALSE; // unbalanced close
     }
 }
 
-void protocore_json_begin_object(uint8_t *work)
+void protocore_json_begin_object(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.begin_object_args.w;
 
     json_push(w, '{');
 }
-void protocore_json_end_object(uint8_t *work)
+void protocore_json_end_object(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.end_object_args.w;
 
     json_pop(w, '}');
 }
-void protocore_json_begin_array(uint8_t *work)
+void protocore_json_begin_array(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.begin_array_args.w;
 
     json_push(w, '[');
 }
-void protocore_json_end_array(uint8_t *work)
+void protocore_json_end_array(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.end_array_args.w;
@@ -222,7 +222,7 @@ void protocore_json_end_array(uint8_t *work)
     json_pop(w, ']');
 }
 
-void protocore_json_key(uint8_t *work)
+void protocore_json_key(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.key_args.w;
@@ -233,10 +233,10 @@ void protocore_json_key(uint8_t *work)
     json_put_escaped(w, k);
     json_put(w, '"');
     json_put(w, ':');
-    w->after_key = PROTO_TRUE; // suppress the following value's own comma
+    w->after_key = EMBED_TRUE; // suppress the following value's own comma
 }
 
-void protocore_json_put_str(uint8_t *work)
+void protocore_json_put_str(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.put_str_args.w;
@@ -248,7 +248,7 @@ void protocore_json_put_str(uint8_t *work)
     json_put(w, '"');
 }
 
-void protocore_json_put_int(uint8_t *work)
+void protocore_json_put_int(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.put_int_args.w;
@@ -266,7 +266,7 @@ void protocore_json_put_int(uint8_t *work)
     json_emit_raw(w, tmp);
 }
 
-void protocore_json_put_uint(uint8_t *work)
+void protocore_json_put_uint(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.put_uint_args.w;
@@ -284,17 +284,17 @@ void protocore_json_put_uint(uint8_t *work)
     json_emit_raw(w, tmp);
 }
 
-void protocore_json_put_bool(uint8_t *work)
+void protocore_json_put_bool(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.put_bool_args.w;
-    proto_bool v = JsonV.put_bool_args.v;
+    embed_bool v = JsonV.put_bool_args.v;
 
     json_value_prefix(w);
     json_emit_raw(w, v ? "true" : "false");
 }
 
-void protocore_json_put_null(uint8_t *work)
+void protocore_json_put_null(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.put_null_args.w;
@@ -303,7 +303,7 @@ void protocore_json_put_null(uint8_t *work)
     json_emit_raw(w, "null");
 }
 
-void protocore_json_put_raw(uint8_t *work)
+void protocore_json_put_raw(const uint8_t *work)
 {
     (void)work;
     protocore_json_writer *w = JsonV.put_raw_args.w;
@@ -356,7 +356,7 @@ void protocore_json_kv_bool(uint8_t *work)
 {
     protocore_json_writer *w = JsonV.kv_bool_args.w;
     const char *k = JsonV.kv_bool_args.k;
-    proto_bool v = JsonV.kv_bool_args.v;
+    embed_bool v = JsonV.kv_bool_args.v;
 
     JsonV.key_args.w = w;
     JsonV.key_args.k = k;
@@ -394,7 +394,7 @@ void protocore_json_kv_raw(uint8_t *work)
 // Reader (top-level object members)
 // ---------------------------------------------------------------------------
 
-static proto_bool is_ws(char c)
+static embed_bool is_ws(char c)
 {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
@@ -489,7 +489,7 @@ static const char *json_find_value(const char *json, const char *key)
     p++; // into the object
 
     size_t keylen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = JSON_KEY_MAX);
-    while (PROTO_TRUE)
+    while (EMBED_TRUE)
     {
         p = skip_ws(p);
         if (*p == '}' || *p == '\0')
@@ -504,8 +504,8 @@ static const char *json_find_value(const char *json, const char *key)
         const char *kstart = p + 1;
         const char *kend = skip_string(p); // just past closing quote
         size_t klen = (kend > kstart) ? (size_t)((kend - 1) - kstart) : 0;
-        proto_bool match = (klen == keylen) && (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = kstart, .other = key,
-                                                           .cap = klen, .ci = PROTO_FALSE) == klen);
+        embed_bool match = (klen == keylen) && (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = kstart, .other = key,
+                                                           .cap = klen, .ci = EMBED_FALSE) == klen);
 
         p = skip_ws(kend);
         if (*p != ':')
@@ -547,12 +547,11 @@ static int hex_val(char c)
     return -1;
 }
 
-typedef enum PROTO_ENUM_PACKED
-{
-    JSON_ESC_LITERAL_C, // *c_out holds one char for the caller's common write path
-    JSON_ESC_EMITTED,   // UTF-8 bytes already written to out; caller advances p and continues
-    JSON_ESC_TRUNCATED  // sequence would overflow out_cap; caller returns
-} JsonEsc;
+EMBED_ENUM_BYTE(JsonEsc,
+                JSON_ESC_LITERAL_C, // *c_out holds one char for the caller's common write path
+                JSON_ESC_EMITTED,   // UTF-8 bytes already written to out; caller advances p and continues
+                JSON_ESC_TRUNCATED  // sequence would overflow out_cap; caller returns
+);
 
 // Decode a \uXXXX sequence with p at the 'u'. A high surrogate (0xD800..0xDBFF) followed by a low
 // surrogate combines into one code point (0x10000..0x10FFFF); an unpaired/lone surrogate becomes
@@ -698,7 +697,7 @@ static JsonEsc json_decode_escape(const char **p, char *out, size_t *i, size_t o
     return json_emit_utf8((unsigned)cp, out, i, out_cap);
 }
 
-void protocore_json_get_str(uint8_t *work)
+void protocore_json_get_str(const uint8_t *work)
 {
     (void)work;
     const char *json = JsonV.get_str_args.json;
@@ -708,13 +707,13 @@ void protocore_json_get_str(uint8_t *work)
 
     if (!out || out_cap == 0)
     {
-        JsonV.ok = PROTO_FALSE;
+        JsonV.ok = EMBED_FALSE;
         return;
     }
     const char *v = json_find_value(json, key);
     if (!v || *v != '"')
     {
-        JsonV.ok = PROTO_FALSE;
+        JsonV.ok = EMBED_FALSE;
         return;
     }
 
@@ -729,7 +728,7 @@ void protocore_json_get_str(uint8_t *work)
             JsonEsc r = json_decode_escape(&p, out, &i, out_cap, &c);
             if (r == JSON_ESC_TRUNCATED)
             {
-                JsonV.ok = PROTO_TRUE;
+                JsonV.ok = EMBED_TRUE;
                 return;
             }
             if (r == JSON_ESC_EMITTED)
@@ -745,16 +744,16 @@ void protocore_json_get_str(uint8_t *work)
         else
         {
             out[i] = '\0'; // truncate to capacity
-            JsonV.ok = PROTO_TRUE;
+            JsonV.ok = EMBED_TRUE;
             return;
         }
         p++;
     }
     out[i] = '\0';
-    JsonV.ok = PROTO_TRUE;
+    JsonV.ok = EMBED_TRUE;
 }
 
-void protocore_json_get_int(uint8_t *work)
+void protocore_json_get_int(const uint8_t *work)
 {
     (void)work;
     const char *json = JsonV.get_int_args.json;
@@ -763,64 +762,64 @@ void protocore_json_get_int(uint8_t *work)
 
     if (!out)
     {
-        JsonV.ok = PROTO_FALSE;
+        JsonV.ok = EMBED_FALSE;
         return;
     }
     const char *v = json_find_value(json, key);
     if (!v || *v == '"') // must be a bare number, not a string
     {
-        JsonV.ok = PROTO_FALSE;
+        JsonV.ok = EMBED_FALSE;
         return;
     }
     const char *end = NULL;
     long val = EMBED_CALL(cellul.to_long, TransfiguroCfg, .src = v, .end = &end);
     if (end == v)
     {
-        JsonV.ok = PROTO_FALSE; // no digits parsed
+        JsonV.ok = EMBED_FALSE; // no digits parsed
         return;
     }
     *out = val;
-    JsonV.ok = PROTO_TRUE;
+    JsonV.ok = EMBED_TRUE;
 }
 
-void protocore_json_get_bool(uint8_t *work)
+void protocore_json_get_bool(const uint8_t *work)
 {
     (void)work;
     const char *json = JsonV.get_bool_args.json;
     const char *key = JsonV.get_bool_args.key;
-    proto_bool *out = JsonV.get_bool_args.out;
+    embed_bool *out = JsonV.get_bool_args.out;
 
     if (!out)
     {
-        JsonV.ok = PROTO_FALSE;
+        JsonV.ok = EMBED_FALSE;
         return;
     }
     const char *v = json_find_value(json, key);
     if (!v)
     {
-        JsonV.ok = PROTO_FALSE;
+        JsonV.ok = EMBED_FALSE;
         return;
     }
-    if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = v, .other = "true", .cap = 4, .ci = PROTO_FALSE) &&
+    if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = v, .other = "true", .cap = 4, .ci = EMBED_FALSE) &&
         (v[4] == '\0' || v[4] == ',' || v[4] == '}' || v[4] == ']' || is_ws(v[4])))
     {
-        *out = PROTO_TRUE;
-        JsonV.ok = PROTO_TRUE;
+        *out = EMBED_TRUE;
+        JsonV.ok = EMBED_TRUE;
         return;
     }
-    if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = v, .other = "false", .cap = 5, .ci = PROTO_FALSE) &&
+    if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = v, .other = "false", .cap = 5, .ci = EMBED_FALSE) &&
         (v[5] == '\0' || v[5] == ',' || v[5] == '}' || v[5] == ']' || is_ws(v[5])))
     {
-        *out = PROTO_FALSE;
-        JsonV.ok = PROTO_TRUE;
+        *out = EMBED_FALSE;
+        JsonV.ok = EMBED_TRUE;
         return;
     }
-    JsonV.ok = PROTO_FALSE;
+    JsonV.ok = EMBED_FALSE;
 }
 
 /** @brief The operands and the outcome. */
 JsonVars JsonV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_JSON

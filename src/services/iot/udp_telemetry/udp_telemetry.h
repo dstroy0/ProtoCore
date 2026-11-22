@@ -43,7 +43,7 @@
 
 #if PROTOCORE_ENABLE_UDP_TELEMETRY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 768 "User Interface": the destination address and port every datagram carries. */
 typedef struct
@@ -128,8 +128,8 @@ typedef struct
     UdpTelemetryFieldArgs fields;        ///< one field set entry
     UdpTelemetryTimestampArgs time;      ///< the trailing timestamp
     UdpTelemetryPayloadArgs payload;     ///< what a send carries
-    proto_bool ok;
-    proto_bool overflow;
+    embed_bool ok;
+    embed_bool overflow;
     size_t n;
 } UdpTelemetryVars;
 
@@ -189,7 +189,7 @@ static const UdpTelemetryNs UdpTelemetry __attribute__((unused)) = {
  */
 uint8_t *protocore_udp_telemetry_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UDP_TELEMETRY
 

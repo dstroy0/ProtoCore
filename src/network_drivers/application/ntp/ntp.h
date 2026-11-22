@@ -45,7 +45,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One NTP packet on the wire is exactly 48 octets (no extension or MAC fields). */
 #define PROTOCORE_NTP_PACKET_LEN 48u
@@ -146,6 +146,6 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Reference ID "GPS " - a GPS-disciplined reference clock (use with stratum 1). */
 #define PROTOCORE_NTP_REFID_GPS 0x47505320u
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NTP_H

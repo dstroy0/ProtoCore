@@ -5,7 +5,7 @@
  * @file presentation.c
  * @brief Layer 6 (Presentation) - wires the transport ring buffer to the HTTP parser.
  *
- * A thin adapter. The parsing itself lives in http_parser.c; this layer holds the slot's read
+ * A thin adapter. The parsing itself lives in http_parser.c. This layer holds the slot's read
  * scratch, the per-slot HTTP state, and the ProtoHandler the session layer dispatches through.
  *
  * The worker fills the scratch once per data event through ::ConnPool and the parser walks it -
@@ -60,7 +60,10 @@ static_assert(HTTP_CONN_OFF_CTX + sizeof(struct HttpConnStorage) <= PROTOCORE_HT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define HTTP_CONN_CTX(w) ((struct HttpConnStorage *)(void *)((w) + HTTP_CONN_OFF_CTX))
+#define HTTP_CONN_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct HttpConnStorage *)(const void *)((w) + HTTP_CONN_OFF_CTX),                      \
+        default: (struct HttpConnStorage *)(void *)((w) + HTTP_CONN_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -82,7 +85,7 @@ uint8_t *protocore_http_conn_span(void)
     return s_own.span;
 }
 
-void protocore_http_conn_reset(uint8_t *work)
+void protocore_http_conn_reset(const uint8_t *work)
 {
     (void)work;
     if (HttpConnV.slot >= MAX_CONNS)
@@ -139,7 +142,7 @@ void protocore_http_conn_parse(uint8_t *work)
 
 #if PROTOCORE_ENABLE_WEBSOCKET
     // Once a slot upgrades to WebSocket its bytes are WS frames, not HTTP. The WS frame parser is
-    // pumped separately (handle()/the worker loop); feeding those bytes to the HTTP parser here
+    // pumped separately (handle()/the worker loop). Feeding those bytes to the HTTP parser here
     // would consume - and corrupt - the first WS frame. This guard makes "never HTTP-parse a WS
     // slot" hold for every caller (the event-queue dispatch raced the WS pump and ate the first
     // frame's header byte, dropping the first connection after a reboot).
@@ -247,7 +250,7 @@ static void tls_data(uint8_t slot)
         http_h2_checked[slot] = 1;
         const char *alpn = protocore_tls_alpn(slot);
         if (alpn &&
-            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alpn, .other = "h2", .cap = sizeof("h2"), .ci = PROTO_FALSE))
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alpn, .other = "h2", .cap = sizeof("h2"), .ci = EMBED_FALSE))
         {
             http_h2[slot] = 1;
             http_resp_sink[slot] = protocore_h2_server_respond; // route responses through the h2 framer
@@ -265,7 +268,7 @@ static void tls_data(uint8_t slot)
 
 #if PROTOCORE_ENABLE_WEBSOCKET
     // A TLS slot upgraded to WebSocket is pumped from handle() (it decrypts
-    // records and feeds the WS frame parser, dispatching each frame); leave the
+    // records and feeds the WS frame parser, dispatching each frame). Leave the
     // ciphertext in the rx ring for it rather than feeding the HTTP parser here.
     WsV.slot = slot;
     Ws.find(protocore_ws_span());
@@ -322,8 +325,7 @@ static void http_evt_data(uint8_t slot)
     }
 #endif
     HttpConnV.slot = slot;
-    protocore_http_conn_parse(
-        protocore_http_conn_span()); // a no-op once the slot has upgraded to WebSocket (see parse)
+    protocore_http_conn_parse(protocore_http_conn_span()); // a no-op once the slot upgraded to WebSocket (see parse)
 }
 static void http_evt_close(uint8_t slot)
 {
@@ -361,7 +363,7 @@ void protocore_http_conn_set_poll(uint8_t *work)
 static const ProtoHandler s_http_handler = {
     .on_accept = http_evt_accept, .on_data = http_evt_data, .on_close = http_evt_close, .on_poll = http_evt_poll};
 
-void protocore_http_conn_proto_handler(uint8_t *work)
+void protocore_http_conn_proto_handler(const uint8_t *work)
 {
     (void)work;
     HttpConnV.handler = &s_http_handler;
@@ -374,7 +376,7 @@ void protocore_http_conn_proto_handler(uint8_t *work)
 void protocore_http_conn_has_token(uint8_t *work)
 {
     (void)work;
-    HttpConnV.ok = PROTO_FALSE;
+    HttpConnV.ok = EMBED_FALSE;
     if (HttpConnV.hdr_args.hdr == NULL)
     {
         return;
@@ -402,9 +404,9 @@ void protocore_http_conn_has_token(uint8_t *work)
         // measure against: the trimmed length is the bound, and the length test above it is what
         // stops a longer token matching on its prefix.
         if (len == tlen && EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = start, .other = token, .cap = tlen,
-                                      .ci = PROTO_TRUE) == tlen)
+                                      .ci = EMBED_TRUE) == tlen)
         {
-            HttpConnV.ok = PROTO_TRUE;
+            HttpConnV.ok = EMBED_TRUE;
             return;
         }
         if (*p == ',')
@@ -418,7 +420,7 @@ void protocore_http_conn_has_token(uint8_t *work)
 #if PROTOCORE_ENABLE_KEEPALIVE
 void protocore_http_conn_keepalive_eval(uint8_t *work)
 {
-    HttpConnV.ok = PROTO_FALSE;
+    HttpConnV.ok = EMBED_FALSE;
     HttpReq *req = &http_pool[HttpConnV.slot];
     // Only a cleanly-parsed request has a known message boundary; errors close.
     if (req->parse_state != PARSE_COMPLETE)
@@ -428,7 +430,7 @@ void protocore_http_conn_keepalive_eval(uint8_t *work)
 
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Connection");
     HttpConnV.hdr_args.hdr = http_parser_text;
-    proto_bool keep;
+    embed_bool keep;
     if (req->version == HTTP_11)
     {
         HttpConnV.hdr_args.token = "close";
@@ -441,7 +443,7 @@ void protocore_http_conn_keepalive_eval(uint8_t *work)
         protocore_http_conn_has_token(work);
         keep = HttpConnV.ok; // 1.0/unknown default: close
     }
-    HttpConnV.ok = PROTO_FALSE;
+    HttpConnV.ok = EMBED_FALSE;
     if (!keep)
     {
         return;
@@ -453,7 +455,7 @@ void protocore_http_conn_keepalive_eval(uint8_t *work)
     {
         return;
     }
-    HttpConnV.ok = PROTO_TRUE;
+    HttpConnV.ok = EMBED_TRUE;
 }
 #endif // PROTOCORE_ENABLE_KEEPALIVE
 

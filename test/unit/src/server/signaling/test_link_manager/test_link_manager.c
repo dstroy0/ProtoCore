@@ -41,7 +41,7 @@ static int select_best(const LinkManager *m)
     return LinkV.i32;
 }
 
-static proto_bool set_up(LinkManager *m, size_t idx, proto_bool up)
+static embed_bool set_up(LinkManager *m, size_t idx, embed_bool up)
 {
     LinkV.args.m = m;
     LinkV.args.idx = idx;
@@ -52,9 +52,9 @@ static proto_bool set_up(LinkManager *m, size_t idx, proto_bool up)
 
 void setUp(void)
 {
-    g_ifaces[0] = (LinkIface){LINK_KIND_ETH, 20, PROTO_FALSE};
-    g_ifaces[1] = (LinkIface){LINK_KIND_WIFI_STA, 10, PROTO_FALSE};
-    g_ifaces[2] = (LinkIface){LINK_KIND_WIFI_AP, 5, PROTO_FALSE};
+    g_ifaces[0] = (LinkIface){LINK_KIND_ETH, 20, EMBED_FALSE};
+    g_ifaces[1] = (LinkIface){LINK_KIND_WIFI_STA, 10, EMBED_FALSE};
+    g_ifaces[2] = (LinkIface){LINK_KIND_WIFI_AP, 5, EMBED_FALSE};
     bind(&g_m, g_ifaces, 3);
 }
 void tearDown(void)
@@ -74,24 +74,24 @@ void test_no_interface_up_selects_nothing(void)
 void test_selection_is_total_order_over_priority_then_index(void)
 {
     // The higher priority sits at the later index: position does not decide.
-    LinkIface later[2] = {{LINK_KIND_WIFI_AP, 5, PROTO_TRUE}, {LINK_KIND_ETH, 20, PROTO_TRUE}};
+    LinkIface later[2] = {{LINK_KIND_WIFI_AP, 5, EMBED_TRUE}, {LINK_KIND_ETH, 20, EMBED_TRUE}};
     LinkManager m;
     bind(&m, later, 2);
     TEST_ASSERT_EQUAL_INT(1, active(&m));
 
     // The same two the other way round: the winner is the same interface, now at index 0.
-    LinkIface earlier[2] = {{LINK_KIND_ETH, 20, PROTO_TRUE}, {LINK_KIND_WIFI_AP, 5, PROTO_TRUE}};
+    LinkIface earlier[2] = {{LINK_KIND_ETH, 20, EMBED_TRUE}, {LINK_KIND_WIFI_AP, 5, EMBED_TRUE}};
     bind(&m, earlier, 2);
     TEST_ASSERT_EQUAL_INT(0, active(&m));
 
     // Equal priority: the lower index, so the choice is not left to the walk.
-    LinkIface tied[2] = {{LINK_KIND_ETH, 10, PROTO_TRUE}, {LINK_KIND_WIFI_STA, 10, PROTO_TRUE}};
+    LinkIface tied[2] = {{LINK_KIND_ETH, 10, EMBED_TRUE}, {LINK_KIND_WIFI_STA, 10, EMBED_TRUE}};
     bind(&m, tied, 2);
     TEST_ASSERT_EQUAL_INT(0, active(&m));
 
     // Three at the same priority still picks the first.
     LinkIface all_tied[3] = {
-        {LINK_KIND_ETH, 7, PROTO_TRUE}, {LINK_KIND_WIFI_STA, 7, PROTO_TRUE}, {LINK_KIND_WIFI_AP, 7, PROTO_TRUE}};
+        {LINK_KIND_ETH, 7, EMBED_TRUE}, {LINK_KIND_WIFI_STA, 7, EMBED_TRUE}, {LINK_KIND_WIFI_AP, 7, EMBED_TRUE}};
     bind(&m, all_tied, 3);
     TEST_ASSERT_EQUAL_INT(0, active(&m));
 }
@@ -100,26 +100,26 @@ void test_selection_is_total_order_over_priority_then_index(void)
 // falls back to the best of what remains. from and to name the transition either way.
 void test_escalation_and_failover_walk_the_priority_order(void)
 {
-    TEST_ASSERT_TRUE(set_up(&g_m, 1, PROTO_TRUE)); // WiFi STA first: nothing was up
+    TEST_ASSERT_TRUE(set_up(&g_m, 1, EMBED_TRUE)); // WiFi STA first: nothing was up
     TEST_ASSERT_EQUAL_INT(-1, LinkV.from);
     TEST_ASSERT_EQUAL_INT(1, LinkV.to);
 
-    TEST_ASSERT_TRUE(set_up(&g_m, 0, PROTO_TRUE)); // Ethernet beats it
+    TEST_ASSERT_TRUE(set_up(&g_m, 0, EMBED_TRUE)); // Ethernet beats it
     TEST_ASSERT_EQUAL_INT(1, LinkV.from);
     TEST_ASSERT_EQUAL_INT(0, LinkV.to);
 
-    TEST_ASSERT_FALSE(set_up(&g_m, 2, PROTO_TRUE)); // softAP loses to both
+    TEST_ASSERT_FALSE(set_up(&g_m, 2, EMBED_TRUE)); // softAP loses to both
     TEST_ASSERT_EQUAL_INT(0, LinkV.from);
     TEST_ASSERT_EQUAL_INT(0, LinkV.to);
 
-    TEST_ASSERT_TRUE(set_up(&g_m, 0, PROTO_FALSE)); // Ethernet drops: next best is WiFi STA
+    TEST_ASSERT_TRUE(set_up(&g_m, 0, EMBED_FALSE)); // Ethernet drops: next best is WiFi STA
     TEST_ASSERT_EQUAL_INT(0, LinkV.from);
     TEST_ASSERT_EQUAL_INT(1, LinkV.to);
 
-    TEST_ASSERT_TRUE(set_up(&g_m, 1, PROTO_FALSE)); // and then the softAP
+    TEST_ASSERT_TRUE(set_up(&g_m, 1, EMBED_FALSE)); // and then the softAP
     TEST_ASSERT_EQUAL_INT(2, LinkV.to);
 
-    TEST_ASSERT_TRUE(set_up(&g_m, 2, PROTO_FALSE)); // nothing left
+    TEST_ASSERT_TRUE(set_up(&g_m, 2, EMBED_FALSE)); // nothing left
     TEST_ASSERT_EQUAL_INT(-1, LinkV.to);
     TEST_ASSERT_EQUAL_INT(-1, active(&g_m));
 }
@@ -128,14 +128,14 @@ void test_escalation_and_failover_walk_the_priority_order(void)
 // carrier state it already holds moves nothing, however many times it is set.
 void test_changed_reports_a_moved_egress_only(void)
 {
-    TEST_ASSERT_TRUE(set_up(&g_m, 0, PROTO_TRUE));
-    TEST_ASSERT_FALSE(set_up(&g_m, 0, PROTO_TRUE));
-    TEST_ASSERT_FALSE(set_up(&g_m, 0, PROTO_TRUE));
+    TEST_ASSERT_TRUE(set_up(&g_m, 0, EMBED_TRUE));
+    TEST_ASSERT_FALSE(set_up(&g_m, 0, EMBED_TRUE));
+    TEST_ASSERT_FALSE(set_up(&g_m, 0, EMBED_TRUE));
     TEST_ASSERT_EQUAL_INT(0, active(&g_m));
 
     // A lower-priority link going up and back down never touches the active one.
-    TEST_ASSERT_FALSE(set_up(&g_m, 2, PROTO_TRUE));
-    TEST_ASSERT_FALSE(set_up(&g_m, 2, PROTO_FALSE));
+    TEST_ASSERT_FALSE(set_up(&g_m, 2, EMBED_TRUE));
+    TEST_ASSERT_FALSE(set_up(&g_m, 2, EMBED_FALSE));
     TEST_ASSERT_EQUAL_INT(0, active(&g_m));
 }
 
@@ -143,7 +143,7 @@ void test_changed_reports_a_moved_egress_only(void)
 // active interface is unmoved by the asking.
 void test_select_does_not_move_the_active_interface(void)
 {
-    (void)set_up(&g_m, 1, PROTO_TRUE);
+    (void)set_up(&g_m, 1, EMBED_TRUE);
     TEST_ASSERT_EQUAL_INT(1, select_best(&g_m));
     TEST_ASSERT_EQUAL_INT(1, select_best(&g_m));
     TEST_ASSERT_EQUAL_INT(1, active(&g_m));
@@ -153,14 +153,14 @@ void test_select_does_not_move_the_active_interface(void)
 // the same interface as both the previous and the current one.
 void test_an_index_past_the_table_changes_nothing(void)
 {
-    (void)set_up(&g_m, 1, PROTO_TRUE);
+    (void)set_up(&g_m, 1, EMBED_TRUE);
 
-    TEST_ASSERT_FALSE(set_up(&g_m, 3, PROTO_TRUE));
+    TEST_ASSERT_FALSE(set_up(&g_m, 3, EMBED_TRUE));
     TEST_ASSERT_EQUAL_INT(1, LinkV.from);
     TEST_ASSERT_EQUAL_INT(1, LinkV.to);
     TEST_ASSERT_EQUAL_INT(1, active(&g_m));
 
-    TEST_ASSERT_FALSE(set_up(&g_m, (size_t)-1, PROTO_TRUE));
+    TEST_ASSERT_FALSE(set_up(&g_m, (size_t)-1, EMBED_TRUE));
     TEST_ASSERT_EQUAL_INT(1, active(&g_m));
 }
 
@@ -174,7 +174,7 @@ void test_a_manager_with_no_table_carries_nothing(void)
     TEST_ASSERT_EQUAL_INT(-1, select_best(&m));
     TEST_ASSERT_EQUAL_INT(-1, active(&m));
 
-    TEST_ASSERT_FALSE(set_up(&m, 0, PROTO_TRUE));
+    TEST_ASSERT_FALSE(set_up(&m, 0, EMBED_TRUE));
     TEST_ASSERT_EQUAL_INT(-1, LinkV.from);
     TEST_ASSERT_EQUAL_INT(-1, LinkV.to);
 }
@@ -186,7 +186,7 @@ void test_a_missing_manager_is_refused(void)
     TEST_ASSERT_EQUAL_INT(-1, active(NULL));
     TEST_ASSERT_EQUAL_INT(-1, select_best(NULL));
 
-    TEST_ASSERT_FALSE(set_up(NULL, 0, PROTO_TRUE));
+    TEST_ASSERT_FALSE(set_up(NULL, 0, EMBED_TRUE));
     TEST_ASSERT_EQUAL_INT(-1, LinkV.from);
     TEST_ASSERT_EQUAL_INT(-1, LinkV.to);
 }

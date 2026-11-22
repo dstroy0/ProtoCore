@@ -53,7 +53,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_PROTOBUF
 
@@ -95,7 +95,7 @@ typedef struct
     uint32_t u32;        ///< I32 bits: a fixed32 payload, or the bits a decode converts
     float f32;           ///< float payload, encoded as I32
     double f64;          ///< double payload, encoded as I64
-    proto_bool flag;     ///< bool payload, encoded as the VARINT 0 or 1
+    embed_bool flag;     ///< bool payload, encoded as the VARINT 0 or 1
     const uint8_t *data; ///< LEN payload octets
     size_t len;          ///< how many of them there are
     const char *text;    ///< NUL-terminated LEN payload, bounded by the row's capacity
@@ -167,7 +167,7 @@ typedef struct
     ProtobufTagArgs tag;       ///< what a tag says
     ProtobufValueArgs value;   ///< what a payload carries
     ProtobufSourceArgs source; ///< what a decode walks
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint64_t u64;
     int64_t i64;
@@ -200,10 +200,10 @@ typedef struct
     void (*const reader_open)(uint8_t *work);
     void (*const read_varint)(uint8_t *work);
     void (*const read_record)(uint8_t *work);
-    void (*const zigzag64)(uint8_t *work);
-    void (*const zigzag32)(uint8_t *work);
-    void (*const float_bits)(uint8_t *work);
-    void (*const double_bits)(uint8_t *work);
+    void (*const zigzag64)(const uint8_t *work);
+    void (*const zigzag32)(const uint8_t *work);
+    void (*const float_bits)(const uint8_t *work);
+    void (*const double_bits)(const uint8_t *work);
 } ProtobufNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -225,10 +225,10 @@ void protocore_protobuf_writer_finish(uint8_t *work);
 void protocore_protobuf_reader_open(uint8_t *work);
 void protocore_protobuf_read_varint(uint8_t *work);
 void protocore_protobuf_read_record(uint8_t *work);
-void protocore_protobuf_zigzag64(uint8_t *work);
-void protocore_protobuf_zigzag32(uint8_t *work);
-void protocore_protobuf_float_bits(uint8_t *work);
-void protocore_protobuf_double_bits(uint8_t *work);
+void protocore_protobuf_zigzag64(const uint8_t *work);
+void protocore_protobuf_zigzag32(const uint8_t *work);
+void protocore_protobuf_float_bits(const uint8_t *work);
+void protocore_protobuf_double_bits(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -271,6 +271,6 @@ uint8_t *protocore_protobuf_span(void);
 
 #endif // PROTOCORE_ENABLE_PROTOBUF
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_PROTOBUF_H

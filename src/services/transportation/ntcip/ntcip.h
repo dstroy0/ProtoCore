@@ -25,12 +25,12 @@
 
 #if PROTOCORE_ENABLE_NTCIP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief NTCIP object roots under 1.3.6.1.4.1.1206.4.2 (private.enterprises.nema.transportation.devices).
  *
- * Each is the OID prefix of a scalar/column; the leaf/instance index is appended by
+ * Each is the OID prefix of a scalar/column. The leaf/instance index is appended by
  * protocore_ntcip_oid() (a scalar takes .0; a table column takes the row index).
  */
 extern const uint32_t NTCIP_1202_MAX_PHASES[]; ///< maxPhases (1202): number of phases. len via _len.
@@ -55,7 +55,7 @@ extern const size_t NTCIP_1203_DMS_MESSAGE_MULTI_LEN;
  */
 size_t protocore_ntcip_oid(const uint32_t *root, size_t root_len, uint32_t index, uint32_t *out, size_t out_cap);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTCIP
 

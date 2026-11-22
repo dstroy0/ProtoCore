@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_FINS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -53,11 +53,10 @@ PROTOCORE_BEGIN_DECLS
 #define FINS_SRC_STOP 0x02
 
 /** @brief The operating mode requested by a RUN (0401) command. */
-typedef enum PROTO_ENUM_PACKED
-{
-    FINS_RUN_MODE_MONITOR = 0x02, ///< MONITOR mode (program runs, online edits allowed)
-    FINS_RUN_MODE_RUN = 0x04,     ///< RUN mode (program runs, no online edits)
-} FinsRunMode;
+EMBED_ENUM_BYTE(FinsRunMode,
+                FINS_RUN_MODE_MONITOR = 0x02, ///< MONITOR mode (program runs, online edits allowed)
+                FINS_RUN_MODE_RUN = 0x04,     ///< RUN mode (program runs, no online edits)
+);
 
 /** @brief The 10-octet FINS routing header. */
 typedef struct
@@ -214,7 +213,7 @@ typedef struct
     FinsBuildStopArgs build_stop_args;
     FinsParseCommandArgs parse_command_args;
     FinsParseResponseArgs parse_response_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } FinsVars;
 
@@ -224,24 +223,24 @@ extern FinsVars FinsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_command)(uint8_t *work);
+    void (*const build_command)(const uint8_t *work);
     void (*const build_memory_area_read)(uint8_t *work);
     void (*const build_memory_area_write)(uint8_t *work);
     void (*const build_run)(uint8_t *work);
     void (*const build_stop)(uint8_t *work);
-    void (*const parse_command)(uint8_t *work);
-    void (*const parse_response)(uint8_t *work);
+    void (*const parse_command)(const uint8_t *work);
+    void (*const parse_response)(const uint8_t *work);
 } FinsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FinsV or a region of the borrow at a fixed offset.
-void protocore_fins_build_command(uint8_t *work);
+void protocore_fins_build_command(const uint8_t *work);
 void protocore_fins_build_memory_area_read(uint8_t *work);
 void protocore_fins_build_memory_area_write(uint8_t *work);
 void protocore_fins_build_run(uint8_t *work);
 void protocore_fins_build_stop(uint8_t *work);
-void protocore_fins_parse_command(uint8_t *work);
-void protocore_fins_parse_response(uint8_t *work);
+void protocore_fins_parse_command(const uint8_t *work);
+void protocore_fins_parse_response(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -257,7 +256,7 @@ static const FinsNs Fins __attribute__((unused)) = {
     .parse_response = protocore_fins_parse_response,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FINS
 

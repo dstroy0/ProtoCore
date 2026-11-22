@@ -45,7 +45,7 @@ static int failsafe_add(const char *name, uint32_t deadline_ms, uint32_t now)
 }
 
 /** @brief Check lifeline @p id in against @p now. */
-static proto_bool failsafe_feed(int id, uint32_t now)
+static embed_bool failsafe_feed(int id, uint32_t now)
 {
     FailsafeV.args.id = id;
     FailsafeV.args.now = now;

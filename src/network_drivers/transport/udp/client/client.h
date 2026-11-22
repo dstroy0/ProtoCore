@@ -27,7 +27,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The sending side of UDP.
@@ -54,7 +54,7 @@ typedef struct
     uint16_t dst_port;
     const uint8_t *data;
     size_t len;
-    proto_bool ok;
+    embed_bool ok;
 } UdpClientVars;
 
 /** @brief The operands and the outcome. */
@@ -63,12 +63,12 @@ extern UdpClientVars UdpClientV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const sendto)(uint8_t *work);
+    void (*const sendto)(const uint8_t *work);
 } UdpClientNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in UdpClientV or a region of the borrow at a fixed offset.
-void protocore_udp_client_sendto(uint8_t *work);
+void protocore_udp_client_sendto(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -89,6 +89,6 @@ static const UdpClientNs UdpClient __attribute__((unused)) = {
  */
 uint8_t *protocore_udp_client_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_UDP_CLIENT_H

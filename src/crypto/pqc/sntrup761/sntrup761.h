@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file sntrup761.h
@@ -48,9 +48,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*keypair)(uint8_t *, uint8_t *, uint8_t *);
-    proto_bool (*enc)(uint8_t *, const uint8_t *, uint8_t *, uint8_t *);
-    proto_bool (*dec)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
+    embed_bool (*keypair)(uint8_t *, uint8_t *, uint8_t *);
+    embed_bool (*enc)(uint8_t *, const uint8_t *, uint8_t *, uint8_t *);
+    embed_bool (*dec)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
 } Sntrup761Ns;
 PROTOCORE_NS_LAYOUT(Sntrup761Ns, keypair, enc, dec);
 
@@ -59,32 +59,32 @@ PROTOCORE_NS_LAYOUT(Sntrup761Ns, keypair, enc, dec);
  * @param work PROTOCORE_SNTRUP761_BORROW bytes the caller took. Not held past the call.
  * @param pk PROTOCORE_SNTRUP761_PK_BYTES bytes
  * @param sk PROTOCORE_SNTRUP761_SK_BYTES bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk);
+embed_bool protocore_sntrup761_keypair(uint8_t *work, uint8_t *pk, uint8_t *sk);
 /**
  * @brief Draw a short polynomial, encrypt it under pk, derive the session key.
  * @param work PROTOCORE_SNTRUP761_BORROW bytes the caller took. Not held past the call.
  * @param pk the peer's public key, PROTOCORE_SNTRUP761_PK_BYTES bytes
  * @param ct PROTOCORE_SNTRUP761_CT_BYTES bytes
  * @param ss PROTOCORE_SNTRUP761_SS_BYTES bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sntrup761_enc(uint8_t *work, const uint8_t *pk, uint8_t *ct, uint8_t *ss);
+embed_bool protocore_sntrup761_enc(uint8_t *work, const uint8_t *pk, uint8_t *ct, uint8_t *ss);
 /**
  * @brief Recover the session key from the peer's ciphertext under sk.
  * @param work PROTOCORE_SNTRUP761_BORROW bytes the caller took. Not held past the call.
  * @param sk this side's secret key, PROTOCORE_SNTRUP761_SK_BYTES bytes
  * @param ct the peer's ciphertext, PROTOCORE_SNTRUP761_CT_BYTES bytes
  * @param ss PROTOCORE_SNTRUP761_SS_BYTES bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss);
+embed_bool protocore_sntrup761_dec(uint8_t *work, const uint8_t *sk, const uint8_t *ct, uint8_t *ss);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Sntrup761Ns Sntrup761 PROTOCORE_UNUSED = {
     .keypair = protocore_sntrup761_keypair, .enc = protocore_sntrup761_enc, .dec = protocore_sntrup761_dec};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SNTRUP761_H

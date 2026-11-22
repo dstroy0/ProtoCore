@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+#
+# What a repair may touch, and the errors that stop one before it is written.
+#
+
+import os
+
+from .context import NAMED_STANDARD, RFC_2119
+from .manifest import manifest_listed, reconcile_command
+from .scan import banned_hits
+from .tier import tier_of
+from .verbatim import verbatim_root
+
+
+
+# --------------------------------------------------------------------
+# WHAT A REWRITE MAY TOUCH, AND IT IS ALMOST NOTHING
+# --------------------------------------------------------------------
+#
+# A BANNED HINGE IS DISSOLVED AND NEVER REPLACED. Detection is mechanical. SUBSTITUTION is where the
+# judgement lives, and it is exactly where an automatic rewrite does damage.
+#
+# THE REASON IS CHECKABLE IN ONE DOCUMENT AND IT IS WHY THIS IS A PERMANENT LIMIT AND NOT A GAP.
+# A construction ban targets a rhetorical move and not a word. The nearest synonym preserves the
+# move and lands on another banned item. `rather` is banned at code-documentation:110. Its obvious
+# repair is the X-not-Y shape, which is banned at :146 of the same document, thirty-six lines later:
+# "The X-not-Y shape sounds decisive and carries almost nothing". Anyone repairing the first without
+# reading the second produces the second at scale. A pass turning fifty `rather` sites into fifty
+# X-not-Y sites reports fifty fixes and leaves the tree measurably worse.
+#
+# IT HAS HAPPENED. Three times in one day, three different people, all caught before shipping:
+# `seamless` proposed as `fast`, where both are named in one praise-adjective ban; "in the header,
+# not in the .c" nearly written to replace a `rather than`; and eleven X-not-Y substitutions across
+# one file, rejected on review.
+#
+# THE TWO LEGAL TREATMENTS, from :110 and :146 read together. Give the second half its own plain
+# declarative sentence, or drop the weaker half. Dropping is the default, and :146's test is whether
+# the reader would otherwise land on the wrong one. THE TEST FOR A BAD REPAIR IS MECHANICAL: if the
+# two halves are still adjacent across a comma, the shape survived and only its wording changed.
+#
+# SO THE ALPHABET TIER IS THE ONLY TIER A REWRITE MAY REACH. initialised to initialized, licence to
+# license, behaviour to behavior. Those are token for token and the replacement cannot change the
+# shape of the sentence. TIER A AND TIER B STAY REPORT-ONLY permanently. This is not a feature
+# nobody has written yet. Read code-documentation:110 and :146 before changing this line.
+#
+# Pair it with :143, which the note above AUTHORITY already quotes: a word that reads as a tic in
+# one construction only is bounded to that construction. Together the two say the whole thing. Bans
+# name constructions. Detection AND repair both operate on constructions and never on words, and
+# there is no construction a machine can repair.
+#
+# THE REWRITING HALF IS DELIBERATELY NOT IMPLEMENTED. `--fix` runs this policy over the findings and
+# prints what it would and would not touch, and writes nothing. The gate is here first, and on
+# purpose: whoever adds the writing half has to come through fix_error, and cannot add it without
+# meeting the manifest, verbatim, generated and legal errors that are already tested beside it.
+FIX_TIERS = frozenset(("alphabet",))
+
+
+def fix_error(path, tier, at=None, regions=None, line=""):
+    """Why a rewrite may not touch this site, or None where it may.
+
+    Every branch is an error and the order decides only which reason is printed first. The tier
+    test leads because it alone holds everywhere and is never lifted.
+    """
+    if tier not in FIX_TIERS:
+        return (
+            "a tier %s finding is a construction and not a token. No replacement can be "
+            "mechanical: code-documentation:110 bans `rather` and :146 bans the X-not-Y shape "
+            "that repairs it. An automatic repair produces the second ban while removing "
+            "the first. Report only, permanently." % tier
+        )
+
+    held = verbatim_root(path)
+    if held:
+        return "under %s, which is %s" % (held[0], held[1])
+
+    listed = manifest_listed(path)
+    if listed:
+        manifest, signature, named = listed
+        return (
+            "attested as %s in %s%s. Changing one byte makes its hash wrong and invalidates a "
+            "signature whose purpose is to say what a published measurement was taken over. "
+            "After any run that writes in this tree: %s"
+            % (
+                named,
+                os.path.basename(manifest),
+                ", signed by %s" % os.path.basename(signature) if signature else "",
+                reconcile_command(manifest),
+            )
+        )
+
+    if regions and (at in regions):
+        return (
+            "inside a region generated by %s. CI regenerates it. An edit here is reverted "
+            "and the finding returns. Fix the generator, then rerun it: a source fix not paired "
+            "with regeneration reds the pull request that carried it." % regions[at]
+        )
+
+    if RFC_2119.search(line):
+        return (
+            "the line carries an RFC 2119 normative keyword in capitals. Its wording is a "
+            "requirement somebody agreed to and not this project's prose"
+        )
+
+    if NAMED_STANDARD.search(line):
+        return (
+            "the line names a standard by number. The terms around it are that standard's "
+            "own field names. Rewriting one makes the comment cite something that is not in "
+            "the document it names"
+        )
+
+    return None
+
+
+def fix_plan(path, lines, said, regions, errors, allowed):
+    """Sort one file's findings into what a rewrite could touch and what it errors.
+
+    Appends to the two lists the caller holds. Writes nothing and is never going to: the note above
+    FIX_TIERS says why the construction tiers are report-only permanently, with the two sections
+    that say it. What this does is make the error visible before anybody writes the other half.
+    """
+    quotations = path.endswith(".md")
+    comments = not path.endswith((".md", ".tex"))
+    displayed = path.replace("\\", "/")
+    for at, pattern, token in banned_hits(said, quotations, comments, path):
+        tier = tier_of(pattern)
+        line = lines[at - 1] if 0 < at <= len(lines) else ""
+        why = fix_error(path, tier, at, regions, line)
+        said_token = " ".join(token.split())
+        if why:
+            errors.append("%s:%d %r: %s" % (displayed, at, said_token, why))
+        else:
+            allowed.append("%s:%d %r, token for token" % (displayed, at, said_token))

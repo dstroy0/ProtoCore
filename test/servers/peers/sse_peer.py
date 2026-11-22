@@ -60,7 +60,7 @@ def _parse_event_stream(data: bytes):
     """WHATWG "interpret an event stream": yield dicts {event,id,data} per dispatched event.
 
     Faithful to the algorithm: lines split on \\n / \\r / \\r\\n; a blank line dispatches;
-    ':'-prefixed lines are comments; 'data' accumulates with trailing-newline joins; an
+    ':'-prefixed lines are comments; 'data' accumulates with trailing-newline joins. An
     event with an empty data buffer is not dispatched; default event type is 'message'.
     """
     text = data.decode("utf-8", errors="replace")

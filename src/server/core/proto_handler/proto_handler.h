@@ -28,7 +28,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Per-protocol connection event/poll callbacks (the server's dispatch vtable).
@@ -51,6 +51,6 @@ typedef struct ProtoHandler
  */
 void protocore_register_builtins(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_PROTO_HANDLER_H

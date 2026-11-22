@@ -155,7 +155,7 @@ typedef struct
     uint8_t slot;               ///< the connection every call names
     void (*poll)(uint8_t slot); ///< what set_poll installs as the per-tick step
     HttpHdrArgs hdr_args;       ///< the header a token scan reads
-    proto_bool ok;
+    embed_bool ok;
     const struct ProtoHandler *handler;
 #if PROTOCORE_ENABLE_KEEPALIVE
 #endif
@@ -169,23 +169,23 @@ extern HttpConnVars HttpConnV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const reset)(uint8_t *work);
+    void (*const reset)(const uint8_t *work);
     void (*const conn_open)(uint8_t *work);
     void (*const parse)(uint8_t *work);
     void (*const keepalive_eval)(uint8_t *work);
     void (*const has_token)(uint8_t *work);
-    void (*const proto_handler)(uint8_t *work);
+    void (*const proto_handler)(const uint8_t *work);
     void (*const set_poll)(uint8_t *work);
 } HttpConnNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpConnV or a region of the borrow at a fixed offset.
-void protocore_http_conn_reset(uint8_t *work);
+void protocore_http_conn_reset(const uint8_t *work);
 void protocore_http_conn_conn_open(uint8_t *work);
 void protocore_http_conn_parse(uint8_t *work);
 void protocore_http_conn_keepalive_eval(uint8_t *work);
 void protocore_http_conn_has_token(uint8_t *work);
-void protocore_http_conn_proto_handler(uint8_t *work);
+void protocore_http_conn_proto_handler(const uint8_t *work);
 void protocore_http_conn_set_poll(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

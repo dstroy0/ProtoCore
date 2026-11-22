@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 // DTLS 1.3 real-peer interop harness: a tiny UDP server that wraps the library's transport-neutral
-// protocore_dtls_conn state machine, so it can be driven by a reference DTLS 1.3 client (wolfSSL). It is a
+// protocore_dtls_conn state machine. So it can be driven by a reference DTLS 1.3 client (wolfSSL). It is a
 // Linux test driver, NOT part of the library. See README.md for the wolfSSL build + run steps.
 //
 //   usage: protocore_dtls_interop_server <udp-port> <cert.der> <ed25519-seed-32.bin>
 //
 // It completes the DTLS 1.3 handshake against the peer, then decrypts inbound application records
-// (epoch 3) and echoes them back, printing "INTEROP OK" once a full round trip has happened.
+// (epoch 3) and echoes them back, printing "INTEROP OK" once a full round trip happened.
 
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
 #include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
@@ -71,8 +71,8 @@ int main(int argc, char **argv)
     cfg.server_random = srand;
     cfg.cookie_key = cookie_key;
     DtlsConn conn;
-    proto_bool inited =
-        PROTO_FALSE; // the HRR cookie binds the peer address, so init once the first datagram reveals it
+    embed_bool inited =
+        EMBED_FALSE; // the HRR cookie binds the peer address, so init once the first datagram reveals it
 
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     int one = 1;
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
             DtlsServerV.init_args.peer_addr = paddr;
             DtlsServerV.init_args.peer_addr_len = sizeof paddr;
             DtlsServer.init(dtls_server_work);
-            inited = PROTO_TRUE;
+            inited = EMBED_TRUE;
         }
         DtlsServerV.established_args.c = &conn;
         DtlsServer.established(dtls_server_work);

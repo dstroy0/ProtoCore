@@ -54,13 +54,13 @@ static void test_sec7_public_key_is_derived_from_the_seed(void)
 
     // A derived key is not the seed, and is not zero.
     uint8_t acc = 0;
-    proto_bool same_as_seed = PROTO_TRUE;
+    embed_bool same_as_seed = EMBED_TRUE;
     for (int k = 0; k < 32; k++)
     {
         acc |= pub[k];
         if (pub[k] != seed[k])
         {
-            same_as_seed = PROTO_FALSE;
+            same_as_seed = EMBED_FALSE;
         }
     }
     TEST_ASSERT_NOT_EQUAL(0, acc);
@@ -89,12 +89,12 @@ static void test_sec7_different_seeds_give_different_keys(void)
     protocore_ssh_client_pubkey(s1, a);
     protocore_ssh_client_pubkey(s2, b);
 
-    proto_bool same = PROTO_TRUE;
+    embed_bool same = EMBED_TRUE;
     for (int k = 0; k < 32; k++)
     {
         if (a[k] != b[k])
         {
-            same = PROTO_FALSE;
+            same = EMBED_FALSE;
             break;
         }
     }

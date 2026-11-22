@@ -129,14 +129,14 @@ static size_t unhex(const char *h, uint8_t *out)
 // A keyed AES-128-GCM context over one reusable work region. Some backends attach vendor resources
 // to a context, so the previous one is released before the next is built.
 static uint8_t g_gcm_ws[PROTOCORE_AES128GCM_BORROW] __attribute__((aligned(8)));
-static proto_bool g_gcm_live = PROTO_FALSE;
+static embed_bool g_gcm_live = EMBED_FALSE;
 static uint8_t *gcm(const uint8_t *key)
 {
     if (g_gcm_live)
     {
         Aes128Gcm.key_wipe(g_gcm_ws);
     }
-    g_gcm_live = PROTO_TRUE;
+    g_gcm_live = EMBED_TRUE;
     Aes128GcmV.key_args.key = key;
     Aes128Gcm.key_init(g_gcm_ws);
     return g_gcm_ws;
@@ -158,7 +158,7 @@ static void gcm_seal(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, 
 }
 
 // One opened record; the outcome is the return, as the flat call's was.
-static proto_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t alen, const uint8_t *ct,
+static embed_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t alen, const uint8_t *ct,
                            size_t clen, const uint8_t *tag, uint8_t *out)
 {
     uint8_t *w = gcm(key);
@@ -177,7 +177,7 @@ static proto_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t 
 // Compute the whole MAC and compare the leading tag_bits/8 octets to the vector. A valid row must
 // match; an invalid row must not, which is what catches an implementation that ignores a truncated
 // or bit-flipped tag.
-static void run_hmac(const KatMac *rows, size_t n, proto_bool is512)
+static void run_hmac(const KatMac *rows, size_t n, embed_bool is512)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -195,7 +195,7 @@ static void run_hmac(const KatMac *rows, size_t n, proto_bool is512)
             HmacSha256.mac(g_work, key, klen, msg, mlen, got);
         }
         size_t cmp = (size_t)v->tag_bits / 8;
-        proto_bool match = (wlen == cmp) && memcmp(got, want, cmp) == 0;
+        embed_bool match = (wlen == cmp) && memcmp(got, want, cmp) == 0;
         if (v->valid)
         {
             TEST_ASSERT_TRUE_MESSAGE(match, v->tag);
@@ -209,12 +209,12 @@ static void run_hmac(const KatMac *rows, size_t n, proto_bool is512)
 
 void test_hmac_sha256(void)
 {
-    run_hmac(KAT_HMAC_SHA256, ROWS(KAT_HMAC_SHA256), PROTO_FALSE);
+    run_hmac(KAT_HMAC_SHA256, ROWS(KAT_HMAC_SHA256), EMBED_FALSE);
 }
 
 void test_hmac_sha512(void)
 {
-    run_hmac(KAT_HMAC_SHA512, ROWS(KAT_HMAC_SHA512), PROTO_TRUE);
+    run_hmac(KAT_HMAC_SHA512, ROWS(KAT_HMAC_SHA512), EMBED_TRUE);
 }
 
 // ---- AEAD_AES_128_GCM -----------------------------------------------------
@@ -320,9 +320,9 @@ void test_ed25519_verify(void)
         unhex(v->pub, pub);
         size_t mlen = unhex(v->msg, msg);
         size_t slen = unhex(v->sig, sig);
-        proto_bool ed25519_ok = Ed25519.verify(g_work, pub, msg, mlen, sig);
-        proto_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && ed25519_ok;
-        TEST_ASSERT_EQUAL_MESSAGE(v->valid ? PROTO_TRUE : PROTO_FALSE, ok, v->sig);
+        embed_bool ed25519_ok = Ed25519.verify(g_work, pub, msg, mlen, sig);
+        embed_bool ok = (slen == PROTOCORE_ED25519_SIG_LEN) && ed25519_ok;
+        TEST_ASSERT_EQUAL_MESSAGE(v->valid ? EMBED_TRUE : EMBED_FALSE, ok, v->sig);
     }
 }
 

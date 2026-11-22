@@ -21,7 +21,7 @@
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/ina219/ina219.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -45,13 +45,13 @@ uint8_t *protocore_ina219_span(void)
     return s_own.span;
 }
 
-void protocore_ina219_bus_mv(uint8_t *work);
-void protocore_ina219_calibration(uint8_t *work);
-void protocore_ina219_current_ua(uint8_t *work);
-void protocore_ina219_power_uw(uint8_t *work);
-void protocore_ina219_shunt_uv(uint8_t *work);
+void protocore_ina219_bus_mv(const uint8_t *work);
+void protocore_ina219_calibration(const uint8_t *work);
+void protocore_ina219_current_ua(const uint8_t *work);
+void protocore_ina219_power_uw(const uint8_t *work);
+void protocore_ina219_shunt_uv(const uint8_t *work);
 
-void protocore_ina219_bus_mv(uint8_t *work)
+void protocore_ina219_bus_mv(const uint8_t *work)
 {
     (void)work;
     uint16_t raw = Ina219V.bus_mv_args.raw;
@@ -59,7 +59,7 @@ void protocore_ina219_bus_mv(uint8_t *work)
     Ina219V.value = (int32_t)((raw >> 3) * 4); // value in bits [15:3], LSB 4 mV
 }
 
-void protocore_ina219_shunt_uv(uint8_t *work)
+void protocore_ina219_shunt_uv(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ina219V.shunt_uv_args.raw;
@@ -67,7 +67,7 @@ void protocore_ina219_shunt_uv(uint8_t *work)
     Ina219V.value = (int32_t)raw * 10; // LSB 10 uV, signed
 }
 
-void protocore_ina219_calibration(uint8_t *work)
+void protocore_ina219_calibration(const uint8_t *work)
 {
     (void)work;
     uint32_t current_lsb_ua = Ina219V.calibration_args.current_lsb_ua;
@@ -84,7 +84,7 @@ void protocore_ina219_calibration(uint8_t *work)
     Ina219V.cal = (uint16_t)(cal > 0xFFFF ? 0xFFFF : cal);
 }
 
-void protocore_ina219_current_ua(uint8_t *work)
+void protocore_ina219_current_ua(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ina219V.current_ua_args.raw;
@@ -93,7 +93,7 @@ void protocore_ina219_current_ua(uint8_t *work)
     Ina219V.value = (int32_t)((int64_t)raw * current_lsb_ua);
 }
 
-void protocore_ina219_power_uw(uint8_t *work)
+void protocore_ina219_power_uw(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ina219V.power_uw_args.raw;
@@ -133,7 +133,10 @@ static_assert(INA219_OFF_CTX % _Alignof(Ina219Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define INA219_CTX(w) ((Ina219Ctx *)(void *)((w) + INA219_OFF_CTX))
+#define INA219_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ina219Ctx *)(const void *)((w) + INA219_OFF_CTX),                                      \
+        default: (Ina219Ctx *)(void *)((w) + INA219_OFF_CTX))
 
 // Zero is "not set yet", which is the configured default - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.
@@ -150,7 +153,7 @@ static uint32_t dev_lsb_ua(uint8_t *work)
 }
 
 // One transaction: the register byte then its value, big-endian.
-static proto_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
+static embed_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
 {
     INA219_CTX(work)->frame[0] = reg;
     (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = &INA219_CTX(work)->frame[1], .val = v,
@@ -159,14 +162,14 @@ static proto_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
 }
 
 // Name the register, then turn the bus around without releasing it (repeated start).
-static proto_bool rd16(uint8_t *work, uint8_t reg, uint16_t *v)
+static embed_bool rd16(uint8_t *work, uint8_t reg, uint16_t *v)
 {
     if (!protocore_i2c_write_read(dev_addr(work), &reg, 1, INA219_CTX(work)->frame, 2))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *v = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = INA219_CTX(work)->frame, .width = MMGR_ENDIAN_16);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_ina219_begin(uint8_t *work)
@@ -178,7 +181,7 @@ void protocore_ina219_begin(uint8_t *work)
     INA219_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_INA219_I2C_ADDR;
     INA219_CTX(work)->lsb_ua = current_lsb_ua ? current_lsb_ua : (uint32_t)PROTOCORE_INA219_CURRENT_LSB_UA;
     protocore_i2c_begin();
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     Ina219V.calibration_args.current_lsb_ua = dev_lsb_ua(work);
     Ina219V.calibration_args.shunt_mohm = shunt_mohm ? shunt_mohm : (uint32_t)PROTOCORE_INA219_SHUNT_MOHM;
     protocore_ina219_calibration(work);
@@ -194,7 +197,7 @@ void protocore_ina219_read_bus_mv(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_BUS, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (millivolts)
@@ -203,7 +206,7 @@ void protocore_ina219_read_bus_mv(uint8_t *work)
         protocore_ina219_bus_mv(work);
         *millivolts = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 void protocore_ina219_read_shunt_uv(uint8_t *work)
@@ -213,7 +216,7 @@ void protocore_ina219_read_shunt_uv(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_SHUNT, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (microvolts)
@@ -222,7 +225,7 @@ void protocore_ina219_read_shunt_uv(uint8_t *work)
         protocore_ina219_shunt_uv(work);
         *microvolts = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 void protocore_ina219_read_current_ua(uint8_t *work)
@@ -232,7 +235,7 @@ void protocore_ina219_read_current_ua(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_CURRENT, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (microamps)
@@ -242,7 +245,7 @@ void protocore_ina219_read_current_ua(uint8_t *work)
         protocore_ina219_current_ua(work);
         *microamps = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 void protocore_ina219_read_power_uw(uint8_t *work)
@@ -252,7 +255,7 @@ void protocore_ina219_read_power_uw(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_POWER, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (microwatts)
@@ -262,12 +265,12 @@ void protocore_ina219_read_power_uw(uint8_t *work)
         protocore_ina219_power_uw(work);
         *microwatts = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Ina219Vars Ina219V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_INA219

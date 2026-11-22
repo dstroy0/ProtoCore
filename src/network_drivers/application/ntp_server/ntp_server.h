@@ -27,7 +27,7 @@
 
 #include "network_drivers/application/ntp/ntp.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_NTP_SERVER_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -85,7 +85,7 @@ typedef struct
 {
     NtpServerBuildResponseArgs build_response_args;
     NtpServerBeginArgs begin_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } NtpServerVars;
 
@@ -95,13 +95,13 @@ extern NtpServerVars NtpServerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_response)(uint8_t *work);
+    void (*const build_response)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
 } NtpServerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in NtpServerV or a region of the borrow at a fixed offset.
-void protocore_ntp_server_build_response(uint8_t *work);
+void protocore_ntp_server_build_response(const uint8_t *work);
 void protocore_ntp_server_begin(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -124,7 +124,7 @@ static const NtpServerNs NtpServer __attribute__((unused)) = {
  */
 uint8_t *protocore_ntp_server_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTP_SERVER
 

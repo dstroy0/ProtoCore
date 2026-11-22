@@ -28,7 +28,7 @@
 #include "numeros_scribo/numeros_scribo.h"
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_TELNET
 
@@ -107,7 +107,7 @@ typedef struct
     void (*const accept)(uint8_t *work);
     void (*const rx)(uint8_t *work);
     void (*const close)(uint8_t *work);
-    void (*const proto_handler)(uint8_t *work);
+    void (*const proto_handler)(const uint8_t *work);
 } TelnetNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -120,7 +120,7 @@ void protocore_telnet_client_count(uint8_t *work);
 void protocore_telnet_accept(uint8_t *work);
 void protocore_telnet_rx(uint8_t *work);
 void protocore_telnet_close(uint8_t *work);
-void protocore_telnet_proto_handler(uint8_t *work);
+void protocore_telnet_proto_handler(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -151,6 +151,6 @@ uint8_t *protocore_telnet_span(void);
 
 #endif // PROTOCORE_ENABLE_TELNET
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TELNET_H

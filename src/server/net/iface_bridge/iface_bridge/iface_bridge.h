@@ -34,7 +34,7 @@
 
 #include "shared/ip/ip.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_IFACE_BRIDGE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -42,24 +42,14 @@ PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_BRIDGE_TXN_HDR 4 ///< transaction frame header: write_len(2) + read_len(2), big-endian
 
-typedef enum PROTO_ENUM_PACKED
-{
-    BRIDGE_BUS_UART = 0,
-    BRIDGE_BUS_SPI = 1,
-    BRIDGE_BUS_I2C = 2
-} BridgeBus;
+EMBED_ENUM_BYTE(BridgeBus, BRIDGE_BUS_UART = 0, BRIDGE_BUS_SPI = 1, BRIDGE_BUS_I2C = 2);
 
-typedef enum PROTO_ENUM_PACKED
-{
-    BRIDGE_MODE_STREAM = 0,     ///< raw bidirectional passthrough (UART)
-    BRIDGE_MODE_TRANSACTION = 1 ///< framed write-then-read (SPI / I2C; also usable for UART)
-} BridgeMode;
+EMBED_ENUM_BYTE(BridgeMode,
+                BRIDGE_MODE_STREAM = 0,     ///< raw bidirectional passthrough (UART)
+                BRIDGE_MODE_TRANSACTION = 1 ///< framed write-then-read (SPI / I2C; also usable for UART)
+);
 
-typedef enum PROTO_ENUM_PACKED
-{
-    BRIDGE_PROTO_TCP = 0,
-    BRIDGE_PROTO_UDP = 1
-} BridgeProto;
+EMBED_ENUM_BYTE(BridgeProto, BRIDGE_PROTO_TCP = 0, BRIDGE_PROTO_UDP = 1);
 
 typedef struct BridgeTarget
 {
@@ -78,7 +68,7 @@ typedef struct
     uint16_t listen_port;   ///< nnnn
     BridgeProto proto;      ///< TCP or UDP
     BridgeTarget target;
-    proto_bool used;
+    embed_bool used;
 } BridgeRule;
 
 /** @brief What add takes: rule. */
@@ -159,7 +149,7 @@ typedef struct
     IfaceBridgeFindArgs find_args;
     IfaceBridgeTxnParseArgs txn_parse_args;
     IfaceBridgeTxnBuildArgs txn_build_args;
-    proto_bool ok;
+    embed_bool ok;
     const BridgeRule *rule;
     uint8_t u8;
     size_t n;
@@ -176,8 +166,8 @@ typedef struct
     void (*const map)(uint8_t *work);
     void (*const find)(uint8_t *work);
     void (*const count)(uint8_t *work);
-    void (*const txn_parse)(uint8_t *work);
-    void (*const txn_build)(uint8_t *work);
+    void (*const txn_parse)(const uint8_t *work);
+    void (*const txn_build)(const uint8_t *work);
 } IfaceBridgeNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -187,8 +177,8 @@ void protocore_iface_bridge_add(uint8_t *work);
 void protocore_iface_bridge_map(uint8_t *work);
 void protocore_iface_bridge_find(uint8_t *work);
 void protocore_iface_bridge_count(uint8_t *work);
-void protocore_iface_bridge_txn_parse(uint8_t *work);
-void protocore_iface_bridge_txn_build(uint8_t *work);
+void protocore_iface_bridge_txn_parse(const uint8_t *work);
+void protocore_iface_bridge_txn_build(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -215,7 +205,7 @@ static const IfaceBridgeNs IfaceBridge __attribute__((unused)) = {
  */
 uint8_t *protocore_iface_bridge_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IFACE_BRIDGE
 

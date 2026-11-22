@@ -7,7 +7,7 @@
 // protocore_dma_sim_capture (egress produce + read-back), and a loopback channel's TX->RX
 // round trip - all pure, in-memory engine work (PROTOCORE_DMA_SIMULATE, the shipped/tested
 // backend). Out of scope: protocore_dma_hw_* - this rig has no physical UART/I2C/SPI loopback
-// wire, so the real-silicon backend (PROTOCORE_DMA_SIMULATE=0) is never exercised here; the
+// wire, so the real-silicon backend (PROTOCORE_DMA_SIMULATE=0) is never exercised here. The
 // simulator IS the deterministic pipeline under test, identically to the host suite.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

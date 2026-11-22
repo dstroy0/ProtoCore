@@ -15,7 +15,7 @@
 
 #include "server/peripherals/pn532/pn532.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 
@@ -24,7 +24,7 @@ static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_pn532_build_frame(uint8_t *work)
+void protocore_pn532_build_frame(const uint8_t *work)
 {
     (void)work;
     uint8_t tfi = Pn532V.build_frame_args.tfi;
@@ -62,7 +62,7 @@ void protocore_pn532_build_frame(uint8_t *work)
     Pn532V.len = total;
 }
 
-void protocore_pn532_parse_frame(uint8_t *work)
+void protocore_pn532_parse_frame(const uint8_t *work)
 {
     (void)work;
     const uint8_t *raw = Pn532V.parse_frame_args.raw;
@@ -133,7 +133,7 @@ void protocore_pn532_parse_frame(uint8_t *work)
     Pn532V.n = (int)total;
 }
 
-void protocore_pn532_is_ack(uint8_t *work)
+void protocore_pn532_is_ack(const uint8_t *work)
 {
     (void)work;
     const uint8_t *raw = Pn532V.is_ack_args.raw;
@@ -141,21 +141,21 @@ void protocore_pn532_is_ack(uint8_t *work)
 
     if (!raw || len < 6)
     {
-        Pn532V.ok = PROTO_FALSE;
+        Pn532V.ok = EMBED_FALSE;
         return;
     }
     for (uint8_t i = 0; i < 6; i++)
     {
         if (raw[i] != ACK[i])
         {
-            Pn532V.ok = PROTO_FALSE;
+            Pn532V.ok = EMBED_FALSE;
             return;
         }
     }
-    Pn532V.ok = PROTO_TRUE;
+    Pn532V.ok = EMBED_TRUE;
 }
 
-void protocore_pn532_build_ack(uint8_t *work)
+void protocore_pn532_build_ack(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Pn532V.build_ack_args.out;
@@ -176,6 +176,6 @@ void protocore_pn532_build_ack(uint8_t *work)
 /** @brief The operands and the outcome. */
 Pn532Vars Pn532V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PN532

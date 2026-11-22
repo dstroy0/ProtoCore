@@ -5,7 +5,7 @@
  * @file host_answers.h
  * @brief The host build's answers to the platform contract: no silicon anywhere.
  *
- * Included by vendor/vendor_detect.h once the vendor axis has resolved, and by nothing else. Every
+ * Included by vendor/vendor_detect.h once the vendor axis resolved, and by nothing else. Every
  * capability protocore_platform.h asks about is answered here; one it does not answer is refused
  * there by name rather than defaulted.
  *

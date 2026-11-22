@@ -20,7 +20,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief One direction's codec state, handed to the packet layer per call.
@@ -30,28 +30,26 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-    proto_bool enc; ///< that direction's cipher/MAC is active
+    embed_bool enc; ///< that direction's cipher/MAC is active
     uint8_t epoch;  ///< key epoch it reads out of ssh_keys[slot][]
 } SshDir;
 
 /** @brief Negotiated key-exchange method. */
-typedef enum PROTO_ENUM_PACKED
-{
-    SSH_KEX_DH_GROUP14 = 0,      ///< diffie-hellman-group14-sha256 (RFC 8268)
-    SSH_KEX_CURVE25519 = 1,      ///< curve25519-sha256 (RFC 8731)
-    SSH_KEX_MLKEM768_X25519 = 2, ///< mlkem768x25519-sha256
-    SSH_KEX_ECDH_NISTP256 = 3,   ///< ecdh-sha2-nistp256 (RFC 5656 sec 4)
-    SSH_KEX_SNTRUP761_X25519 = 4 ///< sntrup761x25519-sha512@openssh.com
-} SshKexAlg;
+EMBED_ENUM_BYTE(SshKexAlg,
+                SSH_KEX_DH_GROUP14 = 0,      ///< diffie-hellman-group14-sha256 (RFC 8268)
+                SSH_KEX_CURVE25519 = 1,      ///< curve25519-sha256 (RFC 8731)
+                SSH_KEX_MLKEM768_X25519 = 2, ///< mlkem768x25519-sha256
+                SSH_KEX_ECDH_NISTP256 = 3,   ///< ecdh-sha2-nistp256 (RFC 5656 sec 4)
+                SSH_KEX_SNTRUP761_X25519 = 4 ///< sntrup761x25519-sha512@openssh.com
+);
 
 /** @brief Negotiated host-key / signature algorithm. */
-typedef enum PROTO_ENUM_PACKED
-{
-    SSH_HOSTKEY_RSA_SHA256 = 0,    ///< rsa-sha2-256 (RFC 8332)
-    SSH_HOSTKEY_ED25519 = 1,       ///< ssh-ed25519 (RFC 8709)
-    SSH_HOSTKEY_RSA_SHA512 = 2,    ///< rsa-sha2-512 (RFC 8332)
-    SSH_HOSTKEY_ECDSA_NISTP256 = 3 ///< ecdsa-sha2-nistp256 (RFC 5656)
-} SshHostkeyAlg;
+EMBED_ENUM_BYTE(SshHostkeyAlg,
+                SSH_HOSTKEY_RSA_SHA256 = 0,    ///< rsa-sha2-256 (RFC 8332)
+                SSH_HOSTKEY_ED25519 = 1,       ///< ssh-ed25519 (RFC 8709)
+                SSH_HOSTKEY_RSA_SHA512 = 2,    ///< rsa-sha2-512 (RFC 8332)
+                SSH_HOSTKEY_ECDSA_NISTP256 = 3 ///< ecdsa-sha2-nistp256 (RFC 5656)
+);
 
 /**
  * @brief SSH transport/session state for one connection (BSS pool).
@@ -96,26 +94,26 @@ typedef struct
 
     uint8_t *session_id;        ///< SSH_KEXHASH_MAX_LEN: H from the first KEX (RFC 4253 sec 7.2).
     uint8_t session_id_len;     ///< Session id length (the first KEX's exchange-hash length).
-    proto_bool have_session_id; ///< True once the first KEX completes.
+    embed_bool have_session_id; ///< True once the first KEX completes.
 
     // RFC 4253 sec 6 is a layer under sec 7, so the codec is handed one of these per call rather
     // than reading them. Each switches on its own SSH_MSG_NEWKEYS (sec 7.3).
     SshDir out; ///< Our outbound direction: encrypted once we sent NEWKEYS, and the epoch it reads.
     SshDir in;  ///< Our inbound direction: encrypted once the peer's arrives.
 
-    proto_bool kex_active; ///< An exchange is running, from KEXINIT to NEWKEYS (sec 9).
+    embed_bool kex_active; ///< An exchange is running, from KEXINIT to NEWKEYS (sec 9).
     // sec 7.1 restricts what may be sent from the moment THIS end sends its KEXINIT until it sends
     // its NEWKEYS, which is a narrower window than kex_active: an exchange is already running while
     // this end is still waiting to send its own KEXINIT, and that first one must not be refused.
-    proto_bool kexinit_sent; ///< This end has sent its KEXINIT and not yet its NEWKEYS (sec 7.1).
+    embed_bool kexinit_sent; ///< This end sent its KEXINIT and not yet its NEWKEYS (sec 7.1).
     // sec 9: "the state of the higher-level protocols is not affected by the key exchange", so a
     // re-exchange has to put the connection back where it interrupted it. The phase alone cannot say
     // where that was - every exchange ends in SSH_PHASE_NEWKEYS however it started.
     SshPhase phase_before_kex;       ///< What to resume when this exchange completes (sec 9).
-    proto_bool drop_guessed_kex_pkt; ///< The peer guessed a KEX that lost negotiation (sec 7.1).
-    proto_bool ext_info_enabled;     ///< Peer offered its role's RFC 8308 sec 2.2 indicator.
-    proto_bool ext_info_sent;        ///< EXT_INFO already went out; RFC 8308 sec 2.4 allows it once.
-    proto_bool authed;               ///< True after successful user authentication.
+    embed_bool drop_guessed_kex_pkt; ///< The peer guessed a KEX that lost negotiation (sec 7.1).
+    embed_bool ext_info_enabled;     ///< Peer offered its role's RFC 8308 sec 2.2 indicator.
+    embed_bool ext_info_sent;        ///< EXT_INFO already went out; RFC 8308 sec 2.4 allows it once.
+    embed_bool authed;               ///< True after successful user authentication.
     uint32_t last_kex_ms;            ///< protocore_millis() when the last KEX completed.
 } SshSession;
 
@@ -129,10 +127,10 @@ extern SshSession ssh_sess[MAX_SSH_CONNS];
  * Both suites are advertised whatever this is set to; it orders them, so a peer that supports only
  * one still connects. Runtime-selectable, before the handshake.
  */
-void ssh_kex_set_prefer_rsa(proto_bool prefer);
+void ssh_kex_set_prefer_rsa(embed_bool prefer);
 
 /** @brief Current negotiation preference (true = prefer RSA / DH). */
-proto_bool ssh_kex_prefer_rsa(void);
+embed_bool ssh_kex_prefer_rsa(void);
 
 /**
  * @brief The session identifier for slot @p i, or null before the first key exchange completes.
@@ -156,7 +154,7 @@ const uint8_t *ssh_session_id(uint8_t i, size_t *len);
 void ssh_session_id_latch(uint8_t i, const uint8_t *h, size_t h_len);
 
 /** @brief True when @p a hashes with SHA-512 rather than SHA-256 (RFC 8268, RFC 8731). */
-proto_bool ssh_kex_is_sha512(SshKexAlg a);
+embed_bool ssh_kex_is_sha512(SshKexAlg a);
 
 /**
  * @brief Verify the server's signature over the exchange hash with its host key (RFC 4253 sec 8).
@@ -170,7 +168,7 @@ proto_bool ssh_kex_is_sha512(SshKexAlg a);
  * @param h_len   its length
  * @return true when the signature checks out under the blob's own algorithm.
  */
-proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const uint8_t *sig, size_t sig_len,
+embed_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const uint8_t *sig, size_t sig_len,
                               const uint8_t *h, size_t h_len);
 
 /** @brief RFC 4253 sec 6 binary packet: the bytes a receive consumes, and the body it carries. */
@@ -193,7 +191,7 @@ typedef struct
 /** @brief RFC 4253 sec 8: every term the exchange hash H is taken over, and where H lands. */
 typedef struct
 {
-    proto_bool pub_is_string;          ///< the peer public value is a string, not an mpint
+    embed_bool pub_is_string;          ///< the peer public value is a string, not an mpint
     const uint8_t *cpub;               ///< the client public value
     size_t cpub_len;                   ///< its length
     const uint8_t *spub;               ///< the server public value
@@ -202,13 +200,13 @@ typedef struct
     size_t k_len;                      ///< its length
     const uint8_t *ks;                 ///< the host key blob
     size_t ks_len;                     ///< its length
-    proto_bool k_is_string;            ///< that secret is a string, not an mpint
-    proto_bool is512;                  ///< the method hashes with SHA-512
+    embed_bool k_is_string;            ///< that secret is a string, not an mpint
+    embed_bool is512;                  ///< the method hashes with SHA-512
     uint8_t hash[SSH_KEXHASH_MAX_LEN]; ///< where the exchange hash H lands
     size_t hash_len;                   ///< its length: 32 for the SHA-256 methods, 64 for the SHA-512 one
 } SshKexHashArgs;
 
-/** @brief RFC 4253 sec 9 key re-exchange: what has passed since the last one, against its budget. */
+/** @brief RFC 4253 sec 9 key re-exchange: what passed since the last one, against its budget. */
 typedef struct
 {
     uint32_t seq_send;          ///< packets sent since the last exchange
@@ -255,7 +253,7 @@ typedef struct
     SshTransportOut out_args; ///< where a build or a send writes
     SshKexHashArgs kexhash;   ///< sec 8 the terms the exchange hash H is taken over
     SshRekeyArgs rekey;       ///< sec 9 the volume and time budget since the last exchange
-    proto_bool ok;
+    embed_bool ok;
     int i32;
 } SshTransportVars;
 
@@ -266,30 +264,30 @@ extern SshTransportVars SshTransportV;
 typedef struct
 {
     void (*const recv_ident)(uint8_t *work);
-    void (*const send_ident)(uint8_t *work);
-    void (*const kexinit_build)(uint8_t *work);
+    void (*const send_ident)(const uint8_t *work);
+    void (*const kexinit_build)(const uint8_t *work);
     void (*const kexinit_parse)(uint8_t *work);
-    void (*const kex_generate)(uint8_t *work);
-    void (*const exchange_hash)(uint8_t *work);
+    void (*const kex_generate)(const uint8_t *work);
+    void (*const exchange_hash)(const uint8_t *work);
     void (*const kexdh_reply)(uint8_t *work);
-    void (*const newkeys_sent)(uint8_t *work);
+    void (*const newkeys_sent)(const uint8_t *work);
     void (*const newkeys_complete)(uint8_t *work);
-    void (*const rekey_due)(uint8_t *work);
+    void (*const rekey_due)(const uint8_t *work);
     void (*const begin_rekey)(uint8_t *work);
 } SshTransportNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshTransportV or a region of the borrow at a fixed offset.
 void protocore_ssh_transport_recv_ident(uint8_t *work);
-void protocore_ssh_transport_send_ident(uint8_t *work);
-void protocore_ssh_transport_kexinit_build(uint8_t *work);
+void protocore_ssh_transport_send_ident(const uint8_t *work);
+void protocore_ssh_transport_kexinit_build(const uint8_t *work);
 void protocore_ssh_transport_kexinit_parse(uint8_t *work);
-void protocore_ssh_transport_kex_generate(uint8_t *work);
-void protocore_ssh_transport_exchange_hash(uint8_t *work);
+void protocore_ssh_transport_kex_generate(const uint8_t *work);
+void protocore_ssh_transport_exchange_hash(const uint8_t *work);
 void protocore_ssh_transport_kexdh_reply(uint8_t *work);
-void protocore_ssh_transport_newkeys_sent(uint8_t *work);
+void protocore_ssh_transport_newkeys_sent(const uint8_t *work);
 void protocore_ssh_transport_newkeys_complete(uint8_t *work);
-void protocore_ssh_transport_rekey_due(uint8_t *work);
+void protocore_ssh_transport_rekey_due(const uint8_t *work);
 void protocore_ssh_transport_begin_rekey(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -328,7 +326,7 @@ uint8_t *protocore_ssh_transport_span(void);
 void protocore_ssh_hostkey_ed25519_set(const uint8_t seed[32]);
 
 /** @brief Whether an ssh-ed25519 host key is installed. */
-proto_bool protocore_ssh_hostkey_ed25519_available(void);
+embed_bool protocore_ssh_hostkey_ed25519_available(void);
 
 /**
  * @brief Install the server's ecdsa-sha2-nistp256 host key (RFC 5656) from its private scalar.
@@ -337,7 +335,7 @@ proto_bool protocore_ssh_hostkey_ed25519_available(void);
 void protocore_ssh_hostkey_ecdsa_set(const uint8_t *priv);
 
 /** @brief Whether an ecdsa-sha2-nistp256 host key is installed. */
-proto_bool protocore_ssh_hostkey_ecdsa_available(void);
+embed_bool protocore_ssh_hostkey_ecdsa_available(void);
 
 /** @brief Reader shorthand: SSH_TRANSPORT->kexinit_parse(...). */
 #define SSH_TRANSPORT (&SshTransport)
@@ -376,8 +374,8 @@ typedef struct
     const uint8_t *session_id; ///< H of the first KEX; equals H until the first re-key.
     size_t h_len;              ///< Length of H.
     size_t sid_len;            ///< Length of session_id.
-    proto_bool k_is_string;    ///< Encode K as a plain SSH string (hybrid KEX), not an mpint.
-    proto_bool is512;          ///< Hash with SHA-512 instead of SHA-256.
+    embed_bool k_is_string;    ///< Encode K as a plain SSH string (hybrid KEX), not an mpint.
+    embed_bool is512;          ///< Hash with SHA-512 instead of SHA-256.
 } SshKdfInputs;
 
 // ---------------------------------------------------------------------------
@@ -402,7 +400,7 @@ typedef struct
     // §7.2 regardless of role. A server sends s2c / receives c2s; a client is the mirror. This flag
     // selects the direction at each cipher/MAC site so one packet implementation serves both roles.
     // Default false = server (so existing server code is unchanged); ssh_pkt_set_client() flips it.
-    proto_bool is_client;
+    embed_bool is_client;
 
     // Receive reassembly: we may receive partial packets across TCP segments. rx_buf is the whole of
     // the data packet region of the connection's span, at its own named offset.
@@ -420,7 +418,7 @@ typedef struct
     uint8_t *tx_wire;    ///< The wire buffer for this slot. Null until the first packet.
     size_t tx_len;       ///< Bytes of the framed packet.
     size_t tx_off;       ///< Bytes already put on the wire.
-    proto_bool tx_ready; ///< A packet is framed and waiting for a worker.
+    embed_bool tx_ready; ///< A packet is framed and waiting for a worker.
 
     // The packet MAC and the key exchange work out of these, and they come from the same one borrow as
     // tx_wire. Held for the slot's life so neither costs a borrow or a wipe on the packet path.
@@ -463,7 +461,7 @@ void ssh_transport_init(uint8_t i);
  * Sets @ref SshPacketState::tx_wire, @ref SshPacketState::mac_work and @ref SshPacketState::crypto_work.
  * Idempotent, and false only when the pool cannot cover the slot.
  */
-proto_bool ssh_pkt_slot_storage(SshPacketState *s);
+embed_bool ssh_pkt_slot_storage(SshPacketState *s);
 
 /**
  * @brief Mark slot @p i as the SSH client role (call once, right after ssh_pkt_init).
@@ -610,7 +608,7 @@ enum
 };
 
 /** @brief True if @p mac_mode is an encrypt-then-MAC variant (length in the clear, MAC over ciphertext). */
-static inline proto_bool ssh_mac_is_etm(uint8_t mac_mode)
+static inline embed_bool ssh_mac_is_etm(uint8_t mac_mode)
 {
     return mac_mode == SSH_MAC_HMAC_SHA256_ETM || mac_mode == SSH_MAC_HMAC_SHA512_ETM;
 }
@@ -686,7 +684,7 @@ typedef struct
     uint8_t *gcm_ctx_c2s; ///< PROTOCORE_AESGCM_BORROW: keyed GCM context C→S (server opens inbound).
     uint8_t *gcm_ctx_s2c; ///< PROTOCORE_AESGCM_BORROW: keyed GCM context S→C (server seals outbound).
 
-    proto_bool active; ///< True once keys are installed after successful KEX.
+    embed_bool active; ///< True once keys are installed after successful KEX.
 } SshKeyMat;
 
 /**
@@ -800,7 +798,7 @@ static inline void ssh_keymat_wipe(uint8_t i)
             km->mac_mode_s2c = 0;
             km->cipher_mode_c2s = 0;
             km->cipher_mode_s2c = 0;
-            km->active = PROTO_FALSE;
+            km->active = EMBED_FALSE;
         }
     }
 }
@@ -860,7 +858,7 @@ int ssh_transport_service_request(const uint8_t *payload, size_t len, uint8_t *o
 
 /**
  * @brief Take the peer identification string off @p buf (RFC 4253 sec 4.2).
- * @return 1 once it is whole and the phase has advanced, 0 while more bytes are needed, -1 on a
+ * @return 1 once it is whole and the phase advanced, 0 while more bytes are needed, -1 on a
  *         string the section does not admit. @p off is left at the first binary packet byte.
  */
 int ssh_transport_version_exchange_recv(uint8_t i, const uint8_t *buf, size_t n, size_t *off);
@@ -903,11 +901,11 @@ typedef struct
  * @param k_be          256 bytes, zeroed then filled from the right.
  * @return false on a wrong length, a rejected point (RFC 7748 sec 6.1), or an unsupported method.
  */
-proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_pub, uint32_t peer_pub_len,
+embed_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_pub, uint32_t peer_pub_len,
                                  uint8_t k_be[256]);
 
 /** @brief True when @p blob holds a public key in one of the formats this build decodes. */
-proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len);
+embed_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len);
 
 /**
  * @brief True when @p pk_algo names an algorithm this end verifies, and @p blob is of its key type.
@@ -917,15 +915,15 @@ proto_bool ssh_pubkey_blob_valid(const uint8_t *blob, uint32_t blob_len);
  * independently of the blob, so both are checked against what the blob parsers here accept: either
  * RSA signature name takes an "ssh-rsa" blob, the other two take a blob named for themselves.
  */
-proto_bool ssh_pubkey_algo_supported(const char *pk_algo, const uint8_t *blob, uint32_t blob_len);
+embed_bool ssh_pubkey_algo_supported(const char *pk_algo, const uint8_t *blob, uint32_t blob_len);
 
 /**
  * @brief Verify @p sig over @p signed_data against the public key in @p blob, out of slot @p i's
  * crypto_work. The key type comes from the blob; @p pk_algo steers the RSA signature hash (RFC 8332).
  */
-proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob, uint32_t blob_len, const uint8_t *sig,
+embed_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob, uint32_t blob_len, const uint8_t *sig,
                              uint32_t sig_len, const uint8_t *signed_data, size_t signed_len);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TRANSPORT_TRANSPORT_H

@@ -15,7 +15,7 @@
 
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static void put(mmgr_span *w, uint8_t b)
 {
@@ -94,7 +94,7 @@ static void protocore_cbor_str(mmgr_span *w, const char *s)
     protocore_cbor_str_n(w, s, s ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = w->cap + 1) : 0);
 }
 
-static void protocore_cbor_bool(mmgr_span *w, proto_bool b)
+static void protocore_cbor_bool(mmgr_span *w, embed_bool b)
 {
     put(w, b ? 0xf5 : 0xf4);
 }
@@ -134,12 +134,12 @@ static void protocore_cbor_label(mmgr_span *w, const char *name, int64_t num)
 
 // Read a CBOR head at r->pos: major type + argument, advancing pos. Sets err and
 // returns false on out-of-bounds or a reserved/indefinite additional-info value.
-static proto_bool read_head(mmgr_cspan *r, uint8_t *major, uint64_t *val)
+static embed_bool read_head(mmgr_cspan *r, uint8_t *major, uint64_t *val)
 {
     if (r->err || r->pos >= r->len)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     uint8_t b = r->buf[r->pos];
     uint8_t info = (uint8_t)(b & 0x1f);
@@ -148,7 +148,7 @@ static proto_bool read_head(mmgr_cspan *r, uint8_t *major, uint64_t *val)
     {
         *val = info;
         r->pos += 1;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     size_t need;
     switch (info)
@@ -166,15 +166,15 @@ static proto_bool read_head(mmgr_cspan *r, uint8_t *major, uint64_t *val)
         need = 8;
         break;
     default:
-        r->err = PROTO_TRUE; // 28-31: reserved / indefinite-length, unsupported
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE; // 28-31: reserved / indefinite-length, unsupported
+        return EMBED_FALSE;
     }
     // The argument is the `need` big-endian bytes after this head byte, so step over the head first.
     r->pos += 1;
     return EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = need, .out = val);
 }
 
-static protocore_codec_type protocore_cbor_peek(mmgr_cspan *r)
+static protocore_codec_type protocore_cbor_peek(mmgr_cspan *r) // NOSONAR(c:S995): the codec table fixes it
 {
     if (r->err || r->pos >= r->len)
     {
@@ -216,30 +216,30 @@ static protocore_codec_type protocore_cbor_peek(mmgr_cspan *r)
     }
 }
 
-static proto_bool protocore_cbor_read_uint(mmgr_cspan *r, uint64_t *out)
+static embed_bool protocore_cbor_read_uint(mmgr_cspan *r, uint64_t *out)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m != 0)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool protocore_cbor_read_int(mmgr_cspan *r, int64_t *out)
+static embed_bool protocore_cbor_read_int(mmgr_cspan *r, int64_t *out)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m == 0)
     {
@@ -251,54 +251,54 @@ static proto_bool protocore_cbor_read_int(mmgr_cspan *r, int64_t *out)
     }
     else
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool protocore_cbor_read_bool(mmgr_cspan *r, proto_bool *out)
+static embed_bool protocore_cbor_read_bool(mmgr_cspan *r, embed_bool *out)
 {
     if (r->err || r->pos >= r->len)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     uint8_t b = r->buf[r->pos];
     if (b == 0xf4)
     {
-        *out = PROTO_FALSE;
+        *out = EMBED_FALSE;
     }
     else if (b == 0xf5)
     {
-        *out = PROTO_TRUE;
+        *out = EMBED_TRUE;
     }
     else
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     r->pos += 1;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool protocore_cbor_read_null(mmgr_cspan *r)
+static embed_bool protocore_cbor_read_null(mmgr_cspan *r)
 {
     if (r->err || r->pos >= r->len || r->buf[r->pos] != 0xf6)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     r->pos += 1;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool protocore_cbor_read_float(mmgr_cspan *r, float *out)
+static embed_bool protocore_cbor_read_float(mmgr_cspan *r, float *out)
 {
     if (r->err || r->pos >= r->len)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     uint8_t b = r->buf[r->pos];
     if (b == 0xfa) // single
@@ -307,11 +307,11 @@ static proto_bool protocore_cbor_read_float(mmgr_cspan *r, float *out)
         r->pos += 1; // step over the head byte; the argument follows it
         if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 4, .out = &v))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint32_t bits = (uint32_t)v;
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = &bits, .bytes = sizeof(*out));
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (b == 0xfb) // double -> narrow to float
     {
@@ -319,79 +319,79 @@ static proto_bool protocore_cbor_read_float(mmgr_cspan *r, float *out)
         r->pos += 1; // step over the head byte; the argument follows it
         if (!EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = 8, .out = &bits))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         double d;
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &d, .src = &bits, .bytes = sizeof(d));
         *out = (float)d;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    r->err = PROTO_TRUE;
-    return PROTO_FALSE;
+    r->err = EMBED_TRUE;
+    return EMBED_FALSE;
 }
 
 // Shared body for text (major 3) and byte (major 2) strings.
-static proto_bool read_str(mmgr_cspan *r, uint8_t want_major, const uint8_t **out, size_t *len)
+static embed_bool read_str(mmgr_cspan *r, uint8_t want_major, const uint8_t **out, size_t *len)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m != want_major || r->pos + v > r->len)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     *out = &r->buf[r->pos];
     *len = (size_t)v;
     r->pos += (size_t)v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool protocore_cbor_read_str(mmgr_cspan *r, const char **out, size_t *len)
+static embed_bool protocore_cbor_read_str(mmgr_cspan *r, const char **out, size_t *len)
 {
     return read_str(r, 3, (const uint8_t **)out, len);
 }
 
-static proto_bool protocore_cbor_read_bytes(mmgr_cspan *r, const uint8_t **out, size_t *len)
+static embed_bool protocore_cbor_read_bytes(mmgr_cspan *r, const uint8_t **out, size_t *len)
 {
     return read_str(r, 2, out, len);
 }
 
-static proto_bool protocore_cbor_read_array(mmgr_cspan *r, size_t *count)
+static embed_bool protocore_cbor_read_array(mmgr_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m != 4)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     *count = (size_t)v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool protocore_cbor_read_map(mmgr_cspan *r, size_t *count)
+static embed_bool protocore_cbor_read_map(mmgr_cspan *r, size_t *count)
 {
     uint8_t m;
     uint64_t v;
     if (!read_head(r, &m, &v))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m != 5)
     {
-        r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        r->err = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     *count = (size_t)v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /** @brief CBOR (RFC 8949) as an instance of the codec interface. */
@@ -404,6 +404,6 @@ const protocore_codec Cbor = {
     protocore_cbor_read_float,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CBOR

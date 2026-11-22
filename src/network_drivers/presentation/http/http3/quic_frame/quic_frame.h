@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file quic_frame.h
@@ -139,14 +139,14 @@ typedef struct
 typedef struct
 {
     size_t (*parse)(uint8_t *, const uint8_t *, size_t, QuicFrameHeader *);
-    size_t (*build_padding)(uint8_t *, uint8_t *, size_t, size_t);
-    size_t (*build_ping)(uint8_t *, uint8_t *, size_t);
-    size_t (*build_handshake_done)(uint8_t *, uint8_t *, size_t);
+    size_t (*build_padding)(const uint8_t *, uint8_t *, size_t, size_t);
+    size_t (*build_ping)(const uint8_t *, uint8_t *, size_t);
+    size_t (*build_handshake_done)(const uint8_t *, uint8_t *, size_t);
     size_t (*build_ack)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint64_t);
     size_t (*build_crypto)(uint8_t *, uint8_t *, size_t, uint64_t, const uint8_t *, size_t);
-    size_t (*build_stream)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, const uint8_t *, size_t, proto_bool);
+    size_t (*build_stream)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, const uint8_t *, size_t, embed_bool);
     size_t (*build_max_data)(uint8_t *, uint8_t *, size_t, uint64_t);
-    size_t (*build_connection_close)(uint8_t *, uint8_t *, size_t, proto_bool, uint64_t, uint64_t, const char *,
+    size_t (*build_connection_close)(uint8_t *, uint8_t *, size_t, embed_bool, uint64_t, uint64_t, const char *,
                                      size_t);
 } QuicFrameNs;
 PROTOCORE_NS_LAYOUT(QuicFrameNs, parse, build_padding, build_ping, build_handshake_done, build_ack, build_crypto,
@@ -169,7 +169,7 @@ size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len,
  * @param n N
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t cap, size_t n);
+size_t protocore_quic_frame_build_padding(const uint8_t *work, uint8_t *out, size_t cap, size_t n);
 /**
  * @brief A PING frame.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -177,7 +177,7 @@ size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t ca
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap);
+size_t protocore_quic_frame_build_ping(const uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief A HANDSHAKE_DONE frame.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -185,7 +185,7 @@ size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap);
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_handshake_done(uint8_t *work, uint8_t *out, size_t cap);
+size_t protocore_quic_frame_build_handshake_done(const uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief A single-range ACK frame (ACK Range Count 0): Largest, ACK Delay, .
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -223,7 +223,7 @@ size_t protocore_quic_frame_build_crypto(uint8_t *work, uint8_t *out, size_t cap
  * @return The size_t.
  */
 size_t protocore_quic_frame_build_stream(uint8_t *work, uint8_t *out, size_t cap, uint64_t id, uint64_t offset,
-                                         const uint8_t *data, size_t len, proto_bool fin);
+                                         const uint8_t *data, size_t len, embed_bool fin);
 /**
  * @brief A MAX_DATA frame.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -245,7 +245,7 @@ size_t protocore_quic_frame_build_max_data(uint8_t *work, uint8_t *out, size_t c
  * @param reason_len Reason len
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_connection_close(uint8_t *work, uint8_t *out, size_t cap, proto_bool app,
+size_t protocore_quic_frame_build_connection_close(uint8_t *work, uint8_t *out, size_t cap, embed_bool app,
                                                    uint64_t error_code, uint64_t frame_type, const char *reason,
                                                    size_t reason_len);
 
@@ -261,6 +261,6 @@ PROTOCORE_NS QuicFrameNs QuicFrame PROTOCORE_UNUSED = {
     .build_max_data = protocore_quic_frame_build_max_data,
     .build_connection_close = protocore_quic_frame_build_connection_close};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_QUIC_FRAME_H

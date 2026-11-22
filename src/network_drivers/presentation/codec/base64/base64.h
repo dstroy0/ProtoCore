@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_BASE64
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -96,7 +96,7 @@ typedef struct
     Base64DecodeArgs decode_args;
     Base64UrlEncodeArgs url_encode_args;
     Base64UrlDecodeArgs url_decode_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } Base64Vars;
 
@@ -106,18 +106,18 @@ extern Base64Vars Base64V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode)(uint8_t *work);
-    void (*const decode)(uint8_t *work);
+    void (*const encode)(const uint8_t *work);
+    void (*const decode)(const uint8_t *work);
     void (*const url_encode)(uint8_t *work);
-    void (*const url_decode)(uint8_t *work);
+    void (*const url_decode)(const uint8_t *work);
 } Base64Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Base64V or a region of the borrow at a fixed offset.
-void protocore_base64_encode(uint8_t *work);
-void protocore_base64_decode(uint8_t *work);
+void protocore_base64_encode(const uint8_t *work);
+void protocore_base64_decode(const uint8_t *work);
 void protocore_base64_url_encode(uint8_t *work);
-void protocore_base64_url_decode(uint8_t *work);
+void protocore_base64_url_decode(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
@@ -130,7 +130,7 @@ static const Base64Ns Base64 __attribute__((unused)) = {
     .url_decode = protocore_base64_url_decode,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BASE64
 

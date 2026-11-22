@@ -38,7 +38,7 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, const uint8_t *payload,
     return pos;
 }
 
-static proto_bool g_skip_begin = PROTO_FALSE;
+static embed_bool g_skip_begin = EMBED_FALSE;
 
 void setUp()
 {
@@ -47,7 +47,8 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -291,7 +292,7 @@ void test_stale_client_slot_is_skipped()
     Ws.find(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->active = PROTO_FALSE;
+    ws->active = EMBED_FALSE;
     WebTerminal.client_count(protocore_web_terminal_span());
     TEST_ASSERT_EQUAL_UINT(0, WebTerminalV.value);
     tcp_capture_reset();
@@ -303,9 +304,9 @@ void test_stale_client_slot_is_skipped()
 int main()
 {
     UNITY_BEGIN();
-    g_skip_begin = PROTO_TRUE;
+    g_skip_begin = EMBED_TRUE;
     RUN_TEST(test_api_inert_before_begin);
-    g_skip_begin = PROTO_FALSE;
+    g_skip_begin = EMBED_FALSE;
     RUN_TEST(test_serves_terminal_page);
     RUN_TEST(test_ws_upgrade_tracks_client);
     RUN_TEST(test_ws_upgrade_requires_connection_token);

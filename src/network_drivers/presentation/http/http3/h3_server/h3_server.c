@@ -21,11 +21,11 @@ static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never 
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
 #include "proximus_operor/proximus_operor.h"                 // proxim.read: each field moves into the slot
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Randomness for the QUIC ephemeral X25519 key, the ServerHello random, and our connection IDs:
 // four bytes per platform draw, the last draw truncated to what is left.
-static void rng(uint8_t *work)
+static void rng(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = H3Server.rng_args.out;
@@ -47,13 +47,13 @@ static void rng(uint8_t *work)
 // Response sink for the HTTP/3 dispatch slot: route (code, content_type, body) onto the QUIC stream
 // the request arrived on (ids stashed on the slot by dispatch_h3_request). Installed as conn->protocore_resp_sink
 // so send_text()/send_empty() stay protocol-agnostic.
-static proto_bool protocore_h3_resp_sink(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
+static embed_bool protocore_h3_resp_sink(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
 {
     return protocore_quic_server_respond(http_h3_conn_id[slot], http_h3_stream[slot], code, content_type,
                                          (const uint8_t *)body, len);
 }
 
-static void request(uint8_t *work)
+static void request(const uint8_t *work)
 {
     (void)work;
     const uint32_t conn_id = H3Server.stream.conn_id;
@@ -80,7 +80,7 @@ static void request(uint8_t *work)
     // the path field alone: a '?' past the path cap still names a query this slot has room for, and
     // capping the search at the path would drop it while keeping the truncated path.
     const char *q = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = path, .cap = sizeof(r->path) + sizeof(r->query),
-                               .other = "?", .other_cap = sizeof("?"), .ci = PROTO_FALSE);
+                               .other = "?", .other_cap = sizeof("?"), .ci = EMBED_FALSE);
     size_t plen =
         (q != NULL) ? (size_t)(q - path) : EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = path, .cap = sizeof(r->path));
     if (plen >= sizeof(r->path))
@@ -176,7 +176,7 @@ void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id
 // Designated, so a member's position in the struct does not decide what it binds to.
 H3ServerNs H3Server = {.request = request, .rng = rng};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

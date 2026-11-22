@@ -25,8 +25,8 @@
 // ---------------------------------------------------------------------------
 // Node identifiers (namespace PROTOCORE_ROBOTICS_NS). Objects end in 0; their variables count up from it.
 // ---------------------------------------------------------------------------
-static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
-                       // wire compares); enum class would force a cast at every use
+enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
+                // wire compares); enum class would force a cast at every use
 {
     MOTIONDEVICESYSTEM = 6000,
 
@@ -67,8 +67,8 @@ static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids
 };
 
 // Axis variable sub-ids (offset from the Axis_k object id).
-static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA sub-ids used as bare uint32_t offsets; enum
-                       // class would force a cast at every use
+enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA sub-ids used as bare uint32_t offsets; enum
+                // class would force a cast at every use
 {
     AXVAR_POSITION = 1,
     AXVAR_SPEED = 2,
@@ -103,7 +103,10 @@ static_assert(ROBOTICS_OFF_CTX % _Alignof(RoboticsCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define ROBOTICS_CTX(w) ((RoboticsCtx *)(void *)((w) + ROBOTICS_OFF_CTX))
+#define ROBOTICS_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RoboticsCtx *)(const void *)((w) + ROBOTICS_OFF_CTX),                                  \
+        default: (RoboticsCtx *)(void *)((w) + ROBOTICS_OFF_CTX))
 
 // Fill "Axis_k" (k = 1..PROTOCORE_ROBOTICS_AXES) into the owned name table (no snprintf: a tiny fixed render).
 static void build_axis_names(RoboticsCtx *c)
@@ -128,24 +131,24 @@ static void build_axis_names(RoboticsCtx *c)
 }
 
 // Decode an axis node id: ids AXIS_BASE + k*10 + sub, k = 1.., sub = 0 (the Axis object) / 1..4 (a var).
-// Returns true (with k 1-based + sub) only when k is within the bound axis_count; sub is the caller's to
+// Returns true (with k 1-based + sub) only when k is within the bound axis_count. Sub is the caller's to
 // range-check (0 for a Browse of the Axis object, 1..4 for a Read of an axis variable).
-static proto_bool decode_axis(uint32_t id, uint32_t axis_count, uint32_t *k_out, uint32_t *sub_out)
+static embed_bool decode_axis(uint32_t id, uint32_t axis_count, uint32_t *k_out, uint32_t *sub_out)
 {
     if (id <= AXIS_BASE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t rel = id - AXIS_BASE;
     uint32_t k = rel / 10;
     uint32_t sub = rel % 10;
     if (k < 1 || k > axis_count)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *k_out = k;
     *sub_out = sub;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- Variant fillers (leaf values) -----------------------------------------
@@ -166,7 +169,7 @@ static void set_f64(OpcUaVariant *o, double v)
     o->type = OPCUA_VAR_DOUBLE;
     o->f64 = v;
 }
-static void set_bool(OpcUaVariant *o, proto_bool v)
+static void set_bool(OpcUaVariant *o, embed_bool v)
 {
     o->type = OPCUA_VAR_BOOL;
     o->b = v;
@@ -187,7 +190,7 @@ static int32_t add_ref(const RoboticsCtx *c, OpcUaReference *out, int32_t n, uin
     }
     OpcUaReference *r = &out[n];
     r->ref_type_id = ref_type;
-    r->is_forward = PROTO_TRUE;
+    r->is_forward = EMBED_TRUE;
     r->target_ns = c->ns;
     r->target_id = target_id;
     r->browse_name_ns = c->ns;
@@ -268,7 +271,7 @@ void protocore_robotics_bind(uint8_t *work, const RoboticsMotionDeviceSystem *md
 
 // OPC UA Part 4 sec 5.11.2: Read is a Server service over the Server's AddressSpace, so this is the
 // server's OpcUaReadHandler contract rather than an entry of this module's own.
-static proto_bool robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+static embed_bool robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
@@ -276,7 +279,7 @@ static proto_bool robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, Op
     const RoboticsMotionDeviceSystem *mds = ROBOTICS_CTX(work)->mds;
     if (!mds || ns != ROBOTICS_CTX(work)->ns || attribute != OPCUA_ATTR_VALUE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Axis variables (parametric): AXIS_BASE + k*10 + {1..4}.
@@ -291,18 +294,18 @@ static proto_bool robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, Op
         {
         case AXVAR_POSITION:
             set_f64(out, ax->actual_position);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         case AXVAR_SPEED:
             set_f64(out, ax->actual_speed);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         case AXVAR_ACCEL:
             set_f64(out, ax->actual_acceleration);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         case AXVAR_PROFILE:
             set_i32(out, (int32_t)ax->motion_profile);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         default:
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
 
@@ -311,63 +314,63 @@ static proto_bool robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, Op
     // MotionDevice identity
     case MD_MANUFACTURER:
         set_str(out, mds->device.manufacturer);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MD_MODEL:
         set_str(out, mds->device.model);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MD_PRODUCTCODE:
         set_str(out, mds->device.product_code);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MD_SERIAL:
         set_str(out, mds->device.serial_number);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MD_CATEGORY:
         set_i32(out, (int32_t)mds->device.category);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // MotionDevice ParameterSet
     case MDP_ONPATH:
         set_bool(out, mds->device.on_path);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MDP_INCONTROL:
         set_bool(out, mds->device.in_control);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MDP_SPEEDOVERRIDE:
         set_f64(out, mds->device.speed_override);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Controller identity + Software
     case CT_MANUFACTURER:
         set_str(out, mds->controller.manufacturer);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case CT_MODEL:
         set_str(out, mds->controller.model);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case CT_PRODUCTCODE:
         set_str(out, mds->controller.product_code);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case CT_SERIAL:
         set_str(out, mds->controller.serial_number);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case SW_MANUFACTURER:
         set_str(out, mds->controller.sw_manufacturer);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case SW_MODEL:
         set_str(out, mds->controller.sw_model);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case SW_REVISION:
         set_str(out, mds->controller.sw_revision);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // SafetyState ParameterSet
     case SSP_OPMODE:
         set_i32(out, (int32_t)mds->safety.operational_mode);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case SSP_ESTOP:
         set_bool(out, mds->safety.emergency_stop);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case SSP_PSTOP:
         set_bool(out, mds->safety.protective_stop);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     default:
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 }
 

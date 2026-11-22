@@ -15,7 +15,7 @@
 // the length scan stops there and nothing matches.
 #define THEME_NAME_CAP 21u
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const char PROTOCORE_THEME_AMBER_CRT[] =
     ":root{--bg:#0a0600;--bg2:#140d00;--card:#140d00;--ink:#ffb000;--muted:#8a6000;--accent:#ffcc33;--accent2:#ff88"
@@ -2166,7 +2166,7 @@ const char *protocore_binary_asset_blobs_css(uint8_t *work, const char *name)
     {
         const char *have = PROTOCORE_THEME_BLOBS[i].name;
         if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = have, .cap = THEME_NAME_CAP) == n &&
-            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = have, .other = name, .cap = n + 1u, .ci = PROTO_FALSE))
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = have, .other = name, .cap = n + 1u, .ci = EMBED_FALSE))
         {
             return PROTOCORE_THEME_BLOBS[i].css;
         }
@@ -2174,6 +2174,6 @@ const char *protocore_binary_asset_blobs_css(uint8_t *work, const char *name)
     return NULL;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_THEMES

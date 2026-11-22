@@ -22,7 +22,7 @@
 #include "protocore.h"                 // on_http / on_sse / on_ws: the tables the begin entry installs on
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // A message key as it appears in the JSON: quoted, so it cannot match a widget key containing it.
 static const mmgr_field QUOTED_KEY[] = {{MMGR_FK_LIT, 0, 1, "\""}, MMGR_STR, {MMGR_FK_LIT, 0, 1, "\""}, MMGR_END};
@@ -39,7 +39,7 @@ typedef struct
     // Whether begin() has run. The route handlers cannot run before it - they exist only because it
     // registered them - but publish() is called by the application on its own schedule, so it can
     // arrive first.
-    proto_bool started;
+    embed_bool started;
     char stream_path[MAX_PATH_LEN];
 #if PROTOCORE_ENABLE_WEBSOCKET
     char ws_path[MAX_PATH_LEN];
@@ -63,7 +63,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define DASHBOARD_CTX(w) ((DashboardCtx *)(void *)((w) + DASHBOARD_OFF_CTX))
+#define DASHBOARD_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const DashboardCtx *)(const void *)((w) + DASHBOARD_OFF_CTX),                                \
+        default: (DashboardCtx *)(void *)((w) + DASHBOARD_OFF_CTX))
 
 static const char *widget_type_name(protocore_widget_type t)
 {
@@ -111,7 +114,7 @@ uint8_t *protocore_dashboard_span(void)
 }
 
 void protocore_dashboard_configure(uint8_t *work);
-void protocore_dashboard_parse_control(uint8_t *work);
+void protocore_dashboard_parse_control(const uint8_t *work);
 void protocore_dashboard_values_json(uint8_t *work);
 
 void protocore_dashboard_configure(uint8_t *work)
@@ -134,21 +137,21 @@ void protocore_dashboard_set(uint8_t *work)
 
     if (!key || !DASHBOARD_CTX(work)->widgets)
     {
-        DashboardV.ok = PROTO_FALSE;
+        DashboardV.ok = EMBED_FALSE;
         return;
     }
     for (uint8_t i = 0; i < DASHBOARD_CTX(work)->count; i++)
     {
         if (DASHBOARD_CTX(work)->widgets[i].key &&
             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = DASHBOARD_CTX(work)->widgets[i].key, .other = key,
-                       .cap = MAX_KEY_LEN, .ci = PROTO_FALSE))
+                       .cap = MAX_KEY_LEN, .ci = EMBED_FALSE))
         {
             DASHBOARD_CTX(work)->values[i] = value;
-            DashboardV.ok = PROTO_TRUE;
+            DashboardV.ok = EMBED_TRUE;
             return;
         }
     }
-    DashboardV.ok = PROTO_FALSE;
+    DashboardV.ok = EMBED_FALSE;
 }
 
 // The layout is an array of widget objects; the values document is one flat object of key/number
@@ -304,7 +307,7 @@ static const char *control_value_ptr(const char *s, const char *key)
     const size_t s_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = s, .cap = 0xFFFF);
     const size_t pat_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = pat, .cap = sizeof(pat));
     const char *p = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = s, .cap = s_len + 1u, .other = pat,
-                               .other_cap = pat_len + 1u, .ci = PROTO_FALSE);
+                               .other_cap = pat_len + 1u, .ci = EMBED_FALSE);
     if (!p)
     {
         return NULL;
@@ -326,7 +329,7 @@ static const char *control_value_ptr(const char *s, const char *key)
     return p;
 }
 
-void protocore_dashboard_parse_control(uint8_t *work)
+void protocore_dashboard_parse_control(const uint8_t *work)
 {
     (void)work;
     const char *msg = DashboardV.parse_control_args.msg;
@@ -336,7 +339,7 @@ void protocore_dashboard_parse_control(uint8_t *work)
 
     if (!msg || !key_out || key_cap == 0 || !value_out)
     {
-        DashboardV.ok = PROTO_FALSE;
+        DashboardV.ok = EMBED_FALSE;
         return;
     }
     key_out[0] = '\0';
@@ -344,7 +347,7 @@ void protocore_dashboard_parse_control(uint8_t *work)
     const char *vp = control_value_ptr(msg, "v");
     if (!kp || !vp || *kp != '"')
     {
-        DashboardV.ok = PROTO_FALSE;
+        DashboardV.ok = EMBED_FALSE;
         return;
     }
     kp++;
@@ -356,7 +359,7 @@ void protocore_dashboard_parse_control(uint8_t *work)
     if (*kp != '"')
     {
         key_out[0] = '\0';
-        DashboardV.ok = PROTO_FALSE;
+        DashboardV.ok = EMBED_FALSE;
         return; // unterminated or key too long
     }
     key_out[i] = '\0';
@@ -364,11 +367,11 @@ void protocore_dashboard_parse_control(uint8_t *work)
     float v = EMBED_CALL(cellul.to_float, TransfiguroCfg, .src = vp, .end = &end);
     if (end == vp)
     {
-        DashboardV.ok = PROTO_FALSE;
+        DashboardV.ok = EMBED_FALSE;
         return; // no numeric value
     }
     *value_out = v;
-    DashboardV.ok = PROTO_TRUE;
+    DashboardV.ok = EMBED_TRUE;
 }
 
 void protocore_dashboard_dispatch_control(uint8_t *work)
@@ -382,9 +385,11 @@ void protocore_dashboard_dispatch_control(uint8_t *work)
     DashboardV.parse_control_args.key_cap = sizeof(key);
     DashboardV.parse_control_args.value_out = &value;
     protocore_dashboard_parse_control(work);
+    DashboardV.parse_control_args.value_out = NULL;
+    DashboardV.parse_control_args.key_out = NULL;
     if (!DashboardV.ok)
     {
-        DashboardV.ok = PROTO_FALSE;
+        DashboardV.ok = EMBED_FALSE;
         return;
     }
     if (DASHBOARD_CTX(work)->control_cb)
@@ -468,7 +473,7 @@ void protocore_dashboard_begin(uint8_t *work)
     }
     on_ws(DASHBOARD_CTX(work)->ws_path, dash_ws_connect, dash_ws_message, dash_ws_close);
 #endif
-    DASHBOARD_CTX(work)->started = PROTO_TRUE; // last: publish() is only meaningful once the stream route exists
+    DASHBOARD_CTX(work)->started = EMBED_TRUE; // last: publish() is only meaningful once the stream route exists
 }
 
 void protocore_dashboard_publish(uint8_t *work)
@@ -476,12 +481,13 @@ void protocore_dashboard_publish(uint8_t *work)
 
     if (!DASHBOARD_CTX(work)->started)
     {
-        return; // nothing is subscribed until begin() has registered the stream routes
+        return; // nothing is subscribed until begin() registered the stream routes
     }
     char buf[PROTOCORE_DASHBOARD_JSON_BUF];
     DashboardV.values_json_args.out = buf;
     DashboardV.values_json_args.cap = sizeof(buf);
     protocore_dashboard_values_json(work);
+    DashboardV.values_json_args.out = NULL;
     if (DashboardV.value > 0)
     {
         protocore_sse_broadcast(DASHBOARD_CTX(work)->stream_path, buf, NULL, NULL);
@@ -491,6 +497,6 @@ void protocore_dashboard_publish(uint8_t *work)
 /** @brief The operands and the outcome. */
 DashboardVars DashboardV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DASHBOARD
