@@ -85,7 +85,7 @@ typedef struct
     void (*const send)(const uint8_t *work);
     void (*const crypto_work)(const uint8_t *work);
     void (*const state)(const uint8_t *work);
-    void (*const begin)(uint8_t *work);
+    void (*const begin)(const uint8_t *work);
     void (*const poll)(uint8_t *work);
     void (*const end)(const uint8_t *work);
 } SshClientNs;

@@ -116,7 +116,7 @@ static uint8_t pec_final(uint32_t crc)
     return (uint8_t)CrcV.value;
 }
 
-uint8_t protocore_smbus_pec_write(uint8_t *work, uint8_t addr, const uint8_t *payload, size_t len)
+uint8_t protocore_smbus_pec_write(const uint8_t *work, uint8_t addr, const uint8_t *payload, size_t len)
 {
 
     uint8_t smbus_value = Smbus.addr_byte(work, addr, PROTOCORE_SMBUS_WRITE);
@@ -130,8 +130,8 @@ uint8_t protocore_smbus_pec_write(uint8_t *work, uint8_t addr, const uint8_t *pa
     return smbus_value;
 }
 
-uint8_t protocore_smbus_pec_read(uint8_t *work, uint8_t addr, const uint8_t *sent, size_t slen, const uint8_t *got,
-                                 size_t glen)
+uint8_t protocore_smbus_pec_read(const uint8_t *work, uint8_t addr, const uint8_t *sent, size_t slen,
+                                 const uint8_t *got, size_t glen)
 {
 
     uint8_t smbus_value = Smbus.addr_byte(work, addr, PROTOCORE_SMBUS_WRITE);

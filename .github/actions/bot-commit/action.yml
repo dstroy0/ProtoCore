@@ -56,6 +56,19 @@ runs:
           # --autostash: the generated files are unstaged at this point and a rebase refuses to
           # start on a dirty tree.
           git pull --rebase --autostash $REBASE_FLAGS origin main || { git rebase --abort 2>/dev/null || true; }
+          # An autostash that does not apply cleanly leaves conflict markers in the files and its stash entry,
+          # and the pull still reports success. Such files go back to main and the stash entry goes. With a
+          # generate command the files are rendered again below. Without one, this run commits nothing.
+          if [ -n "$(git diff --name-only --diff-filter=U)" ] || git grep -qE '^(<{7}|>{7}) ' -- $BOT_FILES; then
+            echo "the autostash conflicted on main; the files go back to main"
+            git checkout HEAD -- $BOT_FILES
+            git reset -q
+            git stash drop -q 2>/dev/null || true
+            if [ -z "$BOT_GENERATE" ]; then
+              echo "no generate command: nothing is committed, and the next run renders the files again"
+              exit 1
+            fi
+          fi
           # A generated table is a function of the file it is rendered from: render it from the main
           # this attempt is on, never merge a render of an older main into a newer one.
           if [ -n "$BOT_GENERATE" ]; then

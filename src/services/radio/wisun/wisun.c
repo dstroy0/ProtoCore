@@ -199,7 +199,7 @@ int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_
     return (int)fan->count++;
 }
 
-embed_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx)
+embed_bool protocore_wisun_node_find(const uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx)
 {
     if (!fan || !fan->nodes || !addr)
     {
@@ -241,7 +241,7 @@ size_t protocore_wisun_joined_count(const uint8_t *work, const WisunFan *fan)
     return c;
 }
 
-size_t protocore_wisun_nodes_json(uint8_t *work, const WisunFan *fan, char *out, size_t cap)
+size_t protocore_wisun_nodes_json(const uint8_t *work, const WisunFan *fan, char *out, size_t cap)
 {
     if (!fan || !out || cap == 0)
     {

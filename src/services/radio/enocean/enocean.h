@@ -77,7 +77,7 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint8_t (*esp3_crc8)(uint8_t *, const uint8_t *, uint16_t);
+    uint8_t (*esp3_crc8)(const uint8_t *, const uint8_t *, uint16_t);
     int (*esp3_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_esp3_packet *);
     uint16_t (*esp3_build)(uint8_t *, protocore_esp3_type, const uint8_t *, uint16_t, const uint8_t *, uint8_t,
                            uint8_t *, uint16_t);
@@ -93,7 +93,7 @@ PROTOCORE_NS_LAYOUT(EnoceanNs, esp3_crc8, esp3_parse, esp3_build, erp1_parse, er
  * @param len Len
  * @return The uint8_t.
  */
-uint8_t protocore_enocean_esp3_crc8(uint8_t *work, const uint8_t *buf, uint16_t len);
+uint8_t protocore_enocean_esp3_crc8(const uint8_t *work, const uint8_t *buf, uint16_t len);
 /**
  * @brief Frame one ESP3 telegram from the front of raw.
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.

@@ -54,25 +54,147 @@ DOCUMENT = os.path.join(REPOSITORY, "build", "gate", "ste_fix_document.md")
 HAVE = re.compile(r"(?<![\w'-])(has|have|had) (?=([a-z]+)\b)")
 MODAL = {"to", "can", "could", "may", "might", "must", "shall", "should", "will", "would", "not", "never"}
 # The irregular participles that are the same as their past, from the participles that ste_check.py knows
-SAME_AS_PAST = {"brought", "built", "bought", "caught", "cut", "dealt", "displayed", "felt", "found", "held", "hit",
-                "led", "left", "lent", "let", "lost", "made", "meant", "met", "paid", "positioned", "put", "read",
-                "retained", "said", "sent", "set", "shut", "sold", "spent", "split", "struck", "taught", "thought",
-                "told", "understood", "won"}
+SAME_AS_PAST = {
+    "brought",
+    "built",
+    "bought",
+    "caught",
+    "cut",
+    "dealt",
+    "displayed",
+    "felt",
+    "found",
+    "held",
+    "hit",
+    "led",
+    "left",
+    "lent",
+    "let",
+    "lost",
+    "made",
+    "meant",
+    "met",
+    "paid",
+    "positioned",
+    "put",
+    "read",
+    "retained",
+    "said",
+    "sent",
+    "set",
+    "shut",
+    "sold",
+    "spent",
+    "split",
+    "struck",
+    "taught",
+    "thought",
+    "told",
+    "understood",
+    "won",
+}
 # The words that end in -ed and are no participle
-NOT_PARTICIPLE = {"bed", "bleed", "breed", "embed", "exceed", "feed", "heed", "need", "proceed", "red", "seed", "shed",
-                  "speed", "succeed", "shred", "weed"}
+NOT_PARTICIPLE = {
+    "bed",
+    "bleed",
+    "breed",
+    "embed",
+    "exceed",
+    "feed",
+    "heed",
+    "need",
+    "proceed",
+    "red",
+    "seed",
+    "shed",
+    "speed",
+    "succeed",
+    "shred",
+    "weed",
+}
 # The words that can follow a participle that is a verb. A noun after the participle makes it an adjective, and the
 # auxiliary then stays.
-AFTER_VERB = {"a", "an", "the", "this", "that", "these", "those", "it", "its", "them", "their", "his", "her", "him",
-              "us", "you", "me", "every", "each", "all", "no", "one", "to", "in", "on", "at", "by", "from", "into",
-              "out", "up", "down", "off", "over", "back", "before", "after", "since", "once", "and", "or", "but",
-              "as", "with", "for", "of", "here", "there", "so", "than", "when", "where", "while", "if"}
+AFTER_VERB = {
+    "a",
+    "an",
+    "the",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
+    "them",
+    "their",
+    "his",
+    "her",
+    "him",
+    "us",
+    "you",
+    "me",
+    "every",
+    "each",
+    "all",
+    "no",
+    "one",
+    "to",
+    "in",
+    "on",
+    "at",
+    "by",
+    "from",
+    "into",
+    "out",
+    "up",
+    "down",
+    "off",
+    "over",
+    "back",
+    "before",
+    "after",
+    "since",
+    "once",
+    "and",
+    "or",
+    "but",
+    "as",
+    "with",
+    "for",
+    "of",
+    "here",
+    "there",
+    "so",
+    "than",
+    "when",
+    "where",
+    "while",
+    "if",
+}
 SEMICOLON = re.compile(r"(?<=[A-Za-z0-9)\]\"']); +([a-z][a-z]+)\b(?![\w(.\[:/-])")
 PROGRESSIVE = re.compile(r"(?<![\w'-])(is|are) ([a-z]+ing)\b")
 # The words that open a direct object. A progressive verb with an object after it is a verb, and the simple present
 # takes its place. Without an object the -ing word can be an adjective, and it stays.
-OBJECT_OPENERS = {"a", "an", "the", "this", "that", "these", "those", "it", "its", "them", "their", "each", "every",
-                  "all", "any", "no", "one", "his", "her"}
+OBJECT_OPENERS = {
+    "a",
+    "an",
+    "the",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
+    "them",
+    "their",
+    "each",
+    "every",
+    "all",
+    "any",
+    "no",
+    "one",
+    "his",
+    "her",
+}
 JOINED = re.compile(r"(?<=[A-Za-z0-9)\]\"'])(?:, (and|so|but)|(:)) ([a-z][a-z]+)\b")
 # The pronouns that open a clause with its own subject. A conjunction before one of them joins two clauses, and a full
 # stop can take the place of the comma and the conjunction. A determiner such as "the" can open the next item of a
@@ -160,15 +282,19 @@ def count(path, lines):
 
 def better(before, after):
     """Whether the change removes one of the findings and gives no rule more findings."""
-    return sum(after.values()) < sum(before.values()) and all(after.get(rule, 0) <= before.get(rule, 0)
-                                                               for rule in after)
+    return sum(after.values()) < sum(before.values()) and all(
+        after.get(rule, 0) <= before.get(rule, 0) for rule in after
+    )
 
 
 def outside_code(part, at):
     """Whether the column is out of quotation and out of brackets."""
     before = part[:at]
-    return (before.count("`") % 2 == 0) and (before.count("(") <= before.count(")")) \
+    return (
+        (before.count("`") % 2 == 0)
+        and (before.count("(") <= before.count(")"))
         and (before.count("[") <= before.count("]"))
+    )
 
 
 def third_person(base):
@@ -199,7 +325,7 @@ def candidates(part):
     """(start, end, replacement) of each change in the prose of one line, from its end to its start."""
     found = []
     for hit in PROGRESSIVE.finditer(part):
-        following = re.match(r"\s*([A-Za-z]+)", part[hit.end():])
+        following = re.match(r"\s*([A-Za-z]+)", part[hit.end() :])
         if not following or following.group(1).lower() not in OBJECT_OPENERS:
             continue
         if hit.group(2) in TECHNICAL or not outside_code(part, hit.start()):
@@ -211,10 +337,10 @@ def candidates(part):
     for hit in JOINED.finditer(part):
         joint = hit.group(1) or hit.group(2)
         word = hit.group(3)
-        before = part[:hit.start()]
+        before = part[: hit.start()]
         if (word not in SUBJECT_OPENERS) or ("," in before) or (":" in before) or not outside_code(part, hit.start()):
             continue
-        if len(re.findall(LETTERS, before)) < 4 or len(re.findall(LETTERS, part[hit.end():])) < 3:
+        if len(re.findall(LETTERS, before)) < 4 or len(re.findall(LETTERS, part[hit.end() :])) < 3:
             continue
         if joint in ("and", ":"):
             found.append((hit.start(), hit.start(3) + 1, ". " + word[0].upper()))
@@ -226,12 +352,12 @@ def candidates(part):
         regular = participle.endswith("ed") and len(participle) > 4 and participle not in NOT_PARTICIPLE
         if not (regular or participle in SAME_AS_PAST) or participle in TECHNICAL:
             continue
-        previous = re.findall(r"[A-Za-z']+", part[:hit.start()])
+        previous = re.findall(r"[A-Za-z']+", part[: hit.start()])
         if previous and previous[-1].lower() in MODAL:
             continue
         if not outside_code(part, hit.start()):
             continue
-        rest = part[hit.end() + len(participle):]
+        rest = part[hit.end() + len(participle) :]
         following = re.match(r"\s*([A-Za-z]+)", rest)
         if following and following.group(1).lower() not in AFTER_VERB:
             continue
@@ -241,7 +367,7 @@ def candidates(part):
             word = hit.group(1)
             if word not in ENGLISH or word in TECHNICAL or not outside_code(part, hit.start()):
                 continue
-            words_before = len(re.findall(LETTERS, part[:hit.start()]))
+            words_before = len(re.findall(LETTERS, part[: hit.start()]))
             if words_before < 3:
                 continue
             found.append((hit.start(), hit.start(1) + 1, ". " + word[0].upper()))
@@ -256,8 +382,8 @@ def repaired(path, lines):
     for index, start, end in regions(path, lines):
         for at, stop, replacement in candidates(lines[index][start:end]):
             line = lines[index]
-            changed = line[:start + at] + replacement + line[start + stop:]
-            trial = lines[:index] + [changed] + lines[index + 1:]
+            changed = line[: start + at] + replacement + line[start + stop :]
+            trial = lines[:index] + [changed] + lines[index + 1 :]
             after = count(path, trial)
             if better(tally, after):
                 lines = trial

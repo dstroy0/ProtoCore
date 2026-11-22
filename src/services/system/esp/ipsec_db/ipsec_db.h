@@ -263,13 +263,13 @@ typedef struct
 {
     void (*const protocore_ipsec_spd_init)(const uint8_t *work);
     void (*const protocore_ipsec_spd_add)(const uint8_t *work);
-    void (*const protocore_ipsec_spd_lookup)(uint8_t *work);
+    void (*const protocore_ipsec_spd_lookup)(const uint8_t *work);
     void (*const protocore_ipsec_selector_match)(const uint8_t *work);
     void (*const protocore_ipsec_selector_from_ts)(const uint8_t *work);
     void (*const protocore_ipsec_sad_init)(const uint8_t *work);
-    void (*const protocore_ipsec_sad_add)(uint8_t *work);
+    void (*const protocore_ipsec_sad_add)(const uint8_t *work);
     void (*const protocore_ipsec_sad_find)(const uint8_t *work);
-    void (*const protocore_ipsec_sad_remove)(uint8_t *work);
+    void (*const protocore_ipsec_sad_remove)(const uint8_t *work);
     void (*const protocore_ipsec_sad_next_seq)(const uint8_t *work);
 } IpsecDbNs;
 
@@ -277,13 +277,13 @@ typedef struct
 // else an entry needs is an operand in IpsecDbV or a region of the borrow at a fixed offset.
 void protocore_ipsec_db_protocore_ipsec_spd_init(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_spd_add(const uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_spd_lookup(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_selector_from_ts(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_sad_init(const uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_add(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_remove(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_sad_next_seq(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

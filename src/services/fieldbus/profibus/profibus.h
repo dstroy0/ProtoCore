@@ -151,18 +151,18 @@ extern ProfibusVars ProfibusV;
 typedef struct
 {
     void (*const fcs)(const uint8_t *work);
-    void (*const build_sd1)(uint8_t *work);
-    void (*const build_sd2)(uint8_t *work);
-    void (*const build_sd3)(uint8_t *work);
+    void (*const build_sd1)(const uint8_t *work);
+    void (*const build_sd2)(const uint8_t *work);
+    void (*const build_sd3)(const uint8_t *work);
     void (*const parse)(uint8_t *work);
 } ProfibusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ProfibusV or a region of the borrow at a fixed offset.
 void protocore_profibus_fcs(const uint8_t *work);
-void protocore_profibus_build_sd1(uint8_t *work);
-void protocore_profibus_build_sd2(uint8_t *work);
-void protocore_profibus_build_sd3(uint8_t *work);
+void protocore_profibus_build_sd1(const uint8_t *work);
+void protocore_profibus_build_sd2(const uint8_t *work);
+void protocore_profibus_build_sd3(const uint8_t *work);
 void protocore_profibus_parse(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

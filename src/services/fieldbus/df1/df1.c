@@ -39,7 +39,7 @@ void protocore_df1_bcc(const uint8_t *work)
 
 // DF1's block check is the reflected CRC-16 (poly 0xA001 = reflect(0x8005), init 0, no final XOR), cataloged
 // as CRC-16/ARC. The data and the ETX are two runs, folded into one register.
-static uint16_t df1_crc_data_plus_etx(uint8_t *work, const uint8_t *data, size_t len, uint8_t etx)
+static uint16_t df1_crc_data_plus_etx(const uint8_t *work, const uint8_t *data, size_t len, uint8_t etx)
 {
     CrcV.args.params = &PROTOCORE_CRC16_ARC;
     Crc.begin(work);
@@ -56,7 +56,7 @@ static uint16_t df1_crc_data_plus_etx(uint8_t *work, const uint8_t *data, size_t
     return (uint16_t)CrcV.value;
 }
 
-void protocore_df1_crc(uint8_t *work)
+void protocore_df1_crc(const uint8_t *work)
 {
     (void)work;
     const uint8_t *data = Df1V.crc_args.data;

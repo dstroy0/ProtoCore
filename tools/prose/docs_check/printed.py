@@ -101,8 +101,7 @@ def printed_hits(path, lines):
                 found.append(
                     (
                         at,
-                        "printed '%s' in: %s"
-                        % (hit.group(0), " ".join(text.split())[:QUOTED]),
+                        "printed '%s' in: %s" % (hit.group(0), " ".join(text.split())[:QUOTED]),
                     )
                 )
                 break

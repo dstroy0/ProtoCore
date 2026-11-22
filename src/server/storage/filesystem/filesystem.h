@@ -264,7 +264,7 @@ typedef struct
 
     void (*const status)(uint8_t *work);
     void (*const clear)(uint8_t *work);
-    void (*const present)(uint8_t *work);
+    void (*const present)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const resolve)(uint8_t *work);
     void (*const open)(uint8_t *work);

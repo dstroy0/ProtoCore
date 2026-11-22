@@ -108,7 +108,7 @@ typedef struct
 {
     void (*const encode)(const uint8_t *work);
     void (*const decode)(const uint8_t *work);
-    void (*const url_encode)(uint8_t *work);
+    void (*const url_encode)(const uint8_t *work);
     void (*const url_decode)(const uint8_t *work);
 } Base64Ns;
 
@@ -116,7 +116,7 @@ typedef struct
 // else an entry needs is an operand in Base64V or a region of the borrow at a fixed offset.
 void protocore_base64_encode(const uint8_t *work);
 void protocore_base64_decode(const uint8_t *work);
-void protocore_base64_url_encode(uint8_t *work);
+void protocore_base64_url_encode(const uint8_t *work);
 void protocore_base64_url_decode(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

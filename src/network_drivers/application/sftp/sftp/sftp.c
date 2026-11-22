@@ -29,14 +29,14 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_sftp_rd_string(uint8_t *work);
+void protocore_sftp_rd_string(const uint8_t *work);
 void protocore_sftp_rd_u32(const uint8_t *work);
 void protocore_sftp_rd_u64(const uint8_t *work);
-void protocore_sftp_wr_attrs(uint8_t *work);
+void protocore_sftp_wr_attrs(const uint8_t *work);
 void protocore_sftp_wr_bytes(const uint8_t *work);
 void protocore_sftp_wr_finish(const uint8_t *work);
 void protocore_sftp_wr_init(const uint8_t *work);
-void protocore_sftp_wr_string(uint8_t *work);
+void protocore_sftp_wr_string(const uint8_t *work);
 void protocore_sftp_wr_u32(const uint8_t *work);
 void protocore_sftp_wr_u64(const uint8_t *work);
 void protocore_sftp_wr_u8(const uint8_t *work);
@@ -105,7 +105,7 @@ void protocore_sftp_rd_u64(const uint8_t *work)
     SftpV.u64 = v;
 }
 
-void protocore_sftp_rd_string(uint8_t *work)
+void protocore_sftp_rd_string(const uint8_t *work)
 {
     SftpReader *r = SftpV.rd_string_args.r;
     const uint8_t **out = SftpV.rd_string_args.out;
@@ -271,7 +271,7 @@ void protocore_sftp_wr_bytes(const uint8_t *work)
     w->off += n;
 }
 
-void protocore_sftp_wr_string(uint8_t *work)
+void protocore_sftp_wr_string(const uint8_t *work)
 {
     SftpWriter *w = SftpV.wr_string_args.w;
     const void *s = SftpV.wr_string_args.s;
@@ -286,7 +286,7 @@ void protocore_sftp_wr_string(uint8_t *work)
     protocore_sftp_wr_bytes(work);
 }
 
-void protocore_sftp_wr_attrs(uint8_t *work)
+void protocore_sftp_wr_attrs(const uint8_t *work)
 {
     SftpWriter *w = SftpV.wr_attrs_args.w;
     const SftpAttrs *a = SftpV.wr_attrs_args.a;
@@ -395,7 +395,7 @@ void protocore_sftp_frame_len(const uint8_t *work)
 
 // --- response builders ---------------------------------------------------------------------------
 
-void protocore_sftp_build_version(uint8_t *work)
+void protocore_sftp_build_version(const uint8_t *work)
 {
     uint8_t *out = SftpV.build_version_args.out;
     size_t cap = SftpV.build_version_args.cap;
@@ -414,6 +414,9 @@ void protocore_sftp_build_version(uint8_t *work)
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
     SftpV.wr_finish_args.w = NULL;
+    SftpV.wr_init_args.w = NULL;
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_u8_args.w = NULL;
 }
 
 void protocore_sftp_build_status(uint8_t *work)
@@ -450,6 +453,10 @@ void protocore_sftp_build_status(uint8_t *work)
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
     SftpV.wr_finish_args.w = NULL;
+    SftpV.wr_init_args.w = NULL;
+    SftpV.wr_string_args.w = NULL;
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_u8_args.w = NULL;
 }
 
 void protocore_sftp_build_handle(uint8_t *work)
@@ -478,6 +485,10 @@ void protocore_sftp_build_handle(uint8_t *work)
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
     SftpV.wr_finish_args.w = NULL;
+    SftpV.wr_init_args.w = NULL;
+    SftpV.wr_string_args.w = NULL;
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_u8_args.w = NULL;
 }
 
 void protocore_sftp_build_attrs(uint8_t *work)
@@ -504,6 +515,10 @@ void protocore_sftp_build_attrs(uint8_t *work)
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
     SftpV.wr_finish_args.w = NULL;
+    SftpV.wr_attrs_args.w = NULL;
+    SftpV.wr_init_args.w = NULL;
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_u8_args.w = NULL;
 }
 
 void protocore_sftp_build_data(uint8_t *work)
@@ -532,6 +547,10 @@ void protocore_sftp_build_data(uint8_t *work)
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
     SftpV.wr_finish_args.w = NULL;
+    SftpV.wr_init_args.w = NULL;
+    SftpV.wr_string_args.w = NULL;
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_u8_args.w = NULL;
 }
 
 void protocore_sftp_build_name1(uint8_t *work)
@@ -571,9 +590,14 @@ void protocore_sftp_build_name1(uint8_t *work)
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
     SftpV.wr_finish_args.w = NULL;
+    SftpV.wr_attrs_args.w = NULL;
+    SftpV.wr_init_args.w = NULL;
+    SftpV.wr_string_args.w = NULL;
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_u8_args.w = NULL;
 }
 
-void protocore_sftp_format_longname(uint8_t *work)
+void protocore_sftp_format_longname(const uint8_t *work)
 {
     (void)work;
     embed_bool is_dir = SftpV.format_longname_args.is_dir;

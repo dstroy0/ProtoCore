@@ -40,7 +40,7 @@ void protocore_snp_bcc(const uint8_t *work)
     SnpV.value = bcc;
 }
 
-void protocore_snp_build(uint8_t *work)
+void protocore_snp_build(const uint8_t *work)
 {
     uint8_t control = SnpV.build_args.control;
     const uint8_t *data = SnpV.build_args.data;
@@ -72,7 +72,7 @@ void protocore_snp_build(uint8_t *work)
     SnpV.n = n;
 }
 
-void protocore_snp_parse(uint8_t *work)
+void protocore_snp_parse(const uint8_t *work)
 {
     const uint8_t *frame = SnpV.parse_args.frame;
     size_t len = SnpV.parse_args.len;

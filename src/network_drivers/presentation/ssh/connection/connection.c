@@ -40,7 +40,7 @@ SshChannel ssh_chan[MAX_SSH_CONNS][PROTOCORE_SSH_MAX_CHANNELS];
 
 // Defined below; the sec 5 and sec 6.2 handlers above them reach the table through these.
 void protocore_ssh_connection_chan_by_id(const uint8_t *work);
-void protocore_ssh_connection_pty_req_parse(uint8_t *work);
+void protocore_ssh_connection_pty_req_parse(const uint8_t *work);
 
 // All SSH channel-layer callbacks, owned by one instance (internal linkage): the channel-data
 // sink and the local/remote port-forward hooks. Grouped so it is one named owner, unreachable
@@ -350,7 +350,7 @@ void protocore_ssh_connection_set_window_change_cb(const uint8_t *work)
     SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.window_change_cb = cb;
 }
 
-void protocore_ssh_connection_channel_pty(uint8_t *work)
+void protocore_ssh_connection_channel_pty(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -492,7 +492,7 @@ void protocore_ssh_connection_channel_init(const uint8_t *work)
 // Channel table (owned here)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_connection_channel_bind_service(uint8_t *work)
+void protocore_ssh_connection_channel_bind_service(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -726,7 +726,7 @@ void protocore_ssh_connection_global_request_handle(const uint8_t *work)
 // Server-initiated CHANNEL_OPEN (forwarded-tcpip, ssh -R) + its CONFIRM / FAILURE
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_connection_channel_open_forwarded(uint8_t *work)
+void protocore_ssh_connection_channel_open_forwarded(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const char *conn_addr = SshConnectionV.fwd.conn_addr;
@@ -800,7 +800,7 @@ void protocore_ssh_connection_channel_open_forwarded(uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_handle_open_confirm(uint8_t *work)
+void protocore_ssh_connection_channel_handle_open_confirm(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;
@@ -867,7 +867,7 @@ void protocore_ssh_connection_channel_handle_open_failure(const uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_handle_open(uint8_t *work)
+void protocore_ssh_connection_channel_handle_open(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;
@@ -1080,7 +1080,7 @@ static embed_bool read_dimensions(const uint8_t *p, size_t len, size_t *off, Ssh
     return EMBED_TRUE;
 }
 
-void protocore_ssh_connection_pty_req_parse(uint8_t *work)
+void protocore_ssh_connection_pty_req_parse(const uint8_t *work)
 {
     const uint8_t *p = SshConnectionV.pty.p;
     size_t len = SshConnectionV.chan.len;
@@ -1306,7 +1306,7 @@ void protocore_ssh_connection_channel_handle_request(uint8_t *work)
 // CHANNEL_DATA (inbound) + flow control
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_connection_channel_handle_data(uint8_t *work)
+void protocore_ssh_connection_channel_handle_data(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;
@@ -1418,7 +1418,7 @@ void protocore_ssh_connection_channel_handle_data(uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_handle_extended_data(uint8_t *work)
+void protocore_ssh_connection_channel_handle_extended_data(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;
@@ -1488,7 +1488,7 @@ void protocore_ssh_connection_channel_handle_extended_data(uint8_t *work)
 // CHANNEL_DATA (outbound)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_connection_channel_build_data(uint8_t *work)
+void protocore_ssh_connection_channel_build_data(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1515,7 +1515,7 @@ void protocore_ssh_connection_channel_build_data(uint8_t *work)
 // WINDOW_ADJUST (inbound)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_connection_channel_handle_window_adjust(uint8_t *work)
+void protocore_ssh_connection_channel_handle_window_adjust(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;
@@ -1560,7 +1560,7 @@ static int build_eof_chan(SshChannel *c, uint8_t *out, size_t *out_len, size_t c
     return 0;
 }
 
-void protocore_ssh_connection_channel_build_eof(uint8_t *work)
+void protocore_ssh_connection_channel_build_eof(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1611,7 +1611,7 @@ static int build_close_chan(SshChannel *c, uint8_t *out, size_t *out_len, size_t
     return 0;
 }
 
-void protocore_ssh_connection_channel_build_close(uint8_t *work)
+void protocore_ssh_connection_channel_build_close(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1736,7 +1736,7 @@ void protocore_ssh_connection_channel_send_close(uint8_t *work)
 // Both are CHANNEL_REQUEST with want_reply FALSE, so nothing is expected back and the channel is
 // closed after. Built in the framer's span like any other message this layer sends.
 
-void protocore_ssh_connection_channel_send_exit_status(uint8_t *work)
+void protocore_ssh_connection_channel_send_exit_status(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1774,7 +1774,7 @@ void protocore_ssh_connection_channel_send_exit_status(uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_send_exit_signal(uint8_t *work)
+void protocore_ssh_connection_channel_send_exit_signal(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1857,7 +1857,7 @@ void protocore_ssh_connection_channel_send_open_forwarded(uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_handle_eof(uint8_t *work)
+void protocore_ssh_connection_channel_handle_eof(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;
@@ -1883,7 +1883,7 @@ void protocore_ssh_connection_channel_handle_eof(uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_handle_close(uint8_t *work)
+void protocore_ssh_connection_channel_handle_close(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;

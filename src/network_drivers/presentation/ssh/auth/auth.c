@@ -200,7 +200,7 @@ void protocore_ssh_auth_write_publickey_request(const uint8_t *work)
     protocore_ssh_wr_str(w, pk_blob, pk_len);
 }
 
-void protocore_ssh_auth_timed_out(uint8_t *work)
+void protocore_ssh_auth_timed_out(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshAuthV.slot;
@@ -611,7 +611,7 @@ static int build_info_request(uint8_t *out, size_t *out_len, size_t cap)
 // ---------------------------------------------------------------------------
 // Orchestration
 
-void protocore_ssh_auth_handle_request(uint8_t *work)
+void protocore_ssh_auth_handle_request(const uint8_t *work)
 {
     const uint8_t i = SshAuthV.slot;
     const uint8_t *payload = SshAuthV.msg.payload;
@@ -1057,7 +1057,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
 
 // A change the application finished: send the reply its USERAUTH_REQUEST deferred.
 // protocore_ssh_auth_pw_change_take marks the session open on an OK.
-void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
+void protocore_ssh_auth_passwd_change_reply(const uint8_t *work)
 {
     const uint8_t i = SshAuthV.slot;
     // sec 5.1: "SSH_MSG_USERAUTH_SUCCESS MUST be sent only once. When SSH_MSG_USERAUTH_SUCCESS has

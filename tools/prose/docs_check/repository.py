@@ -8,8 +8,6 @@
 import os
 import subprocess
 
-
-
 # Every place this project retains prose. A README beside the code makes the same claims a page under
 # docs makes, and is read by the same people.
 #
@@ -20,9 +18,7 @@ import subprocess
 REPOSITORY = os.path.dirname(os.path.abspath(__file__))
 # Walks up to the repository instead of counting directories to it. A count breaks every path here
 # the moment anything moves.
-while (REPOSITORY != os.path.dirname(REPOSITORY)) and not os.path.isfile(
-    os.path.join(REPOSITORY, "repotools.toml")
-):
+while (REPOSITORY != os.path.dirname(REPOSITORY)) and not os.path.isfile(os.path.join(REPOSITORY, "repotools.toml")):
     REPOSITORY = os.path.dirname(REPOSITORY)
 
 # Every directory holding writing of this project's own.
@@ -96,9 +92,7 @@ def git_say(where, args):
     if not os.path.isdir(where):
         return None
     try:
-        answer = subprocess.check_output(
-            ["git"] + list(args), cwd=where, stderr=subprocess.PIPE, env=git_env()
-        )
+        answer = subprocess.check_output(["git"] + list(args), cwd=where, stderr=subprocess.PIPE, env=git_env())
     except (OSError, subprocess.CalledProcessError):
         return None
     return answer.decode("utf-8", "replace").strip()

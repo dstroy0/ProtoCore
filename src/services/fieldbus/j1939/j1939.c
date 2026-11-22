@@ -371,7 +371,7 @@ void protocore_j1939_tp_reset(const uint8_t *work)
     }
 }
 
-void protocore_j1939_tp_feed(uint8_t *work)
+void protocore_j1939_tp_feed(const uint8_t *work)
 {
     J1939TpRx *rx = J1939V.tp_feed_args.rx;
     const CanFrame *f = J1939V.tp_feed_args.f;
@@ -465,7 +465,7 @@ void protocore_j1939_tp_feed(uint8_t *work)
 
 // --- typed decoders (SAE J1939-71) ---
 
-void protocore_j1939_decode_eec1(uint8_t *work)
+void protocore_j1939_decode_eec1(const uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_eec1_args.f;
     J1939Eec1 *out = J1939V.decode_eec1_args.out;
@@ -495,7 +495,7 @@ void protocore_j1939_decode_eec1(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_et1(uint8_t *work)
+void protocore_j1939_decode_et1(const uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_et1_args.f;
     J1939Et1 *out = J1939V.decode_et1_args.out;
@@ -525,7 +525,7 @@ void protocore_j1939_decode_et1(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_lfe(uint8_t *work)
+void protocore_j1939_decode_lfe(const uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_lfe_args.f;
     J1939Lfe *out = J1939V.decode_lfe_args.out;
@@ -559,7 +559,7 @@ void protocore_j1939_decode_lfe(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_amb(uint8_t *work)
+void protocore_j1939_decode_amb(const uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_amb_args.f;
     J1939Amb *out = J1939V.decode_amb_args.out;
@@ -595,7 +595,7 @@ void protocore_j1939_decode_amb(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_ic1(uint8_t *work)
+void protocore_j1939_decode_ic1(const uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_ic1_args.f;
     J1939Ic1 *out = J1939V.decode_ic1_args.out;
@@ -633,7 +633,7 @@ void protocore_j1939_decode_ic1(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_vd(uint8_t *work)
+void protocore_j1939_decode_vd(const uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_vd_args.f;
     J1939Vd *out = J1939V.decode_vd_args.out;
@@ -665,7 +665,7 @@ void protocore_j1939_decode_vd(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_ccvs(uint8_t *work)
+void protocore_j1939_decode_ccvs(const uint8_t *work)
 {
     const CanFrame *f = J1939V.decode_ccvs_args.f;
     J1939Ccvs *out = J1939V.decode_ccvs_args.out;

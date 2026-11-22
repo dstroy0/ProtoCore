@@ -39,8 +39,8 @@ typedef struct
     size_t (*huff_encode)(const uint8_t *, uint8_t *, size_t, const char *, size_t);
     size_t (*huff_len)(const uint8_t *, const char *, size_t);
     embed_bool (*huff_decode)(const uint8_t *, const uint8_t *, size_t, char *, size_t, size_t *);
-    embed_bool (*decode_str)(uint8_t *, const uint8_t *, size_t, size_t *, char *, size_t, size_t *);
-    size_t (*encode_str)(uint8_t *, uint8_t *, size_t, const char *, size_t);
+    embed_bool (*decode_str)(const uint8_t *, const uint8_t *, size_t, size_t *, char *, size_t, size_t *);
+    size_t (*encode_str)(const uint8_t *, uint8_t *, size_t, const char *, size_t);
 } HpackPrimNs;
 PROTOCORE_NS_LAYOUT(HpackPrimNs, encode_int, decode_int, huff_encode, huff_len, huff_decode, decode_str, encode_str);
 
@@ -109,8 +109,8 @@ embed_bool protocore_hpack_prim_huff_decode(const uint8_t *work, const uint8_t *
  * @param out_len Out len
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, size_t len, size_t *pos, char *out,
-                                           size_t cap, size_t *out_len);
+embed_bool protocore_hpack_prim_decode_str(const uint8_t *work, const uint8_t *block, size_t len, size_t *pos,
+                                           char *out, size_t cap, size_t *out_len);
 /**
  * @brief The same literal out, Huffman-coded when that is the shorter of the .
  * @param work PROTOCORE_HPACK_PRIM_BORROW bytes the caller took. Not held past the call.
@@ -120,7 +120,7 @@ embed_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, 
  * @param n N
  * @return The size_t.
  */
-size_t protocore_hpack_prim_encode_str(uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n);
+size_t protocore_hpack_prim_encode_str(const uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n);
 
 /** @brief Module namespace. */
 PROTOCORE_NS HpackPrimNs HpackPrim PROTOCORE_UNUSED = {.encode_int = protocore_hpack_prim_encode_int,

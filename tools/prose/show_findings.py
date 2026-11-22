@@ -37,7 +37,9 @@ def main():
         call = [sys.executable, UNREAD] + targets
     else:
         call = [sys.executable, CHECK] + targets
-    done = subprocess.run(call, capture_output=True, text=True, encoding="utf-8", env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    done = subprocess.run(
+        call, capture_output=True, text=True, encoding="utf-8", env=dict(os.environ, PYTHONIOENCODING="utf-8")
+    )
 
     held = {}
     displayed = 0

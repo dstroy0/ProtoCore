@@ -180,7 +180,7 @@ void protocore_ptp_parse_header(const uint8_t *work)
 
 // -- messages --
 
-static size_t build_ts_msg(uint8_t *work, uint8_t *buf, size_t cap, const protocore_ptp_header *h,
+static size_t build_ts_msg(const uint8_t *work, uint8_t *buf, size_t cap, const protocore_ptp_header *h,
                            const protocore_ptp_timestamp *ts, uint8_t mtype, uint8_t control)
 {
     if (!buf || !h || !ts || cap < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN)
@@ -238,7 +238,7 @@ void protocore_ptp_build_follow_up(uint8_t *work)
     PtpV.n = build_ts_msg(work, buf, cap, h, precise, PROTOCORE_PTP_FOLLOW_UP, 0x02);
 }
 
-void protocore_ptp_build_delay_resp(uint8_t *work)
+void protocore_ptp_build_delay_resp(const uint8_t *work)
 {
     uint8_t *buf = PtpV.build_delay_resp_args.buf;
     size_t cap = PtpV.build_delay_resp_args.cap;
@@ -276,7 +276,7 @@ void protocore_ptp_build_delay_resp(uint8_t *work)
     PtpV.n = PROTOCORE_PTP_HEADER_LEN + body;
 }
 
-void protocore_ptp_build_pdelay_req(uint8_t *work)
+void protocore_ptp_build_pdelay_req(const uint8_t *work)
 {
     uint8_t *buf = PtpV.build_pdelay_req_args.buf;
     size_t cap = PtpV.build_pdelay_req_args.cap;
@@ -311,7 +311,7 @@ void protocore_ptp_build_pdelay_req(uint8_t *work)
 
 // Pdelay_Resp and Pdelay_Resp_Follow_Up share a body layout (a timestamp + the requesting port identity);
 // only the messageType and which timestamp it carries differ.
-static size_t build_pdelay_resp_msg(uint8_t *work, uint8_t *buf, size_t cap, const protocore_ptp_header *h,
+static size_t build_pdelay_resp_msg(const uint8_t *work, uint8_t *buf, size_t cap, const protocore_ptp_header *h,
                                     const protocore_ptp_timestamp *ts, const uint8_t *req_clock_id, uint16_t req_port,
                                     uint8_t mtype)
 {
@@ -370,7 +370,7 @@ void protocore_ptp_build_pdelay_resp_follow_up(uint8_t *work)
         build_pdelay_resp_msg(work, buf, cap, h, origin, req_clock_id, req_port, PROTOCORE_PTP_PDELAY_RESP_FOLLOW_UP);
 }
 
-void protocore_ptp_build_announce(uint8_t *work)
+void protocore_ptp_build_announce(const uint8_t *work)
 {
     uint8_t *buf = PtpV.build_announce_args.buf;
     size_t cap = PtpV.build_announce_args.cap;
@@ -417,7 +417,7 @@ void protocore_ptp_build_announce(uint8_t *work)
     PtpV.n = PROTOCORE_PTP_HEADER_LEN + body;
 }
 
-void protocore_ptp_parse_timestamp_msg(uint8_t *work)
+void protocore_ptp_parse_timestamp_msg(const uint8_t *work)
 {
     const uint8_t *s = PtpV.parse_timestamp_msg_args.s;
     size_t len = PtpV.parse_timestamp_msg_args.len;
@@ -455,7 +455,7 @@ void protocore_ptp_parse_timestamp_msg(uint8_t *work)
     PtpV.ok = EMBED_TRUE;
 }
 
-void protocore_ptp_parse_delay_resp(uint8_t *work)
+void protocore_ptp_parse_delay_resp(const uint8_t *work)
 {
     const uint8_t *s = PtpV.parse_delay_resp_args.s;
     size_t len = PtpV.parse_delay_resp_args.len;
@@ -497,7 +497,7 @@ void protocore_ptp_parse_delay_resp(uint8_t *work)
     PtpV.ok = EMBED_TRUE;
 }
 
-void protocore_ptp_parse_pdelay_req(uint8_t *work)
+void protocore_ptp_parse_pdelay_req(const uint8_t *work)
 {
     const uint8_t *s = PtpV.parse_pdelay_req_args.s;
     size_t len = PtpV.parse_pdelay_req_args.len;
@@ -536,7 +536,7 @@ void protocore_ptp_parse_pdelay_req(uint8_t *work)
 }
 
 // Pdelay_Resp and its Follow_Up share the body layout; only the messageType differs.
-static embed_bool parse_pdelay_resp_msg(uint8_t *work, const uint8_t *s, size_t len, protocore_ptp_header *h,
+static embed_bool parse_pdelay_resp_msg(const uint8_t *work, const uint8_t *s, size_t len, protocore_ptp_header *h,
                                         protocore_ptp_pdelay_resp *out, uint8_t mtype)
 {
     if (!out)
@@ -592,7 +592,7 @@ void protocore_ptp_parse_pdelay_resp_follow_up(uint8_t *work)
     PtpV.ok = parse_pdelay_resp_msg(work, s, len, h, out, PROTOCORE_PTP_PDELAY_RESP_FOLLOW_UP);
 }
 
-void protocore_ptp_parse_announce(uint8_t *work)
+void protocore_ptp_parse_announce(const uint8_t *work)
 {
     const uint8_t *s = PtpV.parse_announce_args.s;
     size_t len = PtpV.parse_announce_args.len;

@@ -7,7 +7,6 @@
 
 from .locale import LOCALE
 
-
 # docs-check: quoting
 # ====================================================================
 # THE THREE STAGES, AND WHAT MEASURED THEM

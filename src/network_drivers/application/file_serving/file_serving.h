@@ -150,7 +150,7 @@ typedef struct
     void (*const file_send_pump)(const uint8_t *work);
     void (*const holds_slot)(const uint8_t *work);
     void (*const serve_file)(uint8_t *work);
-    void (*const serve_static)(uint8_t *work);
+    void (*const serve_static)(const uint8_t *work);
 } FileServingNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -161,7 +161,7 @@ void protocore_file_serving_serve_file_internal(uint8_t *work);
 void protocore_file_serving_file_send_pump(const uint8_t *work);
 void protocore_file_serving_holds_slot(const uint8_t *work);
 void protocore_file_serving_serve_file(uint8_t *work);
-void protocore_file_serving_serve_static(uint8_t *work);
+void protocore_file_serving_serve_static(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

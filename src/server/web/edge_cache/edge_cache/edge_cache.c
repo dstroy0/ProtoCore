@@ -169,10 +169,10 @@ static embed_bool header_line_value(const char *p, const char *lend, const char 
 // never read.
 
 void protocore_edge_cache_current_age(const uint8_t *work);
-void protocore_edge_cache_entry_fresh(uint8_t *work);
+void protocore_edge_cache_entry_fresh(const uint8_t *work);
 void protocore_edge_cache_entry_has_validator(const uint8_t *work);
 void protocore_edge_cache_entry_set_freshness(uint8_t *work);
-void protocore_edge_cache_freshness_lifetime(uint8_t *work);
+void protocore_edge_cache_freshness_lifetime(const uint8_t *work);
 void protocore_edge_cache_header_value(const uint8_t *work);
 void protocore_edge_cache_heuristic_lifetime(const uint8_t *work);
 void protocore_edge_cache_initial_age(const uint8_t *work);
@@ -387,7 +387,7 @@ void protocore_edge_cache_parse_http_date(const uint8_t *work)
     EdgeCacheV.epoch = days * 86400 + (int64_t)hh * 3600 + (int64_t)mm * 60 + ss;
 }
 
-void protocore_edge_cache_freshness_lifetime(uint8_t *work)
+void protocore_edge_cache_freshness_lifetime(const uint8_t *work)
 {
     (void)work;
     const protocore_cache_control *cc = EdgeCacheV.freshness_lifetime_args.cc;
@@ -698,7 +698,7 @@ void protocore_edge_cache_store_init(const uint8_t *work)
     }
 }
 
-void protocore_edge_cache_store_alloc(uint8_t *work)
+void protocore_edge_cache_store_alloc(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_alloc_args.s;
@@ -793,7 +793,7 @@ void protocore_edge_cache_store_lookup(const uint8_t *work)
     EdgeCacheV.entry = NULL;
 }
 
-void protocore_edge_cache_store_find(uint8_t *work)
+void protocore_edge_cache_store_find(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_find_args.s;
@@ -892,7 +892,7 @@ void protocore_edge_cache_entry_has_validator(const uint8_t *work)
     EdgeCacheV.ok = e->etag[0] != '\0' || e->last_modified[0] != '\0';
 }
 
-void protocore_edge_cache_entry_fresh(uint8_t *work)
+void protocore_edge_cache_entry_fresh(const uint8_t *work)
 {
     (void)work;
     const EdgeEntry *e = EdgeCacheV.entry_fresh_args.e;

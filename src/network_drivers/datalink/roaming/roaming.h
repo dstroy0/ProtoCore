@@ -185,14 +185,14 @@ extern RoamVars RoamV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const decide)(uint8_t *work);
+    void (*const decide)(const uint8_t *work);
     void (*const parse_neighbor_report)(uint8_t *work);
     void (*const parse_btm_request)(uint8_t *work);
 } RoamNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in RoamV or a region of the borrow at a fixed offset.
-void protocore_roam_decide(uint8_t *work);
+void protocore_roam_decide(const uint8_t *work);
 void protocore_roam_parse_neighbor_report(uint8_t *work);
 void protocore_roam_parse_btm_request(uint8_t *work);
 

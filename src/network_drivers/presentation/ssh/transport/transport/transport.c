@@ -654,7 +654,7 @@ static embed_bool ident_protoversion_ok(const uint8_t *line, uint16_t n)
            (vlen == 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = line + 4, .other = "1.99", .bytes = 4) == 0);
 }
 
-void protocore_ssh_transport_recv_ident(uint8_t *work)
+void protocore_ssh_transport_recv_ident(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -1851,7 +1851,7 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
 }
 #endif // PROTOCORE_ENABLE_SSH_SNTRUP761
 
-void protocore_ssh_transport_kexdh_reply(uint8_t *work)
+void protocore_ssh_transport_kexdh_reply(const uint8_t *work)
 {
     const uint8_t i = SshTransportV.slot;
     const uint8_t *payload = SshTransportV.pkt.payload;
@@ -2195,7 +2195,7 @@ void protocore_ssh_transport_rekey_due(const uint8_t *work)
     return;
 }
 
-void protocore_ssh_transport_begin_rekey(uint8_t *work)
+void protocore_ssh_transport_begin_rekey(const uint8_t *work)
 {
     const uint8_t i = SshTransportV.slot;
     uint8_t *out = SshTransportV.out_args.out;

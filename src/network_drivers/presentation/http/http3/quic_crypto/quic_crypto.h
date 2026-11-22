@@ -62,12 +62,12 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*derive_initial_secrets)(uint8_t *, uint8_t *, const uint8_t *, size_t, QuicInitialSecrets *);
+    void (*derive_initial_secrets)(const uint8_t *, uint8_t *, const uint8_t *, size_t, QuicInitialSecrets *);
     void (*keys_from_secret)(const uint8_t *, uint8_t *, const uint8_t *, QuicPacketKeys *);
     size_t (*packet_protect)(const uint8_t *, uint8_t *, size_t, size_t, uint8_t, uint64_t, size_t, QuicPacketKeys *,
                              embed_bool);
-    size_t (*packet_unprotect)(uint8_t *, uint8_t *, size_t, size_t, uint64_t, QuicPacketKeys *, embed_bool, uint8_t *,
-                               uint64_t *);
+    size_t (*packet_unprotect)(const uint8_t *, uint8_t *, size_t, size_t, uint64_t, QuicPacketKeys *, embed_bool,
+                               uint8_t *, uint64_t *);
     void (*retry_integrity_tag)(const uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
 } QuicCryptoNs;
 PROTOCORE_NS_LAYOUT(QuicCryptoNs, derive_initial_secrets, keys_from_secret, packet_protect, packet_unprotect,
@@ -81,7 +81,7 @@ PROTOCORE_NS_LAYOUT(QuicCryptoNs, derive_initial_secrets, keys_from_secret, pack
  * @param dcid_len Dcid len
  * @param out Out
  */
-void protocore_quic_crypto_derive_initial_secrets(uint8_t *work, uint8_t *keys_work, const uint8_t *dcid,
+void protocore_quic_crypto_derive_initial_secrets(const uint8_t *work, uint8_t *keys_work, const uint8_t *dcid,
                                                   size_t dcid_len, QuicInitialSecrets *out);
 /**
  * @brief Expand one traffic secret into a {key, iv, hp} triple (RFC 9001 sec .
@@ -121,7 +121,7 @@ size_t protocore_quic_crypto_packet_protect(const uint8_t *work, uint8_t *pkt, s
  * @param out_pn Receives the reconstructed full packet number (may be NULL)
  * @return The size_t.
  */
-size_t protocore_quic_crypto_packet_unprotect(uint8_t *work, uint8_t *pkt, size_t pn_offset, size_t length,
+size_t protocore_quic_crypto_packet_unprotect(const uint8_t *work, uint8_t *pkt, size_t pn_offset, size_t length,
                                               uint64_t largest_pn, QuicPacketKeys *keys, embed_bool is_long,
                                               uint8_t *out, uint64_t *out_pn);
 /**

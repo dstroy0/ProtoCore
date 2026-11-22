@@ -37,7 +37,7 @@ void protocore_hart_checksum(const uint8_t *work)
     HartV.value = x;
 }
 
-void protocore_hart_build(uint8_t *work)
+void protocore_hart_build(const uint8_t *work)
 {
     uint8_t delimiter = HartV.build_args.delimiter;
     const uint8_t *addr = HartV.build_args.addr;
@@ -85,7 +85,7 @@ void protocore_hart_build(uint8_t *work)
     HartV.n = i;
 }
 
-void protocore_hart_parse(uint8_t *work)
+void protocore_hart_parse(const uint8_t *work)
 {
     const uint8_t *frame = HartV.parse_args.frame;
     size_t len = HartV.parse_args.len;

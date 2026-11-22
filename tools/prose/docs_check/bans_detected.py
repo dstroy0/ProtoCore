@@ -22,7 +22,6 @@ DETECTED = (
     # A colon splicing two independent clauses, the elaboration shape section 6 bans in
     # prose and which the detector scores the same way.
     r"\bhas no call and no text:",
-
     # Tier eight. An outside detector is trained on published machine prose, and that is not the
     # question this gate asks. A passage can score clean there and still not sound like the person
     # whose name is on the research paper. So a score from one bounds nothing here, and every
@@ -42,7 +41,6 @@ DETECTED = (
     # The instrument named by category and then given a passive. It has a filename: oracle.tsv, and
     # the entry names it, as in "Oracle.tsv checked against the paper."
     r"\bthe oracle is checked against\b",
-
     # A corpus README entry read out loud against these retains its facts and loses every sentence
     # written about them, which is the test for whether a sentence was carrying anything.
     #
@@ -103,7 +101,6 @@ DETECTED = (
     # listed in a manifest. A value is in a column. A form appears on a page." That is a house
     # preference for a precise verb, and precise verbs are worth wanting. It is not a register
     # tell, and a bare word ban is not how it gets enforced.
-
     # The shapes a provenance section reaches for when it is read out loud instead of scanned.
     #
     # shape, where nothing has a shape. The topology research papers use it for a real one and are the
@@ -198,8 +195,7 @@ DETECTED = (
     #
     # FOUR SHAPES MUST NOT BE ADDED: `handoff`, `passed off`, `a peer's` and `the specialist`, and
     # neither may bare `this session`. Each of them reaches sentences that credit nobody.
-    r"\b(a|the|one|each|every|another) (later|earlier|previous|next|other|second|third|peer"
-    r"|builder) sessions?\b",
+    r"\b(a|the|one|each|every|another) (later|earlier|previous|next|other|second|third|peer" r"|builder) sessions?\b",
     r"\bpeer sessions?\b",
     r"\b(every|each) session (builds|reads|takes|writes|runs)\b",
     r"\bin (one|a single|the same|an earlier|a later) session\b",

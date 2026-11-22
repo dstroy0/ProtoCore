@@ -632,7 +632,7 @@ const char *protocore_http_parser_get_header(const uint8_t *work, const HttpReq 
     return NULL;
 }
 
-embed_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, const char *name, char *out,
+embed_bool protocore_http_parser_get_cookie(const uint8_t *work, const HttpReq *req, const char *name, char *out,
                                             size_t out_size)
 {
     if (out == NULL || out_size == 0)
@@ -894,7 +894,7 @@ static embed_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t 
            EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = v, .other = lit, .cap = litlen, .ci = EMBED_TRUE) == litlen;
 }
 
-embed_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
+embed_bool protocore_http_parser_forwarded_client(const uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
                                                   embed_bool *is_https)
 {
     if (is_https)
@@ -975,7 +975,7 @@ const char *protocore_http_parser_get_query(const uint8_t *work, const HttpReq *
     return NULL;
 }
 
-embed_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, const char *key, char *out,
+embed_bool protocore_http_parser_get_form(const uint8_t *work, const HttpReq *req, const char *key, char *out,
                                           size_t out_size)
 {
     if (out == NULL || out_size == 0)

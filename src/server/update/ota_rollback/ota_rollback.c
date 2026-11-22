@@ -60,7 +60,7 @@ void protocore_ota_rollback_rollback(const uint8_t *work)
     protocore_platform_img_rollback(); // does not return on a device
 }
 
-void protocore_ota_rollback_tick(uint8_t *work)
+void protocore_ota_rollback_tick(const uint8_t *work)
 {
     protocore_ota_rollback_state(work);
     OtaRollbackV.decide_args.img_state = OtaRollbackV.img_state;
@@ -93,7 +93,7 @@ void protocore_ota_rollback_rollback(const uint8_t *work)
 {
     (void)work;
 }
-void protocore_ota_rollback_tick(uint8_t *work)
+void protocore_ota_rollback_tick(const uint8_t *work)
 {
     (void)work;
     OtaRollbackV.action = PROTOCORE_OTA_WAIT;

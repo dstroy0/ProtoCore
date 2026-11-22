@@ -130,7 +130,7 @@ extern Df1Vars Df1V;
 typedef struct
 {
     void (*const bcc)(const uint8_t *work);
-    void (*const crc)(uint8_t *work);
+    void (*const crc)(const uint8_t *work);
     void (*const build_frame)(uint8_t *work);
     void (*const parse_frame)(uint8_t *work);
 } Df1Ns;
@@ -138,7 +138,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Df1V or a region of the borrow at a fixed offset.
 void protocore_df1_bcc(const uint8_t *work);
-void protocore_df1_crc(uint8_t *work);
+void protocore_df1_crc(const uint8_t *work);
 void protocore_df1_build_frame(uint8_t *work);
 void protocore_df1_parse_frame(uint8_t *work);
 

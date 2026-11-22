@@ -7,8 +7,6 @@
 
 import os
 
-
-
 # --------------------------------------------------------------------
 # SIGNED MANIFESTS
 # --------------------------------------------------------------------
@@ -59,9 +57,7 @@ def manifest_home(start):
         if any(os.path.isfile(os.path.join(here, one)) for one in MANIFEST_NAMES):
             answer = here
             break
-        if os.path.isdir(os.path.join(here, ".git")) or os.path.isfile(
-            os.path.join(here, ".git")
-        ):
+        if os.path.isdir(os.path.join(here, ".git")) or os.path.isfile(os.path.join(here, ".git")):
             break
         up = os.path.dirname(here)
         if up == here:
@@ -132,7 +128,4 @@ def reconcile_command(manifest):
                     return said
     except OSError:
         pass
-    return (
-        "reconcile this tree against %s and re-sign it before committing"
-        % os.path.basename(manifest)
-    )
+    return "reconcile this tree against %s and re-sign it before committing" % os.path.basename(manifest)

@@ -170,7 +170,7 @@ extern HttpConnVars HttpConnV;
 typedef struct
 {
     void (*const reset)(const uint8_t *work);
-    void (*const conn_open)(uint8_t *work);
+    void (*const conn_open)(const uint8_t *work);
     void (*const parse)(uint8_t *work);
     void (*const keepalive_eval)(uint8_t *work);
     void (*const has_token)(uint8_t *work);
@@ -181,7 +181,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpConnV or a region of the borrow at a fixed offset.
 void protocore_http_conn_reset(const uint8_t *work);
-void protocore_http_conn_conn_open(uint8_t *work);
+void protocore_http_conn_conn_open(const uint8_t *work);
 void protocore_http_conn_parse(uint8_t *work);
 void protocore_http_conn_keepalive_eval(uint8_t *work);
 void protocore_http_conn_has_token(uint8_t *work);

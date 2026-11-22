@@ -176,7 +176,8 @@ uint8_t protocore_quic_packet_pn_length(const uint8_t *work, uint64_t full_pn, i
     return 4;
 }
 
-size_t protocore_quic_packet_pn_encode(uint8_t *work, uint8_t *out, size_t cap, uint64_t full_pn, int64_t largest_acked)
+size_t protocore_quic_packet_pn_encode(const uint8_t *work, uint8_t *out, size_t cap, uint64_t full_pn,
+                                       int64_t largest_acked)
 {
     uint8_t quic_packet_u8 = QuicPacket.pn_length(work, full_pn, largest_acked);
     uint8_t n = quic_packet_u8;

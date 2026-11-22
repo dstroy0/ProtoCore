@@ -114,7 +114,7 @@ size_t protocore_quic_tp_encode(uint8_t *work, const QuicTransportParams *tp, ui
 }
 
 // Decode the varint that IS the whole value of a varint-valued parameter (must consume exactly len).
-static embed_bool value_varint(uint8_t *work, const uint8_t *val, size_t len, uint64_t *out)
+static embed_bool value_varint(const uint8_t *work, const uint8_t *val, size_t len, uint64_t *out)
 {
     size_t consumed = 0;
     embed_bool quic_varint_ok = QuicVarint.decode(work, val, len, out, &consumed);

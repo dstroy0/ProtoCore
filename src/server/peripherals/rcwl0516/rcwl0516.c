@@ -135,7 +135,7 @@ embed_bool protocore_rcwl0516_presence_take_event(const uint8_t *work, PresenceC
     return EMBED_TRUE;
 }
 
-void protocore_rcwl0516_core_init(uint8_t *work, PresenceCore *c, uint32_t now)
+void protocore_rcwl0516_core_init(const uint8_t *work, PresenceCore *c, uint32_t now)
 {
 
     Rcwl0516.presence_init(work, c, PROTOCORE_RCWL0516_DEBOUNCE_MS, PROTOCORE_RCWL0516_HOLD_MS, now);

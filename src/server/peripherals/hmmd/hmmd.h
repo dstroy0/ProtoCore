@@ -275,16 +275,16 @@ typedef struct
 
     void (*const parse_report)(const uint8_t *work);
     void (*const stream_reset)(const uint8_t *work);
-    void (*const stream_push)(uint8_t *work);
+    void (*const stream_push)(const uint8_t *work);
     void (*const present)(const uint8_t *work);
     void (*const distance_cm)(const uint8_t *work);
     void (*const cmd_build)(const uint8_t *work);
-    void (*const cmd_open)(uint8_t *work);
-    void (*const cmd_close)(uint8_t *work);
-    void (*const cmd_read_firmware)(uint8_t *work);
-    void (*const cmd_read_serial)(uint8_t *work);
-    void (*const cmd_read_config)(uint8_t *work);
-    void (*const cmd_read_register)(uint8_t *work);
+    void (*const cmd_open)(const uint8_t *work);
+    void (*const cmd_close)(const uint8_t *work);
+    void (*const cmd_read_firmware)(const uint8_t *work);
+    void (*const cmd_read_serial)(const uint8_t *work);
+    void (*const cmd_read_config)(const uint8_t *work);
+    void (*const cmd_read_register)(const uint8_t *work);
     void (*const parse_ack)(const uint8_t *work);
     void (*const ack_matches)(const uint8_t *work);
     void (*const begin)(uint8_t *work);

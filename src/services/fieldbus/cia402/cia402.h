@@ -306,13 +306,13 @@ typedef struct
 {
     void (*const state)(const uint8_t *work);
     void (*const controlword)(const uint8_t *work);
-    void (*const enable_sequence)(uint8_t *work);
-    void (*const sdo_set_controlword)(uint8_t *work);
-    void (*const sdo_set_mode)(uint8_t *work);
-    void (*const sdo_set_target_position)(uint8_t *work);
-    void (*const sdo_set_target_velocity)(uint8_t *work);
-    void (*const sdo_set_target_torque)(uint8_t *work);
-    void (*const sdo_read)(uint8_t *work);
+    void (*const enable_sequence)(const uint8_t *work);
+    void (*const sdo_set_controlword)(const uint8_t *work);
+    void (*const sdo_set_mode)(const uint8_t *work);
+    void (*const sdo_set_target_position)(const uint8_t *work);
+    void (*const sdo_set_target_velocity)(const uint8_t *work);
+    void (*const sdo_set_target_torque)(const uint8_t *work);
+    void (*const sdo_read)(const uint8_t *work);
     void (*const sdo_get_u16)(uint8_t *work);
     void (*const sdo_get_i32)(uint8_t *work);
     void (*const pack_command)(const uint8_t *work);
@@ -323,13 +323,13 @@ typedef struct
 // else an entry needs is an operand in Cia402V or a region of the borrow at a fixed offset.
 void protocore_cia402_state(const uint8_t *work);
 void protocore_cia402_controlword(const uint8_t *work);
-void protocore_cia402_enable_sequence(uint8_t *work);
-void protocore_cia402_sdo_set_controlword(uint8_t *work);
-void protocore_cia402_sdo_set_mode(uint8_t *work);
-void protocore_cia402_sdo_set_target_position(uint8_t *work);
-void protocore_cia402_sdo_set_target_velocity(uint8_t *work);
-void protocore_cia402_sdo_set_target_torque(uint8_t *work);
-void protocore_cia402_sdo_read(uint8_t *work);
+void protocore_cia402_enable_sequence(const uint8_t *work);
+void protocore_cia402_sdo_set_controlword(const uint8_t *work);
+void protocore_cia402_sdo_set_mode(const uint8_t *work);
+void protocore_cia402_sdo_set_target_position(const uint8_t *work);
+void protocore_cia402_sdo_set_target_velocity(const uint8_t *work);
+void protocore_cia402_sdo_set_target_torque(const uint8_t *work);
+void protocore_cia402_sdo_read(const uint8_t *work);
 void protocore_cia402_sdo_get_u16(uint8_t *work);
 void protocore_cia402_sdo_get_i32(uint8_t *work);
 void protocore_cia402_pack_command(const uint8_t *work);

@@ -72,11 +72,14 @@ def main():
         print()
         print("%9s %s  pattern" % ("papers", " ".join("%9s" % ("text %d" % (at + 1)) for at in range(len(beside)))))
         for pattern in GRAMMAR:
-            print("%9.2f %s  %s" % (
-                human[pattern],
-                " ".join("%9.2f" % found[pattern] for _, (found, _) in beside),
-                pattern[:90],
-            ))
+            print(
+                "%9.2f %s  %s"
+                % (
+                    human[pattern],
+                    " ".join("%9.2f" % found[pattern] for _, (found, _) in beside),
+                    pattern[:90],
+                )
+            )
     return 0
 
 

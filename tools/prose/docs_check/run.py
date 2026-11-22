@@ -34,12 +34,11 @@ from .scan import attributed, banned_tokens, em_dashes
 from .ste import ste_findings
 
 
-
 def option_value(name):
     """The value of a --name=value option, or None where it was not given."""
     for one in sys.argv[1:]:
         if one.startswith(name + "="):
-            return one[len(name) + 1:]
+            return one[len(name) + 1 :]
     return None
 
 
@@ -124,18 +123,11 @@ def main():
         "  roots configured: %d, %s"
         % (
             len(roots),
-            (
-                "given on the command line"
-                if where_given
-                else "this tool's own defaults, inside this repository only"
-            ),
+            ("given on the command line" if where_given else "this tool's own defaults, inside this repository only"),
         )
     )
     for one in roots:
-        print(
-            "    %s%s"
-            % (one.replace("\\", "/"), "" if os.path.exists(one) else "   NOT FOUND")
-        )
+        print("    %s%s" % (one.replace("\\", "/"), "" if os.path.exists(one) else "   NOT FOUND"))
 
     for top, revision, reach, dirty in refs_for(roots):
         print(
@@ -228,10 +220,7 @@ def main():
             if added is not None and not on_changed(name, added, at):
                 continue
             on_new_breaking += 1
-            print(
-                "  BREAK %s:%d: %s"
-                % (path.replace("\\", "/"), at, attributed(what, at, regions))
-            )
+            print("  BREAK %s:%d: %s" % (path.replace("\\", "/"), at, attributed(what, at, regions)))
         for at, what in sorted(wording):
             if added is not None and not on_changed(name, added, at):
                 continue
@@ -353,9 +342,7 @@ def main():
             return 0
         print("  no files were read. Nothing was checked. Nothing passed.")
         for one in roots:
-            print(
-                "    %s%s" % (one, "" if os.path.exists(one) else "   does not exist")
-            )
+            print("    %s%s" % (one, "" if os.path.exists(one) else "   does not exist"))
         return 2
 
     # One for an error and two for the sentinel, never a count. A count makes a run with exactly

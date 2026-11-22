@@ -7,8 +7,6 @@
 
 import re
 
-
-
 EM_DASH = "—"
 
 # Definitions that are somebody's name and never this project's prose. The International Conference on

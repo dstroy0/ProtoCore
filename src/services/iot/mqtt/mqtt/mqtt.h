@@ -294,7 +294,7 @@ typedef struct
     void (*const build_pingreq)(const uint8_t *work);
     void (*const build_disconnect)(const uint8_t *work);
     void (*const parse_fixed_header)(const uint8_t *work);
-    void (*const parse_publish)(uint8_t *work);
+    void (*const parse_publish)(const uint8_t *work);
     void (*const parse_ack)(const uint8_t *work);
     void (*const parse_connack)(const uint8_t *work);
     void (*const parse_suback)(const uint8_t *work);
@@ -320,7 +320,7 @@ void protocore_mqtt_build_ack(const uint8_t *work);
 void protocore_mqtt_build_pingreq(const uint8_t *work);
 void protocore_mqtt_build_disconnect(const uint8_t *work);
 void protocore_mqtt_parse_fixed_header(const uint8_t *work);
-void protocore_mqtt_parse_publish(uint8_t *work);
+void protocore_mqtt_parse_publish(const uint8_t *work);
 void protocore_mqtt_parse_ack(const uint8_t *work);
 void protocore_mqtt_parse_connack(const uint8_t *work);
 void protocore_mqtt_parse_suback(const uint8_t *work);

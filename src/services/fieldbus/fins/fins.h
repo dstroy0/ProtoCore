@@ -224,10 +224,10 @@ extern FinsVars FinsV;
 typedef struct
 {
     void (*const build_command)(const uint8_t *work);
-    void (*const build_memory_area_read)(uint8_t *work);
-    void (*const build_memory_area_write)(uint8_t *work);
-    void (*const build_run)(uint8_t *work);
-    void (*const build_stop)(uint8_t *work);
+    void (*const build_memory_area_read)(const uint8_t *work);
+    void (*const build_memory_area_write)(const uint8_t *work);
+    void (*const build_run)(const uint8_t *work);
+    void (*const build_stop)(const uint8_t *work);
     void (*const parse_command)(const uint8_t *work);
     void (*const parse_response)(const uint8_t *work);
 } FinsNs;
@@ -235,10 +235,10 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FinsV or a region of the borrow at a fixed offset.
 void protocore_fins_build_command(const uint8_t *work);
-void protocore_fins_build_memory_area_read(uint8_t *work);
-void protocore_fins_build_memory_area_write(uint8_t *work);
-void protocore_fins_build_run(uint8_t *work);
-void protocore_fins_build_stop(uint8_t *work);
+void protocore_fins_build_memory_area_read(const uint8_t *work);
+void protocore_fins_build_memory_area_write(const uint8_t *work);
+void protocore_fins_build_run(const uint8_t *work);
+void protocore_fins_build_stop(const uint8_t *work);
 void protocore_fins_parse_command(const uint8_t *work);
 void protocore_fins_parse_response(const uint8_t *work);
 

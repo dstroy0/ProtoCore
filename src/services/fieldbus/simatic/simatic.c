@@ -58,7 +58,7 @@ uint8_t *protocore_simatic_span(void)
 }
 
 void protocore_simatic_bcc_3964r(const uint8_t *work);
-void protocore_simatic_build_block_3964r(uint8_t *work);
+void protocore_simatic_build_block_3964r(const uint8_t *work);
 
 void protocore_simatic_bcc_3964r(const uint8_t *work)
 {
@@ -74,7 +74,7 @@ void protocore_simatic_bcc_3964r(const uint8_t *work)
     SimaticV.value = x;
 }
 
-void protocore_simatic_build_block_3964r(uint8_t *work)
+void protocore_simatic_build_block_3964r(const uint8_t *work)
 {
     uint8_t *buf = SimaticV.build_block_3964r_args.buf;
     size_t cap = SimaticV.build_block_3964r_args.cap;

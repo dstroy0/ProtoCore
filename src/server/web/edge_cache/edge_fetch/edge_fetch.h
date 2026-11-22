@@ -74,7 +74,7 @@ typedef struct
                   size_t, uint32_t);
     EdgeFetchStatus (*pump)(uint8_t *, EdgeFetch *, const EdgeFetchTransport *, uint32_t);
     void (*end)(const uint8_t *, EdgeFetch *, const EdgeFetchTransport *);
-    embed_bool (*edge_resp_complete)(uint8_t *, const uint8_t *, size_t, embed_bool, size_t *);
+    embed_bool (*edge_resp_complete)(const uint8_t *, const uint8_t *, size_t, embed_bool, size_t *);
 } EdgeFetchNs;
 PROTOCORE_NS_LAYOUT(EdgeFetchNs, begin, pump, end, edge_resp_complete);
 
@@ -116,7 +116,7 @@ void protocore_edge_fetcher_end(const uint8_t *work, EdgeFetch *f, const EdgeFet
  * @param head_len Head len
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
+embed_bool protocore_edge_fetcher_edge_resp_complete(const uint8_t *work, const uint8_t *buf, size_t len,
                                                      embed_bool conn_closed, size_t *head_len);
 
 /** @brief Module namespace. */

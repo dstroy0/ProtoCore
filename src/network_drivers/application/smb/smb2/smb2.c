@@ -111,7 +111,7 @@ embed_bool protocore_smb2_parse_header(const uint8_t *work, const uint8_t *buf, 
     return EMBED_TRUE;
 }
 
-size_t protocore_smb2_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
+size_t protocore_smb2_build_negotiate(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
                                       uint16_t security_mode)
 {
     static const Smb2Dialect dialects[] = {SMB2_DIALECT_0202, SMB2_DIALECT_0210, SMB2_DIALECT_0300, SMB2_DIALECT_0302};
@@ -145,7 +145,7 @@ size_t protocore_smb2_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap, c
     return total;
 }
 
-embed_bool protocore_smb2_parse_negotiate_response(uint8_t *work, const uint8_t *msg, size_t len,
+embed_bool protocore_smb2_parse_negotiate_response(const uint8_t *work, const uint8_t *msg, size_t len,
                                                    Smb2NegotiateResp *out)
 {
     embed_bool ok = EMBED_FALSE;
@@ -200,7 +200,7 @@ embed_bool protocore_smb2_parse_negotiate_response(uint8_t *work, const uint8_t 
     return EMBED_TRUE;
 }
 
-size_t protocore_smb2_build_negotiate_311(uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
+size_t protocore_smb2_build_negotiate_311(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
                                           uint16_t security_mode, const uint8_t *salt, size_t salt_len,
                                           const uint16_t *ciphers, size_t cipher_count)
 {
@@ -316,7 +316,7 @@ size_t protocore_smb2_build_negotiate_311(uint8_t *work, uint8_t *buf, size_t ca
     return total;
 }
 
-embed_bool protocore_smb2_parse_negotiate_contexts(uint8_t *work, const uint8_t *msg, size_t len,
+embed_bool protocore_smb2_parse_negotiate_contexts(const uint8_t *work, const uint8_t *msg, size_t len,
                                                    Smb2NegotiateContexts *out)
 {
     embed_bool ok = EMBED_FALSE;
@@ -440,7 +440,7 @@ void protocore_smb2_preauth_update(const uint8_t *work, uint8_t *crypto_work, Sm
     Sha512.final(crypto_work, p->hash);
 }
 
-size_t protocore_smb2_build_session_setup(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
+size_t protocore_smb2_build_session_setup(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                           uint64_t session_id, uint8_t security_mode, const uint8_t *sec_buf,
                                           size_t sec_len)
 {
@@ -472,7 +472,7 @@ size_t protocore_smb2_build_session_setup(uint8_t *work, uint8_t *buf, size_t ca
     return total;
 }
 
-embed_bool protocore_smb2_parse_session_setup_response(uint8_t *work, const uint8_t *msg, size_t len,
+embed_bool protocore_smb2_parse_session_setup_response(const uint8_t *work, const uint8_t *msg, size_t len,
                                                        Smb2SessionSetupResp *out)
 {
     embed_bool ok = EMBED_FALSE;
@@ -520,7 +520,7 @@ embed_bool protocore_smb2_parse_session_setup_response(uint8_t *work, const uint
     return EMBED_TRUE;
 }
 
-size_t protocore_smb2_build_tree_connect(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
+size_t protocore_smb2_build_tree_connect(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                          uint64_t session_id, const uint8_t *path_utf16, size_t path_len)
 {
     const size_t body = 8; // fixed TREE_CONNECT request body (§2.2.9)
@@ -548,7 +548,7 @@ size_t protocore_smb2_build_tree_connect(uint8_t *work, uint8_t *buf, size_t cap
     return total;
 }
 
-embed_bool protocore_smb2_parse_tree_connect_response(uint8_t *work, const uint8_t *msg, size_t len,
+embed_bool protocore_smb2_parse_tree_connect_response(const uint8_t *work, const uint8_t *msg, size_t len,
                                                       Smb2TreeConnectResp *out)
 {
     if (!msg || !out)
@@ -578,10 +578,10 @@ embed_bool protocore_smb2_parse_tree_connect_response(uint8_t *work, const uint8
     return EMBED_TRUE;
 }
 
-size_t protocore_smb2_build_create(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
-                                   uint32_t tree_id, uint32_t desired_access, uint32_t share_access,
-                                   uint32_t create_disposition, uint32_t create_options, const uint8_t *name_utf16,
-                                   size_t name_len)
+size_t protocore_smb2_build_create(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                   uint64_t session_id, uint32_t tree_id, uint32_t desired_access,
+                                   uint32_t share_access, uint32_t create_disposition, uint32_t create_options,
+                                   const uint8_t *name_utf16, size_t name_len)
 {
     const size_t body = 56; // fixed CREATE request body (§2.2.13)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + name_len;
@@ -621,7 +621,8 @@ size_t protocore_smb2_build_create(uint8_t *work, uint8_t *buf, size_t cap, uint
     return total;
 }
 
-embed_bool protocore_smb2_parse_create_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2CreateResp *out)
+embed_bool protocore_smb2_parse_create_response(const uint8_t *work, const uint8_t *msg, size_t len,
+                                                Smb2CreateResp *out)
 {
     if (!msg || !out)
     {
@@ -651,8 +652,8 @@ embed_bool protocore_smb2_parse_create_response(uint8_t *work, const uint8_t *ms
     return EMBED_TRUE;
 }
 
-size_t protocore_smb2_build_close(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
-                                  uint32_t tree_id, const uint8_t *file_id)
+size_t protocore_smb2_build_close(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                  uint64_t session_id, uint32_t tree_id, const uint8_t *file_id)
 {
     const size_t body = 24; // fixed CLOSE request body (§2.2.15), no variable buffer
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body;
@@ -674,7 +675,7 @@ size_t protocore_smb2_build_close(uint8_t *work, uint8_t *buf, size_t cap, uint6
     return total;
 }
 
-embed_bool protocore_smb2_parse_close_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2CloseResp *out)
+embed_bool protocore_smb2_parse_close_response(const uint8_t *work, const uint8_t *msg, size_t len, Smb2CloseResp *out)
 {
     if (!msg || !out)
     {
@@ -701,8 +702,9 @@ embed_bool protocore_smb2_parse_close_response(uint8_t *work, const uint8_t *msg
     return EMBED_TRUE;
 }
 
-size_t protocore_smb2_build_read(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
-                                 uint32_t tree_id, const uint8_t *file_id, uint32_t length, uint64_t offset)
+size_t protocore_smb2_build_read(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                 uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, uint32_t length,
+                                 uint64_t offset)
 {
     const size_t body = 48;                                     // fixed READ request body (§2.2.19)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + 1; // + a 1-byte buffer (StructureSize 49 convention)
@@ -732,7 +734,7 @@ size_t protocore_smb2_build_read(uint8_t *work, uint8_t *buf, size_t cap, uint64
     return total;
 }
 
-embed_bool protocore_smb2_parse_read_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2ReadResp *out)
+embed_bool protocore_smb2_parse_read_response(const uint8_t *work, const uint8_t *msg, size_t len, Smb2ReadResp *out)
 {
     embed_bool ok = EMBED_FALSE;
     if (!msg || !out)
@@ -775,9 +777,9 @@ embed_bool protocore_smb2_parse_read_response(uint8_t *work, const uint8_t *msg,
     return EMBED_TRUE;
 }
 
-size_t protocore_smb2_build_write(uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id, uint64_t session_id,
-                                  uint32_t tree_id, const uint8_t *file_id, const uint8_t *data, size_t data_len,
-                                  uint64_t offset)
+size_t protocore_smb2_build_write(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
+                                  uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, const uint8_t *data,
+                                  size_t data_len, uint64_t offset)
 {
     const size_t body = 48; // fixed WRITE request body (§2.2.21)
     const size_t total = PROTOCORE_SMB2_HEADER_SIZE + body + data_len;
@@ -805,7 +807,7 @@ size_t protocore_smb2_build_write(uint8_t *work, uint8_t *buf, size_t cap, uint6
     return total;
 }
 
-embed_bool protocore_smb2_parse_write_response(uint8_t *work, const uint8_t *msg, size_t len, Smb2WriteResp *out)
+embed_bool protocore_smb2_parse_write_response(const uint8_t *work, const uint8_t *msg, size_t len, Smb2WriteResp *out)
 {
     if (!msg || !out)
     {

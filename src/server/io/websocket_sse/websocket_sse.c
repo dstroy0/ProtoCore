@@ -52,7 +52,7 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
  * the result, and base64-encodes the 20-byte digest into @p out.
  * @p out must be at least 29 bytes (28 base64 chars + null terminator).
  */
-static embed_bool ws_accept_key(uint8_t *work, const char *client_key, char *out)
+static embed_bool ws_accept_key(const uint8_t *work, const char *client_key, char *out)
 {
     size_t key_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = client_key, .cap = WS_MAX_KEY_LEN + 1);
     if (key_len > WS_MAX_KEY_LEN)

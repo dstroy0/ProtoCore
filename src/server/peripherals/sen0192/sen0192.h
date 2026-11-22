@@ -50,7 +50,7 @@ typedef struct
 typedef struct
 {
     void (*motion_init)(const uint8_t *, Sen0192Motion *, uint32_t, embed_bool);
-    embed_bool (*motion_update)(uint8_t *, Sen0192Motion *, embed_bool, uint32_t);
+    embed_bool (*motion_update)(const uint8_t *, Sen0192Motion *, embed_bool, uint32_t);
     embed_bool (*motion_tick)(const uint8_t *, Sen0192Motion *, uint32_t);
     embed_bool (*motion_present)(const uint8_t *, const Sen0192Motion *);
     uint32_t (*motion_events)(const uint8_t *, const Sen0192Motion *);
@@ -79,7 +79,8 @@ void protocore_sen0192_motion_init(const uint8_t *work, Sen0192Motion *m, uint32
  * @param now_ms Now ms
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, embed_bool level_high, uint32_t now_ms);
+embed_bool protocore_sen0192_motion_update(const uint8_t *work, Sen0192Motion *m, embed_bool level_high,
+                                           uint32_t now_ms);
 /**
  * @brief Re-evaluate presence against the hold window at now_ms without a .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.

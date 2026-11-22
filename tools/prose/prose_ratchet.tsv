@@ -984,7 +984,7 @@ src/web_assets/wizard/gen_theme_blobs.py	11
 src/web_assets/wizard/gen_themes.py	14
 test/CMakeLists.txt	523
 test/INVENTORY.md	5
-test/README.md	1075
+test/README.md	1073
 test/TEST_REPORT.md	584
 test/bare.py	75
 test/core_setup/CMakeLists.txt	7

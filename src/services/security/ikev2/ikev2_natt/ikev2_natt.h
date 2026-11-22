@@ -142,9 +142,9 @@ typedef struct
     void (*const hash)(const uint8_t *work);
     void (*const source_build)(uint8_t *work);
     void (*const dest_build)(uint8_t *work);
-    void (*const match)(uint8_t *work);
-    void (*const peer_behind_nat)(uint8_t *work);
-    void (*const self_behind_nat)(uint8_t *work);
+    void (*const match)(const uint8_t *work);
+    void (*const peer_behind_nat)(const uint8_t *work);
+    void (*const self_behind_nat)(const uint8_t *work);
     void (*const is_keepalive)(const uint8_t *work);
     void (*const is_ike)(const uint8_t *work);
 } IkeNattNs;
@@ -154,9 +154,9 @@ typedef struct
 void protocore_ike_natt_hash(const uint8_t *work);
 void protocore_ike_natt_source_build(uint8_t *work);
 void protocore_ike_natt_dest_build(uint8_t *work);
-void protocore_ike_natt_match(uint8_t *work);
-void protocore_ike_natt_peer_behind_nat(uint8_t *work);
-void protocore_ike_natt_self_behind_nat(uint8_t *work);
+void protocore_ike_natt_match(const uint8_t *work);
+void protocore_ike_natt_peer_behind_nat(const uint8_t *work);
+void protocore_ike_natt_self_behind_nat(const uint8_t *work);
 void protocore_ike_natt_is_keepalive(const uint8_t *work);
 void protocore_ike_natt_is_ike(const uint8_t *work);
 

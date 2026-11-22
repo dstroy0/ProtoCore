@@ -49,7 +49,7 @@ static embed_bool is_integral(double d)
 
 // Render a Number into a JSON value position: an integer when integral, else a floating-point form
 // of SENML_JSON_NUMBER_DIGITS significant digits.
-static void json_number(uint8_t *work, protocore_json_writer *w, double d)
+static void json_number(const uint8_t *work, protocore_json_writer *w, double d)
 {
     char tmp[SENML_JSON_NUMBER_MAX];
     size_t sb = 0;

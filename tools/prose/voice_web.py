@@ -113,21 +113,32 @@ def main():
     with io.open(CHARACTER_WEB, "w", encoding="utf-8", newline="\n") as handle:
         handle.write("from_rank\tto_rank\tfrom\tto\tcount\n")
         for (first, second), count in sorted(character_pairs.items(), key=lambda item: (-item[1], item[0])):
-            handle.write("%d\t%d\t%s\t%s\t%d\n" % (first, second, displayed(ordered[first]), displayed(ordered[second]), count))
+            handle.write(
+                "%d\t%d\t%s\t%s\t%d\n" % (first, second, displayed(ordered[first]), displayed(ordered[second]), count)
+            )
     with io.open(WORD_WEB, "w", encoding="utf-8", newline="\n") as handle:
         handle.write("first\tsecond\tcount\n")
         for (first, second), count in sorted(word_pairs.items(), key=lambda item: (-item[1], item[0])):
             handle.write("%s\t%s\t%d\n" % (first, second, count))
 
     past = sum(characters[symbol] for symbol in ordered[RANKS:])
-    print("  alphabet: %d characters, %d symbols, %d past rank %d, written to %s"
-          % (sum(characters.values()), len(ordered), past, RANKS, os.path.relpath(ALPHABET, ROOT)))
-    print("  character web: %d pairs in %d of %d cells, written to %s"
-          % (sum(character_pairs.values()), len(character_pairs), RANKS * RANKS,
-             os.path.relpath(CHARACTER_WEB, ROOT)))
-    print("  word web: %d pairs, %d distinct, %d seen once, written to %s"
-          % (sum(word_pairs.values()), len(word_pairs), sum(1 for count in word_pairs.values() if count == 1),
-             os.path.relpath(WORD_WEB, ROOT)))
+    print(
+        "  alphabet: %d characters, %d symbols, %d past rank %d, written to %s"
+        % (sum(characters.values()), len(ordered), past, RANKS, os.path.relpath(ALPHABET, ROOT))
+    )
+    print(
+        "  character web: %d pairs in %d of %d cells, written to %s"
+        % (sum(character_pairs.values()), len(character_pairs), RANKS * RANKS, os.path.relpath(CHARACTER_WEB, ROOT))
+    )
+    print(
+        "  word web: %d pairs, %d distinct, %d seen once, written to %s"
+        % (
+            sum(word_pairs.values()),
+            len(word_pairs),
+            sum(1 for count in word_pairs.values() if count == 1),
+            os.path.relpath(WORD_WEB, ROOT),
+        )
+    )
 
 
 if __name__ == "__main__":

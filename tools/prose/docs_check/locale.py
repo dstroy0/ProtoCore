@@ -134,8 +134,7 @@ LOCALE = LOCALE_NAMED + (
     # `-wise` compound. The {2,} floor does not match `wise`, `rise`, `prise`, `arise` and `anise`, which are too
     # short to reach it. What is left is the suffix attached to a stem, and _ISE_STEMS names the
     # English words that reach that shape and are not British.
-    r"\b(?![A-Za-z]*(?:%s)%s\b)[A-Za-z]{2,}[bcdfghjklmnpqrstvxz]is%s\b"
-    % ("|".join(_ISE_STEMS), _ISE_TAIL, _ISE_TAIL),
+    r"\b(?![A-Za-z]*(?:%s)%s\b)[A-Za-z]{2,}[bcdfghjklmnpqrstvxz]is%s\b" % ("|".join(_ISE_STEMS), _ISE_TAIL, _ISE_TAIL),
     # -isation, -isations and -isational, where American takes -ization. This arm needs no
     # exemption list: no American word ends in those characters.
     r"\b[A-Za-z]{3,}isation(?:al|s)?\b",
@@ -146,8 +145,7 @@ LOCALE = LOCALE_NAMED + (
     # -our where American takes -or. The {3,} floor carries the majority of the work and _OUR_WORDS carries
     # the rest. The tail reaches `behavioural`, `colourful`, `favourite`, `labourer` and
     # `neighbourless`, which the two named patterns above never did.
-    r"\b(?![A-Za-z]*(?:%s)%s\b)[A-Za-z]{3,}our%s\b"
-    % ("|".join(_OUR_WORDS), _OUR_TAIL, _OUR_TAIL),
+    r"\b(?![A-Za-z]*(?:%s)%s\b)[A-Za-z]{3,}our%s\b" % ("|".join(_OUR_WORDS), _OUR_TAIL, _OUR_TAIL),
     # -re where American takes -er, as the named list the shape demands. The leading [A-Za-z]*
     # reaches `kilometres`, `millimetre`, `epicentre` and `multicentre`.
     r"\b[A-Za-z]*(?:centre|metre|theatre|fibre|litre|calibre|sabre|sombre|spectre"

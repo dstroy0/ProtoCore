@@ -35,8 +35,13 @@ HOLE = (
     (re.compile(r"[a-z]\s+[.]\s"), "space before a full stop"),
     # The hinge wants a noun or a gerund after it. A bare infinitive there is the verb left located
     # where its subject came out.
-    (re.compile(r"\binstead of (report|draw|write|render|pick|assume|sample|support|place|count"
-                r"|replace|start|sign|generate|carry|return)\b"), "bare verb after the hinge"),
+    (
+        re.compile(
+            r"\binstead of (report|draw|write|render|pick|assume|sample|support|place|count"
+            r"|replace|start|sign|generate|carry|return)\b"
+        ),
+        "bare verb after the hinge",
+    ),
     (re.compile(r"[.]\s+[a-z]{2,}\s"), "sentence opening lower case"),
 )
 

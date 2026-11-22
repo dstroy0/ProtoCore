@@ -7,8 +7,6 @@
 
 import re
 
-
-
 # --------------------------------------------------------------------
 # GENERATED REGIONS
 # --------------------------------------------------------------------
@@ -59,15 +57,12 @@ def generated_regions(lines):
                 complaints.append(
                     (
                         opened_at + 1,
-                        "BEGIN GENERATED with no END GENERATED under it, and a second "
-                        "BEGIN at line %d" % (at + 1),
+                        "BEGIN GENERATED with no END GENERATED under it, and a second " "BEGIN at line %d" % (at + 1),
                     )
                 )
             label = hit.group("label").strip()
             named = GENERATED_BY.search(label)
-            generator = (
-                named.group(1).strip() if named else (label or "an unnamed generator")
-            )
+            generator = named.group(1).strip() if named else (label or "an unnamed generator")
             opened_at = at
             continue
         if GENERATED_CLOSE.search(line):

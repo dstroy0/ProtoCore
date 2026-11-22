@@ -13,8 +13,6 @@ from .scan import banned_hits
 from .tier import tier_of
 from .verbatim import verbatim_root
 
-
-
 # --------------------------------------------------------------------
 # WHAT A REWRITE MAY TOUCH, AND IT IS ALMOST NOTHING
 # --------------------------------------------------------------------

@@ -8,7 +8,6 @@
 import os
 import re
 
-
 # A markdown table separator: | --- | --- |
 SEPARATOR = re.compile(r"^\s*\|[\s:|-]+\|\s*$")
 ROW = re.compile(r"^\s*\|")
@@ -35,9 +34,7 @@ DOXYGEN_TARGET = re.compile(r"^[@\\](ref|subpage|page|link|anchor|cite|see|copyd
 # a pointer star anywhere in the target, a C type qualifier or specifier opening it, or a
 # comma-separated run where every item is two words. A path with a comma in it is legal and rare,
 # and `docs/a.md, docs/b.md` fails the last test because neither item has an interior space.
-DECLARATOR_HEAD = re.compile(
-    r"^(const|volatile|unsigned|signed|struct|enum|union|static)\s"
-)
+DECLARATOR_HEAD = re.compile(r"^(const|volatile|unsigned|signed|struct|enum|union|static)\s")
 
 
 def empty_tables(lines):
@@ -83,9 +80,7 @@ def markdown_leftovers(lines):
         if ASCII_ART.search(line):
             continue
         if MARKDOWN_RULE.match(line):
-            found.append(
-                (at + 1, "markdown rule left in .tex, which typesets as an em dash")
-            )
+            found.append((at + 1, "markdown rule left in .tex, which typesets as an em dash"))
         if MARKDOWN_BOLD.search(line):
             found.append(
                 (

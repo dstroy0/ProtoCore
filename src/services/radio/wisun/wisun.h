@@ -66,9 +66,9 @@ typedef struct
                          const uint8_t *, size_t, uint8_t *, size_t);
     void (*init)(const uint8_t *, WisunFan *, const protocore_ip *, WisunNode *, size_t);
     int (*node_register)(uint8_t *, WisunFan *, const protocore_ip *, uint32_t);
-    embed_bool (*node_find)(uint8_t *, const WisunFan *, const protocore_ip *, size_t *);
+    embed_bool (*node_find)(const uint8_t *, const WisunFan *, const protocore_ip *, size_t *);
     size_t (*joined_count)(const uint8_t *, const WisunFan *);
-    size_t (*nodes_json)(uint8_t *, const WisunFan *, char *, size_t);
+    size_t (*nodes_json)(const uint8_t *, const WisunFan *, char *, size_t);
 } WisunNs;
 PROTOCORE_NS_LAYOUT(WisunNs, build_coap, init, node_register, node_find, joined_count, nodes_json);
 
@@ -117,7 +117,7 @@ int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_
  * @param idx Idx
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx);
+embed_bool protocore_wisun_node_find(const uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx);
 /**
  * @brief Number of joined nodes.
  * @param work PROTOCORE_WISUN_BORROW bytes the caller took. Not held past the call.
@@ -133,7 +133,7 @@ size_t protocore_wisun_joined_count(const uint8_t *work, const WisunFan *fan);
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_wisun_nodes_json(uint8_t *work, const WisunFan *fan, char *out, size_t cap);
+size_t protocore_wisun_nodes_json(const uint8_t *work, const WisunFan *fan, char *out, size_t cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS WisunNs Wisun PROTOCORE_UNUSED = {.build_coap = protocore_wisun_build_coap,

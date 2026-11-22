@@ -263,32 +263,32 @@ extern SshTransportVars SshTransportV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const recv_ident)(uint8_t *work);
+    void (*const recv_ident)(const uint8_t *work);
     void (*const send_ident)(const uint8_t *work);
     void (*const kexinit_build)(const uint8_t *work);
     void (*const kexinit_parse)(uint8_t *work);
     void (*const kex_generate)(const uint8_t *work);
     void (*const exchange_hash)(const uint8_t *work);
-    void (*const kexdh_reply)(uint8_t *work);
+    void (*const kexdh_reply)(const uint8_t *work);
     void (*const newkeys_sent)(const uint8_t *work);
     void (*const newkeys_complete)(uint8_t *work);
     void (*const rekey_due)(const uint8_t *work);
-    void (*const begin_rekey)(uint8_t *work);
+    void (*const begin_rekey)(const uint8_t *work);
 } SshTransportNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshTransportV or a region of the borrow at a fixed offset.
-void protocore_ssh_transport_recv_ident(uint8_t *work);
+void protocore_ssh_transport_recv_ident(const uint8_t *work);
 void protocore_ssh_transport_send_ident(const uint8_t *work);
 void protocore_ssh_transport_kexinit_build(const uint8_t *work);
 void protocore_ssh_transport_kexinit_parse(uint8_t *work);
 void protocore_ssh_transport_kex_generate(const uint8_t *work);
 void protocore_ssh_transport_exchange_hash(const uint8_t *work);
-void protocore_ssh_transport_kexdh_reply(uint8_t *work);
+void protocore_ssh_transport_kexdh_reply(const uint8_t *work);
 void protocore_ssh_transport_newkeys_sent(const uint8_t *work);
 void protocore_ssh_transport_newkeys_complete(uint8_t *work);
 void protocore_ssh_transport_rekey_due(const uint8_t *work);
-void protocore_ssh_transport_begin_rekey(uint8_t *work);
+void protocore_ssh_transport_begin_rekey(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

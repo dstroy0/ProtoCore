@@ -37,9 +37,10 @@ EMBED_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*global_header)(uint8_t *, uint8_t *, size_t);
+    size_t (*global_header)(const uint8_t *, uint8_t *, size_t);
     uint32_t (*i2f32)(const uint8_t *, int32_t);
-    size_t (*tap_record)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t, int32_t, uint16_t, uint32_t, uint32_t);
+    size_t (*tap_record)(const uint8_t *, uint8_t *, size_t, const uint8_t *, size_t, int32_t, uint16_t, uint32_t,
+                         uint32_t);
 } RadioSniffNs;
 PROTOCORE_NS_LAYOUT(RadioSniffNs, global_header, i2f32, tap_record);
 
@@ -50,7 +51,7 @@ PROTOCORE_NS_LAYOUT(RadioSniffNs, global_header, i2f32, tap_record);
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_radio_sniff_global_header(uint8_t *work, uint8_t *out, size_t cap);
+size_t protocore_radio_sniff_global_header(const uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief Encode a signed integer dBm value as an IEEE-754 float32 .
  * @param work PROTOCORE_RADIO_SNIFF_BORROW bytes the caller took. Not held past the call.
@@ -71,8 +72,9 @@ uint32_t protocore_radio_sniff_i2f32(const uint8_t *work, int32_t dbm);
  * @param ts_usec Ts usec
  * @return The size_t.
  */
-size_t protocore_radio_sniff_tap_record(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *frame, size_t flen,
-                                        int32_t rssi_dbm, uint16_t channel, uint32_t ts_sec, uint32_t ts_usec);
+size_t protocore_radio_sniff_tap_record(const uint8_t *work, uint8_t *out, size_t cap, const uint8_t *frame,
+                                        size_t flen, int32_t rssi_dbm, uint16_t channel, uint32_t ts_sec,
+                                        uint32_t ts_usec);
 
 /** @brief Module namespace. */
 PROTOCORE_NS RadioSniffNs RadioSniff PROTOCORE_UNUSED = {.global_header = protocore_radio_sniff_global_header,

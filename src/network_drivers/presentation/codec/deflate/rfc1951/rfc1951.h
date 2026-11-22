@@ -115,7 +115,7 @@ extern Rfc1951Vars Rfc1951V;
 typedef struct
 {
     void (*const reverse_bits)(const uint8_t *work);
-    void (*const build_fixed)(uint8_t *work);
+    void (*const build_fixed)(const uint8_t *work);
     void (*const emit_literal)(const uint8_t *work);
     void (*const emit_match)(const uint8_t *work);
 } Rfc1951Ns;
@@ -123,7 +123,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Rfc1951V or a region of the borrow at a fixed offset.
 void protocore_rfc1951_reverse_bits(const uint8_t *work);
-void protocore_rfc1951_build_fixed(uint8_t *work);
+void protocore_rfc1951_build_fixed(const uint8_t *work);
 void protocore_rfc1951_emit_literal(const uint8_t *work);
 void protocore_rfc1951_emit_match(const uint8_t *work);
 

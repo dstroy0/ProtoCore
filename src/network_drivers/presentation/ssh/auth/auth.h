@@ -280,14 +280,14 @@ typedef struct
     void (*const set_pubkey_cb)(const uint8_t *work);
     void (*const pw_change_report)(const uint8_t *work);
     void (*const pw_change_clear)(const uint8_t *work);
-    void (*const passwd_change_reply)(uint8_t *work);
+    void (*const passwd_change_reply)(const uint8_t *work);
     void (*const write_publickey_request)(const uint8_t *work);
-    void (*const timed_out)(uint8_t *work);
+    void (*const timed_out)(const uint8_t *work);
     void (*const reset)(const uint8_t *work);
     void (*const parse_request)(const uint8_t *work);
     void (*const build_failure)(const uint8_t *work);
     void (*const build_success)(const uint8_t *work);
-    void (*const handle_request)(uint8_t *work);
+    void (*const handle_request)(const uint8_t *work);
     void (*const handle_info_response)(uint8_t *work);
     void (*const dispatch)(uint8_t *work);
 } SshAuthNs;
@@ -299,14 +299,14 @@ void protocore_ssh_auth_set_password_change_cb(const uint8_t *work);
 void protocore_ssh_auth_set_pubkey_cb(const uint8_t *work);
 void protocore_ssh_auth_pw_change_report(const uint8_t *work);
 void protocore_ssh_auth_pw_change_clear(const uint8_t *work);
-void protocore_ssh_auth_passwd_change_reply(uint8_t *work);
+void protocore_ssh_auth_passwd_change_reply(const uint8_t *work);
 void protocore_ssh_auth_write_publickey_request(const uint8_t *work);
-void protocore_ssh_auth_timed_out(uint8_t *work);
+void protocore_ssh_auth_timed_out(const uint8_t *work);
 void protocore_ssh_auth_reset(const uint8_t *work);
 void protocore_ssh_auth_parse_request(const uint8_t *work);
 void protocore_ssh_auth_build_failure(const uint8_t *work);
 void protocore_ssh_auth_build_success(const uint8_t *work);
-void protocore_ssh_auth_handle_request(uint8_t *work);
+void protocore_ssh_auth_handle_request(const uint8_t *work);
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 void protocore_ssh_auth_handle_info_response(uint8_t *work);
 #endif

@@ -91,7 +91,7 @@ static embed_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
 // RFC 7515 sec 4.1.1: `alg` names the algorithm that secures the JWS, and RFC 8725 sec 3.1 requires
 // the operation performed to be the one it names. Decode the header segment and demand HS256
 // (RFC 7518 sec 3.1), which settles `none`, RS256 and every other substitution before the MAC runs.
-static embed_bool alg_is_hs256(uint8_t *work, const char *header, size_t header_len)
+static embed_bool alg_is_hs256(const uint8_t *work, const char *header, size_t header_len)
 {
     uint8_t buf[JWT_JOSE_HDR_CAP];
     Base64V.url_decode_args.src = header;
@@ -157,7 +157,7 @@ static const char *bearer_token(const char *credentials)
 // Decode the JWS Payload into @p buf and return the first character of claim @p name's value, or
 // NULL when the token is malformed or the claim is absent (RFC 7519 sec 4: the claims are the
 // members of the JSON object the payload carries).
-static const char *claim_value(uint8_t *work, const char *jws, size_t jws_len, const char *name, uint8_t *buf,
+static const char *claim_value(const uint8_t *work, const char *jws, size_t jws_len, const char *name, uint8_t *buf,
                                size_t buf_cap)
 {
     if (!jws || !name)

@@ -158,7 +158,7 @@ typedef struct
     void (*const prescale)(const uint8_t *work);
     void (*const channel_reg)(const uint8_t *work);
     void (*const us_to_count)(const uint8_t *work);
-    void (*const set_pwm_bytes)(uint8_t *work);
+    void (*const set_pwm_bytes)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const set_pwm)(uint8_t *work);
     void (*const set_servo_us)(uint8_t *work);
@@ -169,7 +169,7 @@ typedef struct
 void protocore_pca9685_prescale(const uint8_t *work);
 void protocore_pca9685_channel_reg(const uint8_t *work);
 void protocore_pca9685_us_to_count(const uint8_t *work);
-void protocore_pca9685_set_pwm_bytes(uint8_t *work);
+void protocore_pca9685_set_pwm_bytes(const uint8_t *work);
 void protocore_pca9685_begin(uint8_t *work);
 void protocore_pca9685_set_pwm(uint8_t *work);
 void protocore_pca9685_set_servo_us(uint8_t *work);

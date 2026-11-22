@@ -16,7 +16,6 @@ DOC_141 = "code-documentation:141"
 DOC_141_ONE_AUTHOR = "code-documentation:141, one author"
 
 
-
 # ====================================================================
 # THE TWO TIERS, AND WHAT DECIDES WHICH ONE A PATTERN IS IN
 # ====================================================================
@@ -147,8 +146,7 @@ _ORPHANS = tuple(one for one in AUTHORITY if one not in BANNED)
 if _ORPHANS:
     raise SystemExit(
         "docs_check: AUTHORITY names %d pattern(s) that are not in BANNED. A tier "
-        "selector matching nothing reports clean forever.\n  %s"
-        % (len(_ORPHANS), "\n  ".join(_ORPHANS))
+        "selector matching nothing reports clean forever.\n  %s" % (len(_ORPHANS), "\n  ".join(_ORPHANS))
     )
 
 

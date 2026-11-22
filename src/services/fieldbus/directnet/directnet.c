@@ -51,7 +51,7 @@ void protocore_directnet_lrc(const uint8_t *work)
     DirectnetV.value = lrc;
 }
 
-void protocore_directnet_header(uint8_t *work)
+void protocore_directnet_header(const uint8_t *work)
 {
     uint8_t slave = DirectnetV.header_args.slave;
     uint8_t type = DirectnetV.header_args.type;
@@ -86,7 +86,7 @@ void protocore_directnet_header(uint8_t *work)
     DirectnetV.n = i;
 }
 
-void protocore_directnet_data(uint8_t *work)
+void protocore_directnet_data(const uint8_t *work)
 {
     const uint8_t *data = DirectnetV.data_args.data;
     size_t data_len = DirectnetV.data_args.data_len;
@@ -121,7 +121,7 @@ void protocore_directnet_data(uint8_t *work)
     DirectnetV.n = i;
 }
 
-void protocore_directnet_data_parse(uint8_t *work)
+void protocore_directnet_data_parse(const uint8_t *work)
 {
     const uint8_t *frame = DirectnetV.data_parse_args.frame;
     size_t len = DirectnetV.data_parse_args.len;

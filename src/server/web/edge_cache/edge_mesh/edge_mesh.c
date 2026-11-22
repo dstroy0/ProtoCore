@@ -225,7 +225,7 @@ void protocore_edge_mesh_parse_request(const uint8_t *work)
     return; // a complete, valid request
 }
 
-void protocore_edge_mesh_serialize_entry(uint8_t *work)
+void protocore_edge_mesh_serialize_entry(const uint8_t *work)
 {
     (void)work;
     const EdgeEntry *e = EdgeMeshV.serialize_entry_args.e;
@@ -433,7 +433,7 @@ void protocore_edge_mesh_fetch_begin(const uint8_t *work)
     }
 }
 
-void protocore_edge_mesh_fetch_pump(uint8_t *work)
+void protocore_edge_mesh_fetch_pump(const uint8_t *work)
 {
     (void)work;
     EdgeMeshFetch *m = EdgeMeshV.fetch_pump_args.m;

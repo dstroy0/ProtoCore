@@ -106,7 +106,7 @@ static uint64_t get_uid(const uint8_t *p)
            ((uint64_t)p[4] << 8) | (uint64_t)p[5];
 }
 
-void protocore_dmx_rdm_build(uint8_t *work)
+void protocore_dmx_rdm_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = DmxV.rdm_build_args.buf;
@@ -154,7 +154,7 @@ void protocore_dmx_rdm_build(uint8_t *work)
     DmxV.n = total;
 }
 
-void protocore_dmx_rdm_parse(uint8_t *work)
+void protocore_dmx_rdm_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = DmxV.rdm_parse_args.buf;

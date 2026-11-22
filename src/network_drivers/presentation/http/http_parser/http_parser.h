@@ -100,10 +100,10 @@ typedef struct
     void (*reset)(uint8_t *, HttpReq *);
     void (*feed)(uint8_t *, HttpReq *, uint8_t);
     const char *(*get_header)(const uint8_t *, const HttpReq *, const char *);
-    embed_bool (*get_cookie)(uint8_t *, const HttpReq *, const char *, char *, size_t);
-    embed_bool (*forwarded_client)(uint8_t *, const HttpReq *, char *, size_t, embed_bool *);
+    embed_bool (*get_cookie)(const uint8_t *, const HttpReq *, const char *, char *, size_t);
+    embed_bool (*forwarded_client)(const uint8_t *, const HttpReq *, char *, size_t, embed_bool *);
     const char *(*get_query)(const uint8_t *, const HttpReq *, const char *);
-    embed_bool (*get_form)(uint8_t *, const HttpReq *, const char *, char *, size_t);
+    embed_bool (*get_form)(const uint8_t *, const HttpReq *, const char *, char *, size_t);
     const char *(*get_param)(const uint8_t *, const HttpReq *, const char *);
 } HttpParserNs;
 PROTOCORE_NS_LAYOUT(HttpParserNs, set_stream_hooks, reset, feed, get_header, get_cookie, forwarded_client, get_query,
@@ -148,7 +148,7 @@ const char *protocore_http_parser_get_header(const uint8_t *work, const HttpReq 
  * @param out_size Out size
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, const char *name, char *out,
+embed_bool protocore_http_parser_get_cookie(const uint8_t *work, const HttpReq *req, const char *name, char *out,
                                             size_t out_size);
 /**
  * @brief Forwarded_client.
@@ -159,7 +159,7 @@ embed_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, c
  * @param is_https Is https
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
+embed_bool protocore_http_parser_forwarded_client(const uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
                                                   embed_bool *is_https);
 /**
  * @brief Get_query.
@@ -178,7 +178,7 @@ const char *protocore_http_parser_get_query(const uint8_t *work, const HttpReq *
  * @param out_size Out size
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, const char *key, char *out,
+embed_bool protocore_http_parser_get_form(const uint8_t *work, const HttpReq *req, const char *key, char *out,
                                           size_t out_size);
 /**
  * @brief Get_param.

@@ -473,7 +473,7 @@ void protocore_mqttsn_parse_regack(const uint8_t *work)
 }
 
 // PUBACK, whose Message Variable Part has REGACK's layout (sec 5.4.13).
-void protocore_mqttsn_parse_puback(uint8_t *work)
+void protocore_mqttsn_parse_puback(const uint8_t *work)
 {
     protocore_mqttsn_parse_regack(work);
 }

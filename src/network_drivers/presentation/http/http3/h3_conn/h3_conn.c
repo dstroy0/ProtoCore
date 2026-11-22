@@ -465,7 +465,7 @@ static void on_handshake_done(void *app, uint8_t *qc)
     h3->next_uni_id = 15;
 }
 
-static void h3_conn_open(uint8_t *work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
+static void h3_conn_open(const uint8_t *work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
 {
     uint8_t *base = h3->b; // the span is the connection's, bound before this call
     EMBED_CALL(memor.set, MemoriaCfg, .dst = h3, .val = 0, .bytes = sizeof(*h3));

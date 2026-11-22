@@ -126,7 +126,7 @@ static void flight_reset(DtlsConn *c)
 // shifts every later message up by one) and buffer the fragment for (re)transmission. @p epoch is 0
 // (DTLSPlaintext) or 2 (DTLSCiphertext). Records are not built here - that happens in flight_transmit,
 // so a retransmission can use fresh record sequence numbers.
-static embed_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg, size_t tls_len)
+static embed_bool flight_add(const uint8_t *work, DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg, size_t tls_len)
 {
     // tls_len < 4 is defensive and unreachable from any input the server accepts - every caller
     // passes a builder's output, and a TLS handshake message is never shorter than its own 4-byte
@@ -184,7 +184,7 @@ static embed_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const u
 // retransmission MUST use new sequence numbers - reusing one would repeat an AEAD nonce and be dropped
 // by the peer's replay window). Records the record number of each message's transmission for ACK
 // matching. Used for both the initial send and every retransmission.
-static embed_bool flight_transmit(uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
+static embed_bool flight_transmit(const uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     for (uint8_t i = 0; i < c->flight_count; i++)
     {
@@ -300,7 +300,7 @@ static int send_hello_retry(uint8_t *work, DtlsConn *c, const Tls13ClientHello *
 
 // After a HelloRetryRequest, the retry ClientHello must echo a valid cookie (proving the client's
 // address) before we spend the handshake's asymmetric crypto (RFC 9147 §5.1). No HRR -> nothing to check.
-static embed_bool protocore_dtls_hrr_cookie_ok(uint8_t *work, DtlsConn *c, const Tls13ClientHello *ch)
+static embed_bool protocore_dtls_hrr_cookie_ok(const uint8_t *work, DtlsConn *c, const Tls13ClientHello *ch)
 {
     if (!c->hrr_sent)
     {
@@ -669,7 +669,7 @@ static int drive_handshake(uint8_t *work, DtlsConn *c, const uint8_t *payload, s
 // A client ACK (RFC 9147 §7) for the outstanding flight: if it acknowledges every message of the last
 // transmission, the peer has the whole flight, so stop retransmitting (§5.8.3). A partial ACK is
 // ignored here - the timer simply retransmits the whole flight, which is always correct.
-static void process_ack(uint8_t *work, DtlsConn *c, const uint8_t *body, size_t len)
+static void process_ack(const uint8_t *work, DtlsConn *c, const uint8_t *body, size_t len)
 {
     if (!c->awaiting_reply)
     {
@@ -788,7 +788,7 @@ void protocore_dtls_server_established(const uint8_t *work);
 // Once the client Finished completes the handshake, acknowledge it so the client stops retransmitting
 // its final flight (RFC 9147 §5.8.3). The ACK is a content-type-26 record in the highest available epoch
 // (3, application), covering the epoch-2 Finished record (§7). Sent at most once.
-static void maybe_send_completion_ack(uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
+static void maybe_send_completion_ack(const uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     DtlsServerV.established_args.c = c;
     protocore_dtls_server_established(work);
@@ -816,7 +816,7 @@ static void maybe_send_completion_ack(uint8_t *work, DtlsConn *c, uint8_t *out, 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_dtls_server_init(uint8_t *work)
+void protocore_dtls_server_init(const uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.init_args.c;
@@ -986,7 +986,7 @@ void protocore_dtls_server_local_cid(const uint8_t *work)
     DtlsServerV.n = c->local_cid_len;
 }
 
-void protocore_dtls_server_open_app(uint8_t *work)
+void protocore_dtls_server_open_app(const uint8_t *work)
 {
     DtlsConn *c = DtlsServerV.open_app_args.c;
     const uint8_t *rec = DtlsServerV.open_app_args.rec;
@@ -1028,7 +1028,7 @@ void protocore_dtls_server_open_app(uint8_t *work)
     DtlsServerV.ok = EMBED_TRUE;
 }
 
-void protocore_dtls_server_seal_app(uint8_t *work)
+void protocore_dtls_server_seal_app(const uint8_t *work)
 {
     DtlsConn *c = DtlsServerV.seal_app_args.c;
     const uint8_t *data = DtlsServerV.seal_app_args.data;

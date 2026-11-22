@@ -148,7 +148,8 @@ void protocore_cc1101_set_rx(const uint8_t *work, const protocore_cc1101_bus *bu
     strobe(bus, STROBE_SRX);
 }
 
-int protocore_cc1101_recv(uint8_t *work, const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm)
+int protocore_cc1101_recv(const uint8_t *work, const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap,
+                          int16_t *rssi_dbm)
 {
     if (!bus || !bus->spi || !buf)
     {

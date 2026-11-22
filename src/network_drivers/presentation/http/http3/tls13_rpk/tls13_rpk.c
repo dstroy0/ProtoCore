@@ -50,7 +50,7 @@ embed_bool protocore_tls13_rpk_ed25519_from_spki(const uint8_t *work, const uint
     return EMBED_TRUE;
 }
 
-size_t protocore_tls13_rpk_build_certificate(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *ed25519_pub)
+size_t protocore_tls13_rpk_build_certificate(const uint8_t *work, uint8_t *out, size_t cap, const uint8_t *ed25519_pub)
 {
 
     uint8_t spki[PROTOCORE_TLS13_ED25519_SPKI_LEN];

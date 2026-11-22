@@ -476,14 +476,14 @@ typedef struct
     void (*const build_bam_cm)(uint8_t *work);
     void (*const build_tp_dt)(uint8_t *work);
     void (*const tp_reset)(const uint8_t *work);
-    void (*const tp_feed)(uint8_t *work);
-    void (*const decode_eec1)(uint8_t *work);
-    void (*const decode_et1)(uint8_t *work);
-    void (*const decode_lfe)(uint8_t *work);
-    void (*const decode_amb)(uint8_t *work);
-    void (*const decode_ic1)(uint8_t *work);
-    void (*const decode_vd)(uint8_t *work);
-    void (*const decode_ccvs)(uint8_t *work);
+    void (*const tp_feed)(const uint8_t *work);
+    void (*const decode_eec1)(const uint8_t *work);
+    void (*const decode_et1)(const uint8_t *work);
+    void (*const decode_lfe)(const uint8_t *work);
+    void (*const decode_amb)(const uint8_t *work);
+    void (*const decode_ic1)(const uint8_t *work);
+    void (*const decode_vd)(const uint8_t *work);
+    void (*const decode_ccvs)(const uint8_t *work);
     void (*const decode_dm1)(const uint8_t *work);
 } J1939Ns;
 
@@ -499,14 +499,14 @@ void protocore_j1939_tp_num_packets(const uint8_t *work);
 void protocore_j1939_build_bam_cm(uint8_t *work);
 void protocore_j1939_build_tp_dt(uint8_t *work);
 void protocore_j1939_tp_reset(const uint8_t *work);
-void protocore_j1939_tp_feed(uint8_t *work);
-void protocore_j1939_decode_eec1(uint8_t *work);
-void protocore_j1939_decode_et1(uint8_t *work);
-void protocore_j1939_decode_lfe(uint8_t *work);
-void protocore_j1939_decode_amb(uint8_t *work);
-void protocore_j1939_decode_ic1(uint8_t *work);
-void protocore_j1939_decode_vd(uint8_t *work);
-void protocore_j1939_decode_ccvs(uint8_t *work);
+void protocore_j1939_tp_feed(const uint8_t *work);
+void protocore_j1939_decode_eec1(const uint8_t *work);
+void protocore_j1939_decode_et1(const uint8_t *work);
+void protocore_j1939_decode_lfe(const uint8_t *work);
+void protocore_j1939_decode_amb(const uint8_t *work);
+void protocore_j1939_decode_ic1(const uint8_t *work);
+void protocore_j1939_decode_vd(const uint8_t *work);
+void protocore_j1939_decode_ccvs(const uint8_t *work);
 void protocore_j1939_decode_dm1(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

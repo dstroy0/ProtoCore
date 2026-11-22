@@ -41,8 +41,11 @@ def reads():
         with io.open(CHECK, encoding="utf-8") as handle:
             for line in handle:
                 if line.startswith("CHECKED"):
-                    return [one.strip().strip("\"'") for one in
-                            line.split("=", 1)[1].strip(" ()\n").split(",") if one.strip()]
+                    return [
+                        one.strip().strip("\"'")
+                        for one in line.split("=", 1)[1].strip(" ()\n").split(",")
+                        if one.strip()
+                    ]
     except OSError:
         pass
     return []
@@ -73,8 +76,7 @@ def main():
     targets = argv or [os.path.join(HERE, "src")]
     files = gather(targets, known)
     if not files:
-        print("nothing to stage: every type under %s is already read by the gate"
-              % ", ".join(targets))
+        print("nothing to stage: every type under %s is already read by the gate" % ", ".join(targets))
         return 0
 
     if not os.path.exists(CHECK):
@@ -99,7 +101,7 @@ def main():
         for are_in, real in made.items():
             if are_in in os.path.normcase(line):
                 at = os.path.normcase(line).index(are_in)
-                line = line[:at] + os.path.relpath(real, HERE) + line[at + len(are_in):]
+                line = line[:at] + os.path.relpath(real, HERE) + line[at + len(are_in) :]
                 break
         if line.strip():
             print(line)

@@ -103,7 +103,7 @@ uint8_t *protocore_hmmd_span(void)
 // The entries this file calls before reaching their definitions.
 static void hmmd_cmd_build(const uint8_t *work);
 static void hmmd_parse_report(const uint8_t *work);
-static void hmmd_stream_push(uint8_t *work);
+static void hmmd_stream_push(const uint8_t *work);
 static void hmmd_stream_reset(const uint8_t *work);
 
 static void hmmd_parse_report(const uint8_t *work)
@@ -162,7 +162,7 @@ static void hmmd_stream_reset(const uint8_t *work)
     s->phase = 0;
 }
 
-static void hmmd_stream_push(uint8_t *work)
+static void hmmd_stream_push(const uint8_t *work)
 {
     (void)work;
     HmmdStream *s = Hmmd.stream_push_args.s;
@@ -222,6 +222,7 @@ static void hmmd_stream_push(uint8_t *work)
             Hmmd.parse_report_args.len = s->total;
             Hmmd.parse_report_args.out = out;
             hmmd_parse_report(work);
+            Hmmd.parse_report_args.out = NULL;
             embed_bool ok = Hmmd.ok;
             Hmmd.stream_reset_args.s = s;
             hmmd_stream_reset(work);
@@ -292,7 +293,7 @@ static void hmmd_cmd_build(const uint8_t *work)
     Hmmd.n = i;
 }
 
-static void hmmd_cmd_open(uint8_t *work)
+static void hmmd_cmd_open(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_open_args.buf;
@@ -307,7 +308,7 @@ static void hmmd_cmd_open(uint8_t *work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_close(uint8_t *work)
+static void hmmd_cmd_close(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_close_args.buf;
@@ -321,7 +322,7 @@ static void hmmd_cmd_close(uint8_t *work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_firmware(uint8_t *work)
+static void hmmd_cmd_read_firmware(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_firmware_args.buf;
@@ -335,7 +336,7 @@ static void hmmd_cmd_read_firmware(uint8_t *work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_serial(uint8_t *work)
+static void hmmd_cmd_read_serial(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_serial_args.buf;
@@ -349,7 +350,7 @@ static void hmmd_cmd_read_serial(uint8_t *work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_config(uint8_t *work)
+static void hmmd_cmd_read_config(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_config_args.buf;
@@ -363,7 +364,7 @@ static void hmmd_cmd_read_config(uint8_t *work)
     hmmd_cmd_build(work);
 }
 
-static void hmmd_cmd_read_register(uint8_t *work)
+static void hmmd_cmd_read_register(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_read_register_args.buf;

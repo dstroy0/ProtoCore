@@ -22,9 +22,9 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_interbus_fcs(uint8_t *work);
+void protocore_interbus_fcs(const uint8_t *work);
 
-void protocore_interbus_fcs(uint8_t *work)
+void protocore_interbus_fcs(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = InterbusV.fcs_args.bytes;

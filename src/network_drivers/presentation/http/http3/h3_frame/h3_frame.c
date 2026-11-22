@@ -20,7 +20,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-embed_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out)
+embed_bool protocore_h3_frame_parse_header(const uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out)
 {
     size_t c1 = 0;
     size_t c2 = 0;
@@ -76,7 +76,7 @@ void protocore_h3_frame_settings_defaults(const uint8_t *work, H3Settings *s)
     s->qpack_blocked_streams = 0;
 }
 
-embed_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s)
+embed_bool protocore_h3_frame_parse_settings(const uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s)
 {
     embed_bool ok = EMBED_FALSE;
 

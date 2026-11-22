@@ -55,7 +55,8 @@ MACRO_LIMIT = 31
 # spelling is fixed by a datasheet. The rename pass learned this the hard way - a blanket
 # PC-prefix sweep would have renamed PCA9685 and the PCR_* register block.
 # EMBED_CALL is embedded_types' macro. types.h restates it for C++, where the name has to stay the same.
-FOREIGN = re.compile(r"^(?:(?:PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD)|EMBED_CALL$)", re.I)
+FOREIGN = re.compile(r"^(?:PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD)", re.I)
+FOREIGN_NAMES = {"EMBED_CALL"}
 
 
 def decomment(t):
@@ -192,7 +193,12 @@ def check():
             for m in re.finditer(r"^\s*#\s*define\s+([A-Za-z_]\w*)", text, re.M):
                 name = m.group(1)
                 ln = text[: m.start(1)].count("\n") + 1
-                if FOREIGN.match(name) or name == own_guard or name.startswith("PROTOCORE_"):
+                if (
+                    FOREIGN.match(name)
+                    or name.upper() in FOREIGN_NAMES
+                    or name == own_guard
+                    or name.startswith("PROTOCORE_")
+                ):
                     continue
                 if not name.startswith("PROTOCORE_"):
                     add("macro-prefix", rel, ln, f"macro {name} lacks the PROTOCORE_ prefix")

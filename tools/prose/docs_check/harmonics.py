@@ -107,7 +107,8 @@ class Voice:
                 for line in handle:
                     signal, words, blocks, median, edge, worst = line.rstrip("\n").split("\t")
                     self.band.setdefault(signal, []).append(
-                        (int(words), int(blocks), float(median), float(edge), float(worst)))
+                        (int(words), int(blocks), float(median), float(edge), float(worst))
+                    )
 
     def signals(self, text):
         """The four signals of a text, as float arrays. `text` is already plain()."""
@@ -139,9 +140,9 @@ def power(signal, window):
     total = numpy.zeros(window // 2)
     count = 0
     for start in range(0, len(signal) - window + 1, step):
-        piece = signal[start:start + window]
+        piece = signal[start : start + window]
         piece = (piece - piece.mean()) * taper
-        total += numpy.abs(numpy.fft.rfft(piece))[1:window // 2 + 1] ** 2
+        total += numpy.abs(numpy.fft.rfft(piece))[1 : window // 2 + 1] ** 2
         count += 1
     return total, count
 
@@ -215,8 +216,9 @@ def show_harmonics():
 
     readings = {(signal, size): [] for signal in SIGNALS for size in SIZES}
     for index, (name, text) in enumerate(texts):
-        others = {signal: shares(sum(one[signal] for at, one in enumerate(totals) if at != index))
-                  for signal in SIGNALS}
+        others = {
+            signal: shares(sum(one[signal] for at, one in enumerate(totals) if at != index)) for signal in SIGNALS
+        }
         spans = [match.span() for match in voice_count.WORD.finditer(text)]
         for size in SIZES:
             if len(spans) < size:
@@ -225,7 +227,7 @@ def show_harmonics():
             count = min(BLOCKS, 1 + last // size)
             for number in range(count):
                 first = (last * number) // max(1, count - 1) if count > 1 else 0
-                block = text[spans[first][0]:spans[first + size - 1][1]]
+                block = text[spans[first][0] : spans[first + size - 1][1]]
                 mine = spectra_of(voice, block)
                 for signal in SIGNALS:
                     if mine[signal] is not None:
@@ -240,5 +242,7 @@ def show_harmonics():
                     continue
                 row = (float(numpy.median(found)), float(numpy.percentile(found, EDGE)), max(found))
                 handle.write("%s\t%d\t%d\t%.6f\t%.6f\t%.6f\n" % ((signal, size, len(found)) + row))
-                print("  %-10s %6d words  %4d blocks  median %.4f  edge %.4f  worst %.4f"
-                      % ((signal, size, len(found)) + row))
+                print(
+                    "  %-10s %6d words  %4d blocks  median %.4f  edge %.4f  worst %.4f"
+                    % ((signal, size, len(found)) + row)
+                )

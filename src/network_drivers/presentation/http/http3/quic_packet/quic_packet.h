@@ -78,7 +78,7 @@ typedef struct
     size_t (*build_version_negotiation)(const uint8_t *, uint8_t *, size_t, const uint8_t *, uint8_t, const uint8_t *,
                                         uint8_t, const uint32_t *, size_t);
     uint8_t (*pn_length)(const uint8_t *, uint64_t, int64_t);
-    size_t (*pn_encode)(uint8_t *, uint8_t *, size_t, uint64_t, int64_t);
+    size_t (*pn_encode)(const uint8_t *, uint8_t *, size_t, uint64_t, int64_t);
     uint64_t (*pn_decode)(const uint8_t *, uint64_t, uint64_t, uint8_t);
 } QuicPacketNs;
 PROTOCORE_NS_LAYOUT(QuicPacketNs, is_long_header, parse_long_header, build_long_header, parse_short_header,
@@ -162,7 +162,7 @@ uint8_t protocore_quic_packet_pn_length(const uint8_t *work, uint64_t full_pn, i
  * @param largest_acked Largest acked
  * @return The size_t.
  */
-size_t protocore_quic_packet_pn_encode(uint8_t *work, uint8_t *out, size_t cap, uint64_t full_pn,
+size_t protocore_quic_packet_pn_encode(const uint8_t *work, uint8_t *out, size_t cap, uint64_t full_pn,
                                        int64_t largest_acked);
 /**
  * @brief Recover the full packet number from a truncated_pn of pn_nbits bits .

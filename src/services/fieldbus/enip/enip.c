@@ -122,7 +122,7 @@ void protocore_enip_parse(const uint8_t *work)
     EnipV.ok = EMBED_TRUE;
 }
 
-void protocore_enip_build_register_session(uint8_t *work)
+void protocore_enip_build_register_session(const uint8_t *work)
 {
     uint8_t *buf = EnipV.build_register_session_args.buf;
     size_t cap = EnipV.build_register_session_args.cap;
@@ -148,7 +148,7 @@ void protocore_enip_build_register_session(uint8_t *work)
     EnipV.build_args.h = NULL;
 }
 
-void protocore_enip_build_unregister_session(uint8_t *work)
+void protocore_enip_build_unregister_session(const uint8_t *work)
 {
     uint8_t *buf = EnipV.build_unregister_session_args.buf;
     size_t cap = EnipV.build_unregister_session_args.cap;
@@ -172,7 +172,7 @@ void protocore_enip_build_unregister_session(uint8_t *work)
     EnipV.build_args.h = NULL;
 }
 
-void protocore_enip_build_send_rr_data(uint8_t *work)
+void protocore_enip_build_send_rr_data(const uint8_t *work)
 {
     uint8_t *buf = EnipV.build_send_rr_data_args.buf;
     size_t cap = EnipV.build_send_rr_data_args.cap;
@@ -237,7 +237,7 @@ void protocore_enip_build_send_rr_data(uint8_t *work)
     EnipV.n = p;
 }
 
-void protocore_enip_build_list_identity(uint8_t *work)
+void protocore_enip_build_list_identity(const uint8_t *work)
 {
     uint8_t *buf = EnipV.build_list_identity_args.buf;
     size_t cap = EnipV.build_list_identity_args.cap;

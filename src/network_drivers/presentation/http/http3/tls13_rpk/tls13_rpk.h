@@ -37,7 +37,7 @@ typedef struct
 {
     size_t (*ed25519_spki)(const uint8_t *, uint8_t *, size_t, const uint8_t *);
     embed_bool (*ed25519_from_spki)(const uint8_t *, const uint8_t *, size_t, const uint8_t **);
-    size_t (*build_certificate)(uint8_t *, uint8_t *, size_t, const uint8_t *);
+    size_t (*build_certificate)(const uint8_t *, uint8_t *, size_t, const uint8_t *);
 } Tls13RpkNs;
 PROTOCORE_NS_LAYOUT(Tls13RpkNs, ed25519_spki, ed25519_from_spki, build_certificate);
 
@@ -68,7 +68,7 @@ embed_bool protocore_tls13_rpk_ed25519_from_spki(const uint8_t *work, const uint
  * @param ed25519_pub 32 bytes
  * @return The size_t.
  */
-size_t protocore_tls13_rpk_build_certificate(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *ed25519_pub);
+size_t protocore_tls13_rpk_build_certificate(const uint8_t *work, uint8_t *out, size_t cap, const uint8_t *ed25519_pub);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Tls13RpkNs Tls13Rpk PROTOCORE_UNUSED = {.ed25519_spki = protocore_tls13_rpk_ed25519_spki,

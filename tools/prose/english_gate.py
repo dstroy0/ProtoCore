@@ -155,16 +155,11 @@ def english_words(text):
 
 
 def main():
-    out = io.TextIOWrapper(
-        sys.stdout.buffer, encoding="utf-8", errors="replace", newline=""
-    )
+    out = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", newline="")
     _, total, lines = reference()
     cut = _default_cut()
     out.write("\n  reference: %d byte pairs over %d lines\n" % (total, lines))
-    out.write(
-        "  cut: %.4f bits per pair, the reference's own median times %.2f\n"
-        % (cut, SLACK)
-    )
+    out.write("  cut: %.4f bits per pair, the reference's own median times %.2f\n" % (cut, SLACK))
 
     papers = os.path.join(ROOT, "build", "papers")
     corpora = os.path.join(ROOT, "build", "corpora")
@@ -173,9 +168,7 @@ def main():
         held = []
         for name in sorted(os.listdir(papers)):
             if name.endswith(".txt"):
-                with open(
-                    os.path.join(papers, name), encoding="utf-8", errors="replace"
-                ) as one:
+                with open(os.path.join(papers, name), encoding="utf-8", errors="replace") as one:
                     held.append(one.read())
         targets.append(("research papers", "\n".join(held)))
     machine = os.path.join(corpora, "machine_prose.txt")
@@ -183,10 +176,7 @@ def main():
         with open(machine, encoding="utf-8", errors="replace") as one:
             targets.append(("fetched machine prose", one.read()))
 
-    out.write(
-        "\n  %-26s %12s %12s %12s %s\n"
-        % ("corpus", "words in", "words retained", "ascii retained", "share")
-    )
+    out.write("\n  %-26s %12s %12s %12s %s\n" % ("corpus", "words in", "words retained", "ascii retained", "share"))
     for name, text in targets:
         before = len(text.split())
         gated = english_only(text, cut)

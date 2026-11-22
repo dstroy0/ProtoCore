@@ -387,7 +387,7 @@ void protocore_audit_log_cat_name(const uint8_t *work)
     }
 }
 
-void protocore_audit_log_format(uint8_t *work)
+void protocore_audit_log_format(const uint8_t *work)
 {
     (void)work;
     AuditLogV.n = 0;

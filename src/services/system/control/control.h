@@ -344,7 +344,7 @@ extern ControlVars ControlV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const pid_init)(uint8_t *work);
+    void (*const pid_init)(const uint8_t *work);
     void (*const pid_set_output_limits)(const uint8_t *work);
     void (*const pid_set_integral_limits)(const uint8_t *work);
     void (*const pid_set_derivative_filter)(const uint8_t *work);
@@ -358,7 +358,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ControlV or a region of the borrow at a fixed offset.
-void protocore_control_pid_init(uint8_t *work);
+void protocore_control_pid_init(const uint8_t *work);
 void protocore_control_pid_set_output_limits(const uint8_t *work);
 void protocore_control_pid_set_integral_limits(const uint8_t *work);
 void protocore_control_pid_set_derivative_filter(const uint8_t *work);

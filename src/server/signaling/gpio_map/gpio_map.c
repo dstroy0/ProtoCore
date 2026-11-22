@@ -303,7 +303,7 @@ void protocore_gpio_map_write(const uint8_t *work)
 // it is bound here so the whole surface is one initializer rather than a runtime install. Weak, so
 // the pin core links on its own - the serializer and the parser are host-tested without the server,
 // and gpio_map_routes.c overrides this the moment it is in the build.
-__attribute__((weak)) void protocore_gpio_map_begin(uint8_t *work)
+__attribute__((weak)) void protocore_gpio_map_begin(const uint8_t *work)
 {
 }
 

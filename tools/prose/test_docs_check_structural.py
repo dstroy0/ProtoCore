@@ -23,7 +23,6 @@ sys.path.insert(0, HERE)
 
 import docs_check
 
-
 TABLE_SEPARATOR = re.compile(r"^[ \t]*\|[-:| \t]+\|[ \t]*$")
 TABLE_ROW = re.compile(r"^[ \t]*\|")
 
@@ -84,17 +83,13 @@ class LinksStillChecked(unittest.TestCase):
         self.here = os.path.join(HERE, "sample.md")
 
     def test_a_missing_relative_target_is_reported(self):
-        found = docs_check.dead_links(
-            self.here, ["see [the notes](no_such_file_here.md) for it"]
-        )
+        found = docs_check.dead_links(self.here, ["see [the notes](no_such_file_here.md) for it"])
         self.assertEqual(len(found), 1)
         self.assertIn("no_such_file_here.md", found[0][1])
         self.assertEqual(found[0][0], 1)
 
     def test_a_target_that_is_there_is_not_reported(self):
-        found = docs_check.dead_links(
-            self.here, ["see [the checker](docs_check) for it"]
-        )
+        found = docs_check.dead_links(self.here, ["see [the checker](docs_check) for it"])
         self.assertEqual(found, [])
 
     def test_external_and_absolute_targets_are_left_alone(self):
@@ -113,8 +108,7 @@ class LinksStillChecked(unittest.TestCase):
         # A lambda in example code is not a link.
         lines = [
             'server.on("/diag", HTTP_GET, [](uint8_t slot, HttpReq *req) {',
-            "orior_ssh_auth_set_pubkey_cb([](const char *user, const uint8_t *blob, "
-            "size_t len) {",
+            "orior_ssh_auth_set_pubkey_cb([](const char *user, const uint8_t *blob, " "size_t len) {",
             "orior_ssh_auth_set_password_cb([](const char *user, const char *pass) {",
         ]
         self.assertEqual(docs_check.dead_links(self.here, lines), [])

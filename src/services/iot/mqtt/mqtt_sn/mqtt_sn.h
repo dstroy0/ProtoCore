@@ -257,7 +257,7 @@ typedef struct
     void (*const parse_header)(const uint8_t *work);
     void (*const parse_connack)(const uint8_t *work);
     void (*const parse_regack)(const uint8_t *work);
-    void (*const parse_puback)(uint8_t *work);
+    void (*const parse_puback)(const uint8_t *work);
     void (*const parse_suback)(const uint8_t *work);
     void (*const parse_publish)(const uint8_t *work);
     void (*const parse_register)(const uint8_t *work);
@@ -279,7 +279,7 @@ void protocore_mqttsn_build_searchgw(const uint8_t *work);
 void protocore_mqttsn_parse_header(const uint8_t *work);
 void protocore_mqttsn_parse_connack(const uint8_t *work);
 void protocore_mqttsn_parse_regack(const uint8_t *work);
-void protocore_mqttsn_parse_puback(uint8_t *work);
+void protocore_mqttsn_parse_puback(const uint8_t *work);
 void protocore_mqttsn_parse_suback(const uint8_t *work);
 void protocore_mqttsn_parse_publish(const uint8_t *work);
 void protocore_mqttsn_parse_register(const uint8_t *work);

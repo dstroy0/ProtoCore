@@ -77,10 +77,7 @@ def show_offlist(given):
     """Print every word in the tree's prose that the approved list does not hold."""
     roots = oracle_roots(given)
     rows, uses = offlist(roots)
-    print(
-        "  %d off-list word(s), %d use(s), over %d root(s)"
-        % (len(rows), uses, len(roots))
-    )
+    print("  %d off-list word(s), %d use(s), over %d root(s)" % (len(rows), uses, len(roots)))
     print("     uses  files  word")
     for count, files, word in rows[:60]:
         print("  %7d  %5d  %s" % (count, files, word))
@@ -177,20 +174,24 @@ def reading(argv, option_value):
     # none of that would pay for all three.
     if "--rate" in argv:
         from .rate import show_rate
+
         return show_rate(words_given(argv))
 
     if "--harmonics" in argv:
         from .harmonics import show_harmonics
+
         # A reading that returns nothing would read as None here, and None is this function's way
         # of saying run the scan instead. Every reading answers with a status.
         return show_harmonics() or 0
 
     if "--sample" in argv:
         from .sample import show_sample
+
         return as_argv(show_sample, "--sample")
 
     if "--plain" in argv:
         from .plain import show_plain
+
         return as_argv(show_plain, "--plain")
 
     return None

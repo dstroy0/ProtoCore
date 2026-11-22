@@ -110,7 +110,7 @@ void protocore_iolink_checksum6(const uint8_t *work)
     IolinkV.value = compress6(x);
 }
 
-void protocore_iolink_finalize(uint8_t *work)
+void protocore_iolink_finalize(const uint8_t *work)
 {
     uint8_t *msg = IolinkV.finalize_args.msg;
     size_t len = IolinkV.finalize_args.len;

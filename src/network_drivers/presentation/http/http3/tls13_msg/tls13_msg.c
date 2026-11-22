@@ -1157,7 +1157,7 @@ void protocore_tls13_msg_cert_verify_content(const uint8_t *work)
     Tls13MsgV.n = total;
 }
 
-void protocore_tls13_msg_build_cert_verify(uint8_t *work)
+void protocore_tls13_msg_build_cert_verify(const uint8_t *work)
 {
     uint8_t *sign_work = Tls13MsgV.build_cert_verify_args.sign_work;
     uint8_t *out = Tls13MsgV.build_cert_verify_args.out;

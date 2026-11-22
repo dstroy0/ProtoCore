@@ -179,22 +179,22 @@ extern PowerlinkVars PowerlinkV;
 typedef struct
 {
     void (*const build)(const uint8_t *work);
-    void (*const soc)(uint8_t *work);
-    void (*const preq)(uint8_t *work);
-    void (*const pres)(uint8_t *work);
-    void (*const soa)(uint8_t *work);
-    void (*const asnd)(uint8_t *work);
+    void (*const soc)(const uint8_t *work);
+    void (*const preq)(const uint8_t *work);
+    void (*const pres)(const uint8_t *work);
+    void (*const soa)(const uint8_t *work);
+    void (*const asnd)(const uint8_t *work);
     void (*const parse)(const uint8_t *work);
 } PowerlinkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PowerlinkV or a region of the borrow at a fixed offset.
 void protocore_powerlink_build(const uint8_t *work);
-void protocore_powerlink_soc(uint8_t *work);
-void protocore_powerlink_preq(uint8_t *work);
-void protocore_powerlink_pres(uint8_t *work);
-void protocore_powerlink_soa(uint8_t *work);
-void protocore_powerlink_asnd(uint8_t *work);
+void protocore_powerlink_soc(const uint8_t *work);
+void protocore_powerlink_preq(const uint8_t *work);
+void protocore_powerlink_pres(const uint8_t *work);
+void protocore_powerlink_soa(const uint8_t *work);
+void protocore_powerlink_asnd(const uint8_t *work);
 void protocore_powerlink_parse(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

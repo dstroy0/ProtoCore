@@ -291,7 +291,7 @@ typedef struct
 
     void (*const parse_report)(const uint8_t *work);
     void (*const stream_reset)(const uint8_t *work);
-    void (*const stream_push)(uint8_t *work);
+    void (*const stream_push)(const uint8_t *work);
     void (*const present)(const uint8_t *work);
     void (*const distance_cm)(const uint8_t *work);
     void (*const cmd_config_enable)(const uint8_t *work);

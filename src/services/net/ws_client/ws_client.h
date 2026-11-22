@@ -170,7 +170,7 @@ extern WsClientVars WsClientV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const accept_for_key)(uint8_t *work);
+    void (*const accept_for_key)(const uint8_t *work);
     void (*const build_opening_handshake)(const uint8_t *work);
     void (*const check_server_handshake)(const uint8_t *work);
     void (*const build_frame)(const uint8_t *work);
@@ -186,7 +186,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WsClientV or a region of the borrow at a fixed offset.
-void protocore_ws_client_accept_for_key(uint8_t *work);
+void protocore_ws_client_accept_for_key(const uint8_t *work);
 void protocore_ws_client_build_opening_handshake(const uint8_t *work);
 void protocore_ws_client_check_server_handshake(const uint8_t *work);
 void protocore_ws_client_build_frame(const uint8_t *work);

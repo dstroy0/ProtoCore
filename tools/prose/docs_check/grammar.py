@@ -175,6 +175,7 @@ def voice_words():
     """voice.tsv and project_words.tsv as the oracle reads them, read once."""
     if not _VOICE:
         from .oracle import counted
+
         _VOICE.append(counted())
     return _VOICE[0]
 
@@ -221,14 +222,35 @@ def hides_verb(noun):
 # docs-check: end quoting
 def ends_phrase(hit):
     """Whether the noun of a 2.3.3 match closes its phrase, as the noun of a light verb does."""
-    after = hit.string[hit.end():].lstrip()
+    after = hit.string[hit.end() :].lstrip()
     if not after or not after[0].isalnum():
         return True
     return re.match(r"(?:%s)\b" % "|".join(TAILS), after, re.IGNORECASE) is not None
 
 
-TAILS = ("of", "on", "about", "that", "to", "for", "with", "in", "at", "by", "from", "and", "or",
-         "but", "which", "when", "where", "because", "as", "here", "there")
+TAILS = (
+    "of",
+    "on",
+    "about",
+    "that",
+    "to",
+    "for",
+    "with",
+    "in",
+    "at",
+    "by",
+    "from",
+    "and",
+    "or",
+    "but",
+    "which",
+    "when",
+    "where",
+    "because",
+    "as",
+    "here",
+    "there",
+)
 
 
 CONFIRM = {

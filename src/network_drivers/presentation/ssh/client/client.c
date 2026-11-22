@@ -145,7 +145,7 @@ uint8_t *protocore_ssh_client_span(void)
 // The client engine is one translation unit; these are defined below in dependency order.
 static void cli_send(const uint8_t *work);
 static void cli_crypto_work(const uint8_t *work);
-static void protocore_ssh_client_begin(uint8_t *work);
+static void protocore_ssh_client_begin(const uint8_t *work);
 static void protocore_ssh_client_poll(uint8_t *work);
 static void protocore_ssh_client_end(const uint8_t *work);
 static void cli_fail(const char *why);
@@ -341,8 +341,9 @@ static embed_bool handle_kexdh_reply(const uint8_t *p, size_t len)
     {
         return EMBED_FALSE;
     }
-    SshTransportV.slot = SSH_CLI_SLOT; // outbound switches to the epoch this exchange derived return EMBED_TRUE;
-    SshTransport.newkeys_sent(protocore_ssh_transport_span());
+    SshTransportV.slot = SSH_CLI_SLOT;
+    SshTransport.newkeys_sent(protocore_ssh_transport_span()); // outbound switches to the epoch this exchange derived
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -998,7 +999,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
 // Public API
 // ---------------------------------------------------------------------------
 
-static void protocore_ssh_client_begin(uint8_t *work)
+static void protocore_ssh_client_begin(const uint8_t *work)
 {
     (void)work;
     const protocore_ssh_client_cfg *cfg = SshClient.cfg;

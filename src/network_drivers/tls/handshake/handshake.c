@@ -783,7 +783,7 @@ static protocore_x509_sig_alg sig_alg_of(uint16_t scheme)
 
 // CertificateVerify signs the transcript through the Certificate, so the hash is taken before this
 // message joins it (sec 4.4.3).
-static void client_on_cert_verify(uint8_t *work, const uint8_t *msg, size_t len)
+static void client_on_cert_verify(const uint8_t *work, const uint8_t *msg, size_t len)
 {
     const TlsConn *c = TlsConnectionV.conn;
     uint16_t scheme = 0;

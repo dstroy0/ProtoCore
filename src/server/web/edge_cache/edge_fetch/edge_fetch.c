@@ -138,7 +138,7 @@ static embed_bool has_chunked(const char *s)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-embed_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
+embed_bool protocore_edge_fetcher_edge_resp_complete(const uint8_t *work, const uint8_t *buf, size_t len,
                                                      embed_bool conn_closed, size_t *head_len)
 {
     size_t h = head_end(buf, len);

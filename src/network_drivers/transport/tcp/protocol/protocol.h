@@ -189,7 +189,7 @@ typedef struct
     void (*const close)(const uint8_t *work);
     void (*const abort_slot)(const uint8_t *work);
     void (*const closing_finalize)(const uint8_t *work);
-    void (*const closing_check)(uint8_t *work);
+    void (*const closing_check)(const uint8_t *work);
     void (*const begin_close)(const uint8_t *work);
     void (*const enqueue)(const uint8_t *work);
     void (*const init)(uint8_t *work);
@@ -233,7 +233,7 @@ void protocore_conn_pool_raw_send(const uint8_t *work);
 void protocore_conn_pool_close(const uint8_t *work);
 void protocore_conn_pool_abort_slot(const uint8_t *work);
 void protocore_conn_pool_closing_finalize(const uint8_t *work);
-void protocore_conn_pool_closing_check(uint8_t *work);
+void protocore_conn_pool_closing_check(const uint8_t *work);
 void protocore_conn_pool_begin_close(const uint8_t *work);
 void protocore_conn_pool_enqueue(const uint8_t *work);
 void protocore_conn_pool_init(uint8_t *work);

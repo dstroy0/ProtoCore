@@ -100,7 +100,7 @@ typedef struct
     void (*const ifttt_url)(const uint8_t *work);
     void (*const ifttt_payload)(const uint8_t *work);
     void (*const post)(const uint8_t *work);
-    void (*const ifttt_trigger)(uint8_t *work);
+    void (*const ifttt_trigger)(const uint8_t *work);
 } WebhookNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -108,7 +108,7 @@ typedef struct
 void protocore_webhook_ifttt_url(const uint8_t *work);
 void protocore_webhook_ifttt_payload(const uint8_t *work);
 void protocore_webhook_post(const uint8_t *work);
-void protocore_webhook_ifttt_trigger(uint8_t *work);
+void protocore_webhook_ifttt_trigger(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

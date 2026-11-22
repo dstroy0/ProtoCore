@@ -222,11 +222,11 @@ typedef struct
 {
     void (*const build)(const uint8_t *work);
     void (*const parse)(const uint8_t *work);
-    void (*const build_register_session)(uint8_t *work);
-    void (*const build_unregister_session)(uint8_t *work);
-    void (*const build_send_rr_data)(uint8_t *work);
+    void (*const build_register_session)(const uint8_t *work);
+    void (*const build_unregister_session)(const uint8_t *work);
+    void (*const build_send_rr_data)(const uint8_t *work);
     void (*const parse_send_rr_data)(const uint8_t *work);
-    void (*const build_list_identity)(uint8_t *work);
+    void (*const build_list_identity)(const uint8_t *work);
     void (*const parse_list_identity)(const uint8_t *work);
 } EnipNs;
 
@@ -234,11 +234,11 @@ typedef struct
 // else an entry needs is an operand in EnipV or a region of the borrow at a fixed offset.
 void protocore_enip_build(const uint8_t *work);
 void protocore_enip_parse(const uint8_t *work);
-void protocore_enip_build_register_session(uint8_t *work);
-void protocore_enip_build_unregister_session(uint8_t *work);
-void protocore_enip_build_send_rr_data(uint8_t *work);
+void protocore_enip_build_register_session(const uint8_t *work);
+void protocore_enip_build_unregister_session(const uint8_t *work);
+void protocore_enip_build_send_rr_data(const uint8_t *work);
 void protocore_enip_parse_send_rr_data(const uint8_t *work);
-void protocore_enip_build_list_identity(uint8_t *work);
+void protocore_enip_build_list_identity(const uint8_t *work);
 void protocore_enip_parse_list_identity(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

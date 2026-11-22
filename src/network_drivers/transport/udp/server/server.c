@@ -606,7 +606,7 @@ void protocore_udp_listener_reply(uint8_t *work)
     UdpListenerV.ok = send_now(work, &UdpListenerV.peer_args.peer->addr, UdpListenerV.peer_args.peer->port);
 }
 
-void protocore_udp_listener_peer_addr(uint8_t *work)
+void protocore_udp_listener_peer_addr(const uint8_t *work)
 {
     (void)work;
     UdpListenerV.ok = EMBED_FALSE;

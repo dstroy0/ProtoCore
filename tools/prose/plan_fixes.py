@@ -38,7 +38,13 @@ RATHER_THAN = "rather than"
 
 WIDER = {
     "rather": [RATHER_THAN],
-    "which is the": [", which is the whole of", ", which is the whole", ", which is the", "which is the whole of", "which is the whole"],
+    "which is the": [
+        ", which is the whole of",
+        ", which is the whole",
+        ", which is the",
+        "which is the whole of",
+        "which is the whole",
+    ],
     "which is what": [", which is what makes", ", which is what", "which is what makes"],
     "which is why": [", which is why"],
     "That is what": ["That is what makes"],
@@ -82,8 +88,13 @@ RULE = {
 
 
 def sites(targets):
-    done = subprocess.run([sys.executable, SHOW, "--tsv"] + list(targets),
-                          capture_output=True, text=True, encoding="utf-8", env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    done = subprocess.run(
+        [sys.executable, SHOW, "--tsv"] + list(targets),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+    )
     out = []
     for line in done.stdout.replace("\r", "").split("\n"):
         parts = line.split("\t")

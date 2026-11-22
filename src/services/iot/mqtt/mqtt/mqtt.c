@@ -604,7 +604,7 @@ void protocore_mqtt_parse_fixed_header(const uint8_t *work)
 
 // A PUBLISH variable header and payload: the Topic Name, the Packet Identifier when QoS is above 0,
 // and the Payload that fills what the Remaining Length leaves (sec 3.3).
-void protocore_mqtt_parse_publish(uint8_t *work)
+void protocore_mqtt_parse_publish(const uint8_t *work)
 {
     (void)work;
     MqttV.ok = EMBED_FALSE;

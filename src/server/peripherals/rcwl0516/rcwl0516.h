@@ -86,7 +86,7 @@ typedef struct
     embed_bool (*presence_update)(const uint8_t *, PresenceCore *, embed_bool, uint32_t);
     embed_bool (*presence_get)(const uint8_t *, const PresenceCore *);
     embed_bool (*presence_take_event)(const uint8_t *, PresenceCore *);
-    void (*core_init)(uint8_t *, PresenceCore *, uint32_t);
+    void (*core_init)(const uint8_t *, PresenceCore *, uint32_t);
     embed_bool (*begin)(uint8_t *, int);
     embed_bool (*poll)(uint8_t *);
     embed_bool (*present)(uint8_t *);
@@ -133,7 +133,7 @@ embed_bool protocore_rcwl0516_presence_take_event(const uint8_t *work, PresenceC
  * @param c C
  * @param now Now
  */
-void protocore_rcwl0516_core_init(uint8_t *work, PresenceCore *c, uint32_t now);
+void protocore_rcwl0516_core_init(const uint8_t *work, PresenceCore *c, uint32_t now);
 /**
  * @brief Configure out_pin as an input and start the core. true where the .
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.

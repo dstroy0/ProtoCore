@@ -685,7 +685,7 @@ static embed_bool wire_starttls(void *ctx)
 }
 
 // Dial the server, step the open to a connection, walk the session, close.
-void protocore_smtp_send(uint8_t *work)
+void protocore_smtp_send(const uint8_t *work)
 {
     SMTP_CTX(work)->code = 0;
     if (!SmtpV.session.host)
@@ -755,7 +755,7 @@ void protocore_smtp_send(uint8_t *work)
 
 #else // no outbound transport is built: run() over a caller's seam still works, send() cannot dial.
 
-void protocore_smtp_send(uint8_t *work)
+void protocore_smtp_send(const uint8_t *work)
 {
     finish(work, SMTP_ERR_CONNECT);
 }

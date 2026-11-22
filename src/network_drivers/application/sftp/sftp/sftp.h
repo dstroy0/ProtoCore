@@ -417,26 +417,26 @@ typedef struct
     void (*const rd_u8)(const uint8_t *work);
     void (*const rd_u32)(const uint8_t *work);
     void (*const rd_u64)(const uint8_t *work);
-    void (*const rd_string)(uint8_t *work);
+    void (*const rd_string)(const uint8_t *work);
     void (*const rd_attrs)(uint8_t *work);
     void (*const wr_init)(const uint8_t *work);
     void (*const wr_u8)(const uint8_t *work);
     void (*const wr_u32)(const uint8_t *work);
     void (*const wr_u64)(const uint8_t *work);
     void (*const wr_bytes)(const uint8_t *work);
-    void (*const wr_string)(uint8_t *work);
-    void (*const wr_attrs)(uint8_t *work);
+    void (*const wr_string)(const uint8_t *work);
+    void (*const wr_attrs)(const uint8_t *work);
     void (*const wr_finish)(const uint8_t *work);
     void (*const wr_pos)(const uint8_t *work);
     void (*const wr_patch_u32)(const uint8_t *work);
     void (*const frame_len)(const uint8_t *work);
-    void (*const build_version)(uint8_t *work);
+    void (*const build_version)(const uint8_t *work);
     void (*const build_status)(uint8_t *work);
     void (*const build_handle)(uint8_t *work);
     void (*const build_attrs)(uint8_t *work);
     void (*const build_data)(uint8_t *work);
     void (*const build_name1)(uint8_t *work);
-    void (*const format_longname)(uint8_t *work);
+    void (*const format_longname)(const uint8_t *work);
 } SftpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -445,26 +445,26 @@ void protocore_sftp_rd_init(const uint8_t *work);
 void protocore_sftp_rd_u8(const uint8_t *work);
 void protocore_sftp_rd_u32(const uint8_t *work);
 void protocore_sftp_rd_u64(const uint8_t *work);
-void protocore_sftp_rd_string(uint8_t *work);
+void protocore_sftp_rd_string(const uint8_t *work);
 void protocore_sftp_rd_attrs(uint8_t *work);
 void protocore_sftp_wr_init(const uint8_t *work);
 void protocore_sftp_wr_u8(const uint8_t *work);
 void protocore_sftp_wr_u32(const uint8_t *work);
 void protocore_sftp_wr_u64(const uint8_t *work);
 void protocore_sftp_wr_bytes(const uint8_t *work);
-void protocore_sftp_wr_string(uint8_t *work);
-void protocore_sftp_wr_attrs(uint8_t *work);
+void protocore_sftp_wr_string(const uint8_t *work);
+void protocore_sftp_wr_attrs(const uint8_t *work);
 void protocore_sftp_wr_finish(const uint8_t *work);
 void protocore_sftp_wr_pos(const uint8_t *work);
 void protocore_sftp_wr_patch_u32(const uint8_t *work);
 void protocore_sftp_frame_len(const uint8_t *work);
-void protocore_sftp_build_version(uint8_t *work);
+void protocore_sftp_build_version(const uint8_t *work);
 void protocore_sftp_build_status(uint8_t *work);
 void protocore_sftp_build_handle(uint8_t *work);
 void protocore_sftp_build_attrs(uint8_t *work);
 void protocore_sftp_build_data(uint8_t *work);
 void protocore_sftp_build_name1(uint8_t *work);
-void protocore_sftp_format_longname(uint8_t *work);
+void protocore_sftp_format_longname(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

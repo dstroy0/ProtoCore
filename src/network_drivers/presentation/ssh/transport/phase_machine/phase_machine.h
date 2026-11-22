@@ -259,16 +259,16 @@ typedef struct
     void (*const service_done)(const uint8_t *work);
     void (*const auth_done)(const uint8_t *work);
     void (*const rekey_begin)(const uint8_t *work);
-    void (*const admits_ident)(uint8_t *work);
-    void (*const admits_kexinit)(uint8_t *work);
+    void (*const admits_ident)(const uint8_t *work);
+    void (*const admits_kexinit)(const uint8_t *work);
     void (*const kexinit_needs_reply)(const uint8_t *work);
-    void (*const admits_kexdh_init)(uint8_t *work);
-    void (*const admits_newkeys)(uint8_t *work);
-    void (*const admits_service_request)(uint8_t *work);
-    void (*const admits_userauth)(uint8_t *work);
+    void (*const admits_kexdh_init)(const uint8_t *work);
+    void (*const admits_newkeys)(const uint8_t *work);
+    void (*const admits_service_request)(const uint8_t *work);
+    void (*const admits_userauth)(const uint8_t *work);
     void (*const auth_complete)(const uint8_t *work);
     void (*const admits_rekey)(const uint8_t *work);
-    void (*const is_open)(uint8_t *work);
+    void (*const is_open)(const uint8_t *work);
 } PhaseMachineNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -283,16 +283,16 @@ void protocore_phase_machine_newkeys_done(const uint8_t *work);
 void protocore_phase_machine_service_done(const uint8_t *work);
 void protocore_phase_machine_auth_done(const uint8_t *work);
 void protocore_phase_machine_rekey_begin(const uint8_t *work);
-void protocore_phase_machine_admits_ident(uint8_t *work);
-void protocore_phase_machine_admits_kexinit(uint8_t *work);
+void protocore_phase_machine_admits_ident(const uint8_t *work);
+void protocore_phase_machine_admits_kexinit(const uint8_t *work);
 void protocore_phase_machine_kexinit_needs_reply(const uint8_t *work);
-void protocore_phase_machine_admits_kexdh_init(uint8_t *work);
-void protocore_phase_machine_admits_newkeys(uint8_t *work);
-void protocore_phase_machine_admits_service_request(uint8_t *work);
-void protocore_phase_machine_admits_userauth(uint8_t *work);
+void protocore_phase_machine_admits_kexdh_init(const uint8_t *work);
+void protocore_phase_machine_admits_newkeys(const uint8_t *work);
+void protocore_phase_machine_admits_service_request(const uint8_t *work);
+void protocore_phase_machine_admits_userauth(const uint8_t *work);
 void protocore_phase_machine_auth_complete(const uint8_t *work);
 void protocore_phase_machine_admits_rekey(const uint8_t *work);
-void protocore_phase_machine_is_open(uint8_t *work);
+void protocore_phase_machine_is_open(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

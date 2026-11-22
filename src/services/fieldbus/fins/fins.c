@@ -85,7 +85,7 @@ void protocore_fins_build_command(const uint8_t *work)
     FinsV.n = p;
 }
 
-void protocore_fins_build_memory_area_read(uint8_t *work)
+void protocore_fins_build_memory_area_read(const uint8_t *work)
 {
     uint8_t *buf = FinsV.build_memory_area_read_args.buf;
     size_t cap = FinsV.build_memory_area_read_args.cap;
@@ -113,7 +113,7 @@ void protocore_fins_build_memory_area_read(uint8_t *work)
     FinsV.build_command_args.params = NULL;
 }
 
-void protocore_fins_build_memory_area_write(uint8_t *work)
+void protocore_fins_build_memory_area_write(const uint8_t *work)
 {
     uint8_t *buf = FinsV.build_memory_area_write_args.buf;
     size_t cap = FinsV.build_memory_area_write_args.cap;
@@ -165,7 +165,7 @@ void protocore_fins_build_memory_area_write(uint8_t *work)
     FinsV.n = n + data_len;
 }
 
-void protocore_fins_build_run(uint8_t *work)
+void protocore_fins_build_run(const uint8_t *work)
 {
     uint8_t *buf = FinsV.build_run_args.buf;
     size_t cap = FinsV.build_run_args.cap;
@@ -187,7 +187,7 @@ void protocore_fins_build_run(uint8_t *work)
     FinsV.build_command_args.params = NULL;
 }
 
-void protocore_fins_build_stop(uint8_t *work)
+void protocore_fins_build_stop(const uint8_t *work)
 {
     uint8_t *buf = FinsV.build_stop_args.buf;
     size_t cap = FinsV.build_stop_args.cap;

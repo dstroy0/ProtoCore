@@ -112,13 +112,13 @@ class StandardsPassTheCheckerTheyAuthorize(unittest.TestCase):
     def setUp(self):
         for path in STANDARDS.values():
             if not path or not os.path.isfile(path):
-                self.skipTest("set PROSE_STANDARD_DOCUMENTATION and PROSE_STANDARD_COMMENTS to the two standards' files")
+                self.skipTest(
+                    "set PROSE_STANDARD_DOCUMENTATION and PROSE_STANDARD_COMMENTS to the two standards' files"
+                )
 
     def test_no_tier_b_vocabulary_finding_on_either_standard(self):
         for name, path in STANDARDS.items():
-            got = [
-                (at, what) for at, what in findings(path) if what.startswith("tier B")
-            ]
+            got = [(at, what) for at, what in findings(path) if what.startswith("tier B")]
             self.assertEqual(
                 got,
                 [],
@@ -160,10 +160,7 @@ class StandardsPassTheCheckerTheyAuthorize(unittest.TestCase):
                 )
         print(
             "\n  standards: %s"
-            % ", ".join(
-                "%s %d TIER A" % (name, len(findings(path)))
-                for name, path in STANDARDS.items()
-            )
+            % ", ".join("%s %d TIER A" % (name, len(findings(path))) for name, path in STANDARDS.items())
         )
 
     def test_em_dashes_are_the_standards_own_rule_and_are_not_quieted(self):
@@ -171,8 +168,7 @@ class StandardsPassTheCheckerTheyAuthorize(unittest.TestCase):
         # no tier touches it. If this number moves, either somebody edited the
         # standards or somebody quieted the rule, and the two are not the same thing.
         counted = {
-            name: len(docs_check.em_dashes(docs_check.prose_only(path, read(path))))
-            for name, path in STANDARDS.items()
+            name: len(docs_check.em_dashes(docs_check.prose_only(path, read(path)))) for name, path in STANDARDS.items()
         }
         self.assertTrue(
             all(one > 0 for one in counted.values()),
@@ -191,9 +187,7 @@ class TierIsDecidedByTheSentence(unittest.TestCase):
         self.assertEqual(docs_check.tier_of(r"\brather\b"), "A")
 
     def test_superlative_group_is_tier_b_although_it_spans_words(self):
-        group = (
-            r"\b(stellar|superb|phenomenal|tremendous|immense|enormous|staggering)\b"
-        )
+        group = r"\b(stellar|superb|phenomenal|tremendous|immense|enormous|staggering)\b"
         self.assertIn(group, docs_check.BANNED)
         self.assertEqual(docs_check.tier_of(group), "B")
 
@@ -201,9 +195,7 @@ class TierIsDecidedByTheSentence(unittest.TestCase):
         # The import-time guard already raises on drift. This asserts the guard's condition
         # directly. A later edit that removes the guard then fails a test and not a run.
         orphans = [one for one in docs_check.AUTHORITY if one not in docs_check.BANNED]
-        self.assertEqual(
-            orphans, [], "AUTHORITY names patterns BANNED does not hold: %s" % orphans
-        )
+        self.assertEqual(orphans, [], "AUTHORITY names patterns BANNED does not hold: %s" % orphans)
 
     def test_every_authority_entry_cites_a_standard_and_a_line(self):
         for pattern, where in docs_check.AUTHORITY.items():
@@ -220,9 +212,7 @@ class TierIsDecidedByTheSentence(unittest.TestCase):
 
     def test_the_table_holds_no_pattern_twice(self):
         # One rule in two places is two rules that can be edited apart.
-        seen = [
-            one for one in set(docs_check.BANNED) if docs_check.BANNED.count(one) > 1
-        ]
+        seen = [one for one in set(docs_check.BANNED) if docs_check.BANNED.count(one) > 1]
         self.assertEqual(seen, [], "BANNED holds a pattern more than once: %s" % seen)
 
 
@@ -364,10 +354,7 @@ class EveryRuleAgainstTheSentenceThatStatesIt(unittest.TestCase):
         # Both are reported, and the tier separates them.
         wrong = []
         for sentence, phrase, where in self.NAMED:
-            tiers = {
-                docs_check.tier_of(pattern)
-                for _, pattern, _ in docs_check.banned_hits([sentence], comments=True)
-            }
+            tiers = {docs_check.tier_of(pattern) for _, pattern, _ in docs_check.banned_hits([sentence], comments=True)}
             if "A" not in tiers:
                 wrong.append((phrase, where, sorted(tiers)))
         self.assertEqual(
@@ -393,24 +380,14 @@ class EveryRuleAgainstTheSentenceThatStatesIt(unittest.TestCase):
                 self.assertTrue(hits, "%r not reported, comments=%s" % (said, comments))
         said = ["The definition of the identifier is what the linker sees, and the target defines it."]
         for comments in (True, False):
-            self.assertEqual(
-                [one for one in docs_check.banned_hits(said, comments=comments) if one[1] == pattern], []
-            )
+            self.assertEqual([one for one in docs_check.banned_hits(said, comments=comments) if one[1] == pattern], [])
 
     def test_the_mid_sentence_appositive_is_left_alone(self):
         # Section 146 permits the contrast where a reader would otherwise land on the wrong one.
         # The bare X-not-Y pattern is bounded to a whole short sentence. This is the boundary.
-        said = [
-            "The bound is read in the header, not in the .c, and the caller never sees it."
-        ]
-        hits = [
-            token
-            for _, pattern, token in docs_check.banned_hits(said)
-            if ", not " in pattern
-        ]
-        self.assertEqual(
-            hits, [], "the mid-sentence appositive was reported: %s" % hits
-        )
+        said = ["The bound is read in the header, not in the .c, and the caller never sees it."]
+        hits = [token for _, pattern, token in docs_check.banned_hits(said) if ", not " in pattern]
+        self.assertEqual(hits, [], "the mid-sentence appositive was reported: %s" % hits)
 
 
 class TierBIsBoundedToConstructions(unittest.TestCase):
@@ -437,10 +414,7 @@ class TierBIsBoundedToConstructions(unittest.TestCase):
 
     def test_the_standards_own_sentences_are_not_reported(self):
         for word, sentence in self.THE_STANDARDS_OWN_USE:
-            hits = [
-                token
-                for _, _, token in docs_check.banned_hits([sentence], comments=True)
-            ]
+            hits = [token for _, _, token in docs_check.banned_hits([sentence], comments=True)]
             self.assertNotIn(
                 word,
                 [one.lower() for one in hits],
@@ -457,9 +431,7 @@ class TierBIsBoundedToConstructions(unittest.TestCase):
             "The retry is what costs the round.",
         ):
             hits = list(docs_check.banned_hits([sentence]))
-            self.assertTrue(
-                hits, "the bounded construction was not caught: %r" % sentence
-            )
+            self.assertTrue(hits, "the bounded construction was not caught: %r" % sentence)
             self.assertEqual({docs_check.tier_of(one[1]) for one in hits}, {"A"})
 
     def test_the_plain_technical_verb_is_left_located(self):
@@ -504,9 +476,7 @@ class TierBIsBoundedToConstructions(unittest.TestCase):
         # The shape that must not be added: a pattern that matches the word in any context at all.
         for word in docs_check.WITHDRAWN:
             for pattern in docs_check.BANNED:
-                if re.fullmatch(
-                    r"\\b%s(?:\(\?:[^)]*\)|\[[^\]]*\])?\??\\b" % word, pattern
-                ):
+                if re.fullmatch(r"\\b%s(?:\(\?:[^)]*\)|\[[^\]]*\])?\??\\b" % word, pattern):
                     self.fail("%r is banned bare by %r" % (word, pattern))
 
 
@@ -541,17 +511,12 @@ class NamedSpansAreNamesAndNotUses(unittest.TestCase):
         # Bold marks a heading far more often than a citation here, and exempting it hides real
         # TIER A findings inside heading labels. This holds the exemption out.
         said = ["- **Why it is deferred rather than fixed:** the finding is in a tree we do not own."]
-        hits = [
-            token.lower()
-            for _, _, token in docs_check.banned_hits(said, quotations=True)
-        ]
+        hits = [token.lower() for _, _, token in docs_check.banned_hits(said, quotations=True)]
         self.assertIn("rather", hits)
 
     def test_a_backtick_span_is_exempt_in_a_comment_too(self):
         # Not bounded to markdown. A comment names a symbol in backticks the same way a page does.
-        self.assertEqual(
-            list(docs_check.banned_hits(["# the `rather` pattern fires here"])), []
-        )
+        self.assertEqual(list(docs_check.banned_hits(["# the `rather` pattern fires here"])), [])
 
 
 class TheReportSaysWhatItMeasured(unittest.TestCase):
@@ -560,9 +525,7 @@ class TheReportSaysWhatItMeasured(unittest.TestCase):
     def test_no_report_string_claims_1_1m_human_words(self):
         source = docs_check.source()
         emitted = [one for one in re.findall(r'"[^"\n]*"', source) if "1.1M" in one]
-        self.assertEqual(
-            emitted, [], "a report string still claims 1.1M human words: %s" % emitted
-        )
+        self.assertEqual(emitted, [], "a report string still claims 1.1M human words: %s" % emitted)
 
     def test_every_unmeasured_finding_names_the_corpus(self):
         said = ["The retry is what costs the round and nothing more."]
@@ -643,9 +606,7 @@ class TheStructuralStageIsUntouched(unittest.TestCase):
     def test_dead_links_still_has_its_path_candidate_gate(self):
         self.assertTrue(hasattr(docs_check, "path_candidate"))
         self.assertFalse(docs_check.path_candidate("@ref HTTP_10"))
-        self.assertFalse(
-            docs_check.path_candidate("const char *user, const char *pass")
-        )
+        self.assertFalse(docs_check.path_candidate("const char *user, const char *pass"))
         self.assertTrue(docs_check.path_candidate("docs/README.md"))
 
     def test_locale_and_checked_are_not_this_tier_to_define(self):

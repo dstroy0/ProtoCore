@@ -146,7 +146,7 @@ extern GrpcWebVars GrpcWebV;
 typedef struct
 {
     void (*const frame)(const uint8_t *work);
-    void (*const frame_message)(uint8_t *work);
+    void (*const frame_message)(const uint8_t *work);
     void (*const frame_trailers)(const uint8_t *work);
     void (*const parse)(const uint8_t *work);
     void (*const trailers_status)(const uint8_t *work);
@@ -156,7 +156,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in GrpcWebV or a region of the borrow at a fixed offset.
 void protocore_grpc_web_frame(const uint8_t *work);
-void protocore_grpc_web_frame_message(uint8_t *work);
+void protocore_grpc_web_frame_message(const uint8_t *work);
 void protocore_grpc_web_frame_trailers(const uint8_t *work);
 void protocore_grpc_web_parse(const uint8_t *work);
 void protocore_grpc_web_trailers_status(const uint8_t *work);

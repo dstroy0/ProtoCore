@@ -279,7 +279,7 @@ here means measured that day, not believed.
 borrows `PROTOCORE_PLAINTEXT_WORK_DIAG` at `protocore.c:757` - the truncated-constant corruption is clean (no single-character `#define` in
 `src/` or `test/core_setup/`) - `bytes.h`'s 32-bit bounds wrap is fixed and the header states the
 subtraction rule - `protocore_br_take_be` no longer carries CBOR's tag byte - `SendCtx` / `extern s_send`
-are gone - bare `inline` in `shared/` headers is gone (all `PROTOCORE_INLINE`) - `crypto_scratch.h`
+are gone - bare `inline` in `shared/` headers is gone (all `EMBED_INLINE`) - `crypto_scratch.h`
 is gone - `enum class protocore_mnt_mode` is gone - `regen_digest_secret()` is gone - the unconditional
 `#include <Arduino.h>` is out of `protocore.h` and `fs::FS` is out of the public API (SFTP and SCP go
 through `protocore_fs_*`) - `test/dep_graph.json` is regenerated - `check_owned_context` passes clean -

@@ -190,7 +190,7 @@ typedef struct
     void (*const ckt)(const uint8_t *work);
     void (*const cks)(const uint8_t *work);
     void (*const checksum6)(const uint8_t *work);
-    void (*const finalize)(uint8_t *work);
+    void (*const finalize)(const uint8_t *work);
     void (*const verify)(const uint8_t *work);
 } IolinkNs;
 
@@ -203,7 +203,7 @@ void protocore_iolink_mc_address(const uint8_t *work);
 void protocore_iolink_ckt(const uint8_t *work);
 void protocore_iolink_cks(const uint8_t *work);
 void protocore_iolink_checksum6(const uint8_t *work);
-void protocore_iolink_finalize(uint8_t *work);
+void protocore_iolink_finalize(const uint8_t *work);
 void protocore_iolink_verify(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

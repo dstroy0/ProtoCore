@@ -181,9 +181,9 @@ typedef struct
 {
     void (*const build_epath)(const uint8_t *work);
     void (*const build_request)(const uint8_t *work);
-    void (*const build_get_attr_single)(uint8_t *work);
-    void (*const build_get_attr_all)(uint8_t *work);
-    void (*const build_set_attr_single)(uint8_t *work);
+    void (*const build_get_attr_single)(const uint8_t *work);
+    void (*const build_get_attr_all)(const uint8_t *work);
+    void (*const build_set_attr_single)(const uint8_t *work);
     void (*const parse_response)(const uint8_t *work);
 } CipNs;
 
@@ -191,9 +191,9 @@ typedef struct
 // else an entry needs is an operand in CipV or a region of the borrow at a fixed offset.
 void protocore_cip_build_epath(const uint8_t *work);
 void protocore_cip_build_request(const uint8_t *work);
-void protocore_cip_build_get_attr_single(uint8_t *work);
-void protocore_cip_build_get_attr_all(uint8_t *work);
-void protocore_cip_build_set_attr_single(uint8_t *work);
+void protocore_cip_build_get_attr_single(const uint8_t *work);
+void protocore_cip_build_get_attr_all(const uint8_t *work);
+void protocore_cip_build_set_attr_single(const uint8_t *work);
 void protocore_cip_parse_response(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

@@ -53,7 +53,7 @@ uint8_t *protocore_provisioning_service_span(void)
     return s_own.span;
 }
 
-embed_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap)
+embed_bool protocore_prov_form_field(const uint8_t *work, const char *body, const char *key, char *out, size_t cap)
 {
     if (out && cap)
     {

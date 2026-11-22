@@ -739,7 +739,7 @@ void protocore_tcp_listener_stop(const uint8_t *work)
 #endif
 }
 
-void protocore_tcp_listener_stop_all(uint8_t *work)
+void protocore_tcp_listener_stop_all(const uint8_t *work)
 {
     for (uint8_t i = 0; i < MAX_LISTENERS; i++)
     {

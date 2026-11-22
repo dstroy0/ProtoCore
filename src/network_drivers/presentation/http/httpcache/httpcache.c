@@ -376,7 +376,7 @@ static embed_bool cache_parse_one_directive(const char *s, size_t len, size_t *i
     return nlen && cc_match(cc, s + start, nlen, val, vlen);
 }
 
-void protocore_httpcache_control_parse(uint8_t *work)
+void protocore_httpcache_control_parse(const uint8_t *work)
 {
     const char *s = HttpcacheV.control_parse_args.s;
     size_t len = HttpcacheV.control_parse_args.len;
@@ -403,7 +403,7 @@ void protocore_httpcache_control_parse(uint8_t *work)
 
 // --- presets + freshness ---------------------------------------------------
 
-void protocore_httpcache_immutable_asset(uint8_t *work)
+void protocore_httpcache_immutable_asset(const uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.immutable_asset_args.cc;
     uint32_t max_age = HttpcacheV.immutable_asset_args.max_age;
@@ -415,7 +415,7 @@ void protocore_httpcache_immutable_asset(uint8_t *work)
     cc->cc_immutable = EMBED_TRUE;
 }
 
-void protocore_httpcache_revalidatable(uint8_t *work)
+void protocore_httpcache_revalidatable(const uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.revalidatable_args.cc;
     uint32_t max_age = HttpcacheV.revalidatable_args.max_age;
@@ -431,7 +431,7 @@ void protocore_httpcache_revalidatable(uint8_t *work)
     }
 }
 
-void protocore_httpcache_no_store(uint8_t *work)
+void protocore_httpcache_no_store(const uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.no_store_args.cc;
 
@@ -440,7 +440,7 @@ void protocore_httpcache_no_store(uint8_t *work)
     cc->no_store = EMBED_TRUE;
 }
 
-void protocore_httpcache_shared(uint8_t *work)
+void protocore_httpcache_shared(const uint8_t *work)
 {
     protocore_cache_control *cc = HttpcacheV.shared_args.cc;
     uint32_t max_age = HttpcacheV.shared_args.max_age;

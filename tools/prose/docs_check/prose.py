@@ -11,8 +11,6 @@ from .files import build_file
 from .legal import legal_blank
 from .quoting import QUIET_CLOSE, quieted
 
-
-
 # The audit on the mechanism above, because the mechanism is easy to misuse. A marker pair protects
 # a quotation, and a quotation has edges: it opens and closes where a sentence does. A pair reached
 # for to silence a finding lands wherever the token sits, in the middle of a sentence. A correct
@@ -119,9 +117,7 @@ def tex_prose(lines):
         )
 
         # Environment openers and closers, which name the environment and carry no sentence.
-        held = re.sub(
-            r"\\(begin|end)\s*\{[^{}]*\}(\[[^\]]*\])?(\{[^{}]*\})*", " ", held
-        )
+        held = re.sub(r"\\(begin|end)\s*\{[^{}]*\}(\[[^\]]*\])?(\{[^{}]*\})*", " ", held)
 
         # Every remaining command retains its braces, since \textbf{a sentence} is a sentence. The
         # command name itself goes, and so do the braces around it.

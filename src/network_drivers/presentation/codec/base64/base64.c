@@ -341,7 +341,7 @@ void protocore_base64_decode(const uint8_t *work)
 // buffer or re-padding.
 // ---------------------------------------------------------------------------
 
-void protocore_base64_url_encode(uint8_t *work)
+void protocore_base64_url_encode(const uint8_t *work)
 {
     const uint8_t *src = Base64V.url_encode_args.src;
     size_t src_len = Base64V.url_encode_args.src_len;

@@ -39,7 +39,7 @@ void protocore_ad9238_build_instruction(const uint8_t *work)
     Ad9238V.ok = EMBED_TRUE;
 }
 
-void protocore_ad9238_build_write(uint8_t *work)
+void protocore_ad9238_build_write(const uint8_t *work)
 {
     (void)work;
     uint16_t reg_addr = Ad9238V.build_write_args.reg_addr;
@@ -70,7 +70,7 @@ void protocore_ad9238_build_write(uint8_t *work)
     Ad9238V.n = 3;
 }
 
-void protocore_ad9238_build_read(uint8_t *work)
+void protocore_ad9238_build_read(const uint8_t *work)
 {
     (void)work;
     uint16_t reg_addr = Ad9238V.build_read_args.reg_addr;

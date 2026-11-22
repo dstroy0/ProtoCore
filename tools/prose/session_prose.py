@@ -97,8 +97,7 @@ def main():
     words = sum(len(one.split()) for one in cleaned)
 
     out.write("\n  %s\n" % os.path.basename(path))
-    out.write("    %d machine messages, %d after code and tables come out\n"
-              % (len(blocks), len(cleaned)))
+    out.write("    %d machine messages, %d after code and tables come out\n" % (len(blocks), len(cleaned)))
     out.write("    %d words of prose\n" % words)
 
     if target:

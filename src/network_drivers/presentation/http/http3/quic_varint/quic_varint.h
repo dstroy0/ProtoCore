@@ -38,7 +38,7 @@ EMBED_BEGIN_DECLS
 typedef struct
 {
     size_t (*len)(const uint8_t *, uint64_t);
-    size_t (*encode)(uint8_t *, uint8_t *, size_t, uint64_t);
+    size_t (*encode)(const uint8_t *, uint8_t *, size_t, uint64_t);
     embed_bool (*decode)(const uint8_t *, const uint8_t *, size_t, uint64_t *, size_t *);
 } QuicVarintNs;
 PROTOCORE_NS_LAYOUT(QuicVarintNs, len, encode, decode);
@@ -58,7 +58,7 @@ size_t protocore_quic_varint_len(const uint8_t *work, uint64_t value);
  * @param value Value
  * @return The size_t.
  */
-size_t protocore_quic_varint_encode(uint8_t *work, uint8_t *out, size_t cap, uint64_t value);
+size_t protocore_quic_varint_encode(const uint8_t *work, uint8_t *out, size_t cap, uint64_t value);
 /**
  * @brief Decode a varint at in. Sets value and consumed (1/2/4/8). false if .
  * @param work PROTOCORE_QUIC_VARINT_BORROW bytes the caller took. Not held past the call.

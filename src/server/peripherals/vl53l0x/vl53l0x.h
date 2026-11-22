@@ -134,7 +134,7 @@ typedef struct
     void (*const range_mm)(const uint8_t *work);
     void (*const data_ready)(const uint8_t *work);
     void (*const range_status)(const uint8_t *work);
-    void (*const range_valid)(uint8_t *work);
+    void (*const range_valid)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read_mm)(uint8_t *work);
 } Vl53l0xNs;
@@ -144,7 +144,7 @@ typedef struct
 void protocore_vl53l0x_range_mm(const uint8_t *work);
 void protocore_vl53l0x_data_ready(const uint8_t *work);
 void protocore_vl53l0x_range_status(const uint8_t *work);
-void protocore_vl53l0x_range_valid(uint8_t *work);
+void protocore_vl53l0x_range_valid(const uint8_t *work);
 void protocore_vl53l0x_begin(uint8_t *work);
 void protocore_vl53l0x_read_mm(uint8_t *work);
 

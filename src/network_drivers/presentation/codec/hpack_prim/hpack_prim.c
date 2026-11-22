@@ -286,8 +286,8 @@ embed_bool protocore_hpack_prim_huff_decode(const uint8_t *work, const uint8_t *
 
 // --- string literal (RFC 7541 sec 5.2; RFC 9204 reuses it verbatim) -------------------------------
 
-embed_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, size_t len, size_t *pos, char *out,
-                                           size_t cap, size_t *out_len)
+embed_bool protocore_hpack_prim_decode_str(const uint8_t *work, const uint8_t *block, size_t len, size_t *pos,
+                                           char *out, size_t cap, size_t *out_len)
 {
     if (*pos >= len)
     {
@@ -327,7 +327,7 @@ embed_bool protocore_hpack_prim_decode_str(uint8_t *work, const uint8_t *block, 
     return EMBED_TRUE;
 }
 
-size_t protocore_hpack_prim_encode_str(uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
+size_t protocore_hpack_prim_encode_str(const uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
 {
     size_t hpack_prim_n = HpackPrim.huff_len(work, s, n);
     size_t hl = hpack_prim_n;

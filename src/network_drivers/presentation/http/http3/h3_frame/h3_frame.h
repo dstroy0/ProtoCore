@@ -87,11 +87,11 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*parse_header)(uint8_t *, const uint8_t *, size_t, H3FrameHeader *);
+    embed_bool (*parse_header)(const uint8_t *, const uint8_t *, size_t, H3FrameHeader *);
     size_t (*write_header)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t);
     embed_bool (*type_reserved)(const uint8_t *, uint64_t);
     void (*settings_defaults)(const uint8_t *, H3Settings *);
-    embed_bool (*parse_settings)(uint8_t *, const uint8_t *, size_t, H3Settings *);
+    embed_bool (*parse_settings)(const uint8_t *, const uint8_t *, size_t, H3Settings *);
     size_t (*build_data)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
     size_t (*build_headers)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
     size_t (*build_settings)(uint8_t *, uint8_t *, size_t, const uint64_t *, const uint64_t *, size_t);
@@ -108,7 +108,7 @@ PROTOCORE_NS_LAYOUT(H3FrameNs, parse_header, write_header, type_reserved, settin
  * @param out Out
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_h3_frame_parse_header(uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out);
+embed_bool protocore_h3_frame_parse_header(const uint8_t *work, const uint8_t *buf, size_t len, H3FrameHeader *out);
 /**
  * @brief Write a frame header (type + length varints). bytes written, or 0 .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -140,7 +140,7 @@ void protocore_h3_frame_settings_defaults(const uint8_t *work, H3Settings *s);
  * @param s S
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_h3_frame_parse_settings(uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s);
+embed_bool protocore_h3_frame_parse_settings(const uint8_t *work, const uint8_t *payload, size_t len, H3Settings *s);
 /**
  * @brief DATA frame wrapping data.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.

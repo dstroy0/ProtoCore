@@ -48,7 +48,7 @@ static const uint8_t OID_BASIC_CONSTRAINTS[] = {0x55, 0x1D, 0x13}; // { id-ce 19
 // ---------------------------------------------------------------------------
 
 // One value at @p pos in @p der. The reader is stateless, so every step names its own bytes.
-static embed_bool at(uint8_t *work, const uint8_t *der, size_t len, size_t pos)
+static embed_bool at(const uint8_t *work, const uint8_t *der, size_t len, size_t pos)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;

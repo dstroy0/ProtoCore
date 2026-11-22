@@ -507,7 +507,7 @@ void protocore_conn_pool_closing_finalize(const uint8_t *work)
 }
 
 // Finalize now if the slot is dwelling and its transmit queue drained.
-void protocore_conn_pool_closing_check(uint8_t *work)
+void protocore_conn_pool_closing_check(const uint8_t *work)
 {
     if (ConnPoolV.slot >= MAX_CONNS || EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
                                                   .word = &conn_pool[ConnPoolV.slot].state) != CONN_CLOSING)
@@ -583,6 +583,7 @@ static void protocore_conn_enqueue(TcpConn *slot, const TcpEvt *evt)
     ConnPoolV.slot = slot->id;
     ConnPoolV.evt = evt;
     protocore_conn_pool_enqueue(protocore_conn_pool_span());
+    ConnPoolV.evt = NULL;
 }
 
 // ---------------------------------------------------------------------------

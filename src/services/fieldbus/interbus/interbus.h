@@ -102,14 +102,14 @@ extern InterbusVars InterbusV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const fcs)(uint8_t *work);
+    void (*const fcs)(const uint8_t *work);
     void (*const build)(uint8_t *work);
     void (*const parse)(uint8_t *work);
 } InterbusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in InterbusV or a region of the borrow at a fixed offset.
-void protocore_interbus_fcs(uint8_t *work);
+void protocore_interbus_fcs(const uint8_t *work);
 void protocore_interbus_build(uint8_t *work);
 void protocore_interbus_parse(uint8_t *work);
 

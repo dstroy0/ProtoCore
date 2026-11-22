@@ -137,7 +137,7 @@ void protocore_rawl2_parse(const uint8_t *work)
     Rawl2V.ok = EMBED_TRUE;
 }
 
-void protocore_rawl2_fcs(uint8_t *work)
+void protocore_rawl2_fcs(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = Rawl2V.fcs_args.bytes;

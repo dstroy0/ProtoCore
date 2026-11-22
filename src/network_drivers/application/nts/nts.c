@@ -66,7 +66,7 @@ void protocore_nts_ke_record(const uint8_t *work)
     NtsV.n = n;
 }
 
-void protocore_nts_ke_request(uint8_t *work)
+void protocore_nts_ke_request(const uint8_t *work)
 {
     uint8_t *out = NtsV.ke_request_args.out;
     size_t cap = NtsV.ke_request_args.cap;
@@ -195,7 +195,7 @@ void protocore_nts_ef(const uint8_t *work)
     NtsV.n = padded;
 }
 
-void protocore_nts_ef_unique_id(uint8_t *work)
+void protocore_nts_ef_unique_id(const uint8_t *work)
 {
     const uint8_t *nonce = NtsV.ef_unique_id_args.nonce;
     size_t nonce_len = NtsV.ef_unique_id_args.nonce_len;
@@ -210,7 +210,7 @@ void protocore_nts_ef_unique_id(uint8_t *work)
     protocore_nts_ef(work);
 }
 
-void protocore_nts_ef_cookie(uint8_t *work)
+void protocore_nts_ef_cookie(const uint8_t *work)
 {
     const uint8_t *cookie = NtsV.ef_cookie_args.cookie;
     size_t cookie_len = NtsV.ef_cookie_args.cookie_len;

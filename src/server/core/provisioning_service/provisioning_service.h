@@ -32,7 +32,7 @@ EMBED_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*form_field)(uint8_t *, const char *, const char *, char *, size_t);
+    embed_bool (*form_field)(const uint8_t *, const char *, const char *, char *, size_t);
     embed_bool (*load)(const uint8_t *, char *, size_t, char *, size_t);
     void (*begin)(uint8_t *, const char *);
     void (*clear)(const uint8_t *);
@@ -48,7 +48,7 @@ PROTOCORE_NS_LAYOUT(ProvNs, form_field, load, begin, clear);
  * @param cap Capacity of out (>= 1)
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap);
+embed_bool protocore_prov_form_field(const uint8_t *work, const char *body, const char *key, char *out, size_t cap);
 /**
  * @brief Load stored WiFi credentials from NVS.
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.

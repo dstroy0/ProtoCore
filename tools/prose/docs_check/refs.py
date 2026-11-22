@@ -10,8 +10,6 @@ import os
 from .manifest import MANIFEST_NAMES, manifest_home
 from .repository import git_say
 
-
-
 # ====================================================================
 # REPORTING: A COUNT IS NOT A RESULT UNTIL IT SAYS WHAT IT COUNTED
 # ====================================================================

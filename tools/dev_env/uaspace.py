@@ -18,7 +18,11 @@ written in one file resolves to the model that owns it.
 import re
 import xml.etree.ElementTree as ET
 
-NS = {"u": "http://opcfoundation.org/UA/2011/03/UANodeSet.xsd"}  # NOSONAR(python:S5332): an XML namespace name, which no request reaches
+UANODESET_NS = (
+    "http://opcfoundation.org/UA/2011/03/UANodeSet.xsd"  # NOSONAR - an XML namespace name, which no request reaches
+)
+CORE_NS = "http://opcfoundation.org/UA/"  # NOSONAR - an XML namespace name, which no request reaches
+NS = {"u": UANODESET_NS}
 
 HAS_SUBTYPE = "i=45"
 HAS_TYPEDEF = "i=40"
@@ -64,7 +68,7 @@ class Space:
 
     def _uris(self, path):
         root = ET.parse(path).getroot()
-        uris = ["http://opcfoundation.org/UA/"]  # NOSONAR(python:S5332): an XML namespace name, which no request reaches
+        uris = [CORE_NS]
         for u in root.findall("u:NamespaceUris/u:Uri", NS):
             uris.append((u.text or "").strip())
         return uris

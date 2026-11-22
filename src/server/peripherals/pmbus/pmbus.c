@@ -44,7 +44,7 @@ EMBED_BEGIN_DECLS
 // The entries this file calls before reaching their definitions.
 static void pmbus_l11_exponent(const uint8_t *work);
 static void pmbus_l11_mantissa(const uint8_t *work);
-static void pmbus_linear11_micro(uint8_t *work);
+static void pmbus_linear11_micro(const uint8_t *work);
 static void pmbus_linear16_encode(const uint8_t *work);
 static void pmbus_linear16_micro(const uint8_t *work);
 
@@ -119,7 +119,7 @@ static int32_t scale_micro(int64_t mantissa, int8_t exponent)
     return (int32_t)v;
 }
 
-static void pmbus_linear11_micro(uint8_t *work)
+static void pmbus_linear11_micro(const uint8_t *work)
 {
     (void)work;
     uint16_t word = Pmbus.linear11_micro_args.word;
@@ -311,7 +311,7 @@ static void pmbus_read_linear11(uint8_t *work)
     Pmbus.ok = *micro != PROTOCORE_PMBUS_INVALID;
 }
 
-static void pmbus_read_linear16(uint8_t *work)
+static void pmbus_read_linear16(const uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.read_linear16_args.addr;
@@ -338,7 +338,7 @@ static void pmbus_read_linear16(uint8_t *work)
     Pmbus.ok = *micro != PROTOCORE_PMBUS_INVALID;
 }
 
-static void pmbus_write_linear16(uint8_t *work)
+static void pmbus_write_linear16(const uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.write_linear16_args.addr;

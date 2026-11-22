@@ -29,7 +29,8 @@ MEMBER_MARK = re.compile(r"/\*\*<|//[/!]<")
 DOXYGEN_TAG = re.compile(
     r"^@(?:param|tparam|return|returns|retval|brief|details|note|warning|attention|remark|remarks|see|sa|pre|post|"
     r"throws|throw|exception|invariant|todo|deprecated|since|file|defgroup|ingroup|addtogroup|struct|enum|def|"
-    r"typedef|fn|var|class|union|namespace|example|code|endcode|bug|par|li|ref|copydoc|internal|private|public)\b")
+    r"typedef|fn|var|class|union|namespace|example|code|endcode|bug|par|li|ref|copydoc|internal|private|public)\b"
+)
 
 
 def checker():
@@ -55,7 +56,7 @@ def comment_text(said):
         member = MEMBER_MARK.search(line)
         if member:
             # a member's own comment, after the code it documents, is an item of its own
-            text.append("- " + line[member.end():].replace("*/", "").strip())
+            text.append("- " + line[member.end() :].replace("*/", "").strip())
             continue
         stripped = MARKER.sub("", line).strip()
         text.append("- " + stripped if DOXYGEN_TAG.match(stripped) else stripped)

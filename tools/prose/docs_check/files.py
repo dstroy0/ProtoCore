@@ -9,7 +9,6 @@ import os
 
 from .verbatim import verbatim_root
 
-
 # Prose lives in pages, in comments, in the research papers and in the build, and the same voice writes all
 # four.
 #
@@ -72,6 +71,7 @@ def checked_file(path):
     """Whether this tool reads this path at all."""
     return path.endswith(CHECKED) or build_file(path)
 
+
 # Fetched or generated, and none of it authored here. target is what cargo writes for ui.
 # fixtures holds the positive control for machine_distance.py, written deliberately in the register
 # being detected. Repairing it deletes the only sample of the thing.
@@ -95,9 +95,7 @@ SKIP_DIRS = (
 
 def retained_dirs(here, dirs):
     """The directories under `here` a walk goes into: none in SKIP_DIRS and none that is another checkout."""
-    return [
-        one for one in dirs if one not in SKIP_DIRS and not os.path.exists(os.path.join(here, one, ".git"))
-    ]
+    return [one for one in dirs if one not in SKIP_DIRS and not os.path.exists(os.path.join(here, one, ".git"))]
 
 
 # The gate checks the markdown and skips the chapters built from it. The exemptions a verbatim text
@@ -174,11 +172,7 @@ def walk_markdown(roots, ledger=None):
             continue
         for here, dirs, names in os.walk(root):
             dirs[:] = retained_dirs(here, dirs)
-            found.extend(
-                os.path.join(here, name)
-                for name in names
-                if checked_file(os.path.join(here, name))
-            )
+            found.extend(os.path.join(here, name) for name in names if checked_file(os.path.join(here, name)))
     # This package writes down every phrase it bans and matches itself on nearly all of them.
     # Quieting them one pair at a time with the markers below buries the table under its own
     # pragmas, and a reader scrolling past a hundred of them stops reading them. The whole
@@ -194,9 +188,7 @@ def walk_markdown(roots, ledger=None):
         # are excluded here, the exclusion recorded like every other. A fixtures/ directory is
         # already skipped by SKIP_DIRS; these are the tests that live next to the gate.
         one_name = os.path.basename(one)
-        if (os.path.dirname(os.path.abspath(one)) == my_dir) and one_name.startswith(
-            "test_docs_check"
-        ):
+        if (os.path.dirname(os.path.abspath(one)) == my_dir) and one_name.startswith("test_docs_check"):
             if ledger is not None:
                 ledger.note(
                     "gate self-test",

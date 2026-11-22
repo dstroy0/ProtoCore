@@ -817,7 +817,7 @@ void protocore_file_serving_serve_file(uint8_t *work)
     protocore_file_serving_serve_file_internal(work);
 }
 
-void protocore_file_serving_serve_static(uint8_t *work)
+void protocore_file_serving_serve_static(const uint8_t *work)
 {
     (void)work;
     const char *url_prefix = FileServingV.serve_static_args.url_prefix;

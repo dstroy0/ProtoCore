@@ -313,7 +313,7 @@ void protocore_json_put_raw(const uint8_t *work)
     json_emit_raw(w, literal);
 }
 
-void protocore_json_kv_str(uint8_t *work)
+void protocore_json_kv_str(const uint8_t *work)
 {
     protocore_json_writer *w = JsonV.kv_str_args.w;
     const char *k = JsonV.kv_str_args.k;
@@ -326,7 +326,7 @@ void protocore_json_kv_str(uint8_t *work)
     JsonV.put_str_args.v = v;
     protocore_json_put_str(work);
 }
-void protocore_json_kv_int(uint8_t *work)
+void protocore_json_kv_int(const uint8_t *work)
 {
     protocore_json_writer *w = JsonV.kv_int_args.w;
     const char *k = JsonV.kv_int_args.k;
@@ -339,7 +339,7 @@ void protocore_json_kv_int(uint8_t *work)
     JsonV.put_int_args.v = v;
     protocore_json_put_int(work);
 }
-void protocore_json_kv_uint(uint8_t *work)
+void protocore_json_kv_uint(const uint8_t *work)
 {
     protocore_json_writer *w = JsonV.kv_uint_args.w;
     const char *k = JsonV.kv_uint_args.k;
@@ -352,7 +352,7 @@ void protocore_json_kv_uint(uint8_t *work)
     JsonV.put_uint_args.v = v;
     protocore_json_put_uint(work);
 }
-void protocore_json_kv_bool(uint8_t *work)
+void protocore_json_kv_bool(const uint8_t *work)
 {
     protocore_json_writer *w = JsonV.kv_bool_args.w;
     const char *k = JsonV.kv_bool_args.k;
@@ -365,7 +365,7 @@ void protocore_json_kv_bool(uint8_t *work)
     JsonV.put_bool_args.v = v;
     protocore_json_put_bool(work);
 }
-void protocore_json_kv_null(uint8_t *work)
+void protocore_json_kv_null(const uint8_t *work)
 {
     protocore_json_writer *w = JsonV.kv_null_args.w;
     const char *k = JsonV.kv_null_args.k;
@@ -376,7 +376,7 @@ void protocore_json_kv_null(uint8_t *work)
     JsonV.put_null_args.w = w;
     protocore_json_put_null(work);
 }
-void protocore_json_kv_raw(uint8_t *work)
+void protocore_json_kv_raw(const uint8_t *work)
 {
     protocore_json_writer *w = JsonV.kv_raw_args.w;
     const char *k = JsonV.kv_raw_args.k;

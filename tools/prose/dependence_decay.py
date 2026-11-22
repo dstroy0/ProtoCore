@@ -145,12 +145,11 @@ def tokens_of(text, vocabulary=256):
     counts = {}
     for word in words:
         counts[word] = counts.get(word, 0) + 1
-    common = sorted(counts, key=lambda w: -counts[w])[:vocabulary - 1]
+    common = sorted(counts, key=lambda w: -counts[w])[: vocabulary - 1]
     index = {word: number for number, word in enumerate(common)}
     # Everything outside the retained vocabulary shares the last symbol.
     other = vocabulary - 1
-    return numpy.fromiter((index.get(w, other) for w in words), dtype=numpy.int32,
-                          count=len(words)), vocabulary
+    return numpy.fromiter((index.get(w, other) for w in words), dtype=numpy.int32, count=len(words)), vocabulary
 
 
 def mutual_information(symbols, lag, size):
@@ -161,8 +160,7 @@ def mutual_information(symbols, lag, size):
     right = symbols[lag:]
     total = float(left.size)
 
-    joint = numpy.bincount(left.astype(numpy.int64) * size + right,
-                           minlength=size * size).astype(numpy.float64)
+    joint = numpy.bincount(left.astype(numpy.int64) * size + right, minlength=size * size).astype(numpy.float64)
     joint /= total
     joint = joint.reshape(size, size)
 
@@ -218,6 +216,7 @@ def decay_shape(rows):
     logarithm of a negative number is not a small number: it is nothing.
     """
     import math
+
     base = rows[0][3]
     if base <= 0.0:
         return None, 0
@@ -272,14 +271,14 @@ def load_papers(limit_words=400000):
 def main():
     parser = argparse.ArgumentParser(description="Dependence decay against lag.")
     parser.add_argument("--control", action="store_true", help="human pole against machine pole")
-    parser.add_argument("--band", action="store_true",
-                        help="draw the human slope band from disjoint equal-size chunks")
-    parser.add_argument("--scramble", action="store_true",
-                        help="is the human tail dependence, or document boundaries?")
-    parser.add_argument("--twoband", action="store_true",
-                        help="a band for each pole, both cut to --length, with the confound measured")
-    parser.add_argument("--length", type=int, default=200000,
-                        help="tokens per chunk; see the note on why longer is not better")
+    parser.add_argument("--band", action="store_true", help="draw the human slope band from disjoint equal-size chunks")
+    parser.add_argument("--scramble", action="store_true", help="is the human tail dependence, or document boundaries?")
+    parser.add_argument(
+        "--twoband", action="store_true", help="a band for each pole, both cut to --length, with the confound measured"
+    )
+    parser.add_argument(
+        "--length", type=int, default=200000, help="tokens per chunk; see the note on why longer is not better"
+    )
     parser.add_argument("--file", default=None)
     parser.add_argument("--vocabulary", type=int, default=256)
     given = parser.parse_args()
@@ -307,16 +306,15 @@ def main():
         rng = numpy.random.default_rng(0xA55E)
         mixed = human.copy()
         for at in range(0, mixed.size - span, span):
-            piece = mixed[at:at + span]
+            piece = mixed[at : at + span]
             rng.shuffle(piece)
-            mixed[at:at + span] = piece
+            mixed[at : at + span] = piece
         scrambled = curve(mixed, size, draws=3)
 
         print()
         print("  human pole, %s tokens, scrambled within every %d" % (format(human.size, ","), span))
         print()
-        print("    %6s %12s %12s %12s %12s"
-              % ("lag", "as-is", "its floor", "scrambled", "its floor"))
+        print("    %6s %12s %12s %12s %12s" % ("lag", "as-is", "its floor", "scrambled", "its floor"))
         for (lag, r1, f1, e1), (_, r2, f2, e2) in zip(plain, scrambled):
             print("    %6d %12.6f %12.6f %12.6f %12.6f" % (lag, e1, f1, e2, f2))
 
@@ -328,8 +326,10 @@ def main():
         big = [(lag, e1, e2) for (lag, _, _, e1), (_, _, _, e2) in zip(plain, scrambled) if lag >= 256]
         survived = sum(1 for lag, e1, e2 in big if e2 >= e1 * 0.5)
         for lag, e1, e2 in big:
-            print("    lag %4d   as-is %.6f   scrambled %.6f   %s"
-                  % (lag, e1, e2, "SURVIVED" if e2 >= e1 * 0.5 else "destroyed"))
+            print(
+                "    lag %4d   as-is %.6f   scrambled %.6f   %s"
+                % (lag, e1, e2, "SURVIVED" if e2 >= e1 * 0.5 else "destroyed")
+            )
         print()
         if survived >= len(big) - 1:
             print("    The large-lag excess survives having every arrangement below %d words" % span)
@@ -356,22 +356,22 @@ def main():
         # from falls as 1/L. Those two fight. At a large enough length there are too few DISJOINT chunks, and the spread
         # is no longer measurable. The output then prints a large separation against an unmeasurable band, and that
         # looks like the best result. The default sits where both are adequate.
-        machine_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(HERE))),
-                                      "build", "corpora", "machine_suppressed.txt")
+        machine_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(HERE))), "build", "corpora", "machine_suppressed.txt"
+        )
         if not os.path.exists(machine_path):
             print("  no machine corpus at %s" % machine_path)
             return 1
 
         length = given.length
         human, size = tokens_of(load_papers(limit_words=7000000), given.vocabulary)
-        machine, size = tokens_of(io.open(machine_path, encoding="utf-8",
-                                            errors="replace").read(), given.vocabulary)
+        machine, size = tokens_of(io.open(machine_path, encoding="utf-8", errors="replace").read(), given.vocabulary)
 
         def bands(symbols, label, cap):
             out = []
             at = 0
             while at + length <= symbols.size and len(out) < cap:
-                piece = symbols[at:at + length]
+                piece = symbols[at : at + length]
                 # The top-256 mass share is the nuisance that the floors exposed: it sets how the joint table fills, and
                 # therefore the bias. The run records it per chunk, and can then MEASURE its influence below, and not
                 # correct for it on faith.
@@ -403,10 +403,8 @@ def main():
         hm, hs, hn, hshare = summarise(human_rows2)
         mm, msd, mn, mshare = summarise(machine_rows2)
 
-        print("    %-10s slope %+.4f  sd %.4f  n %2d   top-%d mass share %.4f"
-              % ("human", hm, hs, hn, size, hshare))
-        print("    %-10s slope %+.4f  sd %.4f  n %2d   top-%d mass share %.4f"
-              % ("machine", mm, msd, mn, size, mshare))
+        print("    %-10s slope %+.4f  sd %.4f  n %2d   top-%d mass share %.4f" % ("human", hm, hs, hn, size, hshare))
+        print("    %-10s slope %+.4f  sd %.4f  n %2d   top-%d mass share %.4f" % ("machine", mm, msd, mn, size, mshare))
         print()
 
         # DOES THE NUISANCE ACTUALLY DRIVE THE SLOPE? The run measures it across every chunk of both poles pooled. If
@@ -438,24 +436,20 @@ def main():
         print("  RESULT")
         print("=" * 78)
         print()
-        print("    gap %+.4f, standard error %.4f: %.2f sd apart"
-              % (gap, se, abs(gap) / se if se > 0 else 0.0))
+        print("    gap %+.4f, standard error %.4f: %.2f sd apart" % (gap, se, abs(gap) / se if se > 0 else 0.0))
         print()
         overlap = sum(1 for v, _ in human_rows2 if v <= am)
-        print("    %d of %d human chunks decay at least as fast as the machine MEAN"
-              % (overlap, hn))
+        print("    %d of %d human chunks decay at least as fast as the machine MEAN" % (overlap, hn))
         print()
         if se > 0 and abs(gap) / se >= 3.0 and gap < 0 and abs(r) < 0.3:
-            print("    The machine pole decays faster, the separation is %.1f sd on two measured"
-                  % (abs(gap) / se))
+            print("    The machine pole decays faster, the separation is %.1f sd on two measured" % (abs(gap) / se))
             print("    bands, and the nuisance does not track the statistic. That is a result.")
             print()
             print("    And it is CONSERVATIVE: every word of the machine corpus was written under")
             print("    the ban list: the register is suppressed in the direction that works")
             print("    against this separation. The unsuppressed pole would only widen it.")
         elif gap < 0 and se > 0 and abs(gap) / se >= 2.0:
-            print("    Suggestive in the predicted direction at %.1f sd, which is not enough to"
-                  % (abs(gap) / se))
+            print("    Suggestive in the predicted direction at %.1f sd, which is not enough to" % (abs(gap) / se))
             print("    call on a statistic with this much machinery under it. More machine text")
             print("    or a larger --length is the move, subject to the chunk-count tradeoff.")
         else:
@@ -481,7 +475,7 @@ def main():
         slopes = []
         at = 0
         while at + chunk <= human.size and len(slopes) < 24:
-            piece = human[at:at + chunk]
+            piece = human[at : at + chunk]
             slope, _ = decay_shape(curve(piece, size, draws=2, seed=0x5EED + at))
             if slope is not None:
                 slopes.append(slope)
@@ -497,25 +491,21 @@ def main():
         print()
         print("  %d disjoint human chunks of %s words each" % (len(slopes), format(chunk, ",")))
         print()
-        print("    human slopes    %.3f to %.3f, mean %.3f, sd %.3f"
-              % (slopes[0], slopes[-1], middle, spread))
+        print("    human slopes    %.3f to %.3f, mean %.3f, sd %.3f" % (slopes[0], slopes[-1], middle, spread))
         print("    machine slope   %.3f" % session_slope)
         print()
         z = (session_slope - middle) / spread if spread > 0 else 0.0
-        print("    the machine sits %.2f sd from the human mean, and %d of %d human chunks"
-              % (z, below, len(slopes)))
+        print("    the machine sits %.2f sd from the human mean, and %d of %d human chunks" % (z, below, len(slopes)))
         print("    fall at or below it")
         print()
         if below == 0:
             print("    OUTSIDE THE BAND. No human chunk of this size decays as fast as the")
             print("    machine corpus does. That is a real separation on a drawn null.")
         elif below <= max(1, len(slopes) // 20):
-            print("    AT THE EDGE. Only %d of %d human chunks reach it: this is suggestive"
-                  % (below, len(slopes)))
+            print("    AT THE EDGE. Only %d of %d human chunks reach it: this is suggestive" % (below, len(slopes)))
             print("    and would want a larger human sample before it is called.")
         else:
-            print("    INSIDE THE BAND. %d of %d human chunks decay at least as fast: the"
-                  % (below, len(slopes)))
+            print("    INSIDE THE BAND. %d of %d human chunks decay at least as fast: the" % (below, len(slopes)))
             print("    machine slope is an ordinary value for a human text of this length and")
             print("    the shape does NOT separate the poles. The -0.619 against -0.576 seen")
             print("    earlier was within the ordinary spread and is not a finding.")
@@ -547,7 +537,7 @@ def main():
         # The run therefore cuts the human pole to the exact token count of the machine pole, and compares them there.
         # The full-length human curve above stays only to show what the instrument can see with enough text. The verdict
         # does not rest on it.
-        matched = human[:session.size]
+        matched = human[: session.size]
         matched_rows = curve(matched, size)
         show("HUMAN POLE, cut to the machine pole's length", matched_rows, matched.size)
 
@@ -562,8 +552,7 @@ def main():
         human_floor = matched_rows[0][2]
         session_floor = session_rows[0][2]
         apart = abs(human_floor - session_floor) / max(human_floor, session_floor)
-        print("    human floor %.4f, machine floor %.4f, %.0f%% apart"
-              % (human_floor, session_floor, apart * 100.0))
+        print("    human floor %.4f, machine floor %.4f, %.0f%% apart" % (human_floor, session_floor, apart * 100.0))
         print()
 
         # ERROR, AND DO NOT PRINT THE WARNING AND CARRY ON.
@@ -581,23 +570,28 @@ def main():
         human_slope, human_points = decay_shape(matched_rows)
         session_slope, session_points = decay_shape(session_rows)
         print("    decay shape, log-log slope of the excess normalized to its own lag one:")
-        print("      human      %s  over %d lags"
-              % (("%+.3f" % human_slope) if human_slope is not None else "  n/a", human_points))
-        print("      machine    %s  over %d lags"
-              % (("%+.3f" % session_slope) if session_slope is not None else "  n/a", session_points))
+        print(
+            "      human      %s  over %d lags"
+            % (("%+.3f" % human_slope) if human_slope is not None else "  n/a", human_points)
+        )
+        print(
+            "      machine    %s  over %d lags"
+            % (("%+.3f" % session_slope) if session_slope is not None else "  n/a", session_points)
+        )
         print()
 
         if apart > 0.10:
-            print("    THE LEVELS ARE NOT COMPARABLE. The floors sit %.0f%% apart: an excess"
-                  % (apart * 100.0))
+            print("    THE LEVELS ARE NOT COMPARABLE. The floors sit %.0f%% apart: an excess" % (apart * 100.0))
             print("    over them measures the two estimators and not the two corpora, and no")
             print("    verdict is returned from the lag-reach numbers.")
             print()
             if human_slope is not None and session_slope is not None:
                 if session_slope < human_slope:
                     print("    THE SHAPE STILL SEPARATES THEM, and it is the statistic the hypothesis")
-                    print("    was about. The machine curve falls away faster, %+.3f against %+.3f,"
-                          % (session_slope, human_slope))
+                    print(
+                        "    was about. The machine curve falls away faster, %+.3f against %+.3f,"
+                        % (session_slope, human_slope)
+                    )
                     print("    the direction predicted: bounded context forgets sooner. The")
                     print("    normalization divides each curve by its own lag one: the bias scale")
                     print("    cancels to first order and this survives the mismatch above.")
@@ -607,8 +601,10 @@ def main():
                     print("    sample past it before it carries a verdict, the way bench_walk's")
                     print("    injection floor turned an unbounded null into 0.0625.")
                 else:
-                    print("    AND THE SHAPE DOES NOT SEPARATE THEM EITHER, %+.3f against %+.3f."
-                          % (session_slope, human_slope))
+                    print(
+                        "    AND THE SHAPE DOES NOT SEPARATE THEM EITHER, %+.3f against %+.3f."
+                        % (session_slope, human_slope)
+                    )
                     print("    The instrument has nothing to say about these two corpora yet.")
             print()
             print("    Length is matched and this persists: length was not the whole nuisance")

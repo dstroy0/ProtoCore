@@ -128,7 +128,7 @@ void protocore_grpc_web_frame(const uint8_t *work)
 }
 
 // Frame a Message, taking its Compressed-Flag from msg.compressed and leaving the MSB clear.
-void protocore_grpc_web_frame_message(uint8_t *work)
+void protocore_grpc_web_frame_message(const uint8_t *work)
 {
     GrpcWebV.msg.flags = 0;
     if (GrpcWebV.msg.compressed)

@@ -84,9 +84,7 @@ def _repository_root():
         return os.path.abspath(top)
 
     climbed = start
-    while (climbed != os.path.dirname(climbed)) and not os.path.isdir(
-        os.path.join(climbed, "src", "cu", "engine")
-    ):
+    while (climbed != os.path.dirname(climbed)) and not os.path.isdir(os.path.join(climbed, "src", "cu", "engine")):
         climbed = os.path.dirname(climbed)
     return climbed
 
@@ -140,9 +138,7 @@ def main():
 
     detail("\n  %s\n" % APART.replace("\\", "/"))
     if not os.path.isdir(APART):
-        out.write(
-            "  no per source corpora. Run utils/maint/data/fetch/fetch_machine_prose.py first.\n\n"
-        )
+        out.write("  no per source corpora. Run utils/maint/data/fetch/fetch_machine_prose.py first.\n\n")
         out.flush()
         return 2
 
@@ -151,9 +147,7 @@ def main():
     for name in names:
         words = words_of(read(os.path.join(APART, name)))
         if len(words) < LEAST:
-            out.write(
-                "    %-46s %d words, too few to place\n" % (name[:46], len(words))
-            )
+            out.write("    %-46s %d words, too few to place\n" % (name[:46], len(words)))
             continue
         corpora[name[:-4]] = words
 
@@ -164,9 +158,7 @@ def main():
 
     control = words_of(human_text())
     if len(control) < LEAST:
-        out.write(
-            "  no human pole under build/papers. Without the control a distance does not\n"
-        )
+        out.write("  no human pole under build/papers. Without the control a distance does not\n")
         out.write("  mean anything. This stops instead of reporting a bare number.\n\n")
         out.flush()
         return 2
@@ -176,10 +168,7 @@ def main():
     axis = top_words(list(everything.values()))
     on_axis = {one: restricted(value, axis) for one, value in everything.items()}
 
-    detail(
-        "\n  %d corpus(es) claiming one label, against %d control words\n"
-        % (len(corpora), len(control))
-    )
+    detail("\n  %d corpus(es) claiming one label, against %d control words\n" % (len(corpora), len(control)))
     for one, words in sorted(corpora.items()):
         detail("    %-52s %7d words\n" % (one[:52], len(words)))
 
@@ -219,34 +208,22 @@ def main():
     detail("  largest own halves floor           %.4f\n" % floor)
 
     if worst_within <= floor:
-        out.write(
-            "\n  every pair sharing the label sits inside its own sampling floor.\n"
-        )
-        out.write(
-            "  Nothing is resolved at this size. Fetch more before trusting the label.\n\n"
-        )
+        out.write("\n  every pair sharing the label sits inside its own sampling floor.\n")
+        out.write("  Nothing is resolved at this size. Fetch more before trusting the label.\n\n")
         out.flush()
         return 2
 
     if worst_within < best_across:
-        out.write(
-            "\n  AGREES. Corpora sharing the label are closer to each other than any is to\n"
-        )
+        out.write("\n  AGREES. Corpora sharing the label are closer to each other than any is to\n")
         out.write("  the control. The label carries information about the text.\n\n")
         out.flush()
         return 0
 
-    out.write(
-        "\n  DISAGREES. At least one corpus sits further from its own siblings than it does\n"
-    )
-    out.write(
-        "  from the control. The label does not separate this text from other writing.\n"
-    )
+    out.write("\n  DISAGREES. At least one corpus sits further from its own siblings than it does\n")
+    out.write("  from the control. The label does not separate this text from other writing.\n")
     for value, one, other in sorted(within, reverse=True)[:3]:
         out.write("    %.4f  %s  and  %s\n" % (value, one[:34], other[:34]))
-    out.write(
-        "  A pole built from all of them would be built out of more than one thing.\n\n"
-    )
+    out.write("  A pole built from all of them would be built out of more than one thing.\n\n")
     out.flush()
     return 1
 

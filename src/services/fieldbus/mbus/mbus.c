@@ -110,7 +110,7 @@ void protocore_mbus_build_long(const uint8_t *work)
     MbusV.n = total;
 }
 
-void protocore_mbus_build_snd_nke(uint8_t *work)
+void protocore_mbus_build_snd_nke(const uint8_t *work)
 {
     uint8_t *buf = MbusV.build_snd_nke_args.buf;
     size_t cap = MbusV.build_snd_nke_args.cap;
@@ -123,7 +123,7 @@ void protocore_mbus_build_snd_nke(uint8_t *work)
     protocore_mbus_build_short(work);
 }
 
-void protocore_mbus_build_req_ud2(uint8_t *work)
+void protocore_mbus_build_req_ud2(const uint8_t *work)
 {
     uint8_t *buf = MbusV.build_req_ud2_args.buf;
     size_t cap = MbusV.build_req_ud2_args.cap;
@@ -137,7 +137,7 @@ void protocore_mbus_build_req_ud2(uint8_t *work)
     protocore_mbus_build_short(work);
 }
 
-void protocore_mbus_build_req_ud1(uint8_t *work)
+void protocore_mbus_build_req_ud1(const uint8_t *work)
 {
     uint8_t *buf = MbusV.build_req_ud1_args.buf;
     size_t cap = MbusV.build_req_ud1_args.cap;
@@ -299,7 +299,7 @@ void protocore_mbus_dif_data_len(const uint8_t *work)
     }
 }
 
-void protocore_mbus_record_next(uint8_t *work)
+void protocore_mbus_record_next(const uint8_t *work)
 {
     const uint8_t *body = MbusV.record_next_args.body;
     size_t len = MbusV.record_next_args.len;

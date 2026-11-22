@@ -293,21 +293,21 @@ extern Sdi12Vars Sdi12V;
 typedef struct
 {
     void (*const build)(const uint8_t *work);
-    void (*const build_ack)(uint8_t *work);
-    void (*const build_identify)(uint8_t *work);
-    void (*const build_measure)(uint8_t *work);
-    void (*const build_concurrent)(uint8_t *work);
-    void (*const build_measure_additional)(uint8_t *work);
-    void (*const build_concurrent_additional)(uint8_t *work);
-    void (*const build_continuous)(uint8_t *work);
-    void (*const build_verify)(uint8_t *work);
-    void (*const build_data)(uint8_t *work);
-    void (*const build_change_address)(uint8_t *work);
-    void (*const build_query_address)(uint8_t *work);
+    void (*const build_ack)(const uint8_t *work);
+    void (*const build_identify)(const uint8_t *work);
+    void (*const build_measure)(const uint8_t *work);
+    void (*const build_concurrent)(const uint8_t *work);
+    void (*const build_measure_additional)(const uint8_t *work);
+    void (*const build_concurrent_additional)(const uint8_t *work);
+    void (*const build_continuous)(const uint8_t *work);
+    void (*const build_verify)(const uint8_t *work);
+    void (*const build_data)(const uint8_t *work);
+    void (*const build_change_address)(const uint8_t *work);
+    void (*const build_query_address)(const uint8_t *work);
     void (*const parse_measure)(const uint8_t *work);
     void (*const parse_values)(const uint8_t *work);
     void (*const parse_identify)(const uint8_t *work);
-    void (*const crc16)(uint8_t *work);
+    void (*const crc16)(const uint8_t *work);
     void (*const crc_encode)(const uint8_t *work);
     void (*const check_crc)(uint8_t *work);
 } Sdi12Ns;
@@ -315,21 +315,21 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Sdi12V or a region of the borrow at a fixed offset.
 void protocore_sdi12_build(const uint8_t *work);
-void protocore_sdi12_build_ack(uint8_t *work);
-void protocore_sdi12_build_identify(uint8_t *work);
-void protocore_sdi12_build_measure(uint8_t *work);
-void protocore_sdi12_build_concurrent(uint8_t *work);
-void protocore_sdi12_build_measure_additional(uint8_t *work);
-void protocore_sdi12_build_concurrent_additional(uint8_t *work);
-void protocore_sdi12_build_continuous(uint8_t *work);
-void protocore_sdi12_build_verify(uint8_t *work);
-void protocore_sdi12_build_data(uint8_t *work);
-void protocore_sdi12_build_change_address(uint8_t *work);
-void protocore_sdi12_build_query_address(uint8_t *work);
+void protocore_sdi12_build_ack(const uint8_t *work);
+void protocore_sdi12_build_identify(const uint8_t *work);
+void protocore_sdi12_build_measure(const uint8_t *work);
+void protocore_sdi12_build_concurrent(const uint8_t *work);
+void protocore_sdi12_build_measure_additional(const uint8_t *work);
+void protocore_sdi12_build_concurrent_additional(const uint8_t *work);
+void protocore_sdi12_build_continuous(const uint8_t *work);
+void protocore_sdi12_build_verify(const uint8_t *work);
+void protocore_sdi12_build_data(const uint8_t *work);
+void protocore_sdi12_build_change_address(const uint8_t *work);
+void protocore_sdi12_build_query_address(const uint8_t *work);
 void protocore_sdi12_parse_measure(const uint8_t *work);
 void protocore_sdi12_parse_values(const uint8_t *work);
 void protocore_sdi12_parse_identify(const uint8_t *work);
-void protocore_sdi12_crc16(uint8_t *work);
+void protocore_sdi12_crc16(const uint8_t *work);
 void protocore_sdi12_crc_encode(const uint8_t *work);
 void protocore_sdi12_check_crc(uint8_t *work);
 

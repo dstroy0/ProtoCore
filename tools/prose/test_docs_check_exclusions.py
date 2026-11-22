@@ -57,7 +57,6 @@ class EveryExclusionErrorsAndSaysSo(unittest.TestCase):
     run that read less than it should have passed for a clean one.
     """
 
-
     def test_the_ledger_retains_the_sites_and_not_only_a_count(self):
         ledger = dc.Ledger()
         ledger.note("a rule", "a reason", "a/site.md:1")
@@ -99,19 +98,13 @@ class VerbatimThirdPartyIsANamedConcept(unittest.TestCase):
             inside = os.path.join(vendored, "someone_elses.md")
             with open(inside, "w", encoding="utf-8") as handle:
                 handle.write("# a document\n")
-            self.assertIsNone(
-                dc.verbatim_root(inside), "not verbatim before the directory says so"
-            )
+            self.assertIsNone(dc.verbatim_root(inside), "not verbatim before the directory says so")
             dc._VERBATIM_CACHE.clear()
-            with open(
-                os.path.join(vendored, dc.VERBATIM_MARKER), "w", encoding="utf-8"
-            ) as handle:
+            with open(os.path.join(vendored, dc.VERBATIM_MARKER), "w", encoding="utf-8") as handle:
                 handle.write("the IETF's, not ours\n")
             held = dc.verbatim_root(inside)
             dc._VERBATIM_CACHE.clear()
-            self.assertIsNotNone(
-                held, "the marker is the second answer to the question"
-            )
+            self.assertIsNotNone(held, "the marker is the second answer to the question")
             self.assertIn(dc.VERBATIM_MARKER, held[1])
 
     def test_every_default_root_is_matched_on_the_path(self):
@@ -161,7 +154,6 @@ class LegalBlocksAreBlankedPerBlockAndNotPerLine(unittest.TestCase):
     Where the block ends is the whole rule, and getting it wrong in either direction has a cost that
     was measured before this landed.
     """
-
 
     def test_a_bare_comment_marker_separates_two_blocks(self):
         """The regression this rule was rewritten for, guarded by name.
@@ -232,10 +224,7 @@ class LegalBlocksAreBlankedPerBlockAndNotPerLine(unittest.TestCase):
             for at, _, _ in dc.banned_hits(raw, quotations, comments):
                 if at in blanked:
                     silenced += 1
-        print(
-            "  legal blanking over %d file(s): %d finding(s) silenced"
-            % (read, silenced)
-        )
+        print("  legal blanking over %d file(s): %d finding(s) silenced" % (read, silenced))
         self.assertEqual(silenced, 0)
 
 
@@ -285,18 +274,13 @@ class GeneratedRegionsAreAttributedAndNeverSuppressed(unittest.TestCase):
         self.assertIn(3, inside)
 
     def test_a_finding_inside_a_region_retains_its_place_and_names_the_generator(self):
-        note = dc.attributed(
-            "table header with no rows under it", 4, {4: "gen_sections.py"}
-        )
+        note = dc.attributed("table header with no rows under it", 4, {4: "gen_sections.py"})
         self.assertIn("table header with no rows under it", note)
         self.assertIn("gen_sections.py", note)
         self.assertIn("fix the generator", note)
 
     def test_a_finding_outside_a_region_carries_no_attribution(self):
-        self.assertEqual(
-            dc.attributed("a finding", 9, {4: "gen_sections.py"}), "a finding"
-        )
-
+        self.assertEqual(dc.attributed("a finding", 9, {4: "gen_sections.py"}), "a finding")
 
     def test_a_site_inside_a_region_is_error_for_rewriting(self):
         why = dc.fix_error("a/page.md", "alphabet", 4, {4: "gen_sections.py"})
@@ -321,9 +305,7 @@ class TheSubjectIsTheConvention(unittest.TestCase):
     """
 
     def test_a_passage_about_the_convention_may_write_the_word(self):
-        said = [
-            "# British English writes colour and behaviour where American writes color."
-        ]
+        said = ["# British English writes colour and behaviour where American writes color."]
         found = [what for _, what in dc.banned_tokens(said, comments=True)]
         self.assertEqual(
             [one for one in found if one.startswith("definition")],
@@ -333,9 +315,7 @@ class TheSubjectIsTheConvention(unittest.TestCase):
 
     def test_the_same_passage_still_reports_a_construction(self):
         """The bound is the test. A paragraph about convention does not get a register pass."""
-        said = [
-            "# British definition is what makes the difference. A reader has to know."
-        ]
+        said = ["# British definition is what makes the difference. A reader has to know."]
         found = [what for _, what in dc.banned_tokens(said, comments=True)]
         self.assertTrue(
             any(one.startswith("tier A") for one in found),
@@ -357,19 +337,11 @@ class TheSubjectIsTheConvention(unittest.TestCase):
             "",
             "# The optimisation runs once.",
         ]
-        at = [
-            one
-            for one, what in dc.banned_tokens(said, comments=True)
-            if what.startswith("definition")
-        ]
-        self.assertEqual(
-            at, [3], "the next paragraph is a different run and is reported"
-        )
+        at = [one for one, what in dc.banned_tokens(said, comments=True) if what.startswith("definition")]
+        self.assertEqual(at, [3], "the next paragraph is a different run and is reported")
 
     def test_context_exempt_answers_with_a_tier_set_and_not_a_boolean(self):
-        self.assertEqual(
-            dc.context_exempt("British English writes colour"), frozenset(("alphabet",))
-        )
+        self.assertEqual(dc.context_exempt("British English writes colour"), frozenset(("alphabet",)))
         self.assertEqual(dc.context_exempt("an ordinary sentence"), frozenset())
 
     def test_the_clause_silences_nothing_in_the_trees_on_disk(self):
@@ -395,10 +367,7 @@ class TheSubjectIsTheConvention(unittest.TestCase):
                 for _, pattern, _ in dc.banned_hits([text], quotations, comments):
                     if dc.tier_of(pattern) == "alphabet":
                         silenced += 1
-        print(
-            "\n  the convention clause over %d file(s): %d finding(s) silenced"
-            % (read, silenced)
-        )
+        print("\n  the convention clause over %d file(s): %d finding(s) silenced" % (read, silenced))
         self.assertEqual(silenced, 0)
 
     def test_the_standards_rule_is_a_rewrite_error_and_not_a_scan_exemption(self):
@@ -409,9 +378,7 @@ class TheSubjectIsTheConvention(unittest.TestCase):
         happened to cite an RFC. It bought nothing: the site it was written for, "Robustness
         Variable" in an RFC 2236 brief, matches no pattern in LOCALE and produced no finding.
         """
-        said = [
-            "# RFC 2236 section 8.1 describes the behaviour of the initialised timer."
-        ]
+        said = ["# RFC 2236 section 8.1 describes the behaviour of the initialised timer."]
         found = [what for _, what in dc.banned_tokens(said, comments=True)]
         self.assertTrue(
             any(one.startswith("definition") for one in found),
@@ -451,10 +418,7 @@ class NothingIsRewrittenThatIsNotTokenForToken(unittest.TestCase):
             self.assertIn("permanently", why)
 
     def test_a_plain_convention_finding_is_allowed(self):
-        self.assertIsNone(
-            dc.fix_error(os.path.join(HERE, "nothing_special.md"), "alphabet")
-        )
-
+        self.assertIsNone(dc.fix_error(os.path.join(HERE, "nothing_special.md"), "alphabet"))
 
     def test_a_line_carrying_a_normative_keyword_is_never_rewritten(self):
         why = dc.fix_error(
@@ -467,14 +431,8 @@ class NothingIsRewrittenThatIsNotTokenForToken(unittest.TestCase):
 
     def test_the_normative_keyword_test_is_case_sensitive(self):
         """ "this may be null" is prose. "the sender MAY retransmit" is a requirement."""
-        self.assertIsNone(
-            dc.fix_error(
-                os.path.join(HERE, "plain.md"), "alphabet", line="the value may be null"
-            )
-        )
-        self.assertIsNotNone(
-            dc.fix_error("a/file.c", "alphabet", line="the sender MAY retransmit")
-        )
+        self.assertIsNone(dc.fix_error(os.path.join(HERE, "plain.md"), "alphabet", line="the value may be null"))
+        self.assertIsNotNone(dc.fix_error("a/file.c", "alphabet", line="the sender MAY retransmit"))
 
     def test_the_source_states_the_limit_where_a_maintainer_will_look_for_it(self):
         """A rule with no reason beside it is the type a later maintainer finishes.
@@ -547,7 +505,6 @@ class TheReportSaysWhatItMeasured(unittest.TestCase):
         self.assertIn("installed nowhere", said)
         self.assertIn("root(s) and nothing outside them", said)
 
-
     def test_prose_still_never_fails_a_build(self):
         """Verbatim in both standards, in the sentence that names this tool, and unchanged here.
 
@@ -567,20 +524,11 @@ class TheReportSaysWhatItMeasured(unittest.TestCase):
                 text=True,
                 env=dc.git_env(),
             )
-        breaking = [
-            one for one in answer.stdout.splitlines() if one.strip().startswith("BREAK")
-        ]
-        prose = [
-            one for one in answer.stdout.splitlines() if one.strip().startswith("prose")
-        ]
+        breaking = [one for one in answer.stdout.splitlines() if one.strip().startswith("BREAK")]
+        prose = [one for one in answer.stdout.splitlines() if one.strip().startswith("prose")]
         if breaking:
-            self.skipTest(
-                "this file carries a structural finding. The exit code is about that"
-            )
-        print(
-            "  this suite reports %d prose finding(s) and exits %d"
-            % (len(prose), answer.returncode)
-        )
+            self.skipTest("this file carries a structural finding. The exit code is about that")
+        print("  this suite reports %d prose finding(s) and exits %d" % (len(prose), answer.returncode))
         self.assertTrue(prose, "the fixture carries a prose finding")
         self.assertEqual(answer.returncode, 0)
 

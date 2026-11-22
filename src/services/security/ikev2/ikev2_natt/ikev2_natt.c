@@ -79,7 +79,7 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
 }
 
 // A detection payload is a Notify with Protocol ID and SPI Size zero (RFC 7296 sec 3.10).
-static size_t natd_notify_build(uint8_t *work, uint16_t notify_type, const uint8_t *hash)
+static size_t natd_notify_build(const uint8_t *work, uint16_t notify_type, const uint8_t *hash)
 {
     IkeV.out.buf = IkeNattV.out.buf;
     IkeV.out.cap = IkeNattV.out.cap;
@@ -144,21 +144,21 @@ void protocore_ike_natt_dest_build(uint8_t *work)
     IkeNattV.n = natd_notify_build(work, PROTOCORE_IKE_N_NAT_DETECTION_DESTINATION_IP, h);
 }
 
-void protocore_ike_natt_match(uint8_t *work)
+void protocore_ike_natt_match(const uint8_t *work)
 {
     (void)work;
     IkeNattV.ok = natd_match();
 }
 
 // No match against the source the packet was observed to come from: someone on the route rewrote it.
-void protocore_ike_natt_peer_behind_nat(uint8_t *work)
+void protocore_ike_natt_peer_behind_nat(const uint8_t *work)
 {
     (void)work;
     IkeNattV.ok = !natd_match();
 }
 
 // No match against our own address: the peer sent to a translated destination.
-void protocore_ike_natt_self_behind_nat(uint8_t *work)
+void protocore_ike_natt_self_behind_nat(const uint8_t *work)
 {
     (void)work;
     IkeNattV.ok = !natd_match();

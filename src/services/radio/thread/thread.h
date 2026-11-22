@@ -172,45 +172,45 @@ static inline uint8_t protocore_spinel_header_iid(uint8_t h)
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint16_t (*spinel_fcs)(uint8_t *, const uint8_t *, uint16_t);
+    uint16_t (*spinel_fcs)(const uint8_t *, const uint8_t *, uint16_t);
     uint8_t (*spinel_pack_uint)(const uint8_t *, uint32_t, uint8_t *, uint8_t);
     int (*spinel_unpack_uint)(const uint8_t *, const uint8_t *, uint8_t, uint32_t *);
-    uint16_t (*spinel_command_build)(uint8_t *, uint8_t, uint32_t, uint32_t, const uint8_t *, uint16_t, uint8_t *,
+    uint16_t (*spinel_command_build)(const uint8_t *, uint8_t, uint32_t, uint32_t, const uint8_t *, uint16_t, uint8_t *,
                                      uint16_t);
-    int (*spinel_command_parse)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint32_t *, uint32_t *,
+    int (*spinel_command_parse)(const uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint32_t *, uint32_t *,
                                 const uint8_t **, uint16_t *);
     void (*spinel_reader_init)(const uint8_t *, SpinelReader *, const uint8_t *, uint16_t);
     embed_bool (*spinel_get_bool)(const uint8_t *, SpinelReader *, embed_bool *);
     embed_bool (*spinel_get_u8)(const uint8_t *, SpinelReader *, uint8_t *);
     embed_bool (*spinel_get_i8)(const uint8_t *, SpinelReader *, int8_t *);
     embed_bool (*spinel_get_u16)(const uint8_t *, SpinelReader *, uint16_t *);
-    embed_bool (*spinel_get_i16)(uint8_t *, SpinelReader *, int16_t *);
+    embed_bool (*spinel_get_i16)(const uint8_t *, SpinelReader *, int16_t *);
     embed_bool (*spinel_get_u32)(const uint8_t *, SpinelReader *, uint32_t *);
-    embed_bool (*spinel_get_i32)(uint8_t *, SpinelReader *, int32_t *);
-    embed_bool (*spinel_get_uint)(uint8_t *, SpinelReader *, uint32_t *);
+    embed_bool (*spinel_get_i32)(const uint8_t *, SpinelReader *, int32_t *);
+    embed_bool (*spinel_get_uint)(const uint8_t *, SpinelReader *, uint32_t *);
     embed_bool (*spinel_get_eui64)(const uint8_t *, SpinelReader *, const uint8_t **);
     embed_bool (*spinel_get_ipv6)(const uint8_t *, SpinelReader *, const uint8_t **);
     embed_bool (*spinel_get_utf8)(const uint8_t *, SpinelReader *, const char **, uint16_t *);
     embed_bool (*spinel_get_data)(const uint8_t *, SpinelReader *, const uint8_t **, uint16_t *);
-    embed_bool (*spinel_get_data_wlen)(uint8_t *, SpinelReader *, const uint8_t **, uint16_t *);
+    embed_bool (*spinel_get_data_wlen)(const uint8_t *, SpinelReader *, const uint8_t **, uint16_t *);
     embed_bool (*spinel_reader_ok)(const uint8_t *, const SpinelReader *);
     void (*spinel_writer_init)(const uint8_t *, SpinelWriter *, uint8_t *, uint16_t);
     embed_bool (*spinel_put_bool)(const uint8_t *, SpinelWriter *, embed_bool);
     embed_bool (*spinel_put_u8)(const uint8_t *, SpinelWriter *, uint8_t);
-    void (*spinel_put_i8)(uint8_t *, SpinelWriter *, int8_t);
+    void (*spinel_put_i8)(const uint8_t *, SpinelWriter *, int8_t);
     embed_bool (*spinel_put_u16)(const uint8_t *, SpinelWriter *, uint16_t);
-    void (*spinel_put_i16)(uint8_t *, SpinelWriter *, int16_t);
+    void (*spinel_put_i16)(const uint8_t *, SpinelWriter *, int16_t);
     embed_bool (*spinel_put_u32)(const uint8_t *, SpinelWriter *, uint32_t);
-    void (*spinel_put_i32)(uint8_t *, SpinelWriter *, int32_t);
-    embed_bool (*spinel_put_uint)(uint8_t *, SpinelWriter *, uint32_t);
+    void (*spinel_put_i32)(const uint8_t *, SpinelWriter *, int32_t);
+    embed_bool (*spinel_put_uint)(const uint8_t *, SpinelWriter *, uint32_t);
     embed_bool (*spinel_put_eui64)(const uint8_t *, SpinelWriter *, const uint8_t *);
     embed_bool (*spinel_put_ipv6)(const uint8_t *, SpinelWriter *, const uint8_t *);
     embed_bool (*spinel_put_utf8)(const uint8_t *, SpinelWriter *, const char *);
     embed_bool (*spinel_put_data)(const uint8_t *, SpinelWriter *, const uint8_t *, uint16_t);
-    embed_bool (*spinel_put_data_wlen)(uint8_t *, SpinelWriter *, const uint8_t *, uint16_t);
+    embed_bool (*spinel_put_data_wlen)(const uint8_t *, SpinelWriter *, const uint8_t *, uint16_t);
     uint16_t (*spinel_writer_len)(const uint8_t *, const SpinelWriter *);
     const SpinelPropInfo *(*spinel_prop_lookup)(const uint8_t *, uint32_t);
-    const char *(*spinel_prop_name)(uint8_t *, uint32_t);
+    const char *(*spinel_prop_name)(const uint8_t *, uint32_t);
     const char *(*spinel_status_name)(const uint8_t *, uint32_t);
     uint16_t (*spinel_frame_encode)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint16_t);
     int (*spinel_frame_decode)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint16_t, uint16_t *);
@@ -231,7 +231,7 @@ PROTOCORE_NS_LAYOUT(ThreadNs, spinel_fcs, spinel_pack_uint, spinel_unpack_uint, 
  * @param len Len
  * @return The uint16_t.
  */
-uint16_t protocore_thread_spinel_fcs(uint8_t *work, const uint8_t *buf, uint16_t len);
+uint16_t protocore_thread_spinel_fcs(const uint8_t *work, const uint8_t *buf, uint16_t len);
 /**
  * @brief Encode a spinel packed unsigned integer (7 bits/byte, .
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -262,7 +262,7 @@ int protocore_thread_spinel_unpack_uint(const uint8_t *work, const uint8_t *raw,
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_thread_spinel_command_build(uint8_t *work, uint8_t header, uint32_t cmd, uint32_t prop,
+uint16_t protocore_thread_spinel_command_build(const uint8_t *work, uint8_t header, uint32_t cmd, uint32_t prop,
                                                const uint8_t *value, uint16_t value_len, uint8_t *out, uint16_t cap);
 /**
  * @brief Parse a spinel property-command payload (from a decoded HDLC frame).
@@ -276,7 +276,7 @@ uint16_t protocore_thread_spinel_command_build(uint8_t *work, uint8_t header, ui
  * @param value_len Value len
  * @return The int.
  */
-int protocore_thread_spinel_command_parse(uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *header,
+int protocore_thread_spinel_command_parse(const uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *header,
                                           uint32_t *cmd, uint32_t *prop, const uint8_t **value, uint16_t *value_len);
 /**
  * @brief Spinel_reader_init.
@@ -325,7 +325,7 @@ embed_bool protocore_thread_spinel_get_u16(const uint8_t *work, SpinelReader *r,
  * @param out Out
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_thread_spinel_get_i16(uint8_t *work, SpinelReader *r, int16_t *out);
+embed_bool protocore_thread_spinel_get_i16(const uint8_t *work, SpinelReader *r, int16_t *out);
 /**
  * @brief Spinel_get_u32.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -341,7 +341,7 @@ embed_bool protocore_thread_spinel_get_u32(const uint8_t *work, SpinelReader *r,
  * @param out Out
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_thread_spinel_get_i32(uint8_t *work, SpinelReader *r, int32_t *out);
+embed_bool protocore_thread_spinel_get_i32(const uint8_t *work, SpinelReader *r, int32_t *out);
 /**
  * @brief Spinel_get_uint.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -349,7 +349,7 @@ embed_bool protocore_thread_spinel_get_i32(uint8_t *work, SpinelReader *r, int32
  * @param out Out
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_thread_spinel_get_uint(uint8_t *work, SpinelReader *r, uint32_t *out);
+embed_bool protocore_thread_spinel_get_uint(const uint8_t *work, SpinelReader *r, uint32_t *out);
 /**
  * @brief Spinel_get_eui64.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -393,7 +393,7 @@ embed_bool protocore_thread_spinel_get_data(const uint8_t *work, SpinelReader *r
  * @param out_len Out len
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_thread_spinel_get_data_wlen(uint8_t *work, SpinelReader *r, const uint8_t **out,
+embed_bool protocore_thread_spinel_get_data_wlen(const uint8_t *work, SpinelReader *r, const uint8_t **out,
                                                  uint16_t *out_len);
 /**
  * @brief True if every read so far stayed in bounds.
@@ -432,7 +432,7 @@ embed_bool protocore_thread_spinel_put_u8(const uint8_t *work, SpinelWriter *w, 
  * @param w W
  * @param v V
  */
-void protocore_thread_spinel_put_i8(uint8_t *work, SpinelWriter *w, int8_t v);
+void protocore_thread_spinel_put_i8(const uint8_t *work, SpinelWriter *w, int8_t v);
 /**
  * @brief Spinel_put_u16.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -447,7 +447,7 @@ embed_bool protocore_thread_spinel_put_u16(const uint8_t *work, SpinelWriter *w,
  * @param w W
  * @param v V
  */
-void protocore_thread_spinel_put_i16(uint8_t *work, SpinelWriter *w, int16_t v);
+void protocore_thread_spinel_put_i16(const uint8_t *work, SpinelWriter *w, int16_t v);
 /**
  * @brief Spinel_put_u32.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -462,7 +462,7 @@ embed_bool protocore_thread_spinel_put_u32(const uint8_t *work, SpinelWriter *w,
  * @param w W
  * @param v V
  */
-void protocore_thread_spinel_put_i32(uint8_t *work, SpinelWriter *w, int32_t v);
+void protocore_thread_spinel_put_i32(const uint8_t *work, SpinelWriter *w, int32_t v);
 /**
  * @brief Spinel_put_uint.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -470,7 +470,7 @@ void protocore_thread_spinel_put_i32(uint8_t *work, SpinelWriter *w, int32_t v);
  * @param v V
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_thread_spinel_put_uint(uint8_t *work, SpinelWriter *w, uint32_t v);
+embed_bool protocore_thread_spinel_put_uint(const uint8_t *work, SpinelWriter *w, uint32_t v);
 /**
  * @brief Spinel_put_eui64.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -512,7 +512,7 @@ embed_bool protocore_thread_spinel_put_data(const uint8_t *work, SpinelWriter *w
  * @param n N
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_thread_spinel_put_data_wlen(uint8_t *work, SpinelWriter *w, const uint8_t *d, uint16_t n);
+embed_bool protocore_thread_spinel_put_data_wlen(const uint8_t *work, SpinelWriter *w, const uint8_t *d, uint16_t n);
 /**
  * @brief The finished value length, or 0 if any write overflowed.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
@@ -533,7 +533,7 @@ const SpinelPropInfo *protocore_thread_spinel_prop_lookup(const uint8_t *work, u
  * @param id Id
  * @return The const char *.
  */
-const char *protocore_thread_spinel_prop_name(uint8_t *work, uint32_t id);
+const char *protocore_thread_spinel_prop_name(const uint8_t *work, uint32_t id);
 /**
  * @brief A `LAST_STATUS` code's human name, or "UNKNOWN" if unregistered.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.

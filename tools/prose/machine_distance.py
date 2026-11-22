@@ -114,11 +114,7 @@ def words_of(text):
     Both stages of english_gate run first. Without them the human pole is 31 percent non-English. Every comparison
     against it then reads how much Salishan a text prints, before it reads a word of anybody's register.
     """
-    return [
-        one
-        for one in english_words(english_only(text))
-        if (one not in SUBJECT) and (one not in MEDIUM)
-    ]
+    return [one for one in english_words(english_only(text)) if (one not in SUBJECT) and (one not in MEDIUM)]
 
 
 # How many words of each pole the comparison runs over.
@@ -243,9 +239,7 @@ def pulls(mine, machine, human, ranks=24):
         here = mine.get(word, 0.0)
         there = machine.get(word, 0.0)
         theirs = human.get(word, 0.0)
-        scored.append(
-            (abs(here - theirs) - abs(here - there), word, here, there, theirs)
-        )
+        scored.append((abs(here - theirs) - abs(here - there), word, here, there, theirs))
     scored.sort(reverse=True)
     return scored[:ranks], scored[-ranks:]
 
@@ -382,9 +376,7 @@ def measure_band(out, machine_text, human_text):
 
 
 def main():
-    out = io.TextIOWrapper(
-        sys.stdout.buffer, encoding="utf-8", errors="replace", newline=""
-    )
+    out = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", newline="")
     worst = 30
     if "--worst" in sys.argv:
         worst = int(sys.argv[sys.argv.index("--worst") + 1])
@@ -408,21 +400,14 @@ def main():
     if os.path.isfile(SESSION):
         with open(SESSION, encoding="utf-8", errors="replace") as handle:
             machine_text = handle.read()
-        pole_name = (
-            os.path.relpath(SESSION, ROOT).replace("\\", "/") + "  (own transcript)"
-        )
+        pole_name = os.path.relpath(SESSION, ROOT).replace("\\", "/") + "  (own transcript)"
     elif os.path.isfile(FETCHED):
         with open(FETCHED, encoding="utf-8", errors="replace") as handle:
             machine_text = handle.read()
-        pole_name = (
-            os.path.relpath(FETCHED, ROOT).replace("\\", "/") + "  (label unverified)"
-        )
+        pole_name = os.path.relpath(FETCHED, ROOT).replace("\\", "/") + "  (label unverified)"
     elif fixture_text:
         machine_text = fixture_text
-        pole_name = (
-            os.path.relpath(FIXTURE, ROOT).replace("\\", "/")
-            + "  (hand written, small)"
-        )
+        pole_name = os.path.relpath(FIXTURE, ROOT).replace("\\", "/") + "  (hand written, small)"
     else:
         out.write("  no machine pole. Run utils/maint/data/fetch/fetch_machine_prose.py\n")
         out.flush()
@@ -461,18 +446,12 @@ def main():
             continue
         one, _ = profile(words_of(first))
         two, _ = profile(words_of(second))
-        floors.append(
-            (name, distance(restricted(one, vocabulary), restricted(two, vocabulary)))
-        )
+        floors.append((name, distance(restricted(one, vocabulary), restricted(two, vocabulary))))
     out.write("\n  resolution, each pole against its own alternating halves\n")
     for name, value in floors:
         out.write("    %-10s %.4f\n" % (name, value))
-    out.write(
-        "    a pole against itself, which bounds nothing about a 500 word file. The band\n"
-    )
-    out.write(
-        "    above HUMAN_BAND is what places a file, and it is measured at that file's size.\n"
-    )
+    out.write("    a pole against itself, which bounds nothing about a 500 word file. The band\n")
+    out.write("    above HUMAN_BAND is what places a file, and it is measured at that file's size.\n")
 
     if "--band" in sys.argv:
         code = measure_band(out, machine_text, human_text)
@@ -505,27 +484,14 @@ def main():
         return 1
 
     outside = [one for one in rows if one[0] > 0]
-    out.write(
-        "\n  %d files placed against the human band at their own word count\n"
-        % len(rows)
-    )
-    out.write(
-        "  %d sit above everything %d words of human writing did at their size\n"
-        % (len(outside), 366833)
-    )
+    out.write("\n  %d files placed against the human band at their own word count\n" % len(rows))
+    out.write("  %d sit above everything %d words of human writing did at their size\n" % (len(outside), 366833))
 
     out.write("\n  furthest outside the human band, worst first\n")
-    out.write(
-        "    %-8s %-8s %-8s %-7s %s\n" % ("excess", "margin", "human", "words", "file")
-    )
+    out.write("    %-8s %-8s %-8s %-7s %s\n" % ("excess", "margin", "human", "words", "file"))
     for excess, margin, median, count, path in rows[:worst]:
-        out.write(
-            "    %+-8.4f %+-8.4f %+-8.4f %-7d %s\n"
-            % (excess, margin, median, count, path)
-        )
-    out.write(
-        "  excess is the margin less the highest any human block of that length reached.\n"
-    )
+        out.write("    %+-8.4f %+-8.4f %+-8.4f %-7d %s\n" % (excess, margin, median, count, path))
+    out.write("  excess is the margin less the highest any human block of that length reached.\n")
     out.write("  human is where the median human block of that length sits.\n")
 
     # One file explained. Which words in it carry it toward the machine pole, named in order.
@@ -539,27 +505,17 @@ def main():
             mine = restricted(mine_full, vocabulary)
             toward, away = pulls(mine, machine, human)
             out.write("\n  %s, %d words\n" % (wanted, count))
-            out.write(
-                "  what pulls it toward the machine pole, per thousand words in each\n"
-            )
-            out.write(
-                "    %-18s %8s %8s %8s\n" % ("word", "file", "machine", "human")
-            )
+            out.write("  what pulls it toward the machine pole, per thousand words in each\n")
+            out.write("    %-18s %8s %8s %8s\n" % ("word", "file", "machine", "human"))
             for value, word, here, there, theirs in toward:
                 if value <= 0:
                     continue
-                out.write(
-                    "    %-18s %8.2f %8.2f %8.2f\n"
-                    % (word, here * 1000, there * 1000, theirs * 1000)
-                )
+                out.write("    %-18s %8.2f %8.2f %8.2f\n" % (word, here * 1000, there * 1000, theirs * 1000))
             out.write("  and what pulls it the other way\n")
             for value, word, here, there, theirs in reversed(away):
                 if value >= 0:
                     continue
-                out.write(
-                    "    %-18s %8.2f %8.2f %8.2f\n"
-                    % (word, here * 1000, there * 1000, theirs * 1000)
-                )
+                out.write("    %-18s %8.2f %8.2f %8.2f\n" % (word, here * 1000, there * 1000, theirs * 1000))
         out.write("\n")
         out.flush()
         return 0
@@ -606,18 +562,10 @@ def main():
         readable = abs(total) >= 0.01
 
         out.write("\n  %s, %d words\n" % (wanted, count))
-        out.write(
-            "  margin %+.4f, summed over %d words with no remainder\n"
-            % (total, len(vocabulary))
-        )
+        out.write("  margin %+.4f, summed over %d words with no remainder\n" % (total, len(vocabulary)))
         if not readable:
-            out.write(
-                "  too near zero for a share to mean anything. Contributions only.\n"
-            )
-        out.write(
-            "\n  %-14s %9s %8s %9s %9s %9s\n"
-            % ("word", "carries", "cumul", "file/1k", "machine/1k", "human/1k")
-        )
+            out.write("  too near zero for a share to mean anything. Contributions only.\n")
+        out.write("\n  %-14s %9s %8s %9s %9s %9s\n" % ("word", "carries", "cumul", "file/1k", "machine/1k", "human/1k"))
         running = 0.0
         for value, word, here, ours, theirs in terms[:22]:
             running += value
@@ -628,10 +576,7 @@ def main():
                 )
             else:
                 measure = "%+9.4f %+8.4f" % (value, running)
-            out.write(
-                "  %-14s %s %9.2f %9.2f %9.2f\n"
-                % (word, measure, here * 1000, ours * 1000, theirs * 1000)
-            )
+            out.write("  %-14s %s %9.2f %9.2f %9.2f\n" % (word, measure, here * 1000, ours * 1000, theirs * 1000))
 
         shape = sum(one[0] for one in terms if one[1] in SHAPE)
         absolute = sum(one[0] for one in terms if one[1] in ABSOLUTE)
@@ -643,38 +588,23 @@ def main():
         ):
             share = "%7.1f%%" % (100.0 * value / total) if readable else "      --"
             out.write("  %-42s %+9.4f %s\n" % (name, value, share))
-        out.write(
-            "\n  the shape group is what section 6 of the documentation standard requires:\n"
-        )
-        out.write(
-            "  one fact per sentence, in plain declarative order. Moving it toward the\n"
-        )
-        out.write(
-            "  papers means writing longer subordinated sentences, which is a worse\n"
-        )
-        out.write(
-            "  document and a better score. Do not trade the first for the second.\n\n"
-        )
+        out.write("\n  the shape group is what section 6 of the documentation standard requires:\n")
+        out.write("  one fact per sentence, in plain declarative order. Moving it toward the\n")
+        out.write("  papers means writing longer subordinated sentences, which is a worse\n")
+        out.write("  document and a better score. Do not trade the first for the second.\n\n")
         out.flush()
         return 0
 
     out.write("\n  deepest inside the human band, for contrast\n")
     for excess, margin, median, count, path in rows[-5:]:
-        out.write(
-            "    %+-8.4f %+-8.4f %+-8.4f %-7d %s\n"
-            % (excess, margin, median, count, path)
-        )
+        out.write("    %+-8.4f %+-8.4f %+-8.4f %-7d %s\n" % (excess, margin, median, count, path))
 
-    out.write(
-        "\n  margin is human distance minus machine distance. Positive means the file reads\n"
-    )
+    out.write("\n  margin is human distance minus machine distance. Positive means the file reads\n")
     out.write("  more like the machine sample than like the papers.\n")
 
     # The null permutation, run against each pole itself. This is the check that says whether the
     # measure above can see anything at all.
-    out.write(
-        "\n  the null permutation, each pole against a shuffle of its own words\n"
-    )
+    out.write("\n  the null permutation, each pole against a shuffle of its own words\n")
     out.write("    %-12s %-16s %s\n" % ("pole", "bag of words", "word web"))
     webs = {}
     for name, words in (("machine", machine_all),):
@@ -684,10 +614,7 @@ def main():
         web_real, _ = web_profile(words)
         web_null, _ = web_profile(turned)
         webs[name] = web_real
-        out.write(
-            "    %-12s %-16.4f %.4f\n"
-            % (name, distance(bag_real, bag_null), distance(web_real, web_null))
-        )
+        out.write("    %-12s %-16.4f %.4f\n" % (name, distance(bag_real, bag_null), distance(web_real, web_null)))
     # the human pole's own pairs, counted once over the corpus by voice_web.py. The pairs of a
     # shuffle are pairs drawn from the bag. The null is therefore the product of the two word counts
     webs["human"], _ = counted_table(WORD_WEB, 2)
@@ -698,23 +625,13 @@ def main():
             web_null[key] = human_full.get(first, 0.0) * human_full.get(second, 0.0)
         over = sum(web_null.values())
         web_null = {k: v / over for k, v in web_null.items()} if over else web_null
-        out.write(
-            "    %-12s %-16.4f %.4f\n"
-            % ("human", 0.0, distance(webs["human"], web_null))
-        )
-    out.write(
-        "    a bag of words returns exactly zero, because a shuffle does not change one.\n"
-    )
-    out.write(
-        "    every distance printed above this line was taken on that bag. Every one of\n"
-    )
+        out.write("    %-12s %-16.4f %.4f\n" % ("human", 0.0, distance(webs["human"], web_null)))
+    out.write("    a bag of words returns exactly zero, because a shuffle does not change one.\n")
+    out.write("    every distance printed above this line was taken on that bag. Every one of\n")
     out.write("    them reads composition instead of arrangement.\n")
 
     if ("machine" in webs) and ("human" in webs):
-        out.write(
-            "\n  the two poles as word webs sit %.4f apart\n"
-            % distance(webs["machine"], webs["human"])
-        )
+        out.write("\n  the two poles as word webs sit %.4f apart\n" % distance(webs["machine"], webs["human"]))
 
     # The whole tree as one web. A single file holds a few hundred words, and its web is nearly all noise. For that
     # reason, the output reports no web distance per file. The repository as one body is 400,000 words, and that reading
@@ -723,13 +640,7 @@ def main():
     for path in prose_distance.repository_files(where, roots):
         if "fixtures" in path:
             continue
-        whole.extend(
-            words_of(
-                prose_distance.prose_of(
-                    os.path.join(where or prose_distance.ROOT, path)
-                )
-            )
-        )
+        whole.extend(words_of(prose_distance.prose_of(os.path.join(where or prose_distance.ROOT, path))))
     if whole and ("machine" in webs):
         ours, count = web_profile(whole)
         null, _ = web_profile(shuffled(whole, 0x5EED))
@@ -748,20 +659,12 @@ def main():
             )
         )
         nearer = [one for one in (to_machine, to_human) if one < own]
-        out.write(
-            "    a web distance is only worth reading against how far a shuffle already\n"
-        )
+        out.write("    a web distance is only worth reading against how far a shuffle already\n")
         out.write("    sits, and that is %.4f here.\n" % own)
         if not nearer:
-            out.write(
-                "    both poles sit further than the shuffle. Neither is resolved. At\n"
-            )
-            out.write(
-                "    these sizes a bigram web is carried by which words a corpus happens to\n"
-            )
-            out.write(
-                "    hold, and the tree resembles its own scrambled self more than it\n"
-            )
+            out.write("    both poles sit further than the shuffle. Neither is resolved. At\n")
+            out.write("    these sizes a bigram web is carried by which words a corpus happens to\n")
+            out.write("    hold, and the tree resembles its own scrambled self more than it\n")
             out.write("    resembles either reference. Nothing was read.\n")
 
     out.write("\n")

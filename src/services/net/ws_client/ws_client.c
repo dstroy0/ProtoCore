@@ -149,7 +149,7 @@ uint8_t *protocore_ws_client_span(void)
 
 // accept = base64(SHA-1(key || GUID)), the value the server's |Sec-WebSocket-Accept| must carry
 // (RFC 6455 sec 1.3, sec 4.2.2 step 5).
-void protocore_ws_client_accept_for_key(uint8_t *work)
+void protocore_ws_client_accept_for_key(const uint8_t *work)
 {
     (void)work;
     char *accept = WsClientV.handshake.accept;

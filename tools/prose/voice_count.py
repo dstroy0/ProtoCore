@@ -100,8 +100,7 @@ def main():
             pulled.append((forms[word].max_common(1)[0][0], count, why))
 
     reference, total, _ = english_sift.english_reference()
-    scored = [(english_sift.surprise(written, reference, total), written, count, why)
-              for written, count, why in pulled]
+    scored = [(english_sift.surprise(written, reference, total), written, count, why) for written, count, why in pulled]
 
     with io.open(OUT, "w", encoding="utf-8", newline="\n") as handle:
         handle.write("word\tcount\n")
@@ -112,14 +111,17 @@ def main():
         for score, written, count, why in sorted(scored, key=lambda item: (-item[0], -item[2], item[1])):
             handle.write("%s\t%d\t%s\n" % (written, count, why))
 
-    print("  %d words, %d distinct, from %d texts"
-          % (sum(counts.values()), len(counts), len(sources)))
-    print("  retained %d distinct (%d words) in %s"
-          % (len(retained), sum(count for _, count in retained), os.path.relpath(OUT, ROOT)))
+    print("  %d words, %d distinct, from %d texts" % (sum(counts.values()), len(counts), len(sources)))
+    print(
+        "  retained %d distinct (%d words) in %s"
+        % (len(retained), sum(count for _, count in retained), os.path.relpath(OUT, ROOT))
+    )
     for reason, tally in sorted(collections.Counter(why for _, _, why in pulled).items()):
         print("  pulled %d distinct for %s" % (tally, reason))
-    print("  pulled %d distinct (%d words) to %s"
-          % (len(pulled), sum(count for _, count, _ in pulled), os.path.relpath(REVIEW, ROOT)))
+    print(
+        "  pulled %d distinct (%d words) to %s"
+        % (len(pulled), sum(count for _, count, _ in pulled), os.path.relpath(REVIEW, ROOT))
+    )
 
 
 if __name__ == "__main__":

@@ -7,8 +7,6 @@
 
 import re
 
-
-
 # --------------------------------------------------------------------
 # THE SUBJECT IS BRITISH, AND OTHER RUN-LEVEL CONTEXT
 # --------------------------------------------------------------------
@@ -59,9 +57,7 @@ BRITISH_SUBJECT = (
 # A rule that silences correct findings and buys nothing is a net loss, and precision over
 # recall means exactly that when it costs something. So it moved to fix_error, where it errors on a
 # rewrite on a line quoting a named standard and costs nothing at all.
-NAMED_STANDARD = re.compile(
-    r"\b(?:RFC|STD|BCP|IEEE|ISO|IEC|ANSI|FIPS|NIST(?:\s+SP)?)\s*\d", re.IGNORECASE
-)
+NAMED_STANDARD = re.compile(r"\b(?:RFC|STD|BCP|IEEE|ISO|IEC|ANSI|FIPS|NIST(?:\s+SP)?)\s*\d", re.IGNORECASE)
 
 # A normative keyword as RFC 2119 defines it, in capitals. Case matters and the pattern is compiled
 # without IGNORECASE on purpose: "this may be null" is prose and "the sender MAY retransmit" is a
@@ -72,8 +68,7 @@ NAMED_STANDARD = re.compile(
 # error and only that: a line carrying one is never rewritten, because reflowing a requirement is
 # how a requirement stops being the one that was agreed.
 RFC_2119 = re.compile(
-    r"\b(?:MUST NOT|MUST|SHALL NOT|SHALL|SHOULD NOT|SHOULD|NOT RECOMMENDED|RECOMMENDED"
-    r"|REQUIRED|MAY|OPTIONAL)\b"
+    r"\b(?:MUST NOT|MUST|SHALL NOT|SHALL|SHOULD NOT|SHOULD|NOT RECOMMENDED|RECOMMENDED" r"|REQUIRED|MAY|OPTIONAL)\b"
 )
 
 

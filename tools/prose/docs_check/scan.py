@@ -14,8 +14,6 @@ from .index import PASSAGE, _COMPILED, candidates, present
 from .quoting import EM_DASH, NAMED_IN_MARKDOWN, NAMED_SPAN, QUOTED
 from .tier import AUTHORITY, COMMENT_ONLY, tier_of
 
-
-
 # What opens a comment or continues a wrapped one. Stripped before lines are joined: a phrase
 # broken across two comment lines reads as prose and not as prose with a marker in the middle.
 MARKER = re.compile(r"^\s*(#+|//+|\*+/?|/\*+)\s?")
@@ -82,20 +80,14 @@ def banned_hits(lines, quotations=False, comments=False, path=None, ledger=None)
         quoted.extend(span.span() for span in NAMED_SPAN.finditer(text))
         if quotations:
             quoted.extend(span.span() for span in PASSAGE.finditer(text))
-            quoted.extend(
-                span.span()
-                for name in NAMED_IN_MARKDOWN
-                for span in name.finditer(text)
-            )
+            quoted.extend(span.span() for name in NAMED_IN_MARKDOWN for span in name.finditer(text))
         for pattern in candidates(text, needing):
             if (not comments) and (pattern in COMMENT_ONLY):
                 continue
             tier = tier_of(pattern) if exempt else None
             for hit in _COMPILED[pattern].finditer(text):
                 start, stop = hit.span()
-                if any(
-                    (start >= opens) and (stop <= closes) for opens, closes in quoted
-                ):
+                if any((start >= opens) and (stop <= closes) for opens, closes in quoted):
                     continue
                 if (pattern in CONFIRM) and not CONFIRM[pattern](hit):
                     continue
@@ -154,9 +146,7 @@ def measured(pattern):
     return HUMAN_RATE.get(pattern, 0.0), CORPUS
 
 
-def banned_tokens(
-    lines, quotations=False, comments=False, path=None, ledger=None, regions=None
-):
+def banned_tokens(lines, quotations=False, comments=False, path=None, ledger=None, regions=None):
     """Findings a reader sees, one per hit, carrying the tier and what is behind it.
 
     A TIER A line names the section that bans the construction. A reader can go and read the

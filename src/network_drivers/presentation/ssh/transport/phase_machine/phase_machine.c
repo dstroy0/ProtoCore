@@ -162,7 +162,7 @@ void protocore_phase_machine_rekey_begin(const uint8_t *work)
 // Admissibility
 // ---------------------------------------------------------------------------
 
-void protocore_phase_machine_admits_ident(uint8_t *work)
+void protocore_phase_machine_admits_ident(const uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_ident_args.i;
 
@@ -177,7 +177,7 @@ void protocore_phase_machine_admits_ident(uint8_t *work)
 // RFC 4253 sec 7.1: "a party MUST respond with its own SSH_MSG_KEXINIT message, except when the
 // received SSH_MSG_KEXINIT already was a reply." Whether it is a reply is exactly whether this end
 // has already sent its own, which kexinit_sent records; the phase alone cannot tell the two apart.
-void protocore_phase_machine_admits_kexinit(uint8_t *work)
+void protocore_phase_machine_admits_kexinit(const uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_kexinit_args.i;
 
@@ -195,7 +195,7 @@ void protocore_phase_machine_kexinit_needs_reply(const uint8_t *work)
     PhaseMachineV.ok = i < MAX_SSH_CONNS && !ssh_sess[i].kexinit_sent;
 }
 
-void protocore_phase_machine_admits_kexdh_init(uint8_t *work)
+void protocore_phase_machine_admits_kexdh_init(const uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_kexdh_init_args.i;
 
@@ -204,7 +204,7 @@ void protocore_phase_machine_admits_kexdh_init(uint8_t *work)
     protocore_phase_machine_is(work);
 }
 
-void protocore_phase_machine_admits_newkeys(uint8_t *work)
+void protocore_phase_machine_admits_newkeys(const uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_newkeys_args.i;
 
@@ -213,7 +213,7 @@ void protocore_phase_machine_admits_newkeys(uint8_t *work)
     protocore_phase_machine_is(work);
 }
 
-void protocore_phase_machine_admits_service_request(uint8_t *work)
+void protocore_phase_machine_admits_service_request(const uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_service_request_args.i;
 
@@ -222,7 +222,7 @@ void protocore_phase_machine_admits_service_request(uint8_t *work)
     protocore_phase_machine_is(work);
 }
 
-void protocore_phase_machine_admits_userauth(uint8_t *work)
+void protocore_phase_machine_admits_userauth(const uint8_t *work)
 {
     uint8_t i = PhaseMachineV.admits_userauth_args.i;
 
@@ -250,7 +250,7 @@ void protocore_phase_machine_admits_rekey(const uint8_t *work)
     PhaseMachineV.ok = i < MAX_SSH_CONNS && ssh_sess[i].phase == SSH_PHASE_OPEN && !ssh_sess[i].kex_active;
 }
 
-void protocore_phase_machine_is_open(uint8_t *work)
+void protocore_phase_machine_is_open(const uint8_t *work)
 {
     uint8_t i = PhaseMachineV.is_open_args.i;
 

@@ -116,7 +116,7 @@ static void put_varbind(BerEnc *e, const SnmpVarbind *vb)
 // The notification PDU: request-id, error-status 0, error-index 0, then the VarBindList with
 // sysUpTime.0 and snmpTrapOID.0 first (RFC 3416 sec 4.2.6). Reads the PDU members off the handle,
 // so it takes ctx, plus the encoder it appends to.
-static void append_pdu(uint8_t *work, BerEnc *e)
+static void append_pdu(const uint8_t *work, BerEnc *e)
 {
     SnmpBerV.enc = e;
     SnmpBerV.tlv.tag = SnmpNotifyV.pdu.pdu_tag;

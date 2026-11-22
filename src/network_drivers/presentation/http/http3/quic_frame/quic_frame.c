@@ -16,7 +16,7 @@
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 
 // Decode a varint at buf[*pos], advancing *pos. Returns false on truncation.
-static embed_bool rd(uint8_t *work, const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
+static embed_bool rd(const uint8_t *work, const uint8_t *buf, size_t len, size_t *pos, uint64_t *v)
 {
     size_t c = 0;
     embed_bool quic_varint_ok = QuicVarint.decode(work, buf + *pos, len - *pos, v, &c);

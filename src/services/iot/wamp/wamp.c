@@ -21,7 +21,7 @@
 EMBED_BEGIN_DECLS
 
 // Emit a uint64 as a JSON number: digits generated low end first, then reversed into the writer.
-static void emit_uint(uint8_t *work, protocore_json_writer *w, uint64_t v)
+static void emit_uint(const uint8_t *work, protocore_json_writer *w, uint64_t v)
 {
     char rev[20];
     size_t r = 0;
@@ -50,7 +50,7 @@ static void emit_uint(uint8_t *work, protocore_json_writer *w, uint64_t v)
 }
 
 // Bind the writer to ns->out and open the list with its message type code (WAMP sec 3.3).
-static void begin_msg(uint8_t *work, protocore_json_writer *w, int code)
+static void begin_msg(const uint8_t *work, protocore_json_writer *w, int code)
 {
     JsonV.init_args.w = w;
     JsonV.init_args.buf = WampV.out.buf;
@@ -74,7 +74,7 @@ static void finish(const uint8_t *work, protocore_json_writer *w)
 
 // Append the trailing Arguments|list and ArgumentsKw|dict, both left off when neither is set.
 // ArgumentsKw sits one position past Arguments, so a keyword-only payload emits `[]` to hold it.
-static void emit_args(uint8_t *work, protocore_json_writer *w)
+static void emit_args(const uint8_t *work, protocore_json_writer *w)
 {
     const char *args = WampV.payload.arguments;
     const char *kwargs = WampV.payload.arguments_kw;
@@ -406,7 +406,7 @@ void protocore_wamp_element(const uint8_t *work)
 }
 
 // Read the element at ns->parse.index as an id, decimal digits only (WAMP sec 2.1.2), into ns->u64.
-void protocore_wamp_get_id(uint8_t *work)
+void protocore_wamp_get_id(const uint8_t *work)
 {
     WampV.u64 = 0;
     protocore_wamp_element(work);
@@ -445,7 +445,7 @@ void protocore_wamp_get_type(uint8_t *work)
 
 // Copy the URI element at ns->parse.index into ns->parse.uri_out, the quotes stripped. WAMP sec
 // 2.1.1 bars whitespace and `#` from URI components, so the copy carries no escape to undo.
-void protocore_wamp_get_uri(uint8_t *work)
+void protocore_wamp_get_uri(const uint8_t *work)
 {
     char *out = WampV.parse.uri_out;
     const size_t cap = WampV.parse.uri_cap;

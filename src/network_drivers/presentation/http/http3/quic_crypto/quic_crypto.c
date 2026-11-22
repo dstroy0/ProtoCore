@@ -64,7 +64,7 @@ void protocore_quic_crypto_keys_from_secret(const uint8_t *work, uint8_t *keys_w
     mmgr_zero_buf(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
 }
 
-void protocore_quic_crypto_derive_initial_secrets(uint8_t *work, uint8_t *keys_work, const uint8_t *dcid,
+void protocore_quic_crypto_derive_initial_secrets(const uint8_t *work, uint8_t *keys_work, const uint8_t *dcid,
                                                   size_t dcid_len, QuicInitialSecrets *out)
 {
 
@@ -130,7 +130,7 @@ size_t protocore_quic_crypto_packet_protect(const uint8_t *work, uint8_t *pkt, s
     return total;
 }
 
-size_t protocore_quic_crypto_packet_unprotect(uint8_t *work, uint8_t *pkt, size_t pn_offset, size_t length,
+size_t protocore_quic_crypto_packet_unprotect(const uint8_t *work, uint8_t *pkt, size_t pn_offset, size_t length,
                                               uint64_t largest_pn, QuicPacketKeys *keys, embed_bool is_long,
                                               uint8_t *out, uint64_t *out_pn)
 {

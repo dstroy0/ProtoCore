@@ -51,7 +51,7 @@ void protocore_rfc1951_reverse_bits(const uint8_t *work)
 
 // The fixed Huffman code/length tables (RFC 1951 sec 3.2.6), each code bit-reversed. ll_code /
 // ll_len hold 288 entries, d_code / d_len hold 30.
-void protocore_rfc1951_build_fixed(uint8_t *work)
+void protocore_rfc1951_build_fixed(const uint8_t *work)
 {
     uint16_t *ll_code = Rfc1951V.build_fixed_args.ll_code;
     uint8_t *ll_len = Rfc1951V.build_fixed_args.ll_len;

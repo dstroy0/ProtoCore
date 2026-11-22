@@ -9,8 +9,6 @@ import re
 
 from .bans import BANNED
 
-
-
 # A quoted passage in a page: an opening double quote, a run of text, a closing one. Somebody
 # else's words, and never this project's prose to repair. Jaynes is quoted twice in the ledger and
 # once in an engine README, and joining wrapped lines put his wording in front of the scanner.
@@ -39,9 +37,7 @@ _PARSER = re._parser if hasattr(re, "_parser") else __import__("sre_parse")
 _CONST = re._constants if hasattr(re, "_constants") else __import__("sre_constants")
 _ATOMIC = getattr(_CONST, "ATOMIC_GROUP", None)
 _REPEATS = tuple(
-    getattr(_CONST, name)
-    for name in ("MAX_REPEAT", "MIN_REPEAT", "POSSESSIVE_REPEAT")
-    if hasattr(_CONST, name)
+    getattr(_CONST, name) for name in ("MAX_REPEAT", "MIN_REPEAT", "POSSESSIVE_REPEAT") if hasattr(_CONST, name)
 )
 
 
@@ -124,8 +120,7 @@ def present(text, needing=None):
     and not against all of them.
     """
     text = folded(text)
-    return [(literal, patterns) for literal, patterns in (_INDEX[0] if needing is None else needing)
-            if literal in text]
+    return [(literal, patterns) for literal, patterns in (_INDEX[0] if needing is None else needing) if literal in text]
 
 
 def candidates(text, needing=None):

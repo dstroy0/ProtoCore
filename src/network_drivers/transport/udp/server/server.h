@@ -126,7 +126,7 @@ typedef struct
     void (*const leave_multicast)(uint8_t *work);
     void (*const poll)(uint8_t *work);
     void (*const reply)(uint8_t *work);
-    void (*const peer_addr)(uint8_t *work);
+    void (*const peer_addr)(const uint8_t *work);
     void (*const sendto)(uint8_t *work);
     void (*const close)(uint8_t *work);
     void (*const joined_group)(uint8_t *work);
@@ -139,7 +139,7 @@ void protocore_udp_listener_listen_multicast(uint8_t *work);
 void protocore_udp_listener_leave_multicast(uint8_t *work);
 void protocore_udp_listener_poll(uint8_t *work);
 void protocore_udp_listener_reply(uint8_t *work);
-void protocore_udp_listener_peer_addr(uint8_t *work);
+void protocore_udp_listener_peer_addr(const uint8_t *work);
 void protocore_udp_listener_sendto(uint8_t *work);
 void protocore_udp_listener_close(uint8_t *work);
 void protocore_udp_listener_joined_group(uint8_t *work);

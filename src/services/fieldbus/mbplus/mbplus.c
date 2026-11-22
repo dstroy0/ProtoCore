@@ -22,9 +22,9 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_mbplus_crc(uint8_t *work);
+void protocore_mbplus_crc(const uint8_t *work);
 
-void protocore_mbplus_crc(uint8_t *work)
+void protocore_mbplus_crc(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = MbplusV.crc_args.bytes;

@@ -172,7 +172,7 @@ static void fs_clear(uint8_t *work)
     FILESYSTEM_CTX(work)->status = PROTOCORE_FS_OK;
 }
 
-static void fs_present(uint8_t *work)
+static void fs_present(const uint8_t *work)
 {
     (void)work;
 

@@ -54,7 +54,7 @@ uint8_t *protocore_pca9685_span(void)
 
 void protocore_pca9685_channel_reg(const uint8_t *work);
 void protocore_pca9685_prescale(const uint8_t *work);
-void protocore_pca9685_set_pwm_bytes(uint8_t *work);
+void protocore_pca9685_set_pwm_bytes(const uint8_t *work);
 
 void protocore_pca9685_prescale(const uint8_t *work)
 {
@@ -105,7 +105,7 @@ void protocore_pca9685_us_to_count(const uint8_t *work)
     Pca9685V.count = count > PCA9685_COUNT_MAX ? (uint16_t)PCA9685_COUNT_MAX : (uint16_t)count;
 }
 
-void protocore_pca9685_set_pwm_bytes(uint8_t *work)
+void protocore_pca9685_set_pwm_bytes(const uint8_t *work)
 {
     uint8_t *buf = Pca9685V.set_pwm_bytes_args.buf;
     size_t cap = Pca9685V.set_pwm_bytes_args.cap;

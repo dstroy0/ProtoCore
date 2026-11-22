@@ -142,7 +142,7 @@ typedef struct
     void (*const at)(uint8_t *work);
     void (*const verify)(uint8_t *work);
     void (*const cat_name)(const uint8_t *work);
-    void (*const format)(uint8_t *work);
+    void (*const format)(const uint8_t *work);
     void (*const dump_json)(uint8_t *work);
 } AuditLogNs;
 
@@ -155,7 +155,7 @@ void protocore_audit_log_count(uint8_t *work);
 void protocore_audit_log_at(uint8_t *work);
 void protocore_audit_log_verify(uint8_t *work);
 void protocore_audit_log_cat_name(const uint8_t *work);
-void protocore_audit_log_format(uint8_t *work);
+void protocore_audit_log_format(const uint8_t *work);
 void protocore_audit_log_dump_json(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

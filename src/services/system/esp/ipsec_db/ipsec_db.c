@@ -120,7 +120,7 @@ void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work)
     IpsecDbV.ok = EMBED_TRUE;
 }
 
-void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_spd_lookup(const uint8_t *work)
 {
     const IpsecSpd *spd = IpsecDbV.protocore_ipsec_spd_lookup_args.spd;
     const IpsecFlow *flow = IpsecDbV.protocore_ipsec_spd_lookup_args.flow;
@@ -211,7 +211,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_init(const uint8_t *work)
     }
 }
 
-void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_add(const uint8_t *work)
 {
     IpsecSad *sad = IpsecDbV.protocore_ipsec_sad_add_args.sad;
     uint32_t spi = IpsecDbV.protocore_ipsec_sad_add_args.spi;
@@ -288,7 +288,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work)
     IpsecDbV.sa = NULL;
 }
 
-void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_remove(const uint8_t *work)
 {
     IpsecSad *sad = IpsecDbV.protocore_ipsec_sad_remove_args.sad;
     uint32_t spi = IpsecDbV.protocore_ipsec_sad_remove_args.spi;

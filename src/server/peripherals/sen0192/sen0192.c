@@ -59,7 +59,8 @@ void protocore_sen0192_motion_init(const uint8_t *work, Sen0192Motion *m, uint32
     m->motion_events = 0;
 }
 
-embed_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, embed_bool level_high, uint32_t now_ms)
+embed_bool protocore_sen0192_motion_update(const uint8_t *work, Sen0192Motion *m, embed_bool level_high,
+                                           uint32_t now_ms)
 {
     embed_bool ok = EMBED_FALSE;
     embed_bool active = (level_high == m->active_high);

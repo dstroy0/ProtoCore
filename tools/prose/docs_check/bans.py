@@ -14,8 +14,6 @@ from .bans_register import REGISTER
 from .bans_shapes import SHAPES
 from .locale import LOCALE
 
-
-
 # The tokens the writing standard bans outright, and the British definitions it bans by pattern.
 #
 # LOCALE is spliced in and is the single copy of the British patterns. The order of the groups is
@@ -23,7 +21,6 @@ from .locale import LOCALE
 # reaches first names it. Reordering these changes which pattern a finding is attributed to. GRAMMAR
 # comes last, and a site an older group already names retains that name.
 BANNED = OUTRIGHT + WORDS + LOCALE + REGISTER + SHAPES + PROBE + DETECTED + GRAMMAR
-
 
 
 # ====================================================================

@@ -130,7 +130,7 @@ typedef struct
     void (*const begin_pins)(const uint8_t *work);
     void (*const sample)(const uint8_t *work);
     void (*const write)(const uint8_t *work);
-    void (*const begin)(uint8_t *work);
+    void (*const begin)(const uint8_t *work);
 } GpioMapNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -142,7 +142,7 @@ void protocore_gpio_map_is_output(const uint8_t *work);
 void protocore_gpio_map_begin_pins(const uint8_t *work);
 void protocore_gpio_map_sample(const uint8_t *work);
 void protocore_gpio_map_write(const uint8_t *work);
-void protocore_gpio_map_begin(uint8_t *work);
+void protocore_gpio_map_begin(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

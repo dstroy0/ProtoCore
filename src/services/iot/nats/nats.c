@@ -147,7 +147,7 @@ static void finish(const uint8_t *work, Buf *b)
 }
 
 // CONNECT {"option_name":option_value,...}
-void protocore_nats_connect(uint8_t *work)
+void protocore_nats_connect(const uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = EMBED_FALSE;
@@ -163,7 +163,7 @@ void protocore_nats_connect(uint8_t *work)
 }
 
 // PUB <subject> [reply-to] <#bytes>CRLF[payload]CRLF
-void protocore_nats_pub(uint8_t *work)
+void protocore_nats_pub(const uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = EMBED_FALSE;
@@ -189,7 +189,7 @@ void protocore_nats_pub(uint8_t *work)
 
 // HPUB <subject> [reply-to] <#header bytes> <#total bytes>CRLF[headers][payload]CRLF, where the
 // header section carries its own terminating CR LF CR LF and #total bytes counts it plus the payload.
-void protocore_nats_hpub(uint8_t *work)
+void protocore_nats_hpub(const uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = EMBED_FALSE;
@@ -218,7 +218,7 @@ void protocore_nats_hpub(uint8_t *work)
 }
 
 // SUB <subject> [queue group] <sid>
-void protocore_nats_sub(uint8_t *work)
+void protocore_nats_sub(const uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = EMBED_FALSE;
@@ -241,7 +241,7 @@ void protocore_nats_sub(uint8_t *work)
 }
 
 // UNSUB <sid> [max_msgs]
-void protocore_nats_unsub(uint8_t *work)
+void protocore_nats_unsub(const uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = EMBED_FALSE;
@@ -262,7 +262,7 @@ void protocore_nats_unsub(uint8_t *work)
 }
 
 // PING
-void protocore_nats_ping(uint8_t *work)
+void protocore_nats_ping(const uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = EMBED_FALSE;
@@ -276,7 +276,7 @@ void protocore_nats_ping(uint8_t *work)
 }
 
 // PONG
-void protocore_nats_pong(uint8_t *work)
+void protocore_nats_pong(const uint8_t *work)
 {
     NatsV.n = 0;
     NatsV.ok = EMBED_FALSE;

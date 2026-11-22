@@ -141,7 +141,7 @@ static void ld2410_cmd_config_end(const uint8_t *work);
 static void ld2410_cmd_engineering(const uint8_t *work);
 static void ld2410_cmd_restart(const uint8_t *work);
 static void ld2410_parse_report(const uint8_t *work);
-static void ld2410_stream_push(uint8_t *work);
+static void ld2410_stream_push(const uint8_t *work);
 static void ld2410_stream_reset(const uint8_t *work);
 
 static void ld2410_parse_report(const uint8_t *work)
@@ -252,7 +252,7 @@ static void ld2410_stream_reset(const uint8_t *work)
     s->phase = 0;
 }
 
-static void ld2410_stream_push(uint8_t *work)
+static void ld2410_stream_push(const uint8_t *work)
 {
     (void)work;
     Ld2410Stream *s = Ld2410.stream_push_args.s;
@@ -307,6 +307,7 @@ static void ld2410_stream_push(uint8_t *work)
             Ld2410.parse_report_args.len = s->total;
             Ld2410.parse_report_args.out = out;
             ld2410_parse_report(work);
+            Ld2410.parse_report_args.out = NULL;
             embed_bool ok = Ld2410.ok;
             Ld2410.stream_reset_args.s = s;
             ld2410_stream_reset(work);

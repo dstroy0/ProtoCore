@@ -42,14 +42,41 @@ THEORY = os.path.join(HERE, "theory")
 
 # Commands whose braced argument is prose and belongs in the graded text.
 RETAIN_ARGUMENT = (
-    "emph", "textbf", "textit", "texttt", "chapter", "section", "subsection", "subsubsection",
-    "paragraph", "caption", "title", "author", "footnote", "textsc", "underline", "text",
+    "emph",
+    "textbf",
+    "textit",
+    "texttt",
+    "chapter",
+    "section",
+    "subsection",
+    "subsubsection",
+    "paragraph",
+    "caption",
+    "title",
+    "author",
+    "footnote",
+    "textsc",
+    "underline",
+    "text",
 )
 
 # Environments that hold no English.
 DROP_ENVIRONMENT = (
-    "equation", "equation*", "align", "align*", "gather", "gather*", "displaymath",
-    "tabular", "array", "verbatim", "lstlisting", "tikzpicture", "matrix", "bmatrix", "pmatrix",
+    "equation",
+    "equation*",
+    "align",
+    "align*",
+    "gather",
+    "gather*",
+    "displaymath",
+    "tabular",
+    "array",
+    "verbatim",
+    "lstlisting",
+    "tikzpicture",
+    "matrix",
+    "bmatrix",
+    "pmatrix",
 )
 
 
@@ -65,14 +92,17 @@ def flatten(line):
     line = re.sub(r"\\\[.*?\\\]", " ", line)
 
     # References and citations carry keys instead of prose.
-    line = re.sub(r"\\(label|ref|eqref|cite|citep|autoref|pageref|input|include|usepackage"
-                  r"|bibliography|bibliographystyle|hypersetup|newcommand|renewcommand"
-                  r"|DeclareMathOperator|index)\s*(\[[^\]]*\])?\s*(\{[^{}]*\})*", " ", line)
+    line = re.sub(
+        r"\\(label|ref|eqref|cite|citep|autoref|pageref|input|include|usepackage"
+        r"|bibliography|bibliographystyle|hypersetup|newcommand|renewcommand"
+        r"|DeclareMathOperator|index)\s*(\[[^\]]*\])?\s*(\{[^{}]*\})*",
+        " ",
+        line,
+    )
 
     # Text-bearing commands: retain the argument, drop the command. Repeated because arguments nest.
     for _ in range(4):
-        line = re.sub(r"\\(" + "|".join(RETAIN_ARGUMENT) + r")\s*\*?\s*(\[[^\]]*\])?\s*\{([^{}]*)\}",
-                      r"\3", line)
+        line = re.sub(r"\\(" + "|".join(RETAIN_ARGUMENT) + r")\s*\*?\s*(\[[^\]]*\])?\s*\{([^{}]*)\}", r"\3", line)
 
     # Any remaining command, with its optional argument. The braced argument is left in place: it is
     # more often prose than not, and leaving it risks a false finding while dropping it risks
@@ -136,8 +166,7 @@ def main():
     else:
         targets = []
         for here, _, names in os.walk(THEORY):
-            targets.extend(os.path.join(here, one) for one in sorted(names)
-                           if one.endswith(".tex"))
+            targets.extend(os.path.join(here, one) for one in sorted(names) if one.endswith(".tex"))
     if not targets:
         sys.stderr.write("no .tex found under %s\n" % THEORY)
         return 1
@@ -168,7 +197,7 @@ def main():
         for are_in, real in made.items():
             if are_in in os.path.normcase(line):
                 start = os.path.normcase(line).index(are_in)
-                line = line[:start] + os.path.relpath(real, HERE) + line[start + len(are_in):]
+                line = line[:start] + os.path.relpath(real, HERE) + line[start + len(are_in) :]
                 break
         if line.strip():
             print(line)
@@ -176,8 +205,7 @@ def main():
     print("")
     print("%d .tex file(s), %d word(s) of prose graded" % (len(targets), total_words))
     if ".tex" in reads_tex():
-        print("  the gate now reads .tex directly: this tool is a second opinion on the"
-              " stripping")
+        print("  the gate now reads .tex directly: this tool is a second opinion on the" " stripping")
     else:
         print("  the gate reads %s: none of this would otherwise be checked" % reads_tex())
     return done.returncode

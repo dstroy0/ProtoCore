@@ -175,7 +175,7 @@ void protocore_oauth2_build_refresh_request(uint8_t *work)
 // RFC 6749 sec 5.1: read access_token, token_type, expires_in and refresh_token out of the reply,
 // plus the OpenID Connect id_token where the provider sends one. ok stays false when access_token is
 // absent, which is the shape of the sec 5.2 error object.
-void protocore_oauth2_parse_token_response(uint8_t *work)
+void protocore_oauth2_parse_token_response(const uint8_t *work)
 {
     (void)work;
     Oauth2V.ok = EMBED_FALSE;

@@ -80,7 +80,7 @@ static embed_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_edge_cache_sd_deserialize(uint8_t *work);
+void protocore_edge_cache_sd_deserialize(const uint8_t *work);
 void protocore_edge_cache_sd_serialize(const uint8_t *work);
 
 void protocore_edge_cache_sd_serialize(const uint8_t *work)
@@ -119,7 +119,7 @@ void protocore_edge_cache_sd_serialize(const uint8_t *work)
     EdgeCacheSdV.n = pos;
 }
 
-void protocore_edge_cache_sd_deserialize(uint8_t *work)
+void protocore_edge_cache_sd_deserialize(const uint8_t *work)
 {
     (void)work;
     uint8_t *entry_buf = EdgeCacheSdV.deserialize_args.entry_buf;
@@ -282,7 +282,7 @@ static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uin
     return total;
 }
 
-void protocore_edge_cache_sd_put(uint8_t *work)
+void protocore_edge_cache_sd_put(const uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.put_args.db;

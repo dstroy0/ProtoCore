@@ -77,12 +77,12 @@ typedef struct
     WebDavMethod (*method)(const uint8_t *, const char *);
     int (*depth)(const uint8_t *, const char *, int);
     size_t (*xml_escape)(const uint8_t *, char *, size_t, const char *);
-    embed_bool (*dest_path)(uint8_t *, const char *, char *, size_t);
+    embed_bool (*dest_path)(const uint8_t *, const char *, char *, size_t);
     size_t (*ms_begin)(const uint8_t *, char *, size_t, size_t);
-    size_t (*ms_entry)(uint8_t *, char *, size_t, size_t, const char *, embed_bool, uint32_t, const char *,
+    size_t (*ms_entry)(const uint8_t *, char *, size_t, size_t, const char *, embed_bool, uint32_t, const char *,
                        const char *);
     size_t (*ms_end)(const uint8_t *, char *, size_t, size_t);
-    size_t (*proppatch_ms)(uint8_t *, char *, size_t, const char *, const char *, size_t);
+    size_t (*proppatch_ms)(const uint8_t *, char *, size_t, const char *, const char *, size_t);
     void (*lock_init)(const uint8_t *, DavLockTable *);
     const DavLock *(*lock_acquire)(const uint8_t *, DavLockTable *, const char *, const char *, embed_bool, embed_bool,
                                    uint32_t);
@@ -128,7 +128,7 @@ size_t protocore_webdav_xml_escape(const uint8_t *work, char *dst, size_t cap, c
  * @param cap Cap
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, char *out, size_t cap);
+embed_bool protocore_webdav_dest_path(const uint8_t *work, const char *destination, char *out, size_t cap);
 /**
  * @brief Write the XML prolog and the open <multistatus> element.
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
@@ -151,7 +151,7 @@ size_t protocore_webdav_ms_begin(const uint8_t *work, char *buf, size_t cap, siz
  * @param content_type MIME type (files only), or "" to omit
  * @return The size_t.
  */
-size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t len, const char *href,
+size_t protocore_webdav_ms_entry(const uint8_t *work, char *buf, size_t cap, size_t len, const char *href,
                                  embed_bool is_collection, uint32_t size, const char *rfc1123_mtime,
                                  const char *content_type);
 /**
@@ -173,7 +173,7 @@ size_t protocore_webdav_ms_end(const uint8_t *work, char *buf, size_t cap, size_
  * @param body_len length of body
  * @return The size_t.
  */
-size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const char *href, const char *body,
+size_t protocore_webdav_proppatch_ms(const uint8_t *work, char *buf, size_t cap, const char *href, const char *body,
                                      size_t body_len);
 /**
  * @brief Reset a lock table (no locks held).

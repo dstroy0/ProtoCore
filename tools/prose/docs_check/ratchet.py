@@ -10,14 +10,10 @@ import os
 from .files import SKIP_DIRS
 from .repository import REPOSITORY, git_say
 
-
-
 # The ratchet this repository retains, for the readings that want it without being told where it is.
 # Beside the package rather than inside it: the ceilings are this repository's record and the
 # checker is a tool, and a tool does not carry one repository's numbers around in it.
-DEFAULT_RATCHET = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prose_ratchet.tsv"
-)
+DEFAULT_RATCHET = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prose_ratchet.tsv")
 
 
 RATCHET_HEADER = (

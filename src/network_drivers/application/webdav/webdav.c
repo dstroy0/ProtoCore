@@ -178,7 +178,7 @@ size_t protocore_webdav_xml_escape(const uint8_t *work, char *dst, size_t cap, c
     return o;
 }
 
-embed_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, char *out, size_t cap)
+embed_bool protocore_webdav_dest_path(const uint8_t *work, const char *destination, char *out, size_t cap)
 {
     embed_bool ok = EMBED_FALSE;
 
@@ -257,7 +257,7 @@ size_t protocore_webdav_ms_begin(const uint8_t *work, char *buf, size_t cap, siz
     return len;
 }
 
-size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t len, const char *href,
+size_t protocore_webdav_ms_entry(const uint8_t *work, char *buf, size_t cap, size_t len, const char *href,
                                  embed_bool is_collection, uint32_t size, const char *rfc1123_mtime,
                                  const char *content_type)
 {
@@ -364,7 +364,7 @@ static embed_bool name_end_char(char c)
     return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>';
 }
 
-size_t protocore_webdav_proppatch_ms(uint8_t *work, char *buf, size_t cap, const char *href, const char *body,
+size_t protocore_webdav_proppatch_ms(const uint8_t *work, char *buf, size_t cap, const char *href, const char *body,
                                      size_t body_len)
 {
     size_t len = 0;

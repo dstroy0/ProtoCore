@@ -47,12 +47,12 @@ uint8_t *protocore_sht3x_span(void)
     return s_own.span;
 }
 
-void protocore_sht3x_crc8(uint8_t *work);
+void protocore_sht3x_crc8(const uint8_t *work);
 void protocore_sht3x_parse(uint8_t *work);
 void protocore_sht3x_rh_mpct(const uint8_t *work);
 void protocore_sht3x_temp_mc(const uint8_t *work);
 
-void protocore_sht3x_crc8(uint8_t *work)
+void protocore_sht3x_crc8(const uint8_t *work)
 {
     (void)work;
     const uint8_t *data = Sht3xV.crc8_args.data;

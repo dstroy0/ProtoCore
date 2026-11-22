@@ -183,11 +183,11 @@ typedef struct
 {
     void (*const control_init)(const uint8_t *work);
     void (*const control_build)(const uint8_t *work);
-    void (*const control_parse)(uint8_t *work);
-    void (*const immutable_asset)(uint8_t *work);
-    void (*const revalidatable)(uint8_t *work);
-    void (*const no_store)(uint8_t *work);
-    void (*const shared)(uint8_t *work);
+    void (*const control_parse)(const uint8_t *work);
+    void (*const immutable_asset)(const uint8_t *work);
+    void (*const revalidatable)(const uint8_t *work);
+    void (*const no_store)(const uint8_t *work);
+    void (*const shared)(const uint8_t *work);
     void (*const freshness_lifetime)(const uint8_t *work);
 } HttpcacheNs;
 
@@ -195,11 +195,11 @@ typedef struct
 // else an entry needs is an operand in HttpcacheV or a region of the borrow at a fixed offset.
 void protocore_httpcache_control_init(const uint8_t *work);
 void protocore_httpcache_control_build(const uint8_t *work);
-void protocore_httpcache_control_parse(uint8_t *work);
-void protocore_httpcache_immutable_asset(uint8_t *work);
-void protocore_httpcache_revalidatable(uint8_t *work);
-void protocore_httpcache_no_store(uint8_t *work);
-void protocore_httpcache_shared(uint8_t *work);
+void protocore_httpcache_control_parse(const uint8_t *work);
+void protocore_httpcache_immutable_asset(const uint8_t *work);
+void protocore_httpcache_revalidatable(const uint8_t *work);
+void protocore_httpcache_no_store(const uint8_t *work);
+void protocore_httpcache_shared(const uint8_t *work);
 void protocore_httpcache_freshness_lifetime(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

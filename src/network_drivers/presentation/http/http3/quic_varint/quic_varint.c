@@ -41,7 +41,7 @@ size_t protocore_quic_varint_len(const uint8_t *work, uint64_t value)
     return 0;
 }
 
-size_t protocore_quic_varint_encode(uint8_t *work, uint8_t *out, size_t cap, uint64_t value)
+size_t protocore_quic_varint_encode(const uint8_t *work, uint8_t *out, size_t cap, uint64_t value)
 {
     size_t quic_varint_n = QuicVarint.len(work, value);
     size_t n = quic_varint_n;

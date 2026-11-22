@@ -52,14 +52,19 @@ def clean(text):
     probe = os.path.join(room, "candidate.md")
     with io.open(probe, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(text)
-    done = subprocess.run([sys.executable, CHECK, probe], capture_output=True, text=True, encoding="utf-8", env=dict(os.environ, PYTHONIOENCODING="utf-8"))
-    hits = [one.strip() for one in (done.stdout + done.stderr).split("\n")
-            if " prose " in one or " BREAK " in one]
+    done = subprocess.run(
+        [sys.executable, CHECK, probe],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+    )
+    hits = [one.strip() for one in (done.stdout + done.stderr).split("\n") if " prose " in one or " BREAK " in one]
     if not hits:
         return True, ""
     said = hits[0]
     at = said.find("candidate.md:")
-    return False, said[at + len("candidate.md:"):].strip() if at >= 0 else said
+    return False, said[at + len("candidate.md:") :].strip() if at >= 0 else said
 
 
 def endings(path):
@@ -88,8 +93,10 @@ def rows(path):
                 continue
             parts = line.split("\t")
             if len(parts) != 3:
-                sys.stderr.write("%s line %d: wants three tab separated fields, has %d\n"
-                                 % (os.path.basename(path), number, len(parts)))
+                sys.stderr.write(
+                    "%s line %d: wants three tab separated fields, has %d\n"
+                    % (os.path.basename(path), number, len(parts))
+                )
                 raise SystemExit(1)
             out.append(tuple(one.replace("\\n", "\n") for one in parts))
     return out
@@ -143,8 +150,7 @@ def main():
         done += 1
 
     print("")
-    print("%d %s, %d already applied, %d errored"
-          % (done, "applied" if write else "to apply", already, bad))
+    print("%d %s, %d already applied, %d errored" % (done, "applied" if write else "to apply", already, bad))
     return 1 if bad else 0
 
 

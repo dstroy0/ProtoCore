@@ -39,7 +39,6 @@ PROBE = (
     # Half of a can-only against cannot pair. Each half is ordinary and the pairing is the tic,
     # which no single pattern reaches. This catches the half that carries it.
     r"\bcan only show (that|whether)\b",
-
     # ---- Found by a detector probe rather than by a frequency table. ----
     #
     # A frequency comparison against a human corpus finds TOKENS. It cannot find a sentence whose
@@ -65,7 +64,6 @@ PROBE = (
     # register mismatch is exactly what it reads. Narrative openers are a real shape here and no
     # pattern below reaches them, because a regex cannot see register. They still have to be
     # caught by eye.
-
     # The hedge that closes a section while conceding nothing.
     r"\b(further|additional|more) (research|work|study|studies|investigation|analysis) (is|are) needed\b",
     # Announcing emphasis instead of emphasising.
@@ -84,5 +82,4 @@ PROBE = (
     r"\bdeceptively simple\b",
     r"\bstay(?:ing)? ahead of the curve\b",
     r"\bhas never been more important\b",
-
 )

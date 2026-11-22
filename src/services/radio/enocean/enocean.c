@@ -24,7 +24,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint8_t protocore_enocean_esp3_crc8(uint8_t *work, const uint8_t *buf, uint16_t len)
+uint8_t protocore_enocean_esp3_crc8(const uint8_t *work, const uint8_t *buf, uint16_t len)
 {
     // The ESP3 CRC-8 (the u8CRC8Table generator) is the cataloge's CRC-8/SMBUS: poly 0x07, MSB-first, init 0,
     // no final XOR.

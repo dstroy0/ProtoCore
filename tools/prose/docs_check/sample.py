@@ -66,10 +66,7 @@ def show_sample():
     if not named:
         raise SystemExit("  gate_sample: name a file or a directory")
 
-    roots = [
-        one if os.path.exists(one) else os.path.join(REPOSITORY, one)
-        for one in named
-    ]
+    roots = [one if os.path.exists(one) else os.path.join(REPOSITORY, one) for one in named]
 
     held = []
     manifest = []
@@ -92,9 +89,7 @@ def show_sample():
             words += count
             took += count
         if took:
-            manifest.append(
-                (os.path.relpath(path, REPOSITORY).replace("\\", "/"), took)
-            )
+            manifest.append((os.path.relpath(path, REPOSITORY).replace("\\", "/"), took))
 
     body = "\n\n".join(held)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

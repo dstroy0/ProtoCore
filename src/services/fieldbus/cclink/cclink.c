@@ -37,7 +37,7 @@ void protocore_cclink_sum(const uint8_t *work)
     CclinkV.value = sum;
 }
 
-void protocore_cclink_build(uint8_t *work)
+void protocore_cclink_build(const uint8_t *work)
 {
     uint8_t station = CclinkV.build_args.station;
     uint8_t command = CclinkV.build_args.command;
@@ -80,7 +80,7 @@ void protocore_cclink_build(uint8_t *work)
     CclinkV.n = i;
 }
 
-void protocore_cclink_parse(uint8_t *work)
+void protocore_cclink_parse(const uint8_t *work)
 {
     const uint8_t *frame = CclinkV.parse_args.frame;
     size_t len = CclinkV.parse_args.len;

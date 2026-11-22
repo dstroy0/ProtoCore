@@ -150,7 +150,7 @@ typedef struct
 {
     void (*const build_code_request)(uint8_t *work);
     void (*const build_refresh_request)(uint8_t *work);
-    void (*const parse_token_response)(uint8_t *work);
+    void (*const parse_token_response)(const uint8_t *work);
     void (*const exchange_code)(uint8_t *work);
     void (*const refresh)(uint8_t *work);
 } Oauth2Ns;
@@ -159,7 +159,7 @@ typedef struct
 // else an entry needs is an operand in Oauth2V or a region of the borrow at a fixed offset.
 void protocore_oauth2_build_code_request(uint8_t *work);
 void protocore_oauth2_build_refresh_request(uint8_t *work);
-void protocore_oauth2_parse_token_response(uint8_t *work);
+void protocore_oauth2_parse_token_response(const uint8_t *work);
 void protocore_oauth2_exchange_code(uint8_t *work);
 void protocore_oauth2_refresh(uint8_t *work);
 

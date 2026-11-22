@@ -25,7 +25,7 @@ EMBED_BEGIN_DECLS
 
 void protocore_control_pid_reset(const uint8_t *work);
 
-void protocore_control_pid_init(uint8_t *work)
+void protocore_control_pid_init(const uint8_t *work)
 {
     Pid *p = ControlV.pid_init_args.p;
     float kp = ControlV.pid_init_args.kp;

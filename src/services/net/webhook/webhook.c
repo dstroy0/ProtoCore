@@ -199,7 +199,7 @@ void protocore_webhook_post(const uint8_t *work)
 // Build the target URI and the object into this call's own frames, then POST them. A build that
 // does not fit reports -1 and sends nothing. The frames die at return, so the handle stops naming
 // them before the call ends.
-void protocore_webhook_ifttt_trigger(uint8_t *work)
+void protocore_webhook_ifttt_trigger(const uint8_t *work)
 {
     char uri[PROTOCORE_WEBHOOK_URI_CAP];
     char content[PROTOCORE_WEBHOOK_CONTENT_CAP];

@@ -149,8 +149,8 @@ extern CclinkVars CclinkV;
 typedef struct
 {
     void (*const sum)(const uint8_t *work);
-    void (*const build)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const build)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
     void (*const get_bit)(const uint8_t *work);
     void (*const set_bit)(const uint8_t *work);
     void (*const get_word)(const uint8_t *work);
@@ -159,8 +159,8 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CclinkV or a region of the borrow at a fixed offset.
 void protocore_cclink_sum(const uint8_t *work);
-void protocore_cclink_build(uint8_t *work);
-void protocore_cclink_parse(uint8_t *work);
+void protocore_cclink_build(const uint8_t *work);
+void protocore_cclink_parse(const uint8_t *work);
 void protocore_cclink_get_bit(const uint8_t *work);
 void protocore_cclink_set_bit(const uint8_t *work);
 void protocore_cclink_get_word(const uint8_t *work);

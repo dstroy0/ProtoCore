@@ -138,7 +138,7 @@ extern TcpListenerVars TcpListenerV;
 typedef struct
 {
     void (*const stop)(const uint8_t *work);
-    void (*const stop_all)(uint8_t *work);
+    void (*const stop_all)(const uint8_t *work);
     void (*const stop_dynamic)(const uint8_t *work);
     void (*const add)(uint8_t *work);
     void (*const add_dynamic)(uint8_t *work);
@@ -160,7 +160,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in TcpListenerV or a region of the borrow at a fixed offset.
 void protocore_tcp_listener_stop(const uint8_t *work);
-void protocore_tcp_listener_stop_all(uint8_t *work);
+void protocore_tcp_listener_stop_all(const uint8_t *work);
 void protocore_tcp_listener_stop_dynamic(const uint8_t *work);
 void protocore_tcp_listener_add(uint8_t *work);
 void protocore_tcp_listener_add_dynamic(uint8_t *work);

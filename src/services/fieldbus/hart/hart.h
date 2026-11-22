@@ -171,8 +171,8 @@ extern HartVars HartV;
 typedef struct
 {
     void (*const checksum)(const uint8_t *work);
-    void (*const build)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const build)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
     void (*const ip_build_header)(const uint8_t *work);
     void (*const ip_parse_header)(const uint8_t *work);
 } HartNs;
@@ -180,8 +180,8 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HartV or a region of the borrow at a fixed offset.
 void protocore_hart_checksum(const uint8_t *work);
-void protocore_hart_build(uint8_t *work);
-void protocore_hart_parse(uint8_t *work);
+void protocore_hart_build(const uint8_t *work);
+void protocore_hart_parse(const uint8_t *work);
 void protocore_hart_ip_build_header(const uint8_t *work);
 void protocore_hart_ip_parse_header(const uint8_t *work);
 

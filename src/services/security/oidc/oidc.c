@@ -299,7 +299,7 @@ static embed_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size
 
 // The `n` and `e` parameters of one RSA JWK (RFC 7518 sec 6.3.1.1 / 6.3.1.2), base64url-decoded and
 // right-aligned into the key.
-static embed_bool parse_rsa_jwk(uint8_t *work, const char *s, const char *e, protocore_oidc_key *key)
+static embed_bool parse_rsa_jwk(const uint8_t *work, const char *s, const char *e, protocore_oidc_key *key)
 {
     char b64[400];
     if (!get_str(s, e, "n", b64, sizeof(b64)))
@@ -348,7 +348,7 @@ static void claims_clear(protocore_oidc_claims *claims)
 
 // The `kid` Header Parameter (RFC 7515 sec 4.1.4) out of the JOSE Header: split the Compact
 // Serialization, decode the header part, scan it for the member.
-void protocore_oidc_token_kid(uint8_t *work)
+void protocore_oidc_token_kid(const uint8_t *work)
 {
     (void)work;
     OidcV.text[0] = '\0';
@@ -450,7 +450,7 @@ void protocore_oidc_jwks_find(uint8_t *work)
 
 // OIDC Core sec 3.1.3.7 against the key already in ns->key.rsa: steps 6 and 7 (signature and `alg`),
 // then 2, 3 and 9 (`iss`, `aud`, `exp`), then the Claims.
-void protocore_oidc_verify_with_key(uint8_t *work)
+void protocore_oidc_verify_with_key(const uint8_t *work)
 {
     (void)work;
     claims_clear(&OidcV.claims);

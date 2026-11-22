@@ -193,25 +193,25 @@ extern NatsVars NatsV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const connect)(uint8_t *work);
-    void (*const pub)(uint8_t *work);
-    void (*const hpub)(uint8_t *work);
-    void (*const sub)(uint8_t *work);
-    void (*const unsub)(uint8_t *work);
-    void (*const ping)(uint8_t *work);
-    void (*const pong)(uint8_t *work);
+    void (*const connect)(const uint8_t *work);
+    void (*const pub)(const uint8_t *work);
+    void (*const hpub)(const uint8_t *work);
+    void (*const sub)(const uint8_t *work);
+    void (*const unsub)(const uint8_t *work);
+    void (*const ping)(const uint8_t *work);
+    void (*const pong)(const uint8_t *work);
     void (*const parse)(const uint8_t *work);
 } NatsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in NatsV or a region of the borrow at a fixed offset.
-void protocore_nats_connect(uint8_t *work);
-void protocore_nats_pub(uint8_t *work);
-void protocore_nats_hpub(uint8_t *work);
-void protocore_nats_sub(uint8_t *work);
-void protocore_nats_unsub(uint8_t *work);
-void protocore_nats_ping(uint8_t *work);
-void protocore_nats_pong(uint8_t *work);
+void protocore_nats_connect(const uint8_t *work);
+void protocore_nats_pub(const uint8_t *work);
+void protocore_nats_hpub(const uint8_t *work);
+void protocore_nats_sub(const uint8_t *work);
+void protocore_nats_unsub(const uint8_t *work);
+void protocore_nats_ping(const uint8_t *work);
+void protocore_nats_pong(const uint8_t *work);
 void protocore_nats_parse(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

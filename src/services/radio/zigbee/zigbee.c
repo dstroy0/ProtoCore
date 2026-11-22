@@ -51,7 +51,7 @@ static embed_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint16_t protocore_zigbee_ash_crc16(uint8_t *work, const uint8_t *buf, uint16_t len)
+uint16_t protocore_zigbee_ash_crc16(const uint8_t *work, const uint8_t *buf, uint16_t len)
 {
     // ASH uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
     CrcV.args.params = &PROTOCORE_CRC16_IBM_3740;
@@ -61,7 +61,7 @@ uint16_t protocore_zigbee_ash_crc16(uint8_t *work, const uint8_t *buf, uint16_t 
     return (uint16_t)CrcV.value;
 }
 
-uint16_t protocore_zigbee_ash_frame_encode(uint8_t *work, uint8_t control, const uint8_t *payload, uint16_t len,
+uint16_t protocore_zigbee_ash_frame_encode(const uint8_t *work, uint8_t control, const uint8_t *payload, uint16_t len,
                                            uint8_t *out, uint16_t cap)
 {
     if (!out || len > PROTOCORE_ZIGBEE_MAX_DATA || (payload == NULL && len > 0))

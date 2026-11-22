@@ -44,7 +44,6 @@ import os
 import re
 import sys
 
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 PAPERS = os.path.join(ROOT, "build", "papers")
@@ -119,27 +118,23 @@ def main():
     human = [one for one in rows if one[1]["papers"] > 0]
     absent = [one for one in rows if one[1]["papers"] == 0]
 
-    out.write("\n  %d of %d patterns fire in the human papers, %d never do\n"
-              % (len(human), len(rows), len(absent)))
+    out.write("\n  %d of %d patterns fire in the human papers, %d never do\n" % (len(human), len(rows), len(absent)))
 
     out.write("\n  patterns the humans use max, per %d words\n" % int(PER))
     out.write("    %-46s %9s %9s %9s\n" % ("pattern", "papers", "repository", ""))
     for pattern, counts, rates in sorted(human, key=lambda one: -one[2]["papers"])[:worst]:
-        out.write("    %-46s %9.1f %9.1f %9.1f\n"
-                  % (pattern[:46], rates["papers"], rates["repository"], 0.0))
+        out.write("    %-46s %9.1f %9.1f %9.1f\n" % (pattern[:46], rates["papers"], rates["repository"], 0.0))
 
     out.write("\n  patterns absent from every paper but present in this tree\n")
     out.write("    %-46s %9s %9s %9s\n" % ("pattern", "papers", "repository", ""))
     caught = [one for one in absent if one[1]["repository"] > 0]
     for pattern, counts, rates in sorted(caught, key=lambda one: -one[2]["repository"]):
-        out.write("    %-46s %9.1f %9.1f %9.1f\n"
-                  % (pattern[:46], rates["papers"], rates["repository"], 0.0))
+        out.write("    %-46s %9.1f %9.1f %9.1f\n" % (pattern[:46], rates["papers"], rates["repository"], 0.0))
     if not caught:
         out.write("    none\n")
 
     # The summary rate over the whole list. This is the number the ban list is worth as one figure.
-    for label, retain in (("every pattern", rows),
-                        ("only the ones no paper uses", absent)):
+    for label, retain in (("every pattern", rows), ("only the ones no paper uses", absent)):
         totals = dict.fromkeys(arms, 0)
         for pattern, counts, rates in retain:
             for name in arms:

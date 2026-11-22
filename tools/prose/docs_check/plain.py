@@ -49,8 +49,10 @@ from .prose import prose_only
 DISPLAY = (
     re.compile(r"\$\$.*?\$\$", re.DOTALL),
     re.compile(r"\\\[.*?\\\]", re.DOTALL),
-    re.compile(r"\\begin\{(equation|align|gather|multline|tabular|array|matrix|verbatim|lstlisting)"
-               r"\*?\}.*?\\end\{\1\*?\}", re.DOTALL),
+    re.compile(
+        r"\\begin\{(equation|align|gather|multline|tabular|array|matrix|verbatim|lstlisting)" r"\*?\}.*?\\end\{\1\*?\}",
+        re.DOTALL,
+    ),
 )
 
 # Fenced and inline code. The fence has to go before the line walk, since its contents can be
@@ -58,9 +60,9 @@ DISPLAY = (
 FENCE = re.compile(r"^\s*(```|~~~)", re.MULTILINE)
 
 INLINE = (
-    re.compile(r"`[^`]*`"),                 # markdown code span
-    re.compile(r"\$[^$\n]{1,200}\$"),       # inline TeX
-    re.compile(r"\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^{}]*\})*"),   # a TeX control sequence and its arguments
+    re.compile(r"`[^`]*`"),  # markdown code span
+    re.compile(r"\$[^$\n]{1,200}\$"),  # inline TeX
+    re.compile(r"\\[a-zA-Z]+\*?(\[[^\]]*\])?(\{[^{}]*\})*"),  # a TeX control sequence and its arguments
 )
 
 # A line that is structure and not language.
@@ -166,10 +168,10 @@ def readable(text, min_words):
 def show_plain():
     parser = argparse.ArgumentParser(description="Prose with the mathematics taken out.")
     parser.add_argument("--out", default=None)
-    parser.add_argument("--min-words", type=int, default=12,
-                        help="drop anything shorter, which is a caption or a stray label")
-    parser.add_argument("--headers", action="store_true",
-                        help="for a source file, read its comments and docstrings")
+    parser.add_argument(
+        "--min-words", type=int, default=12, help="drop anything shorter, which is a caption or a stray label"
+    )
+    parser.add_argument("--headers", action="store_true", help="for a source file, read its comments and docstrings")
     parser.add_argument("paths", nargs="+")
     given = parser.parse_args()
 

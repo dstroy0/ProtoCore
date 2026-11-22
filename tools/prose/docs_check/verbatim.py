@@ -7,8 +7,6 @@
 
 import os
 
-
-
 # --------------------------------------------------------------------
 # VERBATIM THIRD-PARTY TEXT
 # --------------------------------------------------------------------
@@ -82,9 +80,7 @@ def verbatim_root(path):
                 "declared by a %s marker in that directory" % VERBATIM_MARKER,
             )
             break
-        if os.path.isdir(os.path.join(here, ".git")) or os.path.isfile(
-            os.path.join(here, ".git")
-        ):
+        if os.path.isdir(os.path.join(here, ".git")) or os.path.isfile(os.path.join(here, ".git")):
             answer = None
             break
         up = os.path.dirname(here)

@@ -23,7 +23,6 @@ sys.path.insert(0, HERE)
 
 import docs_check
 
-
 # ============================================================================
 # GROUND TRUTH FOR THE ALPHABET STAGE
 # ============================================================================
@@ -399,27 +398,19 @@ class BuildFilesAreReadAtAll(unittest.TestCase):
         # Asserted against the roots this repository actually scans. The selection rule is
         # measured where it has to work and not only against a made-up path.
         roots = list(docs_check.DEFAULT_ROOTS)
-        got = [
-            one for one in docs_check.walk_markdown(roots) if docs_check.build_file(one)
-        ]
+        got = [one for one in docs_check.walk_markdown(roots) if docs_check.build_file(one)]
         types = sorted(
             {
                 (
                     os.path.basename(one)
-                    if os.path.basename(one) in docs_check.BUILD_NAMES
-                    or os.path.basename(one) in docs_check.HOOK_NAMES
+                    if os.path.basename(one) in docs_check.BUILD_NAMES or os.path.basename(one) in docs_check.HOOK_NAMES
                     else os.path.splitext(one)[1]
                 )
                 for one in got
             }
         )
-        print(
-            "\n  build files under this tree's own roots: %d, of types %s"
-            % (len(got), types)
-        )
-        self.assertGreater(
-            len(got), 0, "no build file was selected under this tree's own roots"
-        )
+        print("\n  build files under this tree's own roots: %d, of types %s" % (len(got), types))
+        self.assertGreater(len(got), 0, "no build file was selected under this tree's own roots")
         self.assertIn("CMakeLists.txt", types)
         self.assertIn("pre-commit", types)
 
@@ -462,9 +453,7 @@ class TheCommentExtractorForTheHashForm(unittest.TestCase):
         # The dispatch and not only the helper, because a caller that has to know which extractor to
         # call is a caller that will get it wrong. submission_check.py imports CHECKED and
         # prose_only and never asks what type of file it has.
-        said = docs_check.prose_only(
-            "x/CMakeLists.txt", ["set(a 1)", "# undefined behaviour"]
-        )
+        said = docs_check.prose_only("x/CMakeLists.txt", ["set(a 1)", "# undefined behaviour"])
         self.assertEqual(said[0], "")
         self.assertIn("behaviour", said[1])
 
@@ -487,8 +476,7 @@ class TheAlphabetStageIsAPatternAndNotAList(unittest.TestCase):
             self.assertIn(
                 pattern,
                 docs_check.BANNED,
-                "a definition pattern that BANNED does not hold reports nothing: %r"
-                % pattern,
+                "a definition pattern that BANNED does not hold reports nothing: %r" % pattern,
             )
         self.assertEqual(len(set(docs_check.LOCALE)), len(docs_check.LOCALE))
 
@@ -511,9 +499,7 @@ class TheAlphabetStageIsAPatternAndNotAList(unittest.TestCase):
         )
         self.assertEqual(docs_check.LOCALE[: len(first_ten)], first_ten)
         dead = [one for one in first_ten if one not in docs_check.HUMAN_RATE]
-        self.assertEqual(
-            dead, [r"\bwhilst\b"], "a measured rate lost its key: %s" % (dead,)
-        )
+        self.assertEqual(dead, [r"\bwhilst\b"], "a measured rate lost its key: %s" % (dead,))
 
     def test_every_definition_pattern_is_the_alphabet_tier(self):
         for pattern in docs_check.LOCALE:
@@ -761,9 +747,7 @@ class TheOtherStagesAreUntouched(unittest.TestCase):
 
     def test_the_structural_gate_errors_a_doxygen_reference(self):
         self.assertFalse(docs_check.path_candidate("@ref HTTP_10"))
-        self.assertFalse(
-            docs_check.path_candidate("const char *user, const char *pass")
-        )
+        self.assertFalse(docs_check.path_candidate("const char *user, const char *pass"))
         self.assertTrue(docs_check.path_candidate("docs/README.md"))
 
     def test_the_tiers_name_their_sections(self):

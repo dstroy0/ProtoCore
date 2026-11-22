@@ -123,7 +123,7 @@ def repository_files(where=None, roots=None):
     """
     where = where or ROOT
     found = []
-    for root in (roots or DEFAULT_ROOTS):
+    for root in roots or DEFAULT_ROOTS:
         base = root if os.path.isabs(root) else os.path.join(where, root)
         if not os.path.isdir(base):
             continue
@@ -158,10 +158,8 @@ def named_roots(argv):
 
     for one in given:
         if not os.path.isdir(one):
-            raise SystemExit("  %s is not a directory. Nothing was measured. Nothing passed."
-                             % one)
-    where = os.path.commonpath([os.path.abspath(one) for one in given]) if len(given) > 1 \
-        else os.path.abspath(given[0])
+            raise SystemExit("  %s is not a directory. Nothing was measured. Nothing passed." % one)
+    where = os.path.commonpath([os.path.abspath(one) for one in given]) if len(given) > 1 else os.path.abspath(given[0])
     if os.path.isfile(where):
         where = os.path.dirname(where)
     return where, [os.path.abspath(one) for one in given]
@@ -244,8 +242,7 @@ def main():
     out.write("\n  against the human spread of %.4f to %.4f\n" % (low, high))
     out.write("    %4d files sit inside it\n" % len(inside))
     out.write("    %4d sit below it, closer to ordinary English than any paper\n" % len(below))
-    out.write("    %4d sit above it, further from English than all %d papers\n"
-              % (len(above), len(human)))
+    out.write("    %4d sit above it, further from English than all %d papers\n" % (len(above), len(human)))
 
     out.write("\n  furthest from English, worst first\n")
     for score, path in list(reversed(mine))[:worst]:

@@ -92,8 +92,7 @@ def sentences(text):
     """
     text = re.sub(r"\s+", " ", text)
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z(])", text)
-    return [len(re.findall(WORD_PATTERN, p)) for p in parts
-            if len(re.findall(WORD_PATTERN, p)) >= 3]
+    return [len(re.findall(WORD_PATTERN, p)) for p in parts if len(re.findall(WORD_PATTERN, p)) >= 3]
 
 
 def burstiness(lengths):
@@ -132,8 +131,10 @@ def show_rate(roots):
         print("  no files were read. Nothing was checked, so nothing passed.")
         return 2
 
-    print("  drawn bars, from docs_check: machine %.1f   human %.1f   this tree %.1f"
-          % (MACHINE_RATE, HUMAN_RATE, TREE_RATE))
+    print(
+        "  drawn bars, from docs_check: machine %.1f   human %.1f   this tree %.1f"
+        % (MACHINE_RATE, HUMAN_RATE, TREE_RATE)
+    )
     print("  %-58s %7s %8s  %s" % ("file", "words", "per100k", "verdict"))
 
     total_words = 0
@@ -168,8 +169,10 @@ def show_rate(roots):
     usable = [cv for _, (mean, _, cv) in rhythm if mean]
     if usable:
         print("")
-        print("  coefficient of variation, low to high: %.3f to %.3f, median %.3f"
-              % (min(usable), max(usable), sorted(usable)[len(usable) // 2]))
+        print(
+            "  coefficient of variation, low to high: %.3f to %.3f, median %.3f"
+            % (min(usable), max(usable), sorted(usable)[len(usable) // 2])
+        )
         print("  A file well below the others is writing at one length, which is the tell a ban")
         print("  list cannot see. Compare a suspect file against this tree's own chapters, since")
         print("  those are the drawn bar for what this corpus sounds like.")
@@ -177,8 +180,7 @@ def show_rate(roots):
     if total_words:
         overall = (total_hits * 100000.0) / total_words
         print("")
-        print("  %d words, %d hits, %.1f per 100k overall: %s"
-              % (total_words, total_hits, overall, verdict(overall)))
+        print("  %d words, %d hits, %.1f per 100k overall: %s" % (total_words, total_hits, overall, verdict(overall)))
 
         # The shapes carrying the rate, since a number without its cause cannot be acted on.
         tally = {}

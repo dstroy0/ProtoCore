@@ -384,7 +384,7 @@ typedef struct
     void (*const build_server_hello)(const uint8_t *work);
     void (*const build_encrypted_extensions)(const uint8_t *work);
     void (*const build_certificate)(const uint8_t *work);
-    void (*const build_cert_verify)(uint8_t *work);
+    void (*const build_cert_verify)(const uint8_t *work);
     void (*const build_finished)(const uint8_t *work);
     void (*const cert_verify_content)(const uint8_t *work);
     void (*const build_hello_retry_request)(const uint8_t *work);
@@ -403,7 +403,7 @@ void protocore_tls13_msg_parse_finished(const uint8_t *work);
 void protocore_tls13_msg_build_server_hello(const uint8_t *work);
 void protocore_tls13_msg_build_encrypted_extensions(const uint8_t *work);
 void protocore_tls13_msg_build_certificate(const uint8_t *work);
-void protocore_tls13_msg_build_cert_verify(uint8_t *work);
+void protocore_tls13_msg_build_cert_verify(const uint8_t *work);
 void protocore_tls13_msg_build_finished(const uint8_t *work);
 void protocore_tls13_msg_cert_verify_content(const uint8_t *work);
 void protocore_tls13_msg_build_hello_retry_request(const uint8_t *work);

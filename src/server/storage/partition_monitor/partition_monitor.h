@@ -117,7 +117,7 @@ extern PartitionMonitorVars PartitionMonitorV;
 typedef struct
 {
     void (*const kind)(const uint8_t *work);
-    void (*const json)(uint8_t *work);
+    void (*const json)(const uint8_t *work);
     void (*const collect)(const uint8_t *work);
     void (*const begin)(const uint8_t *work);
 } PartitionMonitorNs;
@@ -125,7 +125,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PartitionMonitorV or a region of the borrow at a fixed offset.
 void protocore_partition_monitor_kind(const uint8_t *work);
-void protocore_partition_monitor_json(uint8_t *work);
+void protocore_partition_monitor_json(const uint8_t *work);
 void protocore_partition_monitor_collect(const uint8_t *work);
 void protocore_partition_monitor_begin(const uint8_t *work);
 

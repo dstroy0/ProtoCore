@@ -166,16 +166,16 @@ extern Ad9238Vars Ad9238V;
 typedef struct
 {
     void (*const build_instruction)(const uint8_t *work);
-    void (*const build_write)(uint8_t *work);
-    void (*const build_read)(uint8_t *work);
+    void (*const build_write)(const uint8_t *work);
+    void (*const build_read)(const uint8_t *work);
     void (*const build_transfer)(uint8_t *work);
 } Ad9238Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Ad9238V or a region of the borrow at a fixed offset.
 void protocore_ad9238_build_instruction(const uint8_t *work);
-void protocore_ad9238_build_write(uint8_t *work);
-void protocore_ad9238_build_read(uint8_t *work);
+void protocore_ad9238_build_write(const uint8_t *work);
+void protocore_ad9238_build_read(const uint8_t *work);
 void protocore_ad9238_build_transfer(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

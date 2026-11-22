@@ -117,7 +117,7 @@ static inline void http_release_upgrade_bindings(uint8_t slot_id)
 #endif
 }
 
-void protocore_http_conn_conn_open(uint8_t *work)
+void protocore_http_conn_conn_open(const uint8_t *work)
 {
     if (HttpConnV.slot >= MAX_CONNS)
     {

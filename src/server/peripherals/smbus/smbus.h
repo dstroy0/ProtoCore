@@ -43,8 +43,8 @@ EMBED_BEGIN_DECLS
 typedef struct
 {
     uint8_t (*addr_byte)(const uint8_t *, uint8_t, uint8_t);
-    uint8_t (*pec_write)(uint8_t *, uint8_t, const uint8_t *, size_t);
-    uint8_t (*pec_read)(uint8_t *, uint8_t, const uint8_t *, size_t, const uint8_t *, size_t);
+    uint8_t (*pec_write)(const uint8_t *, uint8_t, const uint8_t *, size_t);
+    uint8_t (*pec_read)(const uint8_t *, uint8_t, const uint8_t *, size_t, const uint8_t *, size_t);
     void (*set_pec)(uint8_t *, embed_bool);
     embed_bool (*pec_enabled)(uint8_t *);
     embed_bool (*begin)(const uint8_t *);
@@ -80,7 +80,7 @@ uint8_t protocore_smbus_addr_byte(const uint8_t *work, uint8_t addr, uint8_t rw)
  * @param len Len
  * @return The uint8_t.
  */
-uint8_t protocore_smbus_pec_write(uint8_t *work, uint8_t addr, const uint8_t *payload, size_t len);
+uint8_t protocore_smbus_pec_write(const uint8_t *work, uint8_t addr, const uint8_t *payload, size_t len);
 /**
  * @brief PEC over a read transaction, which covers both halves and the .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
@@ -91,8 +91,8 @@ uint8_t protocore_smbus_pec_write(uint8_t *work, uint8_t addr, const uint8_t *pa
  * @param glen Glen
  * @return The uint8_t.
  */
-uint8_t protocore_smbus_pec_read(uint8_t *work, uint8_t addr, const uint8_t *sent, size_t slen, const uint8_t *got,
-                                 size_t glen);
+uint8_t protocore_smbus_pec_read(const uint8_t *work, uint8_t addr, const uint8_t *sent, size_t slen,
+                                 const uint8_t *got, size_t glen);
 /**
  * @brief Turn the Packet Error Code on or off for every transaction that .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.

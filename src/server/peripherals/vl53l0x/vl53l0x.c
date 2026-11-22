@@ -46,7 +46,7 @@ uint8_t *protocore_vl53l0x_span(void)
 
 void protocore_vl53l0x_range_mm(const uint8_t *work);
 void protocore_vl53l0x_range_status(const uint8_t *work);
-void protocore_vl53l0x_range_valid(uint8_t *work);
+void protocore_vl53l0x_range_valid(const uint8_t *work);
 
 void protocore_vl53l0x_range_mm(const uint8_t *work)
 {
@@ -73,7 +73,7 @@ void protocore_vl53l0x_range_status(const uint8_t *work)
     Vl53l0xV.status = (uint8_t)((range_status_reg >> 3) & 0x0F);
 }
 
-void protocore_vl53l0x_range_valid(uint8_t *work)
+void protocore_vl53l0x_range_valid(const uint8_t *work)
 {
     uint8_t range_status_reg = Vl53l0xV.range_valid_args.range_status_reg;
 

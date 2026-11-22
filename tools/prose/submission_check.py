@@ -203,11 +203,7 @@ def tracked(root):
     listed = git(root, "ls-files")
     if listed is None:
         return None
-    return [
-        os.path.join(root, one.replace("/", os.sep))
-        for one in listed.splitlines()
-        if one
-    ]
+    return [os.path.join(root, one.replace("/", os.sep)) for one in listed.splitlines() if one]
 
 
 def counted(paths, base, out):
@@ -248,51 +244,27 @@ def register(out, tally, words):
     scale = 100000.0 / words
 
     total = sum(tally.values()) * scale
-    phrase = (
-        sum(count for pattern, count in tally.items() if stage_of(pattern) == "phrase")
-        * scale
-    )
-    absent = (
-        sum(count for pattern, count in tally.items() if pattern not in HUMAN_RATE)
-        * scale
-    )
+    phrase = sum(count for pattern, count in tally.items() if stage_of(pattern) == "phrase") * scale
+    absent = sum(count for pattern, count in tally.items() if pattern not in HUMAN_RATE) * scale
 
     out.write("\n  REGISTER, per hundred thousand words of prose\n")
-    out.write(
-        ROW_FORMAT
-        % ("the whole banned list", total, HUMAN_WHOLE, times(total, HUMAN_WHOLE))
-    )
-    out.write(
-        ROW_FORMAT
-        % ("the phrase stage", phrase, phrase_human(), times(phrase, phrase_human()))
-    )
-    out.write(
-        ROW_FORMAT
-        % ("patterns humans never use", absent, 0.0, "no human rate to divide by")
-    )
+    out.write(ROW_FORMAT % ("the whole banned list", total, HUMAN_WHOLE, times(total, HUMAN_WHOLE)))
+    out.write(ROW_FORMAT % ("the phrase stage", phrase, phrase_human(), times(phrase, phrase_human())))
+    out.write(ROW_FORMAT % ("patterns humans never use", absent, 0.0, "no human rate to divide by"))
 
-    ranked = sorted(
-        tally.items(), key=lambda one: excess(one[0], one[1] * scale), reverse=True
-    )
+    ranked = sorted(tally.items(), key=lambda one: excess(one[0], one[1] * scale), reverse=True)
     if not ranked:
         return
-    out.write(
-        "\n    %-46s %5s %8s %8s %9s\n" % ("token", "n", "here", "human", "times")
-    )
+    out.write("\n    %-46s %5s %8s %8s %9s\n" % ("token", "n", "here", "human", "times"))
     for pattern, count in ranked:
         rate = count * scale
         human = HUMAN_RATE.get(pattern, 0.0)
-        out.write(
-            "    %-46s %5d %8.1f %8.1f %9s\n"
-            % (readable(pattern), count, rate, human, times(rate, human))
-        )
+        out.write("    %-46s %5d %8.1f %8.1f %9s\n" % (readable(pattern), count, rate, human, times(rate, human)))
 
 
 def phrase_human():
     """What a human writer carries for the phrase stage, summed from the same table."""
-    return sum(
-        rate for pattern, rate in HUMAN_RATE.items() if stage_of(pattern) == "phrase"
-    )
+    return sum(rate for pattern, rate in HUMAN_RATE.items() if stage_of(pattern) == "phrase")
 
 
 def excess(pattern, rate):
@@ -321,9 +293,7 @@ def readable(pattern):
 def main():
     import io
 
-    out = io.TextIOWrapper(
-        sys.stdout.buffer, encoding="utf-8", errors="replace", newline=""
-    )
+    out = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", newline="")
 
     tree = "--tree" in sys.argv
     given = [one for one in sys.argv[1:] if not one.startswith("-")]
@@ -351,10 +321,7 @@ def main():
 
     tally, words, read = counted(paths, base, out)
 
-    out.write(
-        "\n  %d file(s) offered, %d read, %s words of prose\n"
-        % (len(paths), read, format(words, ","))
-    )
+    out.write("\n  %d file(s) offered, %d read, %s words of prose\n" % (len(paths), read, format(words, ",")))
 
     register(out, tally, words)
 

@@ -350,7 +350,7 @@ typedef struct
     void (*const vout_exponent)(const uint8_t *work);
     void (*const l11_mantissa)(const uint8_t *work);
     void (*const l11_exponent)(const uint8_t *work);
-    void (*const linear11_micro)(uint8_t *work);
+    void (*const linear11_micro)(const uint8_t *work);
     void (*const linear11_encode)(const uint8_t *work);
     void (*const linear16_micro)(const uint8_t *work);
     void (*const linear16_encode)(const uint8_t *work);
@@ -359,8 +359,8 @@ typedef struct
     void (*const set_page)(const uint8_t *work);
     void (*const read_vout_mode)(const uint8_t *work);
     void (*const read_linear11)(uint8_t *work);
-    void (*const read_linear16)(uint8_t *work);
-    void (*const write_linear16)(uint8_t *work);
+    void (*const read_linear16)(const uint8_t *work);
+    void (*const write_linear16)(const uint8_t *work);
     void (*const status_byte)(const uint8_t *work);
     void (*const status_word)(const uint8_t *work);
     void (*const clear_faults)(const uint8_t *work);

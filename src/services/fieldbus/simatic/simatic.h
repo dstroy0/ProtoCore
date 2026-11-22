@@ -311,7 +311,7 @@ extern SimaticVars SimaticV;
 typedef struct
 {
     void (*const bcc_3964r)(const uint8_t *work);
-    void (*const build_block_3964r)(uint8_t *work);
+    void (*const build_block_3964r)(const uint8_t *work);
     void (*const parse_block_3964r)(uint8_t *work);
     void (*const init_3964r)(const uint8_t *work);
     void (*const send_3964r)(uint8_t *work);
@@ -328,7 +328,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SimaticV or a region of the borrow at a fixed offset.
 void protocore_simatic_bcc_3964r(const uint8_t *work);
-void protocore_simatic_build_block_3964r(uint8_t *work);
+void protocore_simatic_build_block_3964r(const uint8_t *work);
 void protocore_simatic_parse_block_3964r(uint8_t *work);
 void protocore_simatic_init_3964r(const uint8_t *work);
 void protocore_simatic_send_3964r(uint8_t *work);

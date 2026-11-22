@@ -90,7 +90,7 @@ typedef struct
     void (*const state)(const uint8_t *work);
     void (*const commit)(const uint8_t *work);
     void (*const rollback)(const uint8_t *work);
-    void (*const tick)(uint8_t *work);
+    void (*const tick)(const uint8_t *work);
 } OtaRollbackNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -99,7 +99,7 @@ void protocore_ota_rollback_decide(const uint8_t *work);
 void protocore_ota_rollback_state(const uint8_t *work);
 void protocore_ota_rollback_commit(const uint8_t *work);
 void protocore_ota_rollback_rollback(const uint8_t *work);
-void protocore_ota_rollback_tick(uint8_t *work);
+void protocore_ota_rollback_tick(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

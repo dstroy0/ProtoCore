@@ -21,7 +21,7 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_hostlink_build(uint8_t *work);
+void protocore_hostlink_build(const uint8_t *work);
 void protocore_hostlink_fcs(const uint8_t *work);
 
 void protocore_hostlink_fcs(const uint8_t *work)
@@ -61,7 +61,7 @@ static int hex_val(char c)
     return -1;
 }
 
-void protocore_hostlink_build(uint8_t *work)
+void protocore_hostlink_build(const uint8_t *work)
 {
     char *buf = HostlinkV.build_args.buf;
     size_t cap = HostlinkV.build_args.cap;
@@ -110,7 +110,7 @@ void protocore_hostlink_build(uint8_t *work)
     HostlinkV.n = p;
 }
 
-void protocore_hostlink_parse(uint8_t *work)
+void protocore_hostlink_parse(const uint8_t *work)
 {
     const char *buf = HostlinkV.parse_args.buf;
     size_t len = HostlinkV.parse_args.len;
@@ -247,7 +247,7 @@ void protocore_hostlink_read_word(const uint8_t *work)
     HostlinkV.ok = EMBED_TRUE;
 }
 
-void protocore_hostlink_build_write(uint8_t *work)
+void protocore_hostlink_build_write(const uint8_t *work)
 {
     char *buf = HostlinkV.build_write_args.buf;
     size_t cap = HostlinkV.build_write_args.cap;

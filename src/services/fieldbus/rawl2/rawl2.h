@@ -149,7 +149,7 @@ typedef struct
     void (*const build)(const uint8_t *work);
     void (*const build_vlan)(const uint8_t *work);
     void (*const parse)(const uint8_t *work);
-    void (*const fcs)(uint8_t *work);
+    void (*const fcs)(const uint8_t *work);
 } Rawl2Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -157,7 +157,7 @@ typedef struct
 void protocore_rawl2_build(const uint8_t *work);
 void protocore_rawl2_build_vlan(const uint8_t *work);
 void protocore_rawl2_parse(const uint8_t *work);
-void protocore_rawl2_fcs(uint8_t *work);
+void protocore_rawl2_fcs(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

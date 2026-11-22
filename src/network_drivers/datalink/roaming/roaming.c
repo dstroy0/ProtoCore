@@ -81,7 +81,7 @@ static void pick(const uint8_t *work, int idx, protocore_roam_reason reason)
     RoamV.decision.reason = reason;
 }
 
-void protocore_roam_decide(uint8_t *work)
+void protocore_roam_decide(const uint8_t *work)
 {
     const uint8_t *serving = RoamV.link.bssid;
     const int8_t serving_rssi = RoamV.link.rssi_dbm;

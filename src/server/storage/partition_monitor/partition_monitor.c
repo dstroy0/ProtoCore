@@ -117,7 +117,7 @@ static const mmgr_field PART_ENTRY[] = {
 };
 static const mmgr_field PART_CLOSE[] = {{MMGR_FK_LIT, 0, 2, "]}"}, MMGR_END};
 
-void protocore_partition_monitor_json(uint8_t *work)
+void protocore_partition_monitor_json(const uint8_t *work)
 {
     (void)work;
     const protocore_partition_info *parts = PartitionMonitorV.json_args.parts;

@@ -68,7 +68,7 @@ typedef struct
     embed_bool (*send)(const uint8_t *, const protocore_cc1101_bus *, const uint8_t *, uint8_t);
     embed_bool (*tx_done)(const uint8_t *, const protocore_cc1101_bus *);
     void (*set_rx)(const uint8_t *, const protocore_cc1101_bus *);
-    int (*recv)(uint8_t *, const protocore_cc1101_bus *, uint8_t *, uint8_t, int16_t *);
+    int (*recv)(const uint8_t *, const protocore_cc1101_bus *, uint8_t *, uint8_t, int16_t *);
     int16_t (*rssi_dbm)(const uint8_t *, uint8_t);
 } Cc1101Ns;
 PROTOCORE_NS_LAYOUT(Cc1101Ns, init, send, tx_done, set_rx, recv, rssi_dbm);
@@ -114,7 +114,8 @@ void protocore_cc1101_set_rx(const uint8_t *work, const protocore_cc1101_bus *bu
  * @param rssi_dbm Rssi dbm
  * @return The int.
  */
-int protocore_cc1101_recv(uint8_t *work, const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm);
+int protocore_cc1101_recv(const uint8_t *work, const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap,
+                          int16_t *rssi_dbm);
 /**
  * @brief Convert a raw CC1101 RSSI register value to dBm (TI datasheet .
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.

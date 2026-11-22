@@ -129,7 +129,7 @@ void protocore_cip_build_request(const uint8_t *work)
     CipV.n = p;
 }
 
-void protocore_cip_build_get_attr_single(uint8_t *work)
+void protocore_cip_build_get_attr_single(const uint8_t *work)
 {
     uint8_t *buf = CipV.build_get_attr_single_args.buf;
     size_t cap = CipV.build_get_attr_single_args.cap;
@@ -145,6 +145,7 @@ void protocore_cip_build_get_attr_single(uint8_t *work)
     CipV.build_epath_args.attribute_id = attribute_id;
     CipV.build_epath_args.with_attribute = EMBED_TRUE;
     protocore_cip_build_epath(work);
+    CipV.build_epath_args.buf = NULL;
     size_t elen = CipV.n;
     if (!elen)
     {
@@ -162,7 +163,7 @@ void protocore_cip_build_get_attr_single(uint8_t *work)
     CipV.build_request_args.epath = NULL;
 }
 
-void protocore_cip_build_get_attr_all(uint8_t *work)
+void protocore_cip_build_get_attr_all(const uint8_t *work)
 {
     uint8_t *buf = CipV.build_get_attr_all_args.buf;
     size_t cap = CipV.build_get_attr_all_args.cap;
@@ -177,6 +178,7 @@ void protocore_cip_build_get_attr_all(uint8_t *work)
     CipV.build_epath_args.attribute_id = 0;
     CipV.build_epath_args.with_attribute = EMBED_FALSE;
     protocore_cip_build_epath(work);
+    CipV.build_epath_args.buf = NULL;
     size_t elen = CipV.n;
     if (!elen)
     {
@@ -194,7 +196,7 @@ void protocore_cip_build_get_attr_all(uint8_t *work)
     CipV.build_request_args.epath = NULL;
 }
 
-void protocore_cip_build_set_attr_single(uint8_t *work)
+void protocore_cip_build_set_attr_single(const uint8_t *work)
 {
     uint8_t *buf = CipV.build_set_attr_single_args.buf;
     size_t cap = CipV.build_set_attr_single_args.cap;
@@ -212,6 +214,7 @@ void protocore_cip_build_set_attr_single(uint8_t *work)
     CipV.build_epath_args.attribute_id = attribute_id;
     CipV.build_epath_args.with_attribute = EMBED_TRUE;
     protocore_cip_build_epath(work);
+    CipV.build_epath_args.buf = NULL;
     size_t elen = CipV.n;
     if (!elen)
     {

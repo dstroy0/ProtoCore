@@ -151,7 +151,7 @@ void protocore_devicenet_frag_octet(const uint8_t *work)
     DevicenetV.value = (uint8_t)((type & DEVICENET_FRAG_TYPE_MASK) | (count & DEVICENET_FRAG_COUNT_MASK));
 }
 
-void protocore_devicenet_build_explicit(uint8_t *work)
+void protocore_devicenet_build_explicit(const uint8_t *work)
 {
     CanFrame *out = DevicenetV.build_explicit_args.out;
     DeviceNetGroup group = DevicenetV.build_explicit_args.group;
@@ -194,7 +194,7 @@ void protocore_devicenet_build_explicit(uint8_t *work)
     DevicenetV.ok = EMBED_TRUE;
 }
 
-void protocore_devicenet_build_fragment(uint8_t *work)
+void protocore_devicenet_build_fragment(const uint8_t *work)
 {
     CanFrame *out = DevicenetV.build_fragment_args.out;
     DeviceNetGroup group = DevicenetV.build_fragment_args.group;
@@ -278,7 +278,7 @@ static embed_bool frag_append(DeviceNetFragRx *rx, const uint8_t *p, uint8_t n)
     return EMBED_TRUE;
 }
 
-void protocore_devicenet_frag_feed(uint8_t *work)
+void protocore_devicenet_frag_feed(const uint8_t *work)
 {
     DeviceNetFragRx *rx = DevicenetV.frag_feed_args.rx;
     const uint8_t *body = DevicenetV.frag_feed_args.body;

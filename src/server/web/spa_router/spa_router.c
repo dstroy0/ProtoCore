@@ -23,7 +23,7 @@ EMBED_BEGIN_DECLS
 // never read.
 
 void protocore_spa_router_has_extension(const uint8_t *work);
-void protocore_spa_router_route(uint8_t *work);
+void protocore_spa_router_route(const uint8_t *work);
 
 void protocore_spa_router_has_extension(const uint8_t *work)
 {
@@ -66,7 +66,7 @@ void protocore_spa_router_has_extension(const uint8_t *work)
     SpaRouterV.ok = dot && dot != seg && dot[1] != '\0';
 }
 
-void protocore_spa_router_route(uint8_t *work)
+void protocore_spa_router_route(const uint8_t *work)
 {
     (void)work;
     const char *path = SpaRouterV.route_args.path;
