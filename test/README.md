@@ -27904,9 +27904,9 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles</b> &mdash; <i>One short of the wrap issues the last legal number; the next call refuses and the counter is</i></summary>
+    <summary><b>test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles</b> &mdash; <i>One short of the wrap issues the last legal number. The next call refuses and the counter is</i></summary>
 
-    * **Objective**: One short of the wrap issues the last legal number; the next call refuses and the counter is
+    * **Objective**: One short of the wrap issues the last legal number. The next call refuses and the counter is
     * **Assertions**:
       * <code>Assert not null (sa)</code>
       * <code>Assert true (IpsecDbV.ok)</code>
@@ -31331,9 +31331,9 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_a_name_this_host_does_not_own_draws_silence</b> &mdash; <i>The A record is the egress address, and there is none on a host with no link up, so the name</i></summary>
+    <summary><b>test_a_name_this_host_does_not_own_draws_silence</b> &mdash; <i>The A record is the egress address. There is none on a host with no link up, so the name</i></summary>
 
-    * **Objective**: The A record is the egress address, and there is none on a host with no link up, so the name
+    * **Objective**: The A record is the egress address. There is none on a host with no link up, so the name
     * **Assertions**:
       * <code>Assert true (MdnsServiceV.ok)</code>
       * <code>TEST_ASSERT_EQUAL_size_t(0u, protocore_net_host_udp_sent());</code>
@@ -32197,9 +32197,9 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_quantity_bounds</b> &mdash; <i>the top of the spec's range is never a data-value problem: it either reads, or it runs</i></summary>
+    <summary><b>test_quantity_bounds</b> &mdash; <i>the top of the spec's range is never a data-value problem. It either reads, or it runs</i></summary>
 
-    * **Objective**: the top of the spec's range is never a data-value problem: it either reads, or it runs
+    * **Objective**: the top of the spec's range is never a data-value problem. It either reads, or it runs
     * **Assertions**:
       * <code>Assert equal uint (2u, run_pdu(pdu, sizeof(pdu), &rsp))</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(MODBUS_EX_ILLEGAL_DATA_VALUE, rsp[1]);</code>
@@ -46037,9 +46037,9 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_zero_hold_still_debounces</b> &mdash; <i>the LOW is not believed until it too has outlasted the debounce; then presence goes at once</i></summary>
+    <summary><b>test_zero_hold_still_debounces</b> &mdash; <i>the LOW is not believed until it too outlasted the debounce; then presence goes at once</i></summary>
 
-    * **Objective**: the LOW is not believed until it too has outlasted the debounce; then presence goes at once
+    * **Objective**: the LOW is not believed until it too outlasted the debounce; then presence goes at once
     * **Assertions**:
       * <code>Assert false (feed(EMBED_TRUE, 0))</code>
       * <code>Assert false (feed(EMBED_TRUE, DEBOUNCE - 1))</code>
@@ -49034,9 +49034,9 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_scpi99_error_class_sets_its_esr_bit</b> &mdash; <i>sec 21.8: "The value, zero, is also reserved to indicate that no error or event has occurred"</i></summary>
+    <summary><b>test_scpi99_error_class_sets_its_esr_bit</b> &mdash; <i>sec 21.8: "The value, zero, is also reserved to indicate that no error or event occurred"</i></summary>
 
-    * **Objective**: sec 21.8: "The value, zero, is also reserved to indicate that no error or event has occurred"
+    * **Objective**: sec 21.8: "The value, zero, is also reserved to indicate that no error or event occurred"
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_HEX8(CASES[i].bit, s.esr);</code>
       * <code>TEST_ASSERT_EQUAL_HEX8(0, s.esr);</code>
@@ -61060,9 +61060,9 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_rfc8448_records_open_again</b> &mdash; <i>Opening the same record again is a different sequence number, so it no longer verifies: this</i></summary>
+    <summary><b>test_rfc8448_records_open_again</b> &mdash; <i>Opening the same record again is a different sequence number. So it no longer verifies: this</i></summary>
 
-    * **Objective**: Opening the same record again is a different sequence number, so it no longer verifies: this
+    * **Objective**: Opening the same record again is a different sequence number. So it no longer verifies: this
     * **Assertions**:
       * <code>Assert true (unprotect(CLIENT_FINISHED_RECORD, sizeof(CLIENT_FINISHED_RECORD), pt, sizeof(pt), &info))</code>
       * <code>TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_HANDSHAKE, info.content_type);</code>

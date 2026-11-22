@@ -2151,7 +2151,7 @@ const protocore_theme_blob PROTOCORE_THEME_BLOBS[] = {
 };
 const size_t PROTOCORE_THEME_BLOB_COUNT = sizeof(PROTOCORE_THEME_BLOBS) / sizeof(PROTOCORE_THEME_BLOBS[0]);
 
-const char *protocore_binary_asset_blobs_css(const uint8_t *work, const char *name)
+const char *protocore_binary_asset_blobs_css(uint8_t *work, const char *name)
 {
     (void)work;
 
