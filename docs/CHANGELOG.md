@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`885a62a`](https://github.com/dstroy0/ProtoCore/commit/885a62a4cf8167030e2c879f20ec795ef9d922c1))
 - update CHANGELOG.md [skip ci] ([`3342c52`](https://github.com/dstroy0/ProtoCore/commit/3342c52c4d6146a90950638e5f9c514066e931e3))
 - update CHANGELOG.md [skip ci] ([`2e6ebf2`](https://github.com/dstroy0/ProtoCore/commit/2e6ebf27d7283b4d88c646b64ef4b7700cd676cd))
 - update CHANGELOG.md [skip ci] ([`5fd58a8`](https://github.com/dstroy0/ProtoCore/commit/5fd58a8effd3c4255c91c1dc4893b5e7bdb74407))
@@ -470,6 +471,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- CI scans a coverage report fitted to the checkout, the core keeps the TCP transport and the HTTP parser, and the tree passes clang-format and Prettier. ([`e47bf0c`](https://github.com/dstroy0/ProtoCore/commit/e47bf0c4ae638c823a79fea3ca0df4d89737ac8a))
 - ProtoCore runs on embedded_types, MMgr and idemIP in place of its own types, libc and lwIP, and the classic ESP32 profile turns each feature off that a build does not ask for. ([`92c7e6e`](https://github.com/dstroy0/ProtoCore/commit/92c7e6e319051766f5e6f83bf926f1c08b38d9a9))
 - The TCP engine resends what the peer does not acknowledge, with the RFC 6298 timer and RFC 5681 fast retransmit, probes a closed window, and ends a connection after R2 or a silent FIN-WAIT-2. ([`783ae11`](https://github.com/dstroy0/ProtoCore/commit/783ae119d9391303de41aecfd77f9f55421f6578))
 - The TCP engine acts on each TCP decision of idemIP over the pool entries, and the stack holds one transmit buffer for each interface that the engine sends through. ([`8d539c0`](https://github.com/dstroy0/ProtoCore/commit/8d539c0324b053965a5c1b794dbe49efc68175cf))
@@ -905,6 +907,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`c4421fd`](https://github.com/dstroy0/ProtoCore/commit/c4421fdd849b5175bb4a77b2966c6ffc518f896d))
 - update ESP32 build footprints [skip ci] ([`a7213fa`](https://github.com/dstroy0/ProtoCore/commit/a7213fa119defb3eeb1307c611261849861ee820))
 - update ESP32 build footprints [skip ci] ([`b08a7ae`](https://github.com/dstroy0/ProtoCore/commit/b08a7aeee7a3671208364a8d3eaf7bcd849e2877))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`0fc0f4d`](https://github.com/dstroy0/ProtoCore/commit/0fc0f4d07919941ea4e97add3c8b737da06574e3))
