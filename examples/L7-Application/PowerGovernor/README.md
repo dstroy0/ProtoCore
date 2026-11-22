@@ -68,7 +68,7 @@ still oscillates, and the reason is worth knowing:
 > **The hysteresis band must be wider than the temperature swing the clock change itself causes.**
 > On this S3, dropping 240 -> 80 MHz cools the die ~2 C within one 500 ms tick, and going back up
 > reheats it by the same amount. With a 2 C band the throttle's own effect carries the die back
-> across the release threshold, so it self-sustains no matter how correct the comparison is.
+> across the release threshold. So it self-sustains no matter how correct the comparison is.
 
 That is why the shipped default is `hot=80 / cool=70` - a 10 C band, comfortably wider than the
 swing. Tune the pair together, not individually.

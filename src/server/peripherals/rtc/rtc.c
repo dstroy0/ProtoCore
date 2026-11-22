@@ -82,7 +82,7 @@ uint8_t *protocore_rtc_span(void)
     return s_own.span;
 }
 
-embed_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch)
+embed_bool protocore_rtc_regs_to_epoch(const uint8_t *work, const uint8_t *regs, uint32_t *epoch)
 {
     (void)work;
     const uint8_t *r = regs;
@@ -127,7 +127,7 @@ embed_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint3
     return EMBED_TRUE;
 }
 
-void protocore_rtc_epoch_to_regs(uint8_t *work, uint32_t epoch, uint8_t *regs)
+void protocore_rtc_epoch_to_regs(const uint8_t *work, uint32_t epoch, uint8_t *regs)
 {
     (void)work;
     uint8_t *r = regs;
@@ -175,9 +175,12 @@ static_assert(RTC_OFF_CTX % _Alignof(RtcCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define RTC_CTX(w) ((RtcCtx *)(void *)((w) + RTC_OFF_CTX))
+#define RTC_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RtcCtx *)(const void *)((w) + RTC_OFF_CTX),                                            \
+        default: (RtcCtx *)(void *)((w) + RTC_OFF_CTX))
 
-embed_bool protocore_rtc_begin(uint8_t *work)
+embed_bool protocore_rtc_begin(const uint8_t *work)
 {
     (void)work;
 

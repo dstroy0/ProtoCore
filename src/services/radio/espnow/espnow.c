@@ -48,12 +48,12 @@ uint8_t *protocore_espnow_span(void)
     return s_own.span;
 }
 
-void protocore_espnow_encode(uint8_t *work);
+void protocore_espnow_encode(const uint8_t *work);
 void protocore_espnow_peer_add(uint8_t *work);
 void protocore_espnow_peers_reset(uint8_t *work);
-void protocore_espnow_send(uint8_t *work);
+void protocore_espnow_send(const uint8_t *work);
 
-void protocore_espnow_encode(uint8_t *work)
+void protocore_espnow_encode(const uint8_t *work)
 {
     (void)work;
     uint8_t type = EspnowV.encode_args.type;
@@ -77,7 +77,7 @@ void protocore_espnow_encode(uint8_t *work)
     EspnowV.n = len + PROTOCORE_ESPNOW_HDR;
 }
 
-void protocore_espnow_decode(uint8_t *work)
+void protocore_espnow_decode(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = EspnowV.decode_args.buf;
@@ -149,7 +149,10 @@ static_assert(ESPNOW_OFF_CTX % _Alignof(EspnowCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define ESPNOW_CTX(w) ((EspnowCtx *)(void *)((w) + ESPNOW_OFF_CTX))
+#define ESPNOW_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const EspnowCtx *)(const void *)((w) + ESPNOW_OFF_CTX),                                      \
+        default: (EspnowCtx *)(void *)((w) + ESPNOW_OFF_CTX))
 
 static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
 {
@@ -285,7 +288,7 @@ static embed_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
     return esp_now_add_peer(&p) == ESP_OK;
 }
 
-void protocore_espnow_begin(uint8_t *work)
+void protocore_espnow_begin(const uint8_t *work)
 {
     nel = EspnowV.begin_args.channel;
     protocore_espnow_recv_fn cb = EspnowV.begin_args.cb;
@@ -316,7 +319,7 @@ void protocore_espnow_add_peer(uint8_t *work)
     EspnowV.ok = radio_add_peer(mac, ESPNOW_CTX(work)->channel);
 }
 
-void protocore_espnow_send(uint8_t *work)
+void protocore_espnow_send(const uint8_t *work)
 {
     const uint8_t *mac = EspnowV.send_args.mac;
     uint8_t type = EspnowV.send_args.type;
@@ -339,7 +342,7 @@ void protocore_espnow_send(uint8_t *work)
     EspnowV.ok = esp_now_send(mac, frame, n) == ESP_OK;
 }
 
-void protocore_espnow_broadcast(uint8_t *work)
+void protocore_espnow_broadcast(const uint8_t *work)
 {
     uint8_t type = EspnowV.broadcast_args.type;
     const uint8_t *payload = EspnowV.broadcast_args.payload;
@@ -354,7 +357,7 @@ void protocore_espnow_broadcast(uint8_t *work)
 
 #else // host build - no radio
 
-void protocore_espnow_begin(uint8_t *work)
+void protocore_espnow_begin(const uint8_t *work)
 {
     (void)work;
     uint8_t channel = EspnowV.begin_args.channel;
@@ -371,7 +374,7 @@ void protocore_espnow_add_peer(uint8_t *work)
     EspnowV.peer_add_args.mac = mac;
     protocore_espnow_peer_add(work);
 }
-void protocore_espnow_send(uint8_t *work)
+void protocore_espnow_send(const uint8_t *work)
 {
     (void)work;
     const uint8_t *mac = EspnowV.send_args.mac;
@@ -385,7 +388,7 @@ void protocore_espnow_send(uint8_t *work)
     (void)len;
     EspnowV.ok = EMBED_FALSE;
 }
-void protocore_espnow_broadcast(uint8_t *work)
+void protocore_espnow_broadcast(const uint8_t *work)
 {
     (void)work;
     uint8_t type = EspnowV.broadcast_args.type;

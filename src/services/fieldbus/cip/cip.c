@@ -47,10 +47,10 @@ static size_t write_segment(uint8_t *p, size_t cap, uint8_t logical_type, uint16
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cip_build_epath(uint8_t *work);
-void protocore_cip_build_request(uint8_t *work);
+void protocore_cip_build_epath(const uint8_t *work);
+void protocore_cip_build_request(const uint8_t *work);
 
-void protocore_cip_build_epath(uint8_t *work)
+void protocore_cip_build_epath(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CipV.build_epath_args.buf;
@@ -93,7 +93,7 @@ void protocore_cip_build_epath(uint8_t *work)
     CipV.n = p;
 }
 
-void protocore_cip_build_request(uint8_t *work)
+void protocore_cip_build_request(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CipV.build_request_args.buf;
@@ -159,6 +159,7 @@ void protocore_cip_build_get_attr_single(uint8_t *work)
     CipV.build_request_args.data = NULL;
     CipV.build_request_args.data_len = 0;
     protocore_cip_build_request(work);
+    CipV.build_request_args.epath = NULL;
 }
 
 void protocore_cip_build_get_attr_all(uint8_t *work)
@@ -190,6 +191,7 @@ void protocore_cip_build_get_attr_all(uint8_t *work)
     CipV.build_request_args.data = NULL;
     CipV.build_request_args.data_len = 0;
     protocore_cip_build_request(work);
+    CipV.build_request_args.epath = NULL;
 }
 
 void protocore_cip_build_set_attr_single(uint8_t *work)
@@ -224,9 +226,10 @@ void protocore_cip_build_set_attr_single(uint8_t *work)
     CipV.build_request_args.data = value;
     CipV.build_request_args.data_len = value_len;
     protocore_cip_build_request(work);
+    CipV.build_request_args.epath = NULL;
 }
 
-void protocore_cip_parse_response(uint8_t *work)
+void protocore_cip_parse_response(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = CipV.parse_response_args.buf;

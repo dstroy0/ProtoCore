@@ -401,7 +401,7 @@ static void k_pke_encrypt(uint8_t *work, uint8_t ct[MLKEM768_CT_BYTES], const ui
 }
 
 // ── Initiator side: KeyGen + Decaps (the FO transform) ──────────────────────────────────────────
-// These reuse the same NTT / sampling / K-PKE.Encrypt core as Encaps; only the inverse codecs
+// These reuse the same NTT / sampling / K-PKE.Encrypt core as Encaps. Only the inverse codecs
 // (ByteEncode_12, Decompress+ByteDecode for du/dv, Compress_1) and the two FIPS 203 top-level
 // algorithms are new.
 

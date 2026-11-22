@@ -74,7 +74,7 @@ def main() -> int:
 
     # Group by the SAME taxonomy the configurator and FEATURES.md use - OSI layer for
     # non-application features, functional category for L7 - rather than by src/
-    # directory. The directories are a code layout; the taxonomy is how the project
+    # directory. The directories are a code layout. The taxonomy is how the project
     # talks about its features everywhere else, and two competing groupings would be
     # a worse answer than either alone. Bridged flag -> feature name -> group.
     flag_to_group = {}

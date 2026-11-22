@@ -125,7 +125,7 @@ void test_pres_frame(void)
     TEST_ASSERT_EQUAL_HEX8(EPL_NODE_BROADCAST, f.dest);
 }
 
-// EPSG DS 301 section 4.6.1.1.5: SoA is multicast from the MN and opens the asynchronous phase; its
+// EPSG DS 301 section 4.6.1.1.5: SoA is multicast from the MN and opens the asynchronous phase. Its
 // payload is the SoA field block, which may be absent for a bare invite.
 void test_soa_frame(void)
 {

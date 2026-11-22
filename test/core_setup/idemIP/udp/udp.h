@@ -78,7 +78,7 @@ EMBED_INLINE uint16_t idemip_udp_cksum(const uint8_t *h)
  * destination address, the protocol, and the UDP length. This information gives protection against
  * misrouted datagrams." It is a zero octet, the protocol, and the length, after the two addresses.
  *
- * Not part of the datagram: it is summed, never sent, so this accumulates into a running sum the
+ * Not part of the datagram. It is summed, never sent, so this accumulates into a running sum the
  * caller then carries over the header and data.
  */
 EMBED_INLINE uint32_t idemip_udp_pseudo_accum(uint32_t sum, uint32_t src, uint32_t dst, uint16_t udp_len)

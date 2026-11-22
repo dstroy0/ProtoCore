@@ -5,7 +5,7 @@
  * @file mtconnect.c
  * @brief MTConnect agent response codec (see mtconnect.h).
  *
- * Serial framing. A document is written straight into the caller's buffer as the calls arrive; the
+ * Serial framing. A document is written straight into the caller's buffer as the calls arrive. The
  * only thing kept across a call is where the next byte of each open run goes.
  */
 
@@ -76,8 +76,14 @@ static_assert(MTC_OFF_RING % _Alignof(MtConnectObs) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define MTC_CTX(w) ((MtConnectCtx *)(void *)((w) + MTC_OFF_CTX))
-#define MTC_RING(w) ((MtConnectObs *)(void *)((w) + MTC_OFF_RING))
+#define MTC_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const MtConnectCtx *)(const void *)((w) + MTC_OFF_CTX),                                      \
+        default: (MtConnectCtx *)(void *)((w) + MTC_OFF_CTX))
+#define MTC_RING(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const MtConnectObs *)(const void *)((w) + MTC_OFF_RING),                                     \
+        default: (MtConnectObs *)(void *)((w) + MTC_OFF_RING))
 
 // The one owned instance, private to this TU: the pointer to the bytes this module took for itself.
 static uint8_t *s_span;

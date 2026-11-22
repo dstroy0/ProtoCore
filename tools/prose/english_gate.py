@@ -158,7 +158,7 @@ def main():
     out = io.TextIOWrapper(
         sys.stdout.buffer, encoding="utf-8", errors="replace", newline=""
     )
-    counts, total, lines = reference()
+    _, total, lines = reference()
     cut = _default_cut()
     out.write("\n  reference: %d byte pairs over %d lines\n" % (total, lines))
     out.write(

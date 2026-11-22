@@ -9,7 +9,7 @@
 // written out beside the octets, so nothing here was produced by a compressor and copied.
 //
 // One case cannot be built that way. A dynamic-Huffman block (sec 3.2.7) carries its own code
-// lengths, so its octets come from a reference ENCODER; the expected value is still the plaintext
+// lengths, so its octets come from a reference ENCODER. The expected value is still the plaintext
 // that was handed to it, never an implementation's output.
 
 #include "network_drivers/presentation/codec/inflate/inflate.h"

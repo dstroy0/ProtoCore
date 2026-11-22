@@ -22,10 +22,10 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_spa_router_has_extension(uint8_t *work);
+void protocore_spa_router_has_extension(const uint8_t *work);
 void protocore_spa_router_route(uint8_t *work);
 
-void protocore_spa_router_has_extension(uint8_t *work)
+void protocore_spa_router_has_extension(const uint8_t *work)
 {
     (void)work;
     const char *path = SpaRouterV.has_extension_args.path;
@@ -131,7 +131,7 @@ void protocore_spa_router_route_ex(uint8_t *work)
 // Conditional UI streaming
 // ---------------------------------------------------------------------------
 
-void protocore_spa_router_ui_stream_begin(uint8_t *work)
+void protocore_spa_router_ui_stream_begin(const uint8_t *work)
 {
     (void)work;
     protocore_ui_stream *s = SpaRouterV.ui_stream_begin_args.s;
@@ -151,7 +151,7 @@ void protocore_spa_router_ui_stream_begin(uint8_t *work)
     s->done = (s->count == 0);
 }
 
-void protocore_spa_router_ui_stream_next(uint8_t *work)
+void protocore_spa_router_ui_stream_next(const uint8_t *work)
 {
     (void)work;
     protocore_ui_stream *s = SpaRouterV.ui_stream_next_args.s;
@@ -199,7 +199,7 @@ void protocore_spa_router_ui_stream_next(uint8_t *work)
     SpaRouterV.n = written;
 }
 
-void protocore_spa_router_ui_stream_done(uint8_t *work)
+void protocore_spa_router_ui_stream_done(const uint8_t *work)
 {
     (void)work;
     const protocore_ui_stream *s = SpaRouterV.ui_stream_done_args.s;

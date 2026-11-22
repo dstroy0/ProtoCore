@@ -46,7 +46,7 @@ static void vector(uint64_t value, const uint8_t *bytes, size_t n)
 }
 
 // RFC 9000 Appendix A.1: "the eight-byte sequence 0xc2197c5eff14e88c decodes to the decimal value
-// 151,288,809,941,952,652; the four-byte sequence 0x9d7f3e7d decodes to 494,878,333; the two-byte
+// 151,288,809,941,952,652; the four-byte sequence 0x9d7f3e7d decodes to 494,878,333. The two-byte
 // sequence 0x7bbd decodes to 15,293; and the single byte 0x25 decodes to 37".
 void test_rfc9000_appendix_a1_vectors(void)
 {

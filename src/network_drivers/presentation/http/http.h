@@ -111,13 +111,13 @@ extern HttpVars HttpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const status_text)(uint8_t *work);
-    void (*const parse_method)(uint8_t *work);
-    void (*const method_name)(uint8_t *work);
-    void (*const path_matches)(uint8_t *work);
-    void (*const match_path_params)(uint8_t *work);
-    void (*const req_is_head)(uint8_t *work);
-    void (*const allow_append)(uint8_t *work);
+    void (*const status_text)(const uint8_t *work);
+    void (*const parse_method)(const uint8_t *work);
+    void (*const method_name)(const uint8_t *work);
+    void (*const path_matches)(const uint8_t *work);
+    void (*const match_path_params)(const uint8_t *work);
+    void (*const req_is_head)(const uint8_t *work);
+    void (*const allow_append)(const uint8_t *work);
     void (*const match_and_execute)(uint8_t *work);
     void (*const set_not_found)(uint8_t *work);
     void (*const poll_slot)(uint8_t *work);
@@ -127,13 +127,13 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpV or a region of the borrow at a fixed offset.
-void protocore_http_status_text(uint8_t *work);
-void protocore_http_parse_method(uint8_t *work);
-void protocore_http_method_name(uint8_t *work);
-void protocore_http_path_matches(uint8_t *work);
-void protocore_http_match_path_params(uint8_t *work);
-void protocore_http_req_is_head(uint8_t *work);
-void protocore_http_allow_append(uint8_t *work);
+void protocore_http_status_text(const uint8_t *work);
+void protocore_http_parse_method(const uint8_t *work);
+void protocore_http_method_name(const uint8_t *work);
+void protocore_http_path_matches(const uint8_t *work);
+void protocore_http_match_path_params(const uint8_t *work);
+void protocore_http_req_is_head(const uint8_t *work);
+void protocore_http_allow_append(const uint8_t *work);
 void protocore_http_match_and_execute(uint8_t *work);
 void protocore_http_set_not_found(uint8_t *work);
 void protocore_http_poll_slot(uint8_t *work);

@@ -98,8 +98,8 @@ def between(after, before, left, right):
     precedes `right` once is a word this writing does not actually put between them, and taking the
     larger of the two would rank it first.
     """
-    leading = dict((word, count) for count, word in after.get(left, []))
-    trailing = dict((word, count) for count, word in before.get(right, []))
+    leading = {word: count for count, word in after.get(left, [])}
+    trailing = {word: count for count, word in before.get(right, [])}
     both = set(leading) & set(trailing)
     return sorted(((min(leading[one], trailing[one]), one) for one in both), reverse=True)
 

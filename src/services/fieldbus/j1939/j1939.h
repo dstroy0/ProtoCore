@@ -11,7 +11,7 @@
  *   bits 28-26 Priority | 25 EDP | 24 DP | 23-16 PF | 15-8 PS | 7-0 SA
  * @endcode
  * The 18-bit Parameter Group Number (PGN) is EDP|DP|PF|PS, where PS is part of the PGN only
- * for PDU2 (broadcast, PF >= 240); for PDU1 (PF < 240) PS is the destination address (DA) and
+ * for PDU2 (broadcast, PF >= 240). For PDU1 (PF < 240) PS is the destination address (DA) and
  * the PGN's low octet is 0. This codec encodes / decodes that id, builds single-frame
  * messages, runs the Transport Protocol (BAM broadcast + RTS/CTS connection mode) with a
  * reassembler for messages up to `PROTOCORE_J1939_TP_MAX` octets, and builds the Address Claimed
@@ -183,7 +183,7 @@ typedef struct
 } J1939Vd;
 
 /** @brief Decoded CCVS (PGN 65265): the wheel-based vehicle speed plus the cruise-control-active state.
- *  Only the two signals with cross-source-verified positions are decoded; the many discrete switches in
+ *  Only the two signals with cross-source-verified positions are decoded. The many discrete switches in
  *  this PGN are left to the caller (their bit positions vary between vendor definitions). */
 typedef struct
 {
@@ -466,16 +466,16 @@ extern J1939Vars J1939V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_id)(uint8_t *work);
-    void (*const decode_id)(uint8_t *work);
+    void (*const encode_id)(const uint8_t *work);
+    void (*const decode_id)(const uint8_t *work);
     void (*const build_message)(uint8_t *work);
     void (*const build_request)(uint8_t *work);
     void (*const build_address_claim)(uint8_t *work);
-    void (*const build_name)(uint8_t *work);
-    void (*const tp_num_packets)(uint8_t *work);
+    void (*const build_name)(const uint8_t *work);
+    void (*const tp_num_packets)(const uint8_t *work);
     void (*const build_bam_cm)(uint8_t *work);
     void (*const build_tp_dt)(uint8_t *work);
-    void (*const tp_reset)(uint8_t *work);
+    void (*const tp_reset)(const uint8_t *work);
     void (*const tp_feed)(uint8_t *work);
     void (*const decode_eec1)(uint8_t *work);
     void (*const decode_et1)(uint8_t *work);
@@ -484,21 +484,21 @@ typedef struct
     void (*const decode_ic1)(uint8_t *work);
     void (*const decode_vd)(uint8_t *work);
     void (*const decode_ccvs)(uint8_t *work);
-    void (*const decode_dm1)(uint8_t *work);
+    void (*const decode_dm1)(const uint8_t *work);
 } J1939Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in J1939V or a region of the borrow at a fixed offset.
-void protocore_j1939_encode_id(uint8_t *work);
-void protocore_j1939_decode_id(uint8_t *work);
+void protocore_j1939_encode_id(const uint8_t *work);
+void protocore_j1939_decode_id(const uint8_t *work);
 void protocore_j1939_build_message(uint8_t *work);
 void protocore_j1939_build_request(uint8_t *work);
 void protocore_j1939_build_address_claim(uint8_t *work);
-void protocore_j1939_build_name(uint8_t *work);
-void protocore_j1939_tp_num_packets(uint8_t *work);
+void protocore_j1939_build_name(const uint8_t *work);
+void protocore_j1939_tp_num_packets(const uint8_t *work);
 void protocore_j1939_build_bam_cm(uint8_t *work);
 void protocore_j1939_build_tp_dt(uint8_t *work);
-void protocore_j1939_tp_reset(uint8_t *work);
+void protocore_j1939_tp_reset(const uint8_t *work);
 void protocore_j1939_tp_feed(uint8_t *work);
 void protocore_j1939_decode_eec1(uint8_t *work);
 void protocore_j1939_decode_et1(uint8_t *work);
@@ -507,7 +507,7 @@ void protocore_j1939_decode_amb(uint8_t *work);
 void protocore_j1939_decode_ic1(uint8_t *work);
 void protocore_j1939_decode_vd(uint8_t *work);
 void protocore_j1939_decode_ccvs(uint8_t *work);
-void protocore_j1939_decode_dm1(uint8_t *work);
+void protocore_j1939_decode_dm1(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

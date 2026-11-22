@@ -66,9 +66,9 @@ typedef void (*protocore_promisc_sink_fn)(const uint8_t *frame, uint16_t len, in
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*wifi_frame_parse)(uint8_t *, const uint8_t *, uint16_t, WifiFrameInfo *);
+    embed_bool (*wifi_frame_parse)(const uint8_t *, const uint8_t *, uint16_t, WifiFrameInfo *);
     embed_bool (*begin)(uint8_t *, uint8_t, protocore_promisc_sink_fn);
-    void (*set_channel)(uint8_t *, uint8_t);
+    void (*set_channel)(const uint8_t *, uint8_t);
     void (*end)(uint8_t *);
 } PromiscNs;
 PROTOCORE_NS_LAYOUT(PromiscNs, wifi_frame_parse, begin, set_channel, end);
@@ -81,7 +81,8 @@ PROTOCORE_NS_LAYOUT(PromiscNs, wifi_frame_parse, begin, set_channel, end);
  * @param out Out
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
+embed_bool protocore_promisc_wifi_frame_parse(const uint8_t *work, const uint8_t *frame, uint16_t len,
+                                              WifiFrameInfo *out);
 /**
  * @brief Start promiscuous capture on channel; every frame is delivered to .
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.
@@ -95,7 +96,7 @@ embed_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_pro
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.
  * @param channel Channel
  */
-void protocore_promisc_set_channel(uint8_t *work, uint8_t channel);
+void protocore_promisc_set_channel(const uint8_t *work, uint8_t channel);
 /**
  * @brief Stop promiscuous capture.
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.

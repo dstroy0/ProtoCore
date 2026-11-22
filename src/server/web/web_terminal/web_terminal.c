@@ -56,14 +56,17 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define WEB_TERMINAL_CTX(w) ((WebTerminalCtx *)(void *)((w) + WEB_TERMINAL_OFF_CTX))
+#define WEB_TERMINAL_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const WebTerminalCtx *)(const void *)((w) + WEB_TERMINAL_OFF_CTX),                           \
+        default: (WebTerminalCtx *)(void *)((w) + WEB_TERMINAL_OFF_CTX))
 
 // ---- internal route handlers ----------------------------------------------
 
 static void term_page_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    // This route only exists once protocore_web_terminal_begin() has installed it, so there is nothing to
+    // This route only exists once protocore_web_terminal_begin() installed it, so there is nothing to
     // test: the handler running IS the proof the service started.
     send_text(slot_id, 200, PROTOCORE_MIME_TEXT_HTML, PROTOCORE_TERMINAL_PAGE);
 }

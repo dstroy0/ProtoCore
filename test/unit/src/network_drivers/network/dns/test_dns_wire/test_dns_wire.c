@@ -292,7 +292,7 @@ void test_encode_buffer_bounds(void)
 // serialize to a name that ends after "a".
 //
 // The lone "." falls under the same rule here. RFC 1035 sec 5.1 spells the root as a single dot in
-// presentation format, so that spelling is one this encoder does not take; its input form for the
+// presentation format, so that spelling is one this encoder does not take. Its input form for the
 // root is the empty string, per the module's own contract.
 void test_empty_labels_inside_a_name_are_refused(void)
 {

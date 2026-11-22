@@ -99,12 +99,12 @@ typedef struct
     void (*set_stream_hooks)(uint8_t *, HttpStreamBeginCb, HttpStreamDataCb, HttpStreamAbortCb);
     void (*reset)(uint8_t *, HttpReq *);
     void (*feed)(uint8_t *, HttpReq *, uint8_t);
-    const char *(*get_header)(uint8_t *, const HttpReq *, const char *);
+    const char *(*get_header)(const uint8_t *, const HttpReq *, const char *);
     embed_bool (*get_cookie)(uint8_t *, const HttpReq *, const char *, char *, size_t);
     embed_bool (*forwarded_client)(uint8_t *, const HttpReq *, char *, size_t, embed_bool *);
-    const char *(*get_query)(uint8_t *, const HttpReq *, const char *);
+    const char *(*get_query)(const uint8_t *, const HttpReq *, const char *);
     embed_bool (*get_form)(uint8_t *, const HttpReq *, const char *, char *, size_t);
-    const char *(*get_param)(uint8_t *, const HttpReq *, const char *);
+    const char *(*get_param)(const uint8_t *, const HttpReq *, const char *);
 } HttpParserNs;
 PROTOCORE_NS_LAYOUT(HttpParserNs, set_stream_hooks, reset, feed, get_header, get_cookie, forwarded_client, get_query,
                     get_form, get_param);
@@ -138,7 +138,7 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte);
  * @param key Key
  * @return The const char *.
  */
-const char *protocore_http_parser_get_header(uint8_t *work, const HttpReq *req, const char *key);
+const char *protocore_http_parser_get_header(const uint8_t *work, const HttpReq *req, const char *key);
 /**
  * @brief Get_cookie.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
@@ -168,7 +168,7 @@ embed_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *
  * @param key Key
  * @return The const char *.
  */
-const char *protocore_http_parser_get_query(uint8_t *work, const HttpReq *req, const char *key);
+const char *protocore_http_parser_get_query(const uint8_t *work, const HttpReq *req, const char *key);
 /**
  * @brief Get_form.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
@@ -187,7 +187,7 @@ embed_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, con
  * @param key Key
  * @return The const char *.
  */
-const char *protocore_http_parser_get_param(uint8_t *work, const HttpReq *req, const char *key);
+const char *protocore_http_parser_get_param(const uint8_t *work, const HttpReq *req, const char *key);
 
 typedef embed_bool (*HttpStreamBeginCb)(HttpReq *req);
 typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);

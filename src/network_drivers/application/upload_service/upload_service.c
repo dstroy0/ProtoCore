@@ -53,7 +53,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define UPLOAD_SERVICE_CTX(w) ((UploadCtx *)(void *)((w) + UPLOAD_SERVICE_OFF_CTX))
+#define UPLOAD_SERVICE_CTX(w)                                                                                          \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const UploadCtx *)(const void *)((w) + UPLOAD_SERVICE_OFF_CTX),                              \
+        default: (UploadCtx *)(void *)((w) + UPLOAD_SERVICE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -76,7 +79,7 @@ uint8_t *protocore_upload_service_span(void)
 }
 
 /// @brief Stream-begin hook: accept POST @p UPLOAD_SERVICE_CTX(work)->path and open the destination file.
-static embed_bool upload_stream_begin(HttpReq *req)
+static embed_bool upload_stream_begin(HttpReq *req) // NOSONAR(c:S995): the stream hook type fixes it
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
@@ -130,7 +133,7 @@ static embed_bool upload_stream_begin(HttpReq *req)
 }
 
 /// @brief Stream-data hook: write one body chunk to the destination file.
-static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
+static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len) // NOSONAR(c:S995): hook type
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.

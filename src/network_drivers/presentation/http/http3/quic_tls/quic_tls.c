@@ -106,7 +106,7 @@ static void snapshot_hash(QuicTls *qt, uint8_t *ctx, uint8_t *out)
 }
 
 // Append a handshake message to both the outbound flight buffer and the transcript.
-static embed_bool emit(QuicTls *qt, uint8_t *flight, size_t cap, size_t *plen, size_t written)
+static embed_bool emit(QuicTls *qt, const uint8_t *flight, size_t cap, size_t *plen, size_t written)
 {
     // *plen <= cap is the invariant this append maintains, so cap - *plen never underflows; refuse a
     // write that would run past the flight buffer (each builder already caps to what it was told, so
@@ -453,7 +453,7 @@ static embed_bool process_message(uint8_t *work, QuicTls *qt, int level, const u
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_tls_server_server_init(uint8_t *work)
+void protocore_quic_tls_server_server_init(const uint8_t *work)
 {
     (void)work;
     QuicTls *qt = QuicTlsServerV.server_init_args.qt;
@@ -502,7 +502,7 @@ void protocore_quic_tls_server_recv_crypto(uint8_t *work)
     QuicTlsServerV.n = off;
 }
 
-void protocore_quic_tls_server_flight(uint8_t *work)
+void protocore_quic_tls_server_flight(const uint8_t *work)
 {
     (void)work;
     const QuicTls *qt = QuicTlsServerV.flight_args.qt;
@@ -525,7 +525,7 @@ void protocore_quic_tls_server_flight(uint8_t *work)
     QuicTlsServerV.bytes = NULL;
 }
 
-void protocore_quic_tls_server_keys(uint8_t *work)
+void protocore_quic_tls_server_keys(const uint8_t *work)
 {
     (void)work;
     QuicTls *qt = QuicTlsServerV.keys_args.qt;
@@ -545,7 +545,7 @@ void protocore_quic_tls_server_keys(uint8_t *work)
     QuicTlsServerV.pkt_keys = NULL;
 }
 
-void protocore_quic_tls_server_peer_params(uint8_t *work)
+void protocore_quic_tls_server_peer_params(const uint8_t *work)
 {
     (void)work;
     const QuicTls *qt = QuicTlsServerV.peer_params_args.qt;

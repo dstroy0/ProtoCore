@@ -96,7 +96,7 @@ enum protocore_ubx_fix_type
 };
 
 /** @brief Decoded UBX-NAV-PVT payload (the fields an application usually needs; native integer scales). */
-typedef struct // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol message; its ~30 fields mirror the
+typedef struct // NOSONAR(cpp:S1820): UBX-NAV-PVT is one fixed protocol message. Its ~30 fields mirror the
                // wire layout, so splitting the struct would be artificial, not clearer
 {
     uint32_t itow_ms;      ///< GPS time of week of the solution (ms)
@@ -167,7 +167,7 @@ typedef struct
 /**
  * @brief Decode a UBX-NAV-SAT frame's fixed header (per the u-blox interface description).
  * @return true iff @p m is a NAV-SAT frame (class 0x01 / id 0x35) whose declared length holds the header
- *         plus its @c num_svs blocks; false otherwise. Walk the blocks with @ref protocore_ubx_nav_sat_get.
+ *         plus its @c num_svs blocks. False otherwise. Walk the blocks with @ref protocore_ubx_nav_sat_get.
  */
 embed_bool protocore_ubx_parse_nav_sat(const protocore_ubx *m, protocore_ubx_nav_sat_hdr *out);
 

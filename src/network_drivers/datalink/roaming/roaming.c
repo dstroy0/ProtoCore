@@ -69,7 +69,7 @@ static int find_bssid(const uint8_t *target, const protocore_roam_neighbor *nb, 
 }
 
 // Write candidate idx into the decision with the reason that chose it.
-static void pick(uint8_t *work, int idx, protocore_roam_reason reason)
+static void pick(const uint8_t *work, int idx, protocore_roam_reason reason)
 {
     (void)work;
     const protocore_roam_neighbor *nb = RoamV.cand.list;

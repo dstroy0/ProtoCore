@@ -101,7 +101,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define EUROMAP77_CTX(w) ((EuroMap77Ctx *)(void *)((w) + EUROMAP77_OFF_CTX))
+#define EUROMAP77_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const EuroMap77Ctx *)(const void *)((w) + EUROMAP77_OFF_CTX),                                \
+        default: (EuroMap77Ctx *)(void *)((w) + EUROMAP77_OFF_CTX))
 
 // --- Variant fillers (leaf values) -----------------------------------------
 static void set_str(OpcUaVariant *o, const char *s)

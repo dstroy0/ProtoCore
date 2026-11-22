@@ -134,7 +134,7 @@ static int recv_msg(SmbRecvFn recv, void *ctx, uint8_t *rx, size_t cap)
 // SMB dialogue working buffers, kept off the caller's stack: smb_open alone needs ~4 KB, which
 // overflows the default 8 KB Arduino loopTask (seen on HW as "Stack canary watchpoint triggered").
 // The client drives one sequential dialogue at a time (open -> read/write -> close), so a single
-// owned working set is correct; it is not reentrant across two concurrent SMB connections.
+// owned working set is correct. It is not reentrant across two concurrent SMB connections.
 typedef struct
 {
     uint8_t tx[PROTOCORE_SMB_BUF];
@@ -164,7 +164,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SMB_CLIENT_CTX(w) ((SmbClientCtx *)(void *)((w) + SMB_CLIENT_OFF_CTX))
+#define SMB_CLIENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SmbClientCtx *)(const void *)((w) + SMB_CLIENT_OFF_CTX),                               \
+        default: (SmbClientCtx *)(void *)((w) + SMB_CLIENT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

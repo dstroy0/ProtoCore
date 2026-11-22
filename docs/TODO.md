@@ -42,7 +42,7 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
 
 ### OPEN (actionable now)
 
-- **`src/` law sweep - carry-over** - the C11 conversion and the `class PC` decomposition landed; what
+- **`src/` law sweep - carry-over** - the C11 conversion and the `class PC` decomposition landed. What
   survived the sweep is the enforcement gap, the plaintext-arena derivation, the ellipsis ban, the
   fixed-width serializer duplication, and the SSH connection layering. Detail under
   **[src/ law sweep - carry-over](#src-law-sweep---carry-over)**; the defects among them are logged in
@@ -70,7 +70,7 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
 - **More niche pure codecs** from old manuals (as they are named / requested - not invented).
 - **Docs** - chart the docs build + automation; full staleness audit; theming (palette/alignment);
   a teacher switch to disable the sandbox; live theme preview.
-- **Ongoing quality** - extend the pentest fuzz corpus; extend test coverage; raise branch coverage
+- **Ongoing quality** - extend the pentest fuzz corpus; extend test coverage. Raise branch coverage
   (ftp + httpcache raised to ~99% branches, v5.100.3; sweep remaining codecs next); remediate any
   Sonar/CodeQL (currently 0 bugs / 0 vulns).
 - **Interop harness -> entire feature set** - the HW interop harness currently proves 7 protocol
@@ -129,7 +129,7 @@ non-goal or needs hardware / proprietary docs) - **DONE** (`[x]`, the shipped re
   client can reach a share whose server requires encryption (which denies the unencrypted TREE_CONNECT before
   it can advertise the share flag). KAT'd vs pyca/cryptography and **HW-verified (2026-07-27) against a real
   Samba `smb encrypt = required` share**, each of the four ciphers reading the file byte-exact. **Done.**
-- **Concurrent TLS** (`MAX_TLS_CONNS`>1) - library + PSRAM build done; only the live 2-client soak remains
+- **Concurrent TLS** (`MAX_TLS_CONNS`>1) - library + PSRAM build done. Only the live 2-client soak remains
   (the reserved **two-rig HW test**, held per the user's "keep looping, hold the rigs").
 - **Ethernet PHY** - RMII bring-up shipped + **HW-verified (2026-07-19)** on a Waveshare ESP32-P4-POE-ETH
   (onboard IP101 PHY): the shipped `Physical.eth->init()` serves real HTTP over pure wired Ethernet. See the `[x]` entry below.
@@ -292,14 +292,14 @@ Ideas and intentions captured from the [Working Thread discussion](https://githu
 
 ### Refactor / security hardening
 
-- [x] Owner-refactor endgame _(done)_: remove the remaining globals now that the core is integrated, and switch to known security patterns for owners. The mutable global pointers that supported a speedy implementation are no longer necessary. Every file-scope mutable in `src/` now lives in one feature-gated owned `<Name>Ctx` (least-privilege / object-capability), enforced by `tools/ci_tooling/check/check_owned_context.py` (wired into CI) so any new loose mutable fails the build; the guard passes clean on `main`. The allow-list is the documented `extern` cross-TU substrate (the shared connection pools + SSH session state).
+- [x] Owner-refactor endgame _(done)_: remove the remaining globals now that the core is integrated, and switch to known security patterns for owners. The mutable global pointers that supported a speedy implementation are no longer necessary. Every file-scope mutable in `src/` now lives in one feature-gated owned `<Name>Ctx` (least-privilege / object-capability), enforced by `tools/ci_tooling/check/check_owned_context.py` (wired into CI) so any new loose mutable fails the build. The guard passes clean on `main`. The allow-list is the documented `extern` cross-TU substrate (the shared connection pools + SSH session state).
 - [ ] Remediate SonarQube code smells and CodeQL gripes. _(SonarCloud: 0 bugs / 0 vulnerabilities project-wide; remaining are style-conflict code smells to disable in the quality profile, not churn.)_
 
 ### Test coverage
 
 - [ ] Keep extending test coverage. Provably-dead lines get `GCOVR_EXCL` with rationale inline; be conservative with exclusions (even a pointless test teaches) - guarded dead branches / unreachable guards are the main exclusion targets.
 - [ ] Raise condition (branch) coverage - line coverage is good, conditional lags. Test both sides of each condition.
-- [ ] **Expand the interop harness to the entire feature set.** The HW interop harness proves 7 protocol families byte-for-byte against real third-party peers (COM3 device + host peer / public broker; see the interop test-setup notes). Extend it so EVERY shipped feature/protocol has an interop driver that round-trips against a real reference implementation (e.g. each MQTT/CoAP/SNMP/Modbus/SMB/SSH/HTTP-client/industrial-bus codec talks to its canonical server/client), not just the host mock-seam tests - host tests miss whole-firmware integration bugs (the SMB/DNC/port-forward HW runs each found real ones). Build out: a per-feature peer (real daemon or a public broker), a harness driver that drives the device against it, and a pass/fail byte-compare; wire into the interop workflow so new features must ship an interop case.
+- [ ] **Expand the interop harness to the entire feature set.** The HW interop harness proves 7 protocol families byte-for-byte against real third-party peers (COM3 device + host peer / public broker; see the interop test-setup notes). Extend it so EVERY shipped feature/protocol has an interop driver that round-trips against a real reference implementation (e.g. each MQTT/CoAP/SNMP/Modbus/SMB/SSH/HTTP-client/industrial-bus codec talks to its canonical server/client), not just the host mock-seam tests - host tests miss whole-firmware integration bugs (the SMB/DNC/port-forward HW runs each found real ones). Build out: a per-feature peer (real daemon or a public broker), a harness driver that drives the device against it, and a pass/fail byte-compare. Wire into the interop workflow so new features must ship an interop case.
 
 ### Codecs / drivers / features
 
@@ -793,7 +793,7 @@ Open follow-ups discovered during the above:
 
 ## Roadmap & known limitations
 
-Forward-looking feature ideas and the future-work backlog have moved to their own
+Forward-looking feature ideas and the future-work backlog moved to their own
 files so this one stays focused on bugfixes, maintenance, and the record of
 shipped work:
 

@@ -16,7 +16,7 @@ EMBED_BEGIN_DECLS
  * cache as a middleware and installs the async-fetch poll hook, maps request path prefixes to upstream
  * origins (fetched over protocore_client), and serves hits with the constant-memory send-pump. A miss or a
  * stale-entry revalidation suspends the client request and drives the origin fetch from the slot's poll,
- * so the worker never stalls; every failure path fails open. Purge + stats round it out.
+ * so the worker never stalls. Every failure path fails open. Purge + stats round it out.
  *
  * @c work is PROTOCORE_EDGE_PROXY_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

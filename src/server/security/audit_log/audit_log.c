@@ -58,7 +58,10 @@ static_assert(AUDIT_LOG_OFF_CTX % _Alignof(AuditCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define AUDIT_LOG_CTX(w) ((AuditCtx *)(void *)((w) + AUDIT_LOG_OFF_CTX))
+#define AUDIT_LOG_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const AuditCtx *)(const void *)((w) + AUDIT_LOG_OFF_CTX),                                    \
+        default: (AuditCtx *)(void *)((w) + AUDIT_LOG_OFF_CTX))
 
 static inline uint16_t idx(const AuditCtx *c, uint16_t i)
 {
@@ -115,31 +118,40 @@ static size_t json_escape(char *out, size_t pos, size_t cap, const char *s)
         size_t n;
         if (ch == '"')
         {
-            esc = "\\\"", n = 2;
+            esc = "\\\"";
+            n = 2;
         }
         else if (ch == '\\')
         {
-            esc = "\\\\", n = 2;
+            esc = "\\\\";
+            n = 2;
         }
         else if (ch == '\n')
         {
-            esc = "\\n", n = 2;
+            esc = "\\n";
+            n = 2;
         }
         else if (ch == '\r')
         {
-            esc = "\\r", n = 2;
+            esc = "\\r";
+            n = 2;
         }
         else if (ch == '\t')
         {
-            esc = "\\t", n = 2;
+            esc = "\\t";
+            n = 2;
         }
         else if (ch < 0x20)
         {
-            ub[0] = '\\', ub[1] = 'u', ub[2] = '0', ub[3] = '0';
+            ub[0] = '\\';
+            ub[1] = 'u';
+            ub[2] = '0';
+            ub[3] = '0';
             ub[4] = hex_digit((uint8_t)((ch >> 4) & 0xF));
             ub[5] = hex_digit((uint8_t)(ch & 0xF));
             ub[6] = '\0';
-            esc = ub, n = 6;
+            esc = ub;
+            n = 6;
         }
         else
         {
@@ -346,7 +358,7 @@ void protocore_audit_log_verify(uint8_t *work)
     return;
 }
 
-void protocore_audit_log_cat_name(uint8_t *work)
+void protocore_audit_log_cat_name(const uint8_t *work)
 {
     (void)work;
     AuditLogV.text = 0;

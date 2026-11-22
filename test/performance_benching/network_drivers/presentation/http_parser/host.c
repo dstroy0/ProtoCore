@@ -3,7 +3,7 @@
 //
 // Host-side microbenchmarks for the request path (docs/FEATURE_PERFORMANCE.md section 3):
 // the standalone HTTP/1.1 request parser and the zero-heap JSON writer/reader. A deterministic
-// host ns/op + MB/s baseline that complements the on-device ESP32-S3 numbers; the host figure is
+// host ns/op + MB/s baseline that complements the on-device ESP32-S3 numbers. The host figure is
 // a relative baseline (a fast RPi core), not the device cost. Build + run (same include roots as
 // the native test env):
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common

@@ -7,7 +7,7 @@
  *
  * Separate from common.h because this is all the layers above the transport need. A listener sizes
  * its queue storage on ::TcpEvt, the session layer switches on ::EvtType, and the presentation
- * layer names EVT_CONNECT; none of them touches a connection slot's fields. common.h carries those
+ * layer names EVT_CONNECT. None of them touches a connection slot's fields. common.h carries those
  * fields and their atomic words, and the sketches do not need them.
  *
  * @author  Douglas Quigg (dstroy0)

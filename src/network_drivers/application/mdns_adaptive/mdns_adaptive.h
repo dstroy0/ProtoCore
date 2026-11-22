@@ -161,7 +161,7 @@ typedef struct
  * @var MdnsAdaptiveNs::beacon_due  is an announce due now? (wrap-safe: elapsed since last_ms >= the ...
  * @var MdnsAdaptiveNs::beacon_presleep_due  auto-sleep beacon: should we announce *before* sleeping for ...
  * @var MdnsAdaptiveNs::contention_init  start sampling at now_ms, anchored to the current counter frames_now
- * @var MdnsAdaptiveNs::contention_sample  if a window has elapsed, report the frames counted in it and start ...
+ * @var MdnsAdaptiveNs::contention_sample  if a window elapsed, report the frames counted in it and start ...
  * @var MdnsAdaptiveNs::begin  start adaptive announcing: begin promiscuous capture on the ...
  * @var MdnsAdaptiveNs::tick  advance the schedule: sample contention, adapt the interval, follow ...
  * @var MdnsAdaptiveNs::end  stop adaptive announcing and release promiscuous mode
@@ -193,13 +193,13 @@ extern MdnsAdaptiveVars MdnsAdaptiveV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const refresh_interval)(uint8_t *work);
-    void (*const beacon_init)(uint8_t *work);
-    void (*const beacon_adapt)(uint8_t *work);
-    void (*const beacon_due)(uint8_t *work);
-    void (*const beacon_presleep_due)(uint8_t *work);
-    void (*const contention_init)(uint8_t *work);
-    void (*const contention_sample)(uint8_t *work);
+    void (*const refresh_interval)(const uint8_t *work);
+    void (*const beacon_init)(const uint8_t *work);
+    void (*const beacon_adapt)(const uint8_t *work);
+    void (*const beacon_due)(const uint8_t *work);
+    void (*const beacon_presleep_due)(const uint8_t *work);
+    void (*const contention_init)(const uint8_t *work);
+    void (*const contention_sample)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const tick)(uint8_t *work);
     void (*const end)(uint8_t *work);
@@ -210,13 +210,13 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MdnsAdaptiveV or a region of the borrow at a fixed offset.
-void protocore_mdns_adaptive_refresh_interval(uint8_t *work);
-void protocore_mdns_adaptive_beacon_init(uint8_t *work);
-void protocore_mdns_adaptive_beacon_adapt(uint8_t *work);
-void protocore_mdns_adaptive_beacon_due(uint8_t *work);
-void protocore_mdns_adaptive_beacon_presleep_due(uint8_t *work);
-void protocore_mdns_adaptive_contention_init(uint8_t *work);
-void protocore_mdns_adaptive_contention_sample(uint8_t *work);
+void protocore_mdns_adaptive_refresh_interval(const uint8_t *work);
+void protocore_mdns_adaptive_beacon_init(const uint8_t *work);
+void protocore_mdns_adaptive_beacon_adapt(const uint8_t *work);
+void protocore_mdns_adaptive_beacon_due(const uint8_t *work);
+void protocore_mdns_adaptive_beacon_presleep_due(const uint8_t *work);
+void protocore_mdns_adaptive_contention_init(const uint8_t *work);
+void protocore_mdns_adaptive_contention_sample(const uint8_t *work);
 void protocore_mdns_adaptive_begin(uint8_t *work);
 void protocore_mdns_adaptive_tick(uint8_t *work);
 void protocore_mdns_adaptive_end(uint8_t *work);

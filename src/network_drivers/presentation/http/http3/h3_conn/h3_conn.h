@@ -69,7 +69,7 @@ typedef struct
 /**
  * @brief HTTP/3 server connection (RFC 9114).
  *
- * The connection's storage is the CALLER's: it arrives as the entry's borrow, and this file lays
+ * The connection's storage is the CALLER's. It arrives as the entry's borrow, and this file lays
  * its context and per-stream buffers out at compile-time offsets inside it. A caller binds the QUIC
  * connection under it, sets the members a call takes, invokes it through ::H3Conn with those bytes,
  * and reads the outcome off the same handle.

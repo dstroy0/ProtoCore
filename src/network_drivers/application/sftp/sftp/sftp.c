@@ -30,18 +30,18 @@ EMBED_BEGIN_DECLS
 // never read.
 
 void protocore_sftp_rd_string(uint8_t *work);
-void protocore_sftp_rd_u32(uint8_t *work);
-void protocore_sftp_rd_u64(uint8_t *work);
+void protocore_sftp_rd_u32(const uint8_t *work);
+void protocore_sftp_rd_u64(const uint8_t *work);
 void protocore_sftp_wr_attrs(uint8_t *work);
-void protocore_sftp_wr_bytes(uint8_t *work);
-void protocore_sftp_wr_finish(uint8_t *work);
-void protocore_sftp_wr_init(uint8_t *work);
+void protocore_sftp_wr_bytes(const uint8_t *work);
+void protocore_sftp_wr_finish(const uint8_t *work);
+void protocore_sftp_wr_init(const uint8_t *work);
 void protocore_sftp_wr_string(uint8_t *work);
-void protocore_sftp_wr_u32(uint8_t *work);
-void protocore_sftp_wr_u64(uint8_t *work);
-void protocore_sftp_wr_u8(uint8_t *work);
+void protocore_sftp_wr_u32(const uint8_t *work);
+void protocore_sftp_wr_u64(const uint8_t *work);
+void protocore_sftp_wr_u8(const uint8_t *work);
 
-void protocore_sftp_rd_init(uint8_t *work)
+void protocore_sftp_rd_init(const uint8_t *work)
 {
     (void)work;
     SftpReader *r = SftpV.rd_init_args.r;
@@ -54,7 +54,7 @@ void protocore_sftp_rd_init(uint8_t *work)
     r->ok = EMBED_TRUE;
 }
 
-void protocore_sftp_rd_u8(uint8_t *work)
+void protocore_sftp_rd_u8(const uint8_t *work)
 {
     (void)work;
     SftpReader *r = SftpV.rd_u8_args.r;
@@ -68,7 +68,7 @@ void protocore_sftp_rd_u8(uint8_t *work)
     SftpV.value = r->p[r->off++];
 }
 
-void protocore_sftp_rd_u32(uint8_t *work)
+void protocore_sftp_rd_u32(const uint8_t *work)
 {
     (void)work;
     SftpReader *r = SftpV.rd_u32_args.r;
@@ -85,7 +85,7 @@ void protocore_sftp_rd_u32(uint8_t *work)
     SftpV.u32 = v;
 }
 
-void protocore_sftp_rd_u64(uint8_t *work)
+void protocore_sftp_rd_u64(const uint8_t *work)
 {
     (void)work;
     SftpReader *r = SftpV.rd_u64_args.r;
@@ -194,7 +194,7 @@ void protocore_sftp_rd_attrs(uint8_t *work)
 
 // --- writer --------------------------------------------------------------------------------------
 
-void protocore_sftp_wr_init(uint8_t *work)
+void protocore_sftp_wr_init(const uint8_t *work)
 {
     (void)work;
     SftpWriter *w = SftpV.wr_init_args.w;
@@ -207,7 +207,7 @@ void protocore_sftp_wr_init(uint8_t *work)
     w->ovf = (cap < 4);
 }
 
-void protocore_sftp_wr_u8(uint8_t *work)
+void protocore_sftp_wr_u8(const uint8_t *work)
 {
     (void)work;
     SftpWriter *w = SftpV.wr_u8_args.w;
@@ -221,7 +221,7 @@ void protocore_sftp_wr_u8(uint8_t *work)
     w->p[w->off++] = v;
 }
 
-void protocore_sftp_wr_u32(uint8_t *work)
+void protocore_sftp_wr_u32(const uint8_t *work)
 {
     (void)work;
     SftpWriter *w = SftpV.wr_u32_args.w;
@@ -238,7 +238,7 @@ void protocore_sftp_wr_u32(uint8_t *work)
     w->p[w->off++] = (uint8_t)v;
 }
 
-void protocore_sftp_wr_u64(uint8_t *work)
+void protocore_sftp_wr_u64(const uint8_t *work)
 {
     (void)work;
     SftpWriter *w = SftpV.wr_u64_args.w;
@@ -255,7 +255,7 @@ void protocore_sftp_wr_u64(uint8_t *work)
     }
 }
 
-void protocore_sftp_wr_bytes(uint8_t *work)
+void protocore_sftp_wr_bytes(const uint8_t *work)
 {
     (void)work;
     SftpWriter *w = SftpV.wr_bytes_args.w;
@@ -326,7 +326,7 @@ void protocore_sftp_wr_attrs(uint8_t *work)
     }
 }
 
-void protocore_sftp_wr_finish(uint8_t *work)
+void protocore_sftp_wr_finish(const uint8_t *work)
 {
     (void)work;
     SftpWriter *w = SftpV.wr_finish_args.w;
@@ -344,7 +344,7 @@ void protocore_sftp_wr_finish(uint8_t *work)
     SftpV.n = w->off;
 }
 
-void protocore_sftp_wr_pos(uint8_t *work)
+void protocore_sftp_wr_pos(const uint8_t *work)
 {
     (void)work;
     const SftpWriter *w = SftpV.wr_pos_args.w;
@@ -352,7 +352,7 @@ void protocore_sftp_wr_pos(uint8_t *work)
     SftpV.n = w->off;
 }
 
-void protocore_sftp_wr_patch_u32(uint8_t *work)
+void protocore_sftp_wr_patch_u32(const uint8_t *work)
 {
     (void)work;
     SftpWriter *w = SftpV.wr_patch_u32_args.w;
@@ -371,7 +371,7 @@ void protocore_sftp_wr_patch_u32(uint8_t *work)
 
 // --- framing -------------------------------------------------------------------------------------
 
-void protocore_sftp_frame_len(uint8_t *work)
+void protocore_sftp_frame_len(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = SftpV.frame_len_args.buf;
@@ -413,6 +413,7 @@ void protocore_sftp_build_version(uint8_t *work)
     protocore_sftp_wr_u32(work);
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
+    SftpV.wr_finish_args.w = NULL;
 }
 
 void protocore_sftp_build_status(uint8_t *work)
@@ -448,6 +449,7 @@ void protocore_sftp_build_status(uint8_t *work)
     protocore_sftp_wr_string(work); // language tag
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
+    SftpV.wr_finish_args.w = NULL;
 }
 
 void protocore_sftp_build_handle(uint8_t *work)
@@ -475,6 +477,7 @@ void protocore_sftp_build_handle(uint8_t *work)
     protocore_sftp_wr_string(work);
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
+    SftpV.wr_finish_args.w = NULL;
 }
 
 void protocore_sftp_build_attrs(uint8_t *work)
@@ -500,6 +503,7 @@ void protocore_sftp_build_attrs(uint8_t *work)
     protocore_sftp_wr_attrs(work);
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
+    SftpV.wr_finish_args.w = NULL;
 }
 
 void protocore_sftp_build_data(uint8_t *work)
@@ -527,6 +531,7 @@ void protocore_sftp_build_data(uint8_t *work)
     protocore_sftp_wr_string(work);
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
+    SftpV.wr_finish_args.w = NULL;
 }
 
 void protocore_sftp_build_name1(uint8_t *work)
@@ -565,6 +570,7 @@ void protocore_sftp_build_name1(uint8_t *work)
     protocore_sftp_wr_attrs(work);
     SftpV.wr_finish_args.w = &w;
     protocore_sftp_wr_finish(work);
+    SftpV.wr_finish_args.w = NULL;
 }
 
 void protocore_sftp_format_longname(uint8_t *work)

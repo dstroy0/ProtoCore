@@ -30,7 +30,7 @@ EMBED_BEGIN_DECLS
  * @brief Streaming client-to-server DEFLATE decompressor (one per SSH connection).
  *
  * The 32 KB circular @ref window is caller-supplied (it lives in PSRAM alongside the s2c compressor).
- * ssh_inflate_init() binds it and resets the stream; the small carry/bit state is inline.
+ * ssh_inflate_init() binds it and resets the stream. The small carry/bit state is inline.
  */
 typedef struct
 {

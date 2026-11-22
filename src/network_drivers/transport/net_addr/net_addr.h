@@ -16,7 +16,7 @@
  * module states them in and the family-tagged form every layer above reads.
  *
  * The address bytes are read out of the vendor value byte by byte rather than shifted out of it. A
- * shift reads the value's arithmetic, which is the host's byte order; the stack holds the address in
+ * shift reads the value's arithmetic, which is the host's byte order. The stack holds the address in
  * network order, so the bytes are the address and the number is not.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -72,8 +72,8 @@ typedef struct
 
     embed_bool ok;
 
-    void (*const to_ip)(uint8_t *work);
-    void (*const from_ip)(uint8_t *work);
+    void (*const to_ip)(const uint8_t *work);
+    void (*const from_ip)(const uint8_t *work);
 } NetAddrNs;
 
 /** @brief The one symbol this module exports. */

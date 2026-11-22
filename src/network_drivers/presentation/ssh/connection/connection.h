@@ -391,7 +391,7 @@ typedef void (*SshWindowChangeCb)(uint8_t i, uint32_t channel, uint32_t width_ch
 // ---------------------------------------------------------------------------
 
 /**
- * @brief Send "exit-status" for a command that has terminated (RFC 4254 sec 6.10).
+ * @brief Send "exit-status" for a command that terminated (RFC 4254 sec 6.10).
  *
  * "When the command running at the other end terminates, the following message can be sent to
  * return the exit status of the command. Returning the status is RECOMMENDED. No acknowledgement is
@@ -674,21 +674,21 @@ extern SshConnectionVars SshConnectionV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const flow_init)(uint8_t *work);
-    void (*const flow_recv_take)(uint8_t *work);
-    void (*const flow_replenish_due)(uint8_t *work);
-    void (*const flow_local_credit)(uint8_t *work);
-    void (*const flow_send_allows)(uint8_t *work);
-    void (*const flow_send_cap)(uint8_t *work);
-    void (*const flow_send_take)(uint8_t *work);
-    void (*const flow_peer_add)(uint8_t *work);
-    void (*const channel_init)(uint8_t *work);
-    void (*const chan_alloc)(uint8_t *work);
-    void (*const chan_by_id)(uint8_t *work);
+    void (*const flow_init)(const uint8_t *work);
+    void (*const flow_recv_take)(const uint8_t *work);
+    void (*const flow_replenish_due)(const uint8_t *work);
+    void (*const flow_local_credit)(const uint8_t *work);
+    void (*const flow_send_allows)(const uint8_t *work);
+    void (*const flow_send_cap)(const uint8_t *work);
+    void (*const flow_send_take)(const uint8_t *work);
+    void (*const flow_peer_add)(const uint8_t *work);
+    void (*const channel_init)(const uint8_t *work);
+    void (*const chan_alloc)(const uint8_t *work);
+    void (*const chan_by_id)(const uint8_t *work);
     void (*const channel_bind_service)(uint8_t *work);
     void (*const channel_handle_open)(uint8_t *work);
     void (*const channel_handle_open_confirm)(uint8_t *work);
-    void (*const channel_handle_open_failure)(uint8_t *work);
+    void (*const channel_handle_open_failure)(const uint8_t *work);
     void (*const channel_handle_request)(uint8_t *work);
     void (*const channel_handle_data)(uint8_t *work);
     void (*const channel_handle_extended_data)(uint8_t *work);
@@ -706,49 +706,49 @@ typedef struct
     void (*const channel_open_forwarded)(uint8_t *work);
     void (*const channel_send_open_forwarded)(uint8_t *work);
     void (*const channel_pty)(uint8_t *work);
-    void (*const req_strings_present)(uint8_t *work);
+    void (*const req_strings_present)(const uint8_t *work);
     void (*const pty_req_fields_present)(uint8_t *work);
-    void (*const pty_modes_valid)(uint8_t *work);
+    void (*const pty_modes_valid)(const uint8_t *work);
     void (*const pty_req_parse)(uint8_t *work);
-    void (*const window_change_parse)(uint8_t *work);
-    void (*const forward_begin)(uint8_t *work);
+    void (*const window_change_parse)(const uint8_t *work);
+    void (*const forward_begin)(const uint8_t *work);
     void (*const forward_pump)(uint8_t *work);
-    void (*const forward_binding)(uint8_t *work);
-    void (*const forward_reset)(uint8_t *work);
-    void (*const global_request_handle)(uint8_t *work);
+    void (*const forward_binding)(const uint8_t *work);
+    void (*const forward_reset)(const uint8_t *work);
+    void (*const global_request_handle)(const uint8_t *work);
     void (*const dispatch)(uint8_t *work);
-    void (*const set_data_cb)(uint8_t *work);
-    void (*const set_pty_req_cb)(uint8_t *work);
-    void (*const set_window_change_cb)(uint8_t *work);
-    void (*const set_forward_open_cb)(uint8_t *work);
-    void (*const set_forward_data_cb)(uint8_t *work);
-    void (*const set_forward_confirm_cb)(uint8_t *work);
-    void (*const set_forward_policy_cb)(uint8_t *work);
-    void (*const set_rforward_open_cb)(uint8_t *work);
-    void (*const set_rforward_cancel_cb)(uint8_t *work);
-    void (*const set_sftp_open_cb)(uint8_t *work);
-    void (*const set_sftp_data_cb)(uint8_t *work);
-    void (*const set_scp_open_cb)(uint8_t *work);
-    void (*const set_scp_data_cb)(uint8_t *work);
+    void (*const set_data_cb)(const uint8_t *work);
+    void (*const set_pty_req_cb)(const uint8_t *work);
+    void (*const set_window_change_cb)(const uint8_t *work);
+    void (*const set_forward_open_cb)(const uint8_t *work);
+    void (*const set_forward_data_cb)(const uint8_t *work);
+    void (*const set_forward_confirm_cb)(const uint8_t *work);
+    void (*const set_forward_policy_cb)(const uint8_t *work);
+    void (*const set_rforward_open_cb)(const uint8_t *work);
+    void (*const set_rforward_cancel_cb)(const uint8_t *work);
+    void (*const set_sftp_open_cb)(const uint8_t *work);
+    void (*const set_sftp_data_cb)(const uint8_t *work);
+    void (*const set_scp_open_cb)(const uint8_t *work);
+    void (*const set_scp_data_cb)(const uint8_t *work);
 } SshConnectionNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshConnectionV or a region of the borrow at a fixed offset.
-void protocore_ssh_connection_flow_init(uint8_t *work);
-void protocore_ssh_connection_flow_recv_take(uint8_t *work);
-void protocore_ssh_connection_flow_replenish_due(uint8_t *work);
-void protocore_ssh_connection_flow_local_credit(uint8_t *work);
-void protocore_ssh_connection_flow_send_allows(uint8_t *work);
-void protocore_ssh_connection_flow_send_cap(uint8_t *work);
-void protocore_ssh_connection_flow_send_take(uint8_t *work);
-void protocore_ssh_connection_flow_peer_add(uint8_t *work);
-void protocore_ssh_connection_channel_init(uint8_t *work);
-void protocore_ssh_connection_chan_alloc(uint8_t *work);
-void protocore_ssh_connection_chan_by_id(uint8_t *work);
+void protocore_ssh_connection_flow_init(const uint8_t *work);
+void protocore_ssh_connection_flow_recv_take(const uint8_t *work);
+void protocore_ssh_connection_flow_replenish_due(const uint8_t *work);
+void protocore_ssh_connection_flow_local_credit(const uint8_t *work);
+void protocore_ssh_connection_flow_send_allows(const uint8_t *work);
+void protocore_ssh_connection_flow_send_cap(const uint8_t *work);
+void protocore_ssh_connection_flow_send_take(const uint8_t *work);
+void protocore_ssh_connection_flow_peer_add(const uint8_t *work);
+void protocore_ssh_connection_channel_init(const uint8_t *work);
+void protocore_ssh_connection_chan_alloc(const uint8_t *work);
+void protocore_ssh_connection_chan_by_id(const uint8_t *work);
 void protocore_ssh_connection_channel_bind_service(uint8_t *work);
 void protocore_ssh_connection_channel_handle_open(uint8_t *work);
 void protocore_ssh_connection_channel_handle_open_confirm(uint8_t *work);
-void protocore_ssh_connection_channel_handle_open_failure(uint8_t *work);
+void protocore_ssh_connection_channel_handle_open_failure(const uint8_t *work);
 void protocore_ssh_connection_channel_handle_request(uint8_t *work);
 void protocore_ssh_connection_channel_handle_data(uint8_t *work);
 void protocore_ssh_connection_channel_handle_extended_data(uint8_t *work);
@@ -766,30 +766,30 @@ void protocore_ssh_connection_channel_send_exit_signal(uint8_t *work);
 void protocore_ssh_connection_channel_open_forwarded(uint8_t *work);
 void protocore_ssh_connection_channel_send_open_forwarded(uint8_t *work);
 void protocore_ssh_connection_channel_pty(uint8_t *work);
-void protocore_ssh_connection_req_strings_present(uint8_t *work);
+void protocore_ssh_connection_req_strings_present(const uint8_t *work);
 void protocore_ssh_connection_pty_req_fields_present(uint8_t *work);
-void protocore_ssh_connection_pty_modes_valid(uint8_t *work);
+void protocore_ssh_connection_pty_modes_valid(const uint8_t *work);
 void protocore_ssh_connection_pty_req_parse(uint8_t *work);
-void protocore_ssh_connection_window_change_parse(uint8_t *work);
-void protocore_ssh_connection_forward_begin(uint8_t *work);
+void protocore_ssh_connection_window_change_parse(const uint8_t *work);
+void protocore_ssh_connection_forward_begin(const uint8_t *work);
 void protocore_ssh_connection_forward_pump(uint8_t *work);
-void protocore_ssh_connection_forward_binding(uint8_t *work);
-void protocore_ssh_connection_forward_reset(uint8_t *work);
-void protocore_ssh_connection_global_request_handle(uint8_t *work);
+void protocore_ssh_connection_forward_binding(const uint8_t *work);
+void protocore_ssh_connection_forward_reset(const uint8_t *work);
+void protocore_ssh_connection_global_request_handle(const uint8_t *work);
 void protocore_ssh_connection_dispatch(uint8_t *work);
-void protocore_ssh_connection_set_data_cb(uint8_t *work);
-void protocore_ssh_connection_set_pty_req_cb(uint8_t *work);
-void protocore_ssh_connection_set_window_change_cb(uint8_t *work);
-void protocore_ssh_connection_set_forward_open_cb(uint8_t *work);
-void protocore_ssh_connection_set_forward_data_cb(uint8_t *work);
-void protocore_ssh_connection_set_forward_confirm_cb(uint8_t *work);
-void protocore_ssh_connection_set_forward_policy_cb(uint8_t *work);
-void protocore_ssh_connection_set_rforward_open_cb(uint8_t *work);
-void protocore_ssh_connection_set_rforward_cancel_cb(uint8_t *work);
-void protocore_ssh_connection_set_sftp_open_cb(uint8_t *work);
-void protocore_ssh_connection_set_sftp_data_cb(uint8_t *work);
-void protocore_ssh_connection_set_scp_open_cb(uint8_t *work);
-void protocore_ssh_connection_set_scp_data_cb(uint8_t *work);
+void protocore_ssh_connection_set_data_cb(const uint8_t *work);
+void protocore_ssh_connection_set_pty_req_cb(const uint8_t *work);
+void protocore_ssh_connection_set_window_change_cb(const uint8_t *work);
+void protocore_ssh_connection_set_forward_open_cb(const uint8_t *work);
+void protocore_ssh_connection_set_forward_data_cb(const uint8_t *work);
+void protocore_ssh_connection_set_forward_confirm_cb(const uint8_t *work);
+void protocore_ssh_connection_set_forward_policy_cb(const uint8_t *work);
+void protocore_ssh_connection_set_rforward_open_cb(const uint8_t *work);
+void protocore_ssh_connection_set_rforward_cancel_cb(const uint8_t *work);
+void protocore_ssh_connection_set_sftp_open_cb(const uint8_t *work);
+void protocore_ssh_connection_set_sftp_data_cb(const uint8_t *work);
+void protocore_ssh_connection_set_scp_open_cb(const uint8_t *work);
+void protocore_ssh_connection_set_scp_data_cb(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

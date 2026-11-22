@@ -15,7 +15,7 @@
  * embedded-v4 `::ffff:a.b.c.d` tail); the formatter emits the RFC 5952 canonical form
  * (lower-case, no leading zeros, the longest zero run compressed to `::`, v4-mapped shown as
  * dotted). ESP32 dual-stack bring-up (enabling IPv6 on the netif) lives in the physical layer
- * behind PROTOCORE_ENABLE_IPV6; the TCP/UDP listeners already bind IPADDR_TYPE_ANY, so the server
+ * behind PROTOCORE_ENABLE_IPV6. The TCP/UDP listeners already bind IPADDR_TYPE_ANY, so the server
  * accepts v6 connections the moment the interface has a v6 address.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -98,7 +98,7 @@ uint32_t protocore_ip_to_v4_be(const protocore_ip *ip);
 /**
  * @brief CIDR containment: is @p addr inside the @p net / @p prefix_len block?
  *
- * The two must be the same family. @p prefix_len is 0..32 for v4, 0..128 for v6; the top
+ * The two must be the same family. @p prefix_len is 0..32 for v4, 0..128 for v6. The top
  * @p prefix_len bits of the address bytes must match @p net (a prefix of 0 matches everything).
  * This is the standard v4/v6 allowlist match.
  * @return true if @p addr is covered; false on a family mismatch or an out-of-range prefix.
@@ -144,22 +144,22 @@ extern IpVars IpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse)(uint8_t *work);
-    void (*const format)(uint8_t *work);
-    void (*const classify)(uint8_t *work);
-    void (*const equal)(uint8_t *work);
-    void (*const is_unspecified)(uint8_t *work);
-    void (*const prefix_match)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const format)(const uint8_t *work);
+    void (*const classify)(const uint8_t *work);
+    void (*const equal)(const uint8_t *work);
+    void (*const is_unspecified)(const uint8_t *work);
+    void (*const prefix_match)(const uint8_t *work);
 } IpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IpV or a region of the borrow at a fixed offset.
-void protocore_ip_parse(uint8_t *work);
-void protocore_ip_format(uint8_t *work);
-void protocore_ip_classify(uint8_t *work);
-void protocore_ip_equal(uint8_t *work);
-void protocore_ip_is_unspecified(uint8_t *work);
-void protocore_ip_prefix_match(uint8_t *work);
+void protocore_ip_parse(const uint8_t *work);
+void protocore_ip_format(const uint8_t *work);
+void protocore_ip_classify(const uint8_t *work);
+void protocore_ip_equal(const uint8_t *work);
+void protocore_ip_is_unspecified(const uint8_t *work);
+void protocore_ip_prefix_match(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

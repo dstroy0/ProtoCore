@@ -59,7 +59,7 @@ size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, 
     return n + m;
 }
 
-embed_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type)
+embed_bool protocore_h3_frame_type_reserved(const uint8_t *work, uint64_t type)
 {
     (void)work;
 
@@ -67,7 +67,7 @@ embed_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type)
     return type == 0x02 || type == 0x06 || type == 0x08 || type == 0x09;
 }
 
-void protocore_h3_frame_settings_defaults(uint8_t *work, H3Settings *s)
+void protocore_h3_frame_settings_defaults(const uint8_t *work, H3Settings *s)
 {
     (void)work;
 

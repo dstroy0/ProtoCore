@@ -151,7 +151,7 @@ typedef struct
     void (*const finish)(uint8_t *work);
     void (*const parse)(uint8_t *work);
     void (*const next)(uint8_t *work);
-    void (*const value_integer)(uint8_t *work);
+    void (*const value_integer)(const uint8_t *work);
 } Lwm2mTlvNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -165,7 +165,7 @@ void protocore_lwm2m_tlv_write_float(uint8_t *work);
 void protocore_lwm2m_tlv_finish(uint8_t *work);
 void protocore_lwm2m_tlv_parse(uint8_t *work);
 void protocore_lwm2m_tlv_next(uint8_t *work);
-void protocore_lwm2m_tlv_value_integer(uint8_t *work);
+void protocore_lwm2m_tlv_value_integer(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

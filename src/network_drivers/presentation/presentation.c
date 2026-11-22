@@ -5,7 +5,7 @@
  * @file presentation.c
  * @brief Layer 6 (Presentation) - wires the transport ring buffer to the HTTP parser.
  *
- * A thin adapter. The parsing itself lives in http_parser.c; this layer holds the slot's read
+ * A thin adapter. The parsing itself lives in http_parser.c. This layer holds the slot's read
  * scratch, the per-slot HTTP state, and the ProtoHandler the session layer dispatches through.
  *
  * The worker fills the scratch once per data event through ::ConnPool and the parser walks it -
@@ -60,7 +60,10 @@ static_assert(HTTP_CONN_OFF_CTX + sizeof(struct HttpConnStorage) <= PROTOCORE_HT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define HTTP_CONN_CTX(w) ((struct HttpConnStorage *)(void *)((w) + HTTP_CONN_OFF_CTX))
+#define HTTP_CONN_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct HttpConnStorage *)(const void *)((w) + HTTP_CONN_OFF_CTX),                      \
+        default: (struct HttpConnStorage *)(void *)((w) + HTTP_CONN_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -82,7 +85,7 @@ uint8_t *protocore_http_conn_span(void)
     return s_own.span;
 }
 
-void protocore_http_conn_reset(uint8_t *work)
+void protocore_http_conn_reset(const uint8_t *work)
 {
     (void)work;
     if (HttpConnV.slot >= MAX_CONNS)
@@ -139,7 +142,7 @@ void protocore_http_conn_parse(uint8_t *work)
 
 #if PROTOCORE_ENABLE_WEBSOCKET
     // Once a slot upgrades to WebSocket its bytes are WS frames, not HTTP. The WS frame parser is
-    // pumped separately (handle()/the worker loop); feeding those bytes to the HTTP parser here
+    // pumped separately (handle()/the worker loop). Feeding those bytes to the HTTP parser here
     // would consume - and corrupt - the first WS frame. This guard makes "never HTTP-parse a WS
     // slot" hold for every caller (the event-queue dispatch raced the WS pump and ate the first
     // frame's header byte, dropping the first connection after a reboot).
@@ -265,7 +268,7 @@ static void tls_data(uint8_t slot)
 
 #if PROTOCORE_ENABLE_WEBSOCKET
     // A TLS slot upgraded to WebSocket is pumped from handle() (it decrypts
-    // records and feeds the WS frame parser, dispatching each frame); leave the
+    // records and feeds the WS frame parser, dispatching each frame). Leave the
     // ciphertext in the rx ring for it rather than feeding the HTTP parser here.
     WsV.slot = slot;
     Ws.find(protocore_ws_span());
@@ -322,8 +325,7 @@ static void http_evt_data(uint8_t slot)
     }
 #endif
     HttpConnV.slot = slot;
-    protocore_http_conn_parse(
-        protocore_http_conn_span()); // a no-op once the slot has upgraded to WebSocket (see parse)
+    protocore_http_conn_parse(protocore_http_conn_span()); // a no-op once the slot upgraded to WebSocket (see parse)
 }
 static void http_evt_close(uint8_t slot)
 {
@@ -361,7 +363,7 @@ void protocore_http_conn_set_poll(uint8_t *work)
 static const ProtoHandler s_http_handler = {
     .on_accept = http_evt_accept, .on_data = http_evt_data, .on_close = http_evt_close, .on_poll = http_evt_poll};
 
-void protocore_http_conn_proto_handler(uint8_t *work)
+void protocore_http_conn_proto_handler(const uint8_t *work)
 {
     (void)work;
     HttpConnV.handler = &s_http_handler;

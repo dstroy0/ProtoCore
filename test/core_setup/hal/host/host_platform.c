@@ -370,7 +370,7 @@ int protocore_platform_can_open(int tx_pin, int rx_pin, uint32_t bitrate)
 {
     (void)tx_pin;
     (void)rx_pin;
-    // The same four rates the controller has timing terms for; an unlisted one is refused here too,
+    // The same four rates the controller has timing terms for. An unlisted one is refused here too,
     // so a test sees the device's answer rather than a host that accepts anything.
     if (s_hp.can_open || (bitrate != 1000000u && bitrate != 500000u && bitrate != 250000u && bitrate != 125000u))
     {

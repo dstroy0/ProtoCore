@@ -38,7 +38,7 @@ from tools import findroot
 
 # Portable headers and the specific symbols this library uses from each. A
 # symbol may be provided by several headers (size_t lives in stddef.h but also
-# string.h / stdio.h / time.h); the first header listed is the canonical/primary
+# string.h / stdio.h / time.h). The first header listed is the canonical/primary
 # one reported in a file's footprint, the rest are accepted as satisfying it.
 SYMBOL_PROVIDERS = [
     # (regex matching a use of the symbol, [providers, primary first]).

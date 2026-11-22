@@ -116,7 +116,10 @@ static_assert(GRAPHQL_OFF_CTX + sizeof(struct GraphQLStorage) <= PROTOCORE_GRAPH
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define GRAPHQL_CTX(w) ((struct GraphQLStorage *)(void *)((w) + GRAPHQL_OFF_CTX))
+#define GRAPHQL_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct GraphQLStorage *)(const void *)((w) + GRAPHQL_OFF_CTX),                         \
+        default: (struct GraphQLStorage *)(void *)((w) + GRAPHQL_OFF_CTX))
 
 // ---- lexer ----------------------------------------------------------------
 

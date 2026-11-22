@@ -129,7 +129,7 @@ struct AuthStorage
 };
 
 // The caller's borrow, split: the credential table, then the bytes SHA-256 runs out of. The table
-// persists between calls and the hash scratch does not, so they are two regions of one span rather
+// persists between calls and the hash scratch does not. So they are two regions of one span rather
 // than two borrows - the worst case over everything an entry here reaches, taken once.
 #define AUTH_OFF_TABLE 0u
 #define AUTH_OFF_SHA (AUTH_OFF_TABLE + sizeof(struct AuthStorage))
@@ -138,7 +138,10 @@ static_assert(AUTH_OFF_SHA + PROTOCORE_SHA256_BORROW <= PROTOCORE_HTTP_AUTH_BORR
               " it in protocore_config.h, which sums it into its arena");
 
 // The regions, at their offsets in the caller's borrow.
-#define AUTH_TABLE(w) ((struct AuthStorage *)(void *)((w) + AUTH_OFF_TABLE))
+#define AUTH_TABLE(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct AuthStorage *)(const void *)((w) + AUTH_OFF_TABLE),                             \
+        default: (struct AuthStorage *)(void *)((w) + AUTH_OFF_TABLE))
 #define AUTH_SHA(w) ((w) + AUTH_OFF_SHA)
 
 // One-shot SHA-256 of @p data, written as 64 lowercase hex chars + NUL. Takes the module span: the

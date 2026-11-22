@@ -100,7 +100,7 @@ static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_relay_init(uint8_t *work)
+void protocore_relay_init(const uint8_t *work)
 {
     (void)work;
     protocore_relay *r = RelayV.init_args.r;
@@ -116,7 +116,7 @@ void protocore_relay_init(uint8_t *work)
     r->b = *origin;
 }
 
-void protocore_relay_step(uint8_t *work)
+void protocore_relay_step(const uint8_t *work)
 {
     (void)work;
     protocore_relay *r = RelayV.step_args.r;
@@ -144,7 +144,7 @@ void protocore_relay_step(uint8_t *work)
     RelayV.status = (r->a2b_done && r->b2a_done) ? PROTOCORE_RELAY_DONE : PROTOCORE_RELAY_RUNNING;
 }
 
-void protocore_relay_note_eof(uint8_t *work)
+void protocore_relay_note_eof(const uint8_t *work)
 {
     (void)work;
     protocore_relay *r = RelayV.note_eof_args.r;

@@ -182,7 +182,7 @@ int protocore_zigbee_ash_frame_decode(uint8_t *work, const uint8_t *raw, uint16_
     {
         *pay_len = plen;
     }
-    n_result = (int)(flag + 1); // consume up to and including the flag
+    n_result = (flag + 1); // consume up to and including the flag
     return n_result;
 }
 

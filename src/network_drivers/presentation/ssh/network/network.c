@@ -51,7 +51,10 @@ static_assert(SSH_NETWORK_OFF_CTX + sizeof(struct SshNetworkStorage) <= PROTOCOR
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_NETWORK_CTX(w) ((struct SshNetworkStorage *)(void *)((w) + SSH_NETWORK_OFF_CTX))
+#define SSH_NETWORK_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SshNetworkStorage *)(const void *)((w) + SSH_NETWORK_OFF_CTX),                  \
+        default: (struct SshNetworkStorage *)(void *)((w) + SSH_NETWORK_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -149,7 +152,7 @@ static void ensure_init(void)
 // Outbound: frame + (encrypt/MAC) one SSH message and write it to the socket.
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_network_emit(uint8_t *work)
+void protocore_ssh_network_emit(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshNetworkV.ssh_slot;
@@ -185,7 +188,7 @@ void protocore_ssh_network_emit(uint8_t *work)
 
 // Put the packet the codec left flagged on the wire: as many bytes as the send window takes now,
 // the rest on a later pass, and the release - which wipes the packet - once the last byte is out.
-void protocore_ssh_network_tx_drain(uint8_t *work)
+void protocore_ssh_network_tx_drain(const uint8_t *work)
 {
     (void)work;
     const uint8_t conn_slot = SshNetworkV.conn_slot;
@@ -223,7 +226,7 @@ void protocore_ssh_network_tx_drain(uint8_t *work)
 
 // Frame one built SSH message into its own binary packet and put it on the slot's socket
 // (RFC 4253 sec 6: one SSH message per packet). The wire is the slot's own span at SSH_OFF_WIRE.
-void protocore_ssh_network_write_msg(uint8_t *work)
+void protocore_ssh_network_write_msg(const uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -254,7 +257,7 @@ void protocore_ssh_network_write_msg(uint8_t *work)
 
 // The span a message may be built in so the framer wraps it without moving it. Null when the slot
 // has no stream or no storage; @p cap takes what is left of the wire after the framing header.
-void protocore_ssh_network_payload_region(uint8_t *work)
+void protocore_ssh_network_payload_region(const uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -277,7 +280,7 @@ void protocore_ssh_network_payload_region(uint8_t *work)
 }
 
 // Frame the @p plen bytes already sitting in the region above and write them, no copy.
-void protocore_ssh_network_write_msg_at(uint8_t *work)
+void protocore_ssh_network_write_msg_at(const uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -305,7 +308,7 @@ void protocore_ssh_network_write_msg_at(uint8_t *work)
     SshNetworkV.i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
 }
 
-void protocore_ssh_network_claim(uint8_t *work)
+void protocore_ssh_network_claim(const uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -325,7 +328,7 @@ void protocore_ssh_network_claim(uint8_t *work)
     return;
 }
 
-void protocore_ssh_network_release(uint8_t *work)
+void protocore_ssh_network_release(const uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -339,7 +342,7 @@ void protocore_ssh_network_release(uint8_t *work)
 }
 
 // The lowest SSH slot no socket owns, or 0xFF when every one is taken.
-void protocore_ssh_network_slot_free(uint8_t *work)
+void protocore_ssh_network_slot_free(const uint8_t *work)
 {
     (void)work;
     ensure_init();
@@ -357,7 +360,7 @@ void protocore_ssh_network_slot_free(uint8_t *work)
 
 // True when the pair is still the one claim() recorded: a slot whose socket has been recycled under
 // it is not this connection's, and the caller must leave it alone.
-void protocore_ssh_network_owns(uint8_t *work)
+void protocore_ssh_network_owns(const uint8_t *work)
 {
     (void)work;
     const uint8_t ssh_slot = SshNetworkV.ssh_slot;
@@ -540,7 +543,7 @@ void protocore_ssh_network_chan_read(uint8_t *work)
     return;
 }
 
-// True once the bridged socket has closed and every byte it held has been read.
+// True once the bridged socket closed and every byte it held has been read.
 void protocore_ssh_network_chan_drained(uint8_t *work)
 {
     (void)work;

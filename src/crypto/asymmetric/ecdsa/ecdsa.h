@@ -28,7 +28,7 @@ EMBED_BEGIN_DECLS
  * A.2.5 (P-256/SHA-256) known-answer vectors on every target.
  *
  * Only the field multiply changes arm. A die whose MPI accelerator carries a single-shot
- * MODMULT does each 256-bit multiply on it; every other target, and a host build, runs the
+ * MODMULT does each 256-bit multiply on it. Every other target, and a host build, runs the
  * software product. The vectors are the same either way, which is what makes the native run
  * a check on the accelerated one.
  *

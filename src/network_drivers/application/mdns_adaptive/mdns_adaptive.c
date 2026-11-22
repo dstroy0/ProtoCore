@@ -21,14 +21,14 @@
 EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
-void protocore_mdns_adaptive_beacon_adapt(uint8_t *work);
-void protocore_mdns_adaptive_beacon_due(uint8_t *work);
-void protocore_mdns_adaptive_beacon_init(uint8_t *work);
-void protocore_mdns_adaptive_contention_init(uint8_t *work);
-void protocore_mdns_adaptive_contention_sample(uint8_t *work);
-void protocore_mdns_adaptive_refresh_interval(uint8_t *work);
+void protocore_mdns_adaptive_beacon_adapt(const uint8_t *work);
+void protocore_mdns_adaptive_beacon_due(const uint8_t *work);
+void protocore_mdns_adaptive_beacon_init(const uint8_t *work);
+void protocore_mdns_adaptive_contention_init(const uint8_t *work);
+void protocore_mdns_adaptive_contention_sample(const uint8_t *work);
+void protocore_mdns_adaptive_refresh_interval(const uint8_t *work);
 
-void protocore_mdns_adaptive_refresh_interval(uint8_t *work)
+void protocore_mdns_adaptive_refresh_interval(const uint8_t *work)
 {
     (void)work;
     uint32_t ttl_s = MdnsAdaptiveV.refresh_interval_args.ttl_s;
@@ -38,7 +38,7 @@ void protocore_mdns_adaptive_refresh_interval(uint8_t *work)
     MdnsAdaptiveV.ms = half_ms > 0xFFFFFFFFu ? 0xFFFFFFFFu : (uint32_t)half_ms;
 }
 
-void protocore_mdns_adaptive_beacon_init(uint8_t *work)
+void protocore_mdns_adaptive_beacon_init(const uint8_t *work)
 {
     (void)work;
     MdnsBeacon *b = MdnsAdaptiveV.beacon_init_args.b;
@@ -56,7 +56,7 @@ void protocore_mdns_adaptive_beacon_init(uint8_t *work)
     b->hi_thresh = hi_thresh ? hi_thresh : 1;
 }
 
-void protocore_mdns_adaptive_beacon_adapt(uint8_t *work)
+void protocore_mdns_adaptive_beacon_adapt(const uint8_t *work)
 {
     (void)work;
     MdnsBeacon *b = MdnsAdaptiveV.beacon_adapt_args.b;
@@ -88,7 +88,7 @@ void protocore_mdns_adaptive_beacon_adapt(uint8_t *work)
     MdnsAdaptiveV.ms = b->cur_ms;
 }
 
-void protocore_mdns_adaptive_beacon_due(uint8_t *work)
+void protocore_mdns_adaptive_beacon_due(const uint8_t *work)
 {
     (void)work;
     const MdnsBeacon *b = MdnsAdaptiveV.beacon_due_args.b;
@@ -104,7 +104,7 @@ void protocore_mdns_adaptive_beacon_due(uint8_t *work)
     MdnsAdaptiveV.ok = elapsed >= b->cur_ms;
 }
 
-void protocore_mdns_adaptive_beacon_presleep_due(uint8_t *work)
+void protocore_mdns_adaptive_beacon_presleep_due(const uint8_t *work)
 {
     (void)work;
     const MdnsBeacon *b = MdnsAdaptiveV.beacon_presleep_due_args.b;
@@ -127,7 +127,7 @@ void protocore_mdns_adaptive_beacon_presleep_due(uint8_t *work)
 // Contention sampling
 // ---------------------------------------------------------------------------
 
-void protocore_mdns_adaptive_contention_init(uint8_t *work)
+void protocore_mdns_adaptive_contention_init(const uint8_t *work)
 {
     (void)work;
     MdnsContentionWindow *w = MdnsAdaptiveV.contention_init_args.w;
@@ -144,7 +144,7 @@ void protocore_mdns_adaptive_contention_init(uint8_t *work)
     w->window_ms = window_ms ? window_ms : 1000;
 }
 
-void protocore_mdns_adaptive_contention_sample(uint8_t *work)
+void protocore_mdns_adaptive_contention_sample(const uint8_t *work)
 {
     (void)work;
     MdnsContentionWindow *w = MdnsAdaptiveV.contention_sample_args.w;
@@ -207,7 +207,10 @@ static_assert(MDNS_ADAPTIVE_OFF_CTX % _Alignof(MdnsAdaptiveCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define MDNS_ADAPTIVE_CTX(w) ((MdnsAdaptiveCtx *)(void *)((w) + MDNS_ADAPTIVE_OFF_CTX))
+#define MDNS_ADAPTIVE_CTX(w)                                                                                           \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const MdnsAdaptiveCtx *)(const void *)((w) + MDNS_ADAPTIVE_OFF_CTX),                         \
+        default: (MdnsAdaptiveCtx *)(void *)((w) + MDNS_ADAPTIVE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -320,6 +323,7 @@ void protocore_mdns_adaptive_tick(uint8_t *work)
     MdnsAdaptiveV.contention_sample_args.now_ms = now;
     MdnsAdaptiveV.contention_sample_args.out = &c;
     protocore_mdns_adaptive_contention_sample(work);
+    MdnsAdaptiveV.contention_sample_args.out = NULL;
     if (MdnsAdaptiveV.ok)
     {
         MDNS_ADAPTIVE_CTX(work)->last_contention = c;
@@ -328,7 +332,7 @@ void protocore_mdns_adaptive_tick(uint8_t *work)
         protocore_mdns_adaptive_beacon_adapt(work);
     }
 
-    // Re-announce when the (adaptive) interval has elapsed. Re-applying the TXT at its current value
+    // Re-announce when the (adaptive) interval elapsed. Re-applying the TXT at its current value
     // re-announces on every PCB with no goodbye - a refresh, not an evict.
     MdnsAdaptiveV.beacon_due_args.b = &MDNS_ADAPTIVE_CTX(work)->beacon;
     MdnsAdaptiveV.beacon_due_args.last_ms = MDNS_ADAPTIVE_CTX(work)->last_announce_ms;

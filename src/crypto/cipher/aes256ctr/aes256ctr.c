@@ -65,11 +65,11 @@ static inline void blk_init(AesBlk *b, const uint8_t key[32])
 {
     protocore_aes_key_expand(key, 8, b->rk);
 }
-static inline void blk_enc(AesBlk *b, const uint8_t in[16], uint8_t out[16])
+static inline void blk_enc(const AesBlk *b, const uint8_t in[16], uint8_t out[16])
 {
     protocore_aes_encrypt_block(b->rk, 14, in, out);
 }
-static inline void blk_free(AesBlk *b)
+static inline void blk_free(const AesBlk *b)
 {
     (void)b; // the software path holds no vendor allocation to release
 }
@@ -101,7 +101,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define AES256CTR_CTX(w) ((Aes256CtrCtx *)(void *)((w) + AES256CTR_OFF_CTX))
+#define AES256CTR_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Aes256CtrCtx *)(const void *)((w) + AES256CTR_OFF_CTX),                                \
+        default: (Aes256CtrCtx *)(void *)((w) + AES256CTR_OFF_CTX))
 #define AES256CTR_KS(w) ((w) + AES256CTR_OFF_KS)
 
 // ---------------------------------------------------------------------------

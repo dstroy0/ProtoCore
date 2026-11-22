@@ -5,7 +5,7 @@
  * @file sha256.c
  * @brief SHA-256 implementation (FIPS 180-4).
  *
- * One context and one set of entries; only the block compression has two arms - the accelerator where
+ * One context and one set of entries. Only the block compression has two arms - the accelerator where
  * the part carries one, the FIPS 180-4 rounds below where it does not. Shared by SSH,
  * TLS 1.3 / QUIC / DTLS, SNMPv3, JWT, CSRF, and SMB 2.x message signing.
  *
@@ -64,10 +64,16 @@ static_assert(SHA256_OFF_STATE % _Alignof(uint32_t) == 0,
               "misaligned pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define SHA256_CTX(w) ((Sha256Ctx *)(void *)((w) + SHA256_OFF_CTX))
+#define SHA256_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Sha256Ctx *)(const void *)((w) + SHA256_OFF_CTX),                                      \
+        default: (Sha256Ctx *)(void *)((w) + SHA256_OFF_CTX))
 #define SHA256_RX(w) ((w) + SHA256_OFF_RX)
 #define SHA256_TX(w) ((w) + SHA256_OFF_TX)
-#define SHA256_FS(w) ((uint32_t *)(void *)((w) + SHA256_OFF_STATE))
+#define SHA256_FS(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const uint32_t *)(const void *)((w) + SHA256_OFF_STATE),                                     \
+        default: (uint32_t *)(void *)((w) + SHA256_OFF_STATE))
 
 // ---------------------------------------------------------------------------
 // SHA-256 (FIPS 180-4).

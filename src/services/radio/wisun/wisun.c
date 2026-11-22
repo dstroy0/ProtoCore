@@ -90,9 +90,9 @@ static embed_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_wisun_build_coap(uint8_t *work, uint8_t type, uint8_t code, uint16_t msg_id, const uint8_t *token,
-                                  uint8_t tkl, const char *uri_path, const uint8_t *payload, size_t plen, uint8_t *out,
-                                  size_t cap)
+size_t protocore_wisun_build_coap(const uint8_t *work, uint8_t type, uint8_t code, uint16_t msg_id,
+                                  const uint8_t *token, uint8_t tkl, const char *uri_path, const uint8_t *payload,
+                                  size_t plen, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -153,7 +153,7 @@ size_t protocore_wisun_build_coap(uint8_t *work, uint8_t type, uint8_t code, uin
     return o;
 }
 
-void protocore_wisun_init(uint8_t *work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage,
+void protocore_wisun_init(const uint8_t *work, WisunFan *fan, const protocore_ip *border_router, WisunNode *storage,
                           size_t cap)
 {
     (void)work;
@@ -222,7 +222,7 @@ embed_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const p
     return EMBED_FALSE;
 }
 
-size_t protocore_wisun_joined_count(uint8_t *work, const WisunFan *fan)
+size_t protocore_wisun_joined_count(const uint8_t *work, const WisunFan *fan)
 {
     (void)work;
 

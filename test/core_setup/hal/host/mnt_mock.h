@@ -232,7 +232,7 @@ static inline int mock_mnt_write(int handle, const void *buf, size_t n)
     return (int)n;
 }
 
-/** @brief Bytes a writer has sent since the last reset. */
+/** @brief Bytes a writer sent since the last reset. */
 static inline size_t mock_mnt_written(void)
 {
     return g_mock_mnt.wlen;

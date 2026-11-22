@@ -162,9 +162,9 @@ extern ResolverVars ResolverV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const classify)(uint8_t *work);
-    void (*const verify)(uint8_t *work);
-    void (*const query_build)(uint8_t *work);
+    void (*const classify)(const uint8_t *work);
+    void (*const verify)(const uint8_t *work);
+    void (*const query_build)(const uint8_t *work);
     void (*const answer_parse)(uint8_t *work);
     void (*const resolve)(uint8_t *work);
     void (*const resolve_verified)(uint8_t *work);
@@ -174,9 +174,9 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ResolverV or a region of the borrow at a fixed offset.
-void protocore_resolver_classify(uint8_t *work);
-void protocore_resolver_verify(uint8_t *work);
-void protocore_resolver_query_build(uint8_t *work);
+void protocore_resolver_classify(const uint8_t *work);
+void protocore_resolver_verify(const uint8_t *work);
+void protocore_resolver_query_build(const uint8_t *work);
 void protocore_resolver_answer_parse(uint8_t *work);
 void protocore_resolver_resolve(uint8_t *work);
 void protocore_resolver_resolve_verified(uint8_t *work);

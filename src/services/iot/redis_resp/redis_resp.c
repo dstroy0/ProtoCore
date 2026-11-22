@@ -252,7 +252,7 @@ static embed_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t head
     {
         return EMBED_FALSE;
     }
-    // The Null bulk string is the length -1 exactly ("Null bulk strings"); no other negative length
+    // The Null bulk string is the length -1 exactly ("Null bulk strings"). No other negative length
     // has an encoding, so it is a malformed reply rather than another spelling of null.
     if (first_byte == '$' && blen == -1)
     {
@@ -334,7 +334,7 @@ static embed_bool parse_aggregate(uint8_t *work, uint8_t first_byte, size_t head
 
 // Build the array of bulk strings a client sends ("Sending commands to a Redis server") from
 // ns->command into ns->out, NUL-terminate it, and report its length in ns->n.
-void protocore_resp_encode_command(uint8_t *work)
+void protocore_resp_encode_command(const uint8_t *work)
 {
     (void)work;
     char *buf = RespV.out.buf;

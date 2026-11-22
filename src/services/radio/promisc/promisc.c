@@ -37,7 +37,8 @@ uint8_t *protocore_promisc_span(void)
     return s_own.span;
 }
 
-embed_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *frame, uint16_t len, WifiFrameInfo *out)
+embed_bool protocore_promisc_wifi_frame_parse(const uint8_t *work, const uint8_t *frame, uint16_t len,
+                                              WifiFrameInfo *out)
 {
     (void)work;
 
@@ -151,7 +152,10 @@ static_assert(PROMISC_OFF_CTX % _Alignof(PromiscCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define PROMISC_CTX(w) ((PromiscCtx *)(void *)((w) + PROMISC_OFF_CTX))
+#define PROMISC_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const PromiscCtx *)(const void *)((w) + PROMISC_OFF_CTX),                                    \
+        default: (PromiscCtx *)(void *)((w) + PROMISC_OFF_CTX))
 
 embed_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink)
 {
@@ -170,7 +174,7 @@ embed_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_pro
     return EMBED_TRUE;
 }
 
-void protocore_promisc_set_channel(uint8_t *work, uint8_t channel)
+void protocore_promisc_set_channel(const uint8_t *work, uint8_t channel)
 {
     (void)work;
 

@@ -131,9 +131,9 @@ extern Vl53l0xVars Vl53l0xV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const range_mm)(uint8_t *work);
-    void (*const data_ready)(uint8_t *work);
-    void (*const range_status)(uint8_t *work);
+    void (*const range_mm)(const uint8_t *work);
+    void (*const data_ready)(const uint8_t *work);
+    void (*const range_status)(const uint8_t *work);
     void (*const range_valid)(uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read_mm)(uint8_t *work);
@@ -141,9 +141,9 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Vl53l0xV or a region of the borrow at a fixed offset.
-void protocore_vl53l0x_range_mm(uint8_t *work);
-void protocore_vl53l0x_data_ready(uint8_t *work);
-void protocore_vl53l0x_range_status(uint8_t *work);
+void protocore_vl53l0x_range_mm(const uint8_t *work);
+void protocore_vl53l0x_data_ready(const uint8_t *work);
+void protocore_vl53l0x_range_status(const uint8_t *work);
 void protocore_vl53l0x_range_valid(uint8_t *work);
 void protocore_vl53l0x_begin(uint8_t *work);
 void protocore_vl53l0x_read_mm(uint8_t *work);

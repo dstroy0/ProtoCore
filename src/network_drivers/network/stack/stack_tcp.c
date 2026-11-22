@@ -97,7 +97,10 @@ static_assert(sizeof(struct StackTcpStorage) <= PROTOCORE_STACK_TCP_BORROW,
               "PROTOCORE_STACK_TCP_BORROW is short of the engine context - raise it in buffer_sizing.h");
 static_assert(IDEMIP_TCP_PCBS < IDEMIP_TCP_PCB_NONE, "a TCB index fits the 16 bits of StackTcpSlot::tcb");
 
-#define STACK_TCP_CONTEXT(work_) ((struct StackTcpStorage *)(void *)(work_))
+#define STACK_TCP_CONTEXT(work_)                                                                                       \
+    _Generic((work_),                                                                                                  \
+        const uint8_t *: (const struct StackTcpStorage *)(const void *)(work_),                                        \
+        default: (struct StackTcpStorage *)(void *)(work_))
 
 /** @brief Where a segment goes: the two ends of the connection and the next hop. */
 typedef struct
@@ -186,8 +189,8 @@ static embed_bool engine_passed(uint32_t now_ms, uint32_t deadline)
 // SND.NXT less SND.UNA.
 static void engine_out_load(const struct StackTcpStorage *context, uint32_t now_ms)
 {
-    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
-    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out);
     out_io->vars = tcb_io->vars;
     out_io->ctl = tcb_io->ctl;
     out_io->state = tcb_io->state;
@@ -202,13 +205,14 @@ static void engine_out_load(const struct StackTcpStorage *context, uint32_t now_
 static void engine_timer_arm(const struct StackTcpStorage *context, uint32_t now_ms)
 {
     engine_out_load(context, now_ms);
-    TcpOut.rtx_arm(context->units->tcp_out);
-    IDEMIP_TCP_PCB_IO(context->units->tcp_pcb)->ctl = IDEMIP_TCP_OUT_IO(context->units->tcp_out)->ctl;
+    TcpOut.rtx_arm(context->units->transport.tcp_out);
+    IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb)->ctl =
+        IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out)->ctl;
 }
 
 // --- the events ------------------------------------------------------------------
 
-static void engine_event_post(StackTcpEventKind type, uint8_t slot, size_t data_len)
+static void engine_event_post(StackTcpEventKind type, uint8_t slot, uint32_t data_len)
 {
     const StackTcpEvent record = {.type = type, .slot_id = slot, .data_len = data_len};
     // Explicit cast reads the record as its octets, which the ring copies whole
@@ -234,9 +238,9 @@ static embed_bool engine_emit(const struct StackTcpStorage *context, const Stack
     {
         return EMBED_FALSE;
     }
-    NetifIo *const netif_io = IDEMIP_NETIF_IO(context->units->netif);
+    NetifIo *const netif_io = IDEMIP_NETIF_IO(context->units->link.netif);
     netif_io->if_args.index = index;
-    Netif.get(context->units->netif);
+    Netif.get(context->units->link.netif);
     if (netif_io->status != IDEMIP_OK)
     {
         return EMBED_FALSE;
@@ -244,7 +248,7 @@ static embed_bool engine_emit(const struct StackTcpStorage *context, const Stack
     uint8_t *const frame = StackV.transmit_frame;
     const embed_bool version6 = endpoint->ip_version == 6u;
     const size_t ip_len = version6 ? IDEMIP_IPV6_HDR_LEN : IDEMIP_IPV4_HDR_LEN;
-    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out);
     out_io->build_args = (TcpOutBuildArgs){0};
     out_io->build_args.buf = frame + IDEMIP_ETH_HDR_LEN + ip_len;
     out_io->build_args.data = outbound->text;
@@ -262,7 +266,7 @@ static embed_bool engine_emit(const struct StackTcpStorage *context, const Stack
     out_io->build_args.opts = outbound->options;
     out_io->build_args.flags = outbound->flags;
     out_io->build_args.ip_version = endpoint->ip_version;
-    TcpOut.build(context->units->tcp_out);
+    TcpOut.build(context->units->transport.tcp_out);
     if (out_io->status != IDEMIP_OK)
     {
         return EMBED_FALSE;
@@ -309,9 +313,9 @@ static embed_bool engine_emit(const struct StackTcpStorage *context, const Stack
 static embed_bool engine_endpoint_of_tcb(const struct StackTcpStorage *context, uint16_t tcb,
                                          StackTcpEndpoint *endpoint)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     tcb_io->pcb_args.index = tcb;
-    TcpPcb.load(context->units->tcp_pcb);
+    TcpPcb.load(context->units->transport.tcp_pcb);
     if (tcb_io->status != IDEMIP_OK)
     {
         return EMBED_FALSE;
@@ -330,17 +334,17 @@ static embed_bool engine_endpoint_of_tcb(const struct StackTcpStorage *context, 
 // Writes the TCB of the last load back. False where TcpPcb refuses the state.
 static embed_bool engine_tcb_store(const struct StackTcpStorage *context, uint16_t tcb)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     tcb_io->pcb_args.index = tcb;
-    TcpPcb.store(context->units->tcp_pcb);
+    TcpPcb.store(context->units->transport.tcp_pcb);
     return tcb_io->status == IDEMIP_OK;
 }
 
 // RFC 9293 sec 3.10.7.1 and sec 3.10.7.2: the reset that answers a segment with no TCB. The two ends and the
 // next hop come from the frame itself.
-static void engine_answer_frame(struct StackTcpStorage *context, const StackTcpSegmentArgs *args)
+static void engine_answer_frame(const struct StackTcpStorage *context, const StackTcpSegmentArgs *args)
 {
-    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->dispatch);
+    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->core.dispatch);
     if ((dispatch_io->tcp_act & IDEMIP_TCP_IN_ACT_RST) == 0u)
     {
         return;
@@ -465,32 +469,32 @@ static void engine_slot_end(struct StackTcpStorage *context, uint8_t index)
 // TcpPcb.close refuses a TCB that keeps one.
 static void engine_tcb_close(struct StackTcpStorage *context, uint16_t tcb)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     for (uint16_t held = 0u; held <= IDEMIP_TCP_OOSEQ_SEGS; held++)
     {
         tcb_io->pcb_args.index = tcb;
-        TcpPcb.load(context->units->tcp_pcb);
+        TcpPcb.load(context->units->transport.tcp_pcb);
         if (tcb_io->status != IDEMIP_OK || tcb_io->info.ooseq == IDEMIP_TCP_PCB_NONE)
         {
             break;
         }
         const uint16_t head = tcb_io->info.ooseq;
         tcb_io->oos_args.index = head;
-        TcpPcb.oos_load(context->units->tcp_pcb);
+        TcpPcb.oos_load(context->units->transport.tcp_pcb);
         const uint16_t handle = tcb_io->oos.desc;
         const uint8_t netif = IDEMIP_DISPATCH_DESC_NETIF(handle);
         if (netif < IDEMIP_NETIF_COUNT)
         {
-            DmaIo *const dma_io = IDEMIP_DMA_IO(context->units->dma[netif]);
+            DmaIo *const dma_io = IDEMIP_DMA_IO(context->units->iface[netif].dma);
             dma_io->desc_args.index = IDEMIP_DISPATCH_DESC_INDEX(handle);
-            Dma.unpin(context->units->dma[netif]);
+            Dma.unpin(context->units->iface[netif].dma);
         }
         tcb_io->oos_args.index = head;
         tcb_io->oos_args.pcb = tcb;
-        TcpPcb.oos_free(context->units->tcp_pcb);
+        TcpPcb.oos_free(context->units->transport.tcp_pcb);
     }
     tcb_io->pcb_args.index = tcb;
-    TcpPcb.close(context->units->tcp_pcb);
+    TcpPcb.close(context->units->transport.tcp_pcb);
     StackTcpRow *const row = &context->rows[tcb];
     if (row->slot < PROTOCORE_STACK_TCP_SLOTS && context->slots[row->slot].tcb == tcb)
     {
@@ -530,12 +534,12 @@ static embed_bool engine_open_passive(struct StackTcpStorage *context, const Sta
 static void engine_slot_connect(struct StackTcpStorage *context, uint8_t index)
 {
     StackTcpSlot *const slot = &context->slots[index];
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
-    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out);
     out_io->timer_args = (TcpOutTimerArgs){0};
     out_io->timer_args.smss = engine_send_mss(tcb_io);
     out_io->ctl = tcb_io->ctl;
-    TcpOut.cc_init(context->units->tcp_out);
+    TcpOut.cc_init(context->units->transport.tcp_out);
     tcb_io->ctl = out_io->ctl;
     (void)engine_tcb_store(context, slot->tcb);
     slot->state = STACK_TCP_SLOT_OPEN;
@@ -562,14 +566,14 @@ static void engine_text(StackTcpSlot *slot, uint8_t index, const uint8_t *text, 
 // call is BUSY, and it gives the last descriptor back.
 static void engine_redeliver(struct StackTcpStorage *context, uint16_t tcb, uint32_t now_ms)
 {
-    DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->dispatch);
+    DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->core.dispatch);
     const StackTcpRow *const row = &context->rows[tcb];
     StackTcpSlot *const slot = (row->slot < PROTOCORE_STACK_TCP_SLOTS) ? &context->slots[row->slot] : NULL;
     for (uint16_t delivery = 0u; delivery <= IDEMIP_TCP_OOSEQ_SEGS; delivery++)
     {
         dispatch_io->tcp_args.pcb = tcb;
         dispatch_io->tcp_args.now_ms = now_ms;
-        Dispatch.tcp_deliver(context->units->dispatch);
+        Dispatch.tcp_deliver(context->units->core.dispatch);
         if (dispatch_io->status != IDEMIP_OK)
         {
             return;
@@ -579,15 +583,15 @@ static void engine_redeliver(struct StackTcpStorage *context, uint16_t tcb, uint
         {
             continue;
         }
-        DmaIo *const dma_io = IDEMIP_DMA_IO(context->units->dma[netif]);
+        DmaIo *const dma_io = IDEMIP_DMA_IO(context->units->iface[netif].dma);
         dma_io->desc_args.index = IDEMIP_DISPATCH_DESC_INDEX(dispatch_io->desc);
-        Dma.pin(context->units->dma[netif]);
+        Dma.pin(context->units->iface[netif].dma);
         if (dma_io->status != IDEMIP_OK)
         {
             continue;
         }
         engine_text(slot, row->slot, dma_io->buf + dispatch_io->text_off, dispatch_io->text_len);
-        Dma.unpin(context->units->dma[netif]);
+        Dma.unpin(context->units->iface[netif].dma);
     }
 }
 
@@ -602,10 +606,11 @@ static void engine_release(StackTcpSlot *slot, uint32_t snd_una, uint32_t iss)
     {
         acknowledged = in_flight;
     }
-    for (uint32_t segment = 0u; segment < PROTOCORE_STACK_TCP_SEGMENTS && acknowledged != 0u; segment++)
+    for (uint32_t segment = 0u; segment < PROTOCORE_STACK_TCP_SEGMENTS; segment++)
     {
         size_t front = 0u;
-        if (!EMBED_CALL(anularis.seg_front, AnularisCfg, .ring = slot->transmit, .out_index = &front))
+        if (acknowledged == 0u ||
+            !EMBED_CALL(anularis.seg_front, AnularisCfg, .ring = slot->transmit, .out_index = &front))
         {
             return;
         }
@@ -638,32 +643,32 @@ static void engine_release(StackTcpSlot *slot, uint32_t snd_una, uint32_t iss)
 static void engine_acknowledged(const struct StackTcpStorage *context, StackTcpRow *row, StackTcpSlot *slot,
                                 uint32_t acked, uint32_t now_ms)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
-    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out);
     engine_release(slot, tcb_io->vars.snd_una, tcb_io->vars.iss);
     engine_out_load(context, now_ms);
     if (row->timing && (tcb_io->vars.snd_una - tcb_io->ctl.rtseq) < 0x80000000u)
     {
         const uint32_t sample = now_ms - row->timed_ms;
         out_io->timer_args.sample_ms = (sample != 0u) ? sample : 1u;
-        TcpOut.rtt(context->units->tcp_out);
+        TcpOut.rtt(context->units->transport.tcp_out);
         row->timing = EMBED_FALSE;
     }
     if (tcb_io->vars.snd_una == tcb_io->vars.snd_nxt)
     {
-        TcpOut.rtx_stop(context->units->tcp_out);
+        TcpOut.rtx_stop(context->units->transport.tcp_out);
     }
     else
     {
-        TcpOut.rtx_restart(context->units->tcp_out);
+        TcpOut.rtx_restart(context->units->transport.tcp_out);
     }
     out_io->timer_args.acked = acked;
     if (out_io->ctl.dupacks < (uint8_t)IDEMIP_TCP_DUPACK_THRESH)
     {
-        TcpOut.cc_ack(context->units->tcp_out);
+        TcpOut.cc_ack(context->units->transport.tcp_out);
     }
     // cc_recover deflates cwnd after fast recovery, and it sets the duplicate count back to zero in each case.
-    TcpOut.cc_recover(context->units->tcp_out);
+    TcpOut.cc_recover(context->units->transport.tcp_out);
     tcb_io->ctl = out_io->ctl;
     (void)engine_tcb_store(context, slot->tcb);
 }
@@ -674,7 +679,7 @@ static void engine_acknowledged(const struct StackTcpStorage *context, StackTcpR
 static embed_bool engine_resend(const struct StackTcpStorage *context, const StackTcpSlot *slot,
                                 const StackTcpEndpoint *endpoint)
 {
-    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     StackTcpOutbound outbound = {
         .seq = tcb_io->vars.snd_una,
         .ack = tcb_io->vars.rcv_nxt,
@@ -730,8 +735,8 @@ static embed_bool engine_resend(const struct StackTcpStorage *context, const Sta
 static void engine_duplicate(const struct StackTcpStorage *context, StackTcpRow *row, const StackTcpSlot *slot,
                              const StackTcpEndpoint *endpoint, uint32_t now_ms)
 {
-    const TcpInIo *const in_io = IDEMIP_TCP_IN_IO(context->units->tcp_in);
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    const TcpInIo *const in_io = IDEMIP_TCP_IN_IO(context->units->transport.tcp_in);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     if (tcb_io->vars.snd_nxt == tcb_io->vars.snd_una || in_io->seg.data_len != 0u ||
         (in_io->seg.flags & (IDEMIP_TCP_SYN | IDEMIP_TCP_FIN)) != 0u || in_io->seg.ack != tcb_io->vars.snd_una ||
         in_io->seg.wnd != row->peer_window || tcb_io->vars.snd_wnd == 0u)
@@ -739,8 +744,8 @@ static void engine_duplicate(const struct StackTcpStorage *context, StackTcpRow 
         return;
     }
     engine_out_load(context, now_ms);
-    TcpOut.cc_dupack(context->units->tcp_out);
-    tcb_io->ctl = IDEMIP_TCP_OUT_IO(context->units->tcp_out)->ctl;
+    TcpOut.cc_dupack(context->units->transport.tcp_out);
+    tcb_io->ctl = IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out)->ctl;
     (void)engine_tcb_store(context, slot->tcb);
     if (tcb_io->ctl.dupacks == (uint8_t)IDEMIP_TCP_DUPACK_THRESH)
     {
@@ -752,7 +757,7 @@ static void engine_duplicate(const struct StackTcpStorage *context, StackTcpRow 
 // What the last Dispatch.input decided about a segment on an open TCB.
 static void engine_tcb_segment(struct StackTcpStorage *context, const StackTcpSegmentArgs *args, uint16_t tcb)
 {
-    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->dispatch);
+    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->core.dispatch);
     // The redelivery below writes the same operand block. This function thus reads the decision first.
     const uint32_t act = dispatch_io->tcp_act;
     const TcpInReply reply = dispatch_io->reply;
@@ -769,7 +774,7 @@ static void engine_tcb_segment(struct StackTcpStorage *context, const StackTcpSe
     {
         return;
     }
-    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     // Dispatch aggregates a plain ACK and sends none of the others. A SYN,ACK carries the MSS Option, which
     // RFC 9293 sec 3.7.1 MUST-14 sends.
     if ((act & (IDEMIP_TCP_IN_ACT_ACK | IDEMIP_TCP_IN_ACT_RST)) != 0u)
@@ -803,7 +808,7 @@ static void engine_tcb_segment(struct StackTcpStorage *context, const StackTcpSe
     {
         engine_duplicate(context, row, slot, &endpoint, args->now_ms);
     }
-    row->peer_window = IDEMIP_TCP_IN_IO(context->units->tcp_in)->seg.wnd;
+    row->peer_window = IDEMIP_TCP_IN_IO(context->units->transport.tcp_in)->seg.wnd;
     if ((act & IDEMIP_TCP_IN_ACT_TEXT) != 0u)
     {
         engine_text(slot, index, args->frame + text_off, text_len);
@@ -871,10 +876,10 @@ static StackTcpCursor engine_cursor(const StackTcpSlot *slot)
 
 // RFC 9293 sec 3.10.4 CLOSE: the FIN goes out after the last text octet. ESTABLISHED moves to FIN-WAIT-1, and
 // CLOSE-WAIT to LAST-ACK. The FIN starts the retransmission timer.
-static void engine_fin_send(struct StackTcpStorage *context, StackTcpSlot *slot, const StackTcpEndpoint *endpoint,
+static void engine_fin_send(const struct StackTcpStorage *context, StackTcpSlot *slot, const StackTcpEndpoint *endpoint,
                             uint32_t now_ms)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     const StackTcpOutbound outbound = {
         .seq = tcb_io->vars.snd_nxt,
         .ack = tcb_io->vars.rcv_nxt,
@@ -897,51 +902,66 @@ static void engine_fin_send(struct StackTcpStorage *context, StackTcpSlot *slot,
 // own segment, one MSS at most. Returns the octets that went out. Each segment advances SND.NXT and starts
 // the retransmission timer, and the TCB goes back to TcpPcb after each one. Where no RFC 6298 sample runs,
 // the first segment starts one.
+static uint32_t engine_text_segment(struct StackTcpStorage *context, StackTcpSlot *slot,
+                                    const StackTcpEndpoint *endpoint, uint32_t room, uint32_t now_ms);
+
 static uint32_t engine_text_send(struct StackTcpStorage *context, StackTcpSlot *slot, const StackTcpEndpoint *endpoint,
                                  uint32_t budget, uint32_t now_ms)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
-    StackTcpRow *const row = &context->rows[slot->tcb];
-    const uint32_t mss = engine_send_mss(tcb_io);
     uint32_t sent = 0u;
-    for (uint32_t step = 0u; step <= PROTOCORE_STACK_TCP_SEGMENTS && sent < budget; step++)
+    for (uint32_t step = 0u; step <= PROTOCORE_STACK_TCP_SEGMENTS; step++)
     {
-        const StackTcpCursor cursor = engine_cursor(slot);
-        if (cursor.text == NULL)
+        const uint32_t one = (sent < budget) ? engine_text_segment(context, slot, endpoint, budget - sent, now_ms) : 0u;
+        if (one == 0u)
         {
-            break;
+            return sent;
         }
-        uint32_t len = budget - sent;
-        len = (len < cursor.len) ? len : cursor.len;
-        len = (len < mss) ? len : mss;
-        const StackTcpOutbound outbound = {
-            .text = cursor.text,
-            .seq = tcb_io->vars.snd_nxt,
-            .ack = tcb_io->vars.rcv_nxt,
-            .window = tcb_io->vars.rcv_wnd,
-            // Explicit cast narrows the count, which the send MSS holds below 65536
-            .len = (uint16_t)len,
-            // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
-            .flags = (uint8_t)(IDEMIP_TCP_ACK | IDEMIP_TCP_PSH),
-        };
-        if (!engine_emit(context, endpoint, &outbound))
-        {
-            break;
-        }
-        tcb_io->ctl.last_send_ms = now_ms;
-        tcb_io->vars.snd_nxt += len;
-        if (!row->timing)
-        {
-            row->timing = EMBED_TRUE;
-            row->timed_ms = now_ms;
-            tcb_io->ctl.rtseq = tcb_io->vars.snd_nxt;
-        }
-        slot->sent += len;
-        sent += len;
-        engine_timer_arm(context, now_ms);
-        (void)engine_tcb_store(context, slot->tcb);
+        sent += one;
     }
     return sent;
+}
+
+// One segment of the text at the cursor, of @p room octets at most, and of one MSS at most. The octets that went
+// out, and 0 where no text waits or the segment did not go out.
+static uint32_t engine_text_segment(struct StackTcpStorage *context, StackTcpSlot *slot,
+                                    const StackTcpEndpoint *endpoint, uint32_t room, uint32_t now_ms)
+{
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
+    StackTcpRow *const row = &context->rows[slot->tcb];
+    const uint32_t mss = engine_send_mss(tcb_io);
+    const StackTcpCursor cursor = engine_cursor(slot);
+    if (cursor.text == NULL)
+    {
+        return 0u;
+    }
+    uint32_t len = (room < cursor.len) ? room : cursor.len;
+    len = (len < mss) ? len : mss;
+    const StackTcpOutbound outbound = {
+        .text = cursor.text,
+        .seq = tcb_io->vars.snd_nxt,
+        .ack = tcb_io->vars.rcv_nxt,
+        .window = tcb_io->vars.rcv_wnd,
+        // Explicit cast narrows the count, which the send MSS holds below 65536
+        .len = (uint16_t)len,
+        // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
+        .flags = (uint8_t)(IDEMIP_TCP_ACK | IDEMIP_TCP_PSH),
+    };
+    if (!engine_emit(context, endpoint, &outbound))
+    {
+        return 0u;
+    }
+    tcb_io->ctl.last_send_ms = now_ms;
+    tcb_io->vars.snd_nxt += len;
+    if (!row->timing)
+    {
+        row->timing = EMBED_TRUE;
+        row->timed_ms = now_ms;
+        tcb_io->ctl.rtseq = tcb_io->vars.snd_nxt;
+    }
+    slot->sent += len;
+    engine_timer_arm(context, now_ms);
+    (void)engine_tcb_store(context, slot->tcb);
+    return len;
 }
 
 // RFC 9293 sec 3.8.6.1: the peer closed its window, and text waits. Where nothing is in flight, the persist
@@ -952,7 +972,7 @@ static uint32_t engine_text_send(struct StackTcpStorage *context, StackTcpSlot *
 static void engine_persist(struct StackTcpStorage *context, StackTcpSlot *slot, const StackTcpEndpoint *endpoint,
                            const StackTcpCursor *cursor, uint32_t now_ms)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     StackTcpRow *const row = &context->rows[slot->tcb];
     const embed_bool idle = tcb_io->vars.snd_una == tcb_io->vars.snd_nxt;
     if (tcb_io->vars.snd_wnd != 0u || (!idle && row->persist_interval == 0u))
@@ -1001,7 +1021,7 @@ static void engine_persist(struct StackTcpStorage *context, StackTcpSlot *slot, 
 // the retransmission timer.
 static void engine_persist_end(struct StackTcpStorage *context, const StackTcpSlot *slot, uint32_t now_ms)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     StackTcpRow *const row = &context->rows[slot->tcb];
     if (tcb_io->vars.snd_wnd == 0u || row->persist_interval == 0u)
     {
@@ -1023,8 +1043,8 @@ static void engine_persist_end(struct StackTcpStorage *context, const StackTcpSl
 static void engine_transmit(struct StackTcpStorage *context, StackTcpSlot *slot, const StackTcpEndpoint *endpoint,
                             uint32_t now_ms)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
-    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out);
     engine_persist_end(context, slot, now_ms);
     for (uint32_t decision = 0u; decision <= PROTOCORE_STACK_TCP_SEGMENTS; decision++)
     {
@@ -1050,7 +1070,7 @@ static void engine_transmit(struct StackTcpStorage *context, StackTcpSlot *slot,
         out_io->send_args.eff_snd_mss = engine_send_mss(tcb_io);
         out_io->send_args.now_ms = now_ms;
         out_io->send_args.push = EMBED_TRUE;
-        TcpOut.send(context->units->tcp_out);
+        TcpOut.send(context->units->transport.tcp_out);
         if (out_io->status != IDEMIP_OK || !out_io->res.send_now)
         {
             engine_persist(context, slot, endpoint, &cursor, now_ms);
@@ -1068,10 +1088,10 @@ static void engine_transmit(struct StackTcpStorage *context, StackTcpSlot *slot,
 // RFC 9293 sec 3.8.6.2.2: the receiver opens the window once the owner read enough of the receive ring. The
 // step is the smaller of half the window and one MSS. The window never passes the vacant octets of the ring,
 // and never passes the window of ::StackTcpStartArgs.
-static void engine_window_open(struct StackTcpStorage *context, const StackTcpSlot *slot,
+static void engine_window_open(const struct StackTcpStorage *context, const StackTcpSlot *slot,
                                const StackTcpEndpoint *endpoint)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     const size_t vacant = EMBED_CALL(anularis.vacant, AnularisCfg, .ring = slot->receive);
     // Explicit cast narrows the room, which the window of ::StackTcpStartArgs holds below 65536
     const uint32_t room = (vacant < context->window) ? (uint32_t)vacant : context->window;
@@ -1105,13 +1125,13 @@ static void engine_window_open(struct StackTcpStorage *context, const StackTcpSl
 static embed_bool engine_expire(struct StackTcpStorage *context, uint8_t index, const StackTcpEndpoint *endpoint,
                                 uint32_t now_ms)
 {
-    StackTcpSlot *const slot = &context->slots[index];
+    const StackTcpSlot *const slot = &context->slots[index];
     StackTcpRow *const row = &context->rows[slot->tcb];
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
-    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->tcp_out);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
+    TcpOutIo *const out_io = IDEMIP_TCP_OUT_IO(context->units->transport.tcp_out);
     engine_out_load(context, now_ms);
     out_io->timer_args.resent = tcb_io->ctl.nrtx != 0u;
-    TcpOut.rtx_expire(context->units->tcp_out);
+    TcpOut.rtx_expire(context->units->transport.tcp_out);
     tcb_io->ctl = out_io->ctl;
     row->timing = EMBED_FALSE;
     if (out_io->res.r2)
@@ -1142,7 +1162,7 @@ static void engine_slot_service(struct StackTcpStorage *context, uint8_t index, 
     {
         return;
     }
-    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    const TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     if (engine_passed(now_ms, tcb_io->ctl.rtx_deadline) && !engine_expire(context, index, &endpoint, now_ms))
     {
         return;
@@ -1172,7 +1192,7 @@ static void engine_slot_service(struct StackTcpStorage *context, uint8_t index, 
 // PROTOCORE_STACK_TCP_FIN_WAIT_2_MS, because its peer sent no FIN.
 static void engine_end_waits(struct StackTcpStorage *context, uint32_t now_ms)
 {
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     for (uint16_t tcb = 0u; tcb < IDEMIP_TCP_PCBS; tcb++)
     {
         StackTcpRow *const row = &context->rows[tcb];
@@ -1181,7 +1201,7 @@ static void engine_end_waits(struct StackTcpStorage *context, uint32_t now_ms)
             continue;
         }
         tcb_io->pcb_args.index = tcb;
-        TcpPcb.load(context->units->tcp_pcb);
+        TcpPcb.load(context->units->transport.tcp_pcb);
         if (tcb_io->status != IDEMIP_OK)
         {
             continue;
@@ -1246,14 +1266,14 @@ void protocore_stack_tcp_listen(uint8_t *work)
     {
         return;
     }
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     tcb_io->listen_args = (TcpPcbListenArgs){0};
     tcb_io->listen_args.ip = any_address;
     tcb_io->listen_args.port = args->port;
     tcb_io->listen_args.backlog = args->backlog;
     tcb_io->listen_args.ip_version = args->ip_version;
     tcb_io->listen_args.rcv_wnd = context->window;
-    TcpPcb.listen(context->units->tcp_pcb);
+    TcpPcb.listen(context->units->transport.tcp_pcb);
     StackTcpV.ok = tcb_io->status == IDEMIP_OK;
 }
 
@@ -1311,7 +1331,7 @@ void protocore_stack_tcp_segment(uint8_t *work)
     {
         return;
     }
-    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->dispatch);
+    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->core.dispatch);
     if ((dispatch_io->act & IDEMIP_DISPATCH_ACT_TCP) == 0u)
     {
         return;
@@ -1329,13 +1349,13 @@ void protocore_stack_tcp_segment(uint8_t *work)
 
 void protocore_stack_tcp_acknowledge(uint8_t *work)
 {
-    struct StackTcpStorage *const context = STACK_TCP_CONTEXT(work);
+    const struct StackTcpStorage *const context = STACK_TCP_CONTEXT(work);
     StackTcpV.ok = EMBED_FALSE;
     if (!context->started)
     {
         return;
     }
-    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->dispatch);
+    const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units->core.dispatch);
     const uint16_t tcb = dispatch_io->pcb;
     const TcpInReply reply = dispatch_io->reply;
     StackTcpEndpoint endpoint;
@@ -1346,7 +1366,7 @@ void protocore_stack_tcp_acknowledge(uint8_t *work)
     const StackTcpOutbound outbound = {
         .seq = reply.seq,
         .ack = reply.ack,
-        .window = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb)->vars.rcv_wnd,
+        .window = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb)->vars.rcv_wnd,
         // Explicit cast narrows the control bits, which RFC 9293 sec 3.1 holds in the low eight bits
         .flags = (uint8_t)reply.flags,
     };
@@ -1464,7 +1484,7 @@ uint32_t protocore_stack_tcp_released(uint8_t index)
 
 embed_bool protocore_stack_tcp_ends(uint8_t index, StackTcpEnds *ends)
 {
-    struct StackTcpStorage *const context = STACK_TCP_CONTEXT(protocore_stack_tcp_span());
+    const struct StackTcpStorage *const context = STACK_TCP_CONTEXT(protocore_stack_tcp_span());
     const StackTcpSlot *const slot = engine_owner_slot(index);
     StackTcpEndpoint endpoint;
     if (slot == NULL || slot->tcb >= IDEMIP_TCP_PCBS || !engine_endpoint_of_tcb(context, slot->tcb, &endpoint))
@@ -1492,9 +1512,9 @@ uint8_t protocore_stack_tcp_connect(const StackTcpConnectArgs *args)
     {
         return PROTOCORE_STACK_TCP_SLOT_NONE;
     }
-    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
+    TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb);
     tcb_io->open_args.ip_version = 4u;
-    TcpPcb.open(context->units->tcp_pcb);
+    TcpPcb.open(context->units->transport.tcp_pcb);
     if (tcb_io->status != IDEMIP_OK)
     {
         return PROTOCORE_STACK_TCP_SLOT_NONE;
@@ -1509,7 +1529,7 @@ uint8_t protocore_stack_tcp_connect(const StackTcpConnectArgs *args)
     tcb_io->bind_args.ip = local_ip;
     tcb_io->bind_args.rand = args->random_word;
     tcb_io->bind_args.netif = args->netif;
-    TcpPcb.bind(context->units->tcp_pcb);
+    TcpPcb.bind(context->units->transport.tcp_pcb);
     const embed_bool bound = tcb_io->status == IDEMIP_OK;
     const uint16_t local_port = tcb_io->port;
     tcb_io->connect_args = (TcpPcbAddrArgs){0};
@@ -1519,9 +1539,9 @@ uint8_t protocore_stack_tcp_connect(const StackTcpConnectArgs *args)
     tcb_io->connect_args.netif = args->netif;
     if (bound)
     {
-        TcpPcb.connect(context->units->tcp_pcb);
+        TcpPcb.connect(context->units->transport.tcp_pcb);
     }
-    TcpIsnIo *const isn_io = IDEMIP_TCP_ISN_IO(context->units->tcp_isn);
+    TcpIsnIo *const isn_io = IDEMIP_TCP_ISN_IO(context->units->transport.tcp_isn);
     isn_io->gen_args.local_ip = local_ip;
     isn_io->gen_args.remote_ip = remote_ip;
     isn_io->gen_args.local_port = local_port;
@@ -1530,17 +1550,23 @@ uint8_t protocore_stack_tcp_connect(const StackTcpConnectArgs *args)
     isn_io->gen_args.now_ms = args->now_ms;
     if (bound && tcb_io->status == IDEMIP_OK)
     {
-        TcpIsn.generate(context->units->tcp_isn);
+        TcpIsn.generate(context->units->transport.tcp_isn);
     }
-    if (!bound || tcb_io->status != IDEMIP_OK || isn_io->status != IDEMIP_OK)
+    const embed_bool opened = bound && tcb_io->status == IDEMIP_OK && isn_io->status == IDEMIP_OK;
+    // The two address buffers end with this call. The operands thus keep no pointer to them.
+    tcb_io->bind_args.ip = NULL;
+    tcb_io->connect_args.ip = NULL;
+    isn_io->gen_args.local_ip = NULL;
+    isn_io->gen_args.remote_ip = NULL;
+    if (!opened)
     {
         tcb_io->pcb_args.index = tcb;
-        TcpPcb.close(context->units->tcp_pcb);
+        TcpPcb.close(context->units->transport.tcp_pcb);
         return PROTOCORE_STACK_TCP_SLOT_NONE;
     }
     // TcpPcb.open gave the TCB its RFC 9293 sec 3.8.3 R2 thresholds, and the load keeps them.
     tcb_io->pcb_args.index = tcb;
-    TcpPcb.load(context->units->tcp_pcb);
+    TcpPcb.load(context->units->transport.tcp_pcb);
     tcb_io->vars = (IdemIpTcpVars){0};
     tcb_io->vars.iss = isn_io->isn;
     tcb_io->vars.snd_una = isn_io->isn;
@@ -1590,7 +1616,7 @@ void protocore_stack_tcp_abort(uint8_t index)
     if (open && engine_endpoint_of_tcb(context, tcb, &endpoint))
     {
         const StackTcpOutbound outbound = {
-            .seq = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb)->vars.snd_nxt,
+            .seq = IDEMIP_TCP_PCB_IO(context->units->transport.tcp_pcb)->vars.snd_nxt,
             // Explicit cast narrows the control bit, which RFC 9293 sec 3.1 holds in the low eight bits
             .flags = (uint8_t)IDEMIP_TCP_RST,
         };
@@ -1608,17 +1634,17 @@ void protocore_stack_tcp_abort(uint8_t index)
 // The one owned instance, private to this TU: the pointer to the bytes this module took for itself.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_STACK_TCP_BORROW persistent bytes
+    uint8_t *borrow; ///< PROTOCORE_STACK_TCP_BORROW persistent bytes
 } StackTcpOwnContext;
 static StackTcpOwnContext s_own;
 
 uint8_t *protocore_stack_tcp_span(void)
 {
-    if (s_own.span == NULL)
+    if (s_own.borrow == NULL)
     {
-        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_STACK_TCP_BORROW);
+        s_own.borrow = (uint8_t *)protocore_plain_persist(PROTOCORE_STACK_TCP_BORROW);
     }
-    return s_own.span;
+    return s_own.borrow;
 }
 
 /** @brief The operands and the outcome. */

@@ -5,7 +5,7 @@
 //
 // This is the filesystem the device runs, so a caller that walks a collection - WebDAV's PROPFIND,
 // a recursive copy, anything that opens a directory - is answered by the same code on the host as
-// on hardware. A hand-rolled tree only ever agrees with itself: it invents its own ordering, never
+// on hardware. A hand-rolled tree only ever agrees with itself. It invents its own ordering, never
 // runs out of space, and cannot disagree with the device, which is exactly the disagreement worth
 // finding. Real littlefs gives real directory semantics, real ENOSPC, and real error codes.
 //

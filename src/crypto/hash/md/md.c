@@ -257,12 +257,18 @@ static void md_finish(struct MdCtx *c, uint8_t out[16], md_compress_fn compress)
 }
 
 // The regions, at their offsets in the caller's borrow.
-#define MD_STATE(w) ((struct MdCtx *)(void *)((w) + MD_OFF_CTX))
+#define MD_STATE(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct MdCtx *)(const void *)((w) + MD_OFF_CTX),                                       \
+        default: (struct MdCtx *)(void *)((w) + MD_OFF_CTX))
 #define MD_KEY(w) ((w) + MD_OFF_KEY)
 #define MD_IPAD(w) ((w) + MD_OFF_IPAD)
 #define MD_OPAD(w) ((w) + MD_OFF_OPAD)
 #define MD_INNER(w) ((w) + MD_OFF_INNER)
-#define MD_KCTX(w) ((struct MdCtx *)(void *)((w) + MD_OFF_KCTX))
+#define MD_KCTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct MdCtx *)(const void *)((w) + MD_OFF_KCTX),                                      \
+        default: (struct MdCtx *)(void *)((w) + MD_OFF_KCTX))
 
 // Which compression the state was seeded for. It rides in the borrow with the state, so a running
 // digest carries it and nothing survives the call here.

@@ -24,14 +24,17 @@ EMBED_BEGIN_DECLS
 
 // PROTOCORE_HTTP_CLOCK_BORROW - the bytes this module runs out of - is stated in protocore_config.h,
 // which sums it into the plaintext arena. One region: the rendered date, held from the render until
-// the caller has copied it out.
+// the caller copied it out.
 #define HTTP_CLOCK_OFF_IMF 0u
 static_assert(HTTP_CLOCK_OFF_IMF + PROTOCORE_HTTP_DATE_MAX <= PROTOCORE_HTTP_CLOCK_BORROW,
               "PROTOCORE_HTTP_CLOCK_BORROW is smaller than the IMF-fixdate it has to hold - raise it to at least "
               "PROTOCORE_HTTP_DATE_MAX");
 
 // char, so alignment is 1 by the standard and the offset needs no alignment assert.
-#define HTTP_CLOCK_IMF(w) ((char *)(void *)((w) + HTTP_CLOCK_OFF_IMF))
+#define HTTP_CLOCK_IMF(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const char *)(const void *)((w) + HTTP_CLOCK_OFF_IMF),                                       \
+        default: (char *)(void *)((w) + HTTP_CLOCK_OFF_IMF))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -55,7 +58,7 @@ uint8_t *protocore_http_clock_span(void)
 
 void protocore_http_clock_date(uint8_t *work)
 {
-    // Zero is what both arms below produce before a sync, and it is what HttpDate.format renders as
+    // Zero is what both arms below produce before a sync. It is what HttpDate.format renders as
     // an empty string - so a clock-less boot emits no Date rather than a wrong one.
     time_t epoch = 0;
 

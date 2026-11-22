@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <string.h>
 
-// sse.c's protocore_sse_write() (not exercised here) references the transport layer; the bench only calls
+// sse.c's protocore_sse_write() (not exercised here) references the transport layer. The bench only calls
 // the pure protocore_sse_format(), so satisfy the linker with stubs rather than pulling in transport + lwIP.
 TcpConn conn_pool[CONN_POOL_SLOTS];
 const TcpNs Tcp = {0};

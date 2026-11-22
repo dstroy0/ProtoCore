@@ -2,17 +2,17 @@
 
 The wired-Ethernet twin of the `rig_s3_tls` firmware, for the **Waveshare ESP32-P4-POE-ETH**. It exists to
 measure the TLS handshake on a board with a **hardware ECC accelerator** (P-256 via mbedTLS `ecc_alt`) and
-compare it to the software-curve S3 — see `docs/FEATURE_PERFORMANCE.md`, "Device-CPU breakdown + the
+compare it to the software-curve S3 - see `docs/FEATURE_PERFORMANCE.md`, "Device-CPU breakdown + the
 ESP32-P4 (HW ECC)".
 
 The P4 is not an S3, so it does not use the `penetration_testing/rig_firmware` PlatformIO envs (those pin the S3
-arduino-2.x core). It builds with **arduino-cli + the arduino-esp32 3.x core** (`esp32:esp32`), and — having
-no radio — brings up the **wired PHY** (`Physical.eth->init`) instead of WiFi.
+arduino-2.x core). It builds with **arduino-cli + the arduino-esp32 3.x core** (`esp32:esp32`), and - having
+no radio - brings up the **wired PHY** (`Physical.eth->init`) instead of WiFi.
 
 ## What it exposes
 
 Identical to `rig_s3_tls`: HTTP/80 (`/`, `/health`, `/status`, `/diag`) + **HTTPS/443** with the same
-self-signed ECDSA-P256 test cert, and `GET /bench/tls` — the CCOUNT decomposition of the handshake ECC
+self-signed ECDSA-P256 test cert, and `GET /bench/tls` - the CCOUNT decomposition of the handshake ECC
 (ECDHE gen/shared for x25519 / P-256 / P-521 + one ECDSA-P256 sign, `us/op` at the reported `cpu_mhz`).
 Built with `PROTOCORE_TLS_HS_BENCH`, so it also prints `TLSHSBENCH cpu_us=.. wall_us=..` per handshake.
 

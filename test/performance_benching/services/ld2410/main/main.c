@@ -58,7 +58,7 @@ static const uint8_t ENG[] = {
 static const uint8_t MAC_ACK[] = {0xFD, 0xFC, 0xFB, 0xFA, 0x0A, 0x00, 0xA5, 0x01, 0x00, 0x00,
                                   0x8F, 0x27, 0x2E, 0xB8, 0x0F, 0x65, 0x04, 0x03, 0x02, 0x01};
 
-// Drive the byte-by-byte stream reassembler over a whole frame; returns true if it completed one.
+// Drive the byte-by-byte stream reassembler over a whole frame. Returns true if it completed one.
 // protocore_ld2410_stream_push resets the stream itself on completion, so feeding a frame repeatedly is
 // safe. Kept out-of-line so the loop body is a single expression for DBENCH_BULK.
 static bool feed_frame(Ld2410Stream *s, const uint8_t *f, size_t n, Ld2410Report *out)

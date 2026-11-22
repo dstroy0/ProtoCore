@@ -5,7 +5,7 @@
 
 WHY THIS EXISTS. A hardware capability has two arms and the host answers only one of them:
 test/core_setup/hal/host states PROTOCORE_PLATFORM_HAS_BUS 1, so the #else half of every bus-owning
-peripheral is text that nothing has ever compiled. Three of them had rotted all the way through -
+peripheral is text that nothing has ever compiled. Three of them rotted all the way through -
 each defined the pre-namespace flat API while its table went on binding entries that existed only
 in the arm the host does build - and the whole matrix stayed green the entire time, because a green
 matrix says nothing about code no target includes.

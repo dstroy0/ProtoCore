@@ -33,9 +33,9 @@ EMBED_BEGIN_DECLS
 typedef struct
 {
     embed_bool (*form_field)(uint8_t *, const char *, const char *, char *, size_t);
-    embed_bool (*load)(uint8_t *, char *, size_t, char *, size_t);
+    embed_bool (*load)(const uint8_t *, char *, size_t, char *, size_t);
     void (*begin)(uint8_t *, const char *);
-    void (*clear)(uint8_t *);
+    void (*clear)(const uint8_t *);
 } ProvNs;
 PROTOCORE_NS_LAYOUT(ProvNs, form_field, load, begin, clear);
 
@@ -58,7 +58,7 @@ embed_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
  * @param psk_cap Capacity of psk
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
+embed_bool protocore_prov_load(const uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap);
 /**
  * @brief Start the captive portal: softAP ap_ssid + catch-all DNS + form .
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
@@ -69,7 +69,7 @@ void protocore_prov_begin(uint8_t *work, const char *ap_ssid);
  * @brief Erase stored credentials (forces re-provisioning on next boot).
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
  */
-void protocore_prov_clear(uint8_t *work);
+void protocore_prov_clear(const uint8_t *work);
 
 /**
  * @brief The PROTOCORE_PROVISIONING_BORROW bytes this module's state lives in.

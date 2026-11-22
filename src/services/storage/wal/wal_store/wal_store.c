@@ -31,7 +31,7 @@ static embed_bool dev_write(const WalDev *d, uint64_t off, const uint8_t *buf, s
 }
 
 // Encode a superblock into a WAL_SUPER_SIZE scratch and write it to copy `ab` (0 or 1).
-static embed_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, uint64_t seq)
+static embed_bool write_super(const WalStore *s, int ab, uint64_t gen, uint64_t head, uint64_t seq)
 {
     uint8_t sb[WAL_SUPER_SIZE];
     EMBED_CALL(memor.set, MemoriaCfg, .dst = sb, .val = 0, .bytes = sizeof(sb));
@@ -260,7 +260,7 @@ embed_bool protocore_wal_store_checkpoint(WalStore *s)
     return EMBED_TRUE;
 }
 
-size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len)
+size_t protocore_wal_store_scan(const WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len)
 {
     if (scratch_len < WAL_RECORD_HEADER)
     {
@@ -307,7 +307,7 @@ size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uin
     return count;
 }
 
-embed_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len)
+embed_bool protocore_wal_store_pread(const WalStore *s, uint64_t off, uint8_t *buf, size_t len)
 {
     if (off + len > s->data_cap)
     {

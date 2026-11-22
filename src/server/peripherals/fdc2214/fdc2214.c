@@ -45,10 +45,10 @@ uint8_t *protocore_fdc2214_span(void)
     return s_own.span;
 }
 
-void protocore_fdc2214_build_config(uint8_t *work);
-void protocore_fdc2214_data(uint8_t *work);
+void protocore_fdc2214_build_config(const uint8_t *work);
+void protocore_fdc2214_data(const uint8_t *work);
 
-void protocore_fdc2214_data(uint8_t *work)
+void protocore_fdc2214_data(const uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Fdc2214V.data_args.msb_reg;
@@ -57,7 +57,7 @@ void protocore_fdc2214_data(uint8_t *work)
     Fdc2214V.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
 }
 
-void protocore_fdc2214_error(uint8_t *work)
+void protocore_fdc2214_error(const uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Fdc2214V.error_args.msb_reg;
@@ -65,7 +65,7 @@ void protocore_fdc2214_error(uint8_t *work)
     Fdc2214V.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
 }
 
-void protocore_fdc2214_sensor_freq_hz(uint8_t *work)
+void protocore_fdc2214_sensor_freq_hz(const uint8_t *work)
 {
     (void)work;
     uint32_t data28 = Fdc2214V.sensor_freq_hz_args.data28;
@@ -74,7 +74,7 @@ void protocore_fdc2214_sensor_freq_hz(uint8_t *work)
     Fdc2214V.hz = ((uint64_t)data28 * fref_hz) >> 28;
 }
 
-void protocore_fdc2214_build_config(uint8_t *work)
+void protocore_fdc2214_build_config(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Fdc2214V.build_config_args.buf;
@@ -135,7 +135,10 @@ static_assert(FDC2214_OFF_CTX % _Alignof(Fdc2214Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define FDC2214_CTX(w) ((Fdc2214Ctx *)(void *)((w) + FDC2214_OFF_CTX))
+#define FDC2214_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Fdc2214Ctx *)(const void *)((w) + FDC2214_OFF_CTX),                                    \
+        default: (Fdc2214Ctx *)(void *)((w) + FDC2214_OFF_CTX))
 
 // Zero is "no address set yet", which is the address the ADDR pin selects when it is low - stated
 // here rather than on the declaration so the context carries no initializer and can live in a

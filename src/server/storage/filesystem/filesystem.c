@@ -37,7 +37,7 @@ typedef struct
     char dwalk[PROTOCORE_FILESYSTEM_PATH_MAX];
 
     // Where each level resumes. Remove re-opens and takes the first survivor every pass, so its
-    // cursor cannot be invalidated by its own removals; copy does not consume what it reads, so it
+    // cursor cannot be invalidated by its own removals. Copy does not consume what it reads, so it
     // re-opens and skips to where it left off.
     uint16_t idx[PROTOCORE_FS_MAX_DEPTH + 2];
 
@@ -45,7 +45,7 @@ typedef struct
     // partial one (see PROTOCORE_FS_BLOCK).
     uint8_t block[PROTOCORE_FS_BLOCK];
 
-    uint32_t status; ///< sticky reasons operations have failed (see the status block in filesystem.h).
+    uint32_t status; ///< sticky reasons operations failed (see the status block in filesystem.h).
 } FilesystemCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -65,7 +65,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define FILESYSTEM_CTX(w) ((FilesystemCtx *)(void *)((w) + FILESYSTEM_OFF_CTX))
+#define FILESYSTEM_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const FilesystemCtx *)(const void *)((w) + FILESYSTEM_OFF_CTX),                              \
+        default: (FilesystemCtx *)(void *)((w) + FILESYSTEM_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -147,7 +150,7 @@ static const char *resolve_into(uint8_t *work, int slot, int root, const char *d
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_BAD_ROOT;
         return NULL;
     }
-    // protocore_fs_resolve separates the two ways a path can be rejected; the mask keeps them separate for
+    // protocore_fs_resolve separates the two ways a path can be rejected. The mask keeps them separate for
     // the caller instead of flattening both into the same NULL.
     int rc = protocore_fs_resolve(FILESYSTEM_CTX(work)->root[root].path, dir, name, FILESYSTEM_CTX(work)->path[slot],
                                   PROTOCORE_FILESYSTEM_PATH_MAX);
@@ -173,7 +176,7 @@ static void fs_present(uint8_t *work)
 {
     (void)work;
 
-    // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
+    // Asked of the mount directly, not of the mask: the mask says what failed, this says what is
     // true now. A hotswap can attach a store between the two.
     Mnt.active(work);
     Fs.ok = MntV.backend != NULL;
@@ -186,7 +189,7 @@ static void fs_begin(uint8_t *work)
     const char *want = (name == NULL || name[0] == '\0') ? "/" : name;
 
     // Binding a name already bound hands back the same root. Two services naming the same storage
-    // is an arrangement the application is entitled to make, and it must not cost a second root or
+    // is an arrangement the application is entitled to make. It must not cost a second root or
     // give them two views of one thing.
     for (uint8_t i = 0; i < FILESYSTEM_CTX(work)->count; i++)
     {
@@ -497,12 +500,12 @@ static void fs_rename(uint8_t *work)
 // at once, and the only reader of FILESYSTEM_CTX(work)->block.
 static embed_bool copy_one(uint8_t *work, const protocore_mnt_backend *b, const char *src, const char *dst)
 {
-    int in = b->open(src, (int)(PROTOCORE_MNT_READ));
+    int in = b->open(src, (PROTOCORE_MNT_READ));
     if (in < 0)
     {
         return EMBED_FALSE;
     }
-    int out = b->open(dst, (int)(PROTOCORE_MNT_WRITE));
+    int out = b->open(dst, (PROTOCORE_MNT_WRITE));
     if (out < 0)
     {
         b->close(in);
@@ -588,7 +591,7 @@ static void fs_copy(uint8_t *work)
             Fs.ok = EMBED_FALSE;
             return;
         }
-        // The name is read onto the end of the source path; the destination takes the same name
+        // The name is read onto the end of the source path. The destination takes the same name
         // through walk_push once the entry is known to exist.
         embed_bool sep = !(slen == 1 && FILESYSTEM_CTX(work)->walk[0] == '/');
         size_t at = slen + (sep ? 1 : 0);
@@ -744,7 +747,7 @@ static void fs_read_file(uint8_t *work)
         Fs.len = -1;
         return;
     }
-    int h = b->open(p, (int)(PROTOCORE_MNT_READ));
+    int h = b->open(p, (PROTOCORE_MNT_READ));
     if (h < 0)
     {
         Fs.len = -1;
@@ -780,7 +783,7 @@ static void fs_write_file(uint8_t *work)
         Fs.ok = EMBED_FALSE;
         return;
     }
-    int h = b->open(p, (int)(PROTOCORE_MNT_WRITE));
+    int h = b->open(p, (PROTOCORE_MNT_WRITE));
     if (h < 0)
     {
         Fs.ok = EMBED_FALSE;

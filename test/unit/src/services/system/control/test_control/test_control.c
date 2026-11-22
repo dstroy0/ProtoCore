@@ -263,7 +263,7 @@ void test_non_positive_dt_is_not_a_step(void)
 }
 
 // The fixed-rate entry point is the same law with the cached period, and it refuses to run before
-// pid_set_rate has supplied one.
+// pid_set_rate supplied one.
 void test_fixed_rate_matches_the_variable_rate_law(void)
 {
     Pid fixed;

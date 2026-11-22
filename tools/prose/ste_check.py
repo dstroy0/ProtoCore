@@ -13,7 +13,8 @@ One file, the same in orior, MMgr and embedded_types; orior's harness holds the 
 
 A technical document is a Markdown file of the tree's prose: the README, the contributing and security notes and
 everything under docs/, but not in a folder that is a repository of its own. A code block, an inline span of code, a table, a heading, a link target, an HTML comment
-and a license section are not prose and are not read.
+and a license section are not prose and are not read. A display formula between two lines of $$ is not prose either.
+An underscore inside a word is part of the word and not emphasis. A name like ref_error_handling stays one name.
 
 The rules checked, with their numbers in ASD-STE100 Issue 9:
 
@@ -54,7 +55,9 @@ IRREGULAR = {"been", "begun", "bitten", "blown", "born", "bought", "brought", "b
 # Words that end in -ing and are no verb form
 NOT_VERB_ING = {"anything", "bring", "ceiling", "during", "everything", "king", "nothing", "ring", "sing",
                 "something", "spring", "sting", "string", "swing", "thing", "things", "wing", "ping"}
-WORD = re.compile(r"[A-Za-z][A-Za-z'-]*")
+WORD = re.compile(r"[A-Za-z][A-Za-z0-9_'-]*")
+# An emphasis mark: a run of stars, or a run of underscores at the edge of a word and never inside one
+EMPHASIS = re.compile(r"\*{1,3}|(?<![A-Za-z0-9])_{1,3}|_{1,3}(?![A-Za-z0-9])")
 
 
 def documents(paths):
@@ -80,6 +83,7 @@ def prose_lines(text):
     """(line number, prose) for every line of prose: code, tables, headings, comments and license sections out."""
     out = []
     fenced = False
+    formula = False
     comment = False
     licence = False
     for number, line in enumerate(text.splitlines(), 1):
@@ -88,6 +92,11 @@ def prose_lines(text):
             fenced = not fenced
             continue
         if fenced:
+            continue
+        if stripped == "$$":
+            formula = not formula
+            continue
+        if formula:
             continue
         if "<!--" in stripped:
             comment = "-->" not in stripped
@@ -106,7 +115,7 @@ def prose_lines(text):
         prose = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", prose)
         prose = re.sub(r"https?://\S+", " CODE ", prose)
         prose = re.sub(r"\$[^$]*\$", " CODE ", prose)
-        prose = re.sub(r"[*_]{1,3}", "", prose)
+        prose = EMPHASIS.sub("", prose)
         out.append((number, prose))
     return out
 

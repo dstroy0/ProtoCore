@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for the mounted storage (server/storage/mnt) over the RAM backend
 // (server/storage/mnt_ram):
 // write_file / read_file / exists. The RAM backend keeps everything in memory (no flash I/O), so this
-// measures the pure VFS bookkeeping + copy cost; the LittleFS/SD backends carry real I/O latency.
+// measures the pure VFS bookkeeping + copy cost. The LittleFS/SD backends carry real I/O latency.
 //
 // Build/flash:  pio run -d performance_benching/services/mnt -t upload --upload-port COM7
 #include "device_bench.h"
@@ -35,7 +35,7 @@ void dbench_run(void)
         Fs.begin(protocore_filesystem_span());
         const int root = Fs.i32;
 
-        // The operands a write takes do not change between iterations, so they are set once and
+        // The operands a write takes do not change between iterations. So they are set once and
         // the timed region is the call - which is what the number is supposed to be about.
         Fs.path.root = root;
         Fs.path.dir = "";

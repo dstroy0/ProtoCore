@@ -343,7 +343,7 @@ void test_peer_registry_membership(void)
     TEST_ASSERT_FALSE(EspnowV.ok);
 }
 
-// The table is fixed at build time and has no heap behind it, so it refuses one past its size and
+// The table is fixed at build time and has no heap behind it. So it refuses one past its size and
 // a freed slot is reusable.
 void test_peer_registry_is_bounded(void)
 {

@@ -177,7 +177,7 @@ typedef struct
     void (*const layout_json)(uint8_t *work);
     void (*const values_json)(uint8_t *work);
     void (*const on_control)(uint8_t *work);
-    void (*const parse_control)(uint8_t *work);
+    void (*const parse_control)(const uint8_t *work);
     void (*const dispatch_control)(uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const publish)(uint8_t *work);
@@ -190,7 +190,7 @@ void protocore_dashboard_set(uint8_t *work);
 void protocore_dashboard_layout_json(uint8_t *work);
 void protocore_dashboard_values_json(uint8_t *work);
 void protocore_dashboard_on_control(uint8_t *work);
-void protocore_dashboard_parse_control(uint8_t *work);
+void protocore_dashboard_parse_control(const uint8_t *work);
 void protocore_dashboard_dispatch_control(uint8_t *work);
 void protocore_dashboard_begin(uint8_t *work);
 void protocore_dashboard_publish(uint8_t *work);

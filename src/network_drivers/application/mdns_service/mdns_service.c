@@ -190,7 +190,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define MDNS_SERVICE_CTX(w) ((MdnsCtx *)(void *)((w) + MDNS_SERVICE_OFF_CTX))
+#define MDNS_SERVICE_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const MdnsCtx *)(const void *)((w) + MDNS_SERVICE_OFF_CTX),                                  \
+        default: (MdnsCtx *)(void *)((w) + MDNS_SERVICE_OFF_CTX))
 
 // Take every borrow once and hold it for the life of the program. A responder answers for the names
 // the device is reached by, so its table and the replies it composes come from the secure pool,

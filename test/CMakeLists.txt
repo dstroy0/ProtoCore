@@ -51,7 +51,7 @@ add_subdirectory("${PROTOCORE_ROOT}/include" "${CMAKE_CURRENT_BINARY_DIR}/pc_inc
 add_subdirectory(core_setup)
 add_subdirectory(support)
 
-# The suites. Each directory under these two declares what it is made of; an env below names the
+# The suites. Each directory under these two declares what it is made of. An env below names the
 # one it runs rather than repeating that suite's files and its include path. A suite carries its
 # sources as INTERFACE_SOURCES, so they are compiled AS the env that links them, with that env's
 # defines - which is what lets 59 suites be run by more than one env, and test_connection by five.
@@ -2206,7 +2206,7 @@ protocore_env(native_defer
     "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
 )
 
-# ASN.1 DER reader (shared/der): the X.690 canonical subset X.509 is parsed with. The accepting cases are RFC 5280 sec 4.1's Certificate SEQUENCE and the sec 4.1.2.5 times; the refusing ones are each a BER spelling DER forbids - indefinite length (sec 8.1.3.6), a long form that fits the short one or carries a leading zero (sec 10.1), a redundant leading zero on an INTEGER (sec 8.3.2), a negative INTEGER read as unsigned (sec 8.3.3), a BIT STRING with unused bits (sec 8.6.2.2), and a multi-octet tag (sec 8.1.2.4). Accepting a second encoding of a certificate is accepting one the signature does not cover.
+# ASN.1 DER reader (shared/der): the X.690 canonical subset X.509 is parsed with. The accepting cases are RFC 5280 sec 4.1's Certificate SEQUENCE and the sec 4.1.2.5 times; the refusing ones are each a BER spelling DER forbids - indefinite length (sec 8.1.3.6), a long form that fits the short one or carries a leading zero (sec 10.1), a redundant leading zero on an INTEGER (sec 8.3.2), a negative INTEGER read as unsigned (sec 8.3.3), a BIT STRING with unused bits (sec 8.6.2.2), and a multi-octet tag (sec 8.1.2.4). Accepting a second encoding of a certificate accepts one the signature does not cover.
 protocore_env(native_der
   SUITE unit/src/shared/der/test_der
   SOURCES
@@ -4628,7 +4628,7 @@ protocore_env(native_hmmd
     "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
 )
 
-# The HMMD codec with PROTOCORE_HAS_BUS at 0: the same suite as native_hmmd against the no-bus arm of hmmd.c. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so that arm had never been compiled by anything - it defined the pre-namespace flat API while the table bound entries nothing defined, and it did not build. The suite touches only the codec (framing, the resyncing reassembler, the command builders), which is identical in both arms; what this env proves is that the seam half still compiles and still answers.
+# The HMMD codec with PROTOCORE_HAS_BUS at 0: the same suite as native_hmmd against the no-bus arm of hmmd.c. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so that arm had never been compiled by anything - it defined the pre-namespace flat API while the table bound entries nothing defined, and it did not build. The suite touches only the codec (framing, the resyncing reassembler, the command builders), which is identical in both arms. What this env proves is that the seam half still compiles and still answers.
 protocore_env(native_hmmd_nobus
   SUITE unit/src/server/peripherals/hmmd/test_hmmd
   SOURCES
@@ -9526,7 +9526,7 @@ protocore_env(native_sha384_kat
     "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
 )
 
-# The same SHA-384 vectors over the accelerator arm: PROTOCORE_HAS_HW_SHA=1 routes the block compression through protocore_sha_hw_block, which the host SHA HAL answers. SHA-384's rounds are SHA-512's, so the accelerator runs in its 512 mode over the SHA-384 seed; the seed, the padding and the six-word digest stay this module's either way.
+# The same SHA-384 vectors over the accelerator arm: PROTOCORE_HAS_HW_SHA=1 routes the block compression through protocore_sha_hw_block, which the host SHA HAL answers. SHA-384's rounds are SHA-512's, so the accelerator runs in its 512 mode over the SHA-384 seed. The seed, the padding and the six-word digest stay this module's either way.
 protocore_env(native_sha384_kat_hw
   SUITE unit/src/crypto/hash/test_sha384
   SOURCES
@@ -13224,7 +13224,7 @@ protocore_env(native_wamp
     "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
 )
 
-# IEEE 1609 WAVE codec (services/transportation/wave): the PSID P-encoding at both ends of all four length classes, the 1609.3 WSMP header build and parse, and the 1609.2 secured-message envelope. IEEE 1609 is not obtainable, so the vectors are derived from the documented P-encoding rule with the derivation written beside them; the load-bearing case is the round-trip property that every PSID the encoder accepts must decode back to itself. Pure host tests.
+# IEEE 1609 WAVE codec (services/transportation/wave): the PSID P-encoding at both ends of all four length classes, the 1609.3 WSMP header build and parse, and the 1609.2 secured-message envelope. IEEE 1609 is not obtainable, so the vectors are derived from the documented P-encoding rule with the derivation written beside them. The load-bearing case is the round-trip property that every PSID the encoder accepts must decode back to itself. Pure host tests.
 protocore_env(native_wave_wsmp
   SUITE unit/src/services/transportation/wave/test_wave
   SOURCES

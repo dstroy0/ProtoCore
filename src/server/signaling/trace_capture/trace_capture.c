@@ -57,7 +57,10 @@ static_assert(TRACE_CAPTURE_OFF_CTX + sizeof(struct TraceCaptureStorage) <= PROT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TRACE_CAPTURE_CTX(w) ((struct TraceCaptureStorage *)(void *)((w) + TRACE_CAPTURE_OFF_CTX))
+#define TRACE_CAPTURE_CTX(w)                                                                                           \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TraceCaptureStorage *)(const void *)((w) + TRACE_CAPTURE_OFF_CTX),              \
+        default: (struct TraceCaptureStorage *)(void *)((w) + TRACE_CAPTURE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

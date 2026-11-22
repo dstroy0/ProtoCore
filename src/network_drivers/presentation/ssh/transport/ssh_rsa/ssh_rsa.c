@@ -26,7 +26,7 @@ EMBED_BEGIN_DECLS
 SshRsaPubKey ssh_host_pubkey;
 
 // The private exponent, borrowed from the secure pool. n and e are public and live in
-// ssh_host_pubkey; only d is secret, so only d comes from here. The persistent end is walked by no
+// ssh_host_pubkey. Only d is secret, so only d comes from here. The persistent end is walked by no
 // mark and no release, so the key stays for the life of the program.
 typedef struct
 {
@@ -50,7 +50,10 @@ static_assert(SSH_RSA_OFF_CTX % _Alignof(SshRsaCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_RSA_CTX(w) ((SshRsaCtx *)(void *)((w) + SSH_RSA_OFF_CTX))
+#define SSH_RSA_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshRsaCtx *)(const void *)((w) + SSH_RSA_OFF_CTX),                                     \
+        default: (SshRsaCtx *)(void *)((w) + SSH_RSA_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -313,7 +316,7 @@ static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
     return p + src_len;
 }
 
-void protocore_ssh_rsa_encode_pubkey(uint8_t *work)
+void protocore_ssh_rsa_encode_pubkey(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = SshRsaV.encode_pubkey_args.out;

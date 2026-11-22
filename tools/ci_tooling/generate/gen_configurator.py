@@ -886,7 +886,7 @@ document.getElementById("theme").onclick = () => { state.theme = currentTheme() 
 
 /* ---- init -------------------------------------------------------------- */
 function initCollapse() {
-  // Open a section by default only if it holds an enabled feature; collapse the rest
+  // Open a section by default only if it holds an enabled feature. Collapse the rest
   // (incl. the big core-knob bucket) so the page opens compact instead of 30 screens tall.
   MODEL.groups.forEach(g => { state.collapsed[g] = g === CORE ? true : onCount(g) === 0; });
 }

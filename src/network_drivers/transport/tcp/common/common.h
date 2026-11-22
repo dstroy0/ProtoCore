@@ -25,7 +25,7 @@
  *
  * **Backpressure (lossless)**
  * When a whole inbound segment will not fit the free ring space, the recv callback refuses it
- * without taking ownership of the segment; the stack holds it and redelivers once the main loop has
+ * without taking ownership of the segment. The stack holds it and redelivers once the main loop has
  * drained the ring, so no received byte is dropped. Requires RX_BUF_SIZE > one TCP segment
  * (TCP_MSS).
  *

@@ -411,7 +411,7 @@ void test_scpi99_error_class_sets_its_esr_bit(void)
         TEST_ASSERT_EQUAL_HEX8(CASES[i].bit, s.esr);
     }
 
-    // sec 21.8: "The value, zero, is also reserved to indicate that no error or event has occurred"
+    // sec 21.8: "The value, zero, is also reserved to indicate that no error or event occurred"
     ScpiStatus s;
     protocore_scpi_status_init(&s);
     protocore_scpi_push_error(&s, 0, "ignored");

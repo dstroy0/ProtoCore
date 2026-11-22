@@ -245,7 +245,7 @@ void test_a_read_with_nothing_buffered_reports_nothing(void)
 //
 // What a wipe promises is the SECRETS - the AEAD schedule, the write IV and the record nonce - plus
 // the ready flag and the sequence number. TlsRecordKeys::cipher is the negotiated AEAD identifier,
-// not a secret, and is deliberately left; asserting the whole struct went to zero would be asserting
+// not a secret, and is deliberately left. Asserting the whole struct went to zero would be asserting
 // more than the record layer offers.
 static uint8_t any_set(const uint8_t *p, size_t n)
 {

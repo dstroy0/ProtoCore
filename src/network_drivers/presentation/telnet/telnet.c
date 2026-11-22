@@ -69,7 +69,10 @@ static_assert(TELNET_OFF_CTX + sizeof(struct TelnetStorage) <= PROTOCORE_TELNET_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TELNET_CTX(w) ((struct TelnetStorage *)(void *)((w) + TELNET_OFF_CTX))
+#define TELNET_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TelnetStorage *)(const void *)((w) + TELNET_OFF_CTX),                           \
+        default: (struct TelnetStorage *)(void *)((w) + TELNET_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -422,7 +425,7 @@ void protocore_telnet_client_count(uint8_t *work)
     TelnetV.u8 = c;
 }
 
-// The session layer's seam dictates these shapes, so they stay as they are and carry the slot onto
+// The session layer's seam dictates these shapes. So they stay as they are and carry the slot onto
 // the handle before the call that does the work.
 static void evt_accept(uint8_t slot)
 {
@@ -446,7 +449,7 @@ static void evt_close(uint8_t slot)
 // on_poll are unset: a null on_abort falls back to on_close, and this protocol is not polled.
 static const ProtoHandler s_telnet_handler = {.on_accept = evt_accept, .on_data = evt_rx, .on_close = evt_close};
 
-void protocore_telnet_proto_handler(uint8_t *work)
+void protocore_telnet_proto_handler(const uint8_t *work)
 {
     (void)work;
     TelnetV.handler = &s_telnet_handler;

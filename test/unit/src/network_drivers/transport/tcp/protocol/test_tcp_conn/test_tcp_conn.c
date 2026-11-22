@@ -472,7 +472,7 @@ void test_begin_close_is_a_no_op_off_the_active_state(void)
 }
 
 // ---------------------------------------------------------------------------
-// RFC 9293 sec 3.6.1 - data arriving after the application has closed
+// RFC 9293 sec 3.6.1 - data arriving after the application closed
 // ---------------------------------------------------------------------------
 
 // This transport takes the half-duplex close sec 3.6.1 MAY-1 permits: once a slot is CONN_CLOSING

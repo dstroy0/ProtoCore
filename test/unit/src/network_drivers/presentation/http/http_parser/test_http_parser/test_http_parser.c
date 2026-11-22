@@ -232,7 +232,7 @@ void test_rfc9112_3_2_duplicate_host_is_rejected(void)
     TEST_ASSERT_EQUAL_INT(PARSE_ERROR, r->parse_state);
 }
 
-// RFC 9112 sec 2.2: the line terminator for the start-line and fields "is the sequence CRLF"; the
+// RFC 9112 sec 2.2: the line terminator for the start-line and fields "is the sequence CRLF". The
 // same section makes recognizing a bare LF a MAY, which this parser declines. A CR not followed by
 // its LF is malformed, and a message terminated only by LF never completes.
 void test_rfc9112_2_2_requires_crlf(void)
@@ -291,7 +291,7 @@ void test_capacity_limits_get_their_own_terminal_states(void)
     TEST_ASSERT_EQUAL_INT(PARSE_BODY, r->parse_state);
 }
 
-// Once a message has reached a terminal state, later octets belong to the next message and must not
+// Once a message reached a terminal state, later octets belong to the next message and must not
 // move this one: a pipelined second request would otherwise be folded into the first.
 void test_terminal_states_ignore_further_octets(void)
 {

@@ -59,7 +59,10 @@ static_assert(TLS_OFF_CTX + sizeof(struct TlsStorage) <= PROTOCORE_TLS_BORROW,
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TLS_CTX(w) ((struct TlsStorage *)(void *)((w) + TLS_OFF_CTX))
+#define TLS_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TlsStorage *)(const void *)((w) + TLS_OFF_CTX),                                 \
+        default: (struct TlsStorage *)(void *)((w) + TLS_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -101,7 +104,7 @@ const char *protocore_tls_alpn(uint8_t slot)
 // carries the fragment length (RFC 8446 sec 5.1), so a record that has not fully arrived is left
 // where it is and read again on the next pump - the ring is not consumed until the whole record is
 // there. Reports the record's total length, or 0 when it is not yet complete.
-static size_t frame_one(uint8_t *work, uint8_t slot, TlsConn *c)
+static size_t frame_one(const uint8_t *work, uint8_t slot, TlsConn *c)
 {
     ConnPoolV.slot = slot;
     ConnPool.available(protocore_conn_pool_span());

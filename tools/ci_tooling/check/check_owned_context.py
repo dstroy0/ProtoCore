@@ -180,7 +180,7 @@ def is_vars_type(type_str: str) -> bool:
     guard still holds to static, and does.
 
     Without this the guard reports 293 modules including sha256, which is the shape every one of
-    them is converted TOWARD: a check that fails the reference implementation is measuring the
+    them is converted TOWARD: a check that fails the reference implementation measures the
     wrong thing, and its number is unactionable rather than merely large."""
     return _last_type_token(type_str).endswith("Vars")
 
@@ -193,7 +193,7 @@ def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
         return True
     if "::" in type_str:  # an out-of-line CLASS static-member definition - the class owns it
         return True
-    # immutable / per-thread, not ambient. _Thread_local is the C11 spelling of thread_local; the
+    # immutable / per-thread, not ambient. _Thread_local is the C11 spelling of thread_local. The
     # tree uses it since the C conversion, and matching only the C++ one reads a per-task slot as a
     # loose global.
     if re.search(r"\b(const|constexpr|thread_local|_Thread_local)\b", type_str):
@@ -217,7 +217,7 @@ def classify(name: str, type_str: str, in_anon_ns: bool) -> bool:
 
 
 # `extern <Something>Ctx name;` in a header - the declaration that makes a context reachable from
-# another TU. The definition-side check cannot see this on its own, and it is the half that does the
+# another TU. The definition-side check cannot see this on its own. It is the half that does the
 # damage: it is what turns an owned context into shared state.
 EXTERN_CTX_RE = re.compile(r"^\s*extern\s+(?P<type>[A-Za-z_]\w*)\s+(?P<name>[A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*;")
 
@@ -249,7 +249,7 @@ def main(argv) -> int:
                 name, type_str = d
                 if not classify(name, type_str, anon_depth >= 0):
                     rel = str(cpp.relative_to(ROOT)).replace(os.sep, "/")
-                    # A context named right but linked wrong is the ratcheted half; anything that is
+                    # A context named right but linked wrong is the ratcheted half. Anything that is
                     # not a context at all was already failing before and stays absolute.
                     (linkage if is_ctx_type(type_str) else loose).append((rel, i, name, line.strip()))
             depth += line.count("{") - line.count("}")

@@ -127,7 +127,7 @@ static const char *const QPACK_STATIC[99][2] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_qpack_encode_prefix(uint8_t *work, uint8_t *out, size_t cap)
+size_t protocore_qpack_encode_prefix(const uint8_t *work, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -145,7 +145,8 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
 {
     size_t n = 0;
 
-    int name_idx = -1, full_idx = -1;
+    int name_idx = -1;
+    int full_idx = -1;
     for (int i = 0; i < 99; i++)
     {
         if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = QPACK_STATIC[i][0], .cap = name_len + 1) == name_len &&

@@ -64,7 +64,7 @@ typedef struct
     void *app;
     H3Settings peer_settings;
     embed_bool control_opened;     ///< our control + QPACK streams have been opened
-    embed_bool peer_settings_seen; ///< the peer's one SETTINGS frame has arrived (sec 6.2.1)
+    embed_bool peer_settings_seen; ///< the peer's one SETTINGS frame arrived (sec 6.2.1)
     uint64_t next_uni_id;          ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
     H3Stream streams[PROTOCORE_H3_MAX_STREAMS];
 } H3ConnCtx;
@@ -107,9 +107,12 @@ static_assert(H3_OFF_CTX % _Alignof(H3ConnCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's span.
-#define H3_CTX(w) ((H3ConnCtx *)(void *)((w) + H3_OFF_CTX))
+#define H3_CTX(w)                                                                                                      \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const H3ConnCtx *)(const void *)((w) + H3_OFF_CTX),                                          \
+        default: (H3ConnCtx *)(void *)((w) + H3_OFF_CTX))
 // H3_OFF_CTX is 0, so a callback is handed back the span it was bound with.
-#define H3_SPAN(c) ((uint8_t *)(void *)(c))
+#define H3_SPAN(c) _Generic((c), const uint8_t *: (const uint8_t *)(const void *)(c), default: (uint8_t *)(void *)(c))
 
 // The connection's bytes, split by offset over its streams. Idempotent: a connection initialised
 // again keeps the borrow it already holds, because the persistent end is never given back.
@@ -201,7 +204,7 @@ static embed_bool req_emit(void *ctx, const char *name, size_t nlen, const char 
 }
 
 // Close the connection with an RFC 9114 sec 8.1 error code. HTTP/3 errors are the application's,
-// so they travel in a CONNECTION_CLOSE of type 0x1d; in the transport variant the same number
+// so they travel in a CONNECTION_CLOSE of type 0x1d. In the transport variant the same number
 // would name a completely different condition.
 static void h3_fail(H3ConnCtx *h3, uint64_t error_code)
 {
@@ -367,9 +370,9 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
             }
             h3->peer_settings_seen = EMBED_TRUE;
             H3Frame.settings_defaults(h3_frame_work, &h3->peer_settings);
-            embed_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, st->buf + off + fr.header_len,
-                                                            (size_t)fr.length, &h3->peer_settings);
-            if (!h3_frame_ok)
+            const embed_bool h3_settings_ok = H3Frame.parse_settings(h3_frame_work, st->buf + off + fr.header_len,
+                                                                     (size_t)fr.length, &h3->peer_settings);
+            if (!h3_settings_ok)
             {
                 h3_fail(h3, H3_SETTINGS_ERROR);
                 return;

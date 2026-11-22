@@ -31,7 +31,10 @@ static_assert(SIGNALING_OFF_CTX + sizeof(struct SignalingStorage) <= PROTOCORE_S
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SIGNALING_CTX(w) ((struct SignalingStorage *)(void *)((w) + SIGNALING_OFF_CTX))
+#define SIGNALING_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SignalingStorage *)(const void *)((w) + SIGNALING_OFF_CTX),                     \
+        default: (struct SignalingStorage *)(void *)((w) + SIGNALING_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -92,13 +95,13 @@ void protocore_signal_know(uint8_t *work)
 
 void protocore_signal_reset(uint8_t *work)
 {
-    // The tallies are per-run: a server that has started over has answered no requests. Zero is the
+    // The tallies are per-run: a server that started over answered no requests. Zero is the
     // bucket's initial state, so the reset is the same store the static initialization performs.
     static const struct SignalingStorage blank = {0};
     *SIGNALING_CTX(work) = blank;
 }
 
-void protocore_signal_kill(uint8_t *work)
+void protocore_signal_kill(const uint8_t *work)
 {
     (void)work;
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle

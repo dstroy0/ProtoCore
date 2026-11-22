@@ -153,7 +153,7 @@ embed_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, c
  *        with NO STX/ETB frame, terminated by CR/LF and optionally bracketed by DC2 (POPEN, 0x12) /
  *        DC4 (PCLOS, 0x14). Strips leading prompt/newline/DC2 and trailing CR/LF/DC4, preserving any
  *        interior spaces (a DPRNT `*` arrives as a space and may be significant).
- * @return true for a non-empty pushed line; false if @p buf contains an STX (it is a framed Q
+ * @return true for a non-empty pushed line. False if @p buf contains an STX (it is a framed Q
  *         response, not DPRNT) or is empty after stripping.
  */
 embed_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);

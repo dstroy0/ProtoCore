@@ -490,7 +490,7 @@ static embed_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     {
         return EMBED_FALSE;
     }
-    // A presented name is a domain name; an embedded NUL is an attempt to end it early for a
+    // A presented name is a domain name. An embedded NUL is an attempt to end it early for a
     // consumer that reads it as a C string.
     for (size_t i = 0; i < pn; i++)
     {

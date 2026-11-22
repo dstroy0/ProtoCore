@@ -33,7 +33,7 @@ EMBED_BEGIN_DECLS
 /**
  * @brief Debounced motion-presence tracker over a single digital line.
  *
- * Presence asserts on an active-level sample and is held for @c hold_ms after the last active sample; an
+ * Presence asserts on an active-level sample and is held for @c hold_ms after the last active sample. An
  * inactive stretch longer than @c hold_ms clears it. Pure: time is passed in, so it is fully host-testable.
  */
 typedef struct
@@ -49,12 +49,12 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*motion_init)(uint8_t *, Sen0192Motion *, uint32_t, embed_bool);
+    void (*motion_init)(const uint8_t *, Sen0192Motion *, uint32_t, embed_bool);
     embed_bool (*motion_update)(uint8_t *, Sen0192Motion *, embed_bool, uint32_t);
-    embed_bool (*motion_tick)(uint8_t *, Sen0192Motion *, uint32_t);
-    embed_bool (*motion_present)(uint8_t *, const Sen0192Motion *);
-    uint32_t (*motion_events)(uint8_t *, const Sen0192Motion *);
-    uint32_t (*motion_active_age_ms)(uint8_t *, const Sen0192Motion *, uint32_t);
+    embed_bool (*motion_tick)(const uint8_t *, Sen0192Motion *, uint32_t);
+    embed_bool (*motion_present)(const uint8_t *, const Sen0192Motion *);
+    uint32_t (*motion_events)(const uint8_t *, const Sen0192Motion *);
+    uint32_t (*motion_active_age_ms)(const uint8_t *, const Sen0192Motion *, uint32_t);
     embed_bool (*begin)(uint8_t *);
     embed_bool (*poll)(uint8_t *);
     embed_bool (*present)(uint8_t *);
@@ -70,7 +70,7 @@ PROTOCORE_NS_LAYOUT(Sen0192Ns, motion_init, motion_update, motion_tick, motion_p
  * @param hold_ms Hold ms
  * @param active_high Active high
  */
-void protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high);
+void protocore_sen0192_motion_init(const uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high);
 /**
  * @brief Feed one sampled line level at now_ms.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
@@ -87,21 +87,21 @@ embed_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, embe
  * @param now_ms Now ms
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_sen0192_motion_tick(uint8_t *work, Sen0192Motion *m, uint32_t now_ms);
+embed_bool protocore_sen0192_motion_tick(const uint8_t *work, Sen0192Motion *m, uint32_t now_ms);
 /**
  * @brief Current presence (respecting the hold window).
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_sen0192_motion_present(uint8_t *work, const Sen0192Motion *m);
+embed_bool protocore_sen0192_motion_present(const uint8_t *work, const Sen0192Motion *m);
 /**
  * @brief Number of clear -> present transitions since init.
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @param m M
  * @return The uint32_t.
  */
-uint32_t protocore_sen0192_motion_events(uint8_t *work, const Sen0192Motion *m);
+uint32_t protocore_sen0192_motion_events(const uint8_t *work, const Sen0192Motion *m);
 /**
  * @brief Milliseconds since the last active-level sample (0 if none yet).
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
@@ -109,7 +109,7 @@ uint32_t protocore_sen0192_motion_events(uint8_t *work, const Sen0192Motion *m);
  * @param now_ms Now ms
  * @return The uint32_t.
  */
-uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *work, const Sen0192Motion *m, uint32_t now_ms);
+uint32_t protocore_sen0192_motion_active_age_ms(const uint8_t *work, const Sen0192Motion *m, uint32_t now_ms);
 /**
  * @brief Configure PROTOCORE_SEN0192_PIN as an input and start tracking .
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.

@@ -158,20 +158,20 @@ extern Fdc2214Vars Fdc2214V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const data)(uint8_t *work);
-    void (*const error)(uint8_t *work);
-    void (*const sensor_freq_hz)(uint8_t *work);
-    void (*const build_config)(uint8_t *work);
+    void (*const data)(const uint8_t *work);
+    void (*const error)(const uint8_t *work);
+    void (*const sensor_freq_hz)(const uint8_t *work);
+    void (*const build_config)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read_ch0)(uint8_t *work);
 } Fdc2214Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Fdc2214V or a region of the borrow at a fixed offset.
-void protocore_fdc2214_data(uint8_t *work);
-void protocore_fdc2214_error(uint8_t *work);
-void protocore_fdc2214_sensor_freq_hz(uint8_t *work);
-void protocore_fdc2214_build_config(uint8_t *work);
+void protocore_fdc2214_data(const uint8_t *work);
+void protocore_fdc2214_error(const uint8_t *work);
+void protocore_fdc2214_sensor_freq_hz(const uint8_t *work);
+void protocore_fdc2214_build_config(const uint8_t *work);
 void protocore_fdc2214_begin(uint8_t *work);
 void protocore_fdc2214_read_ch0(uint8_t *work);
 

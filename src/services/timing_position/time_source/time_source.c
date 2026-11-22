@@ -61,7 +61,7 @@ uint32_t protocore_time_now(void)
     // Query sources in ascending priority (lowest value first); stop at the first
     // that returns a nonzero epoch. A selection scan avoids sorting and, more
     // importantly, does not invoke lower-priority callbacks once a higher-priority
-    // source has answered (reading an RTC / GPS can be costly).
+    // source answered (reading an RTC / GPS can be costly).
     uint32_t queried = 0; // bitmask of sources already tried
     for (int pass = 0; pass < PROTOCORE_TIME_SOURCE_MAX; pass++)
     {

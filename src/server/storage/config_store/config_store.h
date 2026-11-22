@@ -14,7 +14,7 @@
  *
  * Three value types: null-terminated strings, `uint32_t`, and raw blobs - each
  * with a default returned when the key is absent. On ESP32 the backend is the
- * Arduino `Preferences` NVS wrapper; on host builds it is a fixed in-memory table
+ * Arduino `Preferences` NVS wrapper. On host builds it is a fixed in-memory table
  * (`PROTOCORE_CONFIG_MAX_ENTRIES` x `PROTOCORE_CONFIG_VAL_MAX`) so the typed contract is
  * unit-testable without flash.
  *

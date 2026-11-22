@@ -201,7 +201,7 @@ static void clock_past_cooldown(void)
     s_clock += PROTOCORE_SSH_PW_CHANGE_COOLDOWN_MS + 1u;
     set_millis(s_clock);
     // auth.c judges the cooldown against Clock.ms, the stamp one read of the source leaves behind.
-    // The dispatch loop refreshes it once a pass; there is no loop here, so moving the mock counter
+    // The dispatch loop refreshes it once a pass. There is no loop here, so moving the mock counter
     // alone leaves the library reading the previous instant.
     Clock.millis(Clock.internal);
 }

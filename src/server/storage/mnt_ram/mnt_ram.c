@@ -81,7 +81,7 @@ static int ram_create(const char *name, embed_bool is_dir)
     {
         return -1;
     }
-    int i = (int)__builtin_ctz(free_bits);
+    int i = __builtin_ctz(free_bits);
     s_mnt.used |= (1u << i);
     s_mnt.rf[i].is_dir = is_dir;
     EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = s_mnt.rf[i].name, .src = name, .cap = sizeof(s_mnt.rf[i].name));
@@ -195,7 +195,7 @@ static int ram_read(int h, void *buf, size_t n)
     {
         return -1;
     }
-    RamFile *f = &s_mnt.rf[s_mnt.rh[h].file];
+    const RamFile *f = &s_mnt.rf[s_mnt.rh[h].file];
     size_t avail = (s_mnt.rh[h].pos < f->len) ? (f->len - s_mnt.rh[h].pos) : 0;
     size_t k = n < avail ? n : avail;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = f->data + s_mnt.rh[h].pos, .bytes = k);
@@ -407,13 +407,13 @@ static const protocore_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_w
                                                     ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
                                                     ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
-const protocore_mnt_backend *protocore_mnt_ram_backend(uint8_t *work)
+const protocore_mnt_backend *protocore_mnt_ram_backend(const uint8_t *work)
 {
     (void)work;
     return &s_ram_backend;
 }
 
-void protocore_mnt_ram_format(uint8_t *work)
+void protocore_mnt_ram_format(const uint8_t *work)
 {
     (void)work;
 

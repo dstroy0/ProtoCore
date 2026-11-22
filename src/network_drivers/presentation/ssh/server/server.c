@@ -46,7 +46,10 @@ static_assert(SSH_SERVER_OFF_CTX + sizeof(struct SshServerStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_SERVER_CTX(w) ((struct SshServerStorage *)(void *)((w) + SSH_SERVER_OFF_CTX))
+#define SSH_SERVER_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SshServerStorage *)(const void *)((w) + SSH_SERVER_OFF_CTX),                    \
+        default: (struct SshServerStorage *)(void *)((w) + SSH_SERVER_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -88,7 +91,7 @@ static void net_poll(uint8_t conn_slot);
 static const ProtoHandler s_ssh_handler = {
     .on_accept = net_accept, .on_data = net_rx, .on_close = net_close, .on_poll = net_poll};
 
-void protocore_ssh_server_proto_handler(uint8_t *work)
+void protocore_ssh_server_proto_handler(const uint8_t *work)
 {
     (void)work;
     SshServerV.handler = &s_ssh_handler;
@@ -377,7 +380,7 @@ static void rfwd_on_close(uint8_t conn_slot)
 
 static void rfwd_on_poll(uint8_t conn_slot)
 {
-    // The dispatch loop now polls every slot uniformly; it used to poll only ACTIVE slots, so preserve
+    // The dispatch loop now polls every slot uniformly. It used to poll only ACTIVE slots, so preserve
     // that gate here (a closing/free forward slot has nothing to pump).
     ConnPoolV.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
@@ -415,7 +418,7 @@ static const ProtoHandler s_rfwd_handler = {
 
 // RFC 4254 sec 7.1: the socket a binding accepts on. The pool and its dynamic create/stop are the
 // listening role's, so the connection protocol names a port and gets a handle back.
-void protocore_ssh_server_rfwd_listener_open(uint8_t *work)
+void protocore_ssh_server_rfwd_listener_open(const uint8_t *work)
 {
     (void)work;
     const uint16_t bind_port = SshServerV.bind_port;
@@ -447,7 +450,7 @@ void protocore_ssh_server_rfwd_listener_open(uint8_t *work)
     return;
 }
 
-void protocore_ssh_server_rfwd_listener_close(uint8_t *work)
+void protocore_ssh_server_rfwd_listener_close(const uint8_t *work)
 {
     (void)work;
     const int handle = SshServerV.handle;
@@ -458,7 +461,7 @@ void protocore_ssh_server_rfwd_listener_close(uint8_t *work)
     }
 }
 
-void protocore_ssh_server_rfwd_proto_handler(uint8_t *work)
+void protocore_ssh_server_rfwd_proto_handler(const uint8_t *work)
 {
     (void)work;
     SshServerV.handler = &s_rfwd_handler;
@@ -468,16 +471,16 @@ void protocore_ssh_server_rfwd_proto_handler(uint8_t *work)
 
 // PROTOCORE_SSH_PORT_FORWARD is 0: the handle still carries the remote-forward calls, so they exist
 // and report nothing bound.
-void protocore_ssh_server_rfwd_listener_open(uint8_t *work)
+void protocore_ssh_server_rfwd_listener_open(const uint8_t *work)
 {
     (void)work;
     SshServerV.i32 = -1;
 }
-void protocore_ssh_server_rfwd_listener_close(uint8_t *work)
+void protocore_ssh_server_rfwd_listener_close(const uint8_t *work)
 {
     (void)work;
 }
-void protocore_ssh_server_rfwd_proto_handler(uint8_t *work)
+void protocore_ssh_server_rfwd_proto_handler(const uint8_t *work)
 {
     (void)work;
     SshServerV.handler = NULL;

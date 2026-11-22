@@ -102,7 +102,7 @@ void test_build_fails_closed(void)
     TEST_ASSERT_EQUAL_UINT16(0, sigfox_value);
 }
 
-// The modem answers "OK" when it took the command and "ERROR" when it did not; anything else is
+// The modem answers "OK" when it took the command and "ERROR" when it did not. Anything else is
 // not yet an answer, so the caller keeps reading.
 void test_response_classification(void)
 {

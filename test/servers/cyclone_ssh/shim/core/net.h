@@ -28,7 +28,7 @@
 #define SOCKET_SD_SEND 1
 #define SOCKET_SD_BOTH 2
 
-// --- socketReceive flags. Only BREAK_CRLF is exercised by the client: it is used to read the
+// --- socketReceive flags. Only BREAK_CRLF is exercised by the client. It is used to read the
 //     server's SSH identification line ("SSH-2.0-...\r\n") without swallowing the binary KEXINIT
 //     that follows it. The low byte carries the break character. ---
 #define SOCKET_FLAG_WAIT_ALL 0x00000800

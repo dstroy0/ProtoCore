@@ -120,7 +120,7 @@ void test_query_line_spells_the_published_command(void)
 }
 
 // [NGC] "Q600 Command (Read Variable)": "You can request the contents of any macro or system variable
-// with the ?Q600 command; for example, ?Q600 xxxx." The variable number follows one space.
+// with the ?Q600 command. For example, ?Q600 xxxx." The variable number follows one space.
 void test_macro_read_line_is_q600_space_variable(void)
 {
     char buf[32];

@@ -105,7 +105,7 @@ typedef struct
     // sec 7.1 restricts what may be sent from the moment THIS end sends its KEXINIT until it sends
     // its NEWKEYS, which is a narrower window than kex_active: an exchange is already running while
     // this end is still waiting to send its own KEXINIT, and that first one must not be refused.
-    embed_bool kexinit_sent; ///< This end has sent its KEXINIT and not yet its NEWKEYS (sec 7.1).
+    embed_bool kexinit_sent; ///< This end sent its KEXINIT and not yet its NEWKEYS (sec 7.1).
     // sec 9: "the state of the higher-level protocols is not affected by the key exchange", so a
     // re-exchange has to put the connection back where it interrupted it. The phase alone cannot say
     // where that was - every exchange ends in SSH_PHASE_NEWKEYS however it started.
@@ -206,7 +206,7 @@ typedef struct
     size_t hash_len;                   ///< its length: 32 for the SHA-256 methods, 64 for the SHA-512 one
 } SshKexHashArgs;
 
-/** @brief RFC 4253 sec 9 key re-exchange: what has passed since the last one, against its budget. */
+/** @brief RFC 4253 sec 9 key re-exchange: what passed since the last one, against its budget. */
 typedef struct
 {
     uint32_t seq_send;          ///< packets sent since the last exchange
@@ -264,30 +264,30 @@ extern SshTransportVars SshTransportV;
 typedef struct
 {
     void (*const recv_ident)(uint8_t *work);
-    void (*const send_ident)(uint8_t *work);
-    void (*const kexinit_build)(uint8_t *work);
+    void (*const send_ident)(const uint8_t *work);
+    void (*const kexinit_build)(const uint8_t *work);
     void (*const kexinit_parse)(uint8_t *work);
-    void (*const kex_generate)(uint8_t *work);
-    void (*const exchange_hash)(uint8_t *work);
+    void (*const kex_generate)(const uint8_t *work);
+    void (*const exchange_hash)(const uint8_t *work);
     void (*const kexdh_reply)(uint8_t *work);
-    void (*const newkeys_sent)(uint8_t *work);
+    void (*const newkeys_sent)(const uint8_t *work);
     void (*const newkeys_complete)(uint8_t *work);
-    void (*const rekey_due)(uint8_t *work);
+    void (*const rekey_due)(const uint8_t *work);
     void (*const begin_rekey)(uint8_t *work);
 } SshTransportNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshTransportV or a region of the borrow at a fixed offset.
 void protocore_ssh_transport_recv_ident(uint8_t *work);
-void protocore_ssh_transport_send_ident(uint8_t *work);
-void protocore_ssh_transport_kexinit_build(uint8_t *work);
+void protocore_ssh_transport_send_ident(const uint8_t *work);
+void protocore_ssh_transport_kexinit_build(const uint8_t *work);
 void protocore_ssh_transport_kexinit_parse(uint8_t *work);
-void protocore_ssh_transport_kex_generate(uint8_t *work);
-void protocore_ssh_transport_exchange_hash(uint8_t *work);
+void protocore_ssh_transport_kex_generate(const uint8_t *work);
+void protocore_ssh_transport_exchange_hash(const uint8_t *work);
 void protocore_ssh_transport_kexdh_reply(uint8_t *work);
-void protocore_ssh_transport_newkeys_sent(uint8_t *work);
+void protocore_ssh_transport_newkeys_sent(const uint8_t *work);
 void protocore_ssh_transport_newkeys_complete(uint8_t *work);
-void protocore_ssh_transport_rekey_due(uint8_t *work);
+void protocore_ssh_transport_rekey_due(const uint8_t *work);
 void protocore_ssh_transport_begin_rekey(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -858,7 +858,7 @@ int ssh_transport_service_request(const uint8_t *payload, size_t len, uint8_t *o
 
 /**
  * @brief Take the peer identification string off @p buf (RFC 4253 sec 4.2).
- * @return 1 once it is whole and the phase has advanced, 0 while more bytes are needed, -1 on a
+ * @return 1 once it is whole and the phase advanced, 0 while more bytes are needed, -1 on a
  *         string the section does not admit. @p off is left at the first binary packet byte.
  */
 int ssh_transport_version_exchange_recv(uint8_t i, const uint8_t *buf, size_t n, size_t *off);

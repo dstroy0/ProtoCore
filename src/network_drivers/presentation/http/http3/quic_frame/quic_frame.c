@@ -237,7 +237,7 @@ size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len,
     return n;
 }
 
-size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t cap, size_t n)
+size_t protocore_quic_frame_build_padding(const uint8_t *work, uint8_t *out, size_t cap, size_t n)
 {
     (void)work;
 
@@ -249,7 +249,7 @@ size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t ca
     return n;
 }
 
-size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap)
+size_t protocore_quic_frame_build_ping(const uint8_t *work, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -261,7 +261,7 @@ size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap)
     return 1;
 }
 
-size_t protocore_quic_frame_build_handshake_done(uint8_t *work, uint8_t *out, size_t cap)
+size_t protocore_quic_frame_build_handshake_done(const uint8_t *work, uint8_t *out, size_t cap)
 {
     (void)work;
 

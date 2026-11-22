@@ -9,7 +9,7 @@
 // records start at the IP header. What comes out is a .pcap Wireshark opens and a test parses.
 //
 // Separate from protocore_net_host.h on purpose: that header is parsed from inside protocore_config.h,
-// before shared/protocore_types.h supplies EMBED_INLINE, so it cannot include pcap.h. A test includes
+// before shared/protocore_types.h supplies EMBED_INLINE. So it cannot include pcap.h. A test includes
 // this one afterwards, when it can.
 //
 // The source address is 0.0.0.0 / :: because the mock has no interface address to claim.

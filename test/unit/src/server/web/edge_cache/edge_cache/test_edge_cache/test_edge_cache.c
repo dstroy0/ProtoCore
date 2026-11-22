@@ -543,7 +543,7 @@ void test_rfc9111_current_age_over_a_wrapping_millisecond_clock(void)
 
 // sec 4.2 prints the predicate: "response_is_fresh = (freshness_lifetime > current_age)".
 // Strictly greater, so the edge second is stale: lifetime 60 with age 60 is 60 > 60, false. The
-// same section defines stale as "a response whose age has exceeded its freshness lifetime" only
+// same section defines stale as "a response whose age exceeded its freshness lifetime" only
 // after that formula, and sec 4.2.1 leaves lifetime unknown (-1) when nothing is explicit, which
 // is not a fresh state.
 void test_rfc9111_fresh_predicate_is_strictly_greater(void)

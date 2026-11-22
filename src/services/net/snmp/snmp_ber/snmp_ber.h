@@ -74,7 +74,7 @@ typedef struct BerEnc
     embed_bool ok; ///< no write has run past cap
 } BerEnc;
 
-/** @brief A decoder's cursor: the octets being read, and how far the read has walked. */
+/** @brief A decoder's cursor: the octets being read, and how far the read walked. */
 typedef struct
 {
     const uint8_t *buf; ///< the octets being read
@@ -168,39 +168,39 @@ extern SnmpBerVars SnmpBerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const enc_init)(uint8_t *work);
-    void (*const put_integer)(uint8_t *work);
-    void (*const put_uint)(uint8_t *work);
-    void (*const put_octet_string)(uint8_t *work);
-    void (*const put_null)(uint8_t *work);
-    void (*const put_oid)(uint8_t *work);
-    void (*const put_tlv)(uint8_t *work);
-    void (*const put_raw)(uint8_t *work);
-    void (*const seq_begin)(uint8_t *work);
-    void (*const seq_end)(uint8_t *work);
-    void (*const dec_init)(uint8_t *work);
-    void (*const read_header)(uint8_t *work);
-    void (*const read_integer)(uint8_t *work);
-    void (*const read_oid)(uint8_t *work);
-    void (*const skip)(uint8_t *work);
+    void (*const enc_init)(const uint8_t *work);
+    void (*const put_integer)(const uint8_t *work);
+    void (*const put_uint)(const uint8_t *work);
+    void (*const put_octet_string)(const uint8_t *work);
+    void (*const put_null)(const uint8_t *work);
+    void (*const put_oid)(const uint8_t *work);
+    void (*const put_tlv)(const uint8_t *work);
+    void (*const put_raw)(const uint8_t *work);
+    void (*const seq_begin)(const uint8_t *work);
+    void (*const seq_end)(const uint8_t *work);
+    void (*const dec_init)(const uint8_t *work);
+    void (*const read_header)(const uint8_t *work);
+    void (*const read_integer)(const uint8_t *work);
+    void (*const read_oid)(const uint8_t *work);
+    void (*const skip)(const uint8_t *work);
 } SnmpBerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SnmpBerV or a region of the borrow at a fixed offset.
-void protocore_snmp_ber_enc_init(uint8_t *work);
-void protocore_snmp_ber_put_integer(uint8_t *work);
-void protocore_snmp_ber_put_uint(uint8_t *work);
-void protocore_snmp_ber_put_octet_string(uint8_t *work);
-void protocore_snmp_ber_put_null(uint8_t *work);
-void protocore_snmp_ber_put_oid(uint8_t *work);
-void protocore_snmp_ber_put_raw(uint8_t *work);
-void protocore_snmp_ber_seq_begin(uint8_t *work);
-void protocore_snmp_ber_seq_end(uint8_t *work);
-void protocore_snmp_ber_dec_init(uint8_t *work);
-void protocore_snmp_ber_read_header(uint8_t *work);
-void protocore_snmp_ber_read_integer(uint8_t *work);
-void protocore_snmp_ber_read_oid(uint8_t *work);
-void protocore_snmp_ber_skip(uint8_t *work);
+void protocore_snmp_ber_enc_init(const uint8_t *work);
+void protocore_snmp_ber_put_integer(const uint8_t *work);
+void protocore_snmp_ber_put_uint(const uint8_t *work);
+void protocore_snmp_ber_put_octet_string(const uint8_t *work);
+void protocore_snmp_ber_put_null(const uint8_t *work);
+void protocore_snmp_ber_put_oid(const uint8_t *work);
+void protocore_snmp_ber_put_raw(const uint8_t *work);
+void protocore_snmp_ber_seq_begin(const uint8_t *work);
+void protocore_snmp_ber_seq_end(const uint8_t *work);
+void protocore_snmp_ber_dec_init(const uint8_t *work);
+void protocore_snmp_ber_read_header(const uint8_t *work);
+void protocore_snmp_ber_read_integer(const uint8_t *work);
+void protocore_snmp_ber_read_oid(const uint8_t *work);
+void protocore_snmp_ber_skip(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

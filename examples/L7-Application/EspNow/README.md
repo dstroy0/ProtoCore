@@ -6,7 +6,7 @@
 
 ESP-NOW is connectionless peer-to-peer radio messaging between ESP devices - no AP,
 no IP stack, no association. Each board broadcasts a counter every two seconds and
-prints any framed message it receives; flash two boards on the same channel and they
+prints any framed message it receives. Flash two boards on the same channel and they
 see each other over Serial. Messages carry a 1-byte type so a receiver can demux.
 
 **Bring the radio up (but not associated), then begin:**

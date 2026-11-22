@@ -34,7 +34,7 @@ EMBED_BEGIN_DECLS
 // Reply codes this client acts on (RFC 5321 sec 4.2.3, RFC 4954 sec 6, RFC 3207 sec 4).
 #define SMTP_REPLY_SERVICE_READY 220 // <domain> Service ready, and STARTTLS ready to start TLS
 #define SMTP_REPLY_OK 250            // Requested mail action okay, completed
-#define SMTP_REPLY_WILL_FORWARD 251  // User not local; will forward to <forward-path>
+#define SMTP_REPLY_WILL_FORWARD 251  // User not local. Will forward to <forward-path>
 #define SMTP_REPLY_START_INPUT 354   // Start mail input; end with <CRLF>.<CRLF>
 #define SMTP_REPLY_AUTH_OK 235       // Authentication Succeeded
 #define SMTP_REPLY_AUTH_CONTINUE 334 // server challenge, base64 in the text part
@@ -83,7 +83,10 @@ static_assert(SMTP_OFF_CTX + sizeof(struct SmtpStorage) <= PROTOCORE_SMTP_BORROW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SMTP_CTX(w) ((struct SmtpStorage *)(void *)((w) + SMTP_OFF_CTX))
+#define SMTP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SmtpStorage *)(const void *)((w) + SMTP_OFF_CTX),                               \
+        default: (struct SmtpStorage *)(void *)((w) + SMTP_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Reply parsing (RFC 5321 sec 4.2)
@@ -177,7 +180,7 @@ static embed_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyw
 // ---------------------------------------------------------------------------
 
 // Publish one session's outcome on the handle.
-static void finish(uint8_t *work, SmtpResult r)
+static void finish(const uint8_t *work, SmtpResult r)
 {
     SmtpV.result = r;
     SmtpV.ok = (r == SMTP_OK);
@@ -380,7 +383,7 @@ static int build_content(uint8_t *work)
     size_t n = EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = sb);
     if (!EMBED_CALL(verba_finis.ok, VerbaFinisCfg, .out = out, .cap = cap, .at = sb))
     {
-        return (int)SMTP_ERR_OVERFLOW;
+        return SMTP_ERR_OVERFLOW;
     }
 
     const char *b = SmtpV.content.body ? SmtpV.content.body : "";
@@ -396,7 +399,7 @@ static int build_content(uint8_t *work)
         {
             if (n + 2 > cap)
             {
-                return (int)SMTP_ERR_OVERFLOW;
+                return SMTP_ERR_OVERFLOW;
             }
             out[n++] = '\r';
             out[n++] = '\n';
@@ -407,13 +410,13 @@ static int build_content(uint8_t *work)
         {
             if (n + 1 > cap)
             {
-                return (int)SMTP_ERR_OVERFLOW;
+                return SMTP_ERR_OVERFLOW;
             }
             out[n++] = '.'; // the inserted period of RFC 5321 sec 4.5.2
         }
         if (n + 1 > cap)
         {
-            return (int)SMTP_ERR_OVERFLOW;
+            return SMTP_ERR_OVERFLOW;
         }
         out[n++] = c;
         at_line_start = EMBED_FALSE;
@@ -426,14 +429,14 @@ static int build_content(uint8_t *work)
     {
         if (n + 2 > cap)
         {
-            return (int)SMTP_ERR_OVERFLOW;
+            return SMTP_ERR_OVERFLOW;
         }
         out[n++] = '\r';
         out[n++] = '\n';
     }
     if (n + 3 > cap)
     {
-        return (int)SMTP_ERR_OVERFLOW;
+        return SMTP_ERR_OVERFLOW;
     }
     out[n++] = '.';
     out[n++] = '\r';
@@ -706,7 +709,7 @@ void protocore_smtp_send(uint8_t *work)
     chan->tls_active = EMBED_FALSE;
     chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
 
-    // open() takes a slot and starts the name lookup; the connection exists only once connected()
+    // open() takes a slot and starts the name lookup. The connection exists only once connected()
     // says so, so the open is stepped here until it lands, closes, or runs out of budget.
     for (;;)
     {

@@ -232,7 +232,7 @@ typedef struct
     void (*const process_adu)(uint8_t *work);
     void (*const rtu_process_adu)(uint8_t *work);
     void (*const rx)(uint8_t *work);
-    void (*const handler)(uint8_t *work);
+    void (*const handler)(const uint8_t *work);
 } ModbusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -250,7 +250,7 @@ void protocore_modbus_set_input_reg(uint8_t *work);
 void protocore_modbus_process_adu(uint8_t *work);
 void protocore_modbus_rtu_process_adu(uint8_t *work);
 void protocore_modbus_rx(uint8_t *work);
-void protocore_modbus_handler(uint8_t *work);
+void protocore_modbus_handler(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -773,7 +773,7 @@ All notable changes to ProtoCore are documented here.
 - convert shape: say what it guesses and what it must not move ([`d43c677`](https://github.com/dstroy0/ProtoCore/commit/d43c677f163b49a5588bd12fb9f547e169c6a8c3))
 - clang-format the vendor HAL headers ([`d126f0f`](https://github.com/dstroy0/ProtoCore/commit/d126f0fabcb0c8e2e159b63b866ec82a941c9908))
 - black over tools/ ([`4067311`](https://github.com/dstroy0/ProtoCore/commit/40673111739ffa30840b4e764423e77d9cd65d14))
-- clang-format the 77 files that had drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
+- clang-format the 77 files that drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
 - retire the stand-in arrays, 663 sites ([`c78ea4b`](https://github.com/dstroy0/ProtoCore/commit/c78ea4b9ebe232ba6da845628c6e45d575ce3080))
 - only the config include above the gate, 195 files ([`1cd928d`](https://github.com/dstroy0/ProtoCore/commit/1cd928d6a858f175eeae18d2705d0ebb75367e09))
 - read the gate, and see a static with no initializer ([`96b0057`](https://github.com/dstroy0/ProtoCore/commit/96b00576c692dcff7ae4859f0a4a57eb5c573bb4))

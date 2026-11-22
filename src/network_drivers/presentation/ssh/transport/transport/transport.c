@@ -165,7 +165,10 @@ static_assert(SSH_TRANSPORT_OFF_CTX + sizeof(struct SshTransportStorage) <= PROT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_TRANSPORT_CTX(w) ((struct SshTransportStorage *)(void *)((w) + SSH_TRANSPORT_OFF_CTX))
+#define SSH_TRANSPORT_CTX(w)                                                                                           \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SshTransportStorage *)(const void *)((w) + SSH_TRANSPORT_OFF_CTX),              \
+        default: (struct SshTransportStorage *)(void *)((w) + SSH_TRANSPORT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -589,7 +592,7 @@ void ssh_transport_init(uint8_t i)
 // Identification string exchange (RFC 4253 §4.2)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_transport_send_ident(uint8_t *work)
+void protocore_ssh_transport_send_ident(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -738,7 +741,7 @@ void protocore_ssh_transport_recv_ident(uint8_t *work)
 // KEXINIT (RFC 4253 §7.1)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_transport_kexinit_build(uint8_t *work)
+void protocore_ssh_transport_kexinit_build(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -811,7 +814,7 @@ void protocore_ssh_transport_kexinit_build(uint8_t *work)
 }
 
 // A KEXINIT name-list is an RFC 4251 sec 5 string holding comma-separated names, so reading one is
-// protocore_ssh_read_string_at(); what makes it a name-list is what negotiate_alg()/namelist_contains() do with it.
+// protocore_ssh_read_string_at(). What makes it a name-list is what negotiate_alg()/namelist_contains() do with it.
 
 // Negotiate the key-exchange method from the client's kex_algorithms name-list, in our preference order
 // (PQC hybrid first when enabled; RSA group first when prefer_rsa). false = no mutual method.
@@ -1182,7 +1185,7 @@ embed_bool ssh_kex_is_sha512(SshKexAlg a)
 // canonical minimal encoding.
 // @p out holds SSH_KEXHASH_MAX_LEN; the exchange-hash length (32 or 64) is written to @p out_len and
 // selected by @p is512 (the negotiated KEX's hash). Returns 0, or -1 on a bad slot.
-void protocore_ssh_transport_exchange_hash(uint8_t *work)
+void protocore_ssh_transport_exchange_hash(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -1427,10 +1430,19 @@ embed_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
         {
             rh = PROTOCORE_RSA_HASH_SHA512;
         }
-        ok = parse_rsa_pubkey(ks, (uint32_t)ks_len, n_be.buf, e_be.buf) &&
-             (RsaV.verify_args.n = n_be.buf, RsaV.verify_args.e = e_be.buf, RsaV.verify_args.msg = h,
-              RsaV.verify_args.msg_len = h_len, RsaV.verify_args.sig = raw, RsaV.verify_args.sig_len = raw_len,
-              RsaV.verify_args.hash = rh, Rsa.verify(work), RsaV.ok);
+        ok = parse_rsa_pubkey(ks, (uint32_t)ks_len, n_be.buf, e_be.buf);
+        if (ok)
+        {
+            RsaV.verify_args.n = n_be.buf;
+            RsaV.verify_args.e = e_be.buf;
+            RsaV.verify_args.msg = h;
+            RsaV.verify_args.msg_len = h_len;
+            RsaV.verify_args.sig = raw;
+            RsaV.verify_args.sig_len = raw_len;
+            RsaV.verify_args.hash = rh;
+            Rsa.verify(work);
+            ok = RsaV.ok;
+        }
         break;
     }
     }
@@ -1659,7 +1671,7 @@ static int build_kex_reply(uint8_t i, const uint8_t *ks, size_t ks_len, const ui
     return 0;
 }
 
-void protocore_ssh_transport_kex_generate(uint8_t *work)
+void protocore_ssh_transport_kex_generate(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -2084,7 +2096,7 @@ void protocore_ssh_transport_kexdh_reply(uint8_t *work)
     return;
 }
 
-void protocore_ssh_transport_newkeys_sent(uint8_t *work)
+void protocore_ssh_transport_newkeys_sent(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -2122,7 +2134,7 @@ void protocore_ssh_transport_newkeys_complete(uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    // We have received the peer's SSH_MSG_NEWKEYS: our inbound direction is now encrypted and reads
+    // We received the peer's SSH_MSG_NEWKEYS: our inbound direction is now encrypted and reads
     // the epoch this exchange derived (RFC 4253 sec 7.3). Both directions are keyed once we get here
     // (the server always sends its NEWKEYS first), so the KEX is complete.
     ssh_sess[i].in.epoch = 1u - ssh_sess[i].in.epoch;
@@ -2161,7 +2173,7 @@ void protocore_ssh_transport_newkeys_complete(uint8_t *work)
     return;
 }
 
-void protocore_ssh_transport_rekey_due(uint8_t *work)
+void protocore_ssh_transport_rekey_due(const uint8_t *work)
 {
     (void)work;
     const uint32_t seq_send = SshTransportV.rekey.seq_send;
@@ -2341,8 +2353,8 @@ void ssh_pkt_set_client(uint8_t i)
 // Emit: frame one packet into the secure pool and raise the flag a worker drains
 // ---------------------------------------------------------------------------
 
-// RFC 4253 sec 7.1: "Once a party has sent a SSH_MSG_KEXINIT message for key exchange or
-// re-exchange, until it has sent a SSH_MSG_NEWKEYS message ... it MUST NOT send any messages other
+// RFC 4253 sec 7.1: "Once a party sent a SSH_MSG_KEXINIT message for key exchange or
+// re-exchange, until it sent a SSH_MSG_NEWKEYS message ... it MUST NOT send any messages other
 // than: Transport layer generic messages (1 to 19) (but SSH_MSG_SERVICE_REQUEST and
 // SSH_MSG_SERVICE_ACCEPT MUST NOT be sent); Algorithm negotiation messages (20 to 29) (but further
 // SSH_MSG_KEXINIT messages MUST NOT be sent); Specific key exchange method messages (30 to 49)."
@@ -2827,7 +2839,7 @@ static int ssh_recv_chachapoly(uint8_t i, SshPacketState *s, const SshKeyMat *km
 static int ssh_recv_aesgcm(uint8_t i, SshPacketState *s, SshKeyMat *km, ssh_msg_handler_t handler)
 {
     // aes256-gcm@openssh.com (RFC 5647): the 4-byte packet_length is sent in the clear and is
-    // the AEAD's additional authenticated data; the 16-byte GCM tag is verified over
+    // the AEAD's additional authenticated data. The 16-byte GCM tag is verified over
     // (length || ciphertext) BEFORE any plaintext is produced.
     uint32_t pkt_len = read_u32_be(s->rx_buf);
     // The encrypted portion (pkt_len) must be a positive whole number of AES blocks, and the whole
@@ -3625,6 +3637,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     case SSH_MSG_IGNORE:
     case SSH_MSG_DEBUG:         // RFC 4253 sec 11.3: display or discard; never answered
     case SSH_MSG_UNIMPLEMENTED: // sec 11.4: answering it with another would loop
+    case SSH_MSG_EXT_INFO:      // RFC 8308: a client may send its own EXT_INFO; we ignore it
         protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0;
 
@@ -3646,7 +3659,7 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         }
         // RFC 4253 sec 7.1: "a party MUST respond with its own SSH_MSG_KEXINIT message, except when
         // the received SSH_MSG_KEXINIT already was a reply." Answering a reply would both break that
-        // and rebuild I_S with a fresh cookie after the peer has hashed the old one.
+        // and rebuild I_S with a fresh cookie after the peer hashed the old one.
         PhaseMachineV.kexinit_needs_reply_args.i = i;
         PhaseMachine.kexinit_needs_reply(protocore_ssh_transport_span());
         if (!PhaseMachineV.ok)
@@ -3766,12 +3779,8 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
         protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         return 0;
 
-    case SSH_MSG_EXT_INFO:
-        protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
-        return 0; // RFC 8308: a client may send its own EXT_INFO; we ignore it
-
     case SSH_MSG_SERVICE_REQUEST:
-        // RFC 4253 §10: a service request is only valid once the key exchange has completed (NEWKEYS
+        // RFC 4253 §10: a service request is only valid once the key exchange completed (NEWKEYS
         // advances the phase to SSH_PHASE_SERVICE and turns on encryption). Rejecting it in any earlier
         // phase stops a client from jumping from DH_INIT straight to userauth in cleartext, skipping the
         // whole key exchange + host-key verification. Found by the pentest's ssh_msgtype_abuse.

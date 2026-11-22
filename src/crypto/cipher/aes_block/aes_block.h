@@ -175,8 +175,8 @@ EMBED_INLINE void protocore_aes_encrypt_block(const uint32_t *rk, int nr, const 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*key_expand)(uint8_t *, const uint8_t *, int, uint32_t *);
-    embed_bool (*encrypt_block)(uint8_t *, const uint32_t *, int, const uint8_t *, uint8_t *);
+    embed_bool (*key_expand)(const uint8_t *, const uint8_t *, int, uint32_t *);
+    embed_bool (*encrypt_block)(const uint8_t *, const uint32_t *, int, const uint8_t *, uint8_t *);
 } AesBlockNs;
 PROTOCORE_NS_LAYOUT(AesBlockNs, key_expand, encrypt_block);
 
@@ -188,7 +188,7 @@ PROTOCORE_NS_LAYOUT(AesBlockNs, key_expand, encrypt_block);
  * @param rk 4 * (nk + 7) round-key words
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int nk, uint32_t *rk);
+embed_bool protocore_aes_block_key_expand(const uint8_t *work, const uint8_t *key, int nk, uint32_t *rk);
 /**
  * @brief Encrypt one 16-byte block under that schedule.
  * @param work PROTOCORE_AES_BLOCK_BORROW bytes the caller took. Not held past the call.
@@ -198,7 +198,7 @@ embed_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int
  * @param out 16 output bytes; may alias in
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_aes_block_encrypt_block(uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in,
+embed_bool protocore_aes_block_encrypt_block(const uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in,
                                              uint8_t *out);
 
 /** @brief Module namespace. */

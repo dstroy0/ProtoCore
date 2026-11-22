@@ -20,7 +20,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-uint32_t protocore_radio_sniff_i2f32(uint8_t *work, int32_t dbm)
+uint32_t protocore_radio_sniff_i2f32(const uint8_t *work, int32_t dbm)
 {
     (void)work;
 

@@ -100,7 +100,7 @@ int protocore_platform_spi_begin(uint8_t host, int mosi, int miso, int sclk, int
     EspSpiHost *h = &s_bus.spi[host];
     if (h->up)
     {
-        // Already up on different pins: the caller is describing a second bus, which one host does
+        // Already up on different pins: the caller describes a second bus, which one host does
         // not carry. Fail rather than silently drive the first one.
         return (h->mosi == mosi && h->miso == miso && h->sclk == sclk) ? 1 : 0;
     }
@@ -288,7 +288,7 @@ int protocore_platform_i2c_begin(uint8_t bus, int sda, int scl, uint32_t hz)
     {
         return 0;
     }
-    // A sketch that already called Wire.begin() installed this port; treat that as ours rather
+    // A sketch that already called Wire.begin() installed this port. Treat that as ours rather
     // than failing, since both drive the same controller through the same driver.
     esp_err_t e = i2c_driver_install(i2c_port_id(bus), I2C_MODE_MASTER, 0, 0, 0);
     if (e != ESP_OK && e != ESP_ERR_INVALID_STATE)

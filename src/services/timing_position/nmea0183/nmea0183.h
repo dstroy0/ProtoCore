@@ -69,7 +69,8 @@ embed_bool protocore_nmea0183_field_int(const Nmea0183 *m, uint8_t idx, long *ou
 /** @brief Decoded GGA (fix data). */
 typedef struct
 {
-    uint8_t hour, minute; ///< UTC time of the fix
+    uint8_t hour;   ///< UTC time of the fix
+    uint8_t minute; ///< UTC time of the fix
     float second;
     double lat_deg;      ///< latitude in signed decimal degrees (+ N, - S); 0 if absent
     double lon_deg;      ///< longitude in signed decimal degrees (+ E, - W); 0 if absent
@@ -82,14 +83,17 @@ typedef struct
 /** @brief Decoded RMC (recommended minimum: position + velocity + date). */
 typedef struct
 {
-    embed_bool valid;     ///< true when the status field is 'A' (data valid), false for 'V' (warning)
-    uint8_t hour, minute; ///< UTC time
+    embed_bool valid; ///< true when the status field is 'A' (data valid), false for 'V' (warning)
+    uint8_t hour;     ///< UTC time
+    uint8_t minute;   ///< UTC time
     float second;
-    uint8_t day, month, year; ///< UTC date (year is the 2-digit field value, 0..99)
-    double lat_deg;           ///< latitude in signed decimal degrees
-    double lon_deg;           ///< longitude in signed decimal degrees
-    float speed_knots;        ///< speed over ground (knots)
-    float course_deg;         ///< course over ground (degrees true)
+    uint8_t day;       ///< UTC date (year is the 2-digit field value, 0..99)
+    uint8_t month;     ///< UTC date (year is the 2-digit field value, 0..99)
+    uint8_t year;      ///< UTC date (year is the 2-digit field value, 0..99)
+    double lat_deg;    ///< latitude in signed decimal degrees
+    double lon_deg;    ///< longitude in signed decimal degrees
+    float speed_knots; ///< speed over ground (knots)
+    float course_deg;  ///< course over ground (degrees true)
 } protocore_nmea_rmc;
 
 /**
@@ -127,7 +131,7 @@ typedef struct
 
 /**
  * @brief Decode a parsed GSV sentence into @p out. @return true iff @p m is a GSV sentence with at least
- *        the 3-field header; the per-satellite records present in this sentence are filled (0..4).
+ *        the 3-field header. The per-satellite records present in this sentence are filled (0..4).
  */
 embed_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *out);
 
@@ -135,9 +139,11 @@ embed_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *o
  *  4-digit year, so it is the sentence to read for wall-clock time sync. */
 typedef struct
 {
-    uint8_t hour, minute; ///< UTC time
+    uint8_t hour;   ///< UTC time
+    uint8_t minute; ///< UTC time
     float second;
-    uint8_t day, month;   ///< UTC date
+    uint8_t day;          ///< UTC date
+    uint8_t month;        ///< UTC date
     uint16_t year;        ///< UTC year (4-digit)
     int8_t zone_hours;    ///< local zone offset hours (-13..+13); 0 if the field is absent
     uint8_t zone_minutes; ///< local zone offset minutes (0..59); 0 if the field is absent
@@ -181,7 +187,7 @@ typedef struct
 
 /**
  * @brief Decode a parsed GSA sentence into @p out. @return true iff @p m is a GSA sentence with the full
- *        field set (through VDOP); false otherwise. Empty PRN slots are skipped (not counted).
+ *        field set (through VDOP). False otherwise. Empty PRN slots are skipped (not counted).
  */
 embed_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *out);
 
@@ -227,7 +233,7 @@ typedef struct
 
 /**
  * @brief Decode a parsed HDG sentence into @p out. @return true iff @p m is an HDG sentence with the heading
- *        / deviation / variation fields; false otherwise. The E/W direction fields are folded into the sign.
+ *        / deviation / variation fields. False otherwise. The E/W direction fields are folded into the sign.
  */
 embed_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *out);
 
@@ -235,9 +241,10 @@ embed_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *o
  *  GGA carries the full fix quality and RMC adds velocity, GLL is the minimal position report. */
 typedef struct
 {
-    double lat_deg;       ///< latitude in signed decimal degrees (+ N, - S); 0 if absent
-    double lon_deg;       ///< longitude in signed decimal degrees (+ E, - W); 0 if absent
-    uint8_t hour, minute; ///< UTC time of the position
+    double lat_deg; ///< latitude in signed decimal degrees (+ N, - S); 0 if absent
+    double lon_deg; ///< longitude in signed decimal degrees (+ E, - W); 0 if absent
+    uint8_t hour;   ///< UTC time of the position
+    uint8_t minute; ///< UTC time of the position
     float second;
     embed_bool valid; ///< true when the status field is 'A' (data valid), false for 'V' (warning)
     char mode;        ///< FAA mode indicator (NMEA 2.3+), or '\0' if the field is absent

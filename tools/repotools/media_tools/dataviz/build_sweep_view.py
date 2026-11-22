@@ -173,7 +173,7 @@ def main():
         linear.append([round(one / loudest, 6) for one in row])
 
     # The consensus at each frequency, and how far each setting departs from it. This is the field
-    # the tool exists for: it is zero where the settings agree, and everything that is left is the
+    # the tool exists for. It is zero where the settings agree, and everything that is left is the
     # analysis and not the signal.
     consensus = []
     for at in range(grid_n):

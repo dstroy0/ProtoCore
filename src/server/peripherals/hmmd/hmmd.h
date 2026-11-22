@@ -31,7 +31,7 @@
  *
  * The module's GPIO OUT pin is a bare active-high presence line with no protocol at all. Feed it to
  * @ref PresenceCore from `services/rcwl0516` (the shared one-GPIO presence facade) to get the same
- * debounced, hold-extended presence the RCWL-0516 gets; that is an application-level wiring choice,
+ * debounced, hold-extended presence the RCWL-0516 gets. That is an application-level wiring choice,
  * so this service deliberately does not depend on that one.
  *
  * Framing, the report payload layout, the command words, and the open/close command-mode encoding
@@ -273,20 +273,20 @@ typedef struct
     size_t n;
     const HmmdReport *report;
 
-    void (*const parse_report)(uint8_t *work);
-    void (*const stream_reset)(uint8_t *work);
+    void (*const parse_report)(const uint8_t *work);
+    void (*const stream_reset)(const uint8_t *work);
     void (*const stream_push)(uint8_t *work);
-    void (*const present)(uint8_t *work);
-    void (*const distance_cm)(uint8_t *work);
-    void (*const cmd_build)(uint8_t *work);
+    void (*const present)(const uint8_t *work);
+    void (*const distance_cm)(const uint8_t *work);
+    void (*const cmd_build)(const uint8_t *work);
     void (*const cmd_open)(uint8_t *work);
     void (*const cmd_close)(uint8_t *work);
     void (*const cmd_read_firmware)(uint8_t *work);
     void (*const cmd_read_serial)(uint8_t *work);
     void (*const cmd_read_config)(uint8_t *work);
     void (*const cmd_read_register)(uint8_t *work);
-    void (*const parse_ack)(uint8_t *work);
-    void (*const ack_matches)(uint8_t *work);
+    void (*const parse_ack)(const uint8_t *work);
+    void (*const ack_matches)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const poll)(uint8_t *work);
     void (*const last)(uint8_t *work);

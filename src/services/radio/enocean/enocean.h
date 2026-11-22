@@ -22,7 +22,7 @@ EMBED_BEGIN_DECLS
  * CRC-8, polynomial 0x07, init 0). protocore_esp3_parse() frames one telegram out of a byte stream,
  * resynchronizing on a bad sync / CRC, and protocore_esp3_build() assembles one. This is the radio-
  * plugin codec for the gateway: an inbound RADIO_ERP1 telegram carries a sender id (its
- * source address) and payload; bridge it northbound with protocore_gateway_uplink(). Pure - you feed
+ * source address) and payload. Bridge it northbound with protocore_gateway_uplink(). Pure - you feed
  * it the UART bytes - so it is fully host-testable. See example EnOceanGateway.
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
@@ -81,8 +81,8 @@ typedef struct
     int (*esp3_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_esp3_packet *);
     uint16_t (*esp3_build)(uint8_t *, protocore_esp3_type, const uint8_t *, uint16_t, const uint8_t *, uint8_t,
                            uint8_t *, uint16_t);
-    embed_bool (*erp1_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_erp1 *);
-    uint16_t (*erp1_build)(uint8_t *, uint8_t *, uint16_t, uint8_t, const uint8_t *, uint8_t, uint32_t, uint8_t);
+    embed_bool (*erp1_parse)(const uint8_t *, const uint8_t *, uint16_t, protocore_erp1 *);
+    uint16_t (*erp1_build)(const uint8_t *, uint8_t *, uint16_t, uint8_t, const uint8_t *, uint8_t, uint32_t, uint8_t);
 } EnoceanNs;
 PROTOCORE_NS_LAYOUT(EnoceanNs, esp3_crc8, esp3_parse, esp3_build, erp1_parse, erp1_build);
 
@@ -125,7 +125,7 @@ uint16_t protocore_enocean_esp3_build(uint8_t *work, protocore_esp3_type type, c
  * @param out Out
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out);
+embed_bool protocore_enocean_erp1_parse(const uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out);
 /**
  * @brief Assemble an ERP1 radio telegram (the inverse of .
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
@@ -138,8 +138,8 @@ embed_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint
  * @param status Status
  * @return The uint16_t.
  */
-uint16_t protocore_enocean_erp1_build(uint8_t *work, uint8_t *out, uint16_t cap, uint8_t rorg, const uint8_t *payload,
-                                      uint8_t payload_len, uint32_t sender_id, uint8_t status);
+uint16_t protocore_enocean_erp1_build(const uint8_t *work, uint8_t *out, uint16_t cap, uint8_t rorg,
+                                      const uint8_t *payload, uint8_t payload_len, uint32_t sender_id, uint8_t status);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EnoceanNs Enocean PROTOCORE_UNUSED = {.esp3_crc8 = protocore_enocean_esp3_crc8,

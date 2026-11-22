@@ -13,7 +13,7 @@
  *     the D term),
  *   - output clamping to the actuator's range, and
  *   - anti-windup by conditional integration (the integrator is frozen while the output is
- *     saturated and integrating would push it deeper into the rail, so it never winds up past
+ *     saturated and integrating would push it deeper into the rail. So it never winds up past
  *     what the actuator can deliver), plus a hard integral clamp as a secondary bound,
  *   - a feed-forward term (kff * setpoint) for the part of the command known in advance.
  *
@@ -132,7 +132,7 @@ static inline float control_lpf(float prev, float sample, float alpha)
 }
 
 /// Internal shared step, used by pid_update() and pid_update_fixed(): the whole control law with
-/// @p dt and its reciprocal @p inv_dt supplied, so there is no divide inside. Call an entry point
+/// @p dt and its reciprocal @p inv_dt supplied. So there is no divide inside. Call an entry point
 /// below, not this directly.
 static inline float pid_step_(Pid *p, float setpoint, float measurement, float dt, float inv_dt)
 {
@@ -188,7 +188,7 @@ static inline float pid_update(Pid *p, float setpoint, float measurement, float 
 /**
  * @brief Zero-divide fixed-rate step: same law as pid_update() but uses the dt / 1-over-dt cached
  *        by pid_set_rate(), so the hot path is all multiplies (the fastest form). Returns 0 until
- *        pid_set_rate() has supplied a positive dt.
+ *        pid_set_rate() supplied a positive dt.
  */
 static inline float pid_update_fixed(Pid *p, float setpoint, float measurement)
 {
@@ -345,29 +345,29 @@ extern ControlVars ControlV;
 typedef struct
 {
     void (*const pid_init)(uint8_t *work);
-    void (*const pid_set_output_limits)(uint8_t *work);
-    void (*const pid_set_integral_limits)(uint8_t *work);
-    void (*const pid_set_derivative_filter)(uint8_t *work);
-    void (*const pid_set_feedforward)(uint8_t *work);
-    void (*const pid_set_rate)(uint8_t *work);
-    void (*const pid_reset)(uint8_t *work);
-    void (*const pid_update_n)(uint8_t *work);
-    void (*const pid_log_header)(uint8_t *work);
-    void (*const pid_log_record)(uint8_t *work);
+    void (*const pid_set_output_limits)(const uint8_t *work);
+    void (*const pid_set_integral_limits)(const uint8_t *work);
+    void (*const pid_set_derivative_filter)(const uint8_t *work);
+    void (*const pid_set_feedforward)(const uint8_t *work);
+    void (*const pid_set_rate)(const uint8_t *work);
+    void (*const pid_reset)(const uint8_t *work);
+    void (*const pid_update_n)(const uint8_t *work);
+    void (*const pid_log_header)(const uint8_t *work);
+    void (*const pid_log_record)(const uint8_t *work);
 } ControlNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ControlV or a region of the borrow at a fixed offset.
 void protocore_control_pid_init(uint8_t *work);
-void protocore_control_pid_set_output_limits(uint8_t *work);
-void protocore_control_pid_set_integral_limits(uint8_t *work);
-void protocore_control_pid_set_derivative_filter(uint8_t *work);
-void protocore_control_pid_set_feedforward(uint8_t *work);
-void protocore_control_pid_set_rate(uint8_t *work);
-void protocore_control_pid_reset(uint8_t *work);
-void protocore_control_pid_update_n(uint8_t *work);
-void protocore_control_pid_log_header(uint8_t *work);
-void protocore_control_pid_log_record(uint8_t *work);
+void protocore_control_pid_set_output_limits(const uint8_t *work);
+void protocore_control_pid_set_integral_limits(const uint8_t *work);
+void protocore_control_pid_set_derivative_filter(const uint8_t *work);
+void protocore_control_pid_set_feedforward(const uint8_t *work);
+void protocore_control_pid_set_rate(const uint8_t *work);
+void protocore_control_pid_reset(const uint8_t *work);
+void protocore_control_pid_update_n(const uint8_t *work);
+void protocore_control_pid_log_header(const uint8_t *work);
+void protocore_control_pid_log_record(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

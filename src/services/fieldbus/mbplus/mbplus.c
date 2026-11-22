@@ -116,7 +116,7 @@ void protocore_mbplus_parse(uint8_t *work)
     MbplusV.ok = EMBED_TRUE;
 }
 
-void protocore_mbplus_next_token(uint8_t *work)
+void protocore_mbplus_next_token(const uint8_t *work)
 {
     (void)work;
     uint8_t current = MbplusV.next_token_args.current;

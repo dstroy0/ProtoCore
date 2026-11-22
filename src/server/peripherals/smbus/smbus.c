@@ -54,7 +54,10 @@ static_assert(SMBUS_OFF_CTX % _Alignof(SmbusCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SMBUS_CTX(w) ((SmbusCtx *)(void *)((w) + SMBUS_OFF_CTX))
+#define SMBUS_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SmbusCtx *)(const void *)((w) + SMBUS_OFF_CTX),                                        \
+        default: (SmbusCtx *)(void *)((w) + SMBUS_OFF_CTX))
 
 // The entries this file calls before reaching their definitions.
 
@@ -78,7 +81,7 @@ uint8_t *protocore_smbus_span(void)
     return s_own.span;
 }
 
-uint8_t protocore_smbus_addr_byte(uint8_t *work, uint8_t addr, uint8_t rw)
+uint8_t protocore_smbus_addr_byte(const uint8_t *work, uint8_t addr, uint8_t rw)
 {
     (void)work;
 
@@ -161,7 +164,7 @@ embed_bool protocore_smbus_pec_enabled(uint8_t *work)
     return SMBUS_CTX(work)->pec;
 }
 
-embed_bool protocore_smbus_begin(uint8_t *work)
+embed_bool protocore_smbus_begin(const uint8_t *work)
 {
     (void)work;
 

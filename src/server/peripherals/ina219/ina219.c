@@ -45,13 +45,13 @@ uint8_t *protocore_ina219_span(void)
     return s_own.span;
 }
 
-void protocore_ina219_bus_mv(uint8_t *work);
-void protocore_ina219_calibration(uint8_t *work);
-void protocore_ina219_current_ua(uint8_t *work);
-void protocore_ina219_power_uw(uint8_t *work);
-void protocore_ina219_shunt_uv(uint8_t *work);
+void protocore_ina219_bus_mv(const uint8_t *work);
+void protocore_ina219_calibration(const uint8_t *work);
+void protocore_ina219_current_ua(const uint8_t *work);
+void protocore_ina219_power_uw(const uint8_t *work);
+void protocore_ina219_shunt_uv(const uint8_t *work);
 
-void protocore_ina219_bus_mv(uint8_t *work)
+void protocore_ina219_bus_mv(const uint8_t *work)
 {
     (void)work;
     uint16_t raw = Ina219V.bus_mv_args.raw;
@@ -59,7 +59,7 @@ void protocore_ina219_bus_mv(uint8_t *work)
     Ina219V.value = (int32_t)((raw >> 3) * 4); // value in bits [15:3], LSB 4 mV
 }
 
-void protocore_ina219_shunt_uv(uint8_t *work)
+void protocore_ina219_shunt_uv(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ina219V.shunt_uv_args.raw;
@@ -67,7 +67,7 @@ void protocore_ina219_shunt_uv(uint8_t *work)
     Ina219V.value = (int32_t)raw * 10; // LSB 10 uV, signed
 }
 
-void protocore_ina219_calibration(uint8_t *work)
+void protocore_ina219_calibration(const uint8_t *work)
 {
     (void)work;
     uint32_t current_lsb_ua = Ina219V.calibration_args.current_lsb_ua;
@@ -84,7 +84,7 @@ void protocore_ina219_calibration(uint8_t *work)
     Ina219V.cal = (uint16_t)(cal > 0xFFFF ? 0xFFFF : cal);
 }
 
-void protocore_ina219_current_ua(uint8_t *work)
+void protocore_ina219_current_ua(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ina219V.current_ua_args.raw;
@@ -93,7 +93,7 @@ void protocore_ina219_current_ua(uint8_t *work)
     Ina219V.value = (int32_t)((int64_t)raw * current_lsb_ua);
 }
 
-void protocore_ina219_power_uw(uint8_t *work)
+void protocore_ina219_power_uw(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ina219V.power_uw_args.raw;
@@ -133,7 +133,10 @@ static_assert(INA219_OFF_CTX % _Alignof(Ina219Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define INA219_CTX(w) ((Ina219Ctx *)(void *)((w) + INA219_OFF_CTX))
+#define INA219_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ina219Ctx *)(const void *)((w) + INA219_OFF_CTX),                                      \
+        default: (Ina219Ctx *)(void *)((w) + INA219_OFF_CTX))
 
 // Zero is "not set yet", which is the configured default - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.

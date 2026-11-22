@@ -48,7 +48,7 @@ void test_fresh_tracker_is_absent(void)
     TEST_ASSERT_EQUAL_UINT32(0, sen0192_n);
 }
 
-// The first active sample raises presence and reports the edge; further active samples while
+// The first active sample raises presence and reports the edge. Further active samples while
 // already present report no edge, so a caller publishes one event per arrival.
 void test_first_active_sample_is_the_only_edge(void)
 {

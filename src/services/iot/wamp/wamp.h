@@ -166,7 +166,7 @@ typedef struct
     void (*const build_register)(uint8_t *work);
     void (*const build_unregister)(uint8_t *work);
     void (*const build_yield)(uint8_t *work);
-    void (*const element)(uint8_t *work);
+    void (*const element)(const uint8_t *work);
     void (*const get_type)(uint8_t *work);
     void (*const get_id)(uint8_t *work);
     void (*const get_uri)(uint8_t *work);
@@ -183,7 +183,7 @@ void protocore_wamp_build_call(uint8_t *work);
 void protocore_wamp_build_register(uint8_t *work);
 void protocore_wamp_build_unregister(uint8_t *work);
 void protocore_wamp_build_yield(uint8_t *work);
-void protocore_wamp_element(uint8_t *work);
+void protocore_wamp_element(const uint8_t *work);
 void protocore_wamp_get_type(uint8_t *work);
 void protocore_wamp_get_id(uint8_t *work);
 void protocore_wamp_get_uri(uint8_t *work);

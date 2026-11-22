@@ -5,14 +5,14 @@
  * @file southbound.h
  * @brief Southbound protocol-driver framework (PROTOCORE_ENABLE_SOUTHBOUND).
  *
- * The northbound surface of this library is HTTP/WS/SNMP/etc. to a controller; the *southbound* surface
+ * The northbound surface of this library is HTTP/WS/SNMP/etc. to a controller. The *southbound* surface
  * is the field devices it polls and drives (a Modbus slave, a BACnet controller, a raw sensor over
  * SPI/I2C/UART). Today Modbus master is the one such driver, hand-wired by the app. This is the uniform
  * seam every southbound driver plugs into, so the app addresses any field device the same way regardless
  * of the wire protocol underneath: register a driver (a small vtable + its instance context), then
  * read/write *points* (registers, coils, objects) by driver name through one facade.
  *
- * One owner, one API: the framework owns driver lookup + dispatch; each driver owns its own transport
+ * One owner, one API: the framework owns driver lookup + dispatch. Each driver owns its own transport
  * (it is handed the point id and returns the value, doing whatever Modbus/BACnet/GPIO I/O it needs). The
  * block (matrix) read/write is the atomic multi-point path - a contiguous span of points moved in one
  * driver call, which a protocol like Modbus can satisfy as a single request.

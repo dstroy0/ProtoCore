@@ -604,7 +604,7 @@ void test_declared_length_past_the_end_is_refused(void)
     TEST_ASSERT_FALSE(Cbor.get_float(&r, &f));
 }
 
-// The error is sticky: once a read has failed, every later read fails on that flag alone rather than
+// The error is sticky: once a read failed, every later read fails on that flag alone rather than
 // re-reading the buffer, so a caller that ignores one return cannot resynchronize by accident.
 void test_the_read_error_is_sticky(void)
 {

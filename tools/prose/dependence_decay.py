@@ -146,7 +146,7 @@ def tokens_of(text, vocabulary=256):
     for word in words:
         counts[word] = counts.get(word, 0) + 1
     common = sorted(counts, key=lambda w: -counts[w])[:vocabulary - 1]
-    index = dict((word, number) for number, word in enumerate(common))
+    index = {word: number for number, word in enumerate(common)}
     # Everything outside the retained vocabulary shares the last symbol.
     other = vocabulary - 1
     return numpy.fromiter((index.get(w, other) for w in words), dtype=numpy.int32,
@@ -235,7 +235,7 @@ def decay_shape(rows):
     my = sum(ys) / n
     top = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
     bottom = sum((x - mx) ** 2 for x in xs)
-    if bottom == 0.0:
+    if bottom <= 0.0:
         return None, len(xs)
     return top / bottom, len(xs)
 

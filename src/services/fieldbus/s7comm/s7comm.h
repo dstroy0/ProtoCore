@@ -14,7 +14,7 @@
  * @endcode
  * The header is 10 octets, or 12 for a response ROSCTR (Ack or Ack_Data), which adds a 2-octet error code.
  * A Read Var job (function 0x04) carries one or more S7-ANY request items (area / DB / byte
- * address / element count); the Ack_Data response carries, per item, a return code + a data
+ * address / element count). The Ack_Data response carries, per item, a return code + a data
  * transport size + a length + the value bytes. Per the protocol, the response length is in
  * BITS for the bit/byte/int transport sizes (3/4/5) and in BYTES otherwise, and each item
  * is padded to an even length except the last.
@@ -226,20 +226,20 @@ extern S7commVars S7commV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_setup)(uint8_t *work);
-    void (*const build_read_request)(uint8_t *work);
-    void (*const build_write_request)(uint8_t *work);
-    void (*const parse_header)(uint8_t *work);
-    void (*const read_next_item)(uint8_t *work);
+    void (*const build_setup)(const uint8_t *work);
+    void (*const build_read_request)(const uint8_t *work);
+    void (*const build_write_request)(const uint8_t *work);
+    void (*const parse_header)(const uint8_t *work);
+    void (*const read_next_item)(const uint8_t *work);
 } S7commNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in S7commV or a region of the borrow at a fixed offset.
-void protocore_s7comm_build_setup(uint8_t *work);
-void protocore_s7comm_build_read_request(uint8_t *work);
-void protocore_s7comm_build_write_request(uint8_t *work);
-void protocore_s7comm_parse_header(uint8_t *work);
-void protocore_s7comm_read_next_item(uint8_t *work);
+void protocore_s7comm_build_setup(const uint8_t *work);
+void protocore_s7comm_build_read_request(const uint8_t *work);
+void protocore_s7comm_build_write_request(const uint8_t *work);
+void protocore_s7comm_parse_header(const uint8_t *work);
+void protocore_s7comm_read_next_item(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -62,7 +62,10 @@ static_assert(TCP_LOWER_OFF_CTX + sizeof(struct TcpLowerStorage) <= PROTOCORE_TC
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TCP_LOWER_CTX(w) ((struct TcpLowerStorage *)(void *)((w) + TCP_LOWER_OFF_CTX))
+#define TCP_LOWER_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TcpLowerStorage *)(const void *)((w) + TCP_LOWER_OFF_CTX),                      \
+        default: (struct TcpLowerStorage *)(void *)((w) + TCP_LOWER_OFF_CTX))
 
 // True when the caller may run a raw stack op directly instead of marshaling. The stack has two
 // threading models and the answer differs, so branch on which one the framework built:
@@ -72,7 +75,7 @@ static embed_bool on_stack_thread(const uint8_t *work)
 }
 
 // True if the op's control block is still bound to a live connection slot. A marshalled send or
-// output captures the block on the worker thread; by the time the op runs the connection can have
+// output captures the block on the worker thread. By the time the op runs the connection can have
 // been torn down, and writing through a freed block trips the stack's invalid-pcb assert. Re-check
 // here, in the context where teardown also runs. Looking the block up rather than reading the slot
 // is what RAWSEND needs, since it carries no slot.
@@ -146,7 +149,7 @@ static protocore_net_err protocore_tcp_do(uint8_t *work)
         }
         break;
     case PROTOCORE_OP_OUTPUT:
-        // Hot path (O(1)): flush only if the slot still owns a LIVE pcb; else it was torn down - skip
+        // Hot path (O(1)): flush only if the slot still owns a LIVE pcb. Else it was torn down - skip
         // rather than flushing freed memory (the stack's "invalid pcb" assert -> panic). The `TcpLower.pcb`
         // null test is essential and was the missing piece here: protocore_conn_flush() marshals this op with
         // conn_pool[slot].pcb, which is null for a torn-down slot, so a captured-null vs a live-null

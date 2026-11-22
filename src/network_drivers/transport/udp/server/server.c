@@ -85,7 +85,10 @@ static_assert(UDP_LISTENER_OFF_CTX + sizeof(struct UdpListenerStorage) <= PROTOC
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define UDP_LISTENER_CTX(w) ((struct UdpListenerStorage *)(void *)((w) + UDP_LISTENER_OFF_CTX))
+#define UDP_LISTENER_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct UdpListenerStorage *)(const void *)((w) + UDP_LISTENER_OFF_CTX),                \
+        default: (struct UdpListenerStorage *)(void *)((w) + UDP_LISTENER_OFF_CTX))
 
 /** @brief The reply token a handler is given: the sender, and the slot the datagram arrived on. */
 typedef struct protocore_udp_peer
@@ -227,7 +230,7 @@ typedef struct
 
 // Stamp a control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
 // change reaches the next datagram.
-static void apply_dscp(protocore_udp_pcb *pcb)
+static void apply_dscp(const protocore_udp_pcb *pcb)
 {
 #if PROTOCORE_ENABLE_DIFFSERV
     uint8_t dscp = protocore_diffserv_udp_dscp();

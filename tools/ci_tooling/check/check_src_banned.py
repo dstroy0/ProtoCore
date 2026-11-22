@@ -360,7 +360,7 @@ def _key(v):
         # every snprintf shares one message, so the ordinal wrapper does the disambiguating
         return f"{path}|20|snprintf"
     if ban_no == 23:
-        # one message for every ternary, and a line can hold several; the ordinal wrapper separates
+        # one message for every ternary, and a line can hold several. The ordinal wrapper separates
         # them, so removing one leaves the survivors' ordinals inside the recorded set
         return f"{path}|23|ternary"
     return f"{path}|{ban_no}|{message}"

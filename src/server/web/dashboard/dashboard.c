@@ -63,7 +63,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define DASHBOARD_CTX(w) ((DashboardCtx *)(void *)((w) + DASHBOARD_OFF_CTX))
+#define DASHBOARD_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const DashboardCtx *)(const void *)((w) + DASHBOARD_OFF_CTX),                                \
+        default: (DashboardCtx *)(void *)((w) + DASHBOARD_OFF_CTX))
 
 static const char *widget_type_name(protocore_widget_type t)
 {
@@ -111,7 +114,7 @@ uint8_t *protocore_dashboard_span(void)
 }
 
 void protocore_dashboard_configure(uint8_t *work);
-void protocore_dashboard_parse_control(uint8_t *work);
+void protocore_dashboard_parse_control(const uint8_t *work);
 void protocore_dashboard_values_json(uint8_t *work);
 
 void protocore_dashboard_configure(uint8_t *work)
@@ -326,7 +329,7 @@ static const char *control_value_ptr(const char *s, const char *key)
     return p;
 }
 
-void protocore_dashboard_parse_control(uint8_t *work)
+void protocore_dashboard_parse_control(const uint8_t *work)
 {
     (void)work;
     const char *msg = DashboardV.parse_control_args.msg;
@@ -382,6 +385,8 @@ void protocore_dashboard_dispatch_control(uint8_t *work)
     DashboardV.parse_control_args.key_cap = sizeof(key);
     DashboardV.parse_control_args.value_out = &value;
     protocore_dashboard_parse_control(work);
+    DashboardV.parse_control_args.value_out = NULL;
+    DashboardV.parse_control_args.key_out = NULL;
     if (!DashboardV.ok)
     {
         DashboardV.ok = EMBED_FALSE;
@@ -476,12 +481,13 @@ void protocore_dashboard_publish(uint8_t *work)
 
     if (!DASHBOARD_CTX(work)->started)
     {
-        return; // nothing is subscribed until begin() has registered the stream routes
+        return; // nothing is subscribed until begin() registered the stream routes
     }
     char buf[PROTOCORE_DASHBOARD_JSON_BUF];
     DashboardV.values_json_args.out = buf;
     DashboardV.values_json_args.cap = sizeof(buf);
     protocore_dashboard_values_json(work);
+    DashboardV.values_json_args.out = NULL;
     if (DashboardV.value > 0)
     {
         protocore_sse_broadcast(DASHBOARD_CTX(work)->stream_path, buf, NULL, NULL);

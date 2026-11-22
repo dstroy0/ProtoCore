@@ -64,7 +64,7 @@ static void begin_msg(uint8_t *work, protocore_json_writer *w, int code)
 }
 
 // Close out a build: the byte count in ns->n, 0 unless the writer stayed inside the buffer.
-static void finish(uint8_t *work, protocore_json_writer *w)
+static void finish(const uint8_t *work, protocore_json_writer *w)
 {
     JsonV.end_array_args.w = w;
     Json.end_array(work);
@@ -316,7 +316,8 @@ static size_t scan_value(const char *s, size_t i)
     }
     if (s[i] == '{' || s[i] == '[')
     {
-        char open = s[i], close = (open == '{') ? '}' : ']';
+        char open = s[i];
+        char close = (open == '{') ? '}' : ']';
         int depth = 0;
         while (s[i])
         {
@@ -358,7 +359,7 @@ static size_t scan_value(const char *s, size_t i)
 
 // Slice the raw element at ns->parse.index out of the received list (WAMP sec 3.3) into ns->text
 // and ns->n.
-void protocore_wamp_element(uint8_t *work)
+void protocore_wamp_element(const uint8_t *work)
 {
     (void)work;
     WampV.ok = EMBED_FALSE;

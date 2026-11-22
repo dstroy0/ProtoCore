@@ -169,7 +169,7 @@ payloads, all byte-exact.
 1. **DONE - RX read API in transport** - `ConnPool.available` / `ConnPool.read_byte`
    / `ConnPool.read` / `ConnPool.peek` / `ConnPool.consume` (transport/tcp/protocol/protocol.h).
 2. **DONE - migrate the consumers** - HTTP / websocket / telnet / ssh / tls + the
-   conn_pool-ring services (modbus / opcua) all drain through the API; no external
+   conn_pool-ring services (modbus / opcua) all drain through the API. No external
    `rx_tail` modulo remains. The read functions consume only; `ConnPool.ack_consumed`
    stays the only place that reopens the window (per loop), so draining and ACKing
    each have exactly one owner. HW: 10/10 50 KB byte-exact, backpressure 0.
@@ -177,7 +177,7 @@ payloads, all byte-exact.
    per-slot WebDAV PUT state `s_davput.put[MAX_CONNS]`; fixed the concurrent-PUT bug
    (HW: 4 parallel PUTs, distinct payloads, all byte-exact).
 4. **DONE - outbound clients** - all clients (http_client / mqtt / ws_client) share
-   `TcpClient`, the unified client transport; brought to the same ack-on-consume
+   `TcpClient`, the unified client transport. Brought to the same ack-on-consume
    flow control as the server (`PROTOCORE_CLIENT_RX_BUF >= TCP_WND`). Each module's `rx`
    is its own plaintext frame buffer (the client mirror of the server's `body[]`),
    module-owned and correct as-is.
@@ -266,7 +266,7 @@ data,close}` plus `tls_data` (the TLS handshake pump + ALPN "h2" detection + Web
    dispatches into the route table - so it used to be a large inline block in the worker loop
    guarded by `if (proto != PROTO_HTTP)`. That block is now `protocore_http_on_poll()`, installed
    as the HTTP `ProtoHandler`'s `on_poll` (via `HttpConn.set_poll`, the `on_poll` analogue of the
-   `http_resp_sink` TX seam; it is wired in at the top of `service_once()`). The worker
+   `http_resp_sink` TX seam. It is wired in at the top of `service_once()`). The worker
    dispatch loop now calls `on_poll` uniformly for **every** protocol including HTTP - it names no
    protocol and has no special case. The singleton pollers (ssh, rfwd) gate on `CONN_ACTIVE` inside
    their own `on_poll`, preserving the behavior the loop-level gate used to give them.
@@ -399,7 +399,7 @@ back can be asserted to belong to the calling worker.
 
 `high_water()` reports the peak any slot reached - the number to size the arena by.
 Each pool's backing storage is named only from its `bind()`, on the allocation path, so
-`--gc-sections` reclaims the whole block from firmware that never borrows; that is why
+`--gc-sections` reclaims the whole block from firmware that never borrows. That is why
 `reset()` must not bind.
 
 ### Every TU declares its own worst case
@@ -488,7 +488,7 @@ profiles, the crypto accelerator HAL, and the physical (EMAC + PHY + raw-registe
 / lwIP glue) layer. The goal is to **move the vendor-neutral majority into common
 areas and let the preprocessor pull in exactly one vendor backend per build**, so
 adding STM32 (then TI Sitara / CC32xx, RP2350, others) is "add a subdir + wire the
-selector", not a fork. We are targeting a broad board matrix; the seams have to be
+selector", not a fork. We target a broad board matrix; the seams have to be
 designed once, correctly, up front.
 
 **Layout - common by default, a thin per-vendor subdir for what is genuinely
@@ -598,7 +598,7 @@ accelerator's real throughput instead of interrupt-round-trip-bound. This is _al
 portability win: it gives the library a **vendor-agnostic HW modexp** (the same HAL
 API the STM PKA / others implement), so RSA/DH stop depending on each vendor's mbedtls
 port. **Tradeoff to measure, not assume** (run the experiment): polling busy-waits the
-worker for the modexp duration where interrupt mode yields; for the deterministic
+worker for the modexp duration where interrupt mode yields. For the deterministic
 single-owner model a bounded ~tens-of-ms blocking op is likely fine, but confirm
 against `PROTOCORE_WORKER_COUNT` scheduling before switching the default. Keep mbedtls as
 the fallback where the HAL has no MODMULT (classic ESP32) or where a die's interrupt

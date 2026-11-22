@@ -50,7 +50,10 @@ static_assert(SSE_OFF_CTX % _Alignof(SseCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSE_CTX(w) ((SseCtx *)(void *)((w) + SSE_OFF_CTX))
+#define SSE_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SseCtx *)(const void *)((w) + SSE_OFF_CTX),                                            \
+        default: (SseCtx *)(void *)((w) + SSE_OFF_CTX))
 
 void protocore_sse_route_add(uint8_t *work)
 {

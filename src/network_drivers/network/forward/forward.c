@@ -91,7 +91,10 @@ static_assert(FORWARD_OFF_CTX + sizeof(struct ForwardStorage) <= PROTOCORE_FORWA
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define FORWARD_CTX(w) ((struct ForwardStorage *)(void *)((w) + FORWARD_OFF_CTX))
+#define FORWARD_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct ForwardStorage *)(const void *)((w) + FORWARD_OFF_CTX),                         \
+        default: (struct ForwardStorage *)(void *)((w) + FORWARD_OFF_CTX))
 
 // The one time source (server/clock/clock.h). Clock.ms is where the LAST reading landed, not a
 // live read, so a rate window that only looked at it measured against whichever instant something
@@ -134,7 +137,7 @@ static embed_bool fwd_iface_send(uint8_t *work, uint8_t id)
 EMBED_ENUM_BYTE(resolve_result, RESOLVE_RESULT_R_NOROUTE, RESOLVE_RESULT_R_DENY, RESOLVE_RESULT_R_ALLOW, );
 
 // Resolve the control on forwarding for (src_if -> dst): a DENY wins; otherwise the first matching
-// ALLOW governs and its index lands in @p allow_idx; otherwise nothing matched.
+// ALLOW governs and its index lands in @p allow_idx. Otherwise nothing matched.
 static resolve_result fwd_resolve(uint8_t *work, uint8_t dst, int *allow_idx)
 {
     const uint8_t src = ForwardV.src_if;

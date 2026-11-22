@@ -5,7 +5,7 @@
 //
 // An HTTP/3 frame header is two QUIC varints (RFC 9114 sec 7.1), so its correctness is the varint
 // coding's correctness. RFC 9000 Appendix A.1 publishes four decoded sample sequences, and
-// test_rfc9000_sample_varints_as_frame_lengths is the load-bearing case: it drives each of them
+// test_rfc9000_sample_varints_as_frame_lengths is the load-bearing case. It drives each of them
 // through the frame header as a Length and requires the exact octets the RFC prints. The frame type
 // and settings identifier values come from the IANA tables RFC 9114 sec 11.2.1 and sec 11.2.2
 // register, and the settings defaults from sec 7.2.4.1 and RFC 9204 sec 5.
@@ -27,7 +27,7 @@ void tearDown(void)
 static uint8_t g_out[64];
 
 // RFC 9000 Appendix A.1: "the eight-byte sequence 0xc2197c5eff14e88c decodes to the decimal value
-// 151,288,809,941,952,652; the four-byte sequence 0x9d7f3e7d decodes to 494,878,333; the two-byte
+// 151,288,809,941,952,652; the four-byte sequence 0x9d7f3e7d decodes to 494,878,333. The two-byte
 // sequence 0x7bbd decodes to 15,293; and the single byte 0x25 decodes to 37".
 //
 // Each is used here as a DATA frame's Length, so the frame header is 0x00 followed by that sequence.

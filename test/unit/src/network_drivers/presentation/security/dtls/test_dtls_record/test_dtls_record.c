@@ -374,7 +374,7 @@ void test_inner_content_type_and_padding(void)
 
 // sec 4.5.2 with sec 4.2.3: a record whose fixed bits are wrong, that is too short to carry the
 // 16-byte sequence-number sample, or whose body has been altered, is discarded as if deprotection
-// had failed.
+// failed.
 void test_rfc9147_4_5_2_invalid_records(void)
 {
     uint8_t pt[64];

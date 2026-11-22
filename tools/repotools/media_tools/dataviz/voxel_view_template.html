@@ -490,7 +490,7 @@
 
   // Shapes whose extent grows with the count, rather than only their detail, are capped. A prism
   // at 4096 sides is still a prism the same size; a helicoid at 4096 turns is 23,591 units tall and
-  // has left the camera behind. Measured, not guessed: the sweep that found it is in the scratch
+  // left the camera behind. Measured, not guessed: the sweep that found it is in the scratch
   // harness that checks every shape at orders 3 through 4096.
   function winding() { return Math.max(1, Math.min(48, orderAt / 6)); }
 
@@ -984,7 +984,7 @@
       var g = baseColor[(i * 3) + 1];
       var b = baseColor[(i * 3) + 2];
 
-      // The selection dragged on the histogram sits above every mark: it is what the eye is being
+      // The selection dragged on the histogram sits above every mark. It is what the eye is being
       // pointed at right now, and a standing mark should not hide it.
       var mark = null;
       var raw = rawOf[i];
@@ -1758,7 +1758,7 @@
   }
 
   document.getElementById("mark-add").addEventListener("click", function () {
-    // A new mark opens on the range the current field actually holds, so it claims something the
+    // A new mark opens on the range the current field actually holds. So it claims something the
     // moment it appears rather than starting empty and looking broken.
     var top = 0;
     var rows = view.rows;
@@ -2107,7 +2107,7 @@
       // offsetHeight, not clientHeight. clientHeight leaves out the stage's 1px borders, and with
       // box-sizing: border-box writing it back as the height makes the box two pixels shorter,
       // which fires this observer again, which takes off another two. The stage walks down to its
-      // minimum on its own while nobody is touching it. offsetHeight is the same number the height
+      // minimum on its own while nobody touches it. offsetHeight is the same number the height
       // property means, so writing it back changes nothing and the loop has no step.
       var high = stage.offsetHeight;
       if (Math.abs(high - wasHigh) < 1) { return; }

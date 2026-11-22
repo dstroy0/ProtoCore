@@ -339,7 +339,7 @@ void test_authenticate_fails_closed(void)
 }
 
 // A null identity string is an absent field, not an empty one written somewhere unexpected: its
-// triplet reports length 0 at the offset the payload had reached.
+// triplet reports length 0 at the offset the payload reached.
 void test_absent_identity_fields(void)
 {
     uint8_t buf[256];

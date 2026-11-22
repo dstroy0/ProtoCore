@@ -38,7 +38,7 @@ static char *mem_find(char *hay, size_t hlen, const char *needle, size_t nlen)
 // Extract parameter value: search for `key="<value>"` inside `src`.
 // If found, null-terminates in-place and returns pointer to the value.
 // Returns NULL if not found.
-static char *extract_quoted_param(char *src, const char *key)
+static char *extract_quoted_param(const char *src, const char *key)
 {
     char *p = (char *)EMBED_CALL(
         cellul.find, CatenaFinitaCfg, .src = src,
@@ -71,7 +71,7 @@ static char *extract_quoted_param(char *src, const char *key)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-embed_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody *mp)
+embed_bool protocore_multipart_parse(const uint8_t *work, HttpReq *req, MultipartBody *mp)
 {
     (void)work;
 
@@ -121,7 +121,7 @@ embed_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
     size_t dlen = blen + 2;
 
     char *body = (char *)req->body;
-    char *end = body + req->body_len; // length-bounded scanning: NUL bytes in a binary part are fine
+    const char *end = body + req->body_len; // length-bounded scanning: NUL bytes in a binary part are fine
 
     // A part's data ends at the full "\r\n--boundary" delimiter (RFC 2046): matching only the
     // "--boundary" bytes would false-truncate a binary part that happens to contain them.
@@ -195,7 +195,7 @@ embed_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
             else if (hlen >= 13 && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = pos,
                                               .other = "Content-Type:", .cap = 13, .ci = EMBED_TRUE))
             {
-                char *v = pos + 13;
+                const char *v = pos + 13;
                 while (*v == ' ')
                 {
                     v++;
@@ -229,7 +229,7 @@ embed_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
     return mp->part_count > 0;
 }
 
-const char *protocore_multipart_get_field(uint8_t *work, const MultipartBody *mp, const char *field)
+const char *protocore_multipart_get_field(const uint8_t *work, const MultipartBody *mp, const char *field)
 {
     (void)work;
 

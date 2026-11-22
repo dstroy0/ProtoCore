@@ -117,7 +117,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_CLIENT_CTX(w) ((SshClientStorage *)(void *)((w) + SSH_CLIENT_OFF_CTX))
+#define SSH_CLIENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshClientStorage *)(const void *)((w) + SSH_CLIENT_OFF_CTX),                           \
+        default: (SshClientStorage *)(void *)((w) + SSH_CLIENT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -140,11 +143,11 @@ uint8_t *protocore_ssh_client_span(void)
 }
 
 // The client engine is one translation unit; these are defined below in dependency order.
-static void cli_send(uint8_t *work);
-static void cli_crypto_work(uint8_t *work);
+static void cli_send(const uint8_t *work);
+static void cli_crypto_work(const uint8_t *work);
 static void protocore_ssh_client_begin(uint8_t *work);
 static void protocore_ssh_client_poll(uint8_t *work);
-static void protocore_ssh_client_end(uint8_t *work);
+static void protocore_ssh_client_end(const uint8_t *work);
 static void cli_fail(const char *why);
 static embed_bool build_kexinit(void);
 static embed_bool build_kex_public(void);
@@ -164,8 +167,14 @@ static embed_bool send_service_request(void)
     mmgr_span w = EMBED_CALL(spat.from, SpatiumCfg, .buf = out, .cap = sizeof(out));
     EMBED_CALL(byteio.put, OctetusCfg, .write_span = &w, .byte = SSH_MSG_SERVICE_REQUEST);
     protocore_ssh_wr_cstr(&w, "ssh-userauth");
-    return EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
-                                                          cli_send(protocore_ssh_client_span()), SshClient.ok);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
+    {
+        return EMBED_FALSE;
+    }
+    SshClient.msg.payload = out;
+    SshClient.msg.len = w.pos;
+    cli_send(protocore_ssh_client_span());
+    return SshClient.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -325,13 +334,15 @@ static embed_bool handle_kexdh_reply(const uint8_t *p, size_t len)
 #endif
 
     uint8_t nk = SSH_MSG_NEWKEYS;
-    if (!(SshClient.msg.payload = &nk, SshClient.msg.len = 1, cli_send(protocore_ssh_client_span()), SshClient.ok))
+    SshClient.msg.payload = &nk;
+    SshClient.msg.len = 1;
+    cli_send(protocore_ssh_client_span());
+    if (!(SshClient.ok))
     {
         return EMBED_FALSE;
     }
-    (SshTransportV.slot = SSH_CLI_SLOT,
-     SshTransport.newkeys_sent(protocore_ssh_transport_span())); // outbound switches to the epoch this exchange derived
-    return EMBED_TRUE;
+    SshTransportV.slot = SSH_CLI_SLOT; // outbound switches to the epoch this exchange derived return EMBED_TRUE;
+    SshTransport.newkeys_sent(protocore_ssh_transport_span());
 }
 
 // ---------------------------------------------------------------------------
@@ -354,14 +365,19 @@ static embed_bool build_kexinit(void)
     }
     uint8_t *out = base + SSH_OFF_KEXINIT;
     size_t n = 0;
-    if ((SshTransportV.slot = SSH_CLI_SLOT, SshTransportV.out_args.out = out,
-         SshTransportV.out_args.cap = PROTOCORE_SSH_KEXINIT_S_MAX,
-         SshTransport.kexinit_build(protocore_ssh_transport_span()), n = SshTransportV.out_args.out_len,
-         SshTransportV.i32) != 0)
+    SshTransportV.slot = SSH_CLI_SLOT;
+    SshTransportV.out_args.out = out;
+    SshTransportV.out_args.cap = PROTOCORE_SSH_KEXINIT_S_MAX;
+    SshTransport.kexinit_build(protocore_ssh_transport_span());
+    n = SshTransportV.out_args.out_len;
+    if ((SshTransportV.i32) != 0)
     {
         return EMBED_FALSE;
     }
-    return (SshClient.msg.payload = out, SshClient.msg.len = n, cli_send(protocore_ssh_client_span()), SshClient.ok);
+    SshClient.msg.payload = out;
+    SshClient.msg.len = n;
+    cli_send(protocore_ssh_client_span());
+    return SshClient.ok;
 }
 
 // Generate our KEX ephemeral for the negotiated method and build Q_C / e into
@@ -452,7 +468,7 @@ static embed_bool build_kex_public(void)
     case SSH_KEX_SNTRUP761_X25519: {
         // sntrup761 keypair (sk kept for Decaps; pk is embedded in sk) + an X25519 ephemeral. C_INIT
         // (pk || Q_C) is assembled at send time from sk; Q_C lives in qc[0..31]. pk is only needed
-        // transiently here (sk embeds a copy), so it borrows the scratch arena.
+        // transiently here (sk embeds a copy). So it borrows the scratch arena.
         uint8_t *pk = (uint8_t *)protocore_plain_guard()->temporary_buf_alloc(PROTOCORE_SNTRUP761_PK_BYTES,
                                                                               protocore_plain_owner());
         if (!pk)
@@ -480,8 +496,11 @@ static embed_bool build_kex_public(void)
 static embed_bool handle_server_kexinit(const uint8_t *p, size_t len)
 {
     // RFC 4253 sec 7.1 parse + negotiate, the one implementation both roles consume.
-    if ((SshTransportV.slot = SSH_CLI_SLOT, SshTransportV.pkt.payload = p, SshTransportV.pkt.len = len,
-         SshTransport.kexinit_parse(protocore_ssh_transport_span()), SshTransportV.i32) != 0)
+    SshTransportV.slot = SSH_CLI_SLOT;
+    SshTransportV.pkt.payload = p;
+    SshTransportV.pkt.len = len;
+    SshTransport.kexinit_parse(protocore_ssh_transport_span());
+    if ((SshTransportV.i32) != 0)
     {
         return EMBED_FALSE;
     }
@@ -530,7 +549,7 @@ static embed_bool handle_server_kexinit(const uint8_t *p, size_t len)
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->kex == SSH_KEX_SNTRUP761_X25519)
     {
         // KEX_HYBRID_INIT (msg 30): string(C_INIT) where C_INIT = sntrup761_pk || Q_C (1190 B). pk is
-        // reconstructed from sk (it is embedded there); too large for the stack packet buffer, so the
+        // reconstructed from sk (it is embedded there). Too large for the stack packet buffer, so the
         // packet is built in the client's scratch arena.
         SshSession *hs = &ssh_sess[SSH_CLI_SLOT];
         const uint8_t *pk =
@@ -592,8 +611,14 @@ static embed_bool handle_server_kexinit(const uint8_t *p, size_t len)
         protocore_ssh_wr_str(&w, SSH_CLIENT_CTX(protocore_ssh_client_span())->qc,
                              SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len);
     }
-    return EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
-                                                          cli_send(protocore_ssh_client_span()), SshClient.ok);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
+    {
+        return EMBED_FALSE;
+    }
+    SshClient.msg.payload = out;
+    SshClient.msg.len = w.pos;
+    cli_send(protocore_ssh_client_span());
+    return SshClient.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -602,7 +627,7 @@ static embed_bool handle_server_kexinit(const uint8_t *p, size_t len)
 
 // The client is one connection on one slot, so its handshake crypto works out of that slot's bytes -
 // the same borrow the wire and the packet MAC come from. Null when the pool cannot cover the slot.
-static void cli_crypto_work(uint8_t *work)
+static void cli_crypto_work(const uint8_t *work)
 {
     (void)work;
     if (!ssh_pkt_slot_storage(&ssh_pkt[SSH_CLI_SLOT]))
@@ -624,7 +649,7 @@ static void cli_crypto_work(uint8_t *work)
 static const char NAME_ED25519[] = "ssh-ed25519";
 
 // Frame @p payload as a binary packet (encrypted once NEWKEYS is active) and write it to the relay.
-static void cli_send(uint8_t *work)
+static void cli_send(const uint8_t *work)
 {
     (void)work;
     const uint8_t *payload = SshClient.msg.payload;
@@ -651,7 +676,7 @@ static void cli_send(uint8_t *work)
     return;
 }
 
-static void cli_state(uint8_t *work)
+static void cli_state(const uint8_t *work)
 {
     (void)work;
     SshClient.state_of = SSH_CLIENT_CTX(protocore_ssh_client_span())->state;
@@ -681,8 +706,14 @@ static embed_bool send_tcpip_forward(void)
                                   : "");
     EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = &w,
                .value = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.bind_port, .bytes = 4);
-    return EMBED_CALL(spat.ok, SpatiumCfg, .span = w) && (SshClient.msg.payload = out, SshClient.msg.len = w.pos,
-                                                          cli_send(protocore_ssh_client_span()), SshClient.ok);
+    if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
+    {
+        return EMBED_FALSE;
+    }
+    SshClient.msg.payload = out;
+    SshClient.msg.len = w.pos;
+    cli_send(protocore_ssh_client_span());
+    return SshClient.ok;
 }
 // ---------------------------------------------------------------------------
 // RFC 4252 sec 7 - the outbound role's publickey request
@@ -865,8 +896,9 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         {
             handled = EMBED_TRUE;
             // RFC 4253 sec 7.3: a NEWKEYS that ends no key exchange is a protocol error.
-            if ((SshTransportV.slot = SSH_CLI_SLOT, SshTransport.newkeys_complete(protocore_ssh_transport_span()),
-                 SshTransportV.i32) != 0) // -> SSH_PHASE_SERVICE
+            SshTransportV.slot = SSH_CLI_SLOT;
+            SshTransport.newkeys_complete(protocore_ssh_transport_span()); // -> SSH_PHASE_SERVICE
+            if (SshTransportV.i32 != 0)
             {
                 cli_fail("NEWKEYS outside a key exchange");
             }
@@ -913,7 +945,7 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         break;
     case SSH_PHASE_OPEN:
         // The forward is asked for and not yet confirmed until REQUEST_SUCCESS, which is the state
-        // this end reports; the phase is already OPEN (RFC 4254 sec 7.1 is a channel-layer request).
+        // this end reports. The phase is already OPEN (RFC 4254 sec 7.1 is a channel-layer request).
         if (SSH_CLIENT_CTX(protocore_ssh_client_span())->state != PROTOCORE_SSH_CLIENT_UP)
         {
             if (type == SSH_MSG_REQUEST_SUCCESS)
@@ -954,8 +986,10 @@ static void cli_msg_handler(uint8_t slot, uint8_t type, const uint8_t *payload, 
         size_t n = 0;
         if (ssh_pkt_unimplemented(SSH_CLI_SLOT, out, &n, sizeof(out)) == 0)
         {
-            (void)(SshClient.msg.payload = out, SshClient.msg.len = n, cli_send(protocore_ssh_client_span()),
-                   SshClient.ok);
+            SshClient.msg.payload = out;
+            SshClient.msg.len = n;
+            cli_send(protocore_ssh_client_span());
+            (void)SshClient.ok;
         }
     }
 }
@@ -1020,10 +1054,12 @@ static void protocore_ssh_client_begin(uint8_t *work)
     // Send our identification string, then our KEXINIT.
     uint8_t banner[SSH_VERSION_MAX + 2];
     size_t n = 0;
-    const int ident =
-        (SshTransportV.slot = SSH_CLI_SLOT, SshTransportV.out_args.out = banner,
-         SshTransportV.out_args.cap = sizeof(banner), SshTransport.send_ident(protocore_ssh_transport_span()),
-         n = SshTransportV.out_args.out_len, SshTransportV.i32);
+    SshTransportV.slot = SSH_CLI_SLOT;
+    SshTransportV.out_args.out = banner;
+    SshTransportV.out_args.cap = sizeof(banner);
+    SshTransport.send_ident(protocore_ssh_transport_span());
+    n = SshTransportV.out_args.out_len;
+    const int ident = SshTransportV.i32;
     TcpClientV.cid = SSH_CLIENT_CTX(protocore_ssh_client_span())->cid;
     TcpClientV.io.data = banner;
     TcpClientV.io.len = n;
@@ -1110,7 +1146,7 @@ static void protocore_ssh_client_poll(uint8_t *work)
 #endif
 }
 
-static void protocore_ssh_client_end(uint8_t *work)
+static void protocore_ssh_client_end(const uint8_t *work)
 {
     (void)work;
     SshNetworkV.ssh_slot = SSH_CLI_SLOT;

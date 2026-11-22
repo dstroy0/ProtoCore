@@ -50,7 +50,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define HTTP_PARSER_CTX(w) ((HttpParserCtx *)(void *)((w) + HTTP_PARSER_OFF_CTX))
+#define HTTP_PARSER_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HttpParserCtx *)(const void *)((w) + HTTP_PARSER_OFF_CTX),                             \
+        default: (HttpParserCtx *)(void *)((w) + HTTP_PARSER_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -118,7 +121,7 @@ void protocore_http_parser_set_stream_hooks(uint8_t *work, HttpStreamBeginCb beg
 
 // The 256-entry class table, one const byte per input octet (lands in flash .rodata). Written out as a
 // literal, so it is data the compiler places rather than code it has to fold.
-// Each entry ORs the classes that octet belongs to; regenerate via tools if the character classes ever change:
+// Each entry ORs the classes that octet belongs to. Regenerate via tools if the character classes ever change:
 //   tchar = ALPHA/DIGIT/"!#$%&'*+-.^_`|~"  vchar = %x21-7E  field-value = HTAB/%x20-7E/obs-text(%x80-FF)
 static const uint8_t kCharClass[256] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -614,7 +617,7 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
     }
 }
 
-const char *protocore_http_parser_get_header(uint8_t *work, const HttpReq *req, const char *key)
+const char *protocore_http_parser_get_header(const uint8_t *work, const HttpReq *req, const char *key)
 {
     (void)work;
 
@@ -957,7 +960,7 @@ embed_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *
     return EMBED_FALSE;
 }
 
-const char *protocore_http_parser_get_query(uint8_t *work, const HttpReq *req, const char *key)
+const char *protocore_http_parser_get_query(const uint8_t *work, const HttpReq *req, const char *key)
 {
     (void)work;
 
@@ -1048,7 +1051,7 @@ embed_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, con
     return EMBED_FALSE;
 }
 
-const char *protocore_http_parser_get_param(uint8_t *work, const HttpReq *req, const char *key)
+const char *protocore_http_parser_get_param(const uint8_t *work, const HttpReq *req, const char *key)
 {
     (void)work;
 

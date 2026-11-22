@@ -8,7 +8,7 @@ goldenize's own rewriter stages into `<entry>_args.<param>`, which only fits a m
 groups are named after its entries. A module that groups by concern (identity, bind, msg, dgram)
 states the member path per parameter here.
 
-    nsmap.py <map.json> [path ...]        rewrite; paths default to the map's "files"
+    nsmap.py <map.json> [path ...]        rewrite. Paths default to the map's "files"
     nsmap.py <map.json> --dry [path ...]  print what it would do, and write nothing
 
 The map:

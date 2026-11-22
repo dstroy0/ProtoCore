@@ -41,7 +41,10 @@ static_assert(SHA3_OFF_CTX % _Alignof(KeccakCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The sponge, at its offset in the caller's borrow.
-#define SHA3_SPONGE(w) ((KeccakCtx *)(void *)((w) + SHA3_OFF_CTX))
+#define SHA3_SPONGE(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const KeccakCtx *)(const void *)((w) + SHA3_OFF_CTX),                                        \
+        default: (KeccakCtx *)(void *)((w) + SHA3_OFF_CTX))
 
 // Keccak-f[1600] permutation constants (FIPS 202): iota round constants, rho rotation offsets, and
 // the rho/pi lane-permutation order.

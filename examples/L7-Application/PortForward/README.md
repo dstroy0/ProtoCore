@@ -27,7 +27,7 @@ protocore_relay_publish((uint8_t)li, "192.168.1.60", 80); // bind it to the orig
 The server's normal `handle()` loop pumps the relay - no extra task.
 
 > **Security.** The relay forwards to whatever origin you publish and does not
-> authenticate the inbound side, so it is an open door to that origin for anyone
+> authenticate the inbound side. So it is an open door to that origin for anyone
 > who can reach the front port. Only publish trusted internal targets, and keep
 > the front port off untrusted networks (put an ACL or VPN in front if needed).
 
@@ -124,5 +124,5 @@ sockets in a `protocore_relay`. Each `server.handle()` tick calls `protocore_rel
 which moves whatever bytes are ready in each direction, carrying anything the far
 side is too busy to accept yet (backpressure). When either side closes, the relay
 tears the other down. The byte-pump engine is transport-agnostic and unit-tested
-on its own; this listener is the thin glue that binds its seams to the server's
+on its own. This listener is the thin glue that binds its seams to the server's
 inbound connection and an outbound `protocore_client`.

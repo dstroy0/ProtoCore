@@ -403,7 +403,7 @@ class BuildFilesAreReadAtAll(unittest.TestCase):
             one for one in docs_check.walk_markdown(roots) if docs_check.build_file(one)
         ]
         types = sorted(
-            set(
+            {
                 (
                     os.path.basename(one)
                     if os.path.basename(one) in docs_check.BUILD_NAMES
@@ -411,7 +411,7 @@ class BuildFilesAreReadAtAll(unittest.TestCase):
                     else os.path.splitext(one)[1]
                 )
                 for one in got
-            )
+            }
         )
         print(
             "\n  build files under this tree's own roots: %d, of types %s"

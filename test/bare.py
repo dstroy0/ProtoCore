@@ -397,7 +397,7 @@ def flash_image(arch, elf, out_dir, name, mb=None):
     The machine boots the way the part does: the ROM reads the second-stage image from flash offset
     0 and loads its segments. It does NOT start at the ELF entry, which is why -kernel alone leaves
     the CPU at the ROM vector 0x40000000. There is no IDF bootloader here and no partition table -
-    the image the ROM finds at offset 0 is ours, so it is loaded and jumped to directly.
+    the image the ROM finds at offset 0 is ours. So it is loaded and jumped to directly.
     """
     esptool = os.path.join(PIO_PKGS, "tool-esptoolpy", "esptool.py")
     if not os.path.isfile(esptool):

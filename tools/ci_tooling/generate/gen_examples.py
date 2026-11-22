@@ -28,7 +28,7 @@ EXAMPLES_MD = os.path.join(ROOT, "docs", "EXAMPLES.md")
 # Doxygen (which now takes examples/**/README.md as input, see docs/Doxyfile) resolves the same
 # relative link to the rendered Pages page. So the walkthroughs live ON the site, not as bare
 # repo links. Each README documents its example directory, so the pages nest under the Files
-# tree by path (no nav-root flood); this index just links them by OSI-layer group.
+# tree by path (no nav-root flood). This index just links them by OSI-layer group.
 
 REGION = dr.Region(EXAMPLES_MD, "EXAMPLE INDEX", dr.tool_id(__file__))
 
@@ -89,7 +89,7 @@ def build_index():
     the tree's 197 root entries, which is why the sidebar had no usable categories. @subpage
     renders the same link and also nests the page under this index.
 
-    The items must be markdown for @subpage to be seen, so they sit as markdown inside the
+    The items must be markdown for @subpage to be seen. So they sit as markdown inside the
     HTML wrapper with blank lines around them - that is how Doxygen re-enters markdown.
     """
     parts = ['<div class="pc-examples">', ""]

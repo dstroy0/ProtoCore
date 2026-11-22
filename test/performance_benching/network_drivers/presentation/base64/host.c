@@ -3,7 +3,7 @@
 //
 // Host-side microbenchmark for the base64 codec (network_drivers/presentation/codec/base64): encode +
 // decode of a 1 KiB payload. A deterministic ns/op + MB/s baseline that complements the on-device
-// ESP32-S3 numbers; the host figure is a relative baseline (a fast desktop/RPi core), not the device
+// ESP32-S3 numbers. The host figure is a relative baseline (a fast desktop/RPi core), not the device
 // cost. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/performance_benching/common
 //   test/performance_benching/network_drivers/presentation/base64/host.c

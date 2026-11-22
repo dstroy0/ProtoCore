@@ -109,7 +109,10 @@ static_assert(UMATI_OFF_CTX % _Alignof(UmatiCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define UMATI_CTX(w) ((UmatiCtx *)(void *)((w) + UMATI_OFF_CTX))
+#define UMATI_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const UmatiCtx *)(const void *)((w) + UMATI_OFF_CTX),                                        \
+        default: (UmatiCtx *)(void *)((w) + UMATI_OFF_CTX))
 
 // --- Variant fillers (leaf values) -----------------------------------------
 static void set_str(OpcUaVariant *o, const char *s)

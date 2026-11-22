@@ -52,7 +52,7 @@ typedef struct
     uint32_t hblock_stream;
     embed_bool hblock_end_stream;
     embed_bool hblock_trailers; ///< the block is a sec 8.1 trailer section, not the request
-    uint8_t hblock_frames;      ///< CONTINUATION frames this block has spanned
+    uint8_t hblock_frames;      ///< CONTINUATION frames this block spanned
     embed_bool in_header_block; ///< between a non-END_HEADERS HEADERS and its END_HEADERS CONTINUATION
 
     uint8_t hdec[PROTOCORE_HPACK_BORROW]; ///< HPACK decoder table (the peer encoder's state)
@@ -89,10 +89,16 @@ static_assert(H2_CONN_OFF_CTX % _Alignof(H2ConnCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define H2_CONN_CTX(w) ((H2ConnCtx *)(void *)((w) + H2_CONN_OFF_CTX))
+#define H2_CONN_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const H2ConnCtx *)(const void *)((w) + H2_CONN_OFF_CTX),                                     \
+        default: (H2ConnCtx *)(void *)((w) + H2_CONN_OFF_CTX))
 #define H2_CONN_FBUF(w) ((w) + H2_CONN_OFF_FBUF)
 #define H2_CONN_HBLOCK(w) ((w) + H2_CONN_OFF_HBLOCK)
-#define H2_CONN_HSCRATCH(w) ((char *)(void *)((w) + H2_CONN_OFF_HSCRATCH))
+#define H2_CONN_HSCRATCH(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const char *)(const void *)((w) + H2_CONN_OFF_HSCRATCH),                                     \
+        default: (char *)(void *)((w) + H2_CONN_OFF_HSCRATCH))
 #define H2_CONN_FHDR(w) ((w) + H2_CONN_OFF_FHDR)
 #define H2_CONN_CTL(w) ((w) + H2_CONN_OFF_CTL)
 
@@ -146,10 +152,13 @@ static void send_our_settings(uint8_t *work)
                                     H2_SETTINGS_INITIAL_WINDOW_SIZE, H2_SETTINGS_MAX_FRAME_SIZE};
     static const uint32_t vals[4] = {0, PROTOCORE_H2_MAX_STREAMS, 65535, PROTOCORE_H2_MAX_FRAME};
     uint8_t buf[H2_FRAME_HEADER_LEN + 4 * 6];
-    size_t n = (H2FrameV.build_settings_args.buf = buf, H2FrameV.build_settings_args.cap = sizeof buf,
-                H2FrameV.build_settings_args.ids = ids, H2FrameV.build_settings_args.vals = vals,
-                H2FrameV.build_settings_args.n = 4, H2Frame.build_settings(work), H2FrameV.n);
-    printf("DIAG_H2 settings n=%u write=%p\n", (unsigned)n, (void *)(uintptr_t)H2_CONN_CTX(work)->cb.write);
+    H2FrameV.build_settings_args.buf = buf;
+    H2FrameV.build_settings_args.cap = sizeof buf;
+    H2FrameV.build_settings_args.ids = ids;
+    H2FrameV.build_settings_args.vals = vals;
+    H2FrameV.build_settings_args.n = 4;
+    H2Frame.build_settings(work);
+    size_t n = H2FrameV.n;
     wr(work, buf, n);
 }
 
@@ -161,8 +170,12 @@ static void send_our_settings(uint8_t *work)
 // wrong places, which showed up as two unrelated-looking assertion failures in the h2_conn suite.
 static size_t build_rst_refuse(uint8_t *work, uint8_t *b, size_t cap)
 {
-    return (H2FrameV.rst_args.buf = b, H2FrameV.rst_args.cap = cap, H2FrameV.rst_args.stream_id = 0,
-            H2FrameV.rst_args.error = 0, H2Frame.build_rst_stream(work), H2FrameV.n);
+    H2FrameV.rst_args.buf = b;
+    H2FrameV.rst_args.cap = cap;
+    H2FrameV.rst_args.stream_id = 0;
+    H2FrameV.rst_args.error = 0;
+    H2Frame.build_rst_stream(work);
+    return H2FrameV.n;
 }
 
 // send_control takes a plain builder, so the entry is reached through one.
@@ -193,9 +206,12 @@ static void send_control(uint8_t *work, size_t (*build)(uint8_t *, uint8_t *, si
 // frame is built in the dispatcher's borrow, which is where every outbound control frame is staged.
 static void send_rst(uint8_t *work, uint32_t stream_id, uint32_t err)
 {
-    size_t n = (H2FrameV.rst_args.buf = H2_CONN_CTL(work), H2FrameV.rst_args.cap = H2_CTL_FRAME_MAX,
-                H2FrameV.rst_args.stream_id = stream_id, H2FrameV.rst_args.error = err, H2Frame.build_rst_stream(work),
-                H2FrameV.n);
+    H2FrameV.rst_args.buf = H2_CONN_CTL(work);
+    H2FrameV.rst_args.cap = H2_CTL_FRAME_MAX;
+    H2FrameV.rst_args.stream_id = stream_id;
+    H2FrameV.rst_args.error = err;
+    H2Frame.build_rst_stream(work);
+    size_t n = H2FrameV.n;
     wr(work, H2_CONN_CTL(work), n);
 }
 
@@ -302,10 +318,14 @@ static embed_bool emit_header(void *ctx, const char *name, size_t nl, const char
 static embed_bool decode_block(H2Block *b, const uint8_t *block, size_t len)
 {
     uint8_t *work = b->work;
-    if (!(HpackV.decode_args.block = block, HpackV.decode_args.len = len,
-          HpackV.decode_args.scratch = H2_CONN_HSCRATCH(work), HpackV.decode_args.scratch_cap = PROTOCORE_H2_HDR_BLOCK,
-          HpackV.decode_args.emit = emit_header, HpackV.decode_args.ctx = b, Hpack.decode(H2_CONN_CTX(work)->hdec),
-          HpackV.ok))
+    HpackV.decode_args.block = block;
+    HpackV.decode_args.len = len;
+    HpackV.decode_args.scratch = H2_CONN_HSCRATCH(work);
+    HpackV.decode_args.scratch_cap = PROTOCORE_H2_HDR_BLOCK;
+    HpackV.decode_args.emit = emit_header;
+    HpackV.decode_args.ctx = b;
+    Hpack.decode(H2_CONN_CTX(work)->hdec);
+    if (!(HpackV.ok))
     {
         return EMBED_FALSE; // COMPRESSION_ERROR
     }
@@ -514,13 +534,19 @@ static embed_bool handle_data(uint8_t *work, const H2FrameHeader *h, const uint8
     // Replenish flow-control windows for the bytes we consumed (whole frame length).
     if (h->length > 0)
     {
-        size_t n = (H2FrameV.window_args.buf = H2_CONN_CTL(work), H2FrameV.window_args.cap = H2_CTL_FRAME_MAX,
-                    H2FrameV.window_args.stream_id = 0, H2FrameV.window_args.increment = h->length,
-                    H2Frame.build_window_update(work), H2FrameV.n);
+        H2FrameV.window_args.buf = H2_CONN_CTL(work);
+        H2FrameV.window_args.cap = H2_CTL_FRAME_MAX;
+        H2FrameV.window_args.stream_id = 0;
+        H2FrameV.window_args.increment = h->length;
+        H2Frame.build_window_update(work);
+        size_t n = H2FrameV.n;
         wr(work, H2_CONN_CTL(work), n);
-        n = (H2FrameV.window_args.buf = H2_CONN_CTL(work), H2FrameV.window_args.cap = H2_CTL_FRAME_MAX,
-             H2FrameV.window_args.stream_id = h->stream_id, H2FrameV.window_args.increment = h->length,
-             H2Frame.build_window_update(work), H2FrameV.n);
+        H2FrameV.window_args.buf = H2_CONN_CTL(work);
+        H2FrameV.window_args.cap = H2_CTL_FRAME_MAX;
+        H2FrameV.window_args.stream_id = h->stream_id;
+        H2FrameV.window_args.increment = h->length;
+        H2Frame.build_window_update(work);
+        n = H2FrameV.n;
         wr(work, H2_CONN_CTL(work), n);
     }
     return EMBED_TRUE;
@@ -540,8 +566,11 @@ static embed_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *
         {
             return h.length == 0; // ACK of our settings
         }
-        if (!(H2FrameV.settings_args.payload = payload, H2FrameV.settings_args.len = h.length,
-              H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.parse_settings(work), H2FrameV.ok))
+        H2FrameV.settings_args.payload = payload;
+        H2FrameV.settings_args.len = h.length;
+        H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer;
+        H2Frame.parse_settings(work);
+        if (!(H2FrameV.ok))
         {
             return EMBED_FALSE;
         }
@@ -561,8 +590,11 @@ static embed_bool dispatch_frame(uint8_t *work, H2FrameHeader h, const uint8_t *
             return EMBED_FALSE;
         }
         {
-            size_t n = (H2FrameV.ping_args.buf = H2_CONN_CTL(work), H2FrameV.ping_args.cap = H2_CTL_FRAME_MAX,
-                        H2FrameV.ping_args.opaque = payload, H2Frame.build_ping_ack(work), H2FrameV.n);
+            H2FrameV.ping_args.buf = H2_CONN_CTL(work);
+            H2FrameV.ping_args.cap = H2_CTL_FRAME_MAX;
+            H2FrameV.ping_args.opaque = payload;
+            H2Frame.build_ping_ack(work);
+            size_t n = H2FrameV.n;
             wr(work, H2_CONN_CTL(work), n);
         }
         return EMBED_TRUE;
@@ -684,9 +716,11 @@ void protocore_h2_conn_init(uint8_t *work)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = H2_CONN_CTX(work), .val = 0, .bytes = sizeof(H2ConnCtx));
     H2_CONN_CTX(work)->cb = *H2ConnV.init_args.cb;
     H2_CONN_CTX(work)->phase = 0;
-    (H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.settings_defaults(work));
+    H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer;
+    H2Frame.settings_defaults(work);
     H2_CONN_CTX(work)->conn_send_window = 65535;
-    (HpackV.init_args.max_bytes = PROTOCORE_HPACK_TABLE_BYTES, Hpack.dyn_init(H2_CONN_CTX(work)->hdec));
+    HpackV.init_args.max_bytes = PROTOCORE_HPACK_TABLE_BYTES;
+    Hpack.dyn_init(H2_CONN_CTX(work)->hdec);
     send_our_settings(work);
 }
 
@@ -779,9 +813,14 @@ static embed_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
     sb_num = EMBED_CALL(verba_numerus.i64, VerbaNumerusCfg, .out = num, .cap = sizeof num, .at = sb_num,
                         .sval = (int64_t)(status));
     int nl = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = num, .cap = sizeof num, .at = sb_num);
-    size_t w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
-                HpackV.encode_args.name = ":status", HpackV.encode_args.name_len = 7, HpackV.encode_args.value = num,
-                HpackV.encode_args.value_len = (size_t)nl, Hpack.encode_header(work), HpackV.n);
+    HpackV.encode_args.out = block + bo;
+    HpackV.encode_args.cap = sizeof block - bo;
+    HpackV.encode_args.name = ":status";
+    HpackV.encode_args.name_len = 7;
+    HpackV.encode_args.value = num;
+    HpackV.encode_args.value_len = (size_t)nl;
+    Hpack.encode_header(work);
+    size_t w = HpackV.n;
     if (!w)
     {
         return EMBED_FALSE;
@@ -792,12 +831,15 @@ static embed_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
         // Cap above the largest content-type that can fit this block even at HPACK-Huffman's best
         // 5-bit/char (~sizeof block * 8/5): a longer value can never fit, so measuring it as `2*block`
         // still trips the encode's reject below instead of being truncated into a fittable length.
-        w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
-             HpackV.encode_args.name = "content-type", HpackV.encode_args.name_len = 12,
-             HpackV.encode_args.value = content_type,
-             HpackV.encode_args.value_len =
-                 EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content_type, .cap = sizeof block * 2),
-             Hpack.encode_header(work), HpackV.n);
+        HpackV.encode_args.out = block + bo;
+        HpackV.encode_args.cap = sizeof block - bo;
+        HpackV.encode_args.name = "content-type";
+        HpackV.encode_args.name_len = 12;
+        HpackV.encode_args.value = content_type;
+        HpackV.encode_args.value_len =
+            EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content_type, .cap = sizeof block * 2);
+        Hpack.encode_header(work);
+        w = HpackV.n;
         if (!w)
         {
             return EMBED_FALSE;
@@ -808,9 +850,14 @@ static embed_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
     sb_num2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = num, .cap = sizeof num, .at = sb_num2,
                          .val = (uint32_t)((unsigned)body_len));
     int cl = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = num, .cap = sizeof num, .at = sb_num2);
-    w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
-         HpackV.encode_args.name = "content-length", HpackV.encode_args.name_len = 14, HpackV.encode_args.value = num,
-         HpackV.encode_args.value_len = (size_t)cl, Hpack.encode_header(work), HpackV.n);
+    HpackV.encode_args.out = block + bo;
+    HpackV.encode_args.cap = sizeof block - bo;
+    HpackV.encode_args.name = "content-length";
+    HpackV.encode_args.name_len = 14;
+    HpackV.encode_args.value = num;
+    HpackV.encode_args.value_len = (size_t)cl;
+    Hpack.encode_header(work);
+    w = HpackV.n;
     // Reachable: bo has already been advanced by the caller-supplied content-type, which can consume nearly
     // the whole block, leaving too little room for content-length even though it is only a few octets.
     if (!w)
@@ -820,10 +867,14 @@ static embed_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
     bo += w;
 
     uint8_t frame[H2_FRAME_HEADER_LEN + sizeof block];
-    size_t n = (H2FrameV.headers_args.buf = frame, H2FrameV.headers_args.cap = sizeof frame,
-                H2FrameV.headers_args.stream_id = stream_id, H2FrameV.headers_args.block = block,
-                H2FrameV.headers_args.block_len = bo, H2FrameV.headers_args.end_stream = body_len == 0,
-                H2Frame.build_headers(work), H2FrameV.n);
+    H2FrameV.headers_args.buf = frame;
+    H2FrameV.headers_args.cap = sizeof frame;
+    H2FrameV.headers_args.stream_id = stream_id;
+    H2FrameV.headers_args.block = block;
+    H2FrameV.headers_args.block_len = bo;
+    H2FrameV.headers_args.end_stream = body_len == 0;
+    H2Frame.build_headers(work);
+    size_t n = H2FrameV.n;
     if (!n)
     {
         return EMBED_FALSE;
@@ -842,10 +893,14 @@ static embed_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
         }
         embed_bool last = (sent + chunk == body_len);
         uint8_t dh[H2_FRAME_HEADER_LEN];
-        size_t hn = (H2FrameV.write_args.buf = dh, H2FrameV.write_args.cap = sizeof dh,
-                     H2FrameV.write_args.length = (uint32_t)chunk, H2FrameV.write_args.type = H2_DATA,
-                     H2FrameV.write_args.flags = last ? H2_FLAG_END_STREAM : 0,
-                     H2FrameV.write_args.stream_id = stream_id, H2Frame.write_header(work), H2FrameV.n);
+        H2FrameV.write_args.buf = dh;
+        H2FrameV.write_args.cap = sizeof dh;
+        H2FrameV.write_args.length = (uint32_t)chunk;
+        H2FrameV.write_args.type = H2_DATA;
+        H2FrameV.write_args.flags = last ? H2_FLAG_END_STREAM : 0;
+        H2FrameV.write_args.stream_id = stream_id;
+        H2Frame.write_header(work);
+        size_t hn = H2FrameV.n;
         if (!hn)
         {
             return EMBED_FALSE;
@@ -863,9 +918,12 @@ static embed_bool h2_respond_run(uint8_t *work, uint32_t stream_id, int status, 
 static void h2_goaway_run(uint8_t *work, uint32_t error)
 {
     uint8_t buf[H2_FRAME_HEADER_LEN + 8];
-    size_t n = (H2FrameV.goaway_args.buf = buf, H2FrameV.goaway_args.cap = sizeof buf,
-                H2FrameV.goaway_args.last_stream_id = H2_CONN_CTX(work)->last_peer_stream,
-                H2FrameV.goaway_args.error = error, H2Frame.build_goaway(work), H2FrameV.n);
+    H2FrameV.goaway_args.buf = buf;
+    H2FrameV.goaway_args.cap = sizeof buf;
+    H2FrameV.goaway_args.last_stream_id = H2_CONN_CTX(work)->last_peer_stream;
+    H2FrameV.goaway_args.error = error;
+    H2Frame.build_goaway(work);
+    size_t n = H2FrameV.n;
     wr(work, buf, n);
     H2_CONN_CTX(work)->phase = 2;
 }

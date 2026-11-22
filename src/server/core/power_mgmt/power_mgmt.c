@@ -39,7 +39,10 @@ static_assert(POWER_MGMT_OFF_CTX + sizeof(struct PowerMgmtStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define POWER_MGMT_CTX(w) ((struct PowerMgmtStorage *)(void *)((w) + POWER_MGMT_OFF_CTX))
+#define POWER_MGMT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct PowerMgmtStorage *)(const void *)((w) + POWER_MGMT_OFF_CTX),                    \
+        default: (struct PowerMgmtStorage *)(void *)((w) + POWER_MGMT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -61,7 +64,7 @@ uint8_t *protocore_power_mgmt_span(void)
     return s_own.span;
 }
 
-void protocore_power_defaults(uint8_t *work)
+void protocore_power_defaults(const uint8_t *work)
 {
     (void)work;
     PowerCfg *cfg = PowerV.cfg_out;
@@ -77,7 +80,7 @@ void protocore_power_defaults(uint8_t *work)
     cfg->recover_ms = PROTOCORE_POWER_RECOVER_MS;
 }
 
-void protocore_power_decide(uint8_t *work)
+void protocore_power_decide(const uint8_t *work)
 {
     (void)work;
     const PowerCfg *cfg = PowerV.plan_args.cfg;
@@ -191,19 +194,19 @@ void protocore_power_brownout(uint8_t *work)
     PowerV.ok = POWER_MGMT_CTX(work)->brownout_latched;
 }
 
-void protocore_power_die_temp(uint8_t *work)
+void protocore_power_die_temp(const uint8_t *work)
 {
     (void)work;
     PowerV.temp_c = protocore_platform_die_temp_c();
 }
 
-void protocore_power_cpu_mhz(uint8_t *work)
+void protocore_power_cpu_mhz(const uint8_t *work)
 {
     (void)work;
     PowerV.mhz = protocore_platform_cpu_mhz();
 }
 
-void protocore_power_apply(uint8_t *work)
+void protocore_power_apply(const uint8_t *work)
 {
     (void)work;
     const PowerPlan *plan = PowerV.out_args.plan;

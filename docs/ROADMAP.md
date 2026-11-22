@@ -404,7 +404,7 @@ Each item has a working piece in the tree and an explicit _Remaining_ note.
   block CRC (CRC-16/DNP, verified against the canonical 0xEA82 check value) and de-blocks
   the user data. The remaining layers (transport-function segmentation, the application
   objects with groups/variations, Class 0/1/2/3 polling, unsolicited responses,
-  time-sync) layer on the de-blocked user data; fixed BSS point database, no heap.
+  time-sync) layer on the de-blocked user data. Fixed BSS point database, no heap.
   Optional Secure Authentication (IEEE 1815 SAv5) later.
 - [~] **HART** (M, FieldComm) _(frame + HART-IP codec shipped)_ - `PROTOCORE_ENABLE_HART` (`services/hart`):
   the HART command-frame codec - `protocore_hart_build` / `_parse` with the longitudinal XOR checksum and
@@ -612,7 +612,7 @@ They are grouped by the area they came from.
 - [~] \*nRF24L01+ gateway (M) - Nordic 2.4 GHz over SPI; cheap point-to-multipoint
   sensor links bridged to the web stack. **Driver shipped** (`PROTOCORE_ENABLE_NRF24`,
   `services/nrf24`): the SPI command protocol (init / send / recv, pipe-addressed,
-  static payload) over an SPI + CE bus, host-tested against a mock chip; example
+  static payload) over an SPI + CE bus, host-tested against a mock chip. Example
   Nrf24Gateway bridges frames northbound via the gateway. Remaining: verify the
   RF link on the module (and optional dynamic-payload / auto-ack).
 - [~] \*CC1101 sub-GHz gateway (M) - TI 300-928 MHz OOK / 2-FSK over SPI; generic
@@ -638,12 +638,12 @@ They are grouped by the area they came from.
 - [~] \*Z-Wave Serial API gateway (M) - Silicon Labs 500 / 700-series over UART.
   **Serial API frame codec shipped** (`PROTOCORE_ENABLE_ZWAVE`, `services/zwave`):
   SOF/LEN/Type/Cmd/Data frames + the XOR checksum + ACK/NAK/CAN, host-tested against
-  the documented GetVersion frame; example ZWaveGateway bridges a real controller.
+  the documented GetVersion frame. Example ZWaveGateway bridges a real controller.
   Remaining: verify against a controller + inclusion / SendData sequences.
 - [~] \*EnOcean gateway (M) - energy-harvesting 868 MHz ESP3 protocol over UART.
   **ESP3 codec shipped** (`PROTOCORE_ENABLE_ENOCEAN`, `services/enocean`): telegram
   parse/build + the CRC-8 (poly 0x07), host-tested with known-answer CRCs and
-  malformed/resync framing; example EnOceanGateway bridges a real TCM 310 over
+  malformed/resync framing. Example EnOceanGateway bridges a real TCM 310 over
   UART. Remaining: verify against a module + EEP profile decoding.
 - [~] \*Sigfox uplink (S) - Wisol / Murata module over UART; tiny low-power uplinks.
   **AT-command codec shipped** (`PROTOCORE_ENABLE_SIGFOX`, `services/sigfox`): the
@@ -986,7 +986,7 @@ Built-in radio:
 - [~] **ATC** (S, platform note) _(interop shipped)_ - the Advanced Traffic Controller
   spec moves cabinets from closed microcontrollers to a standard Linux engine API (the
   ITS Cabinet / ATC API for field-device I/O) for local video analytics + sensor fusion.
-  This is a host-platform specification more than a wire protocol; the relevant slice for
+  This is a host-platform specification more than a wire protocol. The relevant slice for
   this library is interop - exposing NTCIP / NEMA-TS2 data to an ATC engine over the
   existing HTTP/SNMP surface. It does not implement the Linux ATC stack itself.
   `PROTOCORE_ENABLE_ATC` (`services/atc`): the field-I/O map serialized as
@@ -1034,7 +1034,7 @@ Built-in radio:
   (the network layer - version + NPCI control + optional DNET/DADR destination addressing + hop count, slicing the APDU); layout per ASHRAE 135 Annex J / Clause 6, host-tested.
   Remaining: the **APDU** application layer (the object model - Device / Analog-Input /
   Binary-Output / ... objects, properties, ReadProperty / WriteProperty / COV) and the
-  BBMD foreign-device registration; then **BACnet/SC** (Secure Connect) reuses the shipped
+  BBMD foreign-device registration. Then **BACnet/SC** (Secure Connect) reuses the shipped
   WebSocket + static-pool TLS for its BVLC-SC framing + the same APDU/object model. Fixed
   BSS object database, no heap.
 - [~] **XMPP (IoT profile)** (L, XSF) _(stanza codec shipped)_ - `PROTOCORE_ENABLE_XMPP` (`services/xmpp`):
@@ -1102,7 +1102,7 @@ protocol logic, with silicon pushed out to `test/core_setup/` and platform shell
 `examples/`.
 
 Shipped alongside it: the house prefix is `pc_` / `PROTOCORE_` / `PROTOCORE`; the namespace question was settled in
-favor of one flat naming law ([SYMBOLS.md](SYMBOLS.md)); and every pre-ProtoCore token is gone from the tree.
+favor of one flat naming law ([SYMBOLS.md](SYMBOLS.md)). And every pre-ProtoCore token is gone from the tree.
 
 The remainder of this section is kept as the **decision record** - the criteria applied and the candidates
 rejected. It is history, not an open action.

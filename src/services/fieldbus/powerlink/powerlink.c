@@ -21,9 +21,9 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_powerlink_build(uint8_t *work);
+void protocore_powerlink_build(const uint8_t *work);
 
-void protocore_powerlink_build(uint8_t *work)
+void protocore_powerlink_build(const uint8_t *work)
 {
     (void)work;
     uint8_t msg_type = PowerlinkV.build_args.msg_type;
@@ -145,7 +145,7 @@ void protocore_powerlink_asnd(uint8_t *work)
     protocore_powerlink_build(work);
 }
 
-void protocore_powerlink_parse(uint8_t *work)
+void protocore_powerlink_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = PowerlinkV.parse_args.frame;

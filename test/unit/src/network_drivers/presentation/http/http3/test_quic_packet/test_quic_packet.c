@@ -215,8 +215,8 @@ void test_rfc9000_version_negotiation(void)
     TEST_ASSERT_TRUE(quic_packet_ok);
 }
 
-// RFC 9000 Appendix A.2 worked example: "if an endpoint has received an acknowledgment for packet
-// 0xabe8b3 and is sending a packet with a number of 0xac5c02, there are 29,519 (0x734f) outstanding
+// RFC 9000 Appendix A.2 worked example: "if an endpoint received an acknowledgment for packet
+// 0xabe8b3 and sends a packet with a number of 0xac5c02, there are 29,519 (0x734f) outstanding
 // packet numbers. In order to represent at least twice this range (59,038 packets, or 0xe69e), 16
 // bits are required." and "sending a packet with a number of 0xace8fe uses the 24-bit encoding".
 void test_rfc9000_a2_packet_number_length(void)

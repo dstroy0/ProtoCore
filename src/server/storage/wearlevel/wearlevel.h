@@ -10,7 +10,7 @@
  * This is the pure core of wear leveling: given a per-slot erase/write count, `protocore_wearlevel_pick`
  * returns the least-worn slot to write next, so writes spread evenly and the whole region ages together.
  *
- * The app owns the actual slots (NVS keys, flash sectors, VFS files) and the persisted counts; this core
+ * The app owns the actual slots (NVS keys, flash sectors, VFS files) and the persisted counts. This core
  * just decides *where* the next write goes and reports the wear imbalance. Pure, zero heap, no stdlib,
  * so it is fully host-testable. It composes with the mount (the storage medium) and server/logbuf
  * (whose sink can offload to a wear-leveled store).
@@ -67,16 +67,16 @@ extern WearlevelVars WearlevelV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const pick)(uint8_t *work);
-    void (*const mark)(uint8_t *work);
-    void (*const imbalance)(uint8_t *work);
+    void (*const pick)(const uint8_t *work);
+    void (*const mark)(const uint8_t *work);
+    void (*const imbalance)(const uint8_t *work);
 } WearlevelNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WearlevelV or a region of the borrow at a fixed offset.
-void protocore_wearlevel_pick(uint8_t *work);
-void protocore_wearlevel_mark(uint8_t *work);
-void protocore_wearlevel_imbalance(uint8_t *work);
+void protocore_wearlevel_pick(const uint8_t *work);
+void protocore_wearlevel_mark(const uint8_t *work);
+void protocore_wearlevel_imbalance(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

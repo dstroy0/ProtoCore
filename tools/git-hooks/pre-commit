@@ -22,7 +22,7 @@
 # Set PROTOCORE_HOOK_NO_DRIFT_SCAN=1 to skip the whole-tree drift scan.
 #
 # Install once per clone:   git config core.hooksPath tools/git-hooks
-# Uses the locally installed tools (clang-format, and prettier/cspell via npx); if a tool is
+# Uses the locally installed tools (clang-format, and prettier/cspell via npx). If a tool is
 # missing that step is skipped rather than blocking the commit.
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" 2>/dev/null || exit 0
@@ -160,6 +160,24 @@ if staged '*.md' '*.json' '*.yml' '*.yaml' '*.properties' '*.svg' '*.html' 'docs
     PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
     if [ -n "$PYBIN" ] && ! "$PYBIN" -m tools.ci_tooling.check.check_version_sites --quiet; then
         echo "pre-commit: BLOCKED - register the site(s) above in .bumpversion.cfg."
+        exit 1
+    fi
+fi
+
+# 10) HARD GATE - the prose ratchet and the ASD-STE100 ratchet. A staged file can carry no more prose findings
+# than tools/prose/prose_ratchet.tsv allows it, and no breaking finding. A technical document can carry no more
+# ASD-STE100 findings than tools/prose/ste_ratchet.tsv allows it. The prose run lowers a ceiling where a file
+# carries fewer findings, and the lowered ratchet goes into this commit.
+PYBIN=$(command -v python 2>/dev/null || command -v python3 2>/dev/null)
+if [ -n "$PYBIN" ]; then
+    if ! "$PYBIN" tools/prose/docs_check --staged --ratchet=tools/prose/prose_ratchet.tsv >/dev/null; then
+        echo "pre-commit: BLOCKED - prose findings above the ratchet. See: python tools/prose/docs_check --staged"
+        exit 1
+    fi
+    git add -- tools/prose/prose_ratchet.tsv
+    if ! "$PYBIN" tools/prose/ste_check.py --words tools/prose/voice.tsv --words tools/prose/project_words.tsv \
+        --words tools/prose/engineering_words.tsv --ratchet tools/prose/ste_ratchet.tsv .; then
+        echo "pre-commit: BLOCKED - ASD-STE100 findings above tools/prose/ste_ratchet.tsv."
         exit 1
     fi
 fi

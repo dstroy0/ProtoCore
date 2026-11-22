@@ -15,7 +15,7 @@
  *  - BCC: the 2's complement of the modulo-256 sum of the application data bytes (the ETX
  *    is NOT included). One octet.
  *  - CRC: CRC-16 (poly X16+X15+X2+X0 = 0x8005, init 0x0000, reflected) over the application
- *    data bytes AND the ETX byte; two octets, transmitted low byte first.
+ *    data bytes AND the ETX byte. Two octets, transmitted low byte first.
  *
  * This is the data-link framing layer; the DST/SRC/CMD/STS/TNS application header lives
  * inside the application data. Field definitions verified against the 1770-6.5.16 manual.
@@ -129,7 +129,7 @@ extern Df1Vars Df1V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const bcc)(uint8_t *work);
+    void (*const bcc)(const uint8_t *work);
     void (*const crc)(uint8_t *work);
     void (*const build_frame)(uint8_t *work);
     void (*const parse_frame)(uint8_t *work);
@@ -137,7 +137,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Df1V or a region of the borrow at a fixed offset.
-void protocore_df1_bcc(uint8_t *work);
+void protocore_df1_bcc(const uint8_t *work);
 void protocore_df1_crc(uint8_t *work);
 void protocore_df1_build_frame(uint8_t *work);
 void protocore_df1_parse_frame(uint8_t *work);

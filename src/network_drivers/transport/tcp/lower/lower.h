@@ -10,7 +10,7 @@
  * the push, the close, the reset, the window update, and the DS field (sec 3.9.2 names the
  * Diffserv value as one the user supplies to the lower layer).
  *
- * The byte stream is the floor. Nothing below the platform's own TCP is modelled here; this module
+ * The byte stream is the floor. Nothing below the platform's own TCP is modelled here. This module
  * is the one place that names it, so no other file in the layer holds a raw stack call.
  *
  * **Why the ops are marshaled**
@@ -50,7 +50,7 @@ EMBED_BEGIN_DECLS
 EMBED_ENUM_BYTE(protocore_tcp_op, PROTOCORE_OP_SEND, PROTOCORE_OP_OUTPUT, PROTOCORE_OP_CLOSE, PROTOCORE_OP_ABORT,
                 PROTOCORE_OP_DETACH,
                 PROTOCORE_OP_RAWSEND,     // raw write of already-encrypted bytes (TLS BIO), no TLS re-entry
-                PROTOCORE_OP_CLOSE_CHECK, // in stack context: finalize a CONN_CLOSING slot if its TX has drained
+                PROTOCORE_OP_CLOSE_CHECK, // in stack context: finalize a CONN_CLOSING slot if its TX drained
                 PROTOCORE_OP_RECVED,      // in stack context: reopen the receive window (ack-on-consume)
                 PROTOCORE_OP_SET_TTL,     // in stack context: stamp the TTL on a control block; len carries the value
 );

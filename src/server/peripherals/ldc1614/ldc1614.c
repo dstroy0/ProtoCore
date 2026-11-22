@@ -45,10 +45,10 @@ uint8_t *protocore_ldc1614_span(void)
     return s_own.span;
 }
 
-void protocore_ldc1614_build_config(uint8_t *work);
-void protocore_ldc1614_data(uint8_t *work);
+void protocore_ldc1614_build_config(const uint8_t *work);
+void protocore_ldc1614_data(const uint8_t *work);
 
-void protocore_ldc1614_data(uint8_t *work)
+void protocore_ldc1614_data(const uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Ldc1614V.data_args.msb_reg;
@@ -57,7 +57,7 @@ void protocore_ldc1614_data(uint8_t *work)
     Ldc1614V.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
 }
 
-void protocore_ldc1614_error(uint8_t *work)
+void protocore_ldc1614_error(const uint8_t *work)
 {
     (void)work;
     uint16_t msb_reg = Ldc1614V.error_args.msb_reg;
@@ -65,7 +65,7 @@ void protocore_ldc1614_error(uint8_t *work)
     Ldc1614V.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
 }
 
-void protocore_ldc1614_sensor_freq_hz(uint8_t *work)
+void protocore_ldc1614_sensor_freq_hz(const uint8_t *work)
 {
     (void)work;
     uint32_t data28 = Ldc1614V.sensor_freq_hz_args.data28;
@@ -74,7 +74,7 @@ void protocore_ldc1614_sensor_freq_hz(uint8_t *work)
     Ldc1614V.hz = ((uint64_t)data28 * fref_hz) >> 28;
 }
 
-void protocore_ldc1614_build_config(uint8_t *work)
+void protocore_ldc1614_build_config(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ldc1614V.build_config_args.buf;
@@ -134,7 +134,10 @@ static_assert(LDC1614_OFF_CTX % _Alignof(Ldc1614Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define LDC1614_CTX(w) ((Ldc1614Ctx *)(void *)((w) + LDC1614_OFF_CTX))
+#define LDC1614_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ldc1614Ctx *)(const void *)((w) + LDC1614_OFF_CTX),                                    \
+        default: (Ldc1614Ctx *)(void *)((w) + LDC1614_OFF_CTX))
 
 // Zero is "no address set yet", which is the address the ADDR pin selects when it is low - stated
 // here rather than on the declaration so the context carries no initializer and can live in a

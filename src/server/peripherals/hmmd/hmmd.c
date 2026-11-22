@@ -61,7 +61,10 @@ static_assert(HMMD_OFF_CTX % _Alignof(HmmdCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define HMMD_CTX(w) ((HmmdCtx *)(void *)((w) + HMMD_OFF_CTX))
+#define HMMD_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HmmdCtx *)(const void *)((w) + HMMD_OFF_CTX),                                          \
+        default: (HmmdCtx *)(void *)((w) + HMMD_OFF_CTX))
 
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/uart/uart.h" // the shared UART owner
@@ -98,12 +101,12 @@ uint8_t *protocore_hmmd_span(void)
 }
 
 // The entries this file calls before reaching their definitions.
-static void hmmd_cmd_build(uint8_t *work);
-static void hmmd_parse_report(uint8_t *work);
+static void hmmd_cmd_build(const uint8_t *work);
+static void hmmd_parse_report(const uint8_t *work);
 static void hmmd_stream_push(uint8_t *work);
-static void hmmd_stream_reset(uint8_t *work);
+static void hmmd_stream_reset(const uint8_t *work);
 
-static void hmmd_parse_report(uint8_t *work)
+static void hmmd_parse_report(const uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Hmmd.parse_report_args.frame;
@@ -144,7 +147,7 @@ static void hmmd_parse_report(uint8_t *work)
     Hmmd.ok = EMBED_TRUE;
 }
 
-static void hmmd_stream_reset(uint8_t *work)
+static void hmmd_stream_reset(const uint8_t *work)
 {
     (void)work;
     HmmdStream *s = Hmmd.stream_reset_args.s;
@@ -230,7 +233,7 @@ static void hmmd_stream_push(uint8_t *work)
     }
 }
 
-static void hmmd_present(uint8_t *work)
+static void hmmd_present(const uint8_t *work)
 {
     (void)work;
     const HmmdReport *r = Hmmd.present_args.r;
@@ -238,7 +241,7 @@ static void hmmd_present(uint8_t *work)
     Hmmd.ok = r && r->detected != 0;
 }
 
-static void hmmd_distance_cm(uint8_t *work)
+static void hmmd_distance_cm(const uint8_t *work)
 {
     (void)work;
     const HmmdReport *r = Hmmd.distance_cm_args.r;
@@ -248,7 +251,7 @@ static void hmmd_distance_cm(uint8_t *work)
 
 // --- command encoders ------------------------------------------------------
 
-static void hmmd_cmd_build(uint8_t *work)
+static void hmmd_cmd_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Hmmd.cmd_build_args.buf;
@@ -378,7 +381,7 @@ static void hmmd_cmd_read_register(uint8_t *work)
 
 // --- command-ACK decoding --------------------------------------------------
 
-static void hmmd_parse_ack(uint8_t *work)
+static void hmmd_parse_ack(const uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Hmmd.parse_ack_args.frame;
@@ -413,7 +416,7 @@ static void hmmd_parse_ack(uint8_t *work)
     Hmmd.ok = EMBED_TRUE;
 }
 
-static void hmmd_ack_matches(uint8_t *work)
+static void hmmd_ack_matches(const uint8_t *work)
 {
     (void)work;
     const HmmdAck *ack = Hmmd.ack_matches_args.ack;
@@ -451,6 +454,7 @@ static void hmmd_poll(uint8_t *work)
         Hmmd.stream_push_args.byte = HMMD_CTX(work)->rx[i];
         Hmmd.stream_push_args.out = &r;
         hmmd_stream_push(work);
+        Hmmd.stream_push_args.out = NULL;
         if (Hmmd.ok)
         {
             HMMD_CTX(work)->last = r;

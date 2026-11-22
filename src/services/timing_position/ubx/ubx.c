@@ -17,7 +17,8 @@ EMBED_BEGIN_DECLS
 
 void protocore_ubx_checksum(const uint8_t *body, size_t len, uint8_t *ck_a, uint8_t *ck_b)
 {
-    uint8_t a = 0, b = 0;
+    uint8_t a = 0;
+    uint8_t b = 0;
     for (size_t i = 0; i < len; i++)
     {
         a = (uint8_t)(a + body[i]);
@@ -55,7 +56,8 @@ size_t protocore_ubx_build(uint8_t *buf, size_t cap, uint8_t cls, uint8_t id, co
     {
         buf[p++] = payload[i];
     }
-    uint8_t a = 0, b = 0;
+    uint8_t a = 0;
+    uint8_t b = 0;
     protocore_ubx_checksum(buf + 2, (size_t)len + 4u, &a, &b); // class..payload end
     buf[p++] = a;
     buf[p++] = b;
@@ -82,7 +84,8 @@ embed_bool protocore_ubx_parse(const uint8_t *s, size_t len, protocore_ubx *out)
     {
         return EMBED_FALSE;
     }
-    uint8_t a = 0, b = 0;
+    uint8_t a = 0;
+    uint8_t b = 0;
     protocore_ubx_checksum(s + 2, (size_t)plen + 4u, &a, &b);
     if (a != s[6 + plen] || b != s[7 + plen])
     {

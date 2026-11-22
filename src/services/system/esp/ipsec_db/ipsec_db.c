@@ -35,10 +35,10 @@ static embed_bool port_in(uint16_t p, uint16_t lo, uint16_t hi)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work);
 
-void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_spd_init(const uint8_t *work)
 {
     (void)work;
     IpsecSpd *spd = IpsecDbV.protocore_ipsec_spd_init_args.spd;
@@ -50,7 +50,7 @@ void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *work)
     spd->count = 0;
 }
 
-void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_spd_add(const uint8_t *work)
 {
     (void)work;
     IpsecSpd *spd = IpsecDbV.protocore_ipsec_spd_add_args.spd;
@@ -71,7 +71,7 @@ void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work)
     IpsecDbV.ok = EMBED_TRUE;
 }
 
-void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work)
 {
     (void)work;
     const IpsecSelector *sel = IpsecDbV.protocore_ipsec_selector_match_args.sel;
@@ -144,7 +144,7 @@ void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work)
     IpsecDbV.ptr = NULL;
 }
 
-void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_selector_from_ts(const uint8_t *work)
 {
     (void)work;
     IpsecSelector *out = IpsecDbV.protocore_ipsec_selector_from_ts_args.out;
@@ -195,7 +195,7 @@ void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work)
 
 // ── SAD ─────────────────────────────────────────────────────────────────────────────────────────
 
-void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_init(const uint8_t *work)
 {
     (void)work;
     IpsecSad *sad = IpsecDbV.protocore_ipsec_sad_init_args.sad;
@@ -266,7 +266,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work)
     IpsecDbV.sa = e;
 }
 
-void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work)
 {
     (void)work;
     IpsecSad *sad = IpsecDbV.protocore_ipsec_sad_find_args.sad;
@@ -311,7 +311,7 @@ void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work)
     IpsecDbV.ok = EMBED_TRUE;
 }
 
-void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *work)
+void protocore_ipsec_db_protocore_ipsec_sad_next_seq(const uint8_t *work)
 {
     (void)work;
     IpsecSaEntry *sa = IpsecDbV.protocore_ipsec_sad_next_seq_args.sa;

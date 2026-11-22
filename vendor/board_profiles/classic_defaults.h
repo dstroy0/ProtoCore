@@ -46,7 +46,7 @@
 // --- Vector unit ---
 // A register file wider than a GPR that the byte-lane primitives could be issued on. The classic
 // die's LX6 has none, and neither does a host build, so the floor is off and mmgr/swar.h
-// keeps doing its lane math in a general-purpose register. A profile raising this is asserting a
+// keeps doing its lane math in a general-purpose register. A profile raising this asserts a
 // real unit out of its own die's TRM, never inferring one from the core name.
 #ifndef PROTOCORE_HW_SIMD
 #define PROTOCORE_HW_SIMD 0

@@ -63,7 +63,7 @@ and power that go with it.
 `protocore_ina219_begin(addr, current_lsb_ua, shunt_mohm)` sets up the math. The defaults - `100`
 microamps per bit and a `100` milliohm (0.1 ohm) shunt - give about a 3.2 A range at ~0.1 mA
 resolution, which fits most breakouts. If your board has a different shunt, or you want finer
-resolution over a smaller range, change those two numbers; the calibration is recomputed for
+resolution over a smaller range, change those two numbers. The calibration is recomputed for
 you.
 
 ## Troubleshooting
@@ -90,7 +90,7 @@ pio ci examples/Drivers/Ina219 \
 ## How it works (for the curious)
 
 The bus-voltage register holds the voltage in its upper 13 bits at 4 mV per bit
-(`protocore_ina219_bus_mv` shifts and scales it); the shunt-voltage register is signed at 10 µV per bit
+(`protocore_ina219_bus_mv` shifts and scales it). The shunt-voltage register is signed at 10 µV per bit
 (`protocore_ina219_shunt_uv`). To read current and power directly, the chip needs a **calibration** value
 derived from the shunt resistance and your chosen current LSB: `protocore_ina219_calibration()` computes
 `40960000 / (current_lsb_ua * shunt_mohm)` (so 100 µA and 0.1 ohm give 4096), and

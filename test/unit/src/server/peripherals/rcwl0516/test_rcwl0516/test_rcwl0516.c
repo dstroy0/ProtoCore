@@ -50,7 +50,7 @@ void test_fresh_core_is_absent(void)
     TEST_ASSERT_EQUAL_UINT8(0, g_core.stable);
 }
 
-// A HIGH pin is not believed until it has held for the debounce, and then it is - at that sample,
+// A HIGH pin is not believed until it held for the debounce, and then it is - at that sample,
 // not one later.
 void test_a_level_is_believed_only_after_the_debounce(void)
 {
@@ -181,7 +181,7 @@ void test_zero_hold_still_debounces(void)
     TEST_ASSERT_FALSE(feed(EMBED_TRUE, 0));
     TEST_ASSERT_FALSE(feed(EMBED_TRUE, DEBOUNCE - 1));
     TEST_ASSERT_TRUE(feed(EMBED_TRUE, DEBOUNCE));
-    // the LOW is not believed until it too has outlasted the debounce; then presence goes at once
+    // the LOW is not believed until it too outlasted the debounce; then presence goes at once
     TEST_ASSERT_TRUE(feed(EMBED_FALSE, 100));
     TEST_ASSERT_FALSE(feed(EMBED_FALSE, 150));
 }

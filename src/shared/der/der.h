@@ -115,7 +115,7 @@ extern DerVars DerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const read)(uint8_t *work);
+    void (*const read)(const uint8_t *work);
     void (*const enter)(uint8_t *work);
     void (*const uint)(uint8_t *work);
     void (*const bitstring)(uint8_t *work);
@@ -125,7 +125,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DerV or a region of the borrow at a fixed offset.
-void protocore_der_read(uint8_t *work);
+void protocore_der_read(const uint8_t *work);
 void protocore_der_enter(uint8_t *work);
 void protocore_der_uint(uint8_t *work);
 void protocore_der_bitstring(uint8_t *work);

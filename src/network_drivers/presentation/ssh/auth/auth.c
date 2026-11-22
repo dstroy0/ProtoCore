@@ -35,8 +35,8 @@
 static int build_pk_ok(const SshAuthReq *req, uint8_t *out, size_t *out_len, size_t cap);
 
 // Defined below; the sec 5.1 reply paths above them build through these.
-void protocore_ssh_auth_build_failure(uint8_t *work);
-void protocore_ssh_auth_build_success(uint8_t *work);
+void protocore_ssh_auth_build_failure(const uint8_t *work);
+void protocore_ssh_auth_build_success(const uint8_t *work);
 
 // ---------------------------------------------------------------------------
 // Application password callback
@@ -90,7 +90,10 @@ static_assert(SSH_AUTH_OFF_CTX + sizeof(struct SshAuthStorage) <= PROTOCORE_SSH_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_AUTH_CTX(w) ((struct SshAuthStorage *)(void *)((w) + SSH_AUTH_OFF_CTX))
+#define SSH_AUTH_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SshAuthStorage *)(const void *)((w) + SSH_AUTH_OFF_CTX),                        \
+        default: (struct SshAuthStorage *)(void *)((w) + SSH_AUTH_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -173,7 +176,7 @@ static void auth_identity_check(uint8_t i, const char *user, const char *service
     SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known = EMBED_TRUE;
 }
 
-void protocore_ssh_auth_write_publickey_request(uint8_t *work)
+void protocore_ssh_auth_write_publickey_request(const uint8_t *work)
 {
     (void)work;
     mmgr_span *w = SshAuthV.out_args.w;
@@ -224,12 +227,11 @@ void protocore_ssh_auth_timed_out(uint8_t *work)
         return;
     }
     // Unsigned subtraction, so a wrap of the millisecond counter yields the true elapsed time.
-    SshAuthV.ok =
-        (uint32_t)(now - SSH_AUTH_CTX(protocore_ssh_auth_span())->started_ms[i]) >= (uint32_t)SSH_AUTH_TIMEOUT_MS;
+    SshAuthV.ok = (now - SSH_AUTH_CTX(protocore_ssh_auth_span())->started_ms[i]) >= (uint32_t)SSH_AUTH_TIMEOUT_MS;
     return;
 }
 
-void protocore_ssh_auth_reset(uint8_t *work)
+void protocore_ssh_auth_reset(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshAuthV.slot;
@@ -247,21 +249,21 @@ void protocore_ssh_auth_reset(uint8_t *work)
                   sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service));
 }
 
-void protocore_ssh_auth_set_password_cb(uint8_t *work)
+void protocore_ssh_auth_set_password_cb(const uint8_t *work)
 {
     (void)work;
     SshPasswordCb cb = SshAuthV.cbs.password_cb;
     SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_cb = cb;
 }
 
-void protocore_ssh_auth_set_password_change_cb(uint8_t *work)
+void protocore_ssh_auth_set_password_change_cb(const uint8_t *work)
 {
     (void)work;
     SshPasswordChangeCb cb = SshAuthV.cbs.password_change_cb;
     SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change_cb = cb;
 }
 
-void protocore_ssh_auth_set_pubkey_cb(uint8_t *work)
+void protocore_ssh_auth_set_pubkey_cb(const uint8_t *work)
 {
     (void)work;
     SshPubkeyCb cb = SshAuthV.cbs.pubkey_cb;
@@ -371,7 +373,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
 // USERAUTH_REQUEST parse (RFC 4252 §5)
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_auth_parse_request(uint8_t *work)
+void protocore_ssh_auth_parse_request(const uint8_t *work)
 {
     (void)work;
     const uint8_t *payload = SshAuthV.msg.payload;
@@ -501,7 +503,7 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
 // Response builders
 // ---------------------------------------------------------------------------
 
-void protocore_ssh_auth_build_failure(uint8_t *work)
+void protocore_ssh_auth_build_failure(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = SshAuthV.out_args.out;
@@ -533,7 +535,7 @@ void protocore_ssh_auth_build_failure(uint8_t *work)
     return;
 }
 
-void protocore_ssh_auth_build_success(uint8_t *work)
+void protocore_ssh_auth_build_success(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = SshAuthV.out_args.out;
@@ -735,7 +737,7 @@ void protocore_ssh_auth_handle_request(uint8_t *work)
     return;
 }
 
-void protocore_ssh_auth_pw_change_report(uint8_t *work)
+void protocore_ssh_auth_pw_change_report(const uint8_t *work)
 {
     (void)work;
     const uint8_t slot = SshAuthV.slot;
@@ -755,7 +757,7 @@ void protocore_ssh_auth_pw_change_report(uint8_t *work)
     }
 }
 
-void protocore_ssh_auth_pw_change_clear(uint8_t *work)
+void protocore_ssh_auth_pw_change_clear(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshAuthV.slot;
@@ -1053,7 +1055,7 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
 // Password change reply (RFC 4252 sec 8)
 // ---------------------------------------------------------------------------
 
-// A change the application has finished: send the reply its USERAUTH_REQUEST deferred.
+// A change the application finished: send the reply its USERAUTH_REQUEST deferred.
 // protocore_ssh_auth_pw_change_take marks the session open on an OK.
 void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
 {

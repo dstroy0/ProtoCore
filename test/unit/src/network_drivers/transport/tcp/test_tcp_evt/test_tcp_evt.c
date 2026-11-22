@@ -11,7 +11,7 @@
 // depth it claims.
 //
 // The header's own note that a record is "small enough (<=12 bytes on 32-bit)" is not asserted
-// here. It is a statement about a 32-bit target; on this host size_t is eight bytes, so the record
+// here. It is a statement about a 32-bit target. On this host size_t is eight bytes, so the record
 // is larger and the claim says nothing checkable. The invariant that does hold on every target is
 // the one below: the reserved storage has to hold EVT_QUEUE_DEPTH records of whatever size the
 // record is on that target.
@@ -86,7 +86,7 @@ void test_a_normal_close_and_an_abort_are_different_kinds(void)
 // The record
 // ---------------------------------------------------------------------------
 
-// The slot id is a byte, so it has to be able to name every slot in the pool - the reserved
+// The slot id is a byte. So it has to be able to name every slot in the pool - the reserved
 // internal slots included, since those also post through this record.
 void test_the_slot_field_can_name_every_pool_slot(void)
 {

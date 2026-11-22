@@ -217,10 +217,10 @@ extern HotswapVars HotswapV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const core_init)(uint8_t *work);
-    void (*const core_io)(uint8_t *work);
-    void (*const core_due)(uint8_t *work);
-    void (*const core_probe)(uint8_t *work);
+    void (*const core_init)(const uint8_t *work);
+    void (*const core_io)(const uint8_t *work);
+    void (*const core_due)(const uint8_t *work);
+    void (*const core_probe)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const set_event_cb)(uint8_t *work);
     void (*const poll)(uint8_t *work);
@@ -228,16 +228,16 @@ typedef struct
     void (*const ready)(uint8_t *work);
     void (*const io)(uint8_t *work);
     void (*const state)(uint8_t *work);
-    void (*const state_name)(uint8_t *work);
+    void (*const state_name)(const uint8_t *work);
     void (*const json)(uint8_t *work);
 } HotswapNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HotswapV or a region of the borrow at a fixed offset.
-void protocore_hotswap_core_init(uint8_t *work);
-void protocore_hotswap_core_io(uint8_t *work);
-void protocore_hotswap_core_due(uint8_t *work);
-void protocore_hotswap_core_probe(uint8_t *work);
+void protocore_hotswap_core_init(const uint8_t *work);
+void protocore_hotswap_core_io(const uint8_t *work);
+void protocore_hotswap_core_due(const uint8_t *work);
+void protocore_hotswap_core_probe(const uint8_t *work);
 void protocore_hotswap_begin(uint8_t *work);
 void protocore_hotswap_set_event_cb(uint8_t *work);
 void protocore_hotswap_poll(uint8_t *work);
@@ -245,7 +245,7 @@ void protocore_hotswap_poll_at(uint8_t *work);
 void protocore_hotswap_ready(uint8_t *work);
 void protocore_hotswap_io(uint8_t *work);
 void protocore_hotswap_state(uint8_t *work);
-void protocore_hotswap_state_name(uint8_t *work);
+void protocore_hotswap_state_name(const uint8_t *work);
 void protocore_hotswap_json(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

@@ -18,7 +18,7 @@ this tracks the windowed-ABI argument registers a10..a15 through `movi` and `mov
 table dereference to the slot number, and emits one line per call.
 
 A slot is reported by its byte offset. The table is filled at runtime from ROM addresses, so no
-header names the slots; the offset plus the argument count is what identifies each one.
+header names the slots. The offset plus the argument count is what identifies each one.
 
 Usage:  python -m test.reverse_engineering.esp32_mac.xtensa.blob_analog
 """

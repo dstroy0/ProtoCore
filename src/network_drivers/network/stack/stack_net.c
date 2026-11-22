@@ -249,7 +249,7 @@ protocore_pbuf *protocore_net_pbuf_alloc(int layer, uint16_t len, int type)
     return NULL;
 }
 
-uint8_t protocore_net_pbuf_free(protocore_pbuf *p)
+uint8_t protocore_net_pbuf_free(const protocore_pbuf *p)
 {
     for (size_t index = 0u; index < PROTOCORE_STACK_NET_PBUFS; index++)
     {
@@ -401,7 +401,7 @@ protocore_pcb *protocore_net_listen(protocore_pcb *p, uint8_t backlog)
 protocore_net_err protocore_net_connect(protocore_pcb *p, const protocore_net_ip *a, uint16_t port,
                                         protocore_net_connect_fn connected)
 {
-    if (p == NULL || !p->in_use || p->listen || p->connecting || p->entry < PROTOCORE_STACK_TCP_ENTRIES ||
+    if (p == NULL || !p->in_use || p->listen || p->connect_wait.pending || p->entry < PROTOCORE_STACK_TCP_ENTRIES ||
         !protocore_net_ip_is_v4(a) || port == 0u)
     {
         return PROTOCORE_NET_ERR_VAL;
@@ -414,9 +414,9 @@ protocore_net_err protocore_net_connect(protocore_pcb *p, const protocore_net_ip
     p->on_connect = connected;
     p->remote_ip = *a;
     p->remote_port = port;
-    p->connecting = EMBED_TRUE;
-    p->connect_deadline = now_ms + PROTOCORE_STACK_NET_ARP_WAIT_MS;
-    p->arp_sent_ms = now_ms;
+    p->connect_wait.pending = EMBED_TRUE;
+    p->connect_wait.deadline_ms = now_ms + PROTOCORE_STACK_NET_ARP_WAIT_MS;
+    p->connect_wait.arp_sent_ms = now_ms;
     return stack_net_connect_try(p, now_ms);
 }
 
@@ -519,13 +519,13 @@ protocore_net_err protocore_net_write(protocore_pcb *p, const void *data, uint16
 }
 
 // The TCP of the stack sends its transmit rings in each pass.
-protocore_net_err protocore_net_output(protocore_pcb *p)
+protocore_net_err protocore_net_output(const protocore_pcb *p)
 {
     (void)p;
     return PROTOCORE_NET_OK;
 }
 
-void protocore_net_recved(protocore_pcb *p, uint16_t len)
+void protocore_net_recved(const protocore_pcb *p, uint16_t len)
 {
     if (p == NULL || p->entry >= PROTOCORE_STACK_TCP_ENTRIES)
     {
@@ -538,7 +538,7 @@ void protocore_net_recved(protocore_pcb *p, uint16_t len)
     entry->delivered -= take;
 }
 
-uint16_t protocore_net_sndbuf(protocore_pcb *p)
+uint16_t protocore_net_sndbuf(const protocore_pcb *p)
 {
     if (p == NULL || p->entry >= PROTOCORE_STACK_TCP_ENTRIES)
     {
@@ -551,12 +551,12 @@ uint16_t protocore_net_sndbuf(protocore_pcb *p)
 
 // The TCP of the stack sends each write whole, and it opens the window from the receive ring. These two have
 // nothing to set.
-void protocore_net_nagle_disable(protocore_pcb *p)
+void protocore_net_nagle_disable(const protocore_pcb *p)
 {
     (void)p;
 }
 
-void protocore_net_rcv_wnd_update(protocore_pcb *p, uint16_t len)
+void protocore_net_rcv_wnd_update(const protocore_pcb *p, uint16_t len)
 {
     (void)p;
     (void)len;
@@ -595,9 +595,9 @@ static const StackUnits *stack_net_units(void)
 // Reads interface STACK_NET_NETIF into the operand block of Netif. False where the interface has no entry.
 static embed_bool stack_net_netif(const StackUnits *units)
 {
-    NetifIo *const netif_io = IDEMIP_NETIF_IO(units->netif);
+    NetifIo *const netif_io = IDEMIP_NETIF_IO(units->link.netif);
     netif_io->if_args.index = STACK_NET_NETIF;
-    Netif.get(units->netif);
+    Netif.get(units->link.netif);
     return netif_io->status == IDEMIP_OK;
 }
 
@@ -617,7 +617,7 @@ static void stack_net_group_mac(uint32_t group, uint8_t *mac)
 // further, and the next datagram to the same next hop finds the row.
 static void stack_net_arp_request(const StackUnits *units, uint32_t target)
 {
-    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->netif);
+    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->link.netif);
     StackV.transmit_args.index = STACK_NET_NETIF;
     Stack.transmit_hold(protocore_stack_span());
     if (!StackV.ok)
@@ -638,7 +638,7 @@ static void stack_net_arp_request(const StackUnits *units, uint32_t target)
 // a request then went out.
 static embed_bool stack_net_next_hop(const StackUnits *units, uint32_t dst, uint8_t *mac)
 {
-    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->netif);
+    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->link.netif);
     if ((dst & 0xF0000000u) == 0xE0000000u)
     {
         stack_net_group_mac(dst, mac);
@@ -654,10 +654,10 @@ static embed_bool stack_net_next_hop(const StackUnits *units, uint32_t dst, uint
     }
     const embed_bool on_link = (dst & netif_io->mask) == (netif_io->addr & netif_io->mask);
     const uint32_t hop = on_link ? dst : netif_io->gw;
-    ArpTableIo *const arp_io = IDEMIP_ARP_IO(units->arp);
+    ArpTableIo *const arp_io = IDEMIP_ARP_IO(units->link.arp);
     arp_io->find_args.spa = hop;
     arp_io->find_args.pro = (uint16_t)IDEMIP_ARP_PRO_IPV4;
-    ArpTable.find(units->arp);
+    ArpTable.find(units->link.arp);
     if (arp_io->status != IDEMIP_OK || arp_io->mac == NULL)
     {
         stack_net_arp_request(units, hop);
@@ -671,12 +671,12 @@ static embed_bool stack_net_next_hop(const StackUnits *units, uint32_t dst, uint
 // ALL-ROUTERS. RFC 2236 sec 2 sends each one with TTL 1 and the RFC 2113 Router Alert option.
 static void stack_net_igmp_send(const StackUnits *units)
 {
-    const IgmpIo *const igmp_io = IDEMIP_IGMP_IO(units->igmp);
+    const IgmpIo *const igmp_io = IDEMIP_IGMP_IO(units->network.igmp);
     if (!(igmp_io->send_report || igmp_io->send_leave) || !stack_net_netif(units))
     {
         return;
     }
-    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->netif);
+    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->link.netif);
     const uint32_t dst = igmp_io->send_leave ? IDEMIP_IGMP_ALL_ROUTERS : igmp_io->group;
     uint8_t type = igmp_io->report_v1 ? STACK_NET_IGMP_V1_REPORT : STACK_NET_IGMP_V2_REPORT;
     if (igmp_io->send_leave)
@@ -726,11 +726,11 @@ static void stack_net_igmp_send(const StackUnits *units)
 // RFC 2236 sec 6 "timer expired": each call of Igmp.tick fires one due group, and its Report goes out.
 static void stack_net_igmp_tick(const StackUnits *units, uint32_t now_ms)
 {
-    IgmpIo *const igmp_io = IDEMIP_IGMP_IO(units->igmp);
+    IgmpIo *const igmp_io = IDEMIP_IGMP_IO(units->network.igmp);
     for (uint8_t round = 0u; round < IDEMIP_IGMP_GROUPS; round++)
     {
         igmp_io->tick_args.now_ms = now_ms;
-        Igmp.tick(units->igmp);
+        Igmp.tick(units->network.igmp);
         if (igmp_io->status != IDEMIP_OK || igmp_io->expired == 0u)
         {
             return;
@@ -742,10 +742,10 @@ static void stack_net_igmp_tick(const StackUnits *units, uint32_t now_ms)
 // Opens and binds the UdpPcb entry of a control block. False where idemIP refuses the open or the bind.
 static embed_bool stack_net_udp_open(const StackUnits *units, protocore_udp_pcb *pcb)
 {
-    UdpPcbIo *const udp_io = IDEMIP_UDP_PCB_IO(units->udp_pcb);
+    UdpPcbIo *const udp_io = IDEMIP_UDP_PCB_IO(units->transport.udp_pcb);
     udp_io->open_args.ip_version = 4u;
     udp_io->open_args.lite = EMBED_FALSE;
-    UdpPcb.open(units->udp_pcb);
+    UdpPcb.open(units->transport.udp_pcb);
     if (udp_io->status != IDEMIP_OK)
     {
         return EMBED_FALSE;
@@ -756,11 +756,11 @@ static embed_bool stack_net_udp_open(const StackUnits *units, protocore_udp_pcb 
     udp_io->bind_args.ip = any;
     udp_io->bind_args.index = entry;
     udp_io->bind_args.port = pcb->local_port;
-    UdpPcb.bind(units->udp_pcb);
+    UdpPcb.bind(units->transport.udp_pcb);
     if (udp_io->status != IDEMIP_OK)
     {
         udp_io->pcb_args.index = entry;
-        UdpPcb.close(units->udp_pcb);
+        UdpPcb.close(units->transport.udp_pcb);
         return EMBED_FALSE;
     }
     pcb->entry = entry;
@@ -829,8 +829,8 @@ void protocore_net_udp_recv(protocore_udp_pcb *p, protocore_net_udp_recv_fn fn, 
     }
 }
 
-protocore_net_err protocore_net_udp_sendto(protocore_udp_pcb *p, protocore_pbuf *b, const protocore_net_ip *a,
-                                           uint16_t port)
+protocore_net_err protocore_net_udp_sendto(const protocore_udp_pcb *p, const protocore_pbuf *b,
+                                           const protocore_net_ip *a, uint16_t port)
 {
     const StackUnits *const units = stack_net_units();
     if (p == NULL || b == NULL || b->payload == NULL || !protocore_net_ip_is_v4(a) || units == NULL)
@@ -854,7 +854,7 @@ protocore_net_err protocore_net_udp_sendto(protocore_udp_pcb *p, protocore_pbuf 
     {
         return PROTOCORE_NET_ERR_MEM;
     }
-    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->netif);
+    const NetifIo *const netif_io = IDEMIP_NETIF_IO(units->link.netif);
     uint8_t *const frame = StackV.transmit_frame;
     uint8_t *const udp = frame + IDEMIP_ETH_HDR_LEN + IDEMIP_IPV4_HDR_LEN;
     // Explicit cast narrows the length, which the room test above holds below IDEMIP_DMA_FRAME_MAX
@@ -863,13 +863,13 @@ protocore_net_err protocore_net_udp_sendto(protocore_udp_pcb *p, protocore_pbuf 
     EMBED_CALL(proxim.read, ProximusCfg, .dst = udp + IDEMIP_UDP_HDR_LEN, .at = (const uint8_t *)b->payload,
                .size = b->len);
     // RFC 768: the checksum covers the pseudo header, the header and the data. A sum of zero goes out as ones.
-    uint8_t pseudo[12];
-    idemip_wr32(pseudo, netif_io->addr);
-    idemip_wr32(pseudo + 4, dst);
-    pseudo[8] = 0u;
-    pseudo[9] = IDEMIP_IP4_PROTO_UDP;
-    idemip_wr16(pseudo + 10, udp_len);
-    const uint32_t sum = idemip_cksum_accum(idemip_cksum_accum(0u, pseudo, sizeof(pseudo)), udp, udp_len);
+    uint8_t pseudo_header[12];
+    idemip_wr32(pseudo_header, netif_io->addr);
+    idemip_wr32(pseudo_header + 4, dst);
+    pseudo_header[8] = 0u;
+    pseudo_header[9] = IDEMIP_IP4_PROTO_UDP;
+    idemip_wr16(pseudo_header + 10, udp_len);
+    const uint32_t sum = idemip_cksum_accum(idemip_cksum_accum(0u, pseudo_header, sizeof(pseudo_header)), udp, udp_len);
     const uint16_t check = idemip_cksum_final(sum);
     idemip_wr16(udp + 6, (check == 0u) ? 0xFFFFu : check);
     IdemIpIp4Fields fields = {0};
@@ -899,9 +899,9 @@ void protocore_net_udp_remove(protocore_udp_pcb *p)
     const StackUnits *const units = stack_net_units();
     if (p->opened && units != NULL)
     {
-        UdpPcbIo *const udp_io = IDEMIP_UDP_PCB_IO(units->udp_pcb);
+        UdpPcbIo *const udp_io = IDEMIP_UDP_PCB_IO(units->transport.udp_pcb);
         udp_io->pcb_args.index = p->entry;
-        UdpPcb.close(units->udp_pcb);
+        UdpPcb.close(units->transport.udp_pcb);
     }
     *p = (protocore_udp_pcb){0};
 }
@@ -948,18 +948,18 @@ static protocore_net_err stack_net_igmp(const protocore_net_ip *grp, embed_bool 
     {
         return PROTOCORE_NET_ERR_VAL;
     }
-    IgmpIo *const igmp_io = IDEMIP_IGMP_IO(units->igmp);
+    IgmpIo *const igmp_io = IDEMIP_IGMP_IO(units->network.igmp);
     igmp_io->group_args.group = idemip_rd32(grp->bytes);
     igmp_io->group_args.netif = STACK_NET_NETIF;
     igmp_io->group_args.now_ms = protocore_platform_millis();
     igmp_io->group_args.rand = 0u;
     if (join)
     {
-        Igmp.join(units->igmp);
+        Igmp.join(units->network.igmp);
     }
     else
     {
-        Igmp.leave(units->igmp);
+        Igmp.leave(units->network.igmp);
     }
     if (igmp_io->status != IDEMIP_OK)
     {
@@ -1004,18 +1004,18 @@ static protocore_net_err stack_net_connect_try(protocore_pcb *pcb, uint32_t now_
     const StackUnits *const units = stack_net_units();
     if (units == NULL || !stack_net_netif(units))
     {
-        pcb->connecting = EMBED_FALSE;
+        pcb->connect_wait.pending = EMBED_FALSE;
         return PROTOCORE_NET_ERR_CONN;
     }
     uint8_t mac[IDEMIP_MAC_LEN];
     if (!stack_net_next_hop(units, idemip_rd32(pcb->remote_ip.bytes), mac))
     {
-        pcb->arp_sent_ms = now_ms;
+        pcb->connect_wait.arp_sent_ms = now_ms;
         return PROTOCORE_NET_OK;
     }
-    pcb->connecting = EMBED_FALSE;
+    pcb->connect_wait.pending = EMBED_FALSE;
     uint8_t local_ip[4];
-    idemip_wr32(local_ip, IDEMIP_NETIF_IO(units->netif)->addr);
+    idemip_wr32(local_ip, IDEMIP_NETIF_IO(units->link.netif)->addr);
     const StackTcpConnectArgs args = {
         .local_ip = local_ip,
         .remote_ip = pcb->remote_ip.bytes,
@@ -1053,11 +1053,11 @@ static void stack_net_connect_wait(uint32_t now_ms)
     for (size_t index = 0u; index < STACK_NET_PCBS; index++)
     {
         protocore_pcb *const pcb = &s_net.pcbs[index];
-        if (!pcb->in_use || !pcb->connecting)
+        if (!pcb->in_use || !pcb->connect_wait.pending)
         {
             continue;
         }
-        if ((int32_t)(now_ms - pcb->connect_deadline) >= 0)
+        if ((int32_t)(now_ms - pcb->connect_wait.deadline_ms) >= 0)
         {
             protocore_net_err_fn on_err = pcb->on_err;
             void *const arg = pcb->arg;
@@ -1067,7 +1067,7 @@ static void stack_net_connect_wait(uint32_t now_ms)
                 on_err(arg, PROTOCORE_NET_ERR_ABRT);
             }
         }
-        else if (now_ms - pcb->arp_sent_ms >= PROTOCORE_STACK_NET_ARP_RETRY_MS)
+        else if (now_ms - pcb->connect_wait.arp_sent_ms >= PROTOCORE_STACK_NET_ARP_RETRY_MS)
         {
             (void)stack_net_connect_try(pcb, now_ms);
         }
@@ -1221,6 +1221,27 @@ static void stack_net_sent(uint8_t index)
     }
 }
 
+// One event of the TCP of the stack, as the callback of its control block.
+static void stack_net_event(const StackTcpEvent *event)
+{
+    if (event->slot_id >= PROTOCORE_STACK_TCP_ENTRIES)
+    {
+        return;
+    }
+    if (event->type == STACK_TCP_CONNECT)
+    {
+        stack_net_accept(event->slot_id);
+    }
+    else if (event->type == STACK_TCP_DISCONNECT)
+    {
+        s_net.entries[event->slot_id].fin_owed = EMBED_TRUE;
+    }
+    else if (event->type == STACK_TCP_ERROR)
+    {
+        stack_net_error(event->slot_id);
+    }
+}
+
 void protocore_stack_net_pass(uint32_t now_ms, uint32_t random_word)
 {
     stack_net_lock();
@@ -1241,22 +1262,7 @@ void protocore_stack_net_pass(uint32_t now_ms, uint32_t random_word)
         StackTcp.event_take(tcp);
         while (StackTcpV.ok)
         {
-            const StackTcpEvent event = StackTcpV.event;
-            if (event.slot_id < PROTOCORE_STACK_TCP_ENTRIES)
-            {
-                if (event.type == STACK_TCP_CONNECT)
-                {
-                    stack_net_accept(event.slot_id);
-                }
-                else if (event.type == STACK_TCP_DISCONNECT)
-                {
-                    s_net.entries[event.slot_id].fin_owed = EMBED_TRUE;
-                }
-                else if (event.type == STACK_TCP_ERROR)
-                {
-                    stack_net_error(event.slot_id);
-                }
-            }
+            stack_net_event(&StackTcpV.event);
             StackTcp.event_take(tcp);
         }
         for (uint8_t index = 0u; index < PROTOCORE_STACK_TCP_ENTRIES; index++)

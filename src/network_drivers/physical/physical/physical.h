@@ -16,7 +16,7 @@
  * Bring-up runs in the backend the PROTOCORE_VENDOR_* selector compiled
  * (test/core_setup/physical/<vendor>/), reached through the seam declared below. Failover between
  * interfaces belongs to the stack, which reselects the default route when a link drops, so this
- * layer adds no manager and no tick: it reads the live default route each time it is asked which
+ * layer adds no manager and no tick. It reads the live default route each time it is asked which
  * interface carries outbound traffic (RFC 1122 sec 3.3.1.2 gateway selection).
  *
  * @author  Douglas Quigg (dstroy0)
@@ -349,24 +349,24 @@ extern PhysicalVars PhysicalV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const wifi_init)(uint8_t *work);
-    void (*const wifi_ready)(uint8_t *work);
-    void (*const wifi_radio_init)(uint8_t *work);
-    void (*const wifi_ap_init)(uint8_t *work);
-    void (*const wifi_ssid)(uint8_t *work);
-    void (*const wifi_channel)(uint8_t *work);
-    void (*const wifi_rssi)(uint8_t *work);
-    void (*const wifi_ap_ip)(uint8_t *work);
-    void (*const wifi_mac)(uint8_t *work);
-    void (*const eth_init)(uint8_t *work);
-    void (*const eth_ready)(uint8_t *work);
-    void (*const ip6_init)(uint8_t *work);
-    void (*const ip6_global)(uint8_t *work);
-    void (*const ip6_ready)(uint8_t *work);
-    void (*const egress)(uint8_t *work);
-    void (*const egress_ip)(uint8_t *work);
-    void (*const egress_mac)(uint8_t *work);
-    void (*const classify_ip)(uint8_t *work);
+    void (*const wifi_init)(const uint8_t *work);
+    void (*const wifi_ready)(const uint8_t *work);
+    void (*const wifi_radio_init)(const uint8_t *work);
+    void (*const wifi_ap_init)(const uint8_t *work);
+    void (*const wifi_ssid)(const uint8_t *work);
+    void (*const wifi_channel)(const uint8_t *work);
+    void (*const wifi_rssi)(const uint8_t *work);
+    void (*const wifi_ap_ip)(const uint8_t *work);
+    void (*const wifi_mac)(const uint8_t *work);
+    void (*const eth_init)(const uint8_t *work);
+    void (*const eth_ready)(const uint8_t *work);
+    void (*const ip6_init)(const uint8_t *work);
+    void (*const ip6_global)(const uint8_t *work);
+    void (*const ip6_ready)(const uint8_t *work);
+    void (*const egress)(const uint8_t *work);
+    void (*const egress_ip)(const uint8_t *work);
+    void (*const egress_mac)(const uint8_t *work);
+    void (*const classify_ip)(const uint8_t *work);
     void (*const iface_add)(uint8_t *work);
     void (*const iface_reset)(uint8_t *work);
     void (*const iface_present)(uint8_t *work);
@@ -378,24 +378,24 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PhysicalV or a region of the borrow at a fixed offset.
-void protocore_physical_wifi_init(uint8_t *work);
-void protocore_physical_wifi_ready(uint8_t *work);
-void protocore_physical_wifi_radio_init(uint8_t *work);
-void protocore_physical_wifi_ap_init(uint8_t *work);
-void protocore_physical_wifi_ssid(uint8_t *work);
-void protocore_physical_wifi_channel(uint8_t *work);
-void protocore_physical_wifi_rssi(uint8_t *work);
-void protocore_physical_wifi_ap_ip(uint8_t *work);
-void protocore_physical_wifi_mac(uint8_t *work);
-void protocore_physical_eth_init(uint8_t *work);
-void protocore_physical_eth_ready(uint8_t *work);
-void protocore_physical_ip6_init(uint8_t *work);
-void protocore_physical_ip6_global(uint8_t *work);
-void protocore_physical_ip6_ready(uint8_t *work);
-void protocore_physical_egress(uint8_t *work);
-void protocore_physical_egress_ip(uint8_t *work);
-void protocore_physical_egress_mac(uint8_t *work);
-void protocore_physical_classify_ip(uint8_t *work);
+void protocore_physical_wifi_init(const uint8_t *work);
+void protocore_physical_wifi_ready(const uint8_t *work);
+void protocore_physical_wifi_radio_init(const uint8_t *work);
+void protocore_physical_wifi_ap_init(const uint8_t *work);
+void protocore_physical_wifi_ssid(const uint8_t *work);
+void protocore_physical_wifi_channel(const uint8_t *work);
+void protocore_physical_wifi_rssi(const uint8_t *work);
+void protocore_physical_wifi_ap_ip(const uint8_t *work);
+void protocore_physical_wifi_mac(const uint8_t *work);
+void protocore_physical_eth_init(const uint8_t *work);
+void protocore_physical_eth_ready(const uint8_t *work);
+void protocore_physical_ip6_init(const uint8_t *work);
+void protocore_physical_ip6_global(const uint8_t *work);
+void protocore_physical_ip6_ready(const uint8_t *work);
+void protocore_physical_egress(const uint8_t *work);
+void protocore_physical_egress_ip(const uint8_t *work);
+void protocore_physical_egress_mac(const uint8_t *work);
+void protocore_physical_classify_ip(const uint8_t *work);
 void protocore_physical_iface_add(uint8_t *work);
 void protocore_physical_iface_reset(uint8_t *work);
 void protocore_physical_iface_present(uint8_t *work);

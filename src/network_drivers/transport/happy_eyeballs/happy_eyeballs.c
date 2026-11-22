@@ -46,7 +46,10 @@ static_assert(HAPPY_EYEBALLS_OFF_CTX % _Alignof(HappyEyeballsCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define HAPPY_EYEBALLS_CTX(w) ((HappyEyeballsCtx *)(void *)((w) + HAPPY_EYEBALLS_OFF_CTX))
+#define HAPPY_EYEBALLS_CTX(w)                                                                                          \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HappyEyeballsCtx *)(const void *)((w) + HAPPY_EYEBALLS_OFF_CTX),                       \
+        default: (HappyEyeballsCtx *)(void *)((w) + HAPPY_EYEBALLS_OFF_CTX))
 
 // Effective family for interleave: an IPv4-mapped IPv6 address is treated as IPv4.
 static embed_bool eff_is_v6(uint8_t *work)
@@ -202,7 +205,7 @@ void protocore_happy_eyeballs_order(uint8_t *work)
     }
 }
 
-void protocore_happy_eyeballs_attempt_due(uint8_t *work)
+void protocore_happy_eyeballs_attempt_due(const uint8_t *work)
 {
     (void)work;
     uint32_t last_start_ms = HappyEyeballsV.attempt_due_args.last_start_ms;

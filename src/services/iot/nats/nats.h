@@ -39,7 +39,7 @@
  * The Overview states operation names are case insensitive. The parser here matches them in the
  * upper case a server writes.
  *
- * A builder writes one operation into the caller's buffer and reports its length; the parser decodes
+ * A builder writes one operation into the caller's buffer and reports its length. The parser decodes
  * the operation at the head of the caller's inbound buffer and reports the octets it occupies.
  * Pure: no state, no allocation, no I/O.
  *
@@ -200,7 +200,7 @@ typedef struct
     void (*const unsub)(uint8_t *work);
     void (*const ping)(uint8_t *work);
     void (*const pong)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
 } NatsNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -212,7 +212,7 @@ void protocore_nats_sub(uint8_t *work);
 void protocore_nats_unsub(uint8_t *work);
 void protocore_nats_ping(uint8_t *work);
 void protocore_nats_pong(uint8_t *work);
-void protocore_nats_parse(uint8_t *work);
+void protocore_nats_parse(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

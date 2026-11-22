@@ -16,7 +16,7 @@ The transformation:
 A helper that touches the context needs the borrow to reach it with, and how it gets one depends on
 who calls it. A helper this file calls gains `uint8_t *restrict work` as its first parameter, and
 its call sites gain the argument. A helper whose address is taken is a callback: its signature
-belongs to whoever dispatches it, so it takes the span from the accessor instead and refuses a null
+belongs to whoever dispatches it. So it takes the span from the accessor instead and refuses a null
 the way every entry does.
 """
 
@@ -211,7 +211,7 @@ def funnel(src, module, borrow, notes, stated=()):
 
     # A function that reaches the context needs the borrow to reach it with - and so does a
     # function that only passes the borrow on to one that does. Threading a helper puts `work` in
-    # its callers, so the scan repeats until no body names a `work` it was never given; one pass
+    # its callers, so the scan repeats until no body names a `work` it was never given. One pass
     # left the callers of a threaded helper referencing an identifier that is not there.
     threaded, callbacks = [], []
     for _ in range(64):

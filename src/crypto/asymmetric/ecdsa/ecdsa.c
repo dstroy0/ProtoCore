@@ -327,7 +327,7 @@ static void fp_mul(uint32_t z[8], const uint32_t x[8], const uint32_t y[8], cons
 }
 static void ecdsa_hw_on()
 {
-    // Software big-integer path: there is no hardware MPI accelerator to enable on this build (the HW
+    // Software big-integer path. There is no hardware MPI accelerator to enable on this build (the HW
     // variant of these hooks is compiled instead when the accelerator is present).
 }
 static void ecdsa_hw_off()

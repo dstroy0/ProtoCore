@@ -47,7 +47,7 @@ uint8_t *protocore_sen0192_span(void)
     return s_own.span;
 }
 
-void protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high)
+void protocore_sen0192_motion_init(const uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high)
 {
     (void)work;
 
@@ -81,36 +81,36 @@ embed_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, embe
     return ok;
 }
 
-embed_bool protocore_sen0192_motion_tick(uint8_t *work, Sen0192Motion *m, uint32_t now_ms)
+embed_bool protocore_sen0192_motion_tick(const uint8_t *work, Sen0192Motion *m, uint32_t now_ms)
 {
     (void)work;
 
-    if (m->present && m->seeded && (uint32_t)(now_ms - m->last_active_ms) > m->hold_ms)
+    if (m->present && m->seeded && (now_ms - m->last_active_ms) > m->hold_ms)
     {
         m->present = EMBED_FALSE;
     }
     return m->present;
 }
 
-embed_bool protocore_sen0192_motion_present(uint8_t *work, const Sen0192Motion *m)
+embed_bool protocore_sen0192_motion_present(const uint8_t *work, const Sen0192Motion *m)
 {
     (void)work;
 
     return m->present;
 }
 
-uint32_t protocore_sen0192_motion_events(uint8_t *work, const Sen0192Motion *m)
+uint32_t protocore_sen0192_motion_events(const uint8_t *work, const Sen0192Motion *m)
 {
     (void)work;
 
     return m->motion_events;
 }
 
-uint32_t protocore_sen0192_motion_active_age_ms(uint8_t *work, const Sen0192Motion *m, uint32_t now_ms)
+uint32_t protocore_sen0192_motion_active_age_ms(const uint8_t *work, const Sen0192Motion *m, uint32_t now_ms)
 {
     (void)work;
 
-    return m->seeded ? (uint32_t)(now_ms - m->last_active_ms) : 0;
+    return m->seeded ? (now_ms - m->last_active_ms) : 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +141,10 @@ static_assert(SEN0192_OFF_CTX % _Alignof(Sen0192Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SEN0192_CTX(w) ((Sen0192Ctx *)(void *)((w) + SEN0192_OFF_CTX))
+#define SEN0192_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Sen0192Ctx *)(const void *)((w) + SEN0192_OFF_CTX),                                    \
+        default: (Sen0192Ctx *)(void *)((w) + SEN0192_OFF_CTX))
 
 // The pin, or -1 for "there is none" - which is what a failed or absent begin() reports, the way a
 // main() reports failure. Stated here rather than as an initializer on the declaration so the

@@ -152,7 +152,7 @@ typedef struct
 /**
  * @brief The octets a build writes or a parse reads.
  *
- * A header parse reads a whole message from @c in; every typed parse below reads the Message
+ * A header parse reads a whole message from @c in. Every typed parse below reads the Message
  * Variable Part the header parse pointed @c header.variable at.
  */
 typedef struct
@@ -243,46 +243,46 @@ extern MqttsnVars MqttsnV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const make_flags)(uint8_t *work);
-    void (*const build_connect)(uint8_t *work);
-    void (*const build_register)(uint8_t *work);
-    void (*const build_regack)(uint8_t *work);
-    void (*const build_publish)(uint8_t *work);
-    void (*const build_puback)(uint8_t *work);
-    void (*const build_subscribe_name)(uint8_t *work);
-    void (*const build_subscribe_id)(uint8_t *work);
-    void (*const build_pingreq)(uint8_t *work);
-    void (*const build_disconnect)(uint8_t *work);
-    void (*const build_searchgw)(uint8_t *work);
-    void (*const parse_header)(uint8_t *work);
-    void (*const parse_connack)(uint8_t *work);
-    void (*const parse_regack)(uint8_t *work);
+    void (*const make_flags)(const uint8_t *work);
+    void (*const build_connect)(const uint8_t *work);
+    void (*const build_register)(const uint8_t *work);
+    void (*const build_regack)(const uint8_t *work);
+    void (*const build_publish)(const uint8_t *work);
+    void (*const build_puback)(const uint8_t *work);
+    void (*const build_subscribe_name)(const uint8_t *work);
+    void (*const build_subscribe_id)(const uint8_t *work);
+    void (*const build_pingreq)(const uint8_t *work);
+    void (*const build_disconnect)(const uint8_t *work);
+    void (*const build_searchgw)(const uint8_t *work);
+    void (*const parse_header)(const uint8_t *work);
+    void (*const parse_connack)(const uint8_t *work);
+    void (*const parse_regack)(const uint8_t *work);
     void (*const parse_puback)(uint8_t *work);
-    void (*const parse_suback)(uint8_t *work);
-    void (*const parse_publish)(uint8_t *work);
-    void (*const parse_register)(uint8_t *work);
+    void (*const parse_suback)(const uint8_t *work);
+    void (*const parse_publish)(const uint8_t *work);
+    void (*const parse_register)(const uint8_t *work);
 } MqttsnNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MqttsnV or a region of the borrow at a fixed offset.
-void protocore_mqttsn_make_flags(uint8_t *work);
-void protocore_mqttsn_build_connect(uint8_t *work);
-void protocore_mqttsn_build_register(uint8_t *work);
-void protocore_mqttsn_build_regack(uint8_t *work);
-void protocore_mqttsn_build_publish(uint8_t *work);
-void protocore_mqttsn_build_puback(uint8_t *work);
-void protocore_mqttsn_build_subscribe_name(uint8_t *work);
-void protocore_mqttsn_build_subscribe_id(uint8_t *work);
-void protocore_mqttsn_build_pingreq(uint8_t *work);
-void protocore_mqttsn_build_disconnect(uint8_t *work);
-void protocore_mqttsn_build_searchgw(uint8_t *work);
-void protocore_mqttsn_parse_header(uint8_t *work);
-void protocore_mqttsn_parse_connack(uint8_t *work);
-void protocore_mqttsn_parse_regack(uint8_t *work);
+void protocore_mqttsn_make_flags(const uint8_t *work);
+void protocore_mqttsn_build_connect(const uint8_t *work);
+void protocore_mqttsn_build_register(const uint8_t *work);
+void protocore_mqttsn_build_regack(const uint8_t *work);
+void protocore_mqttsn_build_publish(const uint8_t *work);
+void protocore_mqttsn_build_puback(const uint8_t *work);
+void protocore_mqttsn_build_subscribe_name(const uint8_t *work);
+void protocore_mqttsn_build_subscribe_id(const uint8_t *work);
+void protocore_mqttsn_build_pingreq(const uint8_t *work);
+void protocore_mqttsn_build_disconnect(const uint8_t *work);
+void protocore_mqttsn_build_searchgw(const uint8_t *work);
+void protocore_mqttsn_parse_header(const uint8_t *work);
+void protocore_mqttsn_parse_connack(const uint8_t *work);
+void protocore_mqttsn_parse_regack(const uint8_t *work);
 void protocore_mqttsn_parse_puback(uint8_t *work);
-void protocore_mqttsn_parse_suback(uint8_t *work);
-void protocore_mqttsn_parse_publish(uint8_t *work);
-void protocore_mqttsn_parse_register(uint8_t *work);
+void protocore_mqttsn_parse_suback(const uint8_t *work);
+void protocore_mqttsn_parse_publish(const uint8_t *work);
+void protocore_mqttsn_parse_register(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

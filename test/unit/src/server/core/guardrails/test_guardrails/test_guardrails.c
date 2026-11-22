@@ -89,7 +89,7 @@ void test_the_low_water_mark_is_not_a_guardrail(void)
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_NONE, eval(HEAP_MIN, 0, FRAG_MIN, STACK_MIN));
 }
 
-// The three bits are OR'd into one mask, so they must be distinct powers of two for the mask to
+// The three bits are OR'd into one mask. So they must be distinct powers of two for the mask to
 // name every breach that happened rather than only the last one.
 void test_the_breach_bits_are_disjoint_powers_of_two(void)
 {
@@ -141,7 +141,7 @@ void test_json_writes_the_full_32_bit_range(void)
                              buf);
 }
 
-// The object plus its terminator is what fits; one octet less writes nothing at all, because half a
+// The object plus its terminator is what fits. One octet less writes nothing at all, because half a
 // JSON object is not a document a panel can parse.
 void test_json_boundary_is_the_object_plus_its_terminator(void)
 {

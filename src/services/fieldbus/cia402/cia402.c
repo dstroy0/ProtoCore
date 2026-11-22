@@ -25,9 +25,9 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cia402_controlword(uint8_t *work);
+void protocore_cia402_controlword(const uint8_t *work);
 
-void protocore_cia402_state(uint8_t *work)
+void protocore_cia402_state(const uint8_t *work)
 {
     (void)work;
     uint16_t sw = Cia402V.state_args.statusword;
@@ -76,7 +76,7 @@ void protocore_cia402_state(uint8_t *work)
     Cia402V.value = CIA402_STATE_UNKNOWN;
 }
 
-void protocore_cia402_controlword(uint8_t *work)
+void protocore_cia402_controlword(const uint8_t *work)
 {
     (void)work;
     Cia402Command cmd = Cia402V.controlword_args.cmd;
@@ -306,7 +306,7 @@ void protocore_cia402_sdo_get_i32(uint8_t *work)
     Cia402V.ok = EMBED_TRUE;
 }
 
-void protocore_cia402_pack_command(uint8_t *work)
+void protocore_cia402_pack_command(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Cia402V.pack_command_args.buf;
@@ -324,7 +324,7 @@ void protocore_cia402_pack_command(uint8_t *work)
     Cia402V.n = p; // 6
 }
 
-void protocore_cia402_unpack_status(uint8_t *work)
+void protocore_cia402_unpack_status(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = Cia402V.unpack_status_args.buf;

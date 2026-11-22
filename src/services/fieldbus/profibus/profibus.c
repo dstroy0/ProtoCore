@@ -21,9 +21,9 @@ EMBED_BEGIN_DECLS
 // never read.
 
 // The entries this file calls before reaching their definitions.
-void protocore_profibus_fcs(uint8_t *work);
+void protocore_profibus_fcs(const uint8_t *work);
 
-void protocore_profibus_fcs(uint8_t *work)
+void protocore_profibus_fcs(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = ProfibusV.fcs_args.bytes;
@@ -176,6 +176,7 @@ static void pb_parse_sd1(uint8_t *work)
     ProfibusV.fcs_args.bytes = body;
     ProfibusV.fcs_args.len = 3;
     protocore_profibus_fcs(work);
+    ProfibusV.fcs_args.bytes = NULL;
     if (ProfibusV.value != frame[4] || frame[5] != PB_ED)
     {
         ProfibusV.ok = EMBED_FALSE;

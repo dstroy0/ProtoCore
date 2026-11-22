@@ -111,7 +111,7 @@ typedef struct
 
 /**
  * @brief The whole MachineTool the server exposes. Own it in your sketch and refresh its fields each
- *        loop from your machine I/O; the umati resolvers read straight out of it (no copy). String
+ *        loop from your machine I/O. The umati resolvers read straight out of it (no copy). String
  *        fields may be null (served as an empty String).
  */
 typedef struct

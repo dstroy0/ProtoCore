@@ -248,7 +248,7 @@ class SideChannelStreamReceiver:
                 self.packet_queue.put(window)
 
     def gather_batch(self, batch_size: int, timeout: Optional[float] = None) -> List[CapturedWindow]:
-        """Block until batch_size windows have accumulated (or timeout, if given - raises
+        """Block until batch_size windows accumulated (or timeout, if given - raises
         queue.Empty on expiry mid-batch)."""
         print(f"[*] Accumulating {batch_size} windows from queue...")
         windows = []

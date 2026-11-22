@@ -30,7 +30,7 @@ EMBED_BEGIN_DECLS
 /**
  * @brief NTCIP object roots under 1.3.6.1.4.1.1206.4.2 (private.enterprises.nema.transportation.devices).
  *
- * Each is the OID prefix of a scalar/column; the leaf/instance index is appended by
+ * Each is the OID prefix of a scalar/column. The leaf/instance index is appended by
  * protocore_ntcip_oid() (a scalar takes .0; a table column takes the row index).
  */
 extern const uint32_t NTCIP_1202_MAX_PHASES[]; ///< maxPhases (1202): number of phases. len via _len.

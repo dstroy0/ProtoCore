@@ -70,7 +70,10 @@ static_assert(SPARKPLUG_OFF_CTX + sizeof(struct SparkplugStorage) <= PROTOCORE_S
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SPARKPLUG_CTX(w) ((struct SparkplugStorage *)(void *)((w) + SPARKPLUG_OFF_CTX))
+#define SPARKPLUG_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SparkplugStorage *)(const void *)((w) + SPARKPLUG_OFF_CTX),                     \
+        default: (struct SparkplugStorage *)(void *)((w) + SPARKPLUG_OFF_CTX))
 
 // Append a VARINT record carrying v under field, on the encoder row slot names.
 static void pb_varint(uint8_t slot, uint32_t field, uint64_t v)
@@ -181,7 +184,7 @@ uint8_t *protocore_sparkplug_span(void)
 
 // Join `spBv1.0/group_id/message_type/edge_node_id[/device_id]` (Sparkplug 3.0.0 sec 4.1) into
 // ns->topic_out, and report its length in ns->n. A topic that does not fit writes nothing.
-void protocore_sparkplug_build_topic(uint8_t *work)
+void protocore_sparkplug_build_topic(const uint8_t *work)
 {
     (void)work;
     SparkplugV.n = 0;
@@ -234,7 +237,7 @@ void protocore_sparkplug_build_topic(uint8_t *work)
 }
 
 // Serialize ns->metrics.list[0] as one Metric message into ns->out, reporting its length in ns->n.
-void protocore_sparkplug_build_metric(uint8_t *work)
+void protocore_sparkplug_build_metric(const uint8_t *work)
 {
     (void)work;
     SparkplugV.n = 0;
@@ -283,7 +286,7 @@ void protocore_sparkplug_build_payload(uint8_t *work)
 
 // Read a Payload's timestamp(1) and seq(3) from ns->source into ns->header. metrics(2), uuid(4) and
 // body(5) are stepped over.
-void protocore_sparkplug_parse_payload(uint8_t *work)
+void protocore_sparkplug_parse_payload(const uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = EMBED_FALSE;
@@ -326,7 +329,7 @@ void protocore_sparkplug_parse_payload(uint8_t *work)
 
 // Report the next metrics(2) sub-message of a Payload in ns->metric_bytes / ns->metric_len and
 // advance ns->source.cursor past it. False at the end of the Payload or on a malformed field.
-void protocore_sparkplug_next_metric(uint8_t *work)
+void protocore_sparkplug_next_metric(const uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = EMBED_FALSE;
@@ -463,7 +466,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
 }
 
 // Decode the Metric in ns->source into ns->metric: the metadata fields and the value oneof member.
-void protocore_sparkplug_parse_metric(uint8_t *work)
+void protocore_sparkplug_parse_metric(const uint8_t *work)
 {
     (void)work;
     SparkplugV.ok = EMBED_FALSE;

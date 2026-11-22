@@ -14,7 +14,7 @@
  * The module decodes those two, then fuses the serving BSS's signal strength, the BSS Transition
  * Candidate List, and the BTM Request into one verdict: transition or stay, to which BSSID, on which
  * Channel Number, and under which reason. It reads no radio and keeps nothing between calls, so it runs
- * on a host against synthetic input; the caller measures the link and performs the transition.
+ * on a host against synthetic input. The caller measures the link and performs the transition.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026

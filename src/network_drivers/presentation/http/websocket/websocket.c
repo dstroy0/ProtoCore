@@ -74,7 +74,10 @@ static_assert(WS_OFF_CTX % _Alignof(WsCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define WS_CTX(w) ((WsCtx *)(void *)((w) + WS_OFF_CTX))
+#define WS_CTX(w)                                                                                                      \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const WsCtx *)(const void *)((w) + WS_OFF_CTX),                                              \
+        default: (WsCtx *)(void *)((w) + WS_OFF_CTX))
 
 void protocore_ws_init(uint8_t *work)
 {

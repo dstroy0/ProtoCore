@@ -82,13 +82,13 @@ embed_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *o
     return EMBED_TRUE;
 }
 
-static void to_ip(uint8_t *work)
+static void to_ip(const uint8_t *work)
 {
     (void)work;
     protocore_net_addr_to_ip(NetAddr.in.addr, NetAddr.in.out_ip);
 }
 
-static void from_ip(uint8_t *work)
+static void from_ip(const uint8_t *work)
 {
     (void)work;
     NetAddr.ok = protocore_net_addr_from_ip(NetAddr.out.ip, NetAddr.out.out_addr);

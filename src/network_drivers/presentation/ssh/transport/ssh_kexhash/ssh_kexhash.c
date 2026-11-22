@@ -54,7 +54,10 @@ static_assert(KEXHASH_OFF_CTX % _Alignof(SshKexHashCtx) == 0,
 
 // The regions, at their offsets in the caller's borrow.
 #define KEXHASH_HASH(w) ((w) + KEXHASH_OFF_HASH)
-#define KEXHASH_CTX(w) ((SshKexHashCtx *)(void *)((w) + KEXHASH_OFF_CTX))
+#define KEXHASH_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshKexHashCtx *)(const void *)((w) + KEXHASH_OFF_CTX),                                 \
+        default: (SshKexHashCtx *)(void *)((w) + KEXHASH_OFF_CTX))
 
 // --- the entries -----------------------------------------------------------
 

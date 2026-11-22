@@ -33,9 +33,9 @@ EMBED_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*regs_to_epoch)(uint8_t *, const uint8_t *, uint32_t *);
-    void (*epoch_to_regs)(uint8_t *, uint32_t, uint8_t *);
-    embed_bool (*begin)(uint8_t *);
+    embed_bool (*regs_to_epoch)(const uint8_t *, const uint8_t *, uint32_t *);
+    void (*epoch_to_regs)(const uint8_t *, uint32_t, uint8_t *);
+    embed_bool (*begin)(const uint8_t *);
     uint32_t (*read_epoch)(uint8_t *);
     embed_bool (*set_epoch)(uint8_t *, uint32_t);
 } RtcNs;
@@ -48,20 +48,20 @@ PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_
  * @param epoch out: seconds since 1970-01-01 UTC
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch);
+embed_bool protocore_rtc_regs_to_epoch(const uint8_t *work, const uint8_t *regs, uint32_t *epoch);
 /**
  * @brief Convert a Unix timestamp to the 7 RTC time registers (BCD, .
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @param epoch Epoch
  * @param regs RTC_REG_COUNT bytes
  */
-void protocore_rtc_epoch_to_regs(uint8_t *work, uint32_t epoch, uint8_t *regs);
+void protocore_rtc_epoch_to_regs(const uint8_t *work, uint32_t epoch, uint8_t *regs);
 /**
  * @brief Initialize the I2C bus for the RTC. true; with no bus seam it is a .
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_rtc_begin(uint8_t *work);
+embed_bool protocore_rtc_begin(const uint8_t *work);
 /**
  * @brief Read the current time from the RTC over I2C.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.

@@ -12,7 +12,7 @@
 //
 // test_length_field_switches_at_255 is load-bearing: sec 5.2.1 says the Length is one octet while the
 // whole message is at most 255 octets and otherwise the octet 0x01 followed by a big-endian uint16 of
-// that same total. Length is what separates one datagram's messages, and it is the one field whose
+// that same total. Length is what separates one datagram's messages. It is the one field whose
 // width changes with the message, so its boundary is where a codec silently desynchronizes.
 
 #include "services/iot/mqtt/mqtt_sn/mqtt_sn.h"

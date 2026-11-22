@@ -271,7 +271,7 @@ void test_zigzag_table(void)
 }
 
 // "int32, int64 ... use variable-length encoding" and a negative int64 is its two's complement, which
-// always sets the top bit, so it takes the full ten octets. This is the difference from sint64.
+// always sets the top bit. So it takes the full ten octets. This is the difference from sint64.
 void test_int64_is_two_s_complement_and_sint64_is_zigzag(void)
 {
     writer_open(0, g_buf, sizeof(g_buf));

@@ -49,7 +49,10 @@ static_assert(OAUTH2_OFF_CTX + sizeof(struct Oauth2Storage) <= PROTOCORE_OAUTH2_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define OAUTH2_CTX(w) ((struct Oauth2Storage *)(void *)((w) + OAUTH2_OFF_CTX))
+#define OAUTH2_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct Oauth2Storage *)(const void *)((w) + OAUTH2_OFF_CTX),                           \
+        default: (struct Oauth2Storage *)(void *)((w) + OAUTH2_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

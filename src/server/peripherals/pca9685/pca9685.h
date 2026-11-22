@@ -155,9 +155,9 @@ extern Pca9685Vars Pca9685V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const prescale)(uint8_t *work);
-    void (*const channel_reg)(uint8_t *work);
-    void (*const us_to_count)(uint8_t *work);
+    void (*const prescale)(const uint8_t *work);
+    void (*const channel_reg)(const uint8_t *work);
+    void (*const us_to_count)(const uint8_t *work);
     void (*const set_pwm_bytes)(uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const set_pwm)(uint8_t *work);
@@ -166,9 +166,9 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Pca9685V or a region of the borrow at a fixed offset.
-void protocore_pca9685_prescale(uint8_t *work);
-void protocore_pca9685_channel_reg(uint8_t *work);
-void protocore_pca9685_us_to_count(uint8_t *work);
+void protocore_pca9685_prescale(const uint8_t *work);
+void protocore_pca9685_channel_reg(const uint8_t *work);
+void protocore_pca9685_us_to_count(const uint8_t *work);
 void protocore_pca9685_set_pwm_bytes(uint8_t *work);
 void protocore_pca9685_begin(uint8_t *work);
 void protocore_pca9685_set_pwm(uint8_t *work);

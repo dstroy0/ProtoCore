@@ -22,7 +22,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-WebDavMethod protocore_webdav_method(uint8_t *work, const char *m)
+WebDavMethod protocore_webdav_method(const uint8_t *work, const char *m)
 {
     (void)work;
 
@@ -84,7 +84,7 @@ WebDavMethod protocore_webdav_method(uint8_t *work, const char *m)
     return DAV_M_UNSUPPORTED;
 }
 
-int protocore_webdav_depth(uint8_t *work, const char *depth_hdr, int dflt)
+int protocore_webdav_depth(const uint8_t *work, const char *depth_hdr, int dflt)
 {
     (void)work;
 
@@ -123,7 +123,7 @@ static embed_bool app(char *buf, size_t cap, size_t *len, const char *s)
     return EMBED_TRUE;
 }
 
-size_t protocore_webdav_xml_escape(uint8_t *work, char *dst, size_t cap, const char *src)
+size_t protocore_webdav_xml_escape(const uint8_t *work, char *dst, size_t cap, const char *src)
 {
     (void)work;
 
@@ -249,7 +249,7 @@ embed_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, ch
     return EMBED_TRUE;
 }
 
-size_t protocore_webdav_ms_begin(uint8_t *work, char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_begin(const uint8_t *work, char *buf, size_t cap, size_t len)
 {
     (void)work;
 
@@ -306,7 +306,7 @@ size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t le
         num[ni] = '\0';
         // The href block above tops out at <=381 bytes (<=348 plus the optional
         // <D:collection/> + </D:resourcetype> close, though this branch only runs for
-        // !is_collection so it's really <=366); this fixed getcontentlength markup + a
+        // !is_collection so it's really <=366). This fixed getcontentlength markup + a
         // 10-digit uint32_t max add <=60 more, so the running total never nears tmp[512]
         // and these atomic-append guards cannot fire.
         if (!app(tmp, sizeof(tmp), &t, "        <D:getcontentlength>") || !app(tmp, sizeof(tmp), &t, num) ||
@@ -347,7 +347,7 @@ size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t le
     return len;
 }
 
-size_t protocore_webdav_ms_end(uint8_t *work, char *buf, size_t cap, size_t len)
+size_t protocore_webdav_ms_end(const uint8_t *work, char *buf, size_t cap, size_t len)
 {
     (void)work;
 
@@ -359,7 +359,7 @@ size_t protocore_webdav_ms_end(uint8_t *work, char *buf, size_t cap, size_t len)
 static embed_bool name_end_char(char c)
 {
     // The only caller scans a name span bounded by the '>' index (its tag-end loop stops there),
-    // so this helper never sees '>'; that leg is a defensive, host-unreachable arm. gcov attributes
+    // so this helper never sees '>'. That leg is a defensive, host-unreachable arm. gcov attributes
     // every operand's branch to this one line, so BR_LINE also drops the (exercised) ws/'/' arms.
     return c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '/' || c == '>';
 }
@@ -596,7 +596,7 @@ static embed_bool dav_lock_covers(const DavLock *l, const char *np)
     return l->depth_infinity && dav_lock_same_or_under(l->path, np);
 }
 
-void protocore_webdav_lock_init(uint8_t *work, DavLockTable *t)
+void protocore_webdav_lock_init(const uint8_t *work, DavLockTable *t)
 {
     (void)work;
 
@@ -610,7 +610,7 @@ void protocore_webdav_lock_init(uint8_t *work, DavLockTable *t)
     }
 }
 
-const DavLock *protocore_webdav_lock_acquire(uint8_t *work, DavLockTable *t, const char *path, const char *token,
+const DavLock *protocore_webdav_lock_acquire(const uint8_t *work, DavLockTable *t, const char *path, const char *token,
                                              embed_bool exclusive, embed_bool depth_infinity, uint32_t expiry_s)
 {
     const DavLock *ptr = 0;
@@ -662,7 +662,7 @@ const DavLock *protocore_webdav_lock_acquire(uint8_t *work, DavLockTable *t, con
     return ptr;
 }
 
-size_t protocore_webdav_lock_sweep(uint8_t *work, DavLockTable *t, uint32_t now_s)
+size_t protocore_webdav_lock_sweep(const uint8_t *work, DavLockTable *t, uint32_t now_s)
 {
     (void)work;
 
@@ -683,7 +683,8 @@ size_t protocore_webdav_lock_sweep(uint8_t *work, DavLockTable *t, uint32_t now_
     return dropped;
 }
 
-const DavLock *protocore_webdav_lock_refresh(uint8_t *work, DavLockTable *t, const char *token, uint32_t new_expiry_s)
+const DavLock *protocore_webdav_lock_refresh(const uint8_t *work, DavLockTable *t, const char *token,
+                                             uint32_t new_expiry_s)
 {
     (void)work;
 
@@ -704,7 +705,7 @@ const DavLock *protocore_webdav_lock_refresh(uint8_t *work, DavLockTable *t, con
     return NULL;
 }
 
-const DavLock *protocore_webdav_lock_find(uint8_t *work, const DavLockTable *t, const char *path)
+const DavLock *protocore_webdav_lock_find(const uint8_t *work, const DavLockTable *t, const char *path)
 {
     (void)work;
 
@@ -727,7 +728,7 @@ const DavLock *protocore_webdav_lock_find(uint8_t *work, const DavLockTable *t, 
     return NULL;
 }
 
-embed_bool protocore_webdav_lock_release(uint8_t *work, DavLockTable *t, const char *token)
+embed_bool protocore_webdav_lock_release(const uint8_t *work, DavLockTable *t, const char *token)
 {
     (void)work;
 
@@ -747,7 +748,7 @@ embed_bool protocore_webdav_lock_release(uint8_t *work, DavLockTable *t, const c
     return EMBED_FALSE;
 }
 
-embed_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t, const char *path,
+embed_bool protocore_webdav_lock_can_write(const uint8_t *work, const DavLockTable *t, const char *path,
                                            const char *presented_token)
 {
     embed_bool ok = EMBED_FALSE;
@@ -788,7 +789,7 @@ embed_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t,
     return ok;
 }
 
-embed_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char *out, size_t cap)
+embed_bool protocore_webdav_if_token(const uint8_t *work, const char *if_header, char *out, size_t cap)
 {
     (void)work;
 

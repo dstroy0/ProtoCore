@@ -5,6 +5,7 @@ protocore_add_module(services/net/ws_client
   GATE PROTOCORE_ENABLE_WS_CLIENT
   SOURCES ws_client.c
   PRIVATE_DEPS
+    shared/log
     server/core/worker
     crypto/hash/sha1
     crypto/rng

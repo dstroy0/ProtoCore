@@ -24,11 +24,11 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_sdi12_build(uint8_t *work);
+void protocore_sdi12_build(const uint8_t *work);
 void protocore_sdi12_crc16(uint8_t *work);
-void protocore_sdi12_crc_encode(uint8_t *work);
+void protocore_sdi12_crc_encode(const uint8_t *work);
 
-void protocore_sdi12_build(uint8_t *work)
+void protocore_sdi12_build(const uint8_t *work)
 {
     (void)work;
     char *buf = Sdi12V.build_args.buf;
@@ -141,6 +141,7 @@ void protocore_sdi12_build_measure_additional(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_concurrent_additional(uint8_t *work)
@@ -171,6 +172,7 @@ void protocore_sdi12_build_concurrent_additional(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_continuous(uint8_t *work)
@@ -201,6 +203,7 @@ void protocore_sdi12_build_continuous(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_verify(uint8_t *work)
@@ -236,6 +239,7 @@ void protocore_sdi12_build_data(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_change_address(uint8_t *work)
@@ -252,6 +256,7 @@ void protocore_sdi12_build_change_address(uint8_t *work)
     Sdi12V.build_args.addr = addr;
     Sdi12V.build_args.body = body;
     protocore_sdi12_build(work);
+    Sdi12V.build_args.body = NULL;
 }
 
 void protocore_sdi12_build_query_address(uint8_t *work)
@@ -267,7 +272,7 @@ void protocore_sdi12_build_query_address(uint8_t *work)
     protocore_sdi12_build(work);
 }
 
-void protocore_sdi12_parse_measure(uint8_t *work)
+void protocore_sdi12_parse_measure(const uint8_t *work)
 {
     (void)work;
     const char *resp = Sdi12V.parse_measure_args.resp;
@@ -315,7 +320,7 @@ void protocore_sdi12_parse_measure(uint8_t *work)
     Sdi12V.ok = EMBED_TRUE;
 }
 
-void protocore_sdi12_parse_values(uint8_t *work)
+void protocore_sdi12_parse_values(const uint8_t *work)
 {
     (void)work;
     const char *resp = Sdi12V.parse_values_args.resp;
@@ -362,7 +367,7 @@ void protocore_sdi12_parse_values(uint8_t *work)
     Sdi12V.ok = EMBED_TRUE;
 }
 
-void protocore_sdi12_parse_identify(uint8_t *work)
+void protocore_sdi12_parse_identify(const uint8_t *work)
 {
     (void)work;
     const char *resp = Sdi12V.parse_identify_args.resp;
@@ -401,7 +406,7 @@ void protocore_sdi12_crc16(uint8_t *work)
     Sdi12V.crc = (uint16_t)CrcV.value;
 }
 
-void protocore_sdi12_crc_encode(uint8_t *work)
+void protocore_sdi12_crc_encode(const uint8_t *work)
 {
     (void)work;
     uint16_t crc = Sdi12V.crc_encode_args.crc;

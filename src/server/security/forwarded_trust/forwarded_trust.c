@@ -44,7 +44,10 @@ static_assert(FORWARDED_TRUST_OFF_CTX % _Alignof(protocore_forwarded_trust_ctx) 
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define FORWARDED_TRUST_CTX(w) ((protocore_forwarded_trust_ctx *)(void *)((w) + FORWARDED_TRUST_OFF_CTX))
+#define FORWARDED_TRUST_CTX(w)                                                                                         \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const protocore_forwarded_trust_ctx *)(const void *)((w) + FORWARDED_TRUST_OFF_CTX),         \
+        default: (protocore_forwarded_trust_ctx *)(void *)((w) + FORWARDED_TRUST_OFF_CTX))
 
 // Read @p text as an address into @p out.
 static embed_bool ip_parse(const char *text, protocore_ip *out)
@@ -209,6 +212,7 @@ void protocore_forwarded_trust_add_cidr(uint8_t *work)
     ForwardedTrustV.add_args.network = &net;
     ForwardedTrustV.add_args.prefix_len = prefix;
     protocore_forwarded_trust_add(work);
+    ForwardedTrustV.add_args.network = NULL;
     return;
 }
 

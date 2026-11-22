@@ -24,9 +24,9 @@ static const size_t CC_SENT = (size_t)-1; // overflow sentinel threaded through 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_httpcache_control_init(uint8_t *work);
+void protocore_httpcache_control_init(const uint8_t *work);
 
-void protocore_httpcache_control_init(uint8_t *work)
+void protocore_httpcache_control_init(const uint8_t *work)
 {
     (void)work;
     protocore_cache_control *cc = HttpcacheV.control_init_args.cc;
@@ -113,7 +113,7 @@ static size_t cc_kv(char *buf, size_t cap, size_t n, embed_bool *first, const ch
     return cc_emit_uint(buf, cap, n, (unsigned)v);
 }
 
-void protocore_httpcache_control_build(uint8_t *work)
+void protocore_httpcache_control_build(const uint8_t *work)
 {
     (void)work;
     char *buf = HttpcacheV.control_build_args.buf;
@@ -453,7 +453,7 @@ void protocore_httpcache_shared(uint8_t *work)
     cc->s_maxage = (int32_t)(s_maxage > 2147483647u ? 2147483647u : s_maxage);
 }
 
-void protocore_httpcache_freshness_lifetime(uint8_t *work)
+void protocore_httpcache_freshness_lifetime(const uint8_t *work)
 {
     (void)work;
     const protocore_cache_control *cc = HttpcacheV.freshness_lifetime_args.cc;

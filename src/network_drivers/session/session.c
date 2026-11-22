@@ -77,7 +77,10 @@ static_assert(SESSION_OFF_CTX + sizeof(struct SessionStorage) <= PROTOCORE_SESSI
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SESSION_CTX(w) ((struct SessionStorage *)(void *)((w) + SESSION_OFF_CTX))
+#define SESSION_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SessionStorage *)(const void *)((w) + SESSION_OFF_CTX),                         \
+        default: (struct SessionStorage *)(void *)((w) + SESSION_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -99,7 +102,7 @@ uint8_t *protocore_session_span(void)
     return s_own.span;
 }
 
-void protocore_protocols_register_builtins(uint8_t *work)
+void protocore_protocols_register_builtins(const uint8_t *work)
 {
     (void)work;
     protocore_register_builtins();
@@ -123,7 +126,7 @@ void protocore_protocols_get(uint8_t *work)
 
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in protocore_builtins.c -
-    // this dispatcher names no protocol; it just knows PROTO_HTTP is always registered, and
+    // this dispatcher names no protocol. It just knows PROTO_HTTP is always registered, and
     // uses that as the "already bootstrapped" sentinel.
     if (!SESSION_CTX(work)->proto_handlers[(unsigned)PROTO_HTTP])
     {
@@ -247,7 +250,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     }
 }
 
-void protocore_session_tick(uint8_t *work)
+void protocore_session_tick(const uint8_t *work)
 {
     (void)work;
     /*

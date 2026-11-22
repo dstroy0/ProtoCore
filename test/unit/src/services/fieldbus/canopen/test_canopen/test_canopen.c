@@ -404,7 +404,7 @@ void test_sync_and_emcy_share_a_function_code(void)
     TEST_ASSERT_FALSE(CanopenV.ok);
 }
 
-// The heartbeat is 0x700 + node with one octet of NMT state; bit 7 is the boot toggle and is masked
+// The heartbeat is 0x700 + node with one octet of NMT state. Bit 7 is the boot toggle and is masked
 // off, so a toggled Operational still reads as Operational.
 void test_heartbeat_state_and_toggle_bit(void)
 {

@@ -53,7 +53,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define CHACHAPOLY_CTX(w) ((ChachaPolyCtx *)(void *)((w) + CHACHAPOLY_OFF_CTX))
+#define CHACHAPOLY_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const ChachaPolyCtx *)(const void *)((w) + CHACHAPOLY_OFF_CTX),                              \
+        default: (ChachaPolyCtx *)(void *)((w) + CHACHAPOLY_OFF_CTX))
 #define CHACHAPOLY_CHACHA(w) ((w) + CHACHAPOLY_OFF_CHACHA)
 #define CHACHAPOLY_POLY(w) ((w) + CHACHAPOLY_OFF_POLY)
 

@@ -97,7 +97,7 @@ static void cmd(const nrf_bus *b, uint8_t c)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-embed_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_config *cfg)
+embed_bool protocore_nrf24_init(const uint8_t *work, const nrf_bus *bus, const nrf_config *cfg)
 {
     embed_bool ok = EMBED_FALSE;
     (void)work;
@@ -143,7 +143,7 @@ embed_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_con
     return EMBED_TRUE;
 }
 
-embed_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len)
+embed_bool protocore_nrf24_send(const uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len)
 {
     (void)work;
 
@@ -168,7 +168,7 @@ embed_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t
     return EMBED_TRUE;
 }
 
-embed_bool protocore_nrf24_tx_done(uint8_t *work, const nrf_bus *bus)
+embed_bool protocore_nrf24_tx_done(const uint8_t *work, const nrf_bus *bus)
 {
     (void)work;
 
@@ -184,7 +184,7 @@ embed_bool protocore_nrf24_tx_done(uint8_t *work, const nrf_bus *bus)
     return EMBED_FALSE;
 }
 
-void protocore_nrf24_set_rx(uint8_t *work, const nrf_bus *bus)
+void protocore_nrf24_set_rx(const uint8_t *work, const nrf_bus *bus)
 {
     (void)work;
 
@@ -197,7 +197,7 @@ void protocore_nrf24_set_rx(uint8_t *work, const nrf_bus *bus)
     bus->ce(EMBED_TRUE, bus->ctx);
 }
 
-int protocore_nrf24_recv(uint8_t *work, const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe)
+int protocore_nrf24_recv(const uint8_t *work, const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe)
 {
     int n_result = 0;
     (void)work;

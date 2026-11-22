@@ -144,7 +144,7 @@ def convert_source(s, spec):
     # protocore_secure_persist_span(sizeof(struct AuthStorage)) and the handle only caches the
     # pointer. Collapsing that emitted a context with the fields merged in AND a bind_auth still
     # returning `struct AuthStorage *` from a `->store` member that no longer existed - it did not
-    # compile, and the diff read as if it had worked.
+    # compile, and the diff read as if it worked.
     if not re.search(r"^static\s+(?:PROTOCORE_\w+\s+)?struct\s+%s\s+\w+\s*[;=]" % re.escape(storage), s, re.M):
         raise SystemExit(
             "REFUSED: struct %s has no file-static instance to fold into the borrow.\n"

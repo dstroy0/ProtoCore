@@ -56,11 +56,11 @@ uint8_t *protocore_ads1115_span(void)
     return s_own.span;
 }
 
-void protocore_ads1115_config_single(uint8_t *work);
-void protocore_ads1115_raw_to_uv(uint8_t *work);
+void protocore_ads1115_config_single(const uint8_t *work);
+void protocore_ads1115_raw_to_uv(const uint8_t *work);
 void protocore_ads1115_read_raw(uint8_t *work);
 
-void protocore_ads1115_config_single(uint8_t *work)
+void protocore_ads1115_config_single(const uint8_t *work)
 {
     (void)work;
     uint8_t channel = Ads1115V.config_single_args.channel;
@@ -92,7 +92,7 @@ void protocore_ads1115_config_single(uint8_t *work)
     Ads1115V.word = cfg;
 }
 
-void protocore_ads1115_raw_to_uv(uint8_t *work)
+void protocore_ads1115_raw_to_uv(const uint8_t *work)
 {
     (void)work;
     int16_t raw = Ads1115V.raw_to_uv_args.raw;
@@ -135,7 +135,10 @@ static_assert(ADS1115_OFF_CTX % _Alignof(Ads1115Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define ADS1115_CTX(w) ((Ads1115Ctx *)(void *)((w) + ADS1115_OFF_CTX))
+#define ADS1115_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ads1115Ctx *)(const void *)((w) + ADS1115_OFF_CTX),                                    \
+        default: (Ads1115Ctx *)(void *)((w) + ADS1115_OFF_CTX))
 
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.

@@ -5,7 +5,7 @@
  * @file client.h
  * @brief What an application calls to drive and provision the outbound role.
  *
- * The client engine is client/client.c; these are the entry points above it - where the connection
+ * The client engine is client/client.c. These are the entry points above it - where the connection
  * has got to, and the ssh-ed25519 public half of a seed for RFC 4252 sec 7 provisioning. Nothing
  * here is one of the three components of RFC 4251 sec 1.
  */
@@ -60,16 +60,16 @@ extern SshAppClientVars SshAppClientV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const state_get)(uint8_t *work);
-    void (*const up)(uint8_t *work);
-    void (*const pubkey)(uint8_t *work);
+    void (*const state_get)(const uint8_t *work);
+    void (*const up)(const uint8_t *work);
+    void (*const pubkey)(const uint8_t *work);
 } SshAppClientNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshAppClientV or a region of the borrow at a fixed offset.
-void protocore_ssh_app_client_state_get(uint8_t *work);
-void protocore_ssh_app_client_up(uint8_t *work);
-void protocore_ssh_app_client_pubkey(uint8_t *work);
+void protocore_ssh_app_client_state_get(const uint8_t *work);
+void protocore_ssh_app_client_up(const uint8_t *work);
+void protocore_ssh_app_client_pubkey(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

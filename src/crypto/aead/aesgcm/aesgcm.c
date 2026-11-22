@@ -91,7 +91,10 @@ static_assert(AESGCM_OFF_CTX % _Alignof(GcmWork) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define AESGCM_CTX(w) ((GcmWork *)(void *)((w) + AESGCM_OFF_CTX))
+#define AESGCM_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const GcmWork *)(const void *)((w) + AESGCM_OFF_CTX),                                        \
+        default: (GcmWork *)(void *)((w) + AESGCM_OFF_CTX))
 #define AESGCM_GHASH(w) ((w) + AESGCM_OFF_GHASH)
 
 // --- the AES-256 block seam - one wrapper set, two platform bodies ---------
@@ -120,7 +123,7 @@ static inline void aes256_free_key(GcmWork *w)
 #if !PROTOCORE_HAS_HW_AESGCM
 
 // AES-256 single-block primitive (operates on the schedule inside GcmWork).
-static inline void aes256_ecb(GcmWork *w, const uint8_t in[16], uint8_t out[16])
+static inline void aes256_ecb(const GcmWork *w, const uint8_t in[16], uint8_t out[16])
 {
     protocore_aes_encrypt_block(w->blk.rk, 14, in, out);
 }
@@ -128,7 +131,7 @@ static inline void aes256_load_key(GcmWork *w, const uint8_t key[32])
 {
     protocore_aes_key_expand(key, 8, w->blk.rk);
 }
-static inline void aes256_free_key(GcmWork *w)
+static inline void aes256_free_key(const GcmWork *w)
 {
     (void)w; // software schedule lives in-place in GcmWork; nothing external to release
 }
@@ -162,7 +165,7 @@ static inline void put_be64(uint8_t *p, uint64_t v)
 static inline void inc32(uint8_t ctr[16])
 {
     // A single-byte carry (ctr[15] 0xff -> 0x00 into ctr[14]) is cheap to reach and exercised by
-    // test_aesgcm_gctr_counter_byte_carry; the full 2^32 wrap (~64 GiB in one call) is the only branch a
+    // test_aesgcm_gctr_counter_byte_carry. The full 2^32 wrap (~64 GiB in one call) is the only branch a
     // host test cannot reach.
     for (int i = 15; i >= 12; i--)
     {
@@ -331,7 +334,7 @@ void protocore_aes_gcm_open(uint8_t *work)
 
 // Advance the RFC 5647 invocation counter: the low 8 bytes of the 12-byte nonce, big-endian; the 4-byte
 // fixed field never changes. The nonce is the caller's own, so the borrow goes unread.
-void protocore_aes_gcm_iv_increment(uint8_t *work)
+void protocore_aes_gcm_iv_increment(const uint8_t *work)
 {
     (void)work;
     AesGcmV.ok = EMBED_FALSE;

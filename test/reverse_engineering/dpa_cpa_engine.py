@@ -18,7 +18,7 @@ Techniques implemented, and why:
     the phase shift a causal filter would reintroduce as apparent jitter.
   - TVLA (fixed-vs-random Welch's t-test, |t| > 4.5) - the ISO/IEC 17825 non-specific
     leakage-detection standard: it answers "does this implementation leak at all" without
-    assuming an AES Hamming model, so it is the right first pass before spending traces on
+    assuming an AES Hamming model. So it is the right first pass before spending traces on
     a targeted CPA. See Goodwill et al., "A testing methodology for side-channel resistance
     validation" (NIST NIAT 2011); Migliore et al. rethinking TVLA for PQC (2025) is a live
     reminder that a clean TVLA result is "no leakage FOUND", not "no leakage".

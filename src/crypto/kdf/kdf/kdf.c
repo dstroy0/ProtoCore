@@ -48,7 +48,10 @@ static_assert(KDF_OFF_CTX % _Alignof(KdfCtx) == 0,
 
 // The regions, at their offsets in the caller's borrow.
 #define KDF_MAC(w) ((w) + KDF_OFF_MAC)
-#define KDF_CTX(w) ((KdfCtx *)(void *)((w) + KDF_OFF_CTX))
+#define KDF_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const KdfCtx *)(const void *)((w) + KDF_OFF_CTX),                                            \
+        default: (KdfCtx *)(void *)((w) + KDF_OFF_CTX))
 
 // --- the entries -----------------------------------------------------------
 

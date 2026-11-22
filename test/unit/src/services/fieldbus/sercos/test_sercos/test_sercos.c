@@ -19,7 +19,7 @@
 //
 // The telegram half is NOT anchored, and asserts properties only. The governing document for the
 // wire frame is the Sercos III Communication Specification of Sercos International (IEC 61784-2
-// CP16 / IEC 61158 Type 19); it is members-only and was not obtained. No field offset, no header
+// CP16 / IEC 61158 Type 19). It is members-only and was not obtained. No field offset, no header
 // length and no telegram type number is asserted as a wire value anywhere below. What is asserted
 // is round-trip identity, that a frame is a fixed-size header plus its payload, that the cycle
 // field carries all 65536 values and the phase octet all 256, that the two defined types are
@@ -369,7 +369,7 @@ void test_the_two_telegram_types_are_distinct(void)
     TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_AT, s.type);
 }
 
-// The cycle count is a 16-bit field, so it must survive every value a 16-bit field can hold,
+// The cycle count is a 16-bit field. So it must survive every value a 16-bit field can hold,
 // including the ones that differ only in the high octet.
 void test_cycle_count_carries_every_sixteen_bit_value(void)
 {

@@ -26,7 +26,7 @@ EMBED_BEGIN_DECLS
 const uint8_t RTPS_VERSION[2] = {2, 4};
 
 // Build the 20-octet Header (sec 9.4.4) into ns->out, and report its length in ns->n.
-void protocore_rtps_header(uint8_t *work)
+void protocore_rtps_header(const uint8_t *work)
 {
     (void)work;
     RtpsV.n = 0;
@@ -49,7 +49,7 @@ void protocore_rtps_header(uint8_t *work)
 }
 
 // Build one Submessage, its SubmessageHeader then its contents (sec 9.4.5.1), into ns->out.
-void protocore_rtps_submessage(uint8_t *work)
+void protocore_rtps_submessage(const uint8_t *work)
 {
     (void)work;
     RtpsV.n = 0;
@@ -87,7 +87,7 @@ void protocore_rtps_submessage(uint8_t *work)
 }
 
 // Validate the Header and walk the Submessages, reporting the verdict in ns->ok.
-void protocore_rtps_parse(uint8_t *work)
+void protocore_rtps_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *msg = RtpsV.msg.msg;

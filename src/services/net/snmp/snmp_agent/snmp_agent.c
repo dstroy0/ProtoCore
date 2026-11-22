@@ -107,7 +107,10 @@ static_assert(SNMP_AGENT_OFF_CTX + sizeof(struct SnmpAgentStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SNMP_AGENT_CTX(w) ((struct SnmpAgentStorage *)(void *)((w) + SNMP_AGENT_OFF_CTX))
+#define SNMP_AGENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SnmpAgentStorage *)(const void *)((w) + SNMP_AGENT_OFF_CTX),                    \
+        default: (struct SnmpAgentStorage *)(void *)((w) + SNMP_AGENT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -536,15 +539,15 @@ static void apply_set_all(uint8_t *work, size_t nvb, embed_bool v2c, long *err_s
         int e = 0;
         if (!en)
         {
-            e = (int)SNMP_ERR_NO_SUCH_NAME;
+            e = SNMP_ERR_NO_SUCH_NAME;
         }
         else if (!en->setter)
         {
-            e = (!v2c) ? (int)SNMP_ERR_READ_ONLY : (int)SNMP_ERR_NOT_WRITABLE;
+            e = (!v2c) ? (int)SNMP_ERR_READ_ONLY : SNMP_ERR_NOT_WRITABLE;
         }
         else if (!en->setter(&SNMP_AGENT_CTX(work)->in[i].val))
         {
-            e = (!v2c) ? (int)SNMP_ERR_BAD_VALUE : (int)SNMP_ERR_WRONG_TYPE;
+            e = (!v2c) ? (int)SNMP_ERR_BAD_VALUE : SNMP_ERR_WRONG_TYPE;
         }
         if (!e)
         {
@@ -675,7 +678,7 @@ static size_t run_get(uint8_t *work, uint8_t pdu_tag, size_t nvb, embed_bool v2c
             {
                 // RFC 1157 sec 4.1.2: noSuchName names the failing binding by index, and the
                 // response repeats the request's bindings.
-                *err_status = (int)SNMP_ERR_NO_SUCH_NAME;
+                *err_status = SNMP_ERR_NO_SUCH_NAME;
                 *err_index = (long)(i + 1);
                 echo_varbinds(work, nvb);
                 return nvb;
@@ -845,7 +848,7 @@ void protocore_snmp_agent_dispatch_pdu(uint8_t *work)
         return;
     }
 
-    long err_status = (int)SNMP_ERR_NO_ERROR;
+    long err_status = SNMP_ERR_NO_ERROR;
     long err_index = 0;
     size_t nout = 0;
 
@@ -869,7 +872,7 @@ void protocore_snmp_agent_dispatch_pdu(uint8_t *work)
         echo_varbinds(work, nvb);
         if (!allow_write)
         {
-            err_status = (!v2c) ? (int)SNMP_ERR_NO_SUCH_NAME : (int)SNMP_ERR_NO_ACCESS;
+            err_status = (!v2c) ? (int)SNMP_ERR_NO_SUCH_NAME : SNMP_ERR_NO_ACCESS;
             err_index = 1;
         }
         else
@@ -887,7 +890,7 @@ void protocore_snmp_agent_dispatch_pdu(uint8_t *work)
     {
         // RFC 3416 sec 4.2.1: a response too large for its buffer is answered tooBig with an empty
         // VarBindList.
-        n = encode_response(work, request_id, (int)SNMP_ERR_TOO_BIG, 0, 0, out, out_cap);
+        n = encode_response(work, request_id, SNMP_ERR_TOO_BIG, 0, 0, out, out_cap);
     }
     SnmpAgentV.n = n;
 }
@@ -924,7 +927,7 @@ void protocore_snmp_agent_process(uint8_t *work)
     }
     const long version = SnmpBerV.ival;
 
-    if (version == (int)SNMP_V3)
+    if (version == SNMP_V3)
     {
 #if PROTOCORE_ENABLE_SNMP_V3
         SnmpV3V.msg.req = req;
@@ -936,7 +939,7 @@ void protocore_snmp_agent_process(uint8_t *work)
 #endif
         return; // without the USM layer a v3 message is answered with nothing
     }
-    if (version != (int)SNMP_V1 && version != (int)SNMP_V2C)
+    if (version != (int)SNMP_V1 && version != SNMP_V2C)
     {
         return;
     }
@@ -965,7 +968,7 @@ void protocore_snmp_agent_process(uint8_t *work)
     SnmpAgentV.pdu.req = req + pdu_off;
     SnmpAgentV.pdu.req_len = req_len - pdu_off;
     SnmpAgentV.pdu.allow_write = is_rw;
-    SnmpAgentV.pdu.v2c = (version == (int)SNMP_V2C);
+    SnmpAgentV.pdu.v2c = (version == SNMP_V2C);
     SnmpAgentV.pdu.out = SNMP_AGENT_CTX(work)->pdu_stage;
     SnmpAgentV.pdu.out_cap = sizeof(SNMP_AGENT_CTX(work)->pdu_stage);
     protocore_snmp_agent_dispatch_pdu(work);
@@ -1024,7 +1027,7 @@ static void snmp_udp_handler(const uint8_t *data, size_t len, const struct proto
 }
 #endif // PROTOCORE_HAS_NET_STACK
 
-void protocore_snmp_agent_listen(uint8_t *work)
+void protocore_snmp_agent_listen(const uint8_t *work)
 {
     (void)work;
 #if PROTOCORE_HAS_NET_STACK

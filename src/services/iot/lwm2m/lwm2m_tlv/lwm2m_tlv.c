@@ -61,7 +61,10 @@ static_assert(LWM2M_TLV_OFF_CTX + sizeof(struct Lwm2mTlvStorage) <= PROTOCORE_LW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define LWM2M_TLV_CTX(w) ((struct Lwm2mTlvStorage *)(void *)((w) + LWM2M_TLV_OFF_CTX))
+#define LWM2M_TLV_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct Lwm2mTlvStorage *)(const void *)((w) + LWM2M_TLV_OFF_CTX),                      \
+        default: (struct Lwm2mTlvStorage *)(void *)((w) + LWM2M_TLV_OFF_CTX))
 
 // The shortest Integer width holding v: 1, 2, 4 or 8 octets (LwM2M Core Appendix C Table C.-2).
 static size_t integer_octets(int64_t v)
@@ -310,7 +313,7 @@ void protocore_lwm2m_tlv_next(uint8_t *work)
 }
 
 // Read a Value as an Integer: 1, 2, 4 or 8 octets, network byte order, two's complement.
-void protocore_lwm2m_tlv_value_integer(uint8_t *work)
+void protocore_lwm2m_tlv_value_integer(const uint8_t *work)
 {
     (void)work;
     const uint8_t *value = Lwm2mTlvV.val.opaque;

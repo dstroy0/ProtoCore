@@ -8,7 +8,7 @@
  * Binds the transport-agnostic Modbus TCP master codec (services/fieldbus/modbus/modbus_master) into the
  * southbound driver framework (services/southbound), so an app addresses a Modbus slave the same way
  * as any other field device: register the driver, then read/write *points* (register addresses) by name
- * through the one facade. A point id is a register address; the block (matrix) path is the atomic
+ * through the one facade. A point id is a register address. The block (matrix) path is the atomic
  * multi-register transfer a single Modbus request satisfies (read up to 125, write up to 123 registers).
  *
  * A holding-register driver (FC 0x03) is read/write: read / read_block use FC 0x03/0x04, write /
@@ -16,7 +16,7 @@
  * is read-only - a Modbus input register cannot be written - so its write / write_block stay unbound
  * (the framework reports SB_ERR_UNSUPPORTED).
  *
- * The app owns the transport: it supplies a @ref protocore_sb_modbus_txn seam that sends a request ADU and
+ * The app owns the transport. It supplies a @ref protocore_sb_modbus_txn seam that sends a request ADU and
  * receives the reply (over protocore_client for Modbus TCP, or a serial gateway). Pure otherwise - no heap,
  * no sockets, host-testable with a mock transaction routed straight into the slave codec.
  *
@@ -102,14 +102,14 @@ extern SbModbusVars SbModbusV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *work);
-    void (*const driver)(uint8_t *work);
+    void (*const init)(const uint8_t *work);
+    void (*const driver)(const uint8_t *work);
 } SbModbusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SbModbusV or a region of the borrow at a fixed offset.
-void protocore_sb_modbus_init(uint8_t *work);
-void protocore_sb_modbus_driver(uint8_t *work);
+void protocore_sb_modbus_init(const uint8_t *work);
+void protocore_sb_modbus_driver(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -100,7 +100,10 @@ static_assert(DNS_RESOLVER_OFF_CTX + sizeof(struct ResolverStorage) <= PROTOCORE
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define DNS_RESOLVER_CTX(w) ((struct ResolverStorage *)(void *)((w) + DNS_RESOLVER_OFF_CTX))
+#define DNS_RESOLVER_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct ResolverStorage *)(const void *)((w) + DNS_RESOLVER_OFF_CTX),                   \
+        default: (struct ResolverStorage *)(void *)((w) + DNS_RESOLVER_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Pure: what an address is, and whether it is a plausible answer
@@ -553,7 +556,7 @@ void protocore_resolver_resolve(uint8_t *work)
             ResolverV.state = PROTOCORE_DNS_READY;
             return;
         }
-        if ((uint32_t)(dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
+        if ((dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
             DNS_RESOLVER_CTX(work)->busy = EMBED_FALSE;
             return;
@@ -617,19 +620,19 @@ void protocore_resolver_resolve(uint8_t *work)
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-void protocore_resolver_classify(uint8_t *work)
+void protocore_resolver_classify(const uint8_t *work)
 {
     (void)work;
     ResolverV.cls = ip_class(ResolverV.addr.ip);
 }
 
-void protocore_resolver_verify(uint8_t *work)
+void protocore_resolver_verify(const uint8_t *work)
 {
     (void)work;
     ResolverV.ok = ip_plausible(ResolverV.addr.ip);
 }
 
-void protocore_resolver_query_build(uint8_t *work)
+void protocore_resolver_query_build(const uint8_t *work)
 {
     (void)work;
     ResolverV.n = question_build(ResolverV.query.out, ResolverV.query.cap, ResolverV.query.id, ResolverV.query.host);

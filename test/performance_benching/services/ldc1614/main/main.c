@@ -9,7 +9,7 @@
 // bring-up as (reg, msb, lsb) triples (protocore_ldc1614_build_config). All four are pure - no
 // I2C, no heap. This rig has no LDC1614 breakout attached, so the Wire binding
 // (protocore_ldc1614_begin / protocore_ldc1614_read_ch0, the I2C-over-Wire half) is deliberately out of
-// scope everywhere here; only the deterministic CPU-side codec is ever benched (same posture
+// scope everywhere here. Only the deterministic CPU-side codec is ever benched (same posture
 // as performance_benching/device/ads1115, the peripheral-driver worked example).
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

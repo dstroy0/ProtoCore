@@ -190,7 +190,7 @@ void test_vlan_tci_field_widths(void)
     TEST_ASSERT_EQUAL_HEX8(0x00, out[15]);
 }
 
-// A parser that reads the tag as a type would see 8100h; the two framings must stay distinct and
+// A parser that reads the tag as a type would see 8100h. The two framings must stay distinct and
 // each must round trip its own way, for every ethertype the raw-L2 protocols use.
 void test_tagged_and_untagged_stay_distinct(void)
 {

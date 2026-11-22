@@ -12,7 +12,7 @@
  * Zeroing storage is not here: mmgr_zero_buf() is a memory-manager operation and lives in
  * locus_carcerum/locus_carcerum.h, beside the cellblock that zeroes on release.
  *
- * The compare is `static inline` here, so it inlines into the caller's loop. ::CtEq is the same
+ * The compare is `static inline` here. So it inlines into the caller's loop. ::CtEq is the same
  * compare reached through the namespace, with the operands on the handle.
  *
  * @author  Douglas Quigg (dstroy0)
@@ -98,12 +98,12 @@ extern CtEqVars CtEqV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const eq)(uint8_t *work);
+    void (*const eq)(const uint8_t *work);
 } CtEqNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CtEqV or a region of the borrow at a fixed offset.
-void protocore_ct_eq_eq(uint8_t *work);
+void protocore_ct_eq_eq(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

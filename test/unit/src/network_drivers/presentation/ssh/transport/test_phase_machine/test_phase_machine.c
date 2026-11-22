@@ -40,7 +40,7 @@ static void newkeys_crossed(void)
     PhaseMachine.newkeys_done(phase_machine_work);
 }
 
-// Drive a slot to the point where authentication has completed, which is where sec 9 says a
+// Drive a slot to the point where authentication completed, which is where sec 9 says a
 // re-exchange must leave the connection undisturbed.
 static void run_to_open(void)
 {
@@ -172,7 +172,7 @@ void test_sec10_newkeys_opens_the_service_request(void)
 }
 
 // RFC 4252: the authentication protocol "runs over the transport layer protocol", once its service
-// has started.
+// started.
 void test_rfc4252_service_opens_authentication(void)
 {
     PhaseMachineV.ident_done_args.i = 0;

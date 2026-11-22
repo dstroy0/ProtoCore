@@ -12,7 +12,7 @@ notifies all observers. It builds on the plain CoAP server in
 [CoAP](../CoAP).
 
 **Register an ordinary resource, then notify on change.** The handler is the same
-shape as any CoAP handler; what makes it observable is that observers are tracked
+shape as any CoAP handler. What makes it observable is that observers are tracked
 by the library and you call `protocore_coap_notify()` when the representation changes:
 
 ```cpp

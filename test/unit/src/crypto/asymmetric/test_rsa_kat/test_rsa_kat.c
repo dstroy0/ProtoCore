@@ -5,7 +5,7 @@
 //
 // Every expected value comes from rsa_kat_data.inc, which is compiled from the auditable JSON under
 // test/vectors by tools/crypto/gen_crypto_vectors.py. Verify is driven onto Project Wycheproof's
-// rsa_signature_2048_sha256 / _sha512 files at a pinned commit; sign is driven onto signatures
+// rsa_signature_2048_sha256 / _sha512 files at a pinned commit. Sign is driven onto signatures
 // openssl produced over a throwaway key whose primes the vector file publishes. Nothing here was
 // produced by this tree.
 //

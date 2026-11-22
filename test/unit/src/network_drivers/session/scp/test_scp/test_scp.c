@@ -3,7 +3,7 @@
 //
 // Host tests for the SCP (rcp) wire codec (network_drivers/session/scp/scp.h).
 //
-// The rcp line protocol scp rides on has no published specification: it is defined by 4.2BSD rcp
+// The rcp line protocol scp rides on has no published specification. It is defined by 4.2BSD rcp
 // and by OpenSSH's scp, and no standards text states its grammar. So except where noted the
 // expectations here are PROPERTIES - round-trip identity, refusals, and boundaries - rather than
 // values copied from a spec, and this is said plainly rather than dressed up as conformance.

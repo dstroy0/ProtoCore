@@ -20,7 +20,7 @@
  *    state + unit mode, the requested/actual machine speed, and the production counters.
  *
  * This is a pure, fixed-BSS service: no heap, no I/O. The state engine (protocore_packml_command /
- * protocore_packml_state_complete) is a pure transition table; the owned service (protocore_packml_svc_*) layers the
+ * protocore_packml_state_complete) is a pure transition table. The owned service (protocore_packml_svc_*) layers the
  * PackTags + counters + timers on top for a machine to run directly. Host-tested (native_packml).
  *
  * @author  Douglas Quigg (dstroy0)
@@ -47,7 +47,7 @@ EMBED_ENUM_BYTE(PackMlState,
                 PACK_ML_STATE_STARTING = 3,      ///< acting: Idle -> Execute
                 PACK_ML_STATE_IDLE = 4,          ///< wait: ready to start
                 PACK_ML_STATE_SUSPENDED = 5,     ///< wait: paused by an external condition (starved/blocked)
-                PACK_ML_STATE_EXECUTE = 6,       ///< wait/producing: the machine is doing its work
+                PACK_ML_STATE_EXECUTE = 6,       ///< wait/producing: the machine does its work
                 PACK_ML_STATE_STOPPING = 7,      ///< acting: -> Stopped
                 PACK_ML_STATE_ABORTING = 8,      ///< acting: -> Aborted (fault)
                 PACK_ML_STATE_ABORTED = 9,       ///< wait: faulted; needs Clear
@@ -131,7 +131,7 @@ void protocore_packml_svc_init(PackMlMode mode);
 embed_bool protocore_packml_svc_command(PackMlCommand c);
 
 /**
- * @brief Signal that the current acting state's action has finished (the machine's State-Complete). Advances
+ * @brief Signal that the current acting state's action finished (the machine's State-Complete). Advances
  *        an acting state to its target; a no-op in a wait state.
  * @return the new state.
  */

@@ -253,7 +253,7 @@ HOST_ARMS = [
 def host_flags(entry):
     # The host has no bounded DRAM, so the arenas are sized far past any bench's worst case, the
     # same way the test envs do it. A failed span is then a defect, not a budget.
-    # include/ is where protocore.h lives. Every TU that names it compiles; what the umbrella
+    # include/ is where protocore.h lives. Every TU that names it compiles. What the umbrella
     # reaches is kept out of the source list by _mm_headers pruning its subtree, not by leaving the
     # path off.
     incs = [
@@ -339,7 +339,7 @@ def _siblings_of(header):
 DEFN = re.compile(r"^[A-Za-z_][\w\s\*]*?\b(\w+)\s*\([^;]*$", re.M)
 
 # A file-scope object: a type at column 0, a name, then an initializer. Every module exports its
-# namespace as one of these (`HttpNs Http = {...}`), and a link that is missing `Http` is missing an
+# namespace as one of these (`HttpNs Http = {...}`), and a link that is missing `Http` misses an
 # object, not a function - DEFN alone never sees it and the closure stalls with the name unresolved.
 OBJDEFN = re.compile(r"^[A-Za-z_][\w\s\*]*?\b(\w+)\s*(?:\[[^\]]*\])?\s*=[^=]", re.M)
 

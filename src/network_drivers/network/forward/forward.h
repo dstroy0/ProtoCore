@@ -25,7 +25,7 @@
  * next hop.
  *
  * The inspection hook (PROTOCORE_FWD_INSPECT) runs an application callback on every frame after the
- * access list and before the route lookup; the callback returns a verdict that passes or drops it.
+ * access list and before the route lookup. The callback returns a verdict that passes or drops it.
  *
  * The rate cap reads Clock.millis (server/clock/clock.h), the library's one time source; Clock.set_ms
  * moves the window for every module at once.

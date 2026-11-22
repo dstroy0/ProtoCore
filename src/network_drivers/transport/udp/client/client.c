@@ -43,7 +43,10 @@ static_assert(UDP_CLIENT_OFF_CTX + sizeof(struct UdpClientStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define UDP_CLIENT_CTX(w) ((struct UdpClientStorage *)(void *)((w) + UDP_CLIENT_OFF_CTX))
+#define UDP_CLIENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct UdpClientStorage *)(const void *)((w) + UDP_CLIENT_OFF_CTX),                    \
+        default: (struct UdpClientStorage *)(void *)((w) + UDP_CLIENT_OFF_CTX))
 
 // The datagram, carried to the stack's thread by pointer. The caller's buffer is the send buffer,
 // so nothing is copied into this and it holds no storage of its own.
@@ -59,7 +62,7 @@ typedef struct
 
 // Stamp the control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
 // change reaches the next datagram.
-static void apply_dscp(protocore_udp_pcb *pcb)
+static void apply_dscp(const protocore_udp_pcb *pcb)
 {
 #if PROTOCORE_ENABLE_DIFFSERV
     uint8_t dscp = protocore_diffserv_udp_dscp();
@@ -137,7 +140,7 @@ uint8_t *protocore_udp_client_span(void)
     return s_own.span;
 }
 
-void protocore_udp_client_sendto(uint8_t *work)
+void protocore_udp_client_sendto(const uint8_t *work)
 {
     (void)work;
     if (UdpClientV.data == NULL || UdpClientV.len == 0 || UdpClientV.len > PROTOCORE_UDP_RX_BUF_SIZE ||

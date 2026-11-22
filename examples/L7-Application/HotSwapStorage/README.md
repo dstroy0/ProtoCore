@@ -87,7 +87,7 @@ after the probe     /storage -> {"storage":"ready","mounts":2,"faults":1}   <- r
                     /write   -> ok
 ```
 
-Note the two numbers that prove the design rather than just the happy path: it faulted on the
+Note the two numbers that prove the design rather than just the happy path. It faulted on the
 **third** consecutive failure (not the first), and the fourth write was **refused** with
 `storage not ready` instead of being attempted against a dead mount.
 

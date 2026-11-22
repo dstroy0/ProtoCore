@@ -43,7 +43,10 @@ static_assert(CHACHA20_OFF_CTX % _Alignof(Chacha20Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define CHACHA20_CTX(w) ((Chacha20Ctx *)(void *)((w) + CHACHA20_OFF_CTX))
+#define CHACHA20_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Chacha20Ctx *)(const void *)((w) + CHACHA20_OFF_CTX),                                  \
+        default: (Chacha20Ctx *)(void *)((w) + CHACHA20_OFF_CTX))
 #define CHACHA20_KS(w) ((w) + CHACHA20_OFF_KS)
 
 // ---------------------------------------------------------------------------

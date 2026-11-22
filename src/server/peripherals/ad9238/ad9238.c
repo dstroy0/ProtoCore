@@ -19,7 +19,7 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ad9238_build_instruction(uint8_t *work)
+void protocore_ad9238_build_instruction(const uint8_t *work)
 {
     (void)work;
     embed_bool read = Ad9238V.build_instruction_args.read;
@@ -58,6 +58,7 @@ void protocore_ad9238_build_write(uint8_t *work)
     Ad9238V.build_instruction_args.nbytes = 1;
     Ad9238V.build_instruction_args.out2 = hdr;
     protocore_ad9238_build_instruction(work);
+    Ad9238V.build_instruction_args.out2 = NULL;
     if (!Ad9238V.ok)
     {
         Ad9238V.n = 0;
@@ -87,6 +88,7 @@ void protocore_ad9238_build_read(uint8_t *work)
     Ad9238V.build_instruction_args.nbytes = 1;
     Ad9238V.build_instruction_args.out2 = hdr;
     protocore_ad9238_build_instruction(work);
+    Ad9238V.build_instruction_args.out2 = NULL;
     if (!Ad9238V.ok)
     {
         Ad9238V.n = 0;

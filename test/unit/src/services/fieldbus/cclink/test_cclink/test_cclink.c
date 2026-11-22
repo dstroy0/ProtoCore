@@ -25,7 +25,7 @@
 //     octets are, since a codec that mapped two commands onto one octet could not tell them apart.
 //
 // The field ORDER the layout case asserts is cclink.h's own documented contract, not a published
-// CC-Link layout. It locks the API against silent drift; it cannot show the wire form is right, and
+// CC-Link layout. It locks the API against silent drift. It cannot show the wire form is right, and
 // no test in this file can until the specification is obtained. One trade-press article
 // (control.com, "Understanding the Industrial Network Protocol CC-Link") describes classic CC-Link
 // data frames as HDLC, which has flags, bit stuffing and an FCS rather than a station/command/sum

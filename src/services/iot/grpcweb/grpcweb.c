@@ -99,7 +99,7 @@ static embed_bool find_key(const uint8_t *body, size_t len, const char *key, siz
 }
 
 // Build one Length-Prefixed-Message from ns->msg into ns->out, under the frame byte in msg.flags.
-void protocore_grpc_web_frame(uint8_t *work)
+void protocore_grpc_web_frame(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = GrpcWebV.out.buf;
@@ -140,7 +140,7 @@ void protocore_grpc_web_frame_message(uint8_t *work)
 
 // Build a trailers frame: the prefix, then `grpc-status:<Status>\r\n` and, when a Status-Message is
 // given, `grpc-message:<text>\r\n`. The prefix is reserved first and patched once the section ends.
-void protocore_grpc_web_frame_trailers(uint8_t *work)
+void protocore_grpc_web_frame_trailers(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = GrpcWebV.out.buf;
@@ -174,7 +174,7 @@ void protocore_grpc_web_frame_trailers(uint8_t *work)
 
 // Decode the Length-Prefixed-Message at the head of ns->in into ns->parsed, and report the octets
 // it spans in ns->n. False while fewer than the prefix plus Message-Length octets are buffered.
-void protocore_grpc_web_parse(uint8_t *work)
+void protocore_grpc_web_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = GrpcWebV.in.data;
@@ -200,7 +200,7 @@ void protocore_grpc_web_parse(uint8_t *work)
 }
 
 // Read Status, the "grpc-status" 1*DIGIT field-value, out of the trailer-section in ns->in.
-void protocore_grpc_web_trailers_status(uint8_t *work)
+void protocore_grpc_web_trailers_status(const uint8_t *work)
 {
     (void)work;
     static const char key[] = "grpc-status:";
@@ -234,7 +234,7 @@ void protocore_grpc_web_trailers_status(uint8_t *work)
 
 // Read Status-Message, the "grpc-message" field-value, out of the trailer-section in ns->in. The
 // slice runs to the end of its field-line and stays Percent-Encoded, so decoding is the caller's.
-void protocore_grpc_web_trailers_message(uint8_t *work)
+void protocore_grpc_web_trailers_message(const uint8_t *work)
 {
     (void)work;
     static const char key[] = "grpc-message:";

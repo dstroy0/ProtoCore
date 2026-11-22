@@ -22,12 +22,12 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_devicenet_encode_id(uint8_t *work);
-void protocore_devicenet_frag_octet(uint8_t *work);
-void protocore_devicenet_frag_reset(uint8_t *work);
-void protocore_devicenet_msg_header(uint8_t *work);
+void protocore_devicenet_encode_id(const uint8_t *work);
+void protocore_devicenet_frag_octet(const uint8_t *work);
+void protocore_devicenet_frag_reset(const uint8_t *work);
+void protocore_devicenet_msg_header(const uint8_t *work);
 
-void protocore_devicenet_encode_id(uint8_t *work)
+void protocore_devicenet_encode_id(const uint8_t *work)
 {
     (void)work;
     uint32_t *id = DevicenetV.encode_id_args.id;
@@ -84,7 +84,7 @@ void protocore_devicenet_encode_id(uint8_t *work)
     }
 }
 
-void protocore_devicenet_decode_id(uint8_t *work)
+void protocore_devicenet_decode_id(const uint8_t *work)
 {
     (void)work;
     uint32_t can_id = DevicenetV.decode_id_args.can_id;
@@ -131,7 +131,7 @@ void protocore_devicenet_decode_id(uint8_t *work)
     DevicenetV.ok = EMBED_FALSE; // 0x7F0..0x7FF are invalid identifiers
 }
 
-void protocore_devicenet_msg_header(uint8_t *work)
+void protocore_devicenet_msg_header(const uint8_t *work)
 {
     (void)work;
     embed_bool frag = DevicenetV.msg_header_args.frag;
@@ -142,7 +142,7 @@ void protocore_devicenet_msg_header(uint8_t *work)
         (uint8_t)((frag ? DEVICENET_HDR_FRAG : 0u) | (xid ? DEVICENET_HDR_XID : 0u) | (mac_id & DEVICENET_MAC_MASK));
 }
 
-void protocore_devicenet_frag_octet(uint8_t *work)
+void protocore_devicenet_frag_octet(const uint8_t *work)
 {
     (void)work;
     uint8_t type = DevicenetV.frag_octet_args.type;
@@ -171,6 +171,7 @@ void protocore_devicenet_build_explicit(uint8_t *work)
     DevicenetV.encode_id_args.msg_id = msg_id;
     DevicenetV.encode_id_args.mac_id = mac_id;
     protocore_devicenet_encode_id(work);
+    DevicenetV.encode_id_args.id = NULL;
     if (!DevicenetV.ok)
     {
         DevicenetV.ok = EMBED_FALSE;
@@ -218,6 +219,7 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     DevicenetV.encode_id_args.msg_id = msg_id;
     DevicenetV.encode_id_args.mac_id = mac_id;
     protocore_devicenet_encode_id(work);
+    DevicenetV.encode_id_args.id = NULL;
     if (!DevicenetV.ok)
     {
         DevicenetV.ok = EMBED_FALSE;
@@ -244,7 +246,7 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     DevicenetV.ok = EMBED_TRUE;
 }
 
-void protocore_devicenet_frag_reset(uint8_t *work)
+void protocore_devicenet_frag_reset(const uint8_t *work)
 {
     (void)work;
     DeviceNetFragRx *rx = DevicenetV.frag_reset_args.rx;

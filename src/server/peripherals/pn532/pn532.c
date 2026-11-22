@@ -24,7 +24,7 @@ static const uint8_t ACK[6] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_pn532_build_frame(uint8_t *work)
+void protocore_pn532_build_frame(const uint8_t *work)
 {
     (void)work;
     uint8_t tfi = Pn532V.build_frame_args.tfi;
@@ -62,7 +62,7 @@ void protocore_pn532_build_frame(uint8_t *work)
     Pn532V.len = total;
 }
 
-void protocore_pn532_parse_frame(uint8_t *work)
+void protocore_pn532_parse_frame(const uint8_t *work)
 {
     (void)work;
     const uint8_t *raw = Pn532V.parse_frame_args.raw;
@@ -133,7 +133,7 @@ void protocore_pn532_parse_frame(uint8_t *work)
     Pn532V.n = (int)total;
 }
 
-void protocore_pn532_is_ack(uint8_t *work)
+void protocore_pn532_is_ack(const uint8_t *work)
 {
     (void)work;
     const uint8_t *raw = Pn532V.is_ack_args.raw;
@@ -155,7 +155,7 @@ void protocore_pn532_is_ack(uint8_t *work)
     Pn532V.ok = EMBED_TRUE;
 }
 
-void protocore_pn532_build_ack(uint8_t *work)
+void protocore_pn532_build_ack(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Pn532V.build_ack_args.out;

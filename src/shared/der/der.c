@@ -72,7 +72,7 @@ static embed_bool tlv_at(const uint8_t *buf, size_t len, size_t pos, uint8_t *ta
     return EMBED_TRUE;
 }
 
-void protocore_der_read(uint8_t *work)
+void protocore_der_read(const uint8_t *work)
 {
     (void)work;
     size_t content = 0;

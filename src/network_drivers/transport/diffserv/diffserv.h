@@ -9,7 +9,7 @@
  * outbound TCP connections and UDP datagrams so a QoS-aware network - and the Wi-Fi driver's 802.11e WMM
  * access-category mapping - can prioritize real-time / safety packets over best-effort. The marking is applied
  * on the stack's own thread where the pcb is created (accept / connect / udp create), so nothing is added to
- * the send hot path. This module owns the two server-wide DSCP defaults; the per-listener override lives with
+ * the send hot path. This module owns the two server-wide DSCP defaults. The per-listener override lives with
  * its control block (tcp/server/server.c) but reads the defaults through here.
  *
  * Two levels of control, coarse to fine, each set through the object it marks:

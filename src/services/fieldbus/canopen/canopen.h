@@ -9,7 +9,7 @@
  * CAN frames (see shared/can/can.h): NMT node control, SYNC, TIME, the
  * heartbeat / boot-up (NMT error control), EMCY, PDO (process data), and expedited SDO
  * (service data object) read / write / abort. The 11-bit CAN identifier is a 4-bit
- * function code plus a 7-bit node id; each builder computes the right COB-ID and each
+ * function code plus a 7-bit node id. Each builder computes the right COB-ID and each
  * parser classifies a received frame back to its function + node.
  *
  * Scope: the CANopen object dictionary itself is the application's; this is the wire codec.
@@ -417,52 +417,52 @@ extern CanopenVars CanopenV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_nmt)(uint8_t *work);
-    void (*const build_sync)(uint8_t *work);
-    void (*const build_time)(uint8_t *work);
-    void (*const build_heartbeat)(uint8_t *work);
-    void (*const build_emcy)(uint8_t *work);
-    void (*const build_tpdo)(uint8_t *work);
-    void (*const build_rpdo)(uint8_t *work);
-    void (*const build_sdo_read)(uint8_t *work);
-    void (*const build_sdo_write)(uint8_t *work);
-    void (*const build_sdo_abort)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
-    void (*const parse_emcy)(uint8_t *work);
-    void (*const parse_heartbeat)(uint8_t *work);
-    void (*const parse_time)(uint8_t *work);
-    void (*const parse_sdo_response)(uint8_t *work);
-    void (*const build_sdo_download_init)(uint8_t *work);
-    void (*const build_sdo_download_segment)(uint8_t *work);
-    void (*const build_sdo_upload_segment_req)(uint8_t *work);
-    void (*const parse_sdo_segment)(uint8_t *work);
-    void (*const sdo_reasm_init)(uint8_t *work);
-    void (*const sdo_reasm_feed)(uint8_t *work);
+    void (*const build_nmt)(const uint8_t *work);
+    void (*const build_sync)(const uint8_t *work);
+    void (*const build_time)(const uint8_t *work);
+    void (*const build_heartbeat)(const uint8_t *work);
+    void (*const build_emcy)(const uint8_t *work);
+    void (*const build_tpdo)(const uint8_t *work);
+    void (*const build_rpdo)(const uint8_t *work);
+    void (*const build_sdo_read)(const uint8_t *work);
+    void (*const build_sdo_write)(const uint8_t *work);
+    void (*const build_sdo_abort)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
+    void (*const parse_emcy)(const uint8_t *work);
+    void (*const parse_heartbeat)(const uint8_t *work);
+    void (*const parse_time)(const uint8_t *work);
+    void (*const parse_sdo_response)(const uint8_t *work);
+    void (*const build_sdo_download_init)(const uint8_t *work);
+    void (*const build_sdo_download_segment)(const uint8_t *work);
+    void (*const build_sdo_upload_segment_req)(const uint8_t *work);
+    void (*const parse_sdo_segment)(const uint8_t *work);
+    void (*const sdo_reasm_init)(const uint8_t *work);
+    void (*const sdo_reasm_feed)(const uint8_t *work);
 } CanopenNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in CanopenV or a region of the borrow at a fixed offset.
-void protocore_canopen_build_nmt(uint8_t *work);
-void protocore_canopen_build_sync(uint8_t *work);
-void protocore_canopen_build_time(uint8_t *work);
-void protocore_canopen_build_heartbeat(uint8_t *work);
-void protocore_canopen_build_emcy(uint8_t *work);
-void protocore_canopen_build_tpdo(uint8_t *work);
-void protocore_canopen_build_rpdo(uint8_t *work);
-void protocore_canopen_build_sdo_read(uint8_t *work);
-void protocore_canopen_build_sdo_write(uint8_t *work);
-void protocore_canopen_build_sdo_abort(uint8_t *work);
-void protocore_canopen_parse(uint8_t *work);
-void protocore_canopen_parse_emcy(uint8_t *work);
-void protocore_canopen_parse_heartbeat(uint8_t *work);
-void protocore_canopen_parse_time(uint8_t *work);
-void protocore_canopen_parse_sdo_response(uint8_t *work);
-void protocore_canopen_build_sdo_download_init(uint8_t *work);
-void protocore_canopen_build_sdo_download_segment(uint8_t *work);
-void protocore_canopen_build_sdo_upload_segment_req(uint8_t *work);
-void protocore_canopen_parse_sdo_segment(uint8_t *work);
-void protocore_canopen_sdo_reasm_init(uint8_t *work);
-void protocore_canopen_sdo_reasm_feed(uint8_t *work);
+void protocore_canopen_build_nmt(const uint8_t *work);
+void protocore_canopen_build_sync(const uint8_t *work);
+void protocore_canopen_build_time(const uint8_t *work);
+void protocore_canopen_build_heartbeat(const uint8_t *work);
+void protocore_canopen_build_emcy(const uint8_t *work);
+void protocore_canopen_build_tpdo(const uint8_t *work);
+void protocore_canopen_build_rpdo(const uint8_t *work);
+void protocore_canopen_build_sdo_read(const uint8_t *work);
+void protocore_canopen_build_sdo_write(const uint8_t *work);
+void protocore_canopen_build_sdo_abort(const uint8_t *work);
+void protocore_canopen_parse(const uint8_t *work);
+void protocore_canopen_parse_emcy(const uint8_t *work);
+void protocore_canopen_parse_heartbeat(const uint8_t *work);
+void protocore_canopen_parse_time(const uint8_t *work);
+void protocore_canopen_parse_sdo_response(const uint8_t *work);
+void protocore_canopen_build_sdo_download_init(const uint8_t *work);
+void protocore_canopen_build_sdo_download_segment(const uint8_t *work);
+void protocore_canopen_build_sdo_upload_segment_req(const uint8_t *work);
+void protocore_canopen_parse_sdo_segment(const uint8_t *work);
+void protocore_canopen_sdo_reasm_init(const uint8_t *work);
+void protocore_canopen_sdo_reasm_feed(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

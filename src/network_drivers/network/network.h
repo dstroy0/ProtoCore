@@ -45,7 +45,7 @@ EMBED_BEGIN_DECLS
  * @var NetworkNs::init      bring the layer up. It runs no work: the platform stack holds the route
  *                           table and selects the path (RFC 791 sec 1.4 "Operation")
  *
- * Each carried module is named by pointer; one behind a feature flag is declared under that flag,
+ * Each carried module is named by pointer. One behind a feature flag is declared under that flag,
  * so the layer names only what the image already contains.
  *
  * No argument members: init reads nothing. No result members: init reports nothing.
@@ -68,12 +68,12 @@ extern networkVars networkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *work);
+    void (*const init)(const uint8_t *work);
 } NetworkNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in networkV or a region of the borrow at a fixed offset.
-void protocore_network_init(uint8_t *work);
+void protocore_network_init(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

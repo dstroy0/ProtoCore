@@ -157,20 +157,20 @@ extern Ldc1614Vars Ldc1614V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const data)(uint8_t *work);
-    void (*const error)(uint8_t *work);
-    void (*const sensor_freq_hz)(uint8_t *work);
-    void (*const build_config)(uint8_t *work);
+    void (*const data)(const uint8_t *work);
+    void (*const error)(const uint8_t *work);
+    void (*const sensor_freq_hz)(const uint8_t *work);
+    void (*const build_config)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read_ch0)(uint8_t *work);
 } Ldc1614Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Ldc1614V or a region of the borrow at a fixed offset.
-void protocore_ldc1614_data(uint8_t *work);
-void protocore_ldc1614_error(uint8_t *work);
-void protocore_ldc1614_sensor_freq_hz(uint8_t *work);
-void protocore_ldc1614_build_config(uint8_t *work);
+void protocore_ldc1614_data(const uint8_t *work);
+void protocore_ldc1614_error(const uint8_t *work);
+void protocore_ldc1614_sensor_freq_hz(const uint8_t *work);
+void protocore_ldc1614_build_config(const uint8_t *work);
 void protocore_ldc1614_begin(uint8_t *work);
 void protocore_ldc1614_read_ch0(uint8_t *work);
 

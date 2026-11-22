@@ -12,7 +12,7 @@
  * ready + value count), splits the data values, and does the SDI-12 CRC (the `aMC!` / `aCC!`
  * CRC-protected variants).
  *
- * The wire is a single 1200-baud 7E1 line with a 5 V break / marking convention; on an ESP32
+ * The wire is a single 1200-baud 7E1 line with a 5 V break / marking convention. On an ESP32
  * it needs a small level / direction circuit, and the UART transport is the application's.
  * Pure codec, host-tested. Bridge a sensor string onto Wi-Fi by polling `aM!` / `aD0!` and
  * publishing the values.
@@ -292,7 +292,7 @@ extern Sdi12Vars Sdi12V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build)(uint8_t *work);
+    void (*const build)(const uint8_t *work);
     void (*const build_ack)(uint8_t *work);
     void (*const build_identify)(uint8_t *work);
     void (*const build_measure)(uint8_t *work);
@@ -304,17 +304,17 @@ typedef struct
     void (*const build_data)(uint8_t *work);
     void (*const build_change_address)(uint8_t *work);
     void (*const build_query_address)(uint8_t *work);
-    void (*const parse_measure)(uint8_t *work);
-    void (*const parse_values)(uint8_t *work);
-    void (*const parse_identify)(uint8_t *work);
+    void (*const parse_measure)(const uint8_t *work);
+    void (*const parse_values)(const uint8_t *work);
+    void (*const parse_identify)(const uint8_t *work);
     void (*const crc16)(uint8_t *work);
-    void (*const crc_encode)(uint8_t *work);
+    void (*const crc_encode)(const uint8_t *work);
     void (*const check_crc)(uint8_t *work);
 } Sdi12Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Sdi12V or a region of the borrow at a fixed offset.
-void protocore_sdi12_build(uint8_t *work);
+void protocore_sdi12_build(const uint8_t *work);
 void protocore_sdi12_build_ack(uint8_t *work);
 void protocore_sdi12_build_identify(uint8_t *work);
 void protocore_sdi12_build_measure(uint8_t *work);
@@ -326,11 +326,11 @@ void protocore_sdi12_build_verify(uint8_t *work);
 void protocore_sdi12_build_data(uint8_t *work);
 void protocore_sdi12_build_change_address(uint8_t *work);
 void protocore_sdi12_build_query_address(uint8_t *work);
-void protocore_sdi12_parse_measure(uint8_t *work);
-void protocore_sdi12_parse_values(uint8_t *work);
-void protocore_sdi12_parse_identify(uint8_t *work);
+void protocore_sdi12_parse_measure(const uint8_t *work);
+void protocore_sdi12_parse_values(const uint8_t *work);
+void protocore_sdi12_parse_identify(const uint8_t *work);
 void protocore_sdi12_crc16(uint8_t *work);
-void protocore_sdi12_crc_encode(uint8_t *work);
+void protocore_sdi12_crc_encode(const uint8_t *work);
 void protocore_sdi12_check_crc(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

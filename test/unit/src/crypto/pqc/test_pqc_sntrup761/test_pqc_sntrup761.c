@@ -46,7 +46,7 @@ static void sn_dec(uint8_t *w, const uint8_t *sk, const uint8_t *ct, uint8_t *ss
 static uint32_t s_rng = 0xA5A5F00Du;
 
 // KeyGen's g retry hook. While positive, a draw hands back bytes that drive Small_random's ternary
-// map to coefficient 0 and counts down one per call; 0 everywhere else, so it is inert for the other
+// map to coefficient 0 and counts down one per call; 0 everywhere else. So it is inert for the other
 // cases.
 static int s_force_zero_calls = 0;
 
@@ -136,7 +136,7 @@ void test_round_trip_agrees_over_many_keypairs(void)
     }
 }
 
-// Two Encaps against the same public key draw different r, so they must not produce the same
+// Two Encaps against the same public key draw different r. So they must not produce the same
 // ciphertext or the same secret - a KEM whose randomness did not reach the ciphertext would.
 void test_encaps_is_randomized(void)
 {

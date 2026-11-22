@@ -62,7 +62,10 @@ static_assert(STATSD_OFF_CTX + sizeof(struct StatsdStorage) <= PROTOCORE_STATSD_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define STATSD_CTX(w) ((struct StatsdStorage *)(void *)((w) + STATSD_OFF_CTX))
+#define STATSD_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct StatsdStorage *)(const void *)((w) + STATSD_OFF_CTX),                           \
+        default: (struct StatsdStorage *)(void *)((w) + STATSD_OFF_CTX))
 
 // Unsigned to decimal, most significant digit first, no terminator. Returns the digit count.
 static size_t u64_str(char *b, uint64_t v)
@@ -199,7 +202,7 @@ void protocore_statsd_init(uint8_t *work)
 }
 
 // Build one metric line into ns->line, and report its length in ns->n.
-void protocore_statsd_format(uint8_t *work)
+void protocore_statsd_format(const uint8_t *work)
 {
     (void)work;
     char *out = StatsdV.line.out;

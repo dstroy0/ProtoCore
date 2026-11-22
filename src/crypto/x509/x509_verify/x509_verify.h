@@ -115,8 +115,8 @@ extern X509VerifyVars X509VerifyV;
 typedef struct
 {
     void (*const signature)(uint8_t *work);
-    void (*const validity)(uint8_t *work);
-    void (*const may_sign)(uint8_t *work);
+    void (*const validity)(const uint8_t *work);
+    void (*const may_sign)(const uint8_t *work);
     void (*const link)(uint8_t *work);
     void (*const message)(uint8_t *work);
 } X509VerifyNs;
@@ -124,8 +124,8 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in X509VerifyV or a region of the borrow at a fixed offset.
 void protocore_x509_verify_signature(uint8_t *work);
-void protocore_x509_verify_validity(uint8_t *work);
-void protocore_x509_verify_may_sign(uint8_t *work);
+void protocore_x509_verify_validity(const uint8_t *work);
+void protocore_x509_verify_may_sign(const uint8_t *work);
 void protocore_x509_verify_link(uint8_t *work);
 void protocore_x509_verify_message(uint8_t *work);
 

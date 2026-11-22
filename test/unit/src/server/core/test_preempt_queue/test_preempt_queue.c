@@ -11,7 +11,7 @@
 // where the ISR would.
 //
 // test_a_dma_completion_is_processed_off_the_interrupt is the load-bearing case: the whole reason
-// this pipe exists is that a DMA-complete callback runs in interrupt context, so it must do nothing
+// this pipe exists is that a DMA-complete callback runs in interrupt context. So it must do nothing
 // but hand the bytes over, and the work must happen in the lane's task. If the handler ran inside
 // the callback the module would be an interrupt-context work queue, which is the failure it exists
 // to prevent.
@@ -23,7 +23,7 @@
 #include "server/core/preempt_queue/preempt_queue.h"
 // The host DMA driver defines the mmgr_praet_hw_* hooks with external linkage, so it belongs to
 // exactly one translation unit. Unity's runner generator copies every line matching "#include" at
-// the start of a line into the runner; the space after the '#' keeps this one out of that copy and
+// the start of a line into the runner. The space after the '#' keeps this one out of that copy and
 // out of a duplicate-definition link error.
 #include "protocore_dma_host.h"
 #include <string.h>
@@ -346,7 +346,7 @@ void test_internal_lanes_outrank_the_user_lane(void)
     TEST_ASSERT_GREATER_THAN_UINT8(lane_rank(PROTOCORE_PQ_LANE_USER), lane_rank(PROTOCORE_PQ_LANE_DEVICE));
 }
 
-// A lane with no handler has nothing to do with an item, so it does not start; and starting one
+// A lane with no handler has nothing to do with an item, so it does not start. And starting one
 // that is already up changes nothing.
 void test_start_requires_a_handler_and_is_idempotent(void)
 {
@@ -420,7 +420,7 @@ void test_a_lane_out_of_range_and_a_null_item_fail_closed(void)
     TEST_ASSERT_FALSE(protocore_pq_post_from_isr(NULL));
 }
 
-// The completion callback runs where the interrupt would, and it only hands the bytes over: the
+// The completion callback runs where the interrupt would. It only hands the bytes over: the
 // handler runs later, in the lane's task, with the payload it was given.
 void test_a_dma_completion_is_processed_off_the_interrupt(void)
 {

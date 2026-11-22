@@ -171,7 +171,7 @@ void test_rfc8448_client_hello_parse(void)
 }
 
 // RFC 8446 sec 4.1.2: "legacy_compression_methods: ... this vector MUST contain exactly one byte,
-// set to zero"; sec 4.1.3 fixes legacy_session_id at 0..32 octets; and a truncated or mistyped
+// set to zero"; sec 4.1.3 fixes legacy_session_id at 0..32 octets. And a truncated or mistyped
 // message is not a ClientHello at all.
 void test_malformed_client_hello_is_refused(void)
 {
@@ -687,7 +687,7 @@ void test_server_hello_parse_refuses_truncation(void)
     }
 }
 
-// A HelloRetryRequest is a ServerHello carrying the fixed Random, so it comes back through the same
+// A HelloRetryRequest is a ServerHello carrying the fixed Random. So it comes back through the same
 // parser with is_hrr set, the selected_group in place of a share, and the cookie to echo.
 void test_hello_retry_request_parses_as_a_server_hello(void)
 {

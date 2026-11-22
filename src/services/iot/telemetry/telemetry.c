@@ -31,7 +31,7 @@ static double window_variance_of(const TelemetryWindow *w)
 }
 
 // Bind the caller's sample array to the window and empty it.
-void protocore_telemetry_window_init(uint8_t *work)
+void protocore_telemetry_window_init(const uint8_t *work)
 {
     (void)work;
     TelemetryWindow *w = TelemetryV.window.w;
@@ -51,7 +51,7 @@ void protocore_telemetry_window_init(uint8_t *work)
 
 // Store the sample at head and move the sums by it, dropping the sample it overwrites once the
 // window is full.
-void protocore_telemetry_window_push(uint8_t *work)
+void protocore_telemetry_window_push(const uint8_t *work)
 {
     (void)work;
     TelemetryWindow *w = TelemetryV.window.w;
@@ -84,7 +84,7 @@ void protocore_telemetry_window_push(uint8_t *work)
 }
 
 // The samples the window holds.
-void protocore_telemetry_window_count(uint8_t *work)
+void protocore_telemetry_window_count(const uint8_t *work)
 {
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
@@ -99,7 +99,7 @@ void protocore_telemetry_window_count(uint8_t *work)
 }
 
 // The sum over the count.
-void protocore_telemetry_window_mean(uint8_t *work)
+void protocore_telemetry_window_mean(const uint8_t *work)
 {
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
@@ -114,7 +114,7 @@ void protocore_telemetry_window_mean(uint8_t *work)
 }
 
 // The mean of the squares less the square of the mean.
-void protocore_telemetry_window_variance(uint8_t *work)
+void protocore_telemetry_window_variance(const uint8_t *work)
 {
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
@@ -129,7 +129,7 @@ void protocore_telemetry_window_variance(uint8_t *work)
 }
 
 // The square root of the variance.
-void protocore_telemetry_window_stddev(uint8_t *work)
+void protocore_telemetry_window_stddev(const uint8_t *work)
 {
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
@@ -144,7 +144,7 @@ void protocore_telemetry_window_stddev(uint8_t *work)
 }
 
 // The smallest of the samples held.
-void protocore_telemetry_window_min(uint8_t *work)
+void protocore_telemetry_window_min(const uint8_t *work)
 {
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
@@ -167,7 +167,7 @@ void protocore_telemetry_window_min(uint8_t *work)
 }
 
 // The largest of the samples held.
-void protocore_telemetry_window_max(uint8_t *work)
+void protocore_telemetry_window_max(const uint8_t *work)
 {
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
@@ -190,7 +190,7 @@ void protocore_telemetry_window_max(uint8_t *work)
 }
 
 // Drop the prior sample, so the next update primes the tracker.
-void protocore_telemetry_rate_init(uint8_t *work)
+void protocore_telemetry_rate_init(const uint8_t *work)
 {
     (void)work;
     TelemetryRate *r = TelemetryV.rate.r;
@@ -207,7 +207,7 @@ void protocore_telemetry_rate_init(uint8_t *work)
 
 // The change in value over the elapsed seconds since the previous sample. The first sample and a
 // zero elapsed time both report 0.
-void protocore_telemetry_rate_update(uint8_t *work)
+void protocore_telemetry_rate_update(const uint8_t *work)
 {
     (void)work;
     TelemetryRate *r = TelemetryV.rate.r;
@@ -227,7 +227,7 @@ void protocore_telemetry_rate_update(uint8_t *work)
         r->primed = EMBED_TRUE;
         return;
     }
-    uint32_t dt_ms = (uint32_t)(now_ms - r->last_ms); // wraps correctly
+    uint32_t dt_ms = (now_ms - r->last_ms); // wraps correctly
     if (dt_ms != 0)
     {
         TelemetryV.f32 = (value - r->last_value) * 1000.0f / (float)dt_ms;
@@ -237,7 +237,7 @@ void protocore_telemetry_rate_update(uint8_t *work)
 }
 
 // Zero the total and drop the prior rate sample.
-void protocore_telemetry_totalizer_init(uint8_t *work)
+void protocore_telemetry_totalizer_init(const uint8_t *work)
 {
     (void)work;
     TelemetryTotalizer *t = TelemetryV.totalizer.t;
@@ -255,7 +255,7 @@ void protocore_telemetry_totalizer_init(uint8_t *work)
 
 // Add the mean of the two rate endpoints multiplied by the elapsed seconds. The first sample only
 // seeds the endpoint.
-void protocore_telemetry_totalizer_add(uint8_t *work)
+void protocore_telemetry_totalizer_add(const uint8_t *work)
 {
     (void)work;
     TelemetryTotalizer *t = TelemetryV.totalizer.t;
@@ -276,7 +276,7 @@ void protocore_telemetry_totalizer_add(uint8_t *work)
         TelemetryV.f64 = t->total;
         return;
     }
-    uint32_t dt_ms = (uint32_t)(now_ms - t->last_ms); // wraps correctly
+    uint32_t dt_ms = (now_ms - t->last_ms); // wraps correctly
     double dt_s = (double)dt_ms / 1000.0;
     t->total += ((double)t->last_rate + (double)rate) * 0.5 * dt_s;
     t->last_rate = rate;
@@ -285,7 +285,7 @@ void protocore_telemetry_totalizer_add(uint8_t *work)
 }
 
 // The running total, in rate units multiplied by seconds.
-void protocore_telemetry_totalizer_total(uint8_t *work)
+void protocore_telemetry_totalizer_total(const uint8_t *work)
 {
     (void)work;
     const TelemetryTotalizer *t = TelemetryV.totalizer.t;

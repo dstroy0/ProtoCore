@@ -180,7 +180,7 @@ void test_rfc8448_records_open_again(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(ALERT_PAYLOAD, pt, sizeof(ALERT_PAYLOAD));
     TEST_ASSERT_EQUAL_UINT64(2u, g_keys.seq);
 
-    // Opening the same record again is a different sequence number, so it no longer verifies: this
+    // Opening the same record again is a different sequence number. So it no longer verifies: this
     // is what makes the counter part of the authentication rather than bookkeeping.
     TEST_ASSERT_FALSE(unprotect(ALERT_RECORD, sizeof(ALERT_RECORD), pt, sizeof(pt), &info));
     TEST_ASSERT_EQUAL_UINT64(2u, g_keys.seq); // a failed open does not advance the count
@@ -457,7 +457,7 @@ void test_rederiving_restarts_the_sequence(void)
 // ---- TLS_AES_256_GCM_SHA384 (0x1302) --------------------------------------
 //
 // RFC 8448's trace is 0x1301 throughout, so the cases above pin that suite and these pin the other.
-// The AEAD itself is AES-256-GCM, already vector-tested against NIST/McGrew in its own suite; what is
+// The AEAD itself is AES-256-GCM, already vector-tested against NIST/McGrew in its own suite. What is
 // new here is the record layer picking it and expanding sec 7.3's key and iv at SHA-384.
 
 // A 48-octet traffic secret, and the "key" and "iv" HKDF-Expand-Label produces from it at SHA-384.

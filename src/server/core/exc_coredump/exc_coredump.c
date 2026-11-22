@@ -23,7 +23,7 @@
 
 EMBED_BEGIN_DECLS
 
-void protocore_exc_present(uint8_t *work)
+void protocore_exc_present(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -45,7 +45,7 @@ void protocore_exc_present(uint8_t *work)
     ExcV.ok = EMBED_TRUE;
 }
 
-void protocore_exc_summary(uint8_t *work)
+void protocore_exc_summary(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -89,7 +89,7 @@ void protocore_exc_summary(uint8_t *work)
     ExcV.ok = EMBED_TRUE;
 }
 
-void protocore_exc_read(uint8_t *work)
+void protocore_exc_read(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -112,7 +112,7 @@ void protocore_exc_read(uint8_t *work)
                   : EMBED_FALSE;
 }
 
-void protocore_exc_save(uint8_t *work)
+void protocore_exc_save(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
@@ -159,7 +159,7 @@ void protocore_exc_save(uint8_t *work)
     ExcV.ok = ok;
 }
 
-void protocore_exc_erase(uint8_t *work)
+void protocore_exc_erase(const uint8_t *work)
 {
     (void)work;
     (void)work; // the namespace below IS the module's one symbol; the handle names nothing else

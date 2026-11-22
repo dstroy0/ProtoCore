@@ -9,7 +9,7 @@
 // RFC 8032 sec 7.1 TEST 1. So the server's key_share and the secret the test client recovers are
 // compared with numbers the documents publish, not with a second run of the same code. The message
 // field offsets come from RFC 8446 sec 4.1.3 / 4.2.8 / 4.4.2 / 4.4.3 / 4.4.4 and are cross-checked
-// against the 90-octet ServerHello dump in RFC 8448 sec 3; the 44-octet RawPublicKey credential is
+// against the 90-octet ServerHello dump in RFC 8448 sec 3. The 44-octet RawPublicKey credential is
 // DER derived from RFC 8410 sec 3 and sec 4 in the comment that carries it.
 //
 // The alert cases are anchored on RFC 8446 sec 6 and sec 6.2, which name the alert for each fault

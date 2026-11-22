@@ -26,7 +26,7 @@ On the collector, prepend one `protocore_pcap_global_header(..., PROTOCORE_DLT_C
 decodes the stream as CAN.
 
 The framing (`can_to_socketcan`, the PCAP link type) is pure and host-tested
-(`pio test -e native_bus_capture`); the TWAI bring-up is ESP32-only and needs a CAN transceiver
+(`pio test -e native_bus_capture`). The TWAI bring-up is ESP32-only and needs a CAN transceiver
 (e.g. SN65HVD230) on the `CAN_TX_PIN` / `CAN_RX_PIN` GPIOs.
 
 ## Build-flag note

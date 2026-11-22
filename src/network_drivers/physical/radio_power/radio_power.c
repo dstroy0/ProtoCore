@@ -41,7 +41,10 @@ static_assert(RADIO_POWER_OFF_CTX + sizeof(struct RadioStorage) <= PROTOCORE_RAD
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define RADIO_POWER_CTX(w) ((struct RadioStorage *)(void *)((w) + RADIO_POWER_OFF_CTX))
+#define RADIO_POWER_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct RadioStorage *)(const void *)((w) + RADIO_POWER_OFF_CTX),                       \
+        default: (struct RadioStorage *)(void *)((w) + RADIO_POWER_OFF_CTX))
 
 // Renders an 802.11-2020 11.2.3.2 power management mode as text.
 

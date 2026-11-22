@@ -32,9 +32,9 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_partition_monitor_kind(uint8_t *work);
+void protocore_partition_monitor_kind(const uint8_t *work);
 
-void protocore_partition_monitor_kind(uint8_t *work)
+void protocore_partition_monitor_kind(const uint8_t *work)
 {
     (void)work;
     uint8_t type = PartitionMonitorV.kind_args.type;
@@ -172,13 +172,13 @@ void protocore_partition_monitor_json(uint8_t *work)
     PartitionMonitorV.n = (int32_t)n;
 }
 
-// The table walk is the vendor's, so it is reached through the platform seam rather than through a
+// The table walk is the vendor's. So it is reached through the platform seam rather than through a
 // vendor header: the vendor's headers live beside its implementation in test/core_setup/hal/.
 
 #if PROTOCORE_HAS_VENDOR_OTA
 // A part whose SDK owns a partition table: walk it through the seam and translate each entry into
 // the shape this module publishes.
-void protocore_partition_monitor_collect(uint8_t *work)
+void protocore_partition_monitor_collect(const uint8_t *work)
 {
     (void)work;
     protocore_partition_info *out = PartitionMonitorV.collect_args.out;
@@ -210,7 +210,7 @@ void protocore_partition_monitor_collect(uint8_t *work)
 #if !PROTOCORE_HAS_VENDOR_OTA
 // A part with no partition table reports none, rather than inventing entries a caller would then
 // serve as though they described real storage.
-void protocore_partition_monitor_collect(uint8_t *work)
+void protocore_partition_monitor_collect(const uint8_t *work)
 {
     (void)work;
     PartitionMonitorV.u8 = 0;
@@ -223,7 +223,7 @@ void partition_route_handler(uint8_t slot_id, HttpReq *req);
 
 // Install the route the handler answers on. Under the module's own gate: a build without the
 // monitor has neither this entry nor the handler.
-void protocore_partition_monitor_begin(uint8_t *work)
+void protocore_partition_monitor_begin(const uint8_t *work)
 {
     (void)work;
     const char *path = PartitionMonitorV.begin_args.path;

@@ -315,7 +315,7 @@ void test_stepped_nonce_changes_the_record(void)
 
 // NIST SP 800-38D sec 6.5: GCTR steps the low 32 bits of the counter block once per 16-octet block,
 // starting at inc32(J0) = ..00 00 00 02. Byte 15 rolls 0xff -> 0x00 into byte 14 after 254 blocks,
-// so a record of 255 blocks crosses that carry inside one seal; the round trip proves the wrapped
+// so a record of 255 blocks crosses that carry inside one seal. The round trip proves the wrapped
 // keystream is the same one the open side reproduces.
 void test_gctr_counter_byte_carry(void)
 {

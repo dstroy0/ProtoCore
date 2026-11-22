@@ -30,7 +30,7 @@ void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap)
     }
 }
 
-size_t protocore_uper_writer_finish(UperWriter *w)
+size_t protocore_uper_writer_finish(const UperWriter *w)
 {
     if (!w->ok)
     {

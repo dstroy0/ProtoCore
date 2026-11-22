@@ -53,7 +53,10 @@ static_assert(LOCKOUT_OFF_CTX % _Alignof(LockoutCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define LOCKOUT_CTX(w) ((LockoutCtx *)(void *)((w) + LOCKOUT_OFF_CTX))
+#define LOCKOUT_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const LockoutCtx *)(const void *)((w) + LOCKOUT_OFF_CTX),                                    \
+        default: (LockoutCtx *)(void *)((w) + LOCKOUT_OFF_CTX))
 
 // Whether @p a and @p b are the same family and address.
 static embed_bool ip_same(const protocore_ip *a, const protocore_ip *b)
@@ -88,7 +91,7 @@ LockoutBucket *find_bucket(LockoutCtx *c, const protocore_ip *ip)
 embed_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
 {
     // Unsigned subtraction wraps correctly across the millis() rollover.
-    return b->lock_ms != 0 && (uint32_t)(now_ms - b->lock_start_ms) < b->lock_ms;
+    return b->lock_ms != 0 && (now_ms - b->lock_start_ms) < b->lock_ms;
 }
 
 // --- the program's shared table, beside the namespace not on it -------------
@@ -130,7 +133,7 @@ void protocore_auth_lockout_remaining(uint8_t *work)
     uint32_t elapsed = AuthLockoutV.args.now_ms - b->lock_start_ms; // wraps correctly across rollover
     if (elapsed >= b->lock_ms)
     {
-        return; // the lockout window has passed
+        return; // the lockout window passed
     }
     AuthLockoutV.ms = b->lock_ms - elapsed;
 }
@@ -163,13 +166,13 @@ void protocore_auth_lockout_fail(uint8_t *work)
                 slot = i;
                 break;
             }
-            if ((uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (uint32_t)(now_ms - s_lock->buckets[lru].last_ms))
+            if ((uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[lru].last_ms))
             {
                 lru = i;
             }
             if (!bucket_locked(&s_lock->buckets[i], now_ms) &&
                 (slot < 0 ||
-                 (uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (uint32_t)(now_ms - s_lock->buckets[slot].last_ms)))
+                 (uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[slot].last_ms)))
             {
                 slot = i;
             }

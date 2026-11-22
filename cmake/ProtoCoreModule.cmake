@@ -16,7 +16,7 @@
 # WHY THE GATE IS DECLARED AND NOT INFERRED. It used to be read out of the .c by a generator whose
 # pattern was `^#if PROTOCORE_ENABLE_\w+$` - one macro, nothing else on the line. A module wrapped in
 # `#if PROTOCORE_TLS_SOFTWARE` or `#if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA` therefore
-# had NO gate as far as the build was concerned, so it was compiled into every target and the
+# had NO gate as far as the build was concerned. So it was compiled into every target and the
 # preprocessor threw the body away afterwards. Nothing reported it: the build was green, the binary
 # was correct, and the module was in it. Saying the gate here cannot go quietly wrong that way - a
 # module either names one or is substrate, and both are visible in its own directory.

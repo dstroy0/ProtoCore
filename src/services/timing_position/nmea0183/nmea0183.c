@@ -249,7 +249,8 @@ embed_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *o
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
-    float lat = 0.0f, lon = 0.0f;
+    float lat = 0.0f;
+    float lon = 0.0f;
     if (protocore_nmea0183_field_float(m, 2, &lat) && m->field_len[3] >= 1)
     {
         out->lat_deg = nmea_coord(lat, m->fields[3][0]);
@@ -285,7 +286,8 @@ embed_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *o
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
     out->valid = (m->field_len[2] >= 1 && (m->fields[2][0] == 'A' || m->fields[2][0] == 'a'));
-    float lat = 0.0f, lon = 0.0f;
+    float lat = 0.0f;
+    float lon = 0.0f;
     if (protocore_nmea0183_field_float(m, 3, &lat) && m->field_len[4] >= 1)
     {
         out->lat_deg = nmea_coord(lat, m->fields[4][0]);
@@ -524,7 +526,8 @@ embed_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *o
         return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
-    float lat = 0.0f, lon = 0.0f;
+    float lat = 0.0f;
+    float lon = 0.0f;
     if (protocore_nmea0183_field_float(m, 1, &lat) && m->field_len[2] >= 1)
     {
         out->lat_deg = nmea_coord(lat, m->fields[2][0]);

@@ -157,7 +157,7 @@ void test_the_three_value_fields(void)
 // RFC 8428 sec 6: the CBOR representation "uses integers for the labels, as defined in Table 4",
 // which gives Base Name -2, Base Time -3, Name 0, Unit 1, Value 2, String Value 3, Boolean Value 4
 // and Time 6. RFC 8949 encodes -2 as 0x21 and -3 as 0x22 (major type 1 carrying -1-n) and the
-// non-negative labels as themselves; the RFC 8428 sec 6 hex dump shows exactly those octets.
+// non-negative labels as themselves. The RFC 8428 sec 6 hex dump shows exactly those octets.
 void test_cbor_table_4_integer_map_keys(void)
 {
     static const SenmlRecord PACK[1] = {{

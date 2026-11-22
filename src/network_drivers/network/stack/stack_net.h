@@ -116,7 +116,7 @@ typedef struct protocore_pbuf
 /** @brief A packet buffer of @p len octets from the pool, or NULL when the pool is spent. */
 protocore_pbuf *protocore_net_pbuf_alloc(int layer, uint16_t len, int type);
 /** @brief Give a packet buffer back to the pool. */
-uint8_t protocore_net_pbuf_free(protocore_pbuf *p);
+uint8_t protocore_net_pbuf_free(const protocore_pbuf *p);
 /** @brief Copy at most @p len octets of @p p, from @p off, to @p dst. The octets copied. */
 uint16_t protocore_net_pbuf_copy(const protocore_pbuf *p, void *dst, uint16_t len, uint16_t off);
 
@@ -134,6 +134,20 @@ typedef protocore_net_err (*protocore_net_connect_fn)(void *, protocore_pcb *, p
 typedef void (*protocore_net_err_fn)(void *, protocore_net_err);
 typedef void (*protocore_net_udp_recv_fn)(void *, protocore_udp_pcb *, protocore_pbuf *, const protocore_net_ip *,
                                           uint16_t);
+
+/**
+ * @brief An active open that waits for the ARP row of its next hop.
+ *
+ * @var StackNetConnectWait::deadline_ms the millisecond that the wait ends at
+ * @var StackNetConnectWait::arp_sent_ms the millisecond that the last ARP request went out
+ * @var StackNetConnectWait::pending     the wait runs
+ */
+typedef struct
+{
+    uint32_t deadline_ms;
+    uint32_t arp_sent_ms;
+    embed_bool pending;
+} StackNetConnectWait;
 
 /**
  * @brief One TCP control block of the stack.
@@ -154,11 +168,9 @@ typedef void (*protocore_net_udp_recv_fn)(void *, protocore_udp_pcb *, protocore
  * @var protocore_pcb::on_accept    the callback of a connection that a listener took
  * @var protocore_pcb::on_connect   the callback of an active open that completed
  * @var protocore_pcb::on_err       the callback of a connection that a reset or a timeout ended
- * @var protocore_pcb::connect_deadline the millisecond that an active open with no ARP row ends at
- * @var protocore_pcb::arp_sent_ms  the millisecond that the last ARP request of an active open went out
+ * @var protocore_pcb::connect_wait the active open that waits for the ARP row of its next hop
  * @var protocore_pcb::entry        the entry of the TCP of the stack, PROTOCORE_STACK_NET_NONE for none
  * @var protocore_pcb::listen       the control block listens
- * @var protocore_pcb::connecting   an active open waits for the ARP row of its next hop
  * @var protocore_pcb::in_use       the control block is taken
  */
 struct protocore_pcb
@@ -179,11 +191,9 @@ struct protocore_pcb
     protocore_net_accept_fn on_accept;
     protocore_net_connect_fn on_connect;
     protocore_net_err_fn on_err;
-    uint32_t connect_deadline;
-    uint32_t arp_sent_ms;
+    StackNetConnectWait connect_wait;
     uint8_t entry;
     embed_bool listen;
-    embed_bool connecting;
     embed_bool in_use;
 };
 
@@ -203,11 +213,11 @@ void protocore_net_on_sent(protocore_pcb *p, protocore_net_sent_fn fn);
 void protocore_net_on_accept(protocore_pcb *p, protocore_net_accept_fn fn);
 void protocore_net_on_err(protocore_pcb *p, protocore_net_err_fn fn);
 protocore_net_err protocore_net_write(protocore_pcb *p, const void *data, uint16_t len, uint8_t flags);
-protocore_net_err protocore_net_output(protocore_pcb *p);
-void protocore_net_recved(protocore_pcb *p, uint16_t len);
-uint16_t protocore_net_sndbuf(protocore_pcb *p);
-void protocore_net_nagle_disable(protocore_pcb *p);
-void protocore_net_rcv_wnd_update(protocore_pcb *p, uint16_t len);
+protocore_net_err protocore_net_output(const protocore_pcb *p);
+void protocore_net_recved(const protocore_pcb *p, uint16_t len);
+uint16_t protocore_net_sndbuf(const protocore_pcb *p);
+void protocore_net_nagle_disable(const protocore_pcb *p);
+void protocore_net_rcv_wnd_update(const protocore_pcb *p, uint16_t len);
 void protocore_net_opt_set(void *p, uint32_t opt);
 
 // --- UDP and IGMP ----------------------------------------------------------------------
@@ -239,8 +249,8 @@ struct protocore_udp_pcb
 protocore_udp_pcb *protocore_net_udp_new(void);
 protocore_net_err protocore_net_udp_bind(protocore_udp_pcb *p, const protocore_net_ip *a, uint16_t port);
 void protocore_net_udp_recv(protocore_udp_pcb *p, protocore_net_udp_recv_fn fn, void *arg);
-protocore_net_err protocore_net_udp_sendto(protocore_udp_pcb *p, protocore_pbuf *b, const protocore_net_ip *a,
-                                           uint16_t port);
+protocore_net_err protocore_net_udp_sendto(const protocore_udp_pcb *p, const protocore_pbuf *b,
+                                           const protocore_net_ip *a, uint16_t port);
 void protocore_net_udp_remove(protocore_udp_pcb *p);
 protocore_net_err protocore_net_igmp_join(const protocore_net_ip *nif, const protocore_net_ip *grp);
 protocore_net_err protocore_net_igmp_leave(const protocore_net_ip *nif, const protocore_net_ip *grp);

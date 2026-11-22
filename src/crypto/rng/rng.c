@@ -36,7 +36,7 @@ EMBED_BEGIN_DECLS
 // never leaves this file and no consumer can name it.
 //
 // Only what is not derivable: the budget spent since the last platform draw, and whether that draw
-// has happened. The seed, its nonce and the ratchet copy live at fixed offsets in the borrow, so
+// happened. The seed, its nonce and the ratchet copy live at fixed offsets in the borrow, so
 // macros compute them from the pointer rather than the context holding them.
 typedef struct
 {
@@ -67,7 +67,10 @@ static_assert(RNG_OFF_CTX % _Alignof(RngCtx) == 0,
 
 // The regions, at their offsets in the caller's borrow. The key and the nonce are adjacent, so one
 // platform draw of RNG_SEEDED_LEN bytes at RNG_KEY fills both.
-#define RNG_CTX(w) ((RngCtx *)(void *)((w) + RNG_OFF_CTX))
+#define RNG_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RngCtx *)(const void *)((w) + RNG_OFF_CTX),                                            \
+        default: (RngCtx *)(void *)((w) + RNG_OFF_CTX))
 #define RNG_KEY(w) ((w) + RNG_OFF_KEY)
 #define RNG_IV(w) ((w) + RNG_OFF_IV)
 #define RNG_NEXT(w) ((w) + RNG_OFF_NEXT)

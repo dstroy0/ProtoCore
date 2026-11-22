@@ -8,7 +8,7 @@
  * This is **file-format access**, not the SQLite library: the documented database file structure
  * (https://www.sqlite.org/fileformat2.html) parsed by hand - the 100-byte database header, the b-tree
  * page header, the record varint, and record serial types. It is read-first (a bounded writer is a later
- * step), pure (no I/O; you hand it page bytes), and host-testable against real files produced by the
+ * step), pure (no I/O. You hand it page bytes), and host-testable against real files produced by the
  * sqlite3 CLI. It deliberately does not pull in the SQLite amalgamation, which needs a heap and stdio and
  * does not fit the no-stdlib zero-heap model.
  *
@@ -172,7 +172,7 @@ typedef embed_bool (*SqlitePageReader)(void *ctx, uint32_t pgno, uint8_t *page, 
  * @param out         destination for the full payload; must hold at least @c payload_len bytes.
  * @param out_cap     capacity of @p out - a payload larger than this fails closed (no overrun).
  * @param work_page   a @p page_size scratch buffer for reading overflow pages (must not alias @p leaf_page).
- * @return true when @c payload_len bytes were reassembled into @p out; false on a short buffer, a read error,
+ * @return true when @c payload_len bytes were reassembled into @p out. False on a short buffer, a read error,
  * or a broken / looping chain (the page count is bounded, so a corrupt pointer cannot spin forever).
  */
 embed_bool protocore_sqlite_read_payload(SqlitePageReader read, void *ctx, uint32_t page_size, uint8_t reserved,
@@ -186,7 +186,7 @@ embed_bool protocore_sqlite_read_payload(SqlitePageReader read, void *ctx, uint3
  * each leaf cell as a row. It keeps only a bounded descent stack of page numbers (re-reading an interior
  * page when it returns to it) plus two page buffers - the current leaf and a scratch - so memory is fixed
  * regardless of table size. A row that overflows onto overflow pages yields only its in-page prefix by
- * default (and @c has_overflow flags it); provide an overflow buffer with
+ * default (and @c has_overflow flags it). Provide an overflow buffer with
  * ::protocore_sqlite_table_cursor_set_overflow_buf and the cursor transparently reassembles the full record for each
  * overflowing row instead.
  */

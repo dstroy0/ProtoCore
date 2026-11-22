@@ -5,7 +5,7 @@
  * @file auth.h
  * @brief RFC 4252 user authentication.
  *
- * After NEWKEYS the client requests the "ssh-userauth" service; the server accepts it and then
+ * After NEWKEYS the client requests the "ssh-userauth" service. The server accepts it and then
  * drives SSH_MSG_USERAUTH_REQUEST exchanges until a method succeeds or the connection is dropped.
  * The "none" method is always answered with a failure that advertises what may continue
  * (RFC 4252 sec 5.2), which is how a client discovers the supported methods.
@@ -84,7 +84,7 @@ typedef enum
 /**
  * @brief Take slot @p i's finished change outcome, clearing it back to NONE.
  *
- * @return OK or FAIL once the application has reported, NONE while idle or still in flight.
+ * @return OK or FAIL once the application reported, NONE while idle or still in flight.
  */
 /**
  * @brief Write the "publickey" USERAUTH_REQUEST body that RFC 4252 sec 7 signs and sends.
@@ -275,18 +275,18 @@ extern SshAuthVars SshAuthV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const set_password_cb)(uint8_t *work);
-    void (*const set_password_change_cb)(uint8_t *work);
-    void (*const set_pubkey_cb)(uint8_t *work);
-    void (*const pw_change_report)(uint8_t *work);
-    void (*const pw_change_clear)(uint8_t *work);
+    void (*const set_password_cb)(const uint8_t *work);
+    void (*const set_password_change_cb)(const uint8_t *work);
+    void (*const set_pubkey_cb)(const uint8_t *work);
+    void (*const pw_change_report)(const uint8_t *work);
+    void (*const pw_change_clear)(const uint8_t *work);
     void (*const passwd_change_reply)(uint8_t *work);
-    void (*const write_publickey_request)(uint8_t *work);
+    void (*const write_publickey_request)(const uint8_t *work);
     void (*const timed_out)(uint8_t *work);
-    void (*const reset)(uint8_t *work);
-    void (*const parse_request)(uint8_t *work);
-    void (*const build_failure)(uint8_t *work);
-    void (*const build_success)(uint8_t *work);
+    void (*const reset)(const uint8_t *work);
+    void (*const parse_request)(const uint8_t *work);
+    void (*const build_failure)(const uint8_t *work);
+    void (*const build_success)(const uint8_t *work);
     void (*const handle_request)(uint8_t *work);
     void (*const handle_info_response)(uint8_t *work);
     void (*const dispatch)(uint8_t *work);
@@ -294,18 +294,18 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshAuthV or a region of the borrow at a fixed offset.
-void protocore_ssh_auth_set_password_cb(uint8_t *work);
-void protocore_ssh_auth_set_password_change_cb(uint8_t *work);
-void protocore_ssh_auth_set_pubkey_cb(uint8_t *work);
-void protocore_ssh_auth_pw_change_report(uint8_t *work);
-void protocore_ssh_auth_pw_change_clear(uint8_t *work);
+void protocore_ssh_auth_set_password_cb(const uint8_t *work);
+void protocore_ssh_auth_set_password_change_cb(const uint8_t *work);
+void protocore_ssh_auth_set_pubkey_cb(const uint8_t *work);
+void protocore_ssh_auth_pw_change_report(const uint8_t *work);
+void protocore_ssh_auth_pw_change_clear(const uint8_t *work);
 void protocore_ssh_auth_passwd_change_reply(uint8_t *work);
-void protocore_ssh_auth_write_publickey_request(uint8_t *work);
+void protocore_ssh_auth_write_publickey_request(const uint8_t *work);
 void protocore_ssh_auth_timed_out(uint8_t *work);
-void protocore_ssh_auth_reset(uint8_t *work);
-void protocore_ssh_auth_parse_request(uint8_t *work);
-void protocore_ssh_auth_build_failure(uint8_t *work);
-void protocore_ssh_auth_build_success(uint8_t *work);
+void protocore_ssh_auth_reset(const uint8_t *work);
+void protocore_ssh_auth_parse_request(const uint8_t *work);
+void protocore_ssh_auth_build_failure(const uint8_t *work);
+void protocore_ssh_auth_build_success(const uint8_t *work);
 void protocore_ssh_auth_handle_request(uint8_t *work);
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 void protocore_ssh_auth_handle_info_response(uint8_t *work);

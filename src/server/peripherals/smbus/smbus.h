@@ -42,12 +42,12 @@ EMBED_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint8_t (*addr_byte)(uint8_t *, uint8_t, uint8_t);
+    uint8_t (*addr_byte)(const uint8_t *, uint8_t, uint8_t);
     uint8_t (*pec_write)(uint8_t *, uint8_t, const uint8_t *, size_t);
     uint8_t (*pec_read)(uint8_t *, uint8_t, const uint8_t *, size_t, const uint8_t *, size_t);
     void (*set_pec)(uint8_t *, embed_bool);
     embed_bool (*pec_enabled)(uint8_t *);
-    embed_bool (*begin)(uint8_t *);
+    embed_bool (*begin)(const uint8_t *);
     embed_bool (*quick)(uint8_t *, uint8_t, uint8_t);
     embed_bool (*send_byte)(uint8_t *, uint8_t, uint8_t);
     embed_bool (*receive_byte)(uint8_t *, uint8_t, uint8_t *);
@@ -71,7 +71,7 @@ PROTOCORE_NS_LAYOUT(SmbusNs, addr_byte, pec_write, pec_read, set_pec, pec_enable
  * @param rw Rw
  * @return The uint8_t.
  */
-uint8_t protocore_smbus_addr_byte(uint8_t *work, uint8_t addr, uint8_t rw);
+uint8_t protocore_smbus_addr_byte(const uint8_t *work, uint8_t addr, uint8_t rw);
 /**
  * @brief PEC over a write transaction: the write address byte, then len .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
@@ -110,7 +110,7 @@ embed_bool protocore_smbus_pec_enabled(uint8_t *work);
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_smbus_begin(uint8_t *work);
+embed_bool protocore_smbus_begin(const uint8_t *work);
 /**
  * @brief Quick command: address the part with rw and stop. The direction bit .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.

@@ -43,7 +43,7 @@ def load(path):
 def save(path, keys):
     """Record the current violation set as the floor.
 
-    `keys` is materialized once: it is usually a generator, and consuming it a second
+    `keys` is materialized once. It is usually a generator, and consuming it a second
     time to count yields an empty set - which reported "recorded 0" while writing a
     full file. A count that disagrees with what was written is worse than no count.
     """
@@ -57,7 +57,7 @@ def save(path, keys):
 def filter_new(findings, key_of, path):
     """(new, known_remaining, fixed_since_baseline).
 
-    `fixed` is reported so a sweep can show progress and so a baseline that has drifted
+    `fixed` is reported so a sweep can show progress and so a baseline that drifted
     far below the tree is visible rather than quietly generous.
     """
     known = load(path)

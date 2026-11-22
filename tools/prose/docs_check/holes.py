@@ -18,14 +18,16 @@
 
 import re
 
+NO_NOUN = "article with no noun"
+
 # A pattern and the fault it suspects. Each one is a shape English does not make, which is what lets
 # a list this short are in for reading every edited line.
 HOLE = (
-    (re.compile(r"\bis the (to|that|which|whose|who)\b"), "article with no noun"),
-    (re.compile(r"\bthe (whose|which|that) \w+ing\b"), "article with no noun"),
-    (re.compile(r"\b(a|an|the) (is|are|was|were|and|or|but)\b"), "article with no noun"),
+    (re.compile(r"\bis the (to|that|which|whose|who)\b"), NO_NOUN),
+    (re.compile(r"\bthe (whose|which|that) \w+ing\b"), NO_NOUN),
+    (re.compile(r"\b(a|an|the) (is|are|was|were|and|or|but)\b"), NO_NOUN),
     (re.compile(r"\b(is|are|was|were) (is|are|was|were)\b"), "doubled verb"),
-    (re.compile(r"\b(the|a|an) (the|a|an)\b"), "doubled article"),
+    (re.compile(r"\b(the|an?) (the|an?)\b"), "doubled article"),
     (re.compile(r"\b(and|or|but) (and|or|but)\b"), "doubled conjunction"),
     (re.compile(r"^\s*([#*]|//|--)?\s*[,;:]\s"), "line opening on punctuation"),
     (re.compile(r"\b(instead|rather) (of|than) (of|than)\b"), "doubled hinge"),

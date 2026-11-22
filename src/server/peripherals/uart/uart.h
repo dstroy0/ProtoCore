@@ -7,7 +7,7 @@
  *
  * The third sibling of i2c.h and spi.h, for the parts that speak a serial stream rather than a
  * bus: the mmWave presence radars (LD2410, HMMD) and the interface bridge's UART targets. A unit
- * is a controller index, 0 upward; which pins it runs on is a board fact, so the caller names
+ * is a controller index, 0 upward. Which pins it runs on is a board fact, so the caller names
  * them and -1 leaves a pin at the unit's default.
  *
  * A driver reads what has arrived rather than blocking on a byte count: ::protocore_uart_available
@@ -31,7 +31,7 @@ EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
 
-/** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */
+/** @brief Read timeout in milliseconds, for a driver that takes whatever arrived. */
 #ifndef PROTOCORE_UART_TIMEOUT_MS
 #define PROTOCORE_UART_TIMEOUT_MS 20u
 #endif

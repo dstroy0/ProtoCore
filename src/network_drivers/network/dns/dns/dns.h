@@ -39,7 +39,7 @@ EMBED_BEGIN_DECLS
 /**
  * @brief Name resolution (RFC 1034 sec 2.4).
  *
- * The handle carries no arguments and no results: it takes no call of its own, and each component
+ * The handle carries no arguments and no results. It takes no call of its own, and each component
  * takes its own arguments off its own handle.
  *
  * No storage member: the RESOLVER's timer and in-flight query belong to dns_resolver.c and the NAME

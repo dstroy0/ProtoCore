@@ -70,7 +70,10 @@ static_assert(RELAY_LISTENER_OFF_CTX % _Alignof(RelayListenerCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define RELAY_LISTENER_CTX(w) ((RelayListenerCtx *)(void *)((w) + RELAY_LISTENER_OFF_CTX))
+#define RELAY_LISTENER_CTX(w)                                                                                          \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RelayListenerCtx *)(const void *)((w) + RELAY_LISTENER_OFF_CTX),                       \
+        default: (RelayListenerCtx *)(void *)((w) + RELAY_LISTENER_OFF_CTX))
 
 static RelayBind *bind_by_listener(uint8_t *work, uint8_t lid)
 {

@@ -140,7 +140,7 @@ def main():
     # The summary rate over the whole list. This is the number the ban list is worth as one figure.
     for label, retain in (("every pattern", rows),
                         ("only the ones no paper uses", absent)):
-        totals = {name: 0 for name in arms}
+        totals = dict.fromkeys(arms, 0)
         for pattern, counts, rates in retain:
             for name in arms:
                 totals[name] += counts[name]

@@ -3,7 +3,7 @@
 """SNMP interop: query the device agent with a real SNMP manager.
 
 Role: the *device is the agent*; this peer is the manager. Prefers the net-snmp
-command-line tools (the canonical reference manager); if they are not on PATH it
+command-line tools (the canonical reference manager). If they are not on PATH it
 falls back to the pysnmp library so the peer also works pip-only. Either way a
 pass proves the device's agent interops with an independent SNMP stack.
 """

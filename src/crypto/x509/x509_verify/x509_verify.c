@@ -53,7 +53,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define X509_VERIFY_CTX(w) ((X509VerifyCtx *)(void *)((w) + X509_VERIFY_OFF_CTX))
+#define X509_VERIFY_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const X509VerifyCtx *)(const void *)((w) + X509_VERIFY_OFF_CTX),                             \
+        default: (X509VerifyCtx *)(void *)((w) + X509_VERIFY_OFF_CTX))
 #define X509_VERIFY_ALG(w) ((w) + X509_VERIFY_OFF_ALG)
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -292,7 +295,7 @@ void protocore_x509_verify_message(uint8_t *work)
                  X509VerifyV.message_args.sig_len, work);
 }
 
-void protocore_x509_verify_validity(uint8_t *work)
+void protocore_x509_verify_validity(const uint8_t *work)
 {
     (void)work;
     const X509Cert *cert = X509VerifyV.time_args.cert;
@@ -317,7 +320,7 @@ void protocore_x509_verify_validity(uint8_t *work)
     verdict(PROTOCORE_X509_OK);
 }
 
-void protocore_x509_verify_may_sign(uint8_t *work)
+void protocore_x509_verify_may_sign(const uint8_t *work)
 {
     (void)work;
     const X509Cert *issuer = X509VerifyV.issuer_args.issuer;

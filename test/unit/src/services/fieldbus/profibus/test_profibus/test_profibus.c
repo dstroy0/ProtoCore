@@ -463,7 +463,7 @@ void test_parse_refuses_a_malformed_frame(void)
     TEST_ASSERT_FALSE(ProfibusV.ok);
 }
 
-// A telegram is only a telegram once its end delimiter has arrived, so every prefix is refused.
+// A telegram is only a telegram once its end delimiter arrived, so every prefix is refused.
 void test_parse_refuses_a_truncated_telegram(void)
 {
     PbTelegram t;

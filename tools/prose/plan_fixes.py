@@ -33,34 +33,24 @@ SHOW = os.path.join(os.path.dirname(os.path.abspath(__file__)), "show_findings.p
 # The comma-carrying form is tried first. Replacing a bare explainer with its comma-led form where the
 # source already ends the previous clause with a comma produces `, , the`. The comma the source
 # owns has to be inside the construction being swapped, never added by the replacement.
+ALONE = ", alone"
+RATHER_THAN = "rather than"
+
 WIDER = {
-    "rather": ["rather than"],
-    "so a": ["so a"],
-    "which is the": [", which is the whole of", ", which is the whole", ", which is the",
-                     "which is the whole of", "which is the whole", "which is the"],
-    "which is what": [", which is what makes", ", which is what",
-                      "which is what makes", "which is what"],
-    "which is why": [", which is why", "which is why"],
-    "is what makes": ["is what makes"],
-    "That is what": ["That is what makes", "That is what"],
-    "that is what": ["that is what makes", "that is what"],
-    "and nothing else": [" and nothing else", "and nothing else"],
-    "and nothing more": [" and nothing more", "and nothing more"],
-    "on purpose": ["on purpose"],
-    "is exactly the": ["is exactly the"],
-    "is exactly what": ["is exactly what"],
-    "is the one": ["is the one"],
-    "The one place": ["The one place"],
-    "The one thing": ["The one thing"],
-    "the one thing": ["the one thing"],
-    "That is the reason": ["That is the reason"],
-    "That is why": ["That is why"],
-    "and that is why": ["and that is why"],
+    "rather": [RATHER_THAN],
+    "which is the": [", which is the whole of", ", which is the whole", ", which is the", "which is the whole of", "which is the whole"],
+    "which is what": [", which is what makes", ", which is what", "which is what makes"],
+    "which is why": [", which is why"],
+    "That is what": ["That is what makes"],
+    "that is what": ["that is what makes"],
+    "and nothing else": [" and nothing else"],
+    "and nothing more": [" and nothing more"],
 }
 
 # construction -> replacement. Only relations that survive the swap.
+
 RULE = {
-    "rather than": "and not",
+    RATHER_THAN: "and not",
     ", which is the whole of": ", all of",
     ", which is the whole": ", the entirety of",
     ", which is the": ", the",
@@ -75,10 +65,10 @@ RULE = {
     "which is why": "and so",
     "That is what makes": "That leaves",
     "that is what makes": "that leaves",
-    " and nothing else": ", alone",
-    " and nothing more": ", alone",
-    "and nothing else": ", alone",
-    "and nothing more": ", alone",
+    " and nothing else": ALONE,
+    " and nothing more": ALONE,
+    "and nothing else": ALONE,
+    "and nothing more": ALONE,
     "on purpose": "deliberately",
     "is exactly the": "is precisely the",
     "is exactly what": "is precisely what",
@@ -114,7 +104,7 @@ def main():
         seen.add((name, number, token))
 
         phrase = None
-        for candidate in WIDER.get(token, [token]):
+        for candidate in WIDER.get(token, []) + [token]:
             if candidate in text:
                 phrase = candidate
                 break
@@ -123,8 +113,8 @@ def main():
         # the paired form, where a null described one way becomes one described the other. Before a gerund
         # it does not, because the verb needs a preposition to hang from. A deferral located before
         # a gerund takes the preposition form, and the paired form reads wrong in that position.
-        if phrase == "rather than":
-            after = text.split("rather than", 1)[1].strip().split(" ")
+        if phrase == RATHER_THAN:
+            after = text.split(RATHER_THAN, 1)[1].strip().split(" ")
             following = after[0] if after else ""
             if following.endswith("ing") and following not in ("nothing", "everything", "string"):
                 print("%s\t%d\t%s\t%s" % (name, number, phrase, "instead of"))

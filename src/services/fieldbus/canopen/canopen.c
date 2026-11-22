@@ -36,7 +36,7 @@ static embed_bool valid_node(uint8_t node_id)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_canopen_build_nmt(uint8_t *work)
+void protocore_canopen_build_nmt(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_nmt_args.out;
@@ -54,7 +54,7 @@ void protocore_canopen_build_nmt(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_sync(uint8_t *work)
+void protocore_canopen_build_sync(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_sync_args.out;
@@ -68,7 +68,7 @@ void protocore_canopen_build_sync(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_time(uint8_t *work)
+void protocore_canopen_build_time(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_time_args.out;
@@ -91,7 +91,7 @@ void protocore_canopen_build_time(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_heartbeat(uint8_t *work)
+void protocore_canopen_build_heartbeat(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_heartbeat_args.out;
@@ -108,7 +108,7 @@ void protocore_canopen_build_heartbeat(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_emcy(uint8_t *work)
+void protocore_canopen_build_emcy(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_emcy_args.out;
@@ -164,7 +164,7 @@ static embed_bool build_pdo(CanFrame *out, uint8_t pdo_num, embed_bool transmit,
     return EMBED_TRUE;
 }
 
-void protocore_canopen_build_tpdo(uint8_t *work)
+void protocore_canopen_build_tpdo(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_tpdo_args.out;
@@ -176,7 +176,7 @@ void protocore_canopen_build_tpdo(uint8_t *work)
     CanopenV.ok = build_pdo(out, pdo_num, EMBED_TRUE, node_id, data, len);
 }
 
-void protocore_canopen_build_rpdo(uint8_t *work)
+void protocore_canopen_build_rpdo(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_rpdo_args.out;
@@ -196,7 +196,7 @@ static void sdo_set_object(CanFrame *f, uint16_t index, uint8_t sub)
     f->data[3] = sub;
 }
 
-void protocore_canopen_build_sdo_read(uint8_t *work)
+void protocore_canopen_build_sdo_read(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_sdo_read_args.out;
@@ -215,7 +215,7 @@ void protocore_canopen_build_sdo_read(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_sdo_write(uint8_t *work)
+void protocore_canopen_build_sdo_write(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_sdo_write_args.out;
@@ -238,7 +238,7 @@ void protocore_canopen_build_sdo_write(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_sdo_abort(uint8_t *work)
+void protocore_canopen_build_sdo_abort(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_sdo_abort_args.out;
@@ -263,7 +263,7 @@ void protocore_canopen_build_sdo_abort(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_parse(uint8_t *work)
+void protocore_canopen_parse(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = CanopenV.parse_args.f;
@@ -372,7 +372,7 @@ void protocore_canopen_parse(uint8_t *work)
     }
 }
 
-void protocore_canopen_parse_emcy(uint8_t *work)
+void protocore_canopen_parse_emcy(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = CanopenV.parse_emcy_args.f;
@@ -412,7 +412,7 @@ void protocore_canopen_parse_emcy(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_parse_heartbeat(uint8_t *work)
+void protocore_canopen_parse_heartbeat(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = CanopenV.parse_heartbeat_args.f;
@@ -442,7 +442,7 @@ void protocore_canopen_parse_heartbeat(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_parse_time(uint8_t *work)
+void protocore_canopen_parse_time(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = CanopenV.parse_time_args.f;
@@ -465,7 +465,7 @@ void protocore_canopen_parse_time(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_parse_sdo_response(uint8_t *work)
+void protocore_canopen_parse_sdo_response(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = CanopenV.parse_sdo_response_args.f;
@@ -526,7 +526,7 @@ void protocore_canopen_parse_sdo_response(uint8_t *work)
 
 // --- segmented SDO (CiA 301 §7.2.4.3) ---
 
-void protocore_canopen_build_sdo_download_init(uint8_t *work)
+void protocore_canopen_build_sdo_download_init(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_sdo_download_init_args.out;
@@ -551,7 +551,7 @@ void protocore_canopen_build_sdo_download_init(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_sdo_download_segment(uint8_t *work)
+void protocore_canopen_build_sdo_download_segment(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_sdo_download_segment_args.out;
@@ -574,7 +574,7 @@ void protocore_canopen_build_sdo_download_segment(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_build_sdo_upload_segment_req(uint8_t *work)
+void protocore_canopen_build_sdo_upload_segment_req(const uint8_t *work)
 {
     (void)work;
     CanFrame *out = CanopenV.build_sdo_upload_segment_req_args.out;
@@ -592,7 +592,7 @@ void protocore_canopen_build_sdo_upload_segment_req(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_parse_sdo_segment(uint8_t *work)
+void protocore_canopen_parse_sdo_segment(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = CanopenV.parse_sdo_segment_args.f;
@@ -627,7 +627,7 @@ void protocore_canopen_parse_sdo_segment(uint8_t *work)
     CanopenV.ok = EMBED_TRUE;
 }
 
-void protocore_canopen_sdo_reasm_init(uint8_t *work)
+void protocore_canopen_sdo_reasm_init(const uint8_t *work)
 {
     (void)work;
     CanopenSdoReasm *r = CanopenV.sdo_reasm_init_args.r;
@@ -645,7 +645,7 @@ void protocore_canopen_sdo_reasm_init(uint8_t *work)
     r->done = EMBED_FALSE;
 }
 
-void protocore_canopen_sdo_reasm_feed(uint8_t *work)
+void protocore_canopen_sdo_reasm_feed(const uint8_t *work)
 {
     (void)work;
     CanopenSdoReasm *r = CanopenV.sdo_reasm_feed_args.r;

@@ -57,7 +57,7 @@ static void fail_n(const protocore_ip *ip, int n, uint32_t now_ms)
     }
 }
 
-// An address nobody has failed from is not locked.
+// An address nobody failed from is not locked.
 void test_an_unseen_address_is_not_locked(void)
 {
     const protocore_ip ip = v4(203, 0, 113, 7);
@@ -242,7 +242,7 @@ void test_success_clears_the_address(void)
     TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockoutV.ms);
 }
 
-// Clearing an address nobody has failed from is a no-op, not a corruption of another bucket.
+// Clearing an address nobody failed from is a no-op, not a corruption of another bucket.
 void test_success_from_an_unseen_address_touches_nothing(void)
 {
     const protocore_ip locked = v4(192, 0, 2, 14);
@@ -315,7 +315,7 @@ void test_v4_and_v6_are_different_peers(void)
     TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 }
 
-// An address that names nothing is untrackable, so it is never locked and never consumes a bucket:
+// An address that names nothing is untrackable. So it is never locked and never consumes a bucket:
 // locking it would lock every such request at once.
 void test_an_unspecified_address_is_never_locked(void)
 {

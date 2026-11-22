@@ -101,7 +101,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define CURVE25519_CTX(w) ((Curve25519Ctx *)(void *)((w) + CURVE25519_OFF_CTX))
+#define CURVE25519_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Curve25519Ctx *)(const void *)((w) + CURVE25519_OFF_CTX),                              \
+        default: (Curve25519Ctx *)(void *)((w) + CURVE25519_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Field arithmetic (GF(2^255-19), radix-2^16). Shared with Ed25519.
@@ -323,7 +326,7 @@ static void gf_inv_sw(protocore_gf out, const protocore_gf a)
 
 #if PROTOCORE_FE25519_MPI_HW
 // out = a^-1 mod p through the canonical field layer, whose multiply is one 256-bit MODMULT on the
-// RSA/MPI accelerator. Only the inversion is offloaded; the 255-round Montgomery ladder multiply stays
+// RSA/MPI accelerator. Only the inversion is offloaded. The 255-round Montgomery ladder multiply stays
 // in the software radix-2^16 core, where per-multiply marshalling to the peripheral would cost more
 // than it saves. The base is packed to its canonical residue first.
 void protocore_gf_inv(protocore_gf out, const protocore_gf a)

@@ -47,7 +47,10 @@ static_assert(SYSLOG_OFF_CTX + sizeof(struct SyslogStorage) <= PROTOCORE_SYSLOG_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SYSLOG_CTX(w) ((struct SyslogStorage *)(void *)((w) + SYSLOG_OFF_CTX))
+#define SYSLOG_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SyslogStorage *)(const void *)((w) + SYSLOG_OFF_CTX),                           \
+        default: (struct SyslogStorage *)(void *)((w) + SYSLOG_OFF_CTX))
 
 // Copy a NUL-terminated field into a fixed slot, truncating at cap-1, or empty the slot when the
 // source is absent. An empty slot emits the NILVALUE "-" (RFC 5424 sec 6).
@@ -109,7 +112,7 @@ void protocore_syslog_init(uint8_t *work)
 }
 
 // Build one SYSLOG-MSG (RFC 5424 sec 6) into ns->line, and report its length in ns->n.
-void protocore_syslog_format(uint8_t *work)
+void protocore_syslog_format(const uint8_t *work)
 {
     (void)work;
     char *out = SyslogV.line.out;

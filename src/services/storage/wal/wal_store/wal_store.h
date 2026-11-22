@@ -114,13 +114,14 @@ typedef void (*WalStoreRecordCb)(uint64_t seq, uint64_t data_off, const uint8_t 
  * payload) and re-validates it with the codec, stopping at the first bad record. The point is to rebuild an
  * in-RAM index after mount (e.g. the dbm hash table replays puts/deletes this way). @return the record count.
  */
-size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len);
+size_t protocore_wal_store_scan(const WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch,
+                                size_t scratch_len);
 
 /**
  * @brief Read @p len bytes from data-region offset @p off (as reported to ::WalStoreRecordCb) into @p buf.
  * @return true on success. Lets an index re-read a value straight from the log without buffering it.
  */
-embed_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len);
+embed_bool protocore_wal_store_pread(const WalStore *s, uint64_t off, uint8_t *buf, size_t len);
 
 /** @brief Bytes used in the data region (including appends not yet checkpointed). */
 static inline uint64_t protocore_wal_store_used(const WalStore *s)

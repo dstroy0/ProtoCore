@@ -81,9 +81,9 @@ static embed_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out
 // never read.
 
 void protocore_edge_cache_sd_deserialize(uint8_t *work);
-void protocore_edge_cache_sd_serialize(uint8_t *work);
+void protocore_edge_cache_sd_serialize(const uint8_t *work);
 
-void protocore_edge_cache_sd_serialize(uint8_t *work)
+void protocore_edge_cache_sd_serialize(const uint8_t *work)
 {
     (void)work;
     const EdgeEntry *e = EdgeCacheSdV.serialize_args.e;
@@ -343,7 +343,7 @@ void protocore_edge_cache_sd_get(uint8_t *work)
     protocore_edge_cache_sd_deserialize(work);
 }
 
-void protocore_edge_cache_sd_del(uint8_t *work)
+void protocore_edge_cache_sd_del(const uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.del_args.db;
@@ -352,7 +352,7 @@ void protocore_edge_cache_sd_del(uint8_t *work)
     EdgeCacheSdV.ok = db && digest && protocore_dbm_del(db, (const char *)digest, 32);
 }
 
-void protocore_edge_cache_sd_purge_prefix(uint8_t *work)
+void protocore_edge_cache_sd_purge_prefix(const uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.purge_prefix_args.db;
@@ -368,7 +368,7 @@ void protocore_edge_cache_sd_purge_prefix(uint8_t *work)
     EdgeCacheSdV.count = purge_matching(db, path_prefix, scratch, scratch_cap);
 }
 
-void protocore_edge_cache_sd_purge_all(uint8_t *work)
+void protocore_edge_cache_sd_purge_all(const uint8_t *work)
 {
     (void)work;
     struct protocore_dbm *db = EdgeCacheSdV.purge_all_args.db;

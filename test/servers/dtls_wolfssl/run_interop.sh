@@ -17,7 +17,7 @@ PORT="${DTLS_INTEROP_PORT:-11150}"
 mkdir -p "$WORK"
 
 # --- 1. wolfSSL with DTLS 1.3 (release tarballs ship a pre-built configure, but only the source
-#        tarball is a GitHub asset here, so build from the git tag; needs autoconf/automake/libtool) ---
+#        tarball is a GitHub asset here, so build from the git tag. Needs autoconf/automake/libtool) ---
 CLIENT="$WORK/wolfssl/examples/client/client"
 # Rebuild if the client is missing or was built without DTLS connection-id (RFC 9146, --enable-dtlscid)
 # or Raw Public Keys (RFC 7250, --enable-rpk) support.
@@ -48,7 +48,7 @@ fi
 echo ">> compiling harness"
 D="$ROOT/src/network_drivers/presentation"
 # -I test/mocks supplies the host Arduino.h shim (millis()) that services/system/clock.h pulls in - the same
-# shim the pio host tests use; the harness is likewise a host build.
+# shim the pio host tests use. The harness is likewise a host build.
 g++ -O2 -std=gnu++17 -DPROTOCORE_ENABLE_DTLS=1 -DPROTOCORE_ENABLE_TLS_RPK=1 -I"$ROOT/src" -I"$ROOT/test/mocks" "$HERE/dtls_interop_server.cpp" \
     "$D/dtls/dtls_conn.cpp" "$D/dtls/dtls_record.cpp" "$D/dtls/dtls_handshake.cpp" \
     "$D/http3/tls13_msg.cpp" "$ROOT/src/network_drivers/tls/tls13_kdf.c" "$D/http3/quic_hkdf.cpp" "$D/http3/quic_aead.cpp" \

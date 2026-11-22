@@ -22,7 +22,7 @@
  * this dotted path, given the arguments in scope.
  *
  * Supported: one operation, either the sec 2.3 query shorthand (`{...}`) or `query [Name] {...}`;
- * nested selection sets (sec 2.4); field arguments (sec 2.6) taking Int, Float, String, Boolean and
+ * nested selection sets (sec 2.4). Field arguments (sec 2.6) taking Int, Float, String, Boolean and
  * Null values (sec 2.9.1 to sec 2.9.5); comments (sec 2.1.4) and insignificant commas (sec 2.1.5).
  * Out of scope: mutations and subscriptions (sec 2.3), fragments (sec 2.8), variables (sec 2.10),
  * directives (sec 2.12), aliases (sec 2.7), list values (sec 2.9.7), input objects (sec 2.9.8),

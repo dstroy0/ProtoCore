@@ -65,7 +65,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define NTP_SERVICE_CTX(w) ((NtpSvcCtx *)(void *)((w) + NTP_SERVICE_OFF_CTX))
+#define NTP_SERVICE_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const NtpSvcCtx *)(const void *)((w) + NTP_SERVICE_OFF_CTX),                                 \
+        default: (NtpSvcCtx *)(void *)((w) + NTP_SERVICE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

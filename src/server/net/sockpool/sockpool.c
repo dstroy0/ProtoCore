@@ -19,7 +19,7 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_sockpool_init(uint8_t *work)
+void protocore_sockpool_init(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.init_args.p;
@@ -40,7 +40,7 @@ void protocore_sockpool_init(uint8_t *work)
     }
 }
 
-void protocore_sockpool_acquire(uint8_t *work)
+void protocore_sockpool_acquire(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.acquire_args.p;
@@ -94,7 +94,7 @@ void protocore_sockpool_acquire(uint8_t *work)
     SockpoolV.acq = SOCK_ACQ_RECYCLED;
 }
 
-void protocore_sockpool_touch(uint8_t *work)
+void protocore_sockpool_touch(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.touch_args.p;
@@ -111,7 +111,7 @@ void protocore_sockpool_touch(uint8_t *work)
     }
 }
 
-void protocore_sockpool_release(uint8_t *work)
+void protocore_sockpool_release(const uint8_t *work)
 {
     (void)work;
     SockPool *p = SockpoolV.release_args.p;
@@ -126,7 +126,7 @@ void protocore_sockpool_release(uint8_t *work)
     SockpoolV.ok = EMBED_TRUE;
 }
 
-void protocore_sockpool_find(uint8_t *work)
+void protocore_sockpool_find(const uint8_t *work)
 {
     (void)work;
     const SockPool *p = SockpoolV.find_args.p;
@@ -153,7 +153,7 @@ void protocore_sockpool_find(uint8_t *work)
     SockpoolV.ok = EMBED_FALSE;
 }
 
-void protocore_sockpool_in_use(uint8_t *work)
+void protocore_sockpool_in_use(const uint8_t *work)
 {
     (void)work;
     const SockPool *p = SockpoolV.in_use_args.p;

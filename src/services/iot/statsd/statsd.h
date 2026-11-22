@@ -144,7 +144,7 @@ extern StatsdVars StatsdV;
 typedef struct
 {
     void (*const init)(uint8_t *work);
-    void (*const format)(uint8_t *work);
+    void (*const format)(const uint8_t *work);
     void (*const count)(uint8_t *work);
     void (*const gauge)(uint8_t *work);
     void (*const gauge_delta)(uint8_t *work);
@@ -155,7 +155,7 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in StatsdV or a region of the borrow at a fixed offset.
 void protocore_statsd_init(uint8_t *work);
-void protocore_statsd_format(uint8_t *work);
+void protocore_statsd_format(const uint8_t *work);
 void protocore_statsd_count(uint8_t *work);
 void protocore_statsd_gauge(uint8_t *work);
 void protocore_statsd_gauge_delta(uint8_t *work);

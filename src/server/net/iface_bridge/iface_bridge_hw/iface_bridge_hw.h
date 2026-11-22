@@ -6,7 +6,7 @@
  * @brief Bus glue for the interface bridge (PROTOCORE_ENABLE_IFACE_BRIDGE): the PROTO_BRIDGE listener that
  *        wires an accepted connection to a UART / SPI / I2C endpoint, plus the bus I/O.
  *
- * The pure core (iface_bridge.h) owns the rule table and the transaction frame codec; this file owns the
+ * The pure core (iface_bridge.h) owns the rule table and the transaction frame codec. This file owns the
  * side that reaches the seam: a ProtoConn::PROTO_BRIDGE connection handler and the uart.h / spi.h / i2c.h
  * transfers. Layered exactly like server/net/relay - the app opens the listener, then publishes a target:
  *

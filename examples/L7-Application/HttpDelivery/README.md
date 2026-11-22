@@ -9,7 +9,7 @@ asleep. Three standards make that acceptable to a browser, and this wires all th
 
 **1. Stale-while-revalidate (RFC 5861).** `set_cache_control_swr(60, 300)` emits
 `Cache-Control: public, max-age=60, stale-while-revalidate=300` on every served file. For 60 s the
-client just uses its copy; for 300 s after that it may serve the stale copy **and** refresh in the
+client just uses its copy. For 300 s after that it may serve the stale copy **and** refresh in the
 background. The page never blocks waiting on this device. The header is built by the same
 `protocore_delivery_cache_control` core that backs the `protocore_delivery_swr` decision, so the two cannot
 drift apart.

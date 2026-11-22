@@ -88,7 +88,7 @@ curl -s -m 5 http://<BOARD_IP>/video -o video.mjpeg        # several JPEG frames
 curl -s -m 5 http://<BOARD_IP>/audio.wav -o audio.wav      # ~160 KB in 5 s = the 32 KB/s real-time rate
 ```
 
-On real hardware this streams ~21 fps VGA video and real-time audio; the camera's JPEG rate and the Wi-Fi
+On real hardware this streams ~21 fps VGA video and real-time audio. The camera's JPEG rate and the Wi-Fi
 link set the pace, not the send path. See [FEATURE_PERFORMANCE.md](../../../docs/FEATURE_PERFORMANCE.md) for
 the measured numbers.
 

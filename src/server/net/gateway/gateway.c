@@ -62,7 +62,10 @@ static_assert(GATEWAY_OFF_CTX % _Alignof(GatewayCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define GATEWAY_CTX(w) ((GatewayCtx *)(void *)((w) + GATEWAY_OFF_CTX))
+#define GATEWAY_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const GatewayCtx *)(const void *)((w) + GATEWAY_OFF_CTX),                                    \
+        default: (GatewayCtx *)(void *)((w) + GATEWAY_OFF_CTX))
 
 // The one time source (server/clock/clock.h). A caller that needs to drive the rate window - a
 // test stepping it - installs its own clock with protocore_set_clock(), which governs every module.
@@ -93,7 +96,7 @@ static embed_bool rate_exceeded(port *p)
         return EMBED_FALSE;
     }
     uint32_t now = gw_now();
-    if ((uint32_t)(now - p->window_start) >= 1000)
+    if ((now - p->window_start) >= 1000)
     {
         p->window_start = now;
         p->count = 0;

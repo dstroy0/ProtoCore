@@ -127,7 +127,10 @@ static_assert(COAP_OFF_CTX + sizeof(struct CoapStorage) <= PROTOCORE_COAP_BORROW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define COAP_CTX(w) ((struct CoapStorage *)(void *)((w) + COAP_OFF_CTX))
+#define COAP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct CoapStorage *)(const void *)((w) + COAP_OFF_CTX),                               \
+        default: (struct CoapStorage *)(void *)((w) + COAP_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

@@ -39,11 +39,11 @@ uint8_t *protocore_j1939_span(void)
     return s_own.span;
 }
 
-void protocore_j1939_decode_id(uint8_t *work);
-void protocore_j1939_tp_num_packets(uint8_t *work);
-void protocore_j1939_tp_reset(uint8_t *work);
+void protocore_j1939_decode_id(const uint8_t *work);
+void protocore_j1939_tp_num_packets(const uint8_t *work);
+void protocore_j1939_tp_reset(const uint8_t *work);
 
-void protocore_j1939_encode_id(uint8_t *work)
+void protocore_j1939_encode_id(const uint8_t *work)
 {
     (void)work;
     uint32_t *id = J1939V.encode_id_args.id;
@@ -68,7 +68,7 @@ void protocore_j1939_encode_id(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_id(uint8_t *work)
+void protocore_j1939_decode_id(const uint8_t *work)
 {
     (void)work;
     uint32_t id = J1939V.decode_id_args.id;
@@ -127,7 +127,10 @@ static_assert(J1939_OFF_CTX % _Alignof(J1939Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define J1939_CTX(w) ((J1939Ctx *)(void *)((w) + J1939_OFF_CTX))
+#define J1939_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const J1939Ctx *)(const void *)((w) + J1939_OFF_CTX),                                        \
+        default: (J1939Ctx *)(void *)((w) + J1939_OFF_CTX))
 
 // Fill a CanFrame as a 29-bit extended frame, from the operands on the context.
 static embed_bool ext_frame(uint8_t *work)
@@ -139,6 +142,7 @@ static embed_bool ext_frame(uint8_t *work)
     J1939V.encode_id_args.sa = J1939_CTX(work)->sa;
     J1939V.encode_id_args.da = J1939_CTX(work)->da;
     protocore_j1939_encode_id(work);
+    J1939V.encode_id_args.id = NULL;
     if (!J1939V.ok)
     {
         return EMBED_FALSE;
@@ -218,7 +222,7 @@ void protocore_j1939_build_request(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_build_name(uint8_t *work)
+void protocore_j1939_build_name(const uint8_t *work)
 {
     (void)work;
     embed_bool arbitrary_address_capable = J1939V.build_name_args.arbitrary_address_capable;
@@ -276,7 +280,7 @@ void protocore_j1939_build_address_claim(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_tp_num_packets(uint8_t *work)
+void protocore_j1939_tp_num_packets(const uint8_t *work)
 {
     (void)work;
     uint16_t total_size = J1939V.tp_num_packets_args.total_size;
@@ -356,7 +360,7 @@ void protocore_j1939_build_tp_dt(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_tp_reset(uint8_t *work)
+void protocore_j1939_tp_reset(const uint8_t *work)
 {
     (void)work;
     J1939TpRx *rx = J1939V.tp_reset_args.rx;
@@ -381,6 +385,7 @@ void protocore_j1939_tp_feed(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok)
     // is non-null
     {
@@ -474,6 +479,7 @@ void protocore_j1939_decode_eec1(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_EEC1)
     {
         J1939V.ok = EMBED_FALSE;
@@ -503,6 +509,7 @@ void protocore_j1939_decode_et1(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_ET1)
     {
         J1939V.ok = EMBED_FALSE;
@@ -532,6 +539,7 @@ void protocore_j1939_decode_lfe(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_LFE)
     {
         J1939V.ok = EMBED_FALSE;
@@ -565,6 +573,7 @@ void protocore_j1939_decode_amb(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_AMB)
     {
         J1939V.ok = EMBED_FALSE;
@@ -600,6 +609,7 @@ void protocore_j1939_decode_ic1(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_IC1)
     {
         J1939V.ok = EMBED_FALSE;
@@ -637,6 +647,7 @@ void protocore_j1939_decode_vd(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_VD)
     {
         J1939V.ok = EMBED_FALSE;
@@ -668,6 +679,7 @@ void protocore_j1939_decode_ccvs(uint8_t *work)
     J1939V.decode_id_args.id = f->id;
     J1939V.decode_id_args.out = &id;
     protocore_j1939_decode_id(work);
+    J1939V.decode_id_args.out = NULL;
     if (!J1939V.ok || id.pgn != J1939_PGN_CCVS)
     {
         J1939V.ok = EMBED_FALSE;
@@ -682,7 +694,7 @@ void protocore_j1939_decode_ccvs(uint8_t *work)
     J1939V.ok = EMBED_TRUE;
 }
 
-void protocore_j1939_decode_dm1(uint8_t *work)
+void protocore_j1939_decode_dm1(const uint8_t *work)
 {
     (void)work;
     const uint8_t *body = J1939V.decode_dm1_args.body;

@@ -37,7 +37,10 @@ static_assert(ROUTE_OFF_CTX + sizeof(struct HttpRouteCtx) <= PROTOCORE_HTTP_ROUT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define ROUTE_CTX(w) ((struct HttpRouteCtx *)(void *)((w) + ROUTE_OFF_CTX))
+#define ROUTE_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct HttpRouteCtx *)(const void *)((w) + ROUTE_OFF_CTX),                             \
+        default: (struct HttpRouteCtx *)(void *)((w) + ROUTE_OFF_CTX))
 
 // The one owned instance, private to this TU: the pointer to the bytes taken for the table.
 static uint8_t *s_span;

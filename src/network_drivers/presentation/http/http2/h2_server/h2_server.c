@@ -102,7 +102,10 @@ static uint8_t s_conn[MAX_CONNS][PROTOCORE_H2_CONN_BORROW];
 static uint8_t s_work[PROTOCORE_H2_SERVER_BORROW];
 
 // The region, at its offset in the caller's borrow.
-#define H2_SERVER_CTX(w) ((H2ServerCtx *)(void *)((w) + H2_SERVER_OFF_CTX))
+#define H2_SERVER_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const H2ServerCtx *)(const void *)((w) + H2_SERVER_OFF_CTX),                                 \
+        default: (H2ServerCtx *)(void *)((w) + H2_SERVER_OFF_CTX))
 
 // The bytes a field name may carry: an RFC 9110 token minus the uppercase letters RFC 9113 sec 8.2.1
 // forbids, so lowercase, digits and !#$%&'*+-.^_`|~ - one bit each over the 256 byte values. A byte
@@ -376,7 +379,7 @@ static void open_conn(uint8_t *work)
     HttpParser.reset(protocore_http_parser_span(), &http_pool[slot]);
 }
 
-static void data(uint8_t *work)
+static void data(const uint8_t *work)
 {
     (void)work;
     const uint8_t slot = H2Server.slot;
@@ -410,7 +413,7 @@ static void respond(uint8_t *work)
                      &http_pool[slot]); // ready for the next stream; keep the connection open
 }
 
-static void close_conn(uint8_t *work)
+static void close_conn(const uint8_t *work)
 {
     (void)work;
     const uint8_t slot = H2Server.slot;

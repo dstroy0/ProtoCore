@@ -178,7 +178,7 @@ typedef struct
     void (*const add_dynamic)(uint8_t *work);
     void (*const dispatch_pdu)(uint8_t *work);
     void (*const process)(uint8_t *work);
-    void (*const listen)(uint8_t *work);
+    void (*const listen)(const uint8_t *work);
 } SnmpAgentNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -191,7 +191,7 @@ void protocore_snmp_agent_add_integer(uint8_t *work);
 void protocore_snmp_agent_add_dynamic(uint8_t *work);
 void protocore_snmp_agent_dispatch_pdu(uint8_t *work);
 void protocore_snmp_agent_process(uint8_t *work);
-void protocore_snmp_agent_listen(uint8_t *work);
+void protocore_snmp_agent_listen(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

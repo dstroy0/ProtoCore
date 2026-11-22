@@ -9,7 +9,7 @@
  * The AD9238 (12-bit, 20/40/65 MSPS dual ADC) has TWO interfaces that must not be confused:
  *  - The **sample data path**: a parallel CMOS/LVDS bus (12 data lines + DCO/output clock per
  *    channel) run far beyond what a microcontroller can bit-bang at 20-65 MSPS. That path is
- *    NOT this file - it is out of scope for direct MCU capture; see reverse_engineering/README.md
+ *    NOT this file - it is out of scope for direct MCU capture. See reverse_engineering/README.md
  *    for the FPGA/CPLD-buffered burst-drain architecture this project actually uses.
  *  - The **SPI configuration port** (SCLK / SDIO / CSB, 3-wire, MSB first): a low-speed,
  *    low-throughput control channel for power-down, output data format, output test patterns,
@@ -17,7 +17,7 @@
  *    it builds the 16-bit instruction word (R/W + 2-bit byte-count + 13-bit address) and the
  *    shadow-register "device update" transfer that the whole ADI high-speed-ADC generation of
  *    this era (AD9238 and its close siblings) share, per AN-877's SPI register map. Pure codec
- *    (builds/parses byte sequences); the SPI clocking is the app's - same contract as every other
+ *    (builds/parses byte sequences). The SPI clocking is the app's - same contract as every other
  *    codec in this library (see services/instrumentation/scpi, services/instrumentation/gpib).
  *
  * **Confidence note.** The instruction-word framing, the transfer-register mechanism and every
@@ -165,7 +165,7 @@ extern Ad9238Vars Ad9238V;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_instruction)(uint8_t *work);
+    void (*const build_instruction)(const uint8_t *work);
     void (*const build_write)(uint8_t *work);
     void (*const build_read)(uint8_t *work);
     void (*const build_transfer)(uint8_t *work);
@@ -173,7 +173,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Ad9238V or a region of the borrow at a fixed offset.
-void protocore_ad9238_build_instruction(uint8_t *work);
+void protocore_ad9238_build_instruction(const uint8_t *work);
 void protocore_ad9238_build_write(uint8_t *work);
 void protocore_ad9238_build_read(uint8_t *work);
 void protocore_ad9238_build_transfer(uint8_t *work);

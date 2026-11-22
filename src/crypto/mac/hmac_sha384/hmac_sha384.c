@@ -58,7 +58,10 @@ static_assert(HMAC384_OFF_WORK % _Alignof(Hmac384Work) == 0,
 // The regions, at their offsets in the caller's borrow.
 #define HMAC384_INNER(w) ((w) + HMAC384_OFF_INNER)
 #define HMAC384_OKEY(w) ((w) + HMAC384_OFF_OKEY)
-#define HMAC384_WORK(w) ((Hmac384Work *)(void *)((w) + HMAC384_OFF_WORK))
+#define HMAC384_WORK(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Hmac384Work *)(const void *)((w) + HMAC384_OFF_WORK),                                  \
+        default: (Hmac384Work *)(void *)((w) + HMAC384_OFF_WORK))
 #define HMAC384_HASH(w) ((w) + HMAC384_OFF_HASH)
 
 // One 128-byte HMAC key block into @p block (RFC 2104 sec 2): keys > 128 bytes are pre-hashed, else

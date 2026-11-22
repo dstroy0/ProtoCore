@@ -28,7 +28,7 @@ feeds malformed bytes straight into `http_parser_feed`, `coap_server_process`,
 no fixed buffer overflows and every input lands in a defined state. That is fast,
 reproducible, and runs in CI.
 
-But a real device is more than its parsers: it has a fixed connection pool, accept
+But a real device is more than its parsers. It has a fixed connection pool, accept
 and per-IP throttles, auth lockout, TLS, idle-timeout reaping, and a strict "no
 heap after `begin()`" promise. Those only exist on the wire. `pc_pentest.py`
 drives a flashed board and confirms the **live** behavior:
@@ -84,7 +84,7 @@ tool picks the applicable attacks three ways, in increasing manual control:
 
 1. **Auto-detect (`--diag`)** - read the device's own `/diag` endpoint
    (`PROTOCORE_ENABLE_DIAG`) and enable the matching attacks. `/diag` reports a
-   `features` map and a `config` block; the tool maps the booleans to flags and
+   `features` map and a `config` block. The tool maps the booleans to flags and
    uses the sizes (e.g. `MAX_CONNS`) to tune the attack intensity:
 
     ```python

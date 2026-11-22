@@ -77,7 +77,7 @@ static inline void blk_init(Aes128Blk *b, const uint8_t key[16])
 {
     protocore_aes_key_expand(key, 4, b->rk);
 }
-static inline void blk_enc(Aes128Blk *b, const uint8_t in[16], uint8_t out[16])
+static inline void blk_enc(const Aes128Blk *b, const uint8_t in[16], uint8_t out[16])
 {
     protocore_aes_encrypt_block(b->rk, 10, in, out);
 }
@@ -135,9 +135,15 @@ static_assert(AES128GCM_OFF_BLOCK % _Alignof(Aes128Blk) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define AES128GCM_GCM(w) ((Aes128GcmWork *)(void *)((w) + AES128GCM_OFF_GCM))
+#define AES128GCM_GCM(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Aes128GcmWork *)(const void *)((w) + AES128GCM_OFF_GCM),                               \
+        default: (Aes128GcmWork *)(void *)((w) + AES128GCM_OFF_GCM))
 #define AES128GCM_GHASH(w) ((w) + AES128GCM_OFF_GHASH)
-#define AES128GCM_BLK(w) ((Aes128Blk *)(void *)((w) + AES128GCM_OFF_BLOCK))
+#define AES128GCM_BLK(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Aes128Blk *)(const void *)((w) + AES128GCM_OFF_BLOCK),                                 \
+        default: (Aes128Blk *)(void *)((w) + AES128GCM_OFF_BLOCK))
 
 // --- the GCM construction: software AES-128 + table GHASH on both arms ------
 

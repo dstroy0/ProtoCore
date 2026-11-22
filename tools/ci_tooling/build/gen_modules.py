@@ -41,7 +41,7 @@ INC = re.compile(r'^\s*#\s*include\s+"([^"]+)"')
 # `#if PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA` - and matching only a lone token
 # skipped them, so each got no GATE and was built in every configuration.
 GATE = re.compile(
-    r"^\s*#\s*if\s+(PROTOCORE_(?:ENABLE|HAS)_\w+(?:\s*(?:&&|\|\|)\s*\(?\s*PROTOCORE_(?:ENABLE|HAS)_\w+\)?)*)\s*$"
+    r"^\s*#\s*if\s+(PROTOCORE_(?:ENABLE|HAS)_\w+(?>\s*(?:&&|\|\|)\s*\(?\s*PROTOCORE_(?:ENABLE|HAS)_\w+\)?)*)\s*$"
 )
 # The same condition inside one pair of parentheses - `#if (PROTOCORE_ENABLE_A || PROTOCORE_ENABLE_B)`
 # is how tls13_msg.c opens. Missing it read the file as ungated, and its first inner arm got declared

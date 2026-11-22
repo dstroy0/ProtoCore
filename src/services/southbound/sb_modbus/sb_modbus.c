@@ -159,7 +159,7 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
 }
 
 // Fill a caller-owned instance from the transport seam and the slave it addresses.
-void protocore_sb_modbus_init(uint8_t *work)
+void protocore_sb_modbus_init(const uint8_t *work)
 {
     (void)work;
     protocore_sb_modbus_ctx *c = SbModbusV.ctx;
@@ -183,7 +183,7 @@ void protocore_sb_modbus_init(uint8_t *work)
 }
 
 // Bind the vtable the southbound registry dispatches through to one instance.
-void protocore_sb_modbus_driver(uint8_t *work)
+void protocore_sb_modbus_driver(const uint8_t *work)
 {
     (void)work;
     protocore_sb_modbus_ctx *c = SbModbusV.ctx;
@@ -193,7 +193,7 @@ void protocore_sb_modbus_driver(uint8_t *work)
         SbModbusV.i32 = SB_ERR_ARG;
         return;
     }
-    // Holding registers are read/write; input registers are read-only (a Modbus input register cannot be
+    // Holding registers are read/write. Input registers are read-only (a Modbus input register cannot be
     // written), so an input-register driver leaves write / write_block unbound (framework: SB_ERR_UNSUPPORTED).
     embed_bool writable = (c->fc == MODBUS_FC_READ_HOLDING_REGS);
     drv_out->name = SbModbusV.name;

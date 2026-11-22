@@ -67,6 +67,8 @@ from docs_check import (
     stage_of,
 )
 
+ROW_FORMAT = "    %-26s %9.1f   human %7.1f   %s\n"
+
 # The rate a human research writer carries for the whole banned list, per hundred thousand words.
 # Summed from the table instead of written down. The two cannot disagree. It comes to 387.9.
 HUMAN_WHOLE = sum(HUMAN_RATE.values())
@@ -257,15 +259,15 @@ def register(out, tally, words):
 
     out.write("\n  REGISTER, per hundred thousand words of prose\n")
     out.write(
-        "    %-26s %9.1f   human %7.1f   %s\n"
+        ROW_FORMAT
         % ("the whole banned list", total, HUMAN_WHOLE, times(total, HUMAN_WHOLE))
     )
     out.write(
-        "    %-26s %9.1f   human %7.1f   %s\n"
+        ROW_FORMAT
         % ("the phrase stage", phrase, phrase_human(), times(phrase, phrase_human()))
     )
     out.write(
-        "    %-26s %9.1f   human %7.1f   %s\n"
+        ROW_FORMAT
         % ("patterns humans never use", absent, 0.0, "no human rate to divide by")
     )
 

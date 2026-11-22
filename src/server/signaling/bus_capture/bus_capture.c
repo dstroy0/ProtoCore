@@ -40,7 +40,7 @@ uint8_t *protocore_bus_capture_span(void)
     return s_own.span;
 }
 
-void protocore_bus_capture_can_to_socketcan(uint8_t *work)
+void protocore_bus_capture_can_to_socketcan(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = BusCaptureV.can_to_socketcan_args.f;
@@ -111,7 +111,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define BUS_CAPTURE_CTX(w) ((BusCaptureCtx *)(void *)((w) + BUS_CAPTURE_OFF_CTX))
+#define BUS_CAPTURE_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const BusCaptureCtx *)(const void *)((w) + BUS_CAPTURE_OFF_CTX),                             \
+        default: (BusCaptureCtx *)(void *)((w) + BUS_CAPTURE_OFF_CTX))
 
 #if PROTOCORE_HAS_VENDOR_CAN
 

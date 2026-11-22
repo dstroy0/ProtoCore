@@ -65,7 +65,10 @@ static_assert(LD2410_OFF_CTX % _Alignof(Ld2410Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define LD2410_CTX(w) ((Ld2410Ctx *)(void *)((w) + LD2410_OFF_CTX))
+#define LD2410_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ld2410Ctx *)(const void *)((w) + LD2410_OFF_CTX),                                      \
+        default: (Ld2410Ctx *)(void *)((w) + LD2410_OFF_CTX))
 
 #if PROTOCORE_HAS_BUS
 #include "server/peripherals/uart/uart.h" // the shared UART owner
@@ -133,15 +136,15 @@ uint8_t *protocore_ld2410_span(void)
 }
 
 // The entries this file calls before reaching their definitions.
-static void ld2410_cmd_config_enable(uint8_t *work);
-static void ld2410_cmd_config_end(uint8_t *work);
-static void ld2410_cmd_engineering(uint8_t *work);
-static void ld2410_cmd_restart(uint8_t *work);
-static void ld2410_parse_report(uint8_t *work);
+static void ld2410_cmd_config_enable(const uint8_t *work);
+static void ld2410_cmd_config_end(const uint8_t *work);
+static void ld2410_cmd_engineering(const uint8_t *work);
+static void ld2410_cmd_restart(const uint8_t *work);
+static void ld2410_parse_report(const uint8_t *work);
 static void ld2410_stream_push(uint8_t *work);
-static void ld2410_stream_reset(uint8_t *work);
+static void ld2410_stream_reset(const uint8_t *work);
 
-static void ld2410_parse_report(uint8_t *work)
+static void ld2410_parse_report(const uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Ld2410.parse_report_args.frame;
@@ -238,7 +241,7 @@ static void ld2410_parse_report(uint8_t *work)
     Ld2410.ok = EMBED_TRUE;
 }
 
-static void ld2410_stream_reset(uint8_t *work)
+static void ld2410_stream_reset(const uint8_t *work)
 {
     (void)work;
     Ld2410Stream *s = Ld2410.stream_reset_args.s;
@@ -315,7 +318,7 @@ static void ld2410_stream_push(uint8_t *work)
     }
 }
 
-static void ld2410_present(uint8_t *work)
+static void ld2410_present(const uint8_t *work)
 {
     (void)work;
     const Ld2410Report *r = Ld2410.present_args.r;
@@ -323,7 +326,7 @@ static void ld2410_present(uint8_t *work)
     Ld2410.ok = r && r->state != LD2410_STATE_NONE;
 }
 
-static void ld2410_distance_cm(uint8_t *work)
+static void ld2410_distance_cm(const uint8_t *work)
 {
     (void)work;
     const Ld2410Report *r = Ld2410.distance_cm_args.r;
@@ -346,7 +349,7 @@ static void ld2410_distance_cm(uint8_t *work)
     Ld2410.cm = 0;
 }
 
-static void ld2410_cmd_config_enable(uint8_t *work)
+static void ld2410_cmd_config_enable(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_config_enable_args.buf;
@@ -355,7 +358,7 @@ static void ld2410_cmd_config_enable(uint8_t *work)
     static const uint8_t v[2] = {0x01, 0x00}; // value 0x0001
     Ld2410.n = cmd_frame(buf, cap, 0x00FF, v, 2);
 }
-static void ld2410_cmd_config_end(uint8_t *work)
+static void ld2410_cmd_config_end(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_config_end_args.buf;
@@ -363,7 +366,7 @@ static void ld2410_cmd_config_end(uint8_t *work)
 
     Ld2410.n = cmd_frame(buf, cap, 0x00FE, NULL, 0);
 }
-static void ld2410_cmd_engineering(uint8_t *work)
+static void ld2410_cmd_engineering(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_engineering_args.buf;
@@ -372,7 +375,7 @@ static void ld2410_cmd_engineering(uint8_t *work)
 
     Ld2410.n = cmd_frame(buf, cap, on ? 0x0062 : 0x0063, NULL, 0);
 }
-static void ld2410_cmd_restart(uint8_t *work)
+static void ld2410_cmd_restart(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_restart_args.buf;
@@ -382,7 +385,7 @@ static void ld2410_cmd_restart(uint8_t *work)
 }
 
 // --- LD2410B-only ----------------------------------------------------------
-static void ld2410_cmd_bluetooth(uint8_t *work)
+static void ld2410_cmd_bluetooth(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_bluetooth_args.buf;
@@ -393,7 +396,7 @@ static void ld2410_cmd_bluetooth(uint8_t *work)
     Ld2410.n = cmd_frame(buf, cap, 0x00A4, v, 2);
 }
 
-static void ld2410_cmd_get_mac(uint8_t *work)
+static void ld2410_cmd_get_mac(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_get_mac_args.buf;
@@ -403,7 +406,7 @@ static void ld2410_cmd_get_mac(uint8_t *work)
     Ld2410.n = cmd_frame(buf, cap, 0x00A5, v, 2);
 }
 
-static void ld2410_cmd_set_bt_password(uint8_t *work)
+static void ld2410_cmd_set_bt_password(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Ld2410.cmd_set_bt_password_args.buf;
@@ -422,7 +425,7 @@ static void ld2410_cmd_set_bt_password(uint8_t *work)
 }
 
 // --- command-ACK decoding --------------------------------------------------
-static void ld2410_parse_ack(uint8_t *work)
+static void ld2410_parse_ack(const uint8_t *work)
 {
     (void)work;
     const uint8_t *f = Ld2410.parse_ack_args.frame;
@@ -465,7 +468,7 @@ static void ld2410_parse_ack(uint8_t *work)
     Ld2410.ok = EMBED_TRUE;
 }
 
-static void ld2410_ack_ok(uint8_t *work)
+static void ld2410_ack_ok(const uint8_t *work)
 {
     (void)work;
     const Ld2410Ack *ack = Ld2410.ack_ok_args.ack;
@@ -473,7 +476,7 @@ static void ld2410_ack_ok(uint8_t *work)
     Ld2410.ok = ack && ack->status == 0;
 }
 
-static void ld2410_ack_mac(uint8_t *work)
+static void ld2410_ack_mac(const uint8_t *work)
 {
     (void)work;
     const Ld2410Ack *ack = Ld2410.ack_mac_args.ack;
@@ -521,6 +524,7 @@ static void ld2410_poll(uint8_t *work)
         Ld2410.stream_push_args.byte = LD2410_CTX(work)->rx[i];
         Ld2410.stream_push_args.out = &r;
         ld2410_stream_push(work);
+        Ld2410.stream_push_args.out = NULL;
         if (Ld2410.ok)
         {
             LD2410_CTX(work)->last = r;

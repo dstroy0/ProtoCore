@@ -21,7 +21,7 @@
 
 EMBED_BEGIN_DECLS
 
-// One encoder row: the caller buffer it appends into, how far it has appended, and the sticky flag
+// One encoder row: the caller buffer it appends into, how far it appended, and the sticky flag
 // an overflow sets.
 typedef struct
 {
@@ -31,7 +31,7 @@ typedef struct
     embed_bool error;
 } ProtobufWriterRow;
 
-// One decoder row: the encoded octets it walks and the offset it has walked to.
+// One decoder row: the encoded octets it walks and the offset it walked to.
 typedef struct
 {
     const uint8_t *buf;
@@ -59,7 +59,10 @@ static_assert(PROTOBUF_OFF_CTX + sizeof(struct ProtobufStorage) <= PROTOCORE_PRO
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define PROTOBUF_CTX(w) ((struct ProtobufStorage *)(void *)((w) + PROTOBUF_OFF_CTX))
+#define PROTOBUF_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct ProtobufStorage *)(const void *)((w) + PROTOBUF_OFF_CTX),                       \
+        default: (struct ProtobufStorage *)(void *)((w) + PROTOBUF_OFF_CTX))
 
 // The encoder row ns->slot names, or NULL when the slot is past the pool.
 static ProtobufWriterRow *writer_row(uint8_t *work)
@@ -450,7 +453,7 @@ void protocore_protobuf_read_record(uint8_t *work)
 }
 
 // Convert the ZigZag varint ns->value.u64 to the sint64 ns->i64: even maps to positive, odd to negative.
-void protocore_protobuf_zigzag64(uint8_t *work)
+void protocore_protobuf_zigzag64(const uint8_t *work)
 {
     (void)work;
     const uint64_t v = ProtobufV.value.u64;
@@ -459,7 +462,7 @@ void protocore_protobuf_zigzag64(uint8_t *work)
 }
 
 // Convert the ZigZag varint ns->value.u32 to the sint32 ns->i32: even maps to positive, odd to negative.
-void protocore_protobuf_zigzag32(uint8_t *work)
+void protocore_protobuf_zigzag32(const uint8_t *work)
 {
     (void)work;
     const uint32_t v = ProtobufV.value.u32;
@@ -468,7 +471,7 @@ void protocore_protobuf_zigzag32(uint8_t *work)
 }
 
 // Read the I32 bit pattern ns->value.u32 as the float ns->f32.
-void protocore_protobuf_float_bits(uint8_t *work)
+void protocore_protobuf_float_bits(const uint8_t *work)
 {
     (void)work;
     const uint32_t bits = ProtobufV.value.u32;
@@ -479,7 +482,7 @@ void protocore_protobuf_float_bits(uint8_t *work)
 }
 
 // Read the I64 bit pattern ns->value.u64 as the double ns->f64.
-void protocore_protobuf_double_bits(uint8_t *work)
+void protocore_protobuf_double_bits(const uint8_t *work)
 {
     (void)work;
     const uint64_t bits = ProtobufV.value.u64;

@@ -13,7 +13,7 @@
  * is independent) and bounds memory: a decompressed message must fit @p dst_cap.
  *
  * The only working memory is a Huffman-table scratch the caller supplies
- * (INFLATE_SCRATCH_SIZE bytes); the WebSocket layer borrows it from the
+ * (INFLATE_SCRATCH_SIZE bytes). The WebSocket layer borrows it from the
  * per-dispatch scratch arena, so INFLATE costs no dedicated buffer.
  *
  * Decoding terminates at a final block (BFINAL) or at a clean end-of-input on a
@@ -104,12 +104,12 @@ extern InflateVars InflateV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const raw)(uint8_t *work);
+    void (*const raw)(const uint8_t *work);
 } InflateNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in InflateV or a region of the borrow at a fixed offset.
-void protocore_inflate_raw(uint8_t *work);
+void protocore_inflate_raw(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

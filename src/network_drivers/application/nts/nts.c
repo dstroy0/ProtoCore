@@ -33,10 +33,10 @@ static uint16_t get_u16(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_nts_ef(uint8_t *work);
-void protocore_nts_ke_record(uint8_t *work);
+void protocore_nts_ef(const uint8_t *work);
+void protocore_nts_ke_record(const uint8_t *work);
 
-void protocore_nts_ke_record(uint8_t *work)
+void protocore_nts_ke_record(const uint8_t *work)
 {
     (void)work;
     embed_bool critical = NtsV.ke_record_args.critical;
@@ -85,6 +85,7 @@ void protocore_nts_ke_request(uint8_t *work)
     NtsV.ke_record_args.out = out + n;
     NtsV.ke_record_args.cap = cap - n;
     protocore_nts_ke_record(work);
+    NtsV.ke_record_args.body = NULL;
     r = NtsV.n;
     if (!r)
     {
@@ -99,6 +100,7 @@ void protocore_nts_ke_request(uint8_t *work)
     NtsV.ke_record_args.out = out + n;
     NtsV.ke_record_args.cap = cap - n;
     protocore_nts_ke_record(work);
+    NtsV.ke_record_args.body = NULL;
     r = NtsV.n;
     if (!r)
     {
@@ -123,7 +125,7 @@ void protocore_nts_ke_request(uint8_t *work)
     NtsV.n = n;
 }
 
-void protocore_nts_ke_parse(uint8_t *work)
+void protocore_nts_ke_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = NtsV.ke_parse_args.buf;
@@ -158,7 +160,7 @@ void protocore_nts_ke_parse(uint8_t *work)
     NtsV.ok = EMBED_FALSE; // no End-of-Message record
 }
 
-void protocore_nts_ef(uint8_t *work)
+void protocore_nts_ef(const uint8_t *work)
 {
     (void)work;
     uint16_t field_type = NtsV.ef_args.field_type;

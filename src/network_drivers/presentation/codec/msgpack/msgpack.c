@@ -20,7 +20,7 @@
 EMBED_BEGIN_DECLS
 
 // Thin local names over the shared byte verbs (byteio.h) so the call sites
-// below read the same as before; the cursor invariants live in one place.
+// below read the same as before. The cursor invariants live in one place.
 static void put(mmgr_span *w, uint8_t b)
 {
     EMBED_CALL(byteio.put, OctetusCfg, .write_span = w, .byte = b);
@@ -224,7 +224,7 @@ static embed_bool take_be(mmgr_cspan *r, size_t nbytes, uint64_t *out)
     return EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = nbytes, .out = out);
 }
 
-static protocore_codec_type protocore_msgpack_peek(mmgr_cspan *r)
+static protocore_codec_type protocore_msgpack_peek(mmgr_cspan *r) // NOSONAR(c:S995): the codec table fixes it
 {
     if (r->err || r->pos >= r->len)
     {

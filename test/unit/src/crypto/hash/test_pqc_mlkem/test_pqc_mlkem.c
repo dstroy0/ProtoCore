@@ -9,7 +9,7 @@
 // entry points here are the derandomized "internal" forms, so each is a pure function of its inputs
 // and the whole of it is pinned: KeyGen's (ek, dk) from (d, z), Encaps's (c, K) from (ek, m), and
 // Decaps's K from (dk, c). A round trip alone would agree with a wrong NTT or a wrong compression
-// as long as both halves were wrong the same way; these do not.
+// as long as both halves were wrong the same way. These do not.
 
 #include "crypto/pqc/mlkem/mlkem.h"
 #include <string.h>

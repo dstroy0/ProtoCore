@@ -41,7 +41,7 @@ static void nts_ke_sink(bool critical, uint16_t type, const uint8_t *body, size_
 
 void dbench_run(void)
 {
-    // 32-byte "random" for a Unique Identifier EF (RFC 8915 sec 5.3 requires >= 32 bytes); the exact
+    // 32-byte "random" for a Unique Identifier EF (RFC 8915 sec 5.3 requires >= 32 bytes). The exact
     // byte fill matches test/test_nts/test_nts.cpp (0xAB) so this is known-good, spec-conformant data.
     static uint8_t uid[32];
     memset(uid, 0xAB, sizeof(uid));

@@ -12,7 +12,7 @@
 // All three are pure math/string-building, so every call here exercises the real production code
 // path - like performance_benching/device/modbus, a pure codec with no hardware involved. The Arduino-only route
 // registration half (protocore_delivery_serve_sw, http_delivery_routes.cpp) needs a live PC server + real
-// sockets and is deliberately OUT OF SCOPE on this rig; only the deterministic cores are benched.
+// sockets and is deliberately OUT OF SCOPE on this rig. Only the deterministic cores are benched.
 // Byte-range/206 serving is network_drivers/application/http_range.h's job, not this service's, so it is not benched
 // here.
 //

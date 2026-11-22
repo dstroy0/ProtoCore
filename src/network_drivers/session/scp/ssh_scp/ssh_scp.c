@@ -60,7 +60,10 @@ static_assert(SSH_SCP_OFF_CTX % _Alignof(SshScpCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_SCP_CTX(w) ((SshScpCtx *)(void *)((w) + SSH_SCP_OFF_CTX))
+#define SSH_SCP_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshScpCtx *)(const void *)((w) + SSH_SCP_OFF_CTX),                                     \
+        default: (SshScpCtx *)(void *)((w) + SSH_SCP_OFF_CTX))
 
 // An error ack is a status byte, a message, and a terminator, and all three are fixed - so each one
 // is a single rodata string, sent as it stands. Staging one in a buffer would copy a constant and
@@ -147,7 +150,7 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
     ScpMode mode = scp_value;
     if (mode == SCP_MODE_SINK)
     {
-        // A '/' terminator is what makes the target a directory, and it is also the separator the
+        // A '/' terminator is what makes the target a directory. It is also the separator the
         // accessor's join relies on, so the flag and the string agree without either being rebuilt.
         size_t pl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->dest, .cap = sizeof(c->dest));
         c->dest_is_dir = (pl > 0 && c->dest[pl - 1] == '/');

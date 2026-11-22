@@ -139,9 +139,9 @@ typedef struct
 typedef struct
 {
     size_t (*parse)(uint8_t *, const uint8_t *, size_t, QuicFrameHeader *);
-    size_t (*build_padding)(uint8_t *, uint8_t *, size_t, size_t);
-    size_t (*build_ping)(uint8_t *, uint8_t *, size_t);
-    size_t (*build_handshake_done)(uint8_t *, uint8_t *, size_t);
+    size_t (*build_padding)(const uint8_t *, uint8_t *, size_t, size_t);
+    size_t (*build_ping)(const uint8_t *, uint8_t *, size_t);
+    size_t (*build_handshake_done)(const uint8_t *, uint8_t *, size_t);
     size_t (*build_ack)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, uint64_t);
     size_t (*build_crypto)(uint8_t *, uint8_t *, size_t, uint64_t, const uint8_t *, size_t);
     size_t (*build_stream)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t, const uint8_t *, size_t, embed_bool);
@@ -169,7 +169,7 @@ size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len,
  * @param n N
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t cap, size_t n);
+size_t protocore_quic_frame_build_padding(const uint8_t *work, uint8_t *out, size_t cap, size_t n);
 /**
  * @brief A PING frame.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -177,7 +177,7 @@ size_t protocore_quic_frame_build_padding(uint8_t *work, uint8_t *out, size_t ca
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap);
+size_t protocore_quic_frame_build_ping(const uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief A HANDSHAKE_DONE frame.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.
@@ -185,7 +185,7 @@ size_t protocore_quic_frame_build_ping(uint8_t *work, uint8_t *out, size_t cap);
  * @param cap Cap
  * @return The size_t.
  */
-size_t protocore_quic_frame_build_handshake_done(uint8_t *work, uint8_t *out, size_t cap);
+size_t protocore_quic_frame_build_handshake_done(const uint8_t *work, uint8_t *out, size_t cap);
 /**
  * @brief A single-range ACK frame (ACK Range Count 0): Largest, ACK Delay, .
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.

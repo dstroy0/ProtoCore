@@ -22,9 +22,9 @@ EMBED_BEGIN_DECLS
 // never read.
 
 void protocore_hostlink_build(uint8_t *work);
-void protocore_hostlink_fcs(uint8_t *work);
+void protocore_hostlink_fcs(const uint8_t *work);
 
-void protocore_hostlink_fcs(uint8_t *work)
+void protocore_hostlink_fcs(const uint8_t *work)
 {
     (void)work;
     const char *data = HostlinkV.fcs_args.data;
@@ -160,7 +160,7 @@ void protocore_hostlink_parse(uint8_t *work)
     HostlinkV.ok = EMBED_TRUE;
 }
 
-void protocore_hostlink_end_code(uint8_t *work)
+void protocore_hostlink_end_code(const uint8_t *work)
 {
     (void)work;
     const HostlinkFrame *f = HostlinkV.end_code_args.f;
@@ -214,9 +214,10 @@ void protocore_hostlink_build_read(uint8_t *work)
     HostlinkV.build_args.text = text;
     HostlinkV.build_args.text_len = sizeof(text);
     protocore_hostlink_build(work);
+    HostlinkV.build_args.text = NULL;
 }
 
-void protocore_hostlink_read_word(uint8_t *work)
+void protocore_hostlink_read_word(const uint8_t *work)
 {
     (void)work;
     const HostlinkFrame *f = HostlinkV.read_word_args.f;

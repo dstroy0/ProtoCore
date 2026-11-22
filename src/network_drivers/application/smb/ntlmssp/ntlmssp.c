@@ -30,7 +30,7 @@ static void wr_field(uint8_t *f, uint16_t len, uint32_t off)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_ntlmssp_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap, uint32_t flags)
+size_t protocore_ntlmssp_build_negotiate(const uint8_t *work, uint8_t *buf, size_t cap, uint32_t flags)
 {
     (void)work;
 
@@ -49,7 +49,7 @@ size_t protocore_ntlmssp_build_negotiate(uint8_t *work, uint8_t *buf, size_t cap
     return 32;
 }
 
-embed_bool protocore_ntlmssp_parse_challenge(uint8_t *work, const uint8_t *msg, size_t len, NtlmChallenge *out)
+embed_bool protocore_ntlmssp_parse_challenge(const uint8_t *work, const uint8_t *msg, size_t len, NtlmChallenge *out)
 {
     (void)work;
 
@@ -108,7 +108,7 @@ static size_t utf16_len(const char *s)
     return n * 2;
 }
 
-size_t protocore_ntlmssp_build_authenticate(uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
+size_t protocore_ntlmssp_build_authenticate(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
                                             size_t lm_len, const uint8_t *nt_resp, size_t nt_len, const char *domain,
                                             const char *user, const char *workstation, uint32_t flags,
                                             embed_bool with_mic)

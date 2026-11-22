@@ -6,7 +6,7 @@
  * @brief The platform contract: what the library asks of a target, in the library's own words.
  *
  * Nothing here names a vendor. The axis itself is resolved in vendor/vendor_detect.h, which then
- * pulls in exactly one vendor/<vendor>/ header; this file states the questions that header has to
+ * pulls in exactly one vendor/<vendor>/ header. This file states the questions that header has to
  * answer and refuses the build, by name, for any it did not.
  *
  * Two kinds of thing live here:

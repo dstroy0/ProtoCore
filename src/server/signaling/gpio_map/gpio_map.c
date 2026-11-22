@@ -6,7 +6,7 @@
  * @brief GPIO pin-mapper direction names, JSON serializer, control parser, and
  *        the digital read / write helpers.
  *
- * The serializer and the `pin=&level=` parser are pure (host-tested); the digital
+ * The serializer and the `pin=&level=` parser are pure (host-tested). The digital
  * I/O goes through the board profile's protocore_platform_gpio_* where a pin seam exists
  * and is a no-op where there is none. No server dependency lives here.
  */
@@ -43,7 +43,7 @@ static const char *dir_name_of(protocore_gpio_dir dir)
     }
 }
 
-void protocore_gpio_map_dir_name(uint8_t *work)
+void protocore_gpio_map_dir_name(const uint8_t *work)
 {
     (void)work;
     GpioMapV.text = dir_name_of(GpioMapV.args.dir);
@@ -70,7 +70,7 @@ static const mmgr_field GPIO_PIN[] = {
 };
 static const mmgr_field GPIO_CLOSE[] = {{MMGR_FK_LIT, 0, 2, "]}"}, MMGR_END};
 
-void protocore_gpio_map_json(uint8_t *work)
+void protocore_gpio_map_json(const uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -149,7 +149,7 @@ static embed_bool form_field_uint(const char *body, size_t len, const char *name
     return EMBED_FALSE;
 }
 
-void protocore_gpio_map_parse_set(uint8_t *work)
+void protocore_gpio_map_parse_set(const uint8_t *work)
 {
     (void)work;
     const char *body = GpioMapV.parse_args.body;
@@ -181,7 +181,7 @@ void protocore_gpio_map_parse_set(uint8_t *work)
     GpioMapV.ok = EMBED_TRUE;
 }
 
-void protocore_gpio_map_is_output(uint8_t *work)
+void protocore_gpio_map_is_output(const uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -206,7 +206,7 @@ void protocore_gpio_map_is_output(uint8_t *work)
 
 #if PROTOCORE_HAS_GPIO
 
-void protocore_gpio_map_begin_pins(uint8_t *work)
+void protocore_gpio_map_begin_pins(const uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -222,22 +222,22 @@ void protocore_gpio_map_begin_pins(uint8_t *work)
         switch (pins[i].dir)
         {
         case PROTOCORE_GPIO_DIR_OUT:
-            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_OUT);
+            protocore_platform_gpio_mode((pins[i].pin), PROTOCORE_GPIO_OUT);
             break;
         case PROTOCORE_GPIO_DIR_IN_PULLUP:
-            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN_PULLUP);
+            protocore_platform_gpio_mode((pins[i].pin), PROTOCORE_GPIO_IN_PULLUP);
             break;
         case PROTOCORE_GPIO_DIR_IN_PULLDOWN:
-            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN_PULLDOWN);
+            protocore_platform_gpio_mode((pins[i].pin), PROTOCORE_GPIO_IN_PULLDOWN);
             break;
         default:
-            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN);
+            protocore_platform_gpio_mode((pins[i].pin), PROTOCORE_GPIO_IN);
             break;
         }
     }
 }
 
-void protocore_gpio_map_sample(uint8_t *work)
+void protocore_gpio_map_sample(const uint8_t *work)
 {
     (void)work;
     protocore_gpio_pin *pins = GpioMapV.args.pins_rw;
@@ -249,25 +249,25 @@ void protocore_gpio_map_sample(uint8_t *work)
     }
     for (uint8_t i = 0; i < count; i++)
     {
-        pins[i].level = (uint8_t)(protocore_platform_gpio_read((uint8_t)(pins[i].pin)) ? 1 : 0);
+        pins[i].level = (uint8_t)(protocore_platform_gpio_read((pins[i].pin)) ? 1 : 0);
     }
 }
 
 // level indexes this; !!level is 0 or 1, so the selection is a load rather than a branch.
 static const uint8_t PROTOCORE_GPIO_LEVEL[2] = {PROTOCORE_GPIO_LOW, PROTOCORE_GPIO_HIGH};
 
-void protocore_gpio_map_write(uint8_t *work)
+void protocore_gpio_map_write(const uint8_t *work)
 {
     (void)work;
     const uint8_t pin = GpioMapV.args.pin;
     const uint8_t level = GpioMapV.args.level;
 
-    protocore_platform_gpio_write((uint8_t)(pin), PROTOCORE_GPIO_LEVEL[!!level]);
+    protocore_platform_gpio_write((pin), PROTOCORE_GPIO_LEVEL[!!level]);
 }
 
 #else // no pin seam
 
-void protocore_gpio_map_begin_pins(uint8_t *work)
+void protocore_gpio_map_begin_pins(const uint8_t *work)
 {
     (void)work;
     const protocore_gpio_pin *pins = GpioMapV.args.pins;
@@ -277,7 +277,7 @@ void protocore_gpio_map_begin_pins(uint8_t *work)
     (void)count;
 }
 
-void protocore_gpio_map_sample(uint8_t *work)
+void protocore_gpio_map_sample(const uint8_t *work)
 {
     (void)work;
     protocore_gpio_pin *pins = GpioMapV.args.pins_rw;
@@ -287,7 +287,7 @@ void protocore_gpio_map_sample(uint8_t *work)
     (void)count;
 }
 
-void protocore_gpio_map_write(uint8_t *work)
+void protocore_gpio_map_write(const uint8_t *work)
 {
     (void)work;
     const uint8_t pin = GpioMapV.args.pin;

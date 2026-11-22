@@ -71,7 +71,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define FTP_SESSION_CTX(w) ((FtpSessionCtx *)(void *)((w) + FTP_SESSION_OFF_CTX))
+#define FTP_SESSION_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const FtpSessionCtx *)(const void *)((w) + FTP_SESSION_OFF_CTX),                             \
+        default: (FtpSessionCtx *)(void *)((w) + FTP_SESSION_OFF_CTX))
 
 // Log frames. Each is the shape of one message, fixed when the code was written, so the logger
 // builds it without parsing anything and a level that is compiled out costs the spec nothing.
@@ -130,7 +133,7 @@ static embed_bool ftp_send(uint8_t *work, const char *verb, const char *arg)
  * @brief Read until a complete reply is buffered.
  *
  * The reply text is left at the head of rx (length in @p rlen) so a caller can hand it straight to
- * protocore_ftp_parse_pasv / _epsv; it is shifted out at the start of the next call, which keeps any
+ * protocore_ftp_parse_pasv / _epsv. It is shifted out at the start of the next call, which keeps any
  * bytes the server pipelined behind it.
  */
 static protocore_ftp_state ftp_await(uint8_t *work, int *code, size_t *rlen)

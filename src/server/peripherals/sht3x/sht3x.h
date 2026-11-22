@@ -140,8 +140,8 @@ extern Sht3xVars Sht3xV;
 typedef struct
 {
     void (*const crc8)(uint8_t *work);
-    void (*const temp_mc)(uint8_t *work);
-    void (*const rh_mpct)(uint8_t *work);
+    void (*const temp_mc)(const uint8_t *work);
+    void (*const rh_mpct)(const uint8_t *work);
     void (*const parse)(uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read)(uint8_t *work);
@@ -150,8 +150,8 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Sht3xV or a region of the borrow at a fixed offset.
 void protocore_sht3x_crc8(uint8_t *work);
-void protocore_sht3x_temp_mc(uint8_t *work);
-void protocore_sht3x_rh_mpct(uint8_t *work);
+void protocore_sht3x_temp_mc(const uint8_t *work);
+void protocore_sht3x_rh_mpct(const uint8_t *work);
 void protocore_sht3x_parse(uint8_t *work);
 void protocore_sht3x_begin(uint8_t *work);
 void protocore_sht3x_read(uint8_t *work);

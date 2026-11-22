@@ -5,7 +5,7 @@
  * @file tls13_msg.h
  * @brief TLS 1.3 handshake messages for the QUIC handshake (RFC 8446 sec 4).
  *
- * The wire formats of the handshake messages a QUIC server exchanges: it parses the client's
+ * The wire formats of the handshake messages a QUIC server exchanges. It parses the client's
  * ClientHello and builds its own flight (ServerHello, then the encrypted EncryptedExtensions,
  * Certificate, CertificateVerify, and Finished). Every message is emitted whole, including the
  * 4-byte handshake header (msg_type + 24-bit length), because that is what both the CRYPTO stream
@@ -375,40 +375,40 @@ extern Tls13MsgVars Tls13MsgV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const parse_client_hello)(uint8_t *work);
-    void (*const parse_server_hello)(uint8_t *work);
-    void (*const build_client_hello)(uint8_t *work);
-    void (*const parse_certificate)(uint8_t *work);
-    void (*const parse_cert_verify)(uint8_t *work);
-    void (*const parse_finished)(uint8_t *work);
-    void (*const build_server_hello)(uint8_t *work);
-    void (*const build_encrypted_extensions)(uint8_t *work);
-    void (*const build_certificate)(uint8_t *work);
+    void (*const parse_client_hello)(const uint8_t *work);
+    void (*const parse_server_hello)(const uint8_t *work);
+    void (*const build_client_hello)(const uint8_t *work);
+    void (*const parse_certificate)(const uint8_t *work);
+    void (*const parse_cert_verify)(const uint8_t *work);
+    void (*const parse_finished)(const uint8_t *work);
+    void (*const build_server_hello)(const uint8_t *work);
+    void (*const build_encrypted_extensions)(const uint8_t *work);
+    void (*const build_certificate)(const uint8_t *work);
     void (*const build_cert_verify)(uint8_t *work);
-    void (*const build_finished)(uint8_t *work);
-    void (*const cert_verify_content)(uint8_t *work);
-    void (*const build_hello_retry_request)(uint8_t *work);
-    void (*const build_encrypted_extensions_empty)(uint8_t *work);
-    void (*const build_message_hash)(uint8_t *work);
+    void (*const build_finished)(const uint8_t *work);
+    void (*const cert_verify_content)(const uint8_t *work);
+    void (*const build_hello_retry_request)(const uint8_t *work);
+    void (*const build_encrypted_extensions_empty)(const uint8_t *work);
+    void (*const build_message_hash)(const uint8_t *work);
 } Tls13MsgNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in Tls13MsgV or a region of the borrow at a fixed offset.
-void protocore_tls13_msg_parse_client_hello(uint8_t *work);
-void protocore_tls13_msg_parse_server_hello(uint8_t *work);
-void protocore_tls13_msg_build_client_hello(uint8_t *work);
-void protocore_tls13_msg_parse_certificate(uint8_t *work);
-void protocore_tls13_msg_parse_cert_verify(uint8_t *work);
-void protocore_tls13_msg_parse_finished(uint8_t *work);
-void protocore_tls13_msg_build_server_hello(uint8_t *work);
-void protocore_tls13_msg_build_encrypted_extensions(uint8_t *work);
-void protocore_tls13_msg_build_certificate(uint8_t *work);
+void protocore_tls13_msg_parse_client_hello(const uint8_t *work);
+void protocore_tls13_msg_parse_server_hello(const uint8_t *work);
+void protocore_tls13_msg_build_client_hello(const uint8_t *work);
+void protocore_tls13_msg_parse_certificate(const uint8_t *work);
+void protocore_tls13_msg_parse_cert_verify(const uint8_t *work);
+void protocore_tls13_msg_parse_finished(const uint8_t *work);
+void protocore_tls13_msg_build_server_hello(const uint8_t *work);
+void protocore_tls13_msg_build_encrypted_extensions(const uint8_t *work);
+void protocore_tls13_msg_build_certificate(const uint8_t *work);
 void protocore_tls13_msg_build_cert_verify(uint8_t *work);
-void protocore_tls13_msg_build_finished(uint8_t *work);
-void protocore_tls13_msg_cert_verify_content(uint8_t *work);
-void protocore_tls13_msg_build_hello_retry_request(uint8_t *work);
-void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *work);
-void protocore_tls13_msg_build_message_hash(uint8_t *work);
+void protocore_tls13_msg_build_finished(const uint8_t *work);
+void protocore_tls13_msg_cert_verify_content(const uint8_t *work);
+void protocore_tls13_msg_build_hello_retry_request(const uint8_t *work);
+void protocore_tls13_msg_build_encrypted_extensions_empty(const uint8_t *work);
+void protocore_tls13_msg_build_message_hash(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

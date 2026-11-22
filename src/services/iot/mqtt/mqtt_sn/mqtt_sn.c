@@ -96,7 +96,7 @@ static size_t frame_header(uint8_t *buf, size_t cap, uint8_t msg_type, size_t bo
 // Flags
 // ---------------------------------------------------------------------------
 
-void protocore_mqttsn_make_flags(uint8_t *work)
+void protocore_mqttsn_make_flags(const uint8_t *work)
 {
     (void)work;
     uint8_t f = 0;
@@ -127,7 +127,7 @@ void protocore_mqttsn_make_flags(uint8_t *work)
 // ---------------------------------------------------------------------------
 
 // CONNECT: Flags, ProtocolId, Duration, ClientId (sec 5.4.4).
-void protocore_mqttsn_build_connect(uint8_t *work)
+void protocore_mqttsn_build_connect(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -155,7 +155,7 @@ void protocore_mqttsn_build_connect(uint8_t *work)
 }
 
 // REGISTER: TopicId, MsgId, TopicName (sec 5.4.10).
-void protocore_mqttsn_build_register(uint8_t *work)
+void protocore_mqttsn_build_register(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -183,7 +183,7 @@ void protocore_mqttsn_build_register(uint8_t *work)
 }
 
 // REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
-void protocore_mqttsn_build_regack(uint8_t *work)
+void protocore_mqttsn_build_regack(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -209,7 +209,7 @@ void protocore_mqttsn_build_regack(uint8_t *work)
 }
 
 // PUBLISH: Flags, TopicId, MsgId, Data (sec 5.4.12).
-void protocore_mqttsn_build_publish(uint8_t *work)
+void protocore_mqttsn_build_publish(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -241,7 +241,7 @@ void protocore_mqttsn_build_publish(uint8_t *work)
 }
 
 // PUBACK: TopicId, MsgId, ReturnCode (sec 5.4.13).
-void protocore_mqttsn_build_puback(uint8_t *work)
+void protocore_mqttsn_build_puback(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -267,7 +267,7 @@ void protocore_mqttsn_build_puback(uint8_t *work)
 }
 
 // SUBSCRIBE naming a TopicName: Flags, MsgId, TopicName (sec 5.4.15).
-void protocore_mqttsn_build_subscribe_name(uint8_t *work)
+void protocore_mqttsn_build_subscribe_name(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -294,7 +294,7 @@ void protocore_mqttsn_build_subscribe_name(uint8_t *work)
 }
 
 // SUBSCRIBE naming a pre-defined TopicId: Flags, MsgId, TopicId (sec 5.4.15).
-void protocore_mqttsn_build_subscribe_id(uint8_t *work)
+void protocore_mqttsn_build_subscribe_id(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -319,7 +319,7 @@ void protocore_mqttsn_build_subscribe_id(uint8_t *work)
 }
 
 // PINGREQ, with the optional ClientId a woken sleeping client includes (sec 5.4.19, sec 6.14).
-void protocore_mqttsn_build_pingreq(uint8_t *work)
+void protocore_mqttsn_build_pingreq(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -348,7 +348,7 @@ void protocore_mqttsn_build_pingreq(uint8_t *work)
 }
 
 // DISCONNECT, carrying the sleep Duration when asked (sec 5.4.21, sec 6.14).
-void protocore_mqttsn_build_disconnect(uint8_t *work)
+void protocore_mqttsn_build_disconnect(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -374,7 +374,7 @@ void protocore_mqttsn_build_disconnect(uint8_t *work)
 }
 
 // SEARCHGW: Radius (sec 5.4.2).
-void protocore_mqttsn_build_searchgw(uint8_t *work)
+void protocore_mqttsn_build_searchgw(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -401,7 +401,7 @@ void protocore_mqttsn_build_searchgw(uint8_t *work)
 
 // The Length and MsgType at the head of the buffer, and the Message Variable Part behind them
 // (sec 5.2). n reports the whole message length so the caller can advance.
-void protocore_mqttsn_parse_header(uint8_t *work)
+void protocore_mqttsn_parse_header(const uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
@@ -444,7 +444,7 @@ void protocore_mqttsn_parse_header(uint8_t *work)
 }
 
 // CONNACK: ReturnCode (sec 5.4.5).
-void protocore_mqttsn_parse_connack(uint8_t *work)
+void protocore_mqttsn_parse_connack(const uint8_t *work)
 {
     (void)work;
     MqttsnV.ok = EMBED_FALSE;
@@ -457,7 +457,7 @@ void protocore_mqttsn_parse_connack(uint8_t *work)
 }
 
 // REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
-void protocore_mqttsn_parse_regack(uint8_t *work)
+void protocore_mqttsn_parse_regack(const uint8_t *work)
 {
     (void)work;
     MqttsnV.ok = EMBED_FALSE;
@@ -479,7 +479,7 @@ void protocore_mqttsn_parse_puback(uint8_t *work)
 }
 
 // SUBACK: Flags, TopicId, MsgId, ReturnCode (sec 5.4.16).
-void protocore_mqttsn_parse_suback(uint8_t *work)
+void protocore_mqttsn_parse_suback(const uint8_t *work)
 {
     (void)work;
     MqttsnV.ok = EMBED_FALSE;
@@ -496,7 +496,7 @@ void protocore_mqttsn_parse_suback(uint8_t *work)
 }
 
 // PUBLISH: Flags, TopicId, MsgId, then the Data that fills the rest (sec 5.4.12).
-void protocore_mqttsn_parse_publish(uint8_t *work)
+void protocore_mqttsn_parse_publish(const uint8_t *work)
 {
     (void)work;
     MqttsnV.ok = EMBED_FALSE;
@@ -516,7 +516,7 @@ void protocore_mqttsn_parse_publish(uint8_t *work)
 }
 
 // REGISTER: TopicId, MsgId, then the TopicName that fills the rest (sec 5.4.10).
-void protocore_mqttsn_parse_register(uint8_t *work)
+void protocore_mqttsn_parse_register(const uint8_t *work)
 {
     (void)work;
     MqttsnV.ok = EMBED_FALSE;

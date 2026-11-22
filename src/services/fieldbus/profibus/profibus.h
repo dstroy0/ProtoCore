@@ -15,7 +15,7 @@
  *
  * DA = destination, SA = source, FC = frame control. The FCS is the arithmetic sum (mod 256) of DA + SA
  * + FC + data. ED (end delimiter) is 0x16. This builds/validates the SD1 and SD2 telegrams a DP master
- * exchanges with slaves; the RS-485 UART timing + the DP-V0 state machine are the device step. Pure,
+ * exchanges with slaves. The RS-485 UART timing + the DP-V0 state machine are the device step. Pure,
  * zero heap, no stdlib, host-testable.
  */
 
@@ -150,7 +150,7 @@ extern ProfibusVars ProfibusV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const fcs)(uint8_t *work);
+    void (*const fcs)(const uint8_t *work);
     void (*const build_sd1)(uint8_t *work);
     void (*const build_sd2)(uint8_t *work);
     void (*const build_sd3)(uint8_t *work);
@@ -159,7 +159,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in ProfibusV or a region of the borrow at a fixed offset.
-void protocore_profibus_fcs(uint8_t *work);
+void protocore_profibus_fcs(const uint8_t *work);
 void protocore_profibus_build_sd1(uint8_t *work);
 void protocore_profibus_build_sd2(uint8_t *work);
 void protocore_profibus_build_sd3(uint8_t *work);

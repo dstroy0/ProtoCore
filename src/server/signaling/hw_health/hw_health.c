@@ -15,7 +15,7 @@
 
 EMBED_BEGIN_DECLS
 
-void protocore_hw_health_rail_init(uint8_t *work)
+void protocore_hw_health_rail_init(const uint8_t *work)
 {
     (void)work;
     HwRailMonitor *m = HwHealthV.rail.m;
@@ -31,7 +31,7 @@ void protocore_hw_health_rail_init(uint8_t *work)
     m->brownout_events = 0;
 }
 
-void protocore_hw_health_rail_sample(uint8_t *work)
+void protocore_hw_health_rail_sample(const uint8_t *work)
 {
     (void)work;
     HwRailMonitor *m = HwHealthV.rail.m;
@@ -59,7 +59,7 @@ void protocore_hw_health_rail_sample(uint8_t *work)
     }
 }
 
-void protocore_hw_health_rail_json(uint8_t *work)
+void protocore_hw_health_rail_json(const uint8_t *work)
 {
     (void)work;
     const HwRailMonitor *m = HwHealthV.rail.m_ro;
@@ -89,7 +89,7 @@ void protocore_hw_health_rail_json(uint8_t *work)
     HwHealthV.n = b;
 }
 
-void protocore_hw_health_spi_init(uint8_t *work)
+void protocore_hw_health_spi_init(const uint8_t *work)
 {
     (void)work;
     HwSpiBackoff *s = HwHealthV.spi.s;
@@ -117,7 +117,7 @@ void protocore_hw_health_spi_init(uint8_t *work)
     s->ok_trip = HwHealthV.spi.ok_trip ? HwHealthV.spi.ok_trip : 1;
 }
 
-void protocore_hw_health_spi_result(uint8_t *work)
+void protocore_hw_health_spi_result(const uint8_t *work)
 {
     (void)work;
     HwSpiBackoff *s = HwHealthV.spi.s;
@@ -158,7 +158,7 @@ void protocore_hw_health_spi_result(uint8_t *work)
     HwHealthV.hz = s->hz;
 }
 
-void protocore_hw_health_gpio_short(uint8_t *work)
+void protocore_hw_health_gpio_short(const uint8_t *work)
 {
     (void)work;
     if (HwHealthV.probe.driven_high && !HwHealthV.probe.read_high)
@@ -174,7 +174,7 @@ void protocore_hw_health_gpio_short(uint8_t *work)
     HwHealthV.gpio_verdict = HW_GPIO_OK;
 }
 
-void protocore_hw_health_cap_leak(uint8_t *work)
+void protocore_hw_health_cap_leak(const uint8_t *work)
 {
     (void)work;
     const uint32_t measured_ms = HwHealthV.probe.measured_ms;

@@ -39,7 +39,7 @@ typedef struct BignumCtx
 } BignumCtx;
 
 // The caller's borrow, split: the staged operands, then the p-1 the DH check builds and compares
-// against. p-1 is 256 bytes and is built per call, so it lives here rather than on the stack.
+// against. p-1 is 256 bytes and is built per call. So it lives here rather than on the stack.
 #define BIGNUM_OFF_CTX 0u
 #define BIGNUM_OFF_PM1 (BIGNUM_OFF_CTX + sizeof(struct BignumCtx))
 static_assert(BIGNUM_OFF_PM1 + sizeof(protocore_bignum) <= PROTOCORE_BIGNUM_BORROW,
@@ -55,8 +55,14 @@ static_assert(BIGNUM_OFF_PM1 % _Alignof(protocore_bignum) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define BIGNUM_CTX(w) ((struct BignumCtx *)(void *)((w) + BIGNUM_OFF_CTX))
-#define BIGNUM_PM1(w) ((protocore_bignum *)(void *)((w) + BIGNUM_OFF_PM1))
+#define BIGNUM_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct BignumCtx *)(const void *)((w) + BIGNUM_OFF_CTX),                               \
+        default: (struct BignumCtx *)(void *)((w) + BIGNUM_OFF_CTX))
+#define BIGNUM_PM1(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const protocore_bignum *)(const void *)((w) + BIGNUM_OFF_PM1),                               \
+        default: (protocore_bignum *)(void *)((w) + BIGNUM_OFF_PM1))
 
 // ---------------------------------------------------------------------------
 // Group-14 prime and generator (RFC 3526, §3)

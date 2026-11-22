@@ -20,14 +20,14 @@ def trim(report: pathlib.Path) -> tuple[int, int]:
     coverage = tree.getroot()
     lines_dropped = 0
     files_dropped = 0
-    for node in list(coverage.iter("file")):
+    for node in coverage.findall("file"):
         source = ROOT / node.get("path", "")
         if not source.is_file():
             coverage.remove(node)
             files_dropped += 1
             continue
         count = len(source.read_bytes().splitlines())
-        for line in list(node.iter("lineToCover")):
+        for line in node.findall("lineToCover"):
             if int(line.get("lineNumber", "0")) > count:
                 node.remove(line)
                 lines_dropped += 1
@@ -35,15 +35,14 @@ def trim(report: pathlib.Path) -> tuple[int, int]:
     return lines_dropped, files_dropped
 
 
-def main() -> int:
+def main() -> None:
     report = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "test/coverage.xml"
     if not report.is_file():
         print(f"trim_coverage: no report at {report}")
-        return 0
+        return
     lines_dropped, files_dropped = trim(report)
     print(f"trim_coverage: {lines_dropped} lines past the end of their file, {files_dropped} files gone")
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

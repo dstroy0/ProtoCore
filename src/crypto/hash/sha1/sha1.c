@@ -5,7 +5,7 @@
  * @file sha1.c
  * @brief SHA-1 implementation (FIPS 180-4).
  *
- * One framing and one set of entries; only the block compression has two arms - the accelerator where
+ * One framing and one set of entries. Only the block compression has two arms - the accelerator where
  * the part carries one, the FIPS 180-4 rounds below where it does not. Padding, the padded final
  * blocks and the digest output are software on both arms.
  */

@@ -59,7 +59,10 @@ static_assert(CSRF_OFF_CTX % _Alignof(CsrfCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define CSRF_CTX(w) ((CsrfCtx *)(void *)((w) + CSRF_OFF_CTX))
+#define CSRF_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const CsrfCtx *)(const void *)((w) + CSRF_OFF_CTX),                                          \
+        default: (CsrfCtx *)(void *)((w) + CSRF_OFF_CTX))
 #define CSRF_MAC(w) ((w) + CSRF_OFF_MAC)
 
 // Lowercase hex of @p n bytes at @p in, plus a NUL, into @p out.

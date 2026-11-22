@@ -169,20 +169,21 @@ static embed_bool wifi_link_tx_commit(size_t len)
 
 // The buffers are in internal RAM, which the radio reads and writes through the processor. No cache
 // line holds a stale copy. Both entries thus do nothing.
-static void wifi_link_cache_invalidate(const void *span, size_t len)
+static void wifi_link_cache_invalidate(const void *region, size_t len)
 {
-    (void)span;
+    (void)region;
     (void)len;
 }
 
-static void wifi_link_cache_clean(const void *span, size_t len)
+static void wifi_link_cache_clean(const void *region, size_t len)
 {
-    (void)span;
+    (void)region;
     (void)len;
 }
 
-// An 802.11 station has no IEEE 802.3 Clause 22 management interface. Each access thus refuses.
-static embed_bool wifi_link_mdio_read(uint8_t phy_addr, uint8_t reg, uint16_t *out)
+// An 802.11 station has no IEEE 802.3 Clause 22 management interface. Each access thus refuses. The read has
+// the signature of IdemIpPhyDriver::mdio_read, and a driver with a management interface writes out.
+static embed_bool wifi_link_mdio_read(uint8_t phy_addr, uint8_t reg, uint16_t *out) // NOSONAR(c:S995)
 {
     (void)phy_addr;
     (void)reg;
@@ -265,7 +266,7 @@ EMBED_WEAK embed_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *a
     return EMBED_FALSE;
 }
 
-EMBED_WEAK embed_bool protocore_wifi_radio_mac_read(uint8_t *mac)
+EMBED_WEAK embed_bool protocore_wifi_radio_mac_read(uint8_t *mac) // NOSONAR(c:S995): a port writes mac
 {
     (void)mac;
     return EMBED_FALSE;

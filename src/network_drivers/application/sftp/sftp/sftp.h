@@ -413,23 +413,23 @@ extern SftpVars SftpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const rd_init)(uint8_t *work);
-    void (*const rd_u8)(uint8_t *work);
-    void (*const rd_u32)(uint8_t *work);
-    void (*const rd_u64)(uint8_t *work);
+    void (*const rd_init)(const uint8_t *work);
+    void (*const rd_u8)(const uint8_t *work);
+    void (*const rd_u32)(const uint8_t *work);
+    void (*const rd_u64)(const uint8_t *work);
     void (*const rd_string)(uint8_t *work);
     void (*const rd_attrs)(uint8_t *work);
-    void (*const wr_init)(uint8_t *work);
-    void (*const wr_u8)(uint8_t *work);
-    void (*const wr_u32)(uint8_t *work);
-    void (*const wr_u64)(uint8_t *work);
-    void (*const wr_bytes)(uint8_t *work);
+    void (*const wr_init)(const uint8_t *work);
+    void (*const wr_u8)(const uint8_t *work);
+    void (*const wr_u32)(const uint8_t *work);
+    void (*const wr_u64)(const uint8_t *work);
+    void (*const wr_bytes)(const uint8_t *work);
     void (*const wr_string)(uint8_t *work);
     void (*const wr_attrs)(uint8_t *work);
-    void (*const wr_finish)(uint8_t *work);
-    void (*const wr_pos)(uint8_t *work);
-    void (*const wr_patch_u32)(uint8_t *work);
-    void (*const frame_len)(uint8_t *work);
+    void (*const wr_finish)(const uint8_t *work);
+    void (*const wr_pos)(const uint8_t *work);
+    void (*const wr_patch_u32)(const uint8_t *work);
+    void (*const frame_len)(const uint8_t *work);
     void (*const build_version)(uint8_t *work);
     void (*const build_status)(uint8_t *work);
     void (*const build_handle)(uint8_t *work);
@@ -441,23 +441,23 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SftpV or a region of the borrow at a fixed offset.
-void protocore_sftp_rd_init(uint8_t *work);
-void protocore_sftp_rd_u8(uint8_t *work);
-void protocore_sftp_rd_u32(uint8_t *work);
-void protocore_sftp_rd_u64(uint8_t *work);
+void protocore_sftp_rd_init(const uint8_t *work);
+void protocore_sftp_rd_u8(const uint8_t *work);
+void protocore_sftp_rd_u32(const uint8_t *work);
+void protocore_sftp_rd_u64(const uint8_t *work);
 void protocore_sftp_rd_string(uint8_t *work);
 void protocore_sftp_rd_attrs(uint8_t *work);
-void protocore_sftp_wr_init(uint8_t *work);
-void protocore_sftp_wr_u8(uint8_t *work);
-void protocore_sftp_wr_u32(uint8_t *work);
-void protocore_sftp_wr_u64(uint8_t *work);
-void protocore_sftp_wr_bytes(uint8_t *work);
+void protocore_sftp_wr_init(const uint8_t *work);
+void protocore_sftp_wr_u8(const uint8_t *work);
+void protocore_sftp_wr_u32(const uint8_t *work);
+void protocore_sftp_wr_u64(const uint8_t *work);
+void protocore_sftp_wr_bytes(const uint8_t *work);
 void protocore_sftp_wr_string(uint8_t *work);
 void protocore_sftp_wr_attrs(uint8_t *work);
-void protocore_sftp_wr_finish(uint8_t *work);
-void protocore_sftp_wr_pos(uint8_t *work);
-void protocore_sftp_wr_patch_u32(uint8_t *work);
-void protocore_sftp_frame_len(uint8_t *work);
+void protocore_sftp_wr_finish(const uint8_t *work);
+void protocore_sftp_wr_pos(const uint8_t *work);
+void protocore_sftp_wr_patch_u32(const uint8_t *work);
+void protocore_sftp_frame_len(const uint8_t *work);
 void protocore_sftp_build_version(uint8_t *work);
 void protocore_sftp_build_status(uint8_t *work);
 void protocore_sftp_build_handle(uint8_t *work);

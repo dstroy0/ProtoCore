@@ -59,8 +59,8 @@ def gather(targets, known):
         for here, dirs, names in os.walk(one):
             dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", "build", "vendor")]
             for name in sorted(names):
-                type = os.path.splitext(name)[1]
-                if type in UNREAD and type not in known:
+                kind = os.path.splitext(name)[1]
+                if kind in UNREAD and kind not in known:
                     out.append(os.path.join(here, name))
     return out
 
@@ -84,10 +84,10 @@ def main():
     room = tempfile.mkdtemp(prefix="grade_unread_")
     made = {}
     for path in files:
-        base, type = os.path.splitext(os.path.basename(path))
+        base, kind = os.path.splitext(os.path.basename(path))
         # The staged name retains the original type in it. Two files that differ only by extension
         # do not collide and the mapping back is unambiguous.
-        are_in = os.path.join(room, "%s__%s%s" % (base, type.lstrip("."), UNREAD[type]))
+        are_in = os.path.join(room, "%s__%s%s" % (base, kind.lstrip("."), UNREAD[kind]))
         shutil.copyfile(path, are_in)
         made[os.path.normcase(are_in)] = path
 

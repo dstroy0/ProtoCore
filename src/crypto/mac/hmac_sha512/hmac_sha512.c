@@ -57,7 +57,10 @@ static_assert(HMAC512_OFF_WORK % _Alignof(Hmac512Work) == 0,
 // The regions, at their offsets in the caller's borrow.
 #define HMAC512_INNER(w) ((w) + HMAC512_OFF_INNER)
 #define HMAC512_OKEY(w) ((w) + HMAC512_OFF_OKEY)
-#define HMAC512_WORK(w) ((Hmac512Work *)(void *)((w) + HMAC512_OFF_WORK))
+#define HMAC512_WORK(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Hmac512Work *)(const void *)((w) + HMAC512_OFF_WORK),                                  \
+        default: (Hmac512Work *)(void *)((w) + HMAC512_OFF_WORK))
 #define HMAC512_HASH(w) ((w) + HMAC512_OFF_HASH)
 
 // One 128-byte HMAC key block into @p block (RFC 2104 sec 2): keys > 128 bytes are pre-hashed, else

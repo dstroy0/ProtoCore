@@ -34,7 +34,10 @@ static_assert(FAILSAFE_OFF_CTX + sizeof(struct FailsafeStorage) <= PROTOCORE_FAI
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define FAILSAFE_CTX(w) ((struct FailsafeStorage *)(void *)((w) + FAILSAFE_OFF_CTX))
+#define FAILSAFE_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct FailsafeStorage *)(const void *)((w) + FAILSAFE_OFF_CTX),                       \
+        default: (struct FailsafeStorage *)(void *)((w) + FAILSAFE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

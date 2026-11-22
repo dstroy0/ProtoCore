@@ -7,7 +7,7 @@ The themes under src/web_assets/themes/{,generated/} are normally injected into 
 generator instead embeds them - minified - as `const char[]` blobs in a registry so the firmware can
 serve or switch a theme at runtime (e.g. a `/themes/<name>.css` route, or a picker that remembers the
 user's choice). The whole subsystem is behind `PROTOCORE_ENABLE_THEMES`, so a build that does not want
-runtime theming links none of it; enabling it embeds the set (each theme is ~1 KB of DROM/flash).
+runtime theming links none of it. Enabling it embeds the set (each theme is ~1 KB of DROM/flash).
 
 Output: src/network_drivers/application/binary_asset_blobs/binary_asset_blobs.{h,c} (generated + committed, so the
 Arduino-IDE users who never run Python still get it). Re-run after adding/editing a theme.

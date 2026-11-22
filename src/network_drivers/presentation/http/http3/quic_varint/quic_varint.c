@@ -18,7 +18,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_quic_varint_len(uint8_t *work, uint64_t value)
+size_t protocore_quic_varint_len(const uint8_t *work, uint64_t value)
 {
     (void)work;
 
@@ -59,7 +59,8 @@ size_t protocore_quic_varint_encode(uint8_t *work, uint8_t *out, size_t cap, uin
     return n;
 }
 
-embed_bool protocore_quic_varint_decode(uint8_t *work, const uint8_t *in, size_t len, uint64_t *value, size_t *consumed)
+embed_bool protocore_quic_varint_decode(const uint8_t *work, const uint8_t *in, size_t len, uint64_t *value,
+                                        size_t *consumed)
 {
     (void)work;
 

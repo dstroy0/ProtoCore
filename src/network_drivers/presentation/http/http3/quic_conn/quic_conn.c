@@ -53,7 +53,7 @@ typedef struct
 typedef struct
 {
     uint64_t next_pn;            ///< next packet number to send in this space
-    int64_t largest_acked;       ///< largest of our PNs the peer has acknowledged (-1 = none)
+    int64_t largest_acked;       ///< largest of our PNs the peer acknowledged (-1 = none)
     int64_t last_ae_pn;          ///< PN of the last ack-eliciting packet we sent here (-1 = none)
     uint64_t largest_rx;         ///< largest PN received in this space
     embed_bool have_rx;          ///< at least one packet received
@@ -131,13 +131,16 @@ static_assert(QUIC_OFF_CTX % _Alignof(QuicConnCtx) == 0,
 
 // The handle a caller sets a call's members on, and the connection the bound span holds.
 // The regions, at their offsets in the caller's spans.
-#define QUIC_CTX(w) ((QuicConnCtx *)(void *)((w) + QUIC_OFF_CTX))
+#define QUIC_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const QuicConnCtx *)(const void *)((w) + QUIC_OFF_CTX),                                      \
+        default: (QuicConnCtx *)(void *)((w) + QUIC_OFF_CTX))
 // QUIC_OFF_CTX is 0, so a callback is handed back the span it was bound with.
-#define QUIC_SPAN(c) ((uint8_t *)(void *)(c))
+#define QUIC_SPAN(c) _Generic((c), const uint8_t *: (const uint8_t *)(const void *)(c), default: (uint8_t *)(void *)(c))
 #define QUIC_TX(b, i) ((b) + QUIC_OFF_TX + (size_t)(i) * PROTOCORE_QUIC_STREAM_TX)
 #define QUIC_CRYPTO(b, i) ((b) + QUIC_OFF_CRYPTO + (size_t)(i) * PROTOCORE_QUIC_CRYPTO_RX)
 
-// A single STREAM frame's payload cannot exceed one datagram, so it can never overflow a stream's
+// A single STREAM frame's payload cannot exceed one datagram. So it can never overflow a stream's
 // reassembly buffer - which is why that clamp in handle_stream carries a coverage exclusion. Both
 // sizes are overridable macros (quic_conn.h), so pin the relationship here rather than let a jumbo
 // PROTOCORE_QUIC_MAX_DATAGRAM or a shrunken PROTOCORE_QUIC_STREAM_RX silently make the excluded path reachable.
@@ -146,7 +149,7 @@ static_assert(
     "PROTOCORE_QUIC_STREAM_RX must exceed PROTOCORE_QUIC_MAX_DATAGRAM: one STREAM frame's payload is bounded by the "
     "datagram, and handle_stream relies on that to deliver it without clamping");
 
-// The frame payload build_frames fills is one datagram; every builder it calls (ACK, CRYPTO header,
+// The frame payload build_frames fills is one datagram. Every builder it calls (ACK, CRYPTO header,
 // HANDSHAKE_DONE, STREAM header) must fit with room to spare, which is why their failure guards
 // carry coverage exclusions. RFC 9000 sec 14.1 already requires at least 1200 octets for Initial
 // packets, so pin that floor: a smaller datagram would make those guards reachable.
@@ -980,7 +983,7 @@ static size_t quic_conn_build(uint8_t *work, QuicConnCtx *qc, uint8_t *out, size
     // frame build (a closing endpoint sends nothing else) and is bounded by the amplification limit above.
     if (qc->close_queued && !qc->close_sent)
     {
-        // Send at the level the error was seen on (the peer holds those keys); if that space has since
+        // Send at the level the error was seen on (the peer holds those keys). If that space has since
         // been discarded, fall back to the highest level we still hold keys for.
         int level = qc->close_level;
         if (level < QUIC_ENC_INITIAL || level > QUIC_ENC_APP || qc->space[level].discarded || !seal_keys(qc, level))

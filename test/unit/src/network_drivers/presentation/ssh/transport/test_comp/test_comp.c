@@ -3,7 +3,7 @@
 //
 // transport/comp.c (RFC 4253 sec 6.2): when each direction's compression starts, and when it starts
 // over. "none" and "zlib" are the RFC's two methods; "zlib@openssh.com" is the same codec holding
-// off until authentication has succeeded, so nothing before that point is compressed.
+// off until authentication succeeded, so nothing before that point is compressed.
 
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"

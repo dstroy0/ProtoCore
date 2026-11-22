@@ -71,5 +71,5 @@ This device AMSNetId: 192.168.1.42.1.1  (add as a route on the PLC)
 ## Annotated source
 
 The complete sketch is [AdsClient.ino](AdsClient.ino). The codec itself is in
-[src/services/fieldbus/ads/ads.h](../../../src/services/fieldbus/ads/ads.h); the AMS/ADS wire layout,
+[src/services/fieldbus/ads/ads.h](../../../src/services/fieldbus/ads/ads.h). The AMS/ADS wire layout,
 command ids, and state flags are verified against the Beckhoff InfoSys specification.

@@ -6,7 +6,7 @@
  * @brief The pluggable time source - state and readers. See clock.h.
  *
  * The override lives here rather than in the header because a caller installing a clock and the
- * library reading it are different translation units, and they have to see the same value. A
+ * library reading it are different translation units. They have to see the same value. A
  * header-only `static` would give each one its own copy, so a test that installed a clock would
  * not affect the code under test.
  */

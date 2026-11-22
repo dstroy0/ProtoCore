@@ -222,7 +222,7 @@ static void build_dist()
 }
 
 // The routing classification table, as supplied. 128 entries of uint32_t is 512 bytes, so it spans
-// 16 cache lines on a 32-byte-line part; the route corpus touches the lowercase run and a handful of
+// 16 cache lines on a 32-byte-line part. The route corpus touches the lowercase run and a handful of
 // punctuation, which is most of them.
 #define RT_INVALID 0x00000000U
 #define RT_PATH_CHAR (1U << 0)
@@ -287,7 +287,7 @@ static void swar_bench_task(void *)
     }
 
     // Every row below carries this: rotate the corpus index and fold into the volatile sink. It is
-    // common to both contenders so it never changes which one wins, but it is a constant added to
+    // common to both contenders so it never changes which one wins. But it is a constant added to
     // both, and a constant added to both squeezes every ratio toward 1. Subtract it before quoting
     // a ratio, or quote the raw cycles.
     Serial.println("CB --- harness baseline (index + sink, no string work) ---");

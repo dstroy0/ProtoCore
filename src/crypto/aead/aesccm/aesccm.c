@@ -112,7 +112,10 @@ static_assert(AESCCM_OFF_CTX % _Alignof(CcmWork) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define AESCCM_CTX(w) ((CcmWork *)(void *)((w) + AESCCM_OFF_CTX))
+#define AESCCM_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const CcmWork *)(const void *)((w) + AESCCM_OFF_CTX),                                        \
+        default: (CcmWork *)(void *)((w) + AESCCM_OFF_CTX))
 
 // --- CBC-MAC and CTR over that block (SP 800-38C), both arms ---------------
 

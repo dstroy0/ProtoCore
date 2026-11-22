@@ -5,11 +5,11 @@
  * @file sha384.c
  * @brief SHA-384 implementation (FIPS 180-4).
  *
- * One context and one set of entries; only the block compression has two arms - the accelerator where
+ * One context and one set of entries. Only the block compression has two arms - the accelerator where
  * the part carries one, the FIPS 180-4 rounds below where it does not. The consumer is the TLS 1.3
  * SHA-384 cipher suites.
  *
- * The rounds, the constants and the block width are SHA-512's; the seed is the ninth through
+ * The rounds, the constants and the block width are SHA-512's. The seed is the ninth through
  * sixteenth primes and the digest is the first six state words (RFC 6234 sec 6.3 and 6.4).
  *
  * The context is this file's. The module's own borrow is split by offset into the block as it
@@ -62,10 +62,16 @@ static_assert(SHA384_OFF_STATE % _Alignof(uint64_t) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define SHA384_CTX(w) ((Sha384Ctx *)(void *)((w) + SHA384_OFF_CTX))
+#define SHA384_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Sha384Ctx *)(const void *)((w) + SHA384_OFF_CTX),                                      \
+        default: (Sha384Ctx *)(void *)((w) + SHA384_OFF_CTX))
 #define SHA384_RX(w) ((w) + SHA384_OFF_RX)
 #define SHA384_TX(w) ((w) + SHA384_OFF_TX)
-#define SHA384_FS(w) ((uint64_t *)(void *)((w) + SHA384_OFF_STATE))
+#define SHA384_FS(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const uint64_t *)(const void *)((w) + SHA384_OFF_STATE),                                     \
+        default: (uint64_t *)(void *)((w) + SHA384_OFF_STATE))
 
 // ---------------------------------------------------------------------------
 // SHA-384 (FIPS 180-4).
@@ -104,7 +110,7 @@ static const uint64_t H0[8] = {
 
 #if PROTOCORE_HAS_HW_SHA
 // Compress one block into @p h on the accelerator. The rounds are SHA-512's, so the accelerator runs
-// in its 512 mode over the seeded state; state and block are twice SHA-256's, and the H and M banks
+// in its 512 mode over the seeded state. State and block are twice SHA-256's, and the H and M banks
 // are addressed as 32-bit words, so the counts are 16 and 32.
 static void sha384_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA384_BLOCK_LEN])
 {

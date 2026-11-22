@@ -27,7 +27,7 @@
 // each block with malloc and calls abort when it cannot. A build that owns no heap after boot
 // cannot link that, so the identity is held here instead.
 //
-// One entry per worker plus the ghost slot, which is every context that can ever bind one; the
+// One entry per worker plus the ghost slot, which is every context that can ever bind one. The
 // count is fixed at build time, so this is BSS and the claim is a bounded walk. `s_bound` is the
 // counter: a context that has never bound reads worker 0.
 #define PROTOCORE_WORKER_BINDINGS (PROTOCORE_WORKER_COUNT + 1)
@@ -193,7 +193,10 @@ static_assert(WORKER_OFF_CTX + sizeof(struct WorkerStorage) <= PROTOCORE_WORKER_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define WORKER_CTX(w) ((struct WorkerStorage *)(void *)((w) + WORKER_OFF_CTX))
+#define WORKER_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct WorkerStorage *)(const void *)((w) + WORKER_OFF_CTX),                           \
+        default: (struct WorkerStorage *)(void *)((w) + WORKER_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -220,7 +223,7 @@ uint8_t *protocore_worker_span(void)
 // (Tcp.listener->enqueue, protocore_defer) nudges it the moment work arrives, so events are
 // serviced immediately rather than on the next tick. The block still times out
 // after PROTOCORE_WORKER_POLL_TICKS so the idle timeout sweep (check_timeouts) keeps
-// reaping stale connections with no events in flight; raising that knob now lowers
+// reaping stale connections with no events in flight. Raising that knob now lowers
 // idle wakeups without costing event latency. A nudge that races the pump is
 // latched in the notify count, so the wait returns at once - no lost wake.
 static void worker_task(void *arg)

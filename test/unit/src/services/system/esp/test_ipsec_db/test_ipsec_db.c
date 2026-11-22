@@ -705,7 +705,7 @@ void test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles(void)
         TEST_ASSERT_EQUAL_HEX32(expect, seq);
     }
 
-    // One short of the wrap issues the last legal number; the next call refuses and the counter is
+    // One short of the wrap issues the last legal number. The next call refuses and the counter is
     // left where it was, so a repeated sequence number can never reach the wire.
     sa->seq = 0xFFFFFFFEu;
     IpsecDbV.protocore_ipsec_sad_next_seq_args.sa = sa;

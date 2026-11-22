@@ -200,7 +200,7 @@ embed_bool protocore_sunspec_write_end_model(SunSpecWriter *w)
     return protocore_sunspec_write_u16(w, SUNSPEC_END_MODEL) && protocore_sunspec_write_u16(w, 0);
 }
 
-size_t protocore_sunspec_writer_finish(SunSpecWriter *w)
+size_t protocore_sunspec_writer_finish(const SunSpecWriter *w)
 {
     return w->error ? 0 : w->pos;
 }

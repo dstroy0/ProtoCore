@@ -133,7 +133,7 @@ void ws_send_version_required(uint8_t slot_id)
  * Does NOT close the TCP connection: the slot moves from HTTP parse ownership to WS frame parse
  * ownership.
  */
-embed_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
+embed_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, const HttpReq *req, uint8_t route_id)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Key");
     const char *client_key = http_parser_text;
@@ -231,7 +231,7 @@ embed_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
 /**
  * @brief Send the HTTP 200 + SSE headers and promote the slot to SSE mode.
  */
-embed_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
+embed_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, const HttpReq *req, uint8_t route_id)
 {
     ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());

@@ -74,7 +74,7 @@ def ratchet_slack(ceilings, counts):
 def staged_paths():
     """Repository-relative paths the commit being written adds, copies, modifies or renames."""
     said = git_say(REPOSITORY, ("diff", "--cached", "--name-only", "--diff-filter=ACMR"))
-    return set(one.strip() for one in (said or "").splitlines() if one.strip())
+    return {one.strip() for one in (said or "").splitlines() if one.strip()}
 
 
 def staged_under(roots):

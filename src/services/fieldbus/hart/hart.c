@@ -21,9 +21,9 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_hart_checksum(uint8_t *work);
+void protocore_hart_checksum(const uint8_t *work);
 
-void protocore_hart_checksum(uint8_t *work)
+void protocore_hart_checksum(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = HartV.checksum_args.bytes;
@@ -134,7 +134,7 @@ void protocore_hart_parse(uint8_t *work)
     HartV.ok = EMBED_TRUE;
 }
 
-void protocore_hart_ip_build_header(uint8_t *work)
+void protocore_hart_ip_build_header(const uint8_t *work)
 {
     (void)work;
     uint8_t msg_type = HartV.ip_build_header_args.msg_type;
@@ -161,7 +161,7 @@ void protocore_hart_ip_build_header(uint8_t *work)
     HartV.n = HARTIP_HEADER_LEN;
 }
 
-void protocore_hart_ip_parse_header(uint8_t *work)
+void protocore_hart_ip_parse_header(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = HartV.ip_parse_header_args.buf;

@@ -135,7 +135,7 @@ EMBED_ENUM_BYTE(SshOpenFailureReason, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED = 1, 
 //               flight rather than one per connection.
 //   packet      alive only for the message being framed or verified, so one per worker.
 //
-// exchange and packet are still per-slot here; they are grouped so that stays visible, and so
+// exchange and packet are still per-slot here. They are grouped so that stays visible, and so
 // lifting them out is a change of base pointer rather than a re-layout.
 
 // wire: the framed packet. The payload is written at SSH_WIRE_PAYLOAD_OFF and framed in place.
@@ -144,7 +144,7 @@ EMBED_ENUM_BYTE(SshOpenFailureReason, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED = 1, 
 // session: what outlives a single exchange - the identification strings both ends hash into every
 // exchange hash, the session id the first KEX fixes (RFC 4253 sec 7.2), and the two key epochs. The
 // second epoch holds the keys a re-key derives while the first still decrypts, until both
-// directions have switched (sec 7.3).
+// directions switched (sec 7.3).
 #define SSH_OFF_V_C (SSH_OFF_WIRE + SSH_WIRE_CAP)
 #define SSH_OFF_V_S (SSH_OFF_V_C + SSH_VERSION_MAX)
 #define SSH_OFF_SESSION_ID (SSH_OFF_V_S + SSH_VERSION_MAX)
@@ -222,7 +222,7 @@ static inline void write_u32_be(uint8_t *p, uint32_t v)
     p[3] = (uint8_t)(v);
 }
 
-// The writers below and the readers further down are C: they reach MMgr's string and octet tables,
+// The writers below and the readers further down are C. They reach MMgr's string and octet tables,
 // and a C++ sketch that includes this header for its types and sizes has no use for them.
 #ifndef __cplusplus
 /** @brief Append a string: uint32 length, then @p n bytes of @p data. */
@@ -475,7 +475,7 @@ EMBED_INLINE embed_bool protocore_ssh_mpint_fixed(const uint8_t *m, uint32_t mle
 // Copy an SSH string into a fixed buffer and null-terminate it. Advances *off.
 // Returns false on truncation or if the string does not fit (buffer too small).
 //
-// Reading the field by reference is byteio.rd_str()'s job; this only adds the copy and the terminator,
+// Reading the field by reference is byteio.rd_str()'s job. This only adds the copy and the terminator,
 // which is what separates it from the by-reference reads below.
 static embed_bool read_string(const uint8_t *p, size_t len, size_t *off, char *out, size_t outcap)
 {

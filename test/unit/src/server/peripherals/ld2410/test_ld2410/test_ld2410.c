@@ -261,7 +261,7 @@ void test_malformed_report_frames_are_refused(void)
 }
 
 // The reassembler must find a frame in a stream that starts mid-noise, and must not report one
-// until the last octet has arrived.
+// until the last octet arrived.
 static void feed_noise(Ld2410Stream *s, Ld2410Report *r)
 {
     static const uint8_t NOISE[] = {0x00, 0xF4, 0xF3, 0x11, 0xFF, 0xF4, 0x00, 0x5A};
@@ -626,7 +626,7 @@ void test_v102_published_ack_frames(void)
     TEST_ASSERT_FALSE(Ld2410.ok);
 }
 
-// The get-MAC reply is command word 0x01A5 with six address octets after the status; the document
+// The get-MAC reply is command word 0x01A5 with six address octets after the status. The document
 // does not print one, so the octets below are arbitrary and the property asserted is that they come
 // back in wire order. Only a successful reply to that word yields a MAC at all.
 void test_get_mac_ack_yields_the_address(void)

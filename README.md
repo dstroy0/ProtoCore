@@ -48,7 +48,7 @@ A multi-protocol network server for microcontrollers with a fully deterministic 
 > [!WARNING]
 > **THIS LIBRARY HAS NOT BEEN AUDITED BY A 3RD PARTY**
 >
-> No third party has reviewed this library. The core is not yet locked; it needs that stability to make
+> No third party reviewed this library. The core is not yet locked; it needs that stability to make
 > contribution and collaboration practical, and there has been no time for outside ideas to flow in.
 > Current verification state is measured, not claimed:
 >
@@ -216,7 +216,7 @@ The technical reference documentation has been moved to a dedicated landing page
 ## Build-flag dependencies
 
 Most features are independent. A few build on another feature and will not
-compile without it; those hard dependencies are enforced at compile time with a
+compile without it. Those hard dependencies are enforced at compile time with a
 clear `#error` (so an illegal combination fails fast instead of producing a
 cryptic linker error). Enable a child flag only together with its parent.
 

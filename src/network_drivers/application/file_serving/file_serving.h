@@ -147,8 +147,8 @@ typedef struct
     void (*const http_rfc1123)(uint8_t *work);
     void (*const serve_static_request)(uint8_t *work);
     void (*const serve_file_internal)(uint8_t *work);
-    void (*const file_send_pump)(uint8_t *work);
-    void (*const holds_slot)(uint8_t *work);
+    void (*const file_send_pump)(const uint8_t *work);
+    void (*const holds_slot)(const uint8_t *work);
     void (*const serve_file)(uint8_t *work);
     void (*const serve_static)(uint8_t *work);
 } FileServingNs;
@@ -158,8 +158,8 @@ typedef struct
 void protocore_file_serving_http_rfc1123(uint8_t *work);
 void protocore_file_serving_serve_static_request(uint8_t *work);
 void protocore_file_serving_serve_file_internal(uint8_t *work);
-void protocore_file_serving_file_send_pump(uint8_t *work);
-void protocore_file_serving_holds_slot(uint8_t *work);
+void protocore_file_serving_file_send_pump(const uint8_t *work);
+void protocore_file_serving_holds_slot(const uint8_t *work);
 void protocore_file_serving_serve_file(uint8_t *work);
 void protocore_file_serving_serve_static(uint8_t *work);
 

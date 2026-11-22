@@ -184,7 +184,7 @@ static embed_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_proxy_protocol_parse(uint8_t *work)
+void protocore_proxy_protocol_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = ProxyProtocolV.parse_args.buf;
@@ -259,7 +259,7 @@ void protocore_proxy_protocol_parse(uint8_t *work)
     ProxyProtocolV.ok = EMBED_FALSE; // no PROXY header present
 }
 
-void protocore_proxy_protocol_v1_build(uint8_t *work)
+void protocore_proxy_protocol_v1_build(const uint8_t *work)
 {
     (void)work;
     char *buf = ProxyProtocolV.v1_build_args.buf;
@@ -317,7 +317,7 @@ void protocore_proxy_protocol_v1_build(uint8_t *work)
     ProxyProtocolV.n = (size_t)n;
 }
 
-void protocore_proxy_protocol_v2_build(uint8_t *work)
+void protocore_proxy_protocol_v2_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = ProxyProtocolV.v2_build_args.buf;

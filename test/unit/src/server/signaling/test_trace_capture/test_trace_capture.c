@@ -83,7 +83,7 @@ static protocore_tc_stats stats(void)
 }
 
 // Arming zeroes the whole capture - ring, cursors and tallies - so a begin/end pair is what gives
-// each case a clean slate; end alone only disarms.
+// each case a clean slate. End alone only disarms.
 void setUp(void)
 {
     g_windows = 0;
@@ -98,7 +98,7 @@ void tearDown(void)
 
 // The window straddles the trigger: its first pretrigger_samples are the last samples that arrived
 // BEFORE the trigger, oldest first, and the rest are the samples that arrived after. Six samples
-// through a four-deep ring leave 2,3,4,5 - the ring has wrapped, so a read from the wrong cursor
+// through a four-deep ring leave 2,3,4,5 - the ring wrapped, so a read from the wrong cursor
 // would give 4,5,2,3 instead.
 void test_window_is_the_pre_roll_then_the_post_trigger_samples(void)
 {

@@ -200,10 +200,10 @@ typedef struct
     void (*const reader_open)(uint8_t *work);
     void (*const read_varint)(uint8_t *work);
     void (*const read_record)(uint8_t *work);
-    void (*const zigzag64)(uint8_t *work);
-    void (*const zigzag32)(uint8_t *work);
-    void (*const float_bits)(uint8_t *work);
-    void (*const double_bits)(uint8_t *work);
+    void (*const zigzag64)(const uint8_t *work);
+    void (*const zigzag32)(const uint8_t *work);
+    void (*const float_bits)(const uint8_t *work);
+    void (*const double_bits)(const uint8_t *work);
 } ProtobufNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -225,10 +225,10 @@ void protocore_protobuf_writer_finish(uint8_t *work);
 void protocore_protobuf_reader_open(uint8_t *work);
 void protocore_protobuf_read_varint(uint8_t *work);
 void protocore_protobuf_read_record(uint8_t *work);
-void protocore_protobuf_zigzag64(uint8_t *work);
-void protocore_protobuf_zigzag32(uint8_t *work);
-void protocore_protobuf_float_bits(uint8_t *work);
-void protocore_protobuf_double_bits(uint8_t *work);
+void protocore_protobuf_zigzag64(const uint8_t *work);
+void protocore_protobuf_zigzag32(const uint8_t *work);
+void protocore_protobuf_float_bits(const uint8_t *work);
+void protocore_protobuf_double_bits(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

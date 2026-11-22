@@ -71,7 +71,7 @@ static embed_bool append_kv(char *out, size_t cap, size_t *pos, const char *key,
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_config_io_export(uint8_t *work)
+void protocore_config_io_export(const uint8_t *work)
 {
     (void)work;
     const char *ns = ConfigIoV.export_args.ns;
@@ -152,7 +152,7 @@ static embed_bool config_apply_field(const protocore_cfg_field *fields, size_t n
     return EMBED_FALSE;
 }
 
-void protocore_config_io_import(uint8_t *work)
+void protocore_config_io_import(const uint8_t *work)
 {
     (void)work;
     const char *ns = ConfigIoV.import_args.ns;

@@ -13,7 +13,7 @@
  * register ops.
  *
  * The context is this file's. The module's own borrow carries the table a bound subkey builds, so the
- * entries reach it without a caller naming it; the accumulator a fold runs in is the caller's, named by
+ * entries reach it without a caller naming it. The accumulator a fold runs in is the caller's, named by
  * the args members.
  */
 
@@ -28,7 +28,7 @@ EMBED_BEGIN_DECLS
 
 // The one definition, private to this TU. It sits at GHASH_OFF_CTX in the caller's borrow, so its size
 // never leaves this file and no consumer can name it. The table is what a key_init leaves behind and
-// what every fold reads, so it is all the context carries: M[i] = i*H as four big-endian uint32 words.
+// what every fold reads. So it is all the context carries: M[i] = i*H as four big-endian uint32 words.
 typedef struct
 {
     uint32_t M[16][4];
@@ -50,7 +50,10 @@ static_assert(GHASH_OFF_CTX % _Alignof(GhashCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define GHASH_CTX(w) ((GhashCtx *)(void *)((w) + GHASH_OFF_CTX))
+#define GHASH_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const GhashCtx *)(const void *)((w) + GHASH_OFF_CTX),                                        \
+        default: (GhashCtx *)(void *)((w) + GHASH_OFF_CTX))
 
 // Reduction contribution (into the top 16 bits of word 0) of the low nibble shifted out per step.
 static const uint16_t LAST4[16] = {0x0000, 0x1c20, 0x3840, 0x2460, 0x7080, 0x6ca0, 0x48c0, 0x54e0,

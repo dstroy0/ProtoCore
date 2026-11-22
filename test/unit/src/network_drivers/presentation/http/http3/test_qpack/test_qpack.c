@@ -9,7 +9,7 @@
 // exactly those octets. It is the load-bearing case: it exercises the sec 4.5.1 prefix, the sec
 // 4.5.4 literal-with-static-name-reference representation and the sec 3.1 static table in one pass,
 // against bytes the RFC wrote rather than bytes this encoder produced. The encoder is not pinned to
-// those octets because Huffman coding is the encoder's choice (sec 5), so it is checked by decoding
+// those octets because Huffman coding is the encoder's choice (sec 5). So it is checked by decoding
 // its output and by the representation byte it selects.
 
 #include "network_drivers/presentation/http/http3/qpack/qpack.h"

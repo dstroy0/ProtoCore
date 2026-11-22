@@ -18,7 +18,7 @@
 
 #include <unity.h>
 
-// Each module states the bytes its entries run out of, and they are not the same: Ed25519 carries a
+// Each module states the bytes its entries run out of. They are not the same: Ed25519 carries a
 // signature working set on top of the SHA-512 region it drives, and X25519 carries a ladder.
 static uint8_t g_work[PROTOCORE_ED25519_BORROW] __attribute__((aligned(8)));
 static uint8_t g_c25519[PROTOCORE_CURVE25519_BORROW] __attribute__((aligned(8)));
@@ -275,7 +275,7 @@ void test_verify_refuses_non_canonical_s(void)
 
 // RFC 8032 sec 5.1.7: a public key that does not decode to a curve point makes the signature
 // invalid. Roughly half of all 32-octet strings are not valid encodings, so sweeping candidates
-// with an in-range S drives the decode-failure arm; none can verify, valid point or not, because
+// with an in-range S drives the decode-failure arm. None can verify, valid point or not, because
 // the message does not match the signature.
 void test_verify_refuses_an_undecodable_public_key(void)
 {

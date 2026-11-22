@@ -8,7 +8,7 @@
  * Roomier usable DRAM than the classic ESP32 plus AI/vector DSP instructions, so the RAM-backed
  * pools get a modest bump even with no PSRAM fitted (a PSRAM profile, included first, scales them
  * further). Crypto HW: AES, SHA, RSA/MPI, HMAC, DS (no ECC/ECDSA). classic_defaults.h is pulled
- * in last as the sizing floor; every macro is `#ifndef`-guarded so a -D override wins.
+ * in last as the sizing floor. Every macro is `#ifndef`-guarded so a -D override wins.
  */
 
 #ifndef PROTOCORE_S3_DEFAULTS_H
@@ -40,7 +40,7 @@
 // --- SHA accelerator register map ---
 // The die is identified here, so the values are stated here and crypto/ reads only these names. The
 // block register offsets are shared across every die that carries the unified SHA peripheral and are
-// stated once beside the driver; what differs per die is the peripheral base and the clock, reset and
+// stated once beside the driver. What differs per die is the peripheral base and the clock, reset and
 // hold-clear bits below. Reset holds SHA while the sibling DS and HMAC resets are set, so both clear.
 #ifndef PROTOCORE_SHA_BASE
 #define PROTOCORE_SHA_BASE 0x6003B000u
@@ -85,7 +85,7 @@
 // --- Vector unit ---
 // The LX7's PIE (Processor Instruction Extensions): 128-bit vector registers with their own
 // load/store path and byte-lane compares, which is a real unit rather than the wider GPR the classic
-// die offers. Declared here because which silicon is present is this file's subject; what any of it
+// die offers. Declared here because which silicon is present is this file's subject. What any of it
 // is worth belongs to whatever consumes the flag and to a cycle counter, not to this header. A PIE
 // load wants its pointer 16-byte aligned, so a consumer states that at its own boundary.
 #ifndef PROTOCORE_HW_SIMD

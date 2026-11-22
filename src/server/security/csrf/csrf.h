@@ -6,7 +6,7 @@
  * @brief Stateless HMAC-signed CSRF token (PROTOCORE_ENABLE_CSRF).
  *
  * A token is `<nonce_hex>.<sig_hex>` where sig is the first CSRF_SIG_BYTES of
- * HMAC-SHA256(secret, nonce). The secret is seeded once from the platform's randomness; the nonce is
+ * HMAC-SHA256(secret, nonce). The secret is seeded once from the platform's randomness. The nonce is
  * a per-issue counter and need not be secret, because the security is the HMAC. A verify recomputes
  * the HMAC over the embedded nonce and compares the signature in constant time, so no server-side
  * session state is kept.

@@ -39,7 +39,7 @@ struct SnmpNotifyStorage
     uint8_t tx[PROTOCORE_SNMP_TRAP_BUF_SIZE];
 };
 
-// A trap is unacknowledged, so its request-id only has to differ from the last one; the counter
+// A trap is unacknowledged, so its request-id only has to differ from the last one. The counter
 // starts at 1 and the rest of the storage starts at zero.
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -50,7 +50,10 @@ static_assert(SNMP_NOTIFY_OFF_CTX + sizeof(struct SnmpNotifyStorage) <= PROTOCOR
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SNMP_NOTIFY_CTX(w) ((struct SnmpNotifyStorage *)(void *)((w) + SNMP_NOTIFY_OFF_CTX))
+#define SNMP_NOTIFY_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SnmpNotifyStorage *)(const void *)((w) + SNMP_NOTIFY_OFF_CTX),                  \
+        default: (struct SnmpNotifyStorage *)(void *)((w) + SNMP_NOTIFY_OFF_CTX))
 
 // One caller binding: SEQUENCE { name, typed value }. Reads the binding it is given and no module
 // state, so it takes that binding rather than the handle.

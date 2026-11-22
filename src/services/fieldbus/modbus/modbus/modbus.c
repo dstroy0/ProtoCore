@@ -57,7 +57,10 @@ static_assert(MODBUS_OFF_CTX % _Alignof(ModbusCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define MODBUS_CTX(w) ((ModbusCtx *)(void *)((w) + MODBUS_OFF_CTX))
+#define MODBUS_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const ModbusCtx *)(const void *)((w) + MODBUS_OFF_CTX),                                      \
+        default: (ModbusCtx *)(void *)((w) + MODBUS_OFF_CTX))
 
 static embed_bool bit_get(const uint8_t *a, uint16_t i)
 {
@@ -232,7 +235,8 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        uint16_t start = rd16(pdu + 1), qty = rd16(pdu + 3);
+        uint16_t start = rd16(pdu + 1);
+        uint16_t qty = rd16(pdu + 3);
         uint16_t limit = (fc == MODBUS_FC_READ_COILS) ? PROTOCORE_MODBUS_COILS : PROTOCORE_MODBUS_DISCRETE_INPUTS;
         const uint8_t *src = (fc == MODBUS_FC_READ_COILS) ? MODBUS_CTX(work)->coils : MODBUS_CTX(work)->discrete;
         if (qty < 1 || qty > 2000)
@@ -268,7 +272,8 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        uint16_t start = rd16(pdu + 1), qty = rd16(pdu + 3);
+        uint16_t start = rd16(pdu + 1);
+        uint16_t qty = rd16(pdu + 3);
         uint16_t limit =
             (fc == MODBUS_FC_READ_HOLDING_REGS) ? PROTOCORE_MODBUS_HOLDING_REGS : PROTOCORE_MODBUS_INPUT_REGS;
         const uint16_t *src = (fc == MODBUS_FC_READ_HOLDING_REGS) ? MODBUS_CTX(work)->holding : MODBUS_CTX(work)->input;
@@ -300,7 +305,8 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        uint16_t addr = rd16(pdu + 1), value = rd16(pdu + 3);
+        uint16_t addr = rd16(pdu + 1);
+        uint16_t value = rd16(pdu + 3);
         if (value != 0x0000 && value != 0xFF00)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
@@ -328,7 +334,8 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        uint16_t addr = rd16(pdu + 1), value = rd16(pdu + 3);
+        uint16_t addr = rd16(pdu + 1);
+        uint16_t value = rd16(pdu + 3);
         if (addr >= PROTOCORE_MODBUS_HOLDING_REGS)
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_ADDRESS, out);
@@ -352,7 +359,8 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        uint16_t start = rd16(pdu + 1), qty = rd16(pdu + 3);
+        uint16_t start = rd16(pdu + 1);
+        uint16_t qty = rd16(pdu + 3);
         uint8_t bc = pdu[5];
         if (qty < 1 || qty > 1968 || bc != (uint8_t)((qty + 7) / 8) || pdu_len < (size_t)6 + bc)
         {
@@ -387,7 +395,8 @@ static size_t protocore_modbus_process_pdu(uint8_t *work, const uint8_t *pdu, si
         {
             return pdu_exception(fc, MODBUS_EX_ILLEGAL_DATA_VALUE, out);
         }
-        uint16_t start = rd16(pdu + 1), qty = rd16(pdu + 3);
+        uint16_t start = rd16(pdu + 1);
+        uint16_t qty = rd16(pdu + 3);
         uint8_t bc = pdu[5];
         if (qty < 1 || qty > 123 || bc != (uint8_t)(qty * 2) || pdu_len < (size_t)6 + bc)
         {
@@ -627,7 +636,7 @@ static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
     ConnPoolV.io.count = n;
     ConnPool.peek(protocore_conn_pool_span());
 }
-static void ring_consume(TcpConn *c, size_t n)
+static void ring_consume(const TcpConn *c, size_t n)
 {
     ConnPoolV.slot = c->id;
     ConnPoolV.io.count = n;
@@ -720,7 +729,7 @@ static void modbus_on_data(uint8_t slot)
 
 static const ProtoHandler s_modbus_handler = {.on_data = modbus_on_data};
 
-void protocore_modbus_handler(uint8_t *work)
+void protocore_modbus_handler(const uint8_t *work)
 {
     (void)work;
 

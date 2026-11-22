@@ -56,12 +56,13 @@ EMBED_ENUM_BYTE(protocore_zwave_type,
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint16_t (*build_frame)(uint8_t *, protocore_zwave_type, uint8_t, const uint8_t *, uint8_t, uint8_t *, uint16_t);
-    int (*parse_frame)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint8_t *, const uint8_t **, uint8_t *);
-    embed_bool (*is_ack)(uint8_t *, uint8_t);
-    embed_bool (*is_nak)(uint8_t *, uint8_t);
-    embed_bool (*is_can)(uint8_t *, uint8_t);
-    uint16_t (*build_ack)(uint8_t *, uint8_t *, uint16_t);
+    uint16_t (*build_frame)(const uint8_t *, protocore_zwave_type, uint8_t, const uint8_t *, uint8_t, uint8_t *,
+                            uint16_t);
+    int (*parse_frame)(const uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint8_t *, const uint8_t **, uint8_t *);
+    embed_bool (*is_ack)(const uint8_t *, uint8_t);
+    embed_bool (*is_nak)(const uint8_t *, uint8_t);
+    embed_bool (*is_can)(const uint8_t *, uint8_t);
+    uint16_t (*build_ack)(const uint8_t *, uint8_t *, uint16_t);
 } ZwaveNs;
 PROTOCORE_NS_LAYOUT(ZwaveNs, build_frame, parse_frame, is_ack, is_nak, is_can, build_ack);
 
@@ -76,7 +77,7 @@ PROTOCORE_NS_LAYOUT(ZwaveNs, build_frame, parse_frame, is_ack, is_nak, is_can, b
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_zwave_build_frame(uint8_t *work, protocore_zwave_type type, uint8_t cmd, const uint8_t *data,
+uint16_t protocore_zwave_build_frame(const uint8_t *work, protocore_zwave_type type, uint8_t cmd, const uint8_t *data,
                                      uint8_t data_len, uint8_t *out, uint16_t cap);
 /**
  * @brief Frame one data frame from the front of raw and verify the checksum.
@@ -89,7 +90,7 @@ uint16_t protocore_zwave_build_frame(uint8_t *work, protocore_zwave_type type, u
  * @param pdata_len Pdata len
  * @return The int.
  */
-int protocore_zwave_parse_frame(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd,
+int protocore_zwave_parse_frame(const uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd,
                                 const uint8_t **pdata, uint8_t *pdata_len);
 /**
  * @brief True if b is the ACK control byte.
@@ -97,21 +98,21 @@ int protocore_zwave_parse_frame(uint8_t *work, const uint8_t *raw, uint16_t len,
  * @param b B
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_zwave_is_ack(uint8_t *work, uint8_t b);
+embed_bool protocore_zwave_is_ack(const uint8_t *work, uint8_t b);
 /**
  * @brief True if b is the NAK control byte.
  * @param work PROTOCORE_ZWAVE_BORROW bytes the caller took. Not held past the call.
  * @param b B
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_zwave_is_nak(uint8_t *work, uint8_t b);
+embed_bool protocore_zwave_is_nak(const uint8_t *work, uint8_t b);
 /**
  * @brief True if b is the CAN control byte.
  * @param work PROTOCORE_ZWAVE_BORROW bytes the caller took. Not held past the call.
  * @param b B
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_zwave_is_can(uint8_t *work, uint8_t b);
+embed_bool protocore_zwave_is_can(const uint8_t *work, uint8_t b);
 /**
  * @brief Write the single ACK byte into out. 1, or 0 if cap < 1.
  * @param work PROTOCORE_ZWAVE_BORROW bytes the caller took. Not held past the call.
@@ -119,7 +120,7 @@ embed_bool protocore_zwave_is_can(uint8_t *work, uint8_t b);
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_zwave_build_ack(uint8_t *work, uint8_t *out, uint16_t cap);
+uint16_t protocore_zwave_build_ack(const uint8_t *work, uint8_t *out, uint16_t cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS ZwaveNs Zwave PROTOCORE_UNUSED = {.build_frame = protocore_zwave_build_frame,

@@ -241,7 +241,7 @@ void test_status_octet_field_offsets(void)
 }
 
 // FAILING BY DESIGN. dissector:310 reads the type word with TvbRange:uint() and :568 adds both header
-// words with TreeItem:add(); both are documented big-endian, and the little-endian calls (le_uint,
+// words with TreeItem:add(). Both are documented big-endian, and the little-endian calls (le_uint,
 // add_le) appear nowhere in the file. start_robot_state:29 packs the same two words '>2I'.
 // So a Start carrying version 0x04030201 is
 //   type    0x00000000 -> 00 00 00 00

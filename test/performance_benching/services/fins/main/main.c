@@ -4,7 +4,7 @@
 // On-device CCOUNT microbenchmark for the Omron FINS frame codec (services/fieldbus/fins): the command
 // builder, the Memory Area Read convenience, and the command / response parsers - all pure (no
 // heap, no sockets). FINS/UDP carries this frame directly (UDP provides integrity, so there is no
-// checksum to bench); the send itself is the app's concern and is out of scope here. Worked example
+// checksum to bench). The send itself is the app's concern and is out of scope here. Worked example
 // for performance_benching/device/<service>/: a pure protocol codec with no hardware involved, so every call here
 // exercises the real production code path (contrast with performance_benching/device/ads1115, a peripheral driver
 // where the bus transaction itself is stubbed).

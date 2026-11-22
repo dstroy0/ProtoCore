@@ -84,9 +84,9 @@ static embed_bool magic_bad(const uint8_t *buf, size_t len)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_edge_mesh_parse_response(uint8_t *work);
+void protocore_edge_mesh_parse_response(const uint8_t *work);
 
-void protocore_edge_mesh_build_request(uint8_t *work)
+void protocore_edge_mesh_build_request(const uint8_t *work)
 {
     (void)work;
     const uint8_t *digest = EdgeMeshV.build_request_args.digest;
@@ -136,7 +136,7 @@ void protocore_edge_mesh_build_request(uint8_t *work)
     EdgeMeshV.n = pos;
 }
 
-void protocore_edge_mesh_parse_request(uint8_t *work)
+void protocore_edge_mesh_parse_request(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = EdgeMeshV.parse_request_args.buf;
@@ -299,7 +299,7 @@ void protocore_edge_mesh_deserialize_entry(uint8_t *work)
     EdgeMeshV.ok = EMBED_TRUE;
 }
 
-void protocore_edge_mesh_build_response(uint8_t *work)
+void protocore_edge_mesh_build_response(const uint8_t *work)
 {
     (void)work;
     embed_bool hit = EdgeMeshV.build_response_args.hit;
@@ -333,7 +333,7 @@ void protocore_edge_mesh_build_response(uint8_t *work)
     EdgeMeshV.n = pos;
 }
 
-void protocore_edge_mesh_parse_response(uint8_t *work)
+void protocore_edge_mesh_parse_response(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = EdgeMeshV.parse_response_args.buf;
@@ -391,7 +391,7 @@ void protocore_edge_mesh_parse_response(uint8_t *work)
 
 // --- async requester engine ----------------------------------------------------------------------
 
-void protocore_edge_mesh_fetch_begin(uint8_t *work)
+void protocore_edge_mesh_fetch_begin(const uint8_t *work)
 {
     (void)work;
     EdgeMeshFetch *m = EdgeMeshV.fetch_begin_args.m;
@@ -470,6 +470,8 @@ void protocore_edge_mesh_fetch_pump(uint8_t *work)
     EdgeMeshV.parse_response_args.entry_off = &eoff;
     EdgeMeshV.parse_response_args.entry_len = &elen;
     protocore_edge_mesh_parse_response(work);
+    EdgeMeshV.parse_response_args.entry_len = NULL;
+    EdgeMeshV.parse_response_args.entry_off = NULL;
     EdgeMeshParse p = EdgeMeshV.parse;
     if (p == EDGE_MESH_PARSE_HIT)
     {
@@ -492,7 +494,7 @@ void protocore_edge_mesh_fetch_pump(uint8_t *work)
     EdgeMeshV.status = m->st;
 }
 
-void protocore_edge_mesh_fetch_end(uint8_t *work)
+void protocore_edge_mesh_fetch_end(const uint8_t *work)
 {
     (void)work;
     EdgeMeshFetch *m = EdgeMeshV.fetch_end_args.m;

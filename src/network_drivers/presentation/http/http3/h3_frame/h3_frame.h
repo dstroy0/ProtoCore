@@ -89,8 +89,8 @@ typedef struct
 {
     embed_bool (*parse_header)(uint8_t *, const uint8_t *, size_t, H3FrameHeader *);
     size_t (*write_header)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t);
-    embed_bool (*type_reserved)(uint8_t *, uint64_t);
-    void (*settings_defaults)(uint8_t *, H3Settings *);
+    embed_bool (*type_reserved)(const uint8_t *, uint64_t);
+    void (*settings_defaults)(const uint8_t *, H3Settings *);
     embed_bool (*parse_settings)(uint8_t *, const uint8_t *, size_t, H3Settings *);
     size_t (*build_data)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
     size_t (*build_headers)(uint8_t *, uint8_t *, size_t, const uint8_t *, size_t);
@@ -125,13 +125,13 @@ size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, 
  * @param type Type
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_h3_frame_type_reserved(uint8_t *work, uint64_t type);
+embed_bool protocore_h3_frame_type_reserved(const uint8_t *work, uint64_t type);
 /**
  * @brief Fill s with the RFC default settings.
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.
  * @param s S
  */
-void protocore_h3_frame_settings_defaults(uint8_t *work, H3Settings *s);
+void protocore_h3_frame_settings_defaults(const uint8_t *work, H3Settings *s);
 /**
  * @brief Apply a SETTINGS payload (id, value varint pairs) to s. false if .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.

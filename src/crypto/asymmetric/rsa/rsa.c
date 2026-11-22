@@ -78,7 +78,10 @@ static_assert(RSA_OFF_CTX % _Alignof(RsaCtx) == 0,
 #define RSA_SHA256(w) ((w) + RSA_OFF_SHA256)
 #define RSA_SHA512(w) ((w) + RSA_OFF_SHA512)
 #define RSA_BIGNUM(w) ((w) + RSA_OFF_BIGNUM)
-#define RSA_CTX(w) ((RsaCtx *)(void *)((w) + RSA_OFF_CTX))
+#define RSA_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RsaCtx *)(const void *)((w) + RSA_OFF_CTX),                                            \
+        default: (RsaCtx *)(void *)((w) + RSA_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // DigestInfo for SHA-256 / SHA-512 (PKCS#1 v1.5, RFC 8017 sec 9.2, RFC 5754)
@@ -167,7 +170,7 @@ static void rsa_modmul(uint8_t *work)
     protocore_rsa_modmul(ctx->z, ctx->x, ctx->y, ctx->n.d, ctx->mprime, ctx->rr.d, PROTOCORE_BN_LIMBS);
 }
 
-static void rsa_modmul_end(uint8_t *work)
+static void rsa_modmul_end(const uint8_t *work)
 {
     (void)work;
     protocore_rsa_hw_release();
@@ -193,7 +196,7 @@ static void bn_mul_full(const uint32_t *a, const uint32_t *b, uint32_t *p)
         }
         int k = i + PROTOCORE_BN_LIMBS;
         // a and b are both PROTOCORE_BN_LIMBS limbs, so their full product is bounded by
-        // 2*PROTOCORE_BN_LIMBS limbs; carry propagation out of the top half can never still be pending
+        // 2*PROTOCORE_BN_LIMBS limbs. Carry propagation out of the top half can never still be pending
         // when k reaches 2*PROTOCORE_BN_LIMBS. The "k < 2*PROTOCORE_BN_LIMBS" half of this guard is
         // defensive and provably unreachable.
         while (carry && k < 2 * PROTOCORE_BN_LIMBS)
@@ -261,7 +264,7 @@ static void rsa_modmul(uint8_t *work)
     bn_reduce_full(ctx->prod, ctx->n.d, ctx->z);
 }
 
-static void rsa_modmul_end(uint8_t *work)
+static void rsa_modmul_end(const uint8_t *work)
 {
     (void)work;
 }

@@ -42,7 +42,7 @@ void dbench_run(void)
     {
         DBENCH_BANNER("modbus");
         volatile size_t sink = 0;
-        // The args do not vary across iterations, so they are staged once above the timed loop and
+        // The args do not vary across iterations. So they are staged once above the timed loop and
         // only the call and its result read sit inside it.
         ModbusV.process_adu_args.req = rd8;
         ModbusV.process_adu_args.req_len = sizeof(rd8);

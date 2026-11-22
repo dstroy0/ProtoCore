@@ -36,9 +36,9 @@ typedef struct
     SshInflate inf;                         ///< streaming decompressor (bound to inf_window below).
     uint8_t inf_window[SSH_INFLATE_WINDOW]; ///< 32 KB context-takeover window for c2s inflate.
     SshCompAlg s2c_alg;                     ///< negotiated server-to-client algorithm.
-    embed_bool s2c_active;                  ///< true once the s2c (deflate) stream has started.
+    embed_bool s2c_active;                  ///< true once the s2c (deflate) stream started.
     SshCompAlg c2s_alg;                     ///< negotiated client-to-server algorithm.
-    embed_bool c2s_active;                  ///< true once the c2s (inflate) stream has started.
+    embed_bool c2s_active;                  ///< true once the c2s (inflate) stream started.
 } SshCompState;
 
 // All SSH compression state, owned by one instance (internal linkage): the per-connection
@@ -64,7 +64,10 @@ static_assert(COMP_OFF_CTX % _Alignof(SshCompCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define COMP_CTX(w) ((SshCompCtx *)(void *)((w) + COMP_OFF_CTX))
+#define COMP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshCompCtx *)(const void *)((w) + COMP_OFF_CTX),                                       \
+        default: (SshCompCtx *)(void *)((w) + COMP_OFF_CTX))
 
 // The one owned instance, private to this TU: the pointer to the bytes taken for the table.
 static uint8_t *s_span;

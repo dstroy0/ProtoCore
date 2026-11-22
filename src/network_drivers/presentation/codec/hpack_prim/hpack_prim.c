@@ -91,8 +91,8 @@ static const uint16_t DEC_SYM[257] = {
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_hpack_prim_encode_int(uint8_t *work, uint8_t *out, size_t cap, uint8_t prefix_bits, uint8_t flags,
-                                       uint32_t value)
+size_t protocore_hpack_prim_encode_int(const uint8_t *work, uint8_t *out, size_t cap, uint8_t prefix_bits,
+                                       uint8_t flags, uint32_t value)
 {
     (void)work;
 
@@ -126,7 +126,7 @@ size_t protocore_hpack_prim_encode_int(uint8_t *work, uint8_t *out, size_t cap, 
     return i;
 }
 
-embed_bool protocore_hpack_prim_decode_int(uint8_t *work, const uint8_t *in, size_t len, uint8_t prefix_bits,
+embed_bool protocore_hpack_prim_decode_int(const uint8_t *work, const uint8_t *in, size_t len, uint8_t prefix_bits,
                                            size_t *consumed, uint32_t *value)
 {
     (void)work;
@@ -174,7 +174,7 @@ embed_bool protocore_hpack_prim_decode_int(uint8_t *work, const uint8_t *in, siz
     return EMBED_TRUE;
 }
 
-size_t protocore_hpack_prim_huff_len(uint8_t *work, const char *s, size_t n)
+size_t protocore_hpack_prim_huff_len(const uint8_t *work, const char *s, size_t n)
 {
     (void)work;
 
@@ -186,7 +186,7 @@ size_t protocore_hpack_prim_huff_len(uint8_t *work, const char *s, size_t n)
     return (bits + 7) / 8;
 }
 
-size_t protocore_hpack_prim_huff_encode(uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
+size_t protocore_hpack_prim_huff_encode(const uint8_t *work, uint8_t *out, size_t cap, const char *s, size_t n)
 {
     (void)work;
 
@@ -220,7 +220,7 @@ size_t protocore_hpack_prim_huff_encode(uint8_t *work, uint8_t *out, size_t cap,
     return o;
 }
 
-embed_bool protocore_hpack_prim_huff_decode(uint8_t *work, const uint8_t *in, size_t n, char *out, size_t cap,
+embed_bool protocore_hpack_prim_huff_decode(const uint8_t *work, const uint8_t *in, size_t n, char *out, size_t cap,
                                             size_t *out_len)
 {
     (void)work;

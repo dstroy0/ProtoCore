@@ -8,7 +8,7 @@ Hand-writing a couple hundred theme stylesheets is not maintainable, so a theme 
 style the common page elements (body, headings, links, cards, buttons, inputs, tables, code). Every
 theme therefore has the same structure and only its colors differ, which keeps them consistent and
 lets the set grow to hundreds. The seven original hand-authored themes in src/web_assets/themes/*.css are
-left untouched (they carry bespoke personality - CRT scanlines, nyan trails); this only fills
+left untouched (they carry bespoke personality - CRT scanlines, nyan trails). This only fills
 src/web_assets/themes/generated/.
 
 Categories: `enterprise` (calm, professional), `editor` (recognizable code-editor schemes),
@@ -350,7 +350,7 @@ def derive_palette(base, mode, accent=None):
         acc = accent
     else:
         h, l, s = colorsys.rgb_to_hls(*_rgb(base))
-        # A near-gray base has no meaningful hue to complement, so give it a friendly blue; otherwise
+        # A near-gray base has no meaningful hue to complement, so give it a friendly blue. Otherwise
         # take a vivid complementary at a fixed, readable lightness/saturation (not a muddy shift).
         acc = "#3b82f6" if s < 0.12 else _hex(*colorsys.hls_to_rgb((h + 0.5) % 1.0, 0.58, 0.72))
     acc2 = _shift(acc, dh=0.09, ds=0.05)

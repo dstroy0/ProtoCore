@@ -545,7 +545,7 @@ void protocore_tls_connection_init(uint8_t *work)
         TlsConnectionV.ok = EMBED_FALSE;
         return;
     }
-    // The bytes carry the previous tenant's key material; the pointers to them stay, or the next
+    // The bytes carry the previous tenant's key material. The pointers to them stay, or the next
     // init would ask the persistent end for a second borrow it never gives back.
     mmgr_zero_buf(c->tx, PROTOCORE_TLS_CONN_BORROW);
     mmgr_zero_buf(&c->ks, sizeof(c->ks));
@@ -657,7 +657,7 @@ static embed_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, 
 // public key. Either way the key it carries is kept, because CertificateVerify is checked under it.
 static void client_on_certificate(uint8_t *work, const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnectionV.conn;
+    const TlsConn *c = TlsConnectionV.conn;
     const uint8_t *entry = NULL;
     size_t entry_len = 0;
     Tls13MsgV.parse_certificate_args.msg = msg;
@@ -785,7 +785,7 @@ static protocore_x509_sig_alg sig_alg_of(uint16_t scheme)
 // message joins it (sec 4.4.3).
 static void client_on_cert_verify(uint8_t *work, const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnectionV.conn;
+    const TlsConn *c = TlsConnectionV.conn;
     uint16_t scheme = 0;
     const uint8_t *sig = NULL;
     size_t sig_len = 0;
@@ -977,7 +977,7 @@ void protocore_tls_connection_start(uint8_t *work)
 }
 
 // The worker filled RX with one record and says how much. A ClientHello is in the clear, so it is
-// read where it lies; everything after it opens into TX, which builds nothing while a received
+// read where it lies. Everything after it opens into TX, which builds nothing while a received
 // message stands in it.
 void protocore_tls_connection_process(uint8_t *work)
 {

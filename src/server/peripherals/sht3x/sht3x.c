@@ -49,8 +49,8 @@ uint8_t *protocore_sht3x_span(void)
 
 void protocore_sht3x_crc8(uint8_t *work);
 void protocore_sht3x_parse(uint8_t *work);
-void protocore_sht3x_rh_mpct(uint8_t *work);
-void protocore_sht3x_temp_mc(uint8_t *work);
+void protocore_sht3x_rh_mpct(const uint8_t *work);
+void protocore_sht3x_temp_mc(const uint8_t *work);
 
 void protocore_sht3x_crc8(uint8_t *work)
 {
@@ -66,7 +66,7 @@ void protocore_sht3x_crc8(uint8_t *work)
     Sht3xV.crc = (uint8_t)CrcV.value;
 }
 
-void protocore_sht3x_temp_mc(uint8_t *work)
+void protocore_sht3x_temp_mc(const uint8_t *work)
 {
     (void)work;
     uint16_t raw = Sht3xV.temp_mc_args.raw;
@@ -75,7 +75,7 @@ void protocore_sht3x_temp_mc(uint8_t *work)
     Sht3xV.milli = (int32_t)(-45000 + (int64_t)175000 * raw / 65535);
 }
 
-void protocore_sht3x_rh_mpct(uint8_t *work)
+void protocore_sht3x_rh_mpct(const uint8_t *work)
 {
     (void)work;
     uint16_t raw = Sht3xV.rh_mpct_args.raw;
@@ -158,7 +158,10 @@ static_assert(SHT3X_OFF_CTX % _Alignof(Sht3xCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SHT3X_CTX(w) ((Sht3xCtx *)(void *)((w) + SHT3X_OFF_CTX))
+#define SHT3X_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Sht3xCtx *)(const void *)((w) + SHT3X_OFF_CTX),                                        \
+        default: (Sht3xCtx *)(void *)((w) + SHT3X_OFF_CTX))
 
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.

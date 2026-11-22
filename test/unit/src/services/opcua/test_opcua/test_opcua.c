@@ -133,7 +133,7 @@ void test_part6_builtin_type_encodings(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(FLOAT_EXAMPLE, buf, 4);
 
     // sec 5.2.2.4: a String is UTF-8 preceded by its length in bytes as an Int32. The spec's
-    // example string is a CJK character followed by "Boy"; the CJK character is three UTF-8 octets
+    // example string is a CJK character followed by "Boy". The CJK character is three UTF-8 octets
     // E6 B0 B4, so the length is 6 and the encoding is 06 00 00 00 E6 B0 B4 42 6F 79.
     static const char CJK_BOY[7] = {(char)0xE6, (char)0xB0, (char)0xB4, 'B', 'o', 'y', '\0'};
     w.n = 0;

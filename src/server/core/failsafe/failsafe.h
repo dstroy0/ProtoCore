@@ -51,7 +51,7 @@ typedef void (*protocore_failsafe_cb)(int id, const char *name, void *arg);
  */
 static inline embed_bool protocore_lifeline_overdue(uint32_t now, uint32_t last_feed_ms, uint32_t deadline_ms)
 {
-    return (uint32_t)(now - last_feed_ms) > deadline_ms;
+    return (now - last_feed_ms) > deadline_ms;
 }
 
 // ---------------------------------------------------------------------------

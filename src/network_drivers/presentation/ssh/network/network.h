@@ -63,7 +63,7 @@ typedef struct
  * @brief The binding between an SSH slot and the byte stream underneath it.
  *
  * RFC 4253 sec 4: "SSH works over any 8-bit clean, binary-transparent transport." Nothing here is
- * one of the three components of RFC 4251 sec 1; this is the stream they run on, and the roles that
+ * one of the three components of RFC 4251 sec 1. This is the stream they run on, and the roles that
  * drive them (server sec 4.1, client sec 4) live above it.
  *
  * A caller sets the members a call takes, invokes it through ::SshNetwork, and reads the outcome off
@@ -119,15 +119,15 @@ extern SshNetworkVars SshNetworkV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const claim)(uint8_t *work);
-    void (*const release)(uint8_t *work);
-    void (*const slot_free)(uint8_t *work);
-    void (*const owns)(uint8_t *work);
-    void (*const tx_drain)(uint8_t *work);
-    void (*const emit)(uint8_t *work);
-    void (*const write_msg)(uint8_t *work);
-    void (*const payload_region)(uint8_t *work);
-    void (*const write_msg_at)(uint8_t *work);
+    void (*const claim)(const uint8_t *work);
+    void (*const release)(const uint8_t *work);
+    void (*const slot_free)(const uint8_t *work);
+    void (*const owns)(const uint8_t *work);
+    void (*const tx_drain)(const uint8_t *work);
+    void (*const emit)(const uint8_t *work);
+    void (*const write_msg)(const uint8_t *work);
+    void (*const payload_region)(const uint8_t *work);
+    void (*const write_msg_at)(const uint8_t *work);
     void (*const chan_open)(uint8_t *work);
     void (*const chan_adopt)(uint8_t *work);
     void (*const chan_by_cid)(uint8_t *work);
@@ -141,15 +141,15 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshNetworkV or a region of the borrow at a fixed offset.
-void protocore_ssh_network_claim(uint8_t *work);
-void protocore_ssh_network_release(uint8_t *work);
-void protocore_ssh_network_slot_free(uint8_t *work);
-void protocore_ssh_network_owns(uint8_t *work);
-void protocore_ssh_network_tx_drain(uint8_t *work);
-void protocore_ssh_network_emit(uint8_t *work);
-void protocore_ssh_network_write_msg(uint8_t *work);
-void protocore_ssh_network_payload_region(uint8_t *work);
-void protocore_ssh_network_write_msg_at(uint8_t *work);
+void protocore_ssh_network_claim(const uint8_t *work);
+void protocore_ssh_network_release(const uint8_t *work);
+void protocore_ssh_network_slot_free(const uint8_t *work);
+void protocore_ssh_network_owns(const uint8_t *work);
+void protocore_ssh_network_tx_drain(const uint8_t *work);
+void protocore_ssh_network_emit(const uint8_t *work);
+void protocore_ssh_network_write_msg(const uint8_t *work);
+void protocore_ssh_network_payload_region(const uint8_t *work);
+void protocore_ssh_network_write_msg_at(const uint8_t *work);
 void protocore_ssh_network_chan_open(uint8_t *work);
 void protocore_ssh_network_chan_adopt(uint8_t *work);
 void protocore_ssh_network_chan_by_cid(uint8_t *work);

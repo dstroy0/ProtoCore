@@ -3,7 +3,7 @@
 //
 // Host-side microbenchmark for the NTS framing codecs (RFC 8915): the NTS-KE record builder/parser (the
 // TLS-1.3 key-establishment exchange on :4460) and the NTP extension-field builder (per-packet). All pure
-// framing - no TLS, no AEAD, no socket - so it links standalone; the crypto (AES-SIV-CMAC-256 + the TLS
+// framing - no TLS, no AEAD, no socket - so it links standalone. The crypto (AES-SIV-CMAC-256 + the TLS
 // exporter) sits on top and is not part of these hot ops. The device figure comes from the rig /bench op;
 // this host ns/op + MB/s is a relative baseline. Build + run:
 //   gcc -O2 -std=c11 -I. -Isrc -Itest/mocks -Itest/support -Itest/performance_benching/common

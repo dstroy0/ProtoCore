@@ -82,10 +82,10 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*presence_init)(uint8_t *, PresenceCore *, uint32_t, uint32_t, uint32_t);
-    embed_bool (*presence_update)(uint8_t *, PresenceCore *, embed_bool, uint32_t);
-    embed_bool (*presence_get)(uint8_t *, const PresenceCore *);
-    embed_bool (*presence_take_event)(uint8_t *, PresenceCore *);
+    void (*presence_init)(const uint8_t *, PresenceCore *, uint32_t, uint32_t, uint32_t);
+    embed_bool (*presence_update)(const uint8_t *, PresenceCore *, embed_bool, uint32_t);
+    embed_bool (*presence_get)(const uint8_t *, const PresenceCore *);
+    embed_bool (*presence_take_event)(const uint8_t *, PresenceCore *);
     void (*core_init)(uint8_t *, PresenceCore *, uint32_t);
     embed_bool (*begin)(uint8_t *, int);
     embed_bool (*poll)(uint8_t *);
@@ -102,7 +102,7 @@ PROTOCORE_NS_LAYOUT(Rcwl0516Ns, presence_init, presence_update, presence_get, pr
  * @param hold_ms 0 disables the hold (presence follows the debounced level exactly)
  * @param now Now
  */
-void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
+void protocore_rcwl0516_presence_init(const uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
                                       uint32_t now);
 /**
  * @brief Feed one sample of the presence pin. Call it as often as .
@@ -112,21 +112,21 @@ void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t d
  * @param now Now
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, embed_bool pin_high, uint32_t now);
+embed_bool protocore_rcwl0516_presence_update(const uint8_t *work, PresenceCore *c, embed_bool pin_high, uint32_t now);
 /**
  * @brief Current presence, without sampling.
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  * @param c C
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_rcwl0516_presence_get(uint8_t *work, const PresenceCore *c);
+embed_bool protocore_rcwl0516_presence_get(const uint8_t *work, const PresenceCore *c);
 /**
  * @brief Consume the presence-changed event.
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.
  * @param c C
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_rcwl0516_presence_take_event(uint8_t *work, PresenceCore *c);
+embed_bool protocore_rcwl0516_presence_take_event(const uint8_t *work, PresenceCore *c);
 /**
  * @brief Initialize c with the RCWL-0516 defaults .
  * @param work PROTOCORE_RCWL0516_BORROW bytes the caller took. Not held past the call.

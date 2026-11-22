@@ -135,8 +135,10 @@ def human_text(limit=400000):
 def main():
     out = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     quiet = "--quiet" in sys.argv
+    # The numbers behind the verdict. --quiet leaves the verdict alone.
+    detail = (lambda _text: None) if quiet else out.write
 
-    out.write("\n  %s\n" % APART.replace("\\", "/"))
+    detail("\n  %s\n" % APART.replace("\\", "/"))
     if not os.path.isdir(APART):
         out.write(
             "  no per source corpora. Run utils/maint/data/fetch/fetch_machine_prose.py first.\n\n"
@@ -174,15 +176,15 @@ def main():
     axis = top_words(list(everything.values()))
     on_axis = {one: restricted(value, axis) for one, value in everything.items()}
 
-    out.write(
+    detail(
         "\n  %d corpus(es) claiming one label, against %d control words\n"
         % (len(corpora), len(control))
     )
     for one, words in sorted(corpora.items()):
-        out.write("    %-52s %7d words\n" % (one[:52], len(words)))
+        detail("    %-52s %7d words\n" % (one[:52], len(words)))
 
     # Each corpus against its own halves. That is the floor a distance has to clear here.
-    out.write("\n  own halves, the resolution floor of each\n")
+    detail("\n  own halves, the resolution floor of each\n")
     floors = {}
     for one, words in sorted(corpora.items()):
         first, second = halves(" ".join(words))
@@ -192,29 +194,29 @@ def main():
         left = restricted(profile(words_of(first))[0], axis)
         right = restricted(profile(words_of(second))[0], axis)
         floors[one] = distance(left, right)
-        out.write("    %-52s %.4f\n" % (one[:52], floors[one]))
+        detail("    %-52s %.4f\n" % (one[:52], floors[one]))
 
     keys = sorted(corpora)
     within = []
-    out.write("\n  to each other, and to the control\n")
+    detail("\n  to each other, and to the control\n")
     for at, one in enumerate(keys):
         for other in keys[at + 1 :]:
             value = distance(on_axis[one], on_axis[other])
             within.append((value, one, other))
-            out.write("    %-30s %-30s %.4f\n" % (one[:30], other[:30], value))
+            detail("    %-30s %-30s %.4f\n" % (one[:30], other[:30], value))
     across = []
     for one in keys:
         value = distance(on_axis[one], on_axis["control"])
         across.append((value, one))
-        out.write("    %-30s %-30s %.4f\n" % (one[:30], "control", value))
+        detail("    %-30s %-30s %.4f\n" % (one[:30], "control", value))
 
     worst_within = max(within)[0]
     best_across = min(across)[0]
     floor = max(floors.values()) if floors else 0.0
 
-    out.write("\n  furthest two that share the label   %.4f\n" % worst_within)
-    out.write("  nearest one to the control         %.4f\n" % best_across)
-    out.write("  largest own halves floor           %.4f\n" % floor)
+    detail("\n  furthest two that share the label   %.4f\n" % worst_within)
+    detail("  nearest one to the control         %.4f\n" % best_across)
+    detail("  largest own halves floor           %.4f\n" % floor)
 
     if worst_within <= floor:
         out.write(

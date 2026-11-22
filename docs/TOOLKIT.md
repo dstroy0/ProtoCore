@@ -81,7 +81,7 @@ toolkit's deleted `readclean_test.py` was written against.
 nothing imports, which duplicates the set without ending the duplication.
 
 The other five are wanted. `dedup.py` has no ProtoCore equivalent, and the toolkit's
-`yank_includes.py` is better than ours: it reads its keep list, its never-yank list and its manifest
+`yank_includes.py` is better than ours. It reads its keep list, its never-yank list and its manifest
 path from a Config, where ProtoCore's holds them in its body. Those values are already stated under
 `[yank]` in `repotools.toml`, so that half of the migration is done and waiting.
 

@@ -32,10 +32,10 @@ static uint8_t checksum(const uint8_t *p, size_t n)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_mbus_build_short(uint8_t *work);
-void protocore_mbus_dif_data_len(uint8_t *work);
+void protocore_mbus_build_short(const uint8_t *work);
+void protocore_mbus_dif_data_len(const uint8_t *work);
 
-void protocore_mbus_build_ack(uint8_t *work)
+void protocore_mbus_build_ack(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MbusV.build_ack_args.buf;
@@ -50,7 +50,7 @@ void protocore_mbus_build_ack(uint8_t *work)
     MbusV.n = 1;
 }
 
-void protocore_mbus_build_short(uint8_t *work)
+void protocore_mbus_build_short(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MbusV.build_short_args.buf;
@@ -71,7 +71,7 @@ void protocore_mbus_build_short(uint8_t *work)
     MbusV.n = 5;
 }
 
-void protocore_mbus_build_long(uint8_t *work)
+void protocore_mbus_build_long(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = MbusV.build_long_args.buf;
@@ -151,7 +151,7 @@ void protocore_mbus_build_req_ud1(uint8_t *work)
     protocore_mbus_build_short(work);
 }
 
-void protocore_mbus_parse(uint8_t *work)
+void protocore_mbus_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = MbusV.parse_args.buf;
@@ -241,7 +241,7 @@ void protocore_mbus_parse(uint8_t *work)
     MbusV.ok = EMBED_FALSE;
 }
 
-void protocore_mbus_dif_data_len(uint8_t *work)
+void protocore_mbus_dif_data_len(const uint8_t *work)
 {
     (void)work;
     uint8_t coding = MbusV.dif_data_len_args.coding;
@@ -443,7 +443,7 @@ static embed_bool mbus_decode_bcd(const uint8_t *d, uint8_t n, int64_t *out)
     return EMBED_TRUE;
 }
 
-void protocore_mbus_record_value_int(uint8_t *work)
+void protocore_mbus_record_value_int(const uint8_t *work)
 {
     (void)work;
     const MbusRecord *r = MbusV.record_value_int_args.r;
@@ -479,7 +479,7 @@ void protocore_mbus_record_value_int(uint8_t *work)
     }
 }
 
-void protocore_mbus_record_value_real(uint8_t *work)
+void protocore_mbus_record_value_real(const uint8_t *work)
 {
     (void)work;
     const MbusRecord *r = MbusV.record_value_real_args.r;
@@ -496,7 +496,7 @@ void protocore_mbus_record_value_real(uint8_t *work)
     MbusV.ok = EMBED_TRUE;
 }
 
-void protocore_mbus_vif_decode(uint8_t *work)
+void protocore_mbus_vif_decode(const uint8_t *work)
 {
     (void)work;
     uint8_t vif = MbusV.vif_decode_args.vif;
@@ -544,7 +544,7 @@ void protocore_mbus_vif_decode(uint8_t *work)
     else if ((v >= 0x58 && v <= 0x5F) || (v >= 0x64 && v <= 0x67))
     {
         // Flow/return (0x58..0x5F) and external (0x64..0x67) temperatures are both degrees Celsius at
-        // the same 10^(nn-3) scale, so they share one branch (the VIF only distinguishes them semantically).
+        // the same 10^(nn-3) scale. So they share one branch (the VIF only distinguishes them semantically).
         u = MBUS_UNIT_CELSIUS;
         e = (int8_t)((v & 3) - 3);
     }
@@ -569,7 +569,7 @@ void protocore_mbus_vif_decode(uint8_t *work)
     MbusV.ok = u != MBUS_UNIT_UNKNOWN;
 }
 
-void protocore_mbus_parse_var_header(uint8_t *work)
+void protocore_mbus_parse_var_header(const uint8_t *work)
 {
     (void)work;
     const uint8_t *body = MbusV.parse_var_header_args.body;

@@ -314,7 +314,7 @@ For embedded device use this is generally acceptable because:
 
 - The comparison time difference (a few nanoseconds) is dominated by network
   jitter on WiFi.
-- The credential is transmitted in base64 (effectively plaintext) over HTTP; if
+- The credential is transmitted in base64 (effectively plaintext) over HTTP. If
   the deployment requires true authentication security, TLS (or SSH) must be
   used at the transport layer.
 
@@ -341,7 +341,7 @@ OUT record buffers, handshake temporaries). Here every mbedTLS allocation is
 redirected to a **fixed BSS arena** (`PROTOCORE_TLS_ARENA_SIZE`) via a custom
 first-fit allocator installed with `mbedtls_platform_set_calloc_free()` - so the
 system heap is never touched after `begin()`. The arena is sized for the
-worst-case handshake; if it is ever too small the handshake **fails cleanly**
+worst-case handshake. If it is ever too small the handshake **fails cleanly**
 (allocation returns NULL → connection dropped), never corrupting memory. The
 live high-water mark is queryable via [`protocore_tls_arena_peak()`](@ref protocore_tls_arena_peak).
 Measured peak for one ECDSA P-256 connection on Arduino-esp32 (16 KB IN/OUT
@@ -369,13 +369,13 @@ records) is ~41.5 KB; the default arena is 48 KB.
 
 - **One TLS connection at a time** by default (`MAX_TLS_CONNS` = 1). A second
   concurrent TLS connection roughly doubles the ~32 KB record-buffer cost, which
-  overflows the static DRAM budget on a stock Arduino build; raising it requires
+  overflows the static DRAM budget on a stock Arduino build. Raising it requires
   shrinking the IDF record sizes (`CONFIG_MBEDTLS_SSL_IN/OUT_CONTENT_LEN`, an
   ESP-IDF-framework build).
 - **The server does not authenticate clients via TLS.** It presents its own RFC 7250 raw public
   key and never requests a client certificate, so there is no mutual-TLS mode to enable. Use HTTP
   Basic/Digest/JWT auth, or the SSH layer's public-key auth, for client identity.
-- **Session resumption is optional** ([`PROTOCORE_ENABLE_TLS_RESUMPTION`](@ref PROTOCORE_ENABLE_TLS_RESUMPTION), default off, TLS 1.2 / RFC 5077 tickets). When on, a returning client resumes with an abbreviated handshake; the session is sealed into the client's ticket (a stateless server), so no per-session cache grows. Security trade-off: the ticket-sealing key (AES-256-GCM, in the static arena) protects every outstanding ticket, so its compromise would expose those resumed sessions - it rotates automatically on the [`PROTOCORE_TLS_TICKET_LIFETIME_S`](@ref PROTOCORE_TLS_TICKET_LIFETIME_S) schedule (default 1 day) to bound that window. Full handshakes still get per-connection ECDHE forward secrecy. Leave it off if ticket-key compromise is in your threat model.
+- **Session resumption is optional** ([`PROTOCORE_ENABLE_TLS_RESUMPTION`](@ref PROTOCORE_ENABLE_TLS_RESUMPTION), default off, TLS 1.2 / RFC 5077 tickets). When on, a returning client resumes with an abbreviated handshake. The session is sealed into the client's ticket (a stateless server), so no per-session cache grows. Security trade-off: the ticket-sealing key (AES-256-GCM, in the static arena) protects every outstanding ticket, so its compromise would expose those resumed sessions - it rotates automatically on the [`PROTOCORE_TLS_TICKET_LIFETIME_S`](@ref PROTOCORE_TLS_TICKET_LIFETIME_S) schedule (default 1 day) to bound that window. Full handshakes still get per-connection ECDHE forward secrecy. Leave it off if ticket-key compromise is in your threat model.
 - **`wss://` and TLS Server-Sent Events run over the record layer** when TLS is
   enabled: a WebSocket/SSE upgrade on a TLS connection is encrypted frame-by-frame
   (transparent to handler code), not rejected. Plain `ws://`/SSE on a non-TLS
@@ -966,7 +966,7 @@ survives reboots; give each device a unique engine ID (derive from the MAC).
 - **Unknown community → silent drop.** A datagram whose community matches neither
   configured value produces no response (no oracle, no amplification).
 - **Zero-heap, bounded work.** Request and response share two fixed BSS buffers
-  ([`SNMP_MSG_BUF_SIZE`](@ref SNMP_MSG_BUF_SIZE)); the MIB is a fixed table; the
+  ([`SNMP_MSG_BUF_SIZE`](@ref SNMP_MSG_BUF_SIZE)); the MIB is a fixed table. The
   BER decoder is fully bounds-checked and a malformed/truncated message is
   dropped. `GetBulk` expansion is clamped to
   [`SNMP_MAX_VARBINDS`](@ref SNMP_MAX_VARBINDS), and an over-large response

@@ -783,7 +783,7 @@ static DtlsRecStep process_plaintext_record(uint8_t *work, DtlsConn *c, const ui
 }
 
 // Called above its definition; the ACK helper below reads the handshake state through it.
-void protocore_dtls_server_established(uint8_t *work);
+void protocore_dtls_server_established(const uint8_t *work);
 
 // Once the client Finished completes the handshake, acknowledge it so the client stops retransmitting
 // its final flight (RFC 9147 §5.8.3). The ACK is a content-type-26 record in the highest available epoch
@@ -886,7 +886,7 @@ void protocore_dtls_server_process(uint8_t *work)
     DtlsServerV.n = (int)out_len;
 }
 
-void protocore_dtls_server_timeout_ms(uint8_t *work)
+void protocore_dtls_server_timeout_ms(const uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.timeout_ms_args.c;
@@ -939,7 +939,7 @@ void protocore_dtls_server_on_timeout(uint8_t *work)
     DtlsServerV.n = (int)out_len;
 }
 
-void protocore_dtls_server_established(uint8_t *work)
+void protocore_dtls_server_established(const uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.established_args.c;
@@ -947,7 +947,7 @@ void protocore_dtls_server_established(uint8_t *work)
     DtlsServerV.ok = c->state == DTLS_CONN_STATE_DONE && c->ep3_ready;
 }
 
-void protocore_dtls_server_alert(uint8_t *work)
+void protocore_dtls_server_alert(const uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.alert_args.c;
@@ -955,7 +955,7 @@ void protocore_dtls_server_alert(uint8_t *work)
     DtlsServerV.value = c->alert;
 }
 
-void protocore_dtls_server_app_write_keys(uint8_t *work)
+void protocore_dtls_server_app_write_keys(const uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.app_write_keys_args.c;
@@ -963,7 +963,7 @@ void protocore_dtls_server_app_write_keys(uint8_t *work)
     DtlsServerV.ptr = c->ep3_ready ? &c->ep3_srv : NULL;
 }
 
-void protocore_dtls_server_app_read_keys(uint8_t *work)
+void protocore_dtls_server_app_read_keys(const uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.app_read_keys_args.c;
@@ -971,7 +971,7 @@ void protocore_dtls_server_app_read_keys(uint8_t *work)
     DtlsServerV.ptr = c->ep3_ready ? &c->ep3_cli : NULL;
 }
 
-void protocore_dtls_server_local_cid(uint8_t *work)
+void protocore_dtls_server_local_cid(const uint8_t *work)
 {
     (void)work;
     const DtlsConn *c = DtlsServerV.local_cid_args.c;

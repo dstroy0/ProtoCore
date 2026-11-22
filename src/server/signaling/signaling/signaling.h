@@ -37,7 +37,7 @@
  * Tcp.conn->close(); it means an application never has to reach for it.
  *
  * This is not SSH signaling. RFC 4254 signaling delivers a POSIX signal to a remote process over a
- * channel and is implemented in ssh_flow_control; the two share a word and nothing else.
+ * channel and is implemented in ssh_flow_control. The two share a word and nothing else.
  *
  * Single-accessor like the rest of the server: use it from the worker that owns the slot.
  *
@@ -131,7 +131,7 @@ typedef struct
     void (*const reset)(uint8_t *work);
     void (*const put_response)(uint8_t *work);
     void (*const put_tick)(uint8_t *work);
-    void (*const kill)(uint8_t *work);
+    void (*const kill)(const uint8_t *work);
 } SignalingNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -140,7 +140,7 @@ void protocore_signal_know(uint8_t *work);
 void protocore_signal_reset(uint8_t *work);
 void protocore_signal_put_response(uint8_t *work);
 void protocore_signal_put_tick(uint8_t *work);
-void protocore_signal_kill(uint8_t *work);
+void protocore_signal_kill(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

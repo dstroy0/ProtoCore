@@ -168,20 +168,20 @@ static embed_bool header_line_value(const char *p, const char *lend, const char 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_edge_cache_current_age(uint8_t *work);
+void protocore_edge_cache_current_age(const uint8_t *work);
 void protocore_edge_cache_entry_fresh(uint8_t *work);
-void protocore_edge_cache_entry_has_validator(uint8_t *work);
+void protocore_edge_cache_entry_has_validator(const uint8_t *work);
 void protocore_edge_cache_entry_set_freshness(uint8_t *work);
 void protocore_edge_cache_freshness_lifetime(uint8_t *work);
-void protocore_edge_cache_header_value(uint8_t *work);
-void protocore_edge_cache_heuristic_lifetime(uint8_t *work);
-void protocore_edge_cache_initial_age(uint8_t *work);
-void protocore_edge_cache_is_fresh_at(uint8_t *work);
-void protocore_edge_cache_key_digest(uint8_t *work);
-void protocore_edge_cache_parse_http_date(uint8_t *work);
-void protocore_edge_cache_vary_serialize(uint8_t *work);
+void protocore_edge_cache_header_value(const uint8_t *work);
+void protocore_edge_cache_heuristic_lifetime(const uint8_t *work);
+void protocore_edge_cache_initial_age(const uint8_t *work);
+void protocore_edge_cache_is_fresh_at(const uint8_t *work);
+void protocore_edge_cache_key_digest(const uint8_t *work);
+void protocore_edge_cache_parse_http_date(const uint8_t *work);
+void protocore_edge_cache_vary_serialize(const uint8_t *work);
 
-void protocore_edge_cache_header_value(uint8_t *work)
+void protocore_edge_cache_header_value(const uint8_t *work)
 {
     (void)work;
     const char *hdrs = EdgeCacheV.header_value_args.hdrs;
@@ -332,7 +332,7 @@ static embed_bool parse_date_asctime(const char *p, int *mday, int *mon, int *ye
     return rd_uint(&p, year);
 }
 
-void protocore_edge_cache_parse_http_date(uint8_t *work)
+void protocore_edge_cache_parse_http_date(const uint8_t *work)
 {
     (void)work;
     const char *s = EdgeCacheV.parse_http_date_args.s;
@@ -415,7 +415,7 @@ void protocore_edge_cache_freshness_lifetime(uint8_t *work)
     EdgeCacheV.secs = -1;
 }
 
-void protocore_edge_cache_heuristic_lifetime(uint8_t *work)
+void protocore_edge_cache_heuristic_lifetime(const uint8_t *work)
 {
     (void)work;
     int64_t date_epoch = EdgeCacheV.heuristic_lifetime_args.date_epoch;
@@ -430,7 +430,7 @@ void protocore_edge_cache_heuristic_lifetime(uint8_t *work)
     return; // RFC 9111 sec 4.2.2 (10%)
 }
 
-void protocore_edge_cache_initial_age(uint8_t *work)
+void protocore_edge_cache_initial_age(const uint8_t *work)
 {
     (void)work;
     int32_t age_hdr = EdgeCacheV.initial_age_args.age_hdr;
@@ -446,7 +446,7 @@ void protocore_edge_cache_initial_age(uint8_t *work)
     EdgeCacheV.secs = (apparent > corrected) ? apparent : corrected;
 }
 
-void protocore_edge_cache_current_age(uint8_t *work)
+void protocore_edge_cache_current_age(const uint8_t *work)
 {
     (void)work;
     long initial_age = EdgeCacheV.current_age_args.initial_age;
@@ -457,7 +457,7 @@ void protocore_edge_cache_current_age(uint8_t *work)
     EdgeCacheV.secs = initial_age + (long)(resident_ms / 1000u);
 }
 
-void protocore_edge_cache_is_fresh_at(uint8_t *work)
+void protocore_edge_cache_is_fresh_at(const uint8_t *work)
 {
     (void)work;
     long lifetime = EdgeCacheV.is_fresh_at_args.lifetime;
@@ -466,7 +466,7 @@ void protocore_edge_cache_is_fresh_at(uint8_t *work)
     EdgeCacheV.ok = lifetime >= 0 && current_age < lifetime;
 }
 
-void protocore_edge_cache_key_canon(uint8_t *work)
+void protocore_edge_cache_key_canon(const uint8_t *work)
 {
     (void)work;
     const char *method = EdgeCacheV.key_canon_args.method;
@@ -508,7 +508,7 @@ void protocore_edge_cache_key_canon(uint8_t *work)
     EdgeCacheV.n = pos;
 }
 
-void protocore_edge_cache_key_digest(uint8_t *work)
+void protocore_edge_cache_key_digest(const uint8_t *work)
 {
     (void)work;
     uint8_t *digest_work = EdgeCacheV.key_digest_args.digest_work;
@@ -560,7 +560,7 @@ static embed_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx
     return k_append(out, pos, out_cap, val ? "\x1f" : "\x1d", EMBED_FALSE);
 }
 
-void protocore_edge_cache_vary_serialize(uint8_t *work)
+void protocore_edge_cache_vary_serialize(const uint8_t *work)
 {
     (void)work;
     const char *vary_header = EdgeCacheV.vary_serialize_args.vary_header;
@@ -683,7 +683,7 @@ static embed_bool vary_is_star(const char *vary_header)
     return EMBED_FALSE;
 }
 
-void protocore_edge_cache_store_init(uint8_t *work)
+void protocore_edge_cache_store_init(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_init_args.s;
@@ -765,7 +765,7 @@ void protocore_edge_cache_store_alloc(uint8_t *work)
     EdgeCacheV.entry = e;
 }
 
-void protocore_edge_cache_store_lookup(uint8_t *work)
+void protocore_edge_cache_store_lookup(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_lookup_args.s;
@@ -855,7 +855,7 @@ void protocore_edge_cache_entry_set_freshness(uint8_t *work)
     protocore_edge_cache_freshness_lifetime(work);
     long lifetime = EdgeCacheV.secs;
     // RFC 9111 sec 4.2.2: heuristics apply only when no explicit expiration time is present. Date
-    // plus Expires is an explicit one however far in the past it lies, so it clamps to 0 (stale on
+    // plus Expires is an explicit one however far in the past it lies. So it clamps to 0 (stale on
     // arrival) instead of falling through to a heuristic or the default.
     if (lifetime < 0 && !(date_epoch >= 0 && expires_epoch >= 0))
     {
@@ -884,7 +884,7 @@ void protocore_edge_cache_entry_set_freshness(uint8_t *work)
     e->age_hdr = (age_hdr > 0) ? age_hdr : 0;
 }
 
-void protocore_edge_cache_entry_has_validator(uint8_t *work)
+void protocore_edge_cache_entry_has_validator(const uint8_t *work)
 {
     (void)work;
     const EdgeEntry *e = EdgeCacheV.entry_has_validator_args.e;
@@ -943,7 +943,7 @@ void protocore_edge_cache_store_sweep(uint8_t *work)
     EdgeCacheV.count = n;
 }
 
-void protocore_edge_cache_store_purge(uint8_t *work)
+void protocore_edge_cache_store_purge(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_purge_args.s;
@@ -963,7 +963,7 @@ void protocore_edge_cache_store_purge(uint8_t *work)
     EdgeCacheV.count = n;
 }
 
-void protocore_edge_cache_store_purge_prefix(uint8_t *work)
+void protocore_edge_cache_store_purge_prefix(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_purge_prefix_args.s;
@@ -989,7 +989,7 @@ void protocore_edge_cache_store_purge_prefix(uint8_t *work)
     EdgeCacheV.count = n;
 }
 
-void protocore_edge_cache_store_free_entry(uint8_t *work)
+void protocore_edge_cache_store_free_entry(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_free_entry_args.s;
@@ -1005,7 +1005,7 @@ void protocore_edge_cache_store_free_entry(uint8_t *work)
     }
 }
 
-void protocore_edge_cache_is_storeable(uint8_t *work)
+void protocore_edge_cache_is_storeable(const uint8_t *work)
 {
     (void)work;
     int status = EdgeCacheV.is_storeable_args.status;
@@ -1052,7 +1052,7 @@ static embed_bool hdr_line(char *out, size_t *pos, size_t cap, const char *name,
            k_append(out, pos, cap, value, EMBED_FALSE) && k_append(out, pos, cap, "\r\n", EMBED_FALSE);
 }
 
-void protocore_edge_cache_build_conditional(uint8_t *work)
+void protocore_edge_cache_build_conditional(const uint8_t *work)
 {
     (void)work;
     const EdgeEntry *e = EdgeCacheV.build_conditional_args.e;

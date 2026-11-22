@@ -18,7 +18,7 @@ Grep these before reaching for the network. Both are plain text and searchable.
 | Part datasheets | `docs/learn/datasheets/<part>.txt` | register maps, field widths, LSB weights, conversion formulas |
 
 `docs/learn/datasheets/README.md` indexes each part, says what the suite needs it for, and links the
-vendor page. A part marked NOT CACHED there is one the vendor would not serve to a script; get it
+vendor page. A part marked NOT CACHED there is one the vendor would not serve to a script. Get it
 yourself or fall back to properties that hold regardless of the register map, and say which you did.
 
 A test expectation comes from one of exactly three places: a value the standard publishes verbatim,

@@ -265,7 +265,7 @@ static void parse_backtrace(const char *text, ExcInfo *out)
     }
 }
 
-void protocore_exc_parse(uint8_t *work)
+void protocore_exc_parse(const uint8_t *work)
 {
     (void)work;
     const char *text = ExcV.parse_args.text;
@@ -297,7 +297,7 @@ void protocore_exc_parse(uint8_t *work)
     ExcV.ok = out->cause[0] != '\0' || out->pc != 0 || out->frame_count > 0;
 }
 
-void protocore_exc_json(uint8_t *work)
+void protocore_exc_json(const uint8_t *work)
 {
     (void)work;
     const ExcInfo *info = ExcV.parse_args.info;
@@ -352,13 +352,13 @@ void protocore_exc_json(uint8_t *work)
 }
 
 #if PROTOCORE_HAS_VENDOR_COREDUMP
-// The image half lives in exc_coredump.c, the arm that has one to read; it is bound here so the
+// The image half lives in exc_coredump.c, the arm that has one to read. It is bound here so the
 // whole surface is one initializer rather than a runtime install with an order to get wrong.
-void protocore_exc_present(uint8_t *work);
-void protocore_exc_summary(uint8_t *work);
-void protocore_exc_read(uint8_t *work);
-void protocore_exc_save(uint8_t *work);
-void protocore_exc_erase(uint8_t *work);
+void protocore_exc_present(const uint8_t *work);
+void protocore_exc_summary(const uint8_t *work);
+void protocore_exc_read(const uint8_t *work);
+void protocore_exc_save(const uint8_t *work);
+void protocore_exc_erase(const uint8_t *work);
 #endif
 
 // Designated, so a member's position in the struct does not decide what it binds to.

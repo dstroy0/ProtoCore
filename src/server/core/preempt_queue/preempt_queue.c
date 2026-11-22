@@ -59,7 +59,10 @@ static_assert(PREEMPT_QUEUE_OFF_CTX + sizeof(struct PreemptQueueStorage) <= PROT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define PREEMPT_QUEUE_CTX(w) ((struct PreemptQueueStorage *)(void *)((w) + PREEMPT_QUEUE_OFF_CTX))
+#define PREEMPT_QUEUE_CTX(w)                                                                                           \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct PreemptQueueStorage *)(const void *)((w) + PREEMPT_QUEUE_OFF_CTX),              \
+        default: (struct PreemptQueueStorage *)(void *)((w) + PREEMPT_QUEUE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -247,7 +250,7 @@ void protocore_preempt_queue_post_from_isr(uint8_t *work)
     PreemptQueueV.ok = EMBED_TRUE;
 }
 
-void protocore_preempt_queue_drain(uint8_t *work)
+void protocore_preempt_queue_drain(const uint8_t *work)
 {
     (void)work;
     // The lane's task drains it; a build whose task backend does not run the entry function
@@ -281,7 +284,7 @@ void protocore_preempt_queue_high_water(uint8_t *work)
         lane_ok(PreemptQueueV.lane) ? PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)PreemptQueueV.lane] : 0;
 }
 
-void protocore_preempt_queue_priority(uint8_t *work)
+void protocore_preempt_queue_priority(const uint8_t *work)
 {
     (void)work;
     PreemptQueueV.u8 = lane_priority(PreemptQueueV.lane);

@@ -78,7 +78,7 @@ size_t protocore_nvs_get_str(const char *ns, const char *key, char *out, size_t 
     {
         return 0;
     }
-    // getString writes the terminator and returns the character count without it; an absent key
+    // getString writes the terminator and returns the character count without it. An absent key
     // would give the Arduino String overload, which allocates, so the key is checked first.
     size_t n = s_nvs.prefs.isKey(key) ? s_nvs.prefs.getString(key, out, cap) : 0;
     s_nvs.prefs.end();

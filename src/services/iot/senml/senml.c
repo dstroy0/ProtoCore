@@ -7,7 +7,7 @@
  *        codec, plus the Record resolver.
  *
  * Each build walks the Record array and emits one label / value pair per field present. The JSON
- * build writes the labels as member names (sec 5); the binary build hands both spellings to the
+ * build writes the labels as member names (sec 5). The binary build hands both spellings to the
  * codec, which writes the sec 6 Table 4 integer map key. The resolve carries the Base Name and Base
  * Time forward and folds them into every Record (sec 4.6).
  */
@@ -219,7 +219,7 @@ void protocore_senml_json_build(uint8_t *work)
 
 // Build ns->pack into ns->binary through its codec: an array of Records, each a map whose keys the
 // codec writes as the RFC 8428 sec 6 Table 4 integers. Reports the length in ns->n.
-void protocore_senml_binary_build(uint8_t *work)
+void protocore_senml_binary_build(const uint8_t *work)
 {
     (void)work;
     SenmlV.ok = EMBED_FALSE;
@@ -297,7 +297,7 @@ void protocore_senml_binary_build(uint8_t *work)
 // for the Record carrying it and every Record after it, until a later one overrides it: each output
 // Name is the active Base Name concatenated with the Name, and each output Time is the active Base
 // Time added to the Time. Reports the Record count in ns->n.
-void protocore_senml_resolve(uint8_t *work)
+void protocore_senml_resolve(const uint8_t *work)
 {
     (void)work;
     SenmlV.ok = EMBED_FALSE;

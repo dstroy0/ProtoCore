@@ -24,14 +24,14 @@
 //
 //   test_the_namespace_uris_are_the_published_model_uris - the two URIs were
 //   http://www.euromap.org/euromap77/ and .../euromap83/. The namespaces moved to the OPC Foundation
-//   when the recommendation was published as OPC 40077 / OPC 40083; the NodeSet ModelUri values
+//   when the recommendation was published as OPC 40077 / OPC 40083. The NodeSet ModelUri values
 //   above are the ones a client resolves, and a grep for "euromap" over both NodeSets returns 0
 //   hits. A server advertising the old URI lands in a different namespace index, so a conforming
 //   client never matches the model.
 //
 //   test_each_leaf_carries_the_reference_type_the_nodeset_publishes - the NodeSet models the
 //   MachineInformation, MachineStatus and ActiveJob leaves, and ActiveJobValues.JobStatus, as
-//   HasProperty (46) references to PropertyType (68) nodes; only the other seven ActiveJobValues
+//   HasProperty (46) references to PropertyType (68) nodes. Only the other seven ActiveJobValues
 //   leaves are HasComponent (47) / BaseDataVariableType (63). Every leaf used to be emitted as
 //   HasComponent / BaseDataVariableType, so a client browsing HasProperty found nothing.
 //
@@ -48,7 +48,7 @@
 // caller's bound, and an unbound model serves nothing.
 
 // The .c, so the Read and Browse resolvers are reachable: they answer the OPC UA server's handler
-// contract (Part 4 sec 5.9.2 / sec 5.11.2), so they are internal to the module and the env does not
+// contract (Part 4 sec 5.9.2 / sec 5.11.2). So they are internal to the module and the env does not
 // build this .c itself.
 #include "services/opcua/models/euromap77/euromap77.c"
 #include "services/opcua/opcua.h"

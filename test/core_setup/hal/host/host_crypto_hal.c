@@ -6,7 +6,7 @@
  * @brief The host arm of the RSA/MPI accelerator. See host_crypto_hal.h.
  *
  * Schoolbook multiply into a double-width product, then a bit-serial reduction from the top. The
- * peripheral reaches the same residue by Montgomery, which is why it needs m' and R^2; the answer is
+ * peripheral reaches the same residue by Montgomery, which is why it needs m' and R^2. The answer is
  * the same value either way, which is what the arms above this are checked against.
  */
 

@@ -95,7 +95,7 @@ static size_t natd_notify_build(uint8_t *work, uint16_t notify_type, const uint8
 }
 
 // The digest matches when nothing on that axis was translated.
-static embed_bool natd_match(uint8_t *work)
+static embed_bool natd_match(void)
 {
     if (!IkeNattV.digest.received)
     {
@@ -111,7 +111,7 @@ static embed_bool natd_match(uint8_t *work)
                       .bytes = PROTOCORE_IKE_NATD_HASH_LEN) == 0;
 }
 
-void protocore_ike_natt_hash(uint8_t *work)
+void protocore_ike_natt_hash(const uint8_t *work)
 {
     (void)work;
     IkeNattV.n = natd_hash(IkeNattV.spi.init_spi, IkeNattV.spi.resp_spi, IkeNattV.addr.ip, IkeNattV.addr.ip_len,
@@ -146,26 +146,29 @@ void protocore_ike_natt_dest_build(uint8_t *work)
 
 void protocore_ike_natt_match(uint8_t *work)
 {
-    IkeNattV.ok = natd_match(work);
+    (void)work;
+    IkeNattV.ok = natd_match();
 }
 
 // No match against the source the packet was observed to come from: someone on the route rewrote it.
 void protocore_ike_natt_peer_behind_nat(uint8_t *work)
 {
-    IkeNattV.ok = !natd_match(work);
+    (void)work;
+    IkeNattV.ok = !natd_match();
 }
 
 // No match against our own address: the peer sent to a translated destination.
 void protocore_ike_natt_self_behind_nat(uint8_t *work)
 {
-    IkeNattV.ok = !natd_match(work);
+    (void)work;
+    IkeNattV.ok = !natd_match();
 }
 
 // ---------------------------------------------------------------------------
 // UDP encapsulation demux on port 4500 (RFC 3948 sec 2)
 // ---------------------------------------------------------------------------
 
-void protocore_ike_natt_is_keepalive(uint8_t *work)
+void protocore_ike_natt_is_keepalive(const uint8_t *work)
 {
     (void)work;
     IkeNattV.ok = IkeNattV.pkt.p && IkeNattV.pkt.len == 1 && IkeNattV.pkt.p[0] == PROTOCORE_NATT_KEEPALIVE_BYTE;
@@ -173,7 +176,7 @@ void protocore_ike_natt_is_keepalive(uint8_t *work)
 
 // The Non-ESP Marker is four zero octets aligned with the ESP SPI, and that SPI is never zero
 // (RFC 3948 sec 2.1, sec 2.2), so a leading zero word means the datagram carries IKE.
-void protocore_ike_natt_is_ike(uint8_t *work)
+void protocore_ike_natt_is_ike(const uint8_t *work)
 {
     (void)work;
     const uint8_t *p = IkeNattV.pkt.p;

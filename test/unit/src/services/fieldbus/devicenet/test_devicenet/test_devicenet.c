@@ -765,7 +765,7 @@ void test_reassembly_refusals(void)
     TEST_ASSERT_EQUAL_UINT16(12u, rx.len);
 }
 
-// A new first fragment restarts the message: whatever the previous, abandoned one had accumulated
+// A new first fragment restarts the message: whatever the previous, abandoned one accumulated
 // is discarded rather than prefixed onto the new body.
 void test_a_new_first_fragment_restarts_the_message(void)
 {

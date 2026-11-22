@@ -74,7 +74,7 @@ typedef struct
  * @param out_user     receives the reassembled user data.
  * @param out_cap      capacity of @p out_user.
  * @param out_user_len receives the user-data length.
- * @return true on a complete, all-CRC-valid frame; false on a bad start word, an invalid
+ * @return true on a complete, all-CRC-valid frame. False on a bad start word, an invalid
  *         LEN, truncation, a header or block CRC mismatch, or an out_user overflow.
  */
 embed_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,

@@ -43,6 +43,8 @@ from docs_check.ratchet import ratchet_read  # noqa: E402
 from docs_check.repository import REPOSITORY  # noqa: E402
 from docs_check.ste import checker, ste_findings  # noqa: E402
 
+LETTERS = r"[A-Za-z]+"
+
 PROSE_RATCHET = os.path.join(PROSE, "prose_ratchet.tsv")
 STE_RATCHET = os.path.join(PROSE, "ste_ratchet.tsv")
 VOICE = os.path.join(PROSE, "voice.tsv")
@@ -65,7 +67,7 @@ AFTER_VERB = {"a", "an", "the", "this", "that", "these", "those", "it", "its", "
               "us", "you", "me", "every", "each", "all", "no", "one", "to", "in", "on", "at", "by", "from", "into",
               "out", "up", "down", "off", "over", "back", "before", "after", "since", "once", "and", "or", "but",
               "as", "with", "for", "of", "here", "there", "so", "than", "when", "where", "while", "if"}
-SEMICOLON = re.compile(r"(?<=[A-Za-z0-9)\]\"']); +([a-z][a-z]+)\b(?![\w(_.\[:/-])")
+SEMICOLON = re.compile(r"(?<=[A-Za-z0-9)\]\"']); +([a-z][a-z]+)\b(?![\w(.\[:/-])")
 PROGRESSIVE = re.compile(r"(?<![\w'-])(is|are) ([a-z]+ing)\b")
 # The words that open a direct object. A progressive verb with an object after it is a verb, and the simple present
 # takes its place. Without an object the -ing word can be an adjective, and it stays.
@@ -81,7 +83,7 @@ CODE_SIGNS = ("{", "}", " = ", "==", "->", "::", "for (", "while (", "&&", "||",
 # The two docstring marks, made from one quote each, so that the docs check does not read a mark in this code
 DOUBLE_MARK = '"' * 3
 SINGLE_MARK = "'" * 3
-OPENERS = re.compile(r"^\s*(?:#+|//+|/\*+|\*+(?!/)|\"{3}|'{3})\s?")
+OPENERS = re.compile(r"^\s*(?:#+|/(?:/+|\*+)|\*+(?!/)|\"{3}|'{3})\s?")
 
 
 def word_set(path, column=0):
@@ -212,7 +214,7 @@ def candidates(part):
         before = part[:hit.start()]
         if (word not in SUBJECT_OPENERS) or ("," in before) or (":" in before) or not outside_code(part, hit.start()):
             continue
-        if len(re.findall(r"[A-Za-z]+", before)) < 4 or len(re.findall(r"[A-Za-z]+", part[hit.end():])) < 3:
+        if len(re.findall(LETTERS, before)) < 4 or len(re.findall(LETTERS, part[hit.end():])) < 3:
             continue
         if joint in ("and", ":"):
             found.append((hit.start(), hit.start(3) + 1, ". " + word[0].upper()))
@@ -239,7 +241,7 @@ def candidates(part):
             word = hit.group(1)
             if word not in ENGLISH or word in TECHNICAL or not outside_code(part, hit.start()):
                 continue
-            words_before = len(re.findall(r"[A-Za-z]+", part[:hit.start()]))
+            words_before = len(re.findall(LETTERS, part[:hit.start()]))
             if words_before < 3:
                 continue
             found.append((hit.start(), hit.start(1) + 1, ". " + word[0].upper()))

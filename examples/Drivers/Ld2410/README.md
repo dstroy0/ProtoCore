@@ -80,7 +80,7 @@ report.
 
 - **Nothing prints / always "clear".** Check the two data wires are **crossed** (module TX ->
   GPIO 16, module RX -> GPIO 17) and that the module has power. The LD2410's UART runs at
-  **256000 baud** - that is set for you; you do not need to change the Serial Monitor baud
+  **256000 baud** - that is set for you. You do not need to change the Serial Monitor baud
   (115200), which is only for the printed messages.
 - **It detects "ghosts" with no one there.** Radar reflects off moving fans, curtains, and
   metal. Mount it facing the area you care about and away from moving objects.

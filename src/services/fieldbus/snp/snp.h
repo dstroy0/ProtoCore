@@ -13,7 +13,7 @@
  * SNP frames the payload with an ASCII/binary control byte, a length, the data, and the Block Check
  * Code of GE Fanuc GFK-0582D p. 7-62 (seed zero; per byte, XOR then rotate the accumulator left one
  * bit). This builds/validates that frame so a device can
- * read/write registers on a Series 90 PLC; the RS-485 UART transport (and the SNP-X session setup) is
+ * read/write registers on a Series 90 PLC. The RS-485 UART transport (and the SNP-X session setup) is
  * the remaining device step. Pure, zero heap, no stdlib, host-testable.
  */
 
@@ -112,14 +112,14 @@ extern SnpVars SnpV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const bcc)(uint8_t *work);
+    void (*const bcc)(const uint8_t *work);
     void (*const build)(uint8_t *work);
     void (*const parse)(uint8_t *work);
 } SnpNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SnpV or a region of the borrow at a fixed offset.
-void protocore_snp_bcc(uint8_t *work);
+void protocore_snp_bcc(const uint8_t *work);
 void protocore_snp_build(uint8_t *work);
 void protocore_snp_parse(uint8_t *work);
 

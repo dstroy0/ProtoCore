@@ -117,7 +117,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define WEBDAV_HANDLER_CTX(w) ((DavCtx *)(void *)((w) + WEBDAV_HANDLER_OFF_CTX))
+#define WEBDAV_HANDLER_CTX(w)                                                                                          \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const DavCtx *)(const void *)((w) + WEBDAV_HANDLER_OFF_CTX),                                 \
+        default: (DavCtx *)(void *)((w) + WEBDAV_HANDLER_OFF_CTX))
 
 // The accessor root, or -1 for "not bound yet". Stated here rather than as an initializer so the
 // context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a

@@ -167,7 +167,7 @@ typedef struct
  * @var TlsConnNs::start        client only: write the ClientHello; bytes written, or 0
  * @var TlsConnNs::process      the worker filled @ref TlsConn::rx with one record of @c io.rx_len
  *                              bytes; consume it, writing whatever it owes into @c out_args.out
- * @var TlsConnNs::established  whether the handshake has completed
+ * @var TlsConnNs::established  whether the handshake completed
  * @var TlsConnNs::alert        the alert that ended the connection, or 0
  * @var TlsConnNs::seal_app     seal application data into one record; bytes written, or 0
  * @var TlsConnNs::open_app     open one received application record; false on an AEAD failure
@@ -261,20 +261,20 @@ embed_bool protocore_tls_ready(void);
 embed_bool protocore_tls_conn_begin(uint8_t slot);
 
 /**
- * @brief Pump the handshake on @p slot with whatever ciphertext has arrived.
+ * @brief Pump the handshake on @p slot with whatever ciphertext arrived.
  *
  * @return < 0 the connection failed and must be aborted; 0 still handshaking, ask again when more
  *         ciphertext lands; > 0 the handshake completed.
  */
 int protocore_tls_handshake(uint8_t slot);
 
-/** @brief Whether the handshake on @p slot has completed. */
+/** @brief Whether the handshake on @p slot completed. */
 embed_bool protocore_tls_established(uint8_t slot);
 
 /**
  * @brief Open one received application record on @p slot into @p buf.
  *
- * @return the plaintext length, 0 when no whole record has arrived, or < 0 on an AEAD failure,
+ * @return the plaintext length, 0 when no whole record arrived, or < 0 on an AEAD failure,
  *         which RFC 8446 sec 5.2 makes fatal to the connection.
  */
 int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len);

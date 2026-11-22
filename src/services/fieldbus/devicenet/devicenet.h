@@ -8,7 +8,7 @@
  *
  * DeviceNet (ODVA) carries CIP over classic CAN. The CIP application layer (services, EPATH,
  * data) is the same one the EtherNet/IP codec uses, so build the message body with the
- * existing `Cip.*` functions (`PROTOCORE_ENABLE_CIP`); this module supplies the DeviceNet-specific
+ * existing `Cip.*` functions (`PROTOCORE_ENABLE_CIP`). This module supplies the DeviceNet-specific
  * link adaptation that is NOT part of CIP:
  *
  *  - The 11-bit CAN **identifier** as a Message Group (1..4) + Message ID + MAC ID, per the
@@ -224,25 +224,25 @@ extern DevicenetVars DevicenetV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_id)(uint8_t *work);
-    void (*const decode_id)(uint8_t *work);
-    void (*const msg_header)(uint8_t *work);
-    void (*const frag_octet)(uint8_t *work);
+    void (*const encode_id)(const uint8_t *work);
+    void (*const decode_id)(const uint8_t *work);
+    void (*const msg_header)(const uint8_t *work);
+    void (*const frag_octet)(const uint8_t *work);
     void (*const build_explicit)(uint8_t *work);
     void (*const build_fragment)(uint8_t *work);
-    void (*const frag_reset)(uint8_t *work);
+    void (*const frag_reset)(const uint8_t *work);
     void (*const frag_feed)(uint8_t *work);
 } DevicenetNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in DevicenetV or a region of the borrow at a fixed offset.
-void protocore_devicenet_encode_id(uint8_t *work);
-void protocore_devicenet_decode_id(uint8_t *work);
-void protocore_devicenet_msg_header(uint8_t *work);
-void protocore_devicenet_frag_octet(uint8_t *work);
+void protocore_devicenet_encode_id(const uint8_t *work);
+void protocore_devicenet_decode_id(const uint8_t *work);
+void protocore_devicenet_msg_header(const uint8_t *work);
+void protocore_devicenet_frag_octet(const uint8_t *work);
 void protocore_devicenet_build_explicit(uint8_t *work);
 void protocore_devicenet_build_fragment(uint8_t *work);
-void protocore_devicenet_frag_reset(uint8_t *work);
+void protocore_devicenet_frag_reset(const uint8_t *work);
 void protocore_devicenet_frag_feed(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

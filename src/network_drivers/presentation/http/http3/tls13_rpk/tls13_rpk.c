@@ -19,7 +19,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *pub)
+size_t protocore_tls13_rpk_ed25519_spki(const uint8_t *work, uint8_t *out, size_t cap, const uint8_t *pub)
 {
     (void)work;
 
@@ -35,7 +35,8 @@ size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap,
     return PROTOCORE_TLS13_ED25519_SPKI_LEN;
 }
 
-embed_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *spki, size_t len, const uint8_t **pub)
+embed_bool protocore_tls13_rpk_ed25519_from_spki(const uint8_t *work, const uint8_t *spki, size_t len,
+                                                 const uint8_t **pub)
 {
     (void)work;
 

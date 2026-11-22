@@ -40,7 +40,10 @@ static_assert(SOUTHBOUND_OFF_CTX + sizeof(struct SouthboundStorage) <= PROTOCORE
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SOUTHBOUND_CTX(w) ((struct SouthboundStorage *)(void *)((w) + SOUTHBOUND_OFF_CTX))
+#define SOUTHBOUND_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SouthboundStorage *)(const void *)((w) + SOUTHBOUND_OFF_CTX),                   \
+        default: (struct SouthboundStorage *)(void *)((w) + SOUTHBOUND_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

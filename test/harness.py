@@ -378,7 +378,7 @@ HWCAP_REFUSAL = """refusing to update %s: this drops a capability arm and puts n
 
 A capability is two mutually exclusive arms - test/core_setup/hal/<vendor>/ under
 PROTOCORE_HAS_HW_<X>, and test/core_setup/hal/portable/ under !PROTOCORE_HAS_HW_<X>. Both ship, and
-the host drives BOTH. An env left with neither still links, still goes green, and has stopped
+the host drives BOTH. An env left with neither still links, still goes green, and stopped
 testing the arm the hardware runs - which nothing reports.
 
 An unresolved symbol a hal arm defines is the CAP BEING OFF. Turn it on and build that arm; do not
@@ -390,7 +390,7 @@ To cover the other arm, give it its OWN env and keep this one as it is:
   harness.py env update <name>_sw --drop-src <hal arm> --src <other arm> \\
       --drop-flags=-DPROTOCORE_HAS_HW_<X>=1 --flags=-DPROTOCORE_HAS_HW_<X>=0
 
-Dropping one arm and adding the other IN THE SAME CALL is what this allows: it is a swap, not a
+Dropping one arm and adding the other IN THE SAME CALL is what this allows. It is a swap, not a
 removal, and it is how the twin env above is pointed at its arm."""
 
 
@@ -955,7 +955,7 @@ def matrix_envs(table_path):
 
     The matrix is the only place a native env is defined: CMake builds from it and platformio.ini no
     longer carries a section per env. Each env's base chain is folded in, base first, so a stack base
-    carries its sources and flags to the envs that extend it; without that a direct compile builds
+    carries its sources and flags to the envs that extend it. Without that a direct compile builds
     the suite against nothing and every namespace the suite drives comes back undefined at the link.
     A `${env:NAME.build_src_filter}` entry is expanded to that env's filter, the way gen_cmake.py
     does it. Stack bases are returned too, with no tests.
@@ -1022,7 +1022,7 @@ def _src_hits(f, src_globs):
 
 def _classify_additive(f, base, head, known_envs):
     """Content-aware verdict for an ADDITIVE_SAFE file: a set of affected envs, or "FULL"."""
-    # Shared with tools/ci_tooling/generate/example_footprints.py, so it stays a library rather
+    # Shared with tools/ci_tooling/generate/example_footprints.py. So it stays a library rather
     # than being copied in here.
     sys.path.insert(0, os.path.join(ROOT, "tools", "ci_tooling", "lib"))
     import affected_common as ac
@@ -1165,7 +1165,7 @@ def cmd_env_deps(a):
             done += 1
             if a.progress and (done % 100 == 0 or done == len(jobs)):
                 print("  [%d/%d] scans" % (done, len(jobs)), file=sys.stderr)
-    # A named subset re-scans only those envs, so it carries every other env's entries over from the
+    # A named subset re-scans only those envs. So it carries every other env's entries over from the
     # graph on disk: drop the rescanned names, then merge what this run found.
     if a.envs:
         rescanned = set(names)
@@ -1286,7 +1286,7 @@ def _resolve_src(globs):
     root and nowhere else. An entry matching neither is reported rather than dropped.
 
     A path is returned once however many entries reach it. An env that extends a stack base inherits
-    that base's filter and then names files of its own, and the two overlap; one .c compiled twice is
+    that base's filter and then names files of its own, and the two overlap. One .c compiled twice is
     every symbol in it defined twice, which the linker refuses.
     """
     import glob as _glob
@@ -1396,7 +1396,7 @@ def suite_source(suite_dir):
 def generate_runner(suite_dir, libdeps=None, envname=None):
     """Emit suite_dir/unity_runner.c from the one source that holds the cases.
 
-    This is the bridge to Unity's generate_test_runner.rb: it is what turns a suite source into a
+    This is the bridge to Unity's generate_test_runner.rb. It is what turns a suite source into a
     runnable test, so writing a test means writing the cases and then coming through here.
     """
     if not os.path.isdir(suite_dir):
@@ -1452,7 +1452,7 @@ def generate_runner(suite_dir, libdeps=None, envname=None):
     subprocess.run([ruby, generator, src, out], check=True)
     # The generator's own pattern does not read the parameter list, so a file-scope helper named
     # test_* is registered as a case and called with no arguments. Whatever it registers that is
-    # not a `void test_<name>(void)` in the source is that, and it is refused here: the runner is
+    # not a `void test_<name>(void)` in the source is that. It is refused here: the runner is
     # removed so the next build cannot link it.
     registered = set(RUNNER_CASE.findall(open(out, encoding="utf-8").read()))
     over = sorted(registered - set(runner_cases(src)[0]))
@@ -1793,7 +1793,7 @@ def cmd_readme_gen(a):
 # ---------------------------------------------------------------------------
 
 
-# The host build's third-party libraries. platformio.ini declared them per native env; the envs are
+# The host build's third-party libraries. platformio.ini declared them per native env. The envs are
 # CMake's now, so the list lives here and one install under .pio/libdeps/host serves every env.
 HOST_LIBS = ("throwtheswitch/Unity", "anurag3301/littlefs@^2.11.6")
 HOST_LIBDEPS = os.path.join(ROOT, ".pio", "libdeps", "host")
@@ -1855,7 +1855,7 @@ def lib_packages(envname):
     env's suite uses it or not.
 
     .pio/libdeps/host (`harness.py libs`) is read first. A per-env directory is what a checkout from
-    before the move to CMake still carries, and it is read only where the shared one is missing.
+    before the move to CMake still carries. It is read only where the shared one is missing.
     """
     base = HOST_LIBDEPS if os.path.isdir(HOST_LIBDEPS) else os.path.join(ROOT, ".pio", "libdeps", envname)
     if not os.path.isdir(base):

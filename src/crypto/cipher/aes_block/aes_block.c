@@ -23,7 +23,7 @@
 // --- the entries -----------------------------------------------------------
 
 // Expand the key into 4 * (nk + 7) round-key words in the caller's rk.
-embed_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int nk, uint32_t *rk)
+embed_bool protocore_aes_block_key_expand(const uint8_t *work, const uint8_t *key, int nk, uint32_t *rk)
 {
     embed_bool ok = EMBED_FALSE;
     (void)work;
@@ -37,7 +37,8 @@ embed_bool protocore_aes_block_key_expand(uint8_t *work, const uint8_t *key, int
 }
 
 // Encrypt one 16-byte block under the caller's schedule, nr rounds.
-embed_bool protocore_aes_block_encrypt_block(uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in, uint8_t *out)
+embed_bool protocore_aes_block_encrypt_block(const uint8_t *work, const uint32_t *rk, int nr, const uint8_t *in,
+                                             uint8_t *out)
 {
     embed_bool ok = EMBED_FALSE;
     (void)work;

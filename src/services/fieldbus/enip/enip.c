@@ -48,9 +48,9 @@ static uint32_t get32(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_enip_build(uint8_t *work);
+void protocore_enip_build(const uint8_t *work);
 
-void protocore_enip_build(uint8_t *work)
+void protocore_enip_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = EnipV.build_args.buf;
@@ -86,7 +86,7 @@ void protocore_enip_build(uint8_t *work)
     EnipV.n = p;
 }
 
-void protocore_enip_parse(uint8_t *work)
+void protocore_enip_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = EnipV.parse_args.buf;
@@ -144,6 +144,8 @@ void protocore_enip_build_register_session(uint8_t *work)
     EnipV.build_args.data = data;
     EnipV.build_args.data_len = sizeof(data);
     protocore_enip_build(work);
+    EnipV.build_args.data = NULL;
+    EnipV.build_args.h = NULL;
 }
 
 void protocore_enip_build_unregister_session(uint8_t *work)
@@ -167,6 +169,7 @@ void protocore_enip_build_unregister_session(uint8_t *work)
     EnipV.build_args.data = NULL;
     EnipV.build_args.data_len = 0;
     protocore_enip_build(work); // no command-specific data
+    EnipV.build_args.h = NULL;
 }
 
 void protocore_enip_build_send_rr_data(uint8_t *work)
@@ -209,6 +212,7 @@ void protocore_enip_build_send_rr_data(uint8_t *work)
     EnipV.build_args.data = NULL;
     EnipV.build_args.data_len = 0;
     protocore_enip_build(work);
+    EnipV.build_args.h = NULL;
     if (EnipV.n == 0) // writes only the 24-octet header, length 0
     {
         EnipV.n = 0;
@@ -252,11 +256,13 @@ void protocore_enip_build_list_identity(uint8_t *work)
     EnipV.build_args.data = NULL;
     EnipV.build_args.data_len = 0;
     protocore_enip_build(work); // no command-specific data
+    EnipV.build_args.h = NULL;
 }
 
-void protocore_enip_parse_list_identity(uint8_t *work)
+void protocore_enip_parse_list_identity(const uint8_t *work)
 {
     (void)work;
+    EnipV.build_args.h = NULL;
     const uint8_t *data = EnipV.parse_list_identity_args.data;
     size_t data_len = EnipV.parse_list_identity_args.data_len;
     EipIdentity *out = EnipV.parse_list_identity_args.out;
@@ -318,7 +324,7 @@ void protocore_enip_parse_list_identity(uint8_t *work)
     EnipV.ok = EMBED_FALSE; // no List Identity item
 }
 
-void protocore_enip_parse_send_rr_data(uint8_t *work)
+void protocore_enip_parse_send_rr_data(const uint8_t *work)
 {
     (void)work;
     const uint8_t *data = EnipV.parse_send_rr_data_args.data;

@@ -175,22 +175,64 @@ void protocore_stack_transmit_post(uint8_t *work);
  * @param[in] work The borrow of this module [BORROWS].
  * @note A caller above the network layer reads a unit through this, as the transport reads TcpPcb.
  */
+/** @brief The units that one interface holds. */
+typedef struct
+{
+    uint8_t *phy;
+    uint8_t *dma;
+    uint8_t *nd6;
+    uint8_t *acd;
+    uint8_t *autoip;
+    uint8_t *pmtu6;
+    uint8_t *dhcp4;
+    uint8_t *dhcp6;
+    uint8_t *dad;
+    uint8_t *slaac;
+    uint8_t *rdnss;
+} StackIfaceUnits;
+
+/** @brief The units of the core layer. */
+typedef struct
+{
+    uint8_t *dispatch;
+    uint8_t *tick;
+    uint8_t *timeouts;
+    uint8_t *stats;
+} StackCoreUnits;
+
+/** @brief The units of the link layer. */
 typedef struct
 {
     uint8_t *netif;
     uint8_t *loopif;
     uint8_t *arp;
+    uint8_t *vlan;
+    uint8_t *ethip6;
+} StackLinkUnits;
+
+/** @brief The units of the network layer. */
+typedef struct
+{
     uint8_t *ip4_route;
     uint8_t *ip4_forward;
     uint8_t *ip6_forward;
     uint8_t *ip4_reass;
     uint8_t *ip4_frag;
-    uint8_t *igmp;
     uint8_t *ip6_reass;
     uint8_t *ip6_frag;
+    uint8_t *igmp;
     uint8_t *mld6;
     uint8_t *icmp_in;
     uint8_t *icmp6_in;
+    uint8_t *ip4_addr;
+    uint8_t *ip6_addr;
+    uint8_t *ip6_select;
+    uint8_t *pmtu4;
+} StackNetworkUnits;
+
+/** @brief The units of the transport layer. */
+typedef struct
+{
     uint8_t *raw_pcb;
     uint8_t *udp_pcb;
     uint8_t *udplite;
@@ -198,28 +240,22 @@ typedef struct
     uint8_t *tcp_in;
     uint8_t *tcp_out;
     uint8_t *tcp_isn;
-    uint8_t *ip4_addr;
-    uint8_t *ip6_addr;
-    uint8_t *ip6_select;
-    uint8_t *pmtu4;
+} StackTransportUnits;
+
+/** @brief The units of the application layer. */
+typedef struct
+{
     uint8_t *dns;
-    uint8_t *timeouts;
-    uint8_t *tick;
-    uint8_t *dispatch;
-    uint8_t *stats;
-    uint8_t *vlan;
-    uint8_t *ethip6;
-    uint8_t *phy[IDEMIP_NETIF_COUNT];
-    uint8_t *dma[IDEMIP_NETIF_COUNT];
-    uint8_t *nd6[IDEMIP_NETIF_COUNT];
-    uint8_t *acd[IDEMIP_NETIF_COUNT];
-    uint8_t *autoip[IDEMIP_NETIF_COUNT];
-    uint8_t *pmtu6[IDEMIP_NETIF_COUNT];
-    uint8_t *dhcp4[IDEMIP_NETIF_COUNT];
-    uint8_t *dhcp6[IDEMIP_NETIF_COUNT];
-    uint8_t *dad[IDEMIP_NETIF_COUNT];
-    uint8_t *slaac[IDEMIP_NETIF_COUNT];
-    uint8_t *rdnss[IDEMIP_NETIF_COUNT];
+} StackApplicationUnits;
+
+typedef struct
+{
+    StackCoreUnits core;
+    StackLinkUnits link;
+    StackNetworkUnits network;
+    StackTransportUnits transport;
+    StackApplicationUnits application;
+    StackIfaceUnits iface[IDEMIP_NETIF_COUNT];
 } StackUnits;
 
 /** @brief The unit borrows of the stack in @p work. */

@@ -15,7 +15,7 @@
  *    STX collision the low-priority station yields. The "R" variant appends a BCC - the longitudinal XOR
  *    (even parity) of every character of the block after STX, i.e. the stuffed data and the terminating
  *    DLE ETX. A payload byte equal to DLE (0x10) is doubled (transparency); a doubled DLE contributes
- *    0x10 ^ 0x10 = 0 to the XOR, so it does not change the BCC.
+ *    0x10 ^ 0x10 = 0 to the XOR. So it does not change the BCC.
  *
  *  - **RK512** - fixed-header request/reaction telegrams carried as the 3964R block payload: SEND (write
  *    words to the partner) and FETCH (read words from the partner), addressing a data block / flag / I-O
@@ -310,36 +310,36 @@ extern SimaticVars SimaticV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const bcc_3964r)(uint8_t *work);
+    void (*const bcc_3964r)(const uint8_t *work);
     void (*const build_block_3964r)(uint8_t *work);
     void (*const parse_block_3964r)(uint8_t *work);
-    void (*const init_3964r)(uint8_t *work);
+    void (*const init_3964r)(const uint8_t *work);
     void (*const send_3964r)(uint8_t *work);
     void (*const rx_byte_3964r)(uint8_t *work);
-    void (*const tick_3964r)(uint8_t *work);
-    void (*const idle_3964r)(uint8_t *work);
-    void (*const build_send_rk512)(uint8_t *work);
-    void (*const build_fetch_rk512)(uint8_t *work);
-    void (*const build_reaction_rk512)(uint8_t *work);
-    void (*const parse_header_rk512)(uint8_t *work);
-    void (*const parse_reaction_rk512)(uint8_t *work);
+    void (*const tick_3964r)(const uint8_t *work);
+    void (*const idle_3964r)(const uint8_t *work);
+    void (*const build_send_rk512)(const uint8_t *work);
+    void (*const build_fetch_rk512)(const uint8_t *work);
+    void (*const build_reaction_rk512)(const uint8_t *work);
+    void (*const parse_header_rk512)(const uint8_t *work);
+    void (*const parse_reaction_rk512)(const uint8_t *work);
 } SimaticNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SimaticV or a region of the borrow at a fixed offset.
-void protocore_simatic_bcc_3964r(uint8_t *work);
+void protocore_simatic_bcc_3964r(const uint8_t *work);
 void protocore_simatic_build_block_3964r(uint8_t *work);
 void protocore_simatic_parse_block_3964r(uint8_t *work);
-void protocore_simatic_init_3964r(uint8_t *work);
+void protocore_simatic_init_3964r(const uint8_t *work);
 void protocore_simatic_send_3964r(uint8_t *work);
 void protocore_simatic_rx_byte_3964r(uint8_t *work);
-void protocore_simatic_tick_3964r(uint8_t *work);
-void protocore_simatic_idle_3964r(uint8_t *work);
-void protocore_simatic_build_send_rk512(uint8_t *work);
-void protocore_simatic_build_fetch_rk512(uint8_t *work);
-void protocore_simatic_build_reaction_rk512(uint8_t *work);
-void protocore_simatic_parse_header_rk512(uint8_t *work);
-void protocore_simatic_parse_reaction_rk512(uint8_t *work);
+void protocore_simatic_tick_3964r(const uint8_t *work);
+void protocore_simatic_idle_3964r(const uint8_t *work);
+void protocore_simatic_build_send_rk512(const uint8_t *work);
+void protocore_simatic_build_fetch_rk512(const uint8_t *work);
+void protocore_simatic_build_reaction_rk512(const uint8_t *work);
+void protocore_simatic_parse_header_rk512(const uint8_t *work);
+void protocore_simatic_parse_reaction_rk512(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

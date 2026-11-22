@@ -19,7 +19,7 @@ A version is three dotted numbers, a shape protocol constants and spec citations
 enhanced status codes, Sparkplug spec versions, RFC section numbers, and every dotted-quad address
 in a vendored RFC text. Counting raw substrings makes each of those a version site the day the
 project bumps onto its digits. Two conditions narrow a match to the project's own version: the
-digits stand alone rather than sitting inside a longer dotted run, and they carry a `v` prefix or
+digits stand alone rather than sitting inside a longer dotted run. They carry a `v` prefix or
 follow the word `version` within three lines, which is the shape of all nine registered sites.
 
 Scanning is over the working tree minus .git, .pio, node_modules, __pycache__, build output and

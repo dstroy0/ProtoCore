@@ -31,6 +31,9 @@
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 #include "server/core/preempt_queue/preempt_queue.h" // carried below as Session.workers->queue
 #endif
+#if PROTOCORE_ENABLE_IDEMIP
+#include "src/idemip_owners.h" // IDEMIP_OWNERS: the owner of each unit of the stack
+#endif
 
 EMBED_BEGIN_DECLS
 
@@ -69,7 +72,7 @@ void protocore_worker_set_self(int id);
 // are zeroed on release. A slot has exactly one accessor, the worker that owns it, so a borrow is a
 // plain bump with no lock.
 //
-// The worker slots are the application's: it declares the pools and the LocusCarcerum over them in
+// The worker slots are the application's. It declares the pools and the LocusCarcerum over them in
 // its own translation unit and hands the guards in through protocore_cellblocks_bind(). The ghost
 // slot (PROTOCORE_GHOST_WORKER_SLOT) is the library's own, declared in worker.c. A slot nothing was
 // bound to, and any context outside [0, PROTOCORE_WORKER_COUNT), borrows from the ghost.
@@ -96,7 +99,6 @@ const MaxSecurityGuard *protocore_secure_guard(void);
  * and the name that a reader prints.
  */
 #if PROTOCORE_ENABLE_IDEMIP
-#include "src/idemip_owners.h" // IDEMIP_OWNERS: the owner of each unit of the stack
 #define PROTOCORE_OWNERS(owner_)                                                                                       \
     owner_(protocore_owner_plain, "protocore_plain") owner_(protocore_owner_secure, "protocore_secure")                \
         IDEMIP_OWNERS(owner_)

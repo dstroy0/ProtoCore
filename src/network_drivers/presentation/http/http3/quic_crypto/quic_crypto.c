@@ -44,7 +44,7 @@ static void build_nonce(const uint8_t iv[12], uint64_t full_pn, uint8_t nonce[12
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_crypto_keys_from_secret(uint8_t *work, uint8_t *keys_work, const uint8_t *secret,
+void protocore_quic_crypto_keys_from_secret(const uint8_t *work, uint8_t *keys_work, const uint8_t *secret,
                                             QuicPacketKeys *out)
 {
     (void)work;
@@ -82,8 +82,8 @@ void protocore_quic_crypto_derive_initial_secrets(uint8_t *work, uint8_t *keys_w
     QuicCrypto.keys_from_secret(work, keys_work, server_secret, &out->server);
 }
 
-size_t protocore_quic_crypto_packet_protect(uint8_t *work, uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len,
-                                            uint64_t full_pn, size_t payload_len, QuicPacketKeys *keys,
+size_t protocore_quic_crypto_packet_protect(const uint8_t *work, uint8_t *pkt, size_t cap, size_t pn_offset,
+                                            uint8_t pn_len, uint64_t full_pn, size_t payload_len, QuicPacketKeys *keys,
                                             embed_bool is_long)
 {
     (void)work;
@@ -196,7 +196,7 @@ size_t protocore_quic_crypto_packet_unprotect(uint8_t *work, uint8_t *pkt, size_
     return ct_len - PROTOCORE_AES128GCM_TAG_LEN;
 }
 
-void protocore_quic_crypto_retry_integrity_tag(uint8_t *work, const uint8_t *odcid, size_t odcid_len,
+void protocore_quic_crypto_retry_integrity_tag(const uint8_t *work, const uint8_t *odcid, size_t odcid_len,
                                                const uint8_t *retry, size_t retry_len, uint8_t *tag)
 {
     (void)work;

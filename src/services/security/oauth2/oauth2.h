@@ -5,7 +5,7 @@
  * @file oauth2.h
  * @brief OAuth 2.0 client at the token endpoint (RFC 6749), PROTOCORE_ENABLE_OAUTH2.
  *
- * RFC 6749 sec 3.2 names the token endpoint; sec 4.1.3 is the Access Token Request that trades an
+ * RFC 6749 sec 3.2 names the token endpoint. Sec 4.1.3 is the Access Token Request that trades an
  * authorization code for tokens, and sec 6 is the same exchange presenting a refresh token. Both
  * requests are `application/x-www-form-urlencoded` bodies encoded per RFC 6749 Appendix B, whose
  * percent-encoding is RFC 3986 sec 2.1 over the unreserved set of RFC 3986 sec 2.3. The reply is the

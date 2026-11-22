@@ -12,6 +12,7 @@
  */
 
 #include "services/net/ws_client/ws_client.h"
+#include "shared/log/log.h" // PROTOCORE_LOGD: the debug lines
 
 #if PROTOCORE_ENABLE_WS_CLIENT
 
@@ -50,11 +51,18 @@ static const char WS_ACCEPT_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 #define WSC_POLL_MS 5
 #define WSC_PUMP_CHUNK 256
 
-#ifdef PROTOCORE_WS_CLIENT_DEBUG
-#define WSC_DBG(...) printf(__VA_ARGS__)
-#else
-#define WSC_DBG(...) ((void)0)
-#endif
+static const mmgr_field WSC_LOG_OPEN[] = {{MMGR_FK_LIT, 0, sizeof("[wsc] open failed (") - 1, "[wsc] open failed ("},
+                                          MMGR_I64,
+                                          {MMGR_FK_LIT, 0, sizeof(")") - 1, ")"},
+                                          MMGR_END};
+static const mmgr_field WSC_LOG_DOWN[] = {
+    {MMGR_FK_LIT, 0, sizeof("[wsc] transport never came up") - 1, "[wsc] transport never came up"}, MMGR_END};
+static const mmgr_field WSC_LOG_HANDSHAKE[] = {
+    {MMGR_FK_LIT, 0, sizeof("[wsc] handshake fail done=") - 1, "[wsc] handshake fail done="},
+    MMGR_U32,
+    {MMGR_FK_LIT, 0, sizeof(" rlen=") - 1, " rlen="},
+    MMGR_U32,
+    MMGR_END};
 
 // ---------------------------------------------------------------------------
 // Typedefs
@@ -104,7 +112,10 @@ static_assert(WS_CLIENT_OFF_CTX + sizeof(struct WsClientStorage) <= PROTOCORE_WS
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define WS_CLIENT_CTX(w) ((struct WsClientStorage *)(void *)((w) + WS_CLIENT_OFF_CTX))
+#define WS_CLIENT_CTX(w)                                                                                               \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct WsClientStorage *)(const void *)((w) + WS_CLIENT_OFF_CTX),                      \
+        default: (struct WsClientStorage *)(void *)((w) + WS_CLIENT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -181,8 +192,8 @@ void protocore_ws_client_accept_for_key(uint8_t *work)
 
 // The client's opening handshake: a GET request-line (RFC 9112 sec 3) and the field lines RFC 6455
 // sec 4.1 requires. A |Sec-WebSocket-Protocol| offer is emitted only when a subprotocol is named,
-// and the server echoes the one it selected; null or empty omits the field line.
-void protocore_ws_client_build_opening_handshake(uint8_t *work)
+// and the server echoes the one it selected. Null or empty omits the field line.
+void protocore_ws_client_build_opening_handshake(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = WsClientV.buf.out;
@@ -264,7 +275,7 @@ static const char *field_value(const uint8_t *buf, size_t len, const char *name,
 // The server's opening handshake: a 101 Switching Protocols status-line (RFC 9110 sec 15.2.2)
 // carrying a |Sec-WebSocket-Accept| equal to the value the accept computation produced
 // (RFC 6455 sec 4.1).
-void protocore_ws_client_check_server_handshake(uint8_t *work)
+void protocore_ws_client_check_server_handshake(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = WsClientV.buf.in;
@@ -309,7 +320,7 @@ void protocore_ws_client_check_server_handshake(uint8_t *work)
 
 // One FIN frame: FIN and the 4-bit opcode, the Payload len in its short, 16-bit or 64-bit form, the
 // 4-octet Masking-key, then Payload data XORed with octet i modulo 4 of that key (sec 5.2, sec 5.3).
-void protocore_ws_client_build_frame(uint8_t *work)
+void protocore_ws_client_build_frame(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = WsClientV.buf.out;
@@ -368,7 +379,7 @@ void protocore_ws_client_build_frame(uint8_t *work)
 
 // One inbound frame's header, read back into the frame members. False while fewer octets than the
 // whole frame are present (RFC 6455 sec 5.2).
-void protocore_ws_client_parse_frame(uint8_t *work)
+void protocore_ws_client_parse_frame(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = WsClientV.buf.in;
@@ -645,14 +656,14 @@ static void ws_process_rx(uint8_t *work)
     }
 }
 
-void protocore_ws_client_on_message(uint8_t *work)
+void protocore_ws_client_on_message(const uint8_t *work)
 {
     WS_CLIENT_CTX(work)->on_message = WsClientV.msg.on_message;
 }
 
 // RFC 6455 sec 4.1: dial /host/ and /port/, raise TLS when /secure/ is set, send the client's
 // opening handshake and verify the server's. The connection is established when that verifies.
-void protocore_ws_client_connect(uint8_t *work)
+void protocore_ws_client_connect(const uint8_t *work)
 {
     const char *host = WsClientV.handshake.host;
     const char *resource_name = WsClientV.handshake.resource_name;
@@ -683,7 +694,7 @@ void protocore_ws_client_connect(uint8_t *work)
     WS_CLIENT_CTX(work)->cid = TcpClientV.i32;
     if (WS_CLIENT_CTX(work)->cid < 0)
     {
-        WSC_DBG("[wsc] open failed (%d)\n", WS_CLIENT_CTX(work)->cid);
+        PROTOCORE_LOGD(WSC_LOG_OPEN, ((const mmgr_fval[]){MMGR_VI64(WS_CLIENT_CTX(work)->cid)}), 1);
         return;
     }
 
@@ -709,7 +720,7 @@ void protocore_ws_client_connect(uint8_t *work)
     }
     if (!up)
     {
-        WSC_DBG("[wsc] transport never came up\n");
+        PROTOCORE_LOGD(WSC_LOG_DOWN, NULL, 0);
         ws_close_transport(work);
         return;
     }
@@ -774,8 +785,9 @@ void protocore_ws_client_connect(uint8_t *work)
     }
     if (!WsClientV.ok)
     {
-        WSC_DBG("[wsc] handshake fail done=%d rlen=%u resp:\n%.*s\n", (int)done, (unsigned)rlen, (int)rlen,
-                (const char *)resp);
+        // Explicit cast narrows the length, which the response buffer holds below 2^32
+        PROTOCORE_LOGD(WSC_LOG_HANDSHAKE, ((const mmgr_fval[]){MMGR_VU32(done ? 1u : 0u), MMGR_VU32((uint32_t)rlen)}),
+                       2);
         ws_close_transport(work);
         return;
     }
@@ -783,7 +795,7 @@ void protocore_ws_client_connect(uint8_t *work)
     WsClientV.ok = EMBED_TRUE;
 }
 
-void protocore_ws_client_send_text(uint8_t *work)
+void protocore_ws_client_send_text(const uint8_t *work)
 {
     const char *text = WsClientV.msg.text;
     const size_t len =
@@ -791,12 +803,12 @@ void protocore_ws_client_send_text(uint8_t *work)
     WsClientV.ok = ws_emit_frame(work, (uint8_t)WSC_OP_TEXT, (const uint8_t *)text, len);
 }
 
-void protocore_ws_client_send_binary(uint8_t *work)
+void protocore_ws_client_send_binary(const uint8_t *work)
 {
     WsClientV.ok = ws_emit_frame(work, (uint8_t)WSC_OP_BINARY, WsClientV.msg.data, WsClientV.msg.len);
 }
 
-void protocore_ws_client_loop(uint8_t *work)
+void protocore_ws_client_loop(const uint8_t *work)
 {
     WsClientV.ok = EMBED_FALSE;
     if (!WS_CLIENT_CTX(work)->established)
@@ -812,13 +824,13 @@ void protocore_ws_client_loop(uint8_t *work)
     WsClientV.ok = EMBED_TRUE;
 }
 
-void protocore_ws_client_connected(uint8_t *work)
+void protocore_ws_client_connected(const uint8_t *work)
 {
     WsClientV.ok = WS_CLIENT_CTX(work)->established;
 }
 
 // RFC 6455 sec 5.5.1 then sec 7.1.1: send a Close frame, then close the WebSocket connection.
-void protocore_ws_client_close(uint8_t *work)
+void protocore_ws_client_close(const uint8_t *work)
 {
     if (WS_CLIENT_CTX(work)->established)
     {
@@ -829,42 +841,42 @@ void protocore_ws_client_close(uint8_t *work)
 
 #else // no network stack: the codec stands alone and the connection calls answer no
 
-void protocore_ws_client_on_message(uint8_t *work)
+void protocore_ws_client_on_message(const uint8_t *work)
 {
     (void)work;
 }
 
-void protocore_ws_client_connect(uint8_t *work)
-{
-    (void)work;
-    WsClientV.ok = EMBED_FALSE;
-}
-
-void protocore_ws_client_send_text(uint8_t *work)
+void protocore_ws_client_connect(const uint8_t *work)
 {
     (void)work;
     WsClientV.ok = EMBED_FALSE;
 }
 
-void protocore_ws_client_send_binary(uint8_t *work)
+void protocore_ws_client_send_text(const uint8_t *work)
 {
     (void)work;
     WsClientV.ok = EMBED_FALSE;
 }
 
-void protocore_ws_client_loop(uint8_t *work)
+void protocore_ws_client_send_binary(const uint8_t *work)
 {
     (void)work;
     WsClientV.ok = EMBED_FALSE;
 }
 
-void protocore_ws_client_connected(uint8_t *work)
+void protocore_ws_client_loop(const uint8_t *work)
 {
     (void)work;
     WsClientV.ok = EMBED_FALSE;
 }
 
-void protocore_ws_client_close(uint8_t *work)
+void protocore_ws_client_connected(const uint8_t *work)
+{
+    (void)work;
+    WsClientV.ok = EMBED_FALSE;
+}
+
+void protocore_ws_client_close(const uint8_t *work)
 {
     (void)work;
 }

@@ -56,7 +56,7 @@ typedef struct
 typedef struct
 {
     uint16_t cpu_mhz;      ///< clock to apply.
-    embed_bool throttled;  ///< the thermal limit is holding the clock down.
+    embed_bool throttled;  ///< the thermal limit holds the clock down.
     embed_bool recovering; ///< still inside the post-brownout settle window.
 } PowerPlan;
 
@@ -129,26 +129,26 @@ extern PowerVars PowerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const defaults)(uint8_t *work);
-    void (*const decide)(uint8_t *work);
+    void (*const defaults)(const uint8_t *work);
+    void (*const decide)(const uint8_t *work);
     void (*const json)(uint8_t *work);
     void (*const brownout)(uint8_t *work);
-    void (*const die_temp)(uint8_t *work);
-    void (*const cpu_mhz)(uint8_t *work);
-    void (*const apply)(uint8_t *work);
+    void (*const die_temp)(const uint8_t *work);
+    void (*const cpu_mhz)(const uint8_t *work);
+    void (*const apply)(const uint8_t *work);
     void (*const gate_bt)(uint8_t *work);
 } PowerMgmtNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in PowerV or a region of the borrow at a fixed offset.
-void protocore_power_defaults(uint8_t *work);
-void protocore_power_decide(uint8_t *work);
+void protocore_power_defaults(const uint8_t *work);
+void protocore_power_decide(const uint8_t *work);
 void protocore_power_json(uint8_t *work);
 #if PROTOCORE_HAS_VENDOR_PM
 void protocore_power_brownout(uint8_t *work);
-void protocore_power_die_temp(uint8_t *work);
-void protocore_power_cpu_mhz(uint8_t *work);
-void protocore_power_apply(uint8_t *work);
+void protocore_power_die_temp(const uint8_t *work);
+void protocore_power_cpu_mhz(const uint8_t *work);
+void protocore_power_apply(const uint8_t *work);
 #endif
 #if PROTOCORE_HAS_VENDOR_BT
 void protocore_power_gate_bt(uint8_t *work);

@@ -3,7 +3,7 @@
 //
 // Host tests for the FANUC FOCAS Ethernet codec (services/machine_tool/focas/focas.h).
 //
-// FOCAS has NO public specification: it ships as a proprietary FANUC PC library and FANUC
+// FOCAS has NO public specification. It ships as a proprietary FANUC PC library and FANUC
 // publishes no wire document, so no standard-published vector is obtainable for it. Expectations
 // here come from the two sources that remain: the field layout focas.h itself states (10-octet
 // envelope, magic A0 A0 A0 A0, version 1, the frame-type numbers, big-endian throughout, the

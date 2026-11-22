@@ -20,7 +20,7 @@
 // matching open callback when it does; @p off points at the request-specific arg and may be advanced. Flips
 // *accept true for an accepted SFTP subsystem (exec is already in the base accept set).
 
-void protocore_ssh_app_server_classify(uint8_t *work)
+void protocore_ssh_app_server_classify(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshAppServerV.slot;
@@ -31,11 +31,9 @@ void protocore_ssh_app_server_classify(uint8_t *work)
     mmgr_cspan req =
         EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = SshAppServerV.req.payload, .cap = SshAppServerV.req.len);
     req.pos = SshAppServerV.req.off;
-    embed_bool *accept = &SshAppServerV.accept;
-#if !PROTOCORE_ENABLE_SSH_SFTP
-    (void)accept; // only the SFTP subsystem path flips acceptance; scp exec is already accepted
-#endif
 #if PROTOCORE_ENABLE_SSH_SFTP
+    // Only the SFTP subsystem path flips acceptance. The base set already accepts the exec of scp.
+    embed_bool *const accept = &SshAppServerV.accept;
     // subsystem "sftp": not in the base accept set, so accept it here and tag the channel for the SFTP binding.
     if (rtype_len == 9 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = rtype, .other = "subsystem", .bytes = 9) == 0)
     {
@@ -83,7 +81,7 @@ void protocore_ssh_app_server_classify(uint8_t *work)
 
 #else
 
-void protocore_ssh_app_server_classify(uint8_t *work)
+void protocore_ssh_app_server_classify(const uint8_t *work)
 {
     (void)work;
 }

@@ -3,12 +3,12 @@
 //
 // Host tests for the dynamic sleep-cycle scheduler (server/core/sleep_sched.h).
 //
-// No external standard governs this scheduler: it is a ProtoCore policy core, so the only document
+// No external standard governs this scheduler. It is a ProtoCore policy core, so the only document
 // that can supply an expected value is the contract sleep_sched.h publishes. Every numeric
 // expectation below is arithmetic derived from these four published sentences, with the derivation
 // written into the case:
 //
-//   sleep_sched.h:63-64  "Reports 0 while idle < idle_ms; otherwise a window clamped to
+//   sleep_sched.h:63-64  "Reports 0 while idle < idle_ms. Otherwise a window clamped to
 //                         [min_ms, max_ms] that grows with the idle streak (doubling every
 //                         cfg.ramp_ms, or straight to max_ms when ramp_ms is 0). If max_ms < min_ms
 //                         the result is clamped to min_ms."

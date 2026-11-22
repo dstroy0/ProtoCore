@@ -73,7 +73,7 @@ EMBED_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 // Options (RFC 9293 sec 3.2)
 // ---------------------------------------------------------------------------
-// Kind 0 and 1 are single octets; every other kind carries its own length octet, which is what
+// Kind 0 and 1 are single octets. Every other kind carries its own length octet, which is what
 // lets a parser step past an option it does not implement.
 
 #define IDEMIP_TCP_OPT_END 0u     ///< End of Option List

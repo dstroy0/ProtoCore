@@ -6,7 +6,7 @@
  * @brief Ed25519 (RFC 8032) sign + verify over edwards25519.
  *
  * Points are held in extended twisted-Edwards coordinates (X, Y, Z, T) as four field
- * elements; scalar multiplication is a constant-time bit-by-bit double-and-add; scalars
+ * elements; scalar multiplication is a constant-time bit-by-bit double-and-add. Scalars
  * are reduced mod the group order L. SHA-512 hashes the seed, the nonce input, and R||A||M.
  * Deterministic (no RNG). Validated against the RFC 8032 §7.1 vectors and a reference
  * implementation (test_ed25519).
@@ -71,7 +71,10 @@ static_assert(ED25519_OFF_CTX % _Alignof(Ed25519Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define ED25519_CTX(w) ((Ed25519Ctx *)(void *)((w) + ED25519_OFF_CTX))
+#define ED25519_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Ed25519Ctx *)(const void *)((w) + ED25519_OFF_CTX),                                    \
+        default: (Ed25519Ctx *)(void *)((w) + ED25519_OFF_CTX))
 #define ED25519_SHA(w) ((w) + ED25519_OFF_SHA)
 
 // --- Shared constants -------------------------------------------------------

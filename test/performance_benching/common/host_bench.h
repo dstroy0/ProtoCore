@@ -3,7 +3,7 @@
 //
 // Shared host microbench macros for performance_benching/<layer>/<feature>/host.c. Times an
 // expression over N iterations against CLOCK_MONOTONIC and prints one table row per benched
-// operation. The host number is a relative baseline on a desktop/RPi core; the device cost comes
+// operation. The host number is a relative baseline on a desktop/RPi core. The device cost comes
 // from the matching main/main.c CCOUNT bench (device_bench.h).
 
 #ifndef PROTOCORE_PERF_HOST_BENCH_H

@@ -32,7 +32,7 @@ const char *token = hdr + 7;
 
 **Production notes.** Fetch the JWKS from the issuer's discovery document
 (`<issuer>/.well-known/openid-configuration` -> `jwks_uri`) over HTTPS off the
-request hot path and cache it (re-fetch on an unknown `kid`); the demo embeds it.
+request hot path and cache it (re-fetch on an unknown `kid`). The demo embeds it.
 Use a real NTP clock for `now`; the demo hardcodes a time so the bundled test token
 validates.
 

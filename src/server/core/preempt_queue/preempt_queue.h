@@ -7,7 +7,7 @@
  *        (PROTOCORE_ENABLE_PREEMPT_QUEUE) - the v5 real-time ingest primitive.
  *
  * Fixed-capacity queues, each feeding one dedicated, core-pinned task. A producer posts
- * a fixed-size item; the scheduler **preempts** the lower-priority producer the instant
+ * a fixed-size item. The scheduler **preempts** the lower-priority producer the instant
  * the item lands so it is processed immediately instead of on the next tick. Producers
  * post from a task (back or front, with a wait timeout) or from an ISR (interrupt-safe,
  * with an immediate context-switch request). Each processing task pops items in order
@@ -19,7 +19,7 @@
  *   - `PROTOCORE_PQ_LANE_DMA` / `_FORWARD` / `_DEVICE` - internal lanes for the library's own
  *     real-time work (DMA peripheral transfers, interface forwarding, device access).
  *     They run **above** the user lane (base `PROTOCORE_PQ_INTERNAL_PRIORITY`, DMA highest),
- *     so internal ingest always preempts user work; and below the network stack's own
+ *     so internal ingest always preempts user work. And below the network stack's own
  *     tasks so networking is never starved.
  *
  * This is the single normalized pipe for "hardware event -> process now": a DMA-complete
@@ -127,11 +127,11 @@ typedef struct
     void (*const post_from_isr)(uint8_t *work);
     void (*const post_urgent)(uint8_t *work);
     void (*const high_water)(uint8_t *work);
-    void (*const priority)(uint8_t *work);
+    void (*const priority)(const uint8_t *work);
     void (*const running)(uint8_t *work);
     void (*const start)(uint8_t *work);
     void (*const post)(uint8_t *work);
-    void (*const drain)(uint8_t *work);
+    void (*const drain)(const uint8_t *work);
     void (*const stop)(uint8_t *work);
 } PreemptQueueNs;
 
@@ -140,11 +140,11 @@ typedef struct
 void protocore_preempt_queue_post_from_isr(uint8_t *work);
 void protocore_preempt_queue_post_urgent(uint8_t *work);
 void protocore_preempt_queue_high_water(uint8_t *work);
-void protocore_preempt_queue_priority(uint8_t *work);
+void protocore_preempt_queue_priority(const uint8_t *work);
 void protocore_preempt_queue_running(uint8_t *work);
 void protocore_preempt_queue_start(uint8_t *work);
 void protocore_preempt_queue_post(uint8_t *work);
-void protocore_preempt_queue_drain(uint8_t *work);
+void protocore_preempt_queue_drain(const uint8_t *work);
 void protocore_preempt_queue_stop(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

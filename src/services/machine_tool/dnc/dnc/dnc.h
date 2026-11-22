@@ -10,7 +10,7 @@
  * `%` rewind-stop at the start and end, and drip-fed over an RS-232 link with XON/XOFF
  * software flow control so the sender pauses when the controller's small input buffer
  * fills. This codec is the transport-agnostic framing + tape-code layer only - the same
- * bytes ride RS-232, a raw TCP socket, or a WebSocket; the app owns the wire.
+ * bytes ride RS-232, a raw TCP socket, or a WebSocket. The app owns the wire.
  *
  * Two tape codes are supported (the historical split every DNC package still carries):
  *  - **ISO** (::DNC_CODE_ISO): ISO 7-bit / ASCII, End-of-Block = LF, program marker = `%`.
@@ -97,7 +97,7 @@ void protocore_dnc_flow_init(DncFlow *f);
 
 /**
  * @brief Feed one received byte to the flow-control state machine.
- * @return true if @p rx was a flow-control byte (XON/XOFF) and was consumed; false otherwise
+ * @return true if @p rx was a flow-control byte (XON/XOFF) and was consumed. False otherwise
  *         (the byte is ordinary inbound data the caller still owns).
  */
 embed_bool protocore_dnc_flow_feed(DncFlow *f, uint8_t rx);

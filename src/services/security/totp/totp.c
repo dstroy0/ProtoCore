@@ -173,7 +173,7 @@ void protocore_totp_verify(uint8_t *work)
 // and 2-7 carry 26..31; lowercase carries the same values as uppercase, and '=', ' ' and '-' are
 // skipped rather than rejected under RFC 4648 sec 3.3. Any other character, or a byte past cap,
 // ends the decode at -1.
-void protocore_totp_base32_decode(uint8_t *work)
+void protocore_totp_base32_decode(const uint8_t *work)
 {
     (void)work;
     const char *b32 = TotpV.secret.b32;

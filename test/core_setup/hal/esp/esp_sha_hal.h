@@ -15,7 +15,7 @@
  * and hold-clear bits are stated. This file includes NO `soc/` header, references NO vendor symbol
  * (no `esp_sha_*` / `sha_hal_*` / `sha_ll_*`, no `SHA_*_REG`, no `SYSTEM`/`PCR`/`HP_SYS_CLKRST`
  * struct) and tests NO `CONFIG_IDF_TARGET_*`. The block register offsets below are shared by every
- * die carrying the unified SHA peripheral; only the base and the clock/reset bits differ, and those
+ * die carrying the unified SHA peripheral. Only the base and the clock/reset bits differ, and those
  * come from the profile.
  *
  * EXCLUSIVITY

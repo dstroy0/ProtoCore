@@ -48,7 +48,10 @@ static_assert(DNS_SERVER_OFF_CTX + sizeof(struct DnsServerStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define DNS_SERVER_CTX(w) ((struct DnsServerStorage *)(void *)((w) + DNS_SERVER_OFF_CTX))
+#define DNS_SERVER_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct DnsServerStorage *)(const void *)((w) + DNS_SERVER_OFF_CTX),                    \
+        default: (struct DnsServerStorage *)(void *)((w) + DNS_SERVER_OFF_CTX))
 
 // Parse the first question (RFC 1035 sec 4.1.2): write QNAME into @p name as a dotted string, set
 // *qtype to QTYPE and *qend to the offset just past QTYPE and QCLASS. Returns false on a malformed

@@ -111,7 +111,7 @@ void dbench_run(void);
 #define DBENCH_BANNER(label)                                                                                           \
     printf("DB ==== " label " microbench start (" DBENCH_COUNTER " @ %u MHz) ====\n", (unsigned)DBENCH_CPU_MHZ)
 
-/// End-of-cycle marker. On silicon it pauses and the caller's loop starts the next pass; on host it
+/// End-of-cycle marker. On silicon it pauses and the caller's loop starts the next pass. On host it
 /// ends the process, so the one pass a runner asked for is the one it gets.
 #if PROTOCORE_VENDOR_SILICON
 #define DBENCH_DONE()                                                                                                  \

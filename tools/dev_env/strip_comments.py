@@ -18,7 +18,7 @@ Usage:
     python tools/dev_env/strip_comments.py PATH --go            # rewrite in place
 
     --ext .c,.h     which suffixes to visit (default .c,.h)
-    --no-header     strip the leading copyright / SPDX block too; it is kept by default
+    --no-header     strip the leading copyright / SPDX block too. It is kept by default
     --exclude PAT   skip any path containing PAT (repeatable)
 
 A file is only rewritten when the result differs, so a second run is a no-op.

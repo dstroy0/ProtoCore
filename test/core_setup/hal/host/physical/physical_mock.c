@@ -11,7 +11,7 @@
  * backend holds a link state that can actually be up, and answers from it.
  *
  * Semantics are copied from the ESP backend rather than invented, so a behavior that passes here
- * means the same thing on silicon. Where ESP asks the driver, this asks its own context; the
+ * means the same thing on silicon. Where ESP asks the driver, this asks its own context. The
  * decisions (which interface is egress, how an SSID is truncated, when a MAC readout fails) are the
  * same. The link comes up instantly because there is no radio to wait on.
  */

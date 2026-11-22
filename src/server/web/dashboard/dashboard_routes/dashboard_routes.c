@@ -7,7 +7,7 @@
  *        inbound control socket. See dashboard.h.
  *
  * Only the callbacks live here. They have fixed signatures set by whoever dispatches them, so they
- * hold no state and reach the module through its namespace; the entries that register them are in
+ * hold no state and reach the module through its namespace. The entries that register them are in
  * dashboard.c with the rest of the surface, so the whole namespace is one initializer.
  */
 

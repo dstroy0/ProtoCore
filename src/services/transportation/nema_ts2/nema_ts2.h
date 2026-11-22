@@ -13,7 +13,7 @@
  *
  * where the FCS is the HDLC/X.25 CRC-16 (CRC-16/X-25: reflected poly 0x1021, init 0xFFFF, xorout 0xFFFF)
  * over address..last-data, transmitted low byte first. This builds and validates those frames (the
- * frame-type identifies command / status / detector frames per the TS 2 frame set); the synchronous
+ * frame-type identifies command / status / detector frames per the TS 2 frame set). The synchronous
  * serial PHY and the BIU/detector timing are the hardware-gated part. Pure, zero heap, host-testable.
  */
 

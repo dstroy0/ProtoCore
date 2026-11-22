@@ -64,7 +64,7 @@ INLINE = (
 )
 
 # A line that is structure and not language.
-RULE = re.compile(r"^\s*([-=_*#~+.]|\s)+$")
+RULE = re.compile(r"^[-=_*#~+.\s]+$")
 TABLE = re.compile(r"^\s*\|")
 TEX_TABLE = re.compile(r"&.*\\\\\s*$")
 

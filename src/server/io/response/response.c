@@ -296,7 +296,8 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
                     .val = (uint32_t)code);
     hb = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb, .text = " ",
                     .text_len = sizeof(" ") - 1u);
-    HttpV.code = code, Http.status_text(protocore_http_span()),
+    HttpV.code = code;
+    Http.status_text(protocore_http_span());
     hb = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
                     .text = HttpV.text);
     hb = EMBED_CALL(verba_textus.put_n, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb,
@@ -382,7 +383,8 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     hb2 = EMBED_CALL(verba_numerus.u32, VerbaNumerusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
                      .val = (uint32_t)code);
     hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2, .text = " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()),
+    HttpV.code = code;
+    Http.status_text(protocore_http_span());
     hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
                      .text = HttpV.text);
     hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
@@ -1082,7 +1084,8 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
                             .sval = (int64_t)(code));
     sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
                             .text = " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()),
+    HttpV.code = code;
+    Http.status_text(protocore_http_span());
     sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
                             .text = HttpV.text);
     sb_header2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header2,
@@ -1197,7 +1200,8 @@ void send_empty(uint8_t slot_id, int code)
                             .sval = (int64_t)(code));
     sb_header3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
                             .text = " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()),
+    HttpV.code = code;
+    Http.status_text(protocore_http_span());
     sb_header3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
                             .text = HttpV.text);
     sb_header3 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header3,
@@ -1254,7 +1258,8 @@ void redirect(uint8_t slot_id, int code, const char *location)
                             .sval = (int64_t)(code));
     sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
                             .text = " ");
-    HttpV.code = code, Http.status_text(protocore_http_span()),
+    HttpV.code = code;
+    Http.status_text(protocore_http_span());
     sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,
                             .text = HttpV.text);
     sb_header4 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = sizeof(header), .at = sb_header4,

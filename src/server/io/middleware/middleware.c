@@ -90,7 +90,7 @@ embed_bool rate_limit_check(uint8_t slot_id)
     }
 
     uint32_t now = Clock.ms;
-    if ((uint32_t)(now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
+    if ((now - s_mw.rl_window_start) >= s_mw.rl_window_ms)
     {
         s_mw.rl_window_start = now; // new window
         s_mw.rl_count = 0;
@@ -103,7 +103,7 @@ embed_bool rate_limit_check(uint8_t slot_id)
     }
 
     // Over budget: advertise how long until the window resets, then 429.
-    uint32_t elapsed = (uint32_t)(now - s_mw.rl_window_start);
+    uint32_t elapsed = (now - s_mw.rl_window_start);
     // The ":0" arm is unreachable: the check above either just reset s_mw.rl_window_start to `now`
     // (elapsed == 0) or left it in place because elapsed was already < s_mw.rl_window_ms - either way
     // elapsed < s_mw.rl_window_ms always holds here, so the ">" arm always taken.

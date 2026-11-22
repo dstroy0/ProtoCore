@@ -103,7 +103,10 @@ static_assert(ROBOTICS_OFF_CTX % _Alignof(RoboticsCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define ROBOTICS_CTX(w) ((RoboticsCtx *)(void *)((w) + ROBOTICS_OFF_CTX))
+#define ROBOTICS_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const RoboticsCtx *)(const void *)((w) + ROBOTICS_OFF_CTX),                                  \
+        default: (RoboticsCtx *)(void *)((w) + ROBOTICS_OFF_CTX))
 
 // Fill "Axis_k" (k = 1..PROTOCORE_ROBOTICS_AXES) into the owned name table (no snprintf: a tiny fixed render).
 static void build_axis_names(RoboticsCtx *c)
@@ -128,7 +131,7 @@ static void build_axis_names(RoboticsCtx *c)
 }
 
 // Decode an axis node id: ids AXIS_BASE + k*10 + sub, k = 1.., sub = 0 (the Axis object) / 1..4 (a var).
-// Returns true (with k 1-based + sub) only when k is within the bound axis_count; sub is the caller's to
+// Returns true (with k 1-based + sub) only when k is within the bound axis_count. Sub is the caller's to
 // range-check (0 for a Browse of the Axis object, 1..4 for a Read of an axis variable).
 static embed_bool decode_axis(uint32_t id, uint32_t axis_count, uint32_t *k_out, uint32_t *sub_out)
 {

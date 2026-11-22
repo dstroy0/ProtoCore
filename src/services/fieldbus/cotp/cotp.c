@@ -20,7 +20,7 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cotp_tpkt_build(uint8_t *work)
+void protocore_cotp_tpkt_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.tpkt_build_args.buf;
@@ -50,7 +50,7 @@ void protocore_cotp_tpkt_build(uint8_t *work)
     CotpV.n = total;
 }
 
-void protocore_cotp_tpkt_parse(uint8_t *work)
+void protocore_cotp_tpkt_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = CotpV.tpkt_parse_args.buf;
@@ -90,7 +90,7 @@ void protocore_cotp_tpkt_parse(uint8_t *work)
     CotpV.ok = EMBED_TRUE;
 }
 
-void protocore_cotp_build_dt(uint8_t *work)
+void protocore_cotp_build_dt(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.build_dt_args.buf;
@@ -120,7 +120,7 @@ void protocore_cotp_build_dt(uint8_t *work)
     CotpV.n = total;
 }
 
-void protocore_cotp_build_cr(uint8_t *work)
+void protocore_cotp_build_cr(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.build_cr_args.buf;
@@ -163,7 +163,7 @@ void protocore_cotp_build_cr(uint8_t *work)
     CotpV.n = p;
 }
 
-void protocore_cotp_build_cc(uint8_t *work)
+void protocore_cotp_build_cc(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = CotpV.build_cc_args.buf;
@@ -207,7 +207,7 @@ void protocore_cotp_build_cc(uint8_t *work)
     CotpV.n = p;
 }
 
-void protocore_cotp_parse(uint8_t *work)
+void protocore_cotp_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = CotpV.parse_args.buf;

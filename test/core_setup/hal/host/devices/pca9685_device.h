@@ -125,7 +125,7 @@ static inline void protocore_pca9685_dev_store(protocore_pca9685_dev *d, uint8_t
     d->reg[d->ptr] = v;
 }
 
-// One transfer. The first byte written is the control register; the bytes after it land there, and
+// One transfer. The first byte written is the control register. The bytes after it land there, and
 // the pointer advances past each one when AI is set (7.3.1 note [1]). A read returns the register
 // the pointer names, advancing the same way.
 static inline uint32_t protocore_pca9685_dev_txn(void *ctx, const uint8_t *w, uint32_t wlen, uint8_t *r, uint32_t rlen)

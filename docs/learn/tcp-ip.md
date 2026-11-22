@@ -46,7 +46,7 @@ and let the network's **routers** forward it hop by hop toward the destination.
 
 **TCP** (Transmission Control Protocol) sits on top of IP (the Transport layer) and
 provides what most programs actually want: **a reliable, ordered stream of bytes**.
-You put bytes in one end; the exact same bytes come out the other end, in order, with
+You put bytes in one end. The exact same bytes come out the other end, in order, with
 nothing missing - even though the IP packets underneath were unreliable.
 
 TCP pulls this off with a few tricks:
@@ -61,7 +61,7 @@ TCP pulls this off with a few tricks:
 - **Flow control.** The receiver advertises how much buffer space it has (the
   **window**) to keep a fast sender from overwhelming a slow receiver. This library's
   transport layer manages exactly this - see the "ack-on-consume" design in
-  [ARCHITECTURE.md](../ARCHITECTURE.md); getting it wrong caused a real bug, written up
+  [ARCHITECTURE.md](../ARCHITECTURE.md). Getting it wrong caused a real bug, written up
   in [BUGS.md](../BUGS.md).
 
 ### UDP - the fast, no-promises alternative
@@ -127,5 +127,5 @@ theory you just read _is_ the shape of the code.
 - See the layers as folders: [the architecture map](../ARCHITECTURE.md).
 - See the exact specifications behind each protocol: [STANDARDS.md](../STANDARDS.md)
   (for example, TCP is RFC 793, IP is RFC 791, and HTTP/1.1 is RFC 9112).
-- Re-read [the OSI model](osi-model.md) now that the four-layer version has clicked -
+- Re-read [the OSI model](osi-model.md) now that the four-layer version clicked -
   the seven-layer version will make more sense the second time.

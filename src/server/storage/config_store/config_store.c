@@ -47,7 +47,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define CONFIG_STORE_CTX(w) ((ConfigStoreCtx *)(void *)((w) + CONFIG_STORE_OFF_CTX))
+#define CONFIG_STORE_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const ConfigStoreCtx *)(const void *)((w) + CONFIG_STORE_OFF_CTX),                           \
+        default: (ConfigStoreCtx *)(void *)((w) + CONFIG_STORE_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

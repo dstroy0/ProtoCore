@@ -494,8 +494,9 @@ class TierBIsBoundedToConstructions(unittest.TestCase):
             "construction",
         ):
             self.assertIn(word, docs_check.WITHDRAWN)
-            self.assertTrue(
-                len(docs_check.WITHDRAWN[word]) > 40,
+            self.assertGreater(
+                len(docs_check.WITHDRAWN[word]),
+                40,
                 "WITHDRAWN[%r] gives a rule and no reason" % word,
             )
 
@@ -558,7 +559,7 @@ class TheReportSaysWhatItMeasured(unittest.TestCase):
 
     def test_no_report_string_claims_1_1m_human_words(self):
         source = docs_check.source()
-        emitted = re.findall(r'"[^"\n]*1\.1M[^"\n]*"', source)
+        emitted = [one for one in re.findall(r'"[^"\n]*"', source) if "1.1M" in one]
         self.assertEqual(
             emitted, [], "a report string still claims 1.1M human words: %s" % emitted
         )

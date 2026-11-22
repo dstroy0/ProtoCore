@@ -48,7 +48,7 @@ typedef struct
 
 void protocore_uper_writer_init(UperWriter *w, uint8_t *buf, size_t cap);
 /** @return the number of whole octets produced (rounds the bit length up), or 0 if the writer overflowed. */
-size_t protocore_uper_writer_finish(UperWriter *w);
+size_t protocore_uper_writer_finish(const UperWriter *w);
 
 /** @brief Write @p nbits low bits of @p value, MSB-first. */
 void protocore_uper_put_bits(UperWriter *w, uint32_t value, unsigned nbits);

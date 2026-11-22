@@ -149,7 +149,7 @@ typedef struct
  * @var QuicConnNs::close_args        the error a close reports
  * @var QuicConnNs::ok                a call's true/false outcome
  * @var QuicConnNs::n                 bytes the last send or stream_send produced
- * @var QuicConnNs::established       whether the handshake has completed (client Finished verified)
+ * @var QuicConnNs::established       whether the handshake completed (client Finished verified)
  * @var QuicConnNs::closed            whether the connection is closed or draining
  * @var QuicConnNs::init              open a server connection from the client's first Initial
  * @var QuicConnNs::callbacks         install @ref QuicConnNs::cb on the bound connection

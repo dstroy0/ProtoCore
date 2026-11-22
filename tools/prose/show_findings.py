@@ -22,7 +22,9 @@ HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.a
 CHECK = os.path.join(HERE, "utils", "maint", "prose", "docs_check")
 UNREAD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "grade_unread.py")
 
-SITE = re.compile(r"^\s*(?:prose|BREAK)\s+(.+?):(\d+):\s*(.*)$")
+# A finding line, and the first ":<line>:" after at least one octet of path inside it.
+SITE = re.compile(r"^\s*(?:prose|BREAK)\s+(.*)$")
+LINE_MARK = re.compile(r":(\d+):\s*")
 
 
 def main():
@@ -40,10 +42,12 @@ def main():
     held = {}
     displayed = 0
     for line in (done.stdout + done.stderr).split("\n"):
-        found = SITE.match(line)
+        site = SITE.match(line)
+        mark = LINE_MARK.search(site.group(1), 1) if site else None
+        found = (site.group(1)[: mark.start()], mark.group(1), site.group(1)[mark.end() :]) if mark else None
         if not found:
             continue
-        name, number, what = found.group(1), int(found.group(2)), found.group(3)
+        name, number, what = found[0], int(found[1]), found[2]
         path = name if os.path.isabs(name) else os.path.join(HERE, name)
         if path not in held:
             try:

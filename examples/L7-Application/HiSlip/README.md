@@ -63,6 +63,6 @@ IP: 192.168.1.42
 ## Annotated source
 
 The complete sketch is [HiSlip.ino](HiSlip.ino). The codec itself is in
-[src/services/instrumentation/hislip/hislip.h](../../../src/services/instrumentation/hislip/hislip.h); the header layout,
+[src/services/instrumentation/hislip/hislip.h](../../../src/services/instrumentation/hislip/hislip.h). The header layout,
 message-type codes, and handshake vectors are verified against the IVI-6.1 HiSLIP 2.0
 specification (cross-checked with the Wireshark dissector, MSL-equipment, and PyHiSLIP).

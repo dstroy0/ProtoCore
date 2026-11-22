@@ -95,13 +95,13 @@ extern NtpServerVars NtpServerV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_response)(uint8_t *work);
+    void (*const build_response)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
 } NtpServerNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in NtpServerV or a region of the borrow at a fixed offset.
-void protocore_ntp_server_build_response(uint8_t *work);
+void protocore_ntp_server_build_response(const uint8_t *work);
 void protocore_ntp_server_begin(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

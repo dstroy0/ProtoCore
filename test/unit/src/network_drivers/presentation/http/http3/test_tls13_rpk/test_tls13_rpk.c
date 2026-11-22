@@ -85,7 +85,7 @@ void test_rpk_certificate_round_trip(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(pub, got, 32);
 }
 
-// An X.509 Certificate parses as a Certificate; only the SubjectPublicKeyInfo reader refuses it,
+// An X.509 Certificate parses as a Certificate. Only the SubjectPublicKeyInfo reader refuses it,
 // because a DER chain is not the RFC 8410 encoding an RPK credential has.
 void test_x509_certificate_is_not_read_as_a_raw_public_key(void)
 {

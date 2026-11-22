@@ -50,9 +50,9 @@ static void read_header(const uint8_t *buf, FinsHeader *h)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_fins_build_command(uint8_t *work);
+void protocore_fins_build_command(const uint8_t *work);
 
-void protocore_fins_build_command(uint8_t *work)
+void protocore_fins_build_command(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = FinsV.build_command_args.buf;
@@ -110,6 +110,7 @@ void protocore_fins_build_memory_area_read(uint8_t *work)
     FinsV.build_command_args.params = params;
     FinsV.build_command_args.params_len = sizeof(params);
     protocore_fins_build_command(work);
+    FinsV.build_command_args.params = NULL;
 }
 
 void protocore_fins_build_memory_area_write(uint8_t *work)
@@ -145,6 +146,7 @@ void protocore_fins_build_memory_area_write(uint8_t *work)
     FinsV.build_command_args.params = prefix;
     FinsV.build_command_args.params_len = sizeof(prefix);
     protocore_fins_build_command(work);
+    FinsV.build_command_args.params = NULL;
     size_t n = FinsV.n;
     if (!n)
     {
@@ -182,6 +184,7 @@ void protocore_fins_build_run(uint8_t *work)
     FinsV.build_command_args.params = params;
     FinsV.build_command_args.params_len = sizeof(params);
     protocore_fins_build_command(work);
+    FinsV.build_command_args.params = NULL;
 }
 
 void protocore_fins_build_stop(uint8_t *work)
@@ -200,7 +203,7 @@ void protocore_fins_build_stop(uint8_t *work)
     protocore_fins_build_command(work);
 }
 
-void protocore_fins_parse_command(uint8_t *work)
+void protocore_fins_parse_command(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = FinsV.parse_command_args.buf;
@@ -220,7 +223,7 @@ void protocore_fins_parse_command(uint8_t *work)
     FinsV.ok = EMBED_TRUE;
 }
 
-void protocore_fins_parse_response(uint8_t *work)
+void protocore_fins_parse_response(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = FinsV.parse_response_args.buf;

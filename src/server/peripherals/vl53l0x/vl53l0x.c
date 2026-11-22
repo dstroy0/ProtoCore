@@ -44,11 +44,11 @@ uint8_t *protocore_vl53l0x_span(void)
     return s_own.span;
 }
 
-void protocore_vl53l0x_range_mm(uint8_t *work);
-void protocore_vl53l0x_range_status(uint8_t *work);
+void protocore_vl53l0x_range_mm(const uint8_t *work);
+void protocore_vl53l0x_range_status(const uint8_t *work);
 void protocore_vl53l0x_range_valid(uint8_t *work);
 
-void protocore_vl53l0x_range_mm(uint8_t *work)
+void protocore_vl53l0x_range_mm(const uint8_t *work)
 {
     (void)work;
     uint8_t hi = Vl53l0xV.range_mm_args.hi;
@@ -57,7 +57,7 @@ void protocore_vl53l0x_range_mm(uint8_t *work)
     Vl53l0xV.mm = (uint16_t)((hi << 8) | lo);
 }
 
-void protocore_vl53l0x_data_ready(uint8_t *work)
+void protocore_vl53l0x_data_ready(const uint8_t *work)
 {
     (void)work;
     uint8_t interrupt_status = Vl53l0xV.data_ready_args.interrupt_status;
@@ -65,7 +65,7 @@ void protocore_vl53l0x_data_ready(uint8_t *work)
     Vl53l0xV.ok = (interrupt_status & 0x07) != 0;
 }
 
-void protocore_vl53l0x_range_status(uint8_t *work)
+void protocore_vl53l0x_range_status(const uint8_t *work)
 {
     (void)work;
     uint8_t range_status_reg = Vl53l0xV.range_status_args.range_status_reg;
@@ -110,7 +110,10 @@ static_assert(VL53L0X_OFF_CTX % _Alignof(Vl53l0xCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define VL53L0X_CTX(w) ((Vl53l0xCtx *)(void *)((w) + VL53L0X_OFF_CTX))
+#define VL53L0X_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Vl53l0xCtx *)(const void *)((w) + VL53L0X_OFF_CTX),                                    \
+        default: (Vl53l0xCtx *)(void *)((w) + VL53L0X_OFF_CTX))
 
 // Zero is "no address set yet", which is the address the part answers to out of reset - stated
 // here rather than on the declaration so the context carries no initializer and can live in a

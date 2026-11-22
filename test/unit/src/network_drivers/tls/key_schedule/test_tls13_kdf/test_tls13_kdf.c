@@ -1280,7 +1280,7 @@ void test_a_different_ecdhe_gives_a_different_handshake_secret(void)
 }
 
 // The client and server halves of one level are separate secrets: mixing them up would let a peer
-// decrypt its own traffic and nothing else, so they must never coincide.
+// decrypt its own traffic and nothing else. So they must never coincide.
 void test_client_and_server_secrets_differ_at_every_level(void)
 {
     uint8_t ch_sh[32];

@@ -7,7 +7,7 @@
  *        live egress readout, straight off the Arduino-ESP32 WiFi/ETH wrappers and lwIP's default netif.
  *
  * The vendor-specific half of the physical layer. The common API is in network_drivers/physical/physical.h and the
- * vendor is chosen by the PROTOCORE_VENDOR_* selector (protocore_platform.h); this whole TU
+ * vendor is chosen by the PROTOCORE_VENDOR_* selector (protocore_platform.h). This whole TU
  * compiles to nothing on any non-ESP vendor, where physical.c's fallback stubs stand in (PROTOCORE_PHYSICAL_HAS_BACKEND
  * == 0). WiFi station bring-up is asynchronous (poll wifi_ready()); protocore_net_egress() reads the live default-route
  * netif and hands it to the pure protocore_net_classify_ip() that lives in physical.c. Adding STM/RP/TI = a sibling

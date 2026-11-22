@@ -16,7 +16,7 @@
  *
  * PROTOCORE_RADIO_WIFI_PS picks the mode and PROTOCORE_RADIO_MAX_TX_DBM the cap; @ref RadioNs::power
  * applies both in one call, trading throughput and latency for lower average draw. The mode
- * names are pure and host-tested; the apply and the readback go through the L1 phy contract,
+ * names are pure and host-tested. The apply and the readback go through the L1 phy contract,
  * which reports failure when the part carries no radio backend.
  *
  * The module exports one symbol, @ref Radio. Everything in radio_power.c has internal linkage, so no

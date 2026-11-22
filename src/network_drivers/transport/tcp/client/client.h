@@ -21,7 +21,7 @@
  * carries plaintext octets: there is no client-side TLS engine in the library, so nothing
  * BIO at protocore_client_send() / protocore_client_read().
  *
- * Nothing here blocks. open() takes a slot, starts the resolve and returns a cid straight away; the
+ * Nothing here blocks. open() takes a slot, starts the resolve and returns a cid straight away. The
  * slot carries its own timer and steps from resolving to connected each time the caller asks
  * connected() or is_closed(). The caller drives that from its own loop, and the whole open - the
  * name lookup included - is bounded by the timeout_ms it passed.

@@ -3,12 +3,12 @@
 """MQTT interop: run a reference broker for the device's MQTT client.
 
 Role: the *device is the client*; this peer is the broker. Prefers mosquitto (the
-reference broker) with a paho monitor; if mosquitto is not on PATH it falls back
+reference broker) with a paho monitor. If mosquitto is not on PATH it falls back
 to the amqtt broker (a separate, independent MQTT implementation) so the peer also
 works pip-only. Point the device's broker host at this machine's LAN IP.
 
 With `--seconds N` the peer runs for N seconds and PASSES if it observed at least
-one publish from the device (a real end-to-end interop check); with `--seconds 0`
+one publish from the device (a real end-to-end interop check). With `--seconds 0`
 (default) it monitors until Ctrl-C.
 """
 

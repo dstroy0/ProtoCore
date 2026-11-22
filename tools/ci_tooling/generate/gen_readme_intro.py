@@ -14,7 +14,7 @@ Why these two are generated:
 
 QUICK START used to not exist at all - the README had zero lines of code, so a
 reader could not see the API without leaving the page. Writing one by hand would
-have created a second copy of the API to keep in step, and the example READMEs
+created a second copy of the API to keep in step, and the example READMEs
 already show what happens to hand-copied code (see docs/BUGS.md: 86 of them
 drifted onto a banned API and 62 onto an enum form that no longer compiles). So
 the block is copied from examples/Foundation/Basic/Basic.ino, which CI compiles

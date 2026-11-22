@@ -49,7 +49,7 @@ typedef struct
  * @var H2ServerNs::open     start the engine after ALPN "h2"; sends our initial SETTINGS
  * @var H2ServerNs::data     feed the slot's decrypted inbound bytes in; drives requests via HttpReq
  * @var H2ServerNs::respond  serialize a response for the slot's current stream (HEADERS + DATA),
- *                           then ready the slot's HttpReq for the next stream; the connection stays
+ *                           then ready the slot's HttpReq for the next stream. The connection stays
  *                           open
  * @var H2ServerNs::close    release per-slot state on connection close
  *
@@ -65,9 +65,9 @@ typedef struct
     embed_bool ok;
 
     void (*const open)(uint8_t *work);
-    void (*const data)(uint8_t *work);
+    void (*const data)(const uint8_t *work);
     void (*const respond)(uint8_t *work);
-    void (*const close)(uint8_t *work);
+    void (*const close)(const uint8_t *work);
 
 } H2ServerNs;
 

@@ -23,7 +23,7 @@ feature edge, a "PSRAM" message a resource gate, anything else (a worker-stack f
 is ignored. Gating on the message is what keeps a scoping clause like `!PROTOCORE_ENABLE_SSH` in a
 stack-size guard from being mistaken for "OIDC requires SSH". Auto-derived flags (a `#define
 PROTOCORE_ENABLE_X 1` guarded by an OR of other ENABLE flags) are read too. The graph is injected into
-the "Build-flag dependencies" section of README.md between generated markers, so it can never drift
+the "Build-flag dependencies" section of README.md between generated markers. So it can never drift
 from the guards the compiler actually enforces.
 
 Run from the repo root:
@@ -167,7 +167,7 @@ def primary_tree(hard):
 
 
 # Light / dark node + edge palettes. A filled node box covers the page background, so the same
-# graph reads on GitHub's white or dark canvas; only the two .dot files below differ, one per theme.
+# graph reads on GitHub's white or dark canvas. Only the two .dot files below differ, one per theme.
 PALETTES = {
     "light": {
         "bg": "white",
@@ -211,7 +211,7 @@ def flag_tree(hard):
 
 def dot(hard, theme):
     """A Graphviz DOT drawing of the flag forest for one theme. rankdir=LR puts every feature in a
-    left-aligned column by depth; the tree is crossing-free by construction; TLS requirements are
+    left-aligned column by depth. The tree is crossing-free by construction; TLS requirements are
     green badges baked into the node label (an HTML-like table cell), never edges."""
     pal = PALETTES[theme]
     tree, parents, tls_children, nodes = flag_tree(hard)

@@ -31,7 +31,7 @@ void setUp(void)
 }
 
 // The module holds one query across calls, so a case that left one in flight releases it here by
-// walking past its deadline; otherwise the next case inherits it.
+// walking past its deadline. Otherwise the next case inherits it.
 void tearDown(void)
 {
     Resolver.busy(protocore_dns_resolver_span());

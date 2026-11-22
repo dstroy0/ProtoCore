@@ -169,7 +169,7 @@ void test_a_null_message_renders_the_letter_alone(void)
 }
 
 // A message wider than the line is not truncated into something that reads as a complete entry: the
-// slot is left empty, and it still counts as a line.
+// slot is left empty. It still counts as a line.
 void test_a_line_that_does_not_fit_is_empty(void)
 {
     char big[PROTOCORE_LOG_LINE_LEN + 8];
@@ -191,8 +191,8 @@ void test_dump_joins_the_held_lines_with_a_newline(void)
     TEST_ASSERT_EQUAL_INT((int)strlen(g_out), LogbufV.n);
 }
 
-// The whole dump plus its terminator is what fits; one octet less writes nothing, because a partial
-// dump would read as a complete log that is missing its most recent lines.
+// The whole dump plus its terminator is what fits. One octet less writes nothing, because a partial
+// dump would read as a complete log that misses its most recent lines.
 void test_dump_fails_closed_when_a_line_would_not_fit(void)
 {
     put(PROTOCORE_LOG_ERROR, "a");
@@ -252,7 +252,7 @@ void test_the_trap_sees_the_stored_line(void)
     TEST_ASSERT_EQUAL_STRING(at(0), g_trap_line);
 }
 
-// A threshold of 0xFF is above every level, so it disables the trap without removing it, and a null
+// A threshold of 0xFF is above every level. So it disables the trap without removing it, and a null
 // callback leaves it off whatever the threshold.
 void test_the_trap_can_be_turned_off(void)
 {

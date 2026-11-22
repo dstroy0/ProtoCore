@@ -102,7 +102,7 @@ the worst-case bytes it borrows in a single call - and declares it as a
 the only place that can see them all, since every module header includes it.
 
 **mmgr therefore has preknowledge of every TU's span before the build runs.** It is
-not handed a request at run time and asked whether it fits; the set of spans it will
+not handed a request at run time and asked whether it fits. The set of spans it will
 ever be asked for is an input to how it was sized. That is why the pointer is
 guaranteed and there is nothing to check.
 

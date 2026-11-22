@@ -45,13 +45,13 @@ uint8_t *protocore_wifi_sniffer_span(void)
     return s_own.span;
 }
 
-void protocore_wifi_sniffer_scan_due(uint8_t *work);
-void protocore_wifi_sniffer_scan_init(uint8_t *work);
-void protocore_wifi_sniffer_scan_next(uint8_t *work);
-void protocore_wifi_sniffer_stats_reset(uint8_t *work);
-void protocore_wifi_sniffer_survey_reset(uint8_t *work);
+void protocore_wifi_sniffer_scan_due(const uint8_t *work);
+void protocore_wifi_sniffer_scan_init(const uint8_t *work);
+void protocore_wifi_sniffer_scan_next(const uint8_t *work);
+void protocore_wifi_sniffer_stats_reset(const uint8_t *work);
+void protocore_wifi_sniffer_survey_reset(const uint8_t *work);
 
-void protocore_wifi_sniffer_parse(uint8_t *work)
+void protocore_wifi_sniffer_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *frame = WifiSnifferV.parse_args.frame;
@@ -92,7 +92,7 @@ void protocore_wifi_sniffer_parse(uint8_t *work)
     WifiSnifferV.ok = EMBED_TRUE;
 }
 
-void protocore_wifi_sniffer_stats_reset(uint8_t *work)
+void protocore_wifi_sniffer_stats_reset(const uint8_t *work)
 {
     (void)work;
     WifiStats *s = WifiSnifferV.stats_reset_args.s;
@@ -103,7 +103,7 @@ void protocore_wifi_sniffer_stats_reset(uint8_t *work)
     }
 }
 
-void protocore_wifi_sniffer_stats_add(uint8_t *work)
+void protocore_wifi_sniffer_stats_add(const uint8_t *work)
 {
     (void)work;
     WifiStats *s = WifiSnifferV.stats_add_args.s;
@@ -131,7 +131,7 @@ void protocore_wifi_sniffer_stats_add(uint8_t *work)
     s->total++;
 }
 
-void protocore_wifi_sniffer_should_roam(uint8_t *work)
+void protocore_wifi_sniffer_should_roam(const uint8_t *work)
 {
     (void)work;
     int8_t cur_rssi = WifiSnifferV.should_roam_args.cur_rssi;
@@ -159,7 +159,7 @@ static uint8_t clamp_channel(uint8_t c)
     return c;
 }
 
-void protocore_wifi_sniffer_scan_init(uint8_t *work)
+void protocore_wifi_sniffer_scan_init(const uint8_t *work)
 {
     (void)work;
     WifiScan *s = WifiSnifferV.scan_init_args.s;
@@ -184,7 +184,7 @@ void protocore_wifi_sniffer_scan_init(uint8_t *work)
     s->sweeps = 0;
 }
 
-void protocore_wifi_sniffer_scan_due(uint8_t *work)
+void protocore_wifi_sniffer_scan_due(const uint8_t *work)
 {
     (void)work;
     const WifiScan *s = WifiSnifferV.scan_due_args.s;
@@ -199,7 +199,7 @@ void protocore_wifi_sniffer_scan_due(uint8_t *work)
     WifiSnifferV.ok = (now_ms - s->last_hop_ms) >= s->dwell_ms;
 }
 
-void protocore_wifi_sniffer_scan_next(uint8_t *work)
+void protocore_wifi_sniffer_scan_next(const uint8_t *work)
 {
     (void)work;
     WifiScan *s = WifiSnifferV.scan_next_args.s;
@@ -225,7 +225,7 @@ void protocore_wifi_sniffer_scan_next(uint8_t *work)
 
 // --- Per-channel RSSI survey ------------------------------------------------------------
 
-void protocore_wifi_sniffer_survey_reset(uint8_t *work)
+void protocore_wifi_sniffer_survey_reset(const uint8_t *work)
 {
     (void)work;
     WifiSurvey *s = WifiSnifferV.survey_reset_args.s;
@@ -260,7 +260,7 @@ static int survey_index(const WifiSurvey *s, uint8_t channel)
     return idx;
 }
 
-void protocore_wifi_sniffer_survey_add(uint8_t *work)
+void protocore_wifi_sniffer_survey_add(const uint8_t *work)
 {
     (void)work;
     WifiSurvey *s = WifiSnifferV.survey_add_args.s;
@@ -286,7 +286,7 @@ void protocore_wifi_sniffer_survey_add(uint8_t *work)
     }
 }
 
-void protocore_wifi_sniffer_survey_get(uint8_t *work)
+void protocore_wifi_sniffer_survey_get(const uint8_t *work)
 {
     (void)work;
     const WifiSurvey *s = WifiSnifferV.survey_get_args.s;
@@ -296,7 +296,7 @@ void protocore_wifi_sniffer_survey_get(uint8_t *work)
     WifiSnifferV.ptr = (idx < 0) ? NULL : &s->ch[idx];
 }
 
-void protocore_wifi_sniffer_survey_best(uint8_t *work)
+void protocore_wifi_sniffer_survey_best(const uint8_t *work)
 {
     (void)work;
     const WifiSurvey *s = WifiSnifferV.survey_best_args.s;
@@ -367,7 +367,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define WIFI_SNIFFER_CTX(w) ((WifiSnifferCtx *)(void *)((w) + WIFI_SNIFFER_OFF_CTX))
+#define WIFI_SNIFFER_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const WifiSnifferCtx *)(const void *)((w) + WIFI_SNIFFER_OFF_CTX),                           \
+        default: (WifiSnifferCtx *)(void *)((w) + WIFI_SNIFFER_OFF_CTX))
 
 #if PROTOCORE_ENABLE_PROMISC
 

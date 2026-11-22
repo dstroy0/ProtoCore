@@ -56,7 +56,10 @@ static_assert(HMAC_OFF_WORK % _Alignof(HmacWork) == 0,
 // The regions, at their offsets in the caller's borrow.
 #define HMAC_INNER(w) ((w) + HMAC_OFF_INNER)
 #define HMAC_OKEY(w) ((w) + HMAC_OFF_OKEY)
-#define HMAC_WORK(w) ((HmacWork *)(void *)((w) + HMAC_OFF_WORK))
+#define HMAC_WORK(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HmacWork *)(const void *)((w) + HMAC_OFF_WORK),                                        \
+        default: (HmacWork *)(void *)((w) + HMAC_OFF_WORK))
 #define HMAC_HASH(w) ((w) + HMAC_OFF_HASH)
 
 // Build one 64-byte HMAC key block into @p block (RFC 2104 sec 2), using @p scratch (64 bytes) to hold the

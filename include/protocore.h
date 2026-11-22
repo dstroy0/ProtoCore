@@ -927,7 +927,7 @@ void use(Middleware mw);
 /**
  * @brief Enable a built-in fixed-window request rate limiter.
  *
- * Counts all incoming requests in a sliding fixed window; once more than
+ * Counts all incoming requests in a sliding fixed window. Once more than
  * @p max_requests arrive within @p window_ms the server answers further
  * requests in that window with `429 Too Many Requests` (plus a `Retry-After`
  * header) instead of dispatching them. The check runs before the middleware
@@ -1032,7 +1032,7 @@ embed_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
  * 6. Auto-sends 414 for any slot stuck in `PARSE_URI_TOO_LONG`.
  *
  * Threading note: with the worker task running, route/WS/SSE handlers execute
- * in the worker task. Do server I/O from handlers; pushing from `loop()` (e.g.
+ * in the worker task. Do server I/O from handlers. Pushing from `loop()` (e.g.
  * SSE broadcast on a timer) runs concurrently with the worker and is made
  * thread-safe in a later phase.
  */
@@ -1397,7 +1397,7 @@ char *protocore_resp_extra_hdr(uint8_t slot);
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 /** @brief Perform the RFC 6455 101 handshake and hand the slot to the WS frame parser. */
-embed_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
+embed_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, const HttpReq *req, uint8_t route_id);
 
 /** @brief Reject an unsupported Sec-WebSocket-Version with a 426 (RFC 6455 4.2.1) and close. */
 void ws_send_version_required(uint8_t slot_id);
@@ -1405,7 +1405,7 @@ void ws_send_version_required(uint8_t slot_id);
 
 #if PROTOCORE_ENABLE_SSE
 /** @brief Send the SSE 200 headers and promote the slot to server-sent-events mode. */
-embed_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
+embed_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, const HttpReq *req, uint8_t route_id);
 #endif
 
 EMBED_END_DECLS

@@ -35,9 +35,9 @@ static void put_hex(uint8_t *p, uint32_t value, int digits)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_directnet_lrc(uint8_t *work);
+void protocore_directnet_lrc(const uint8_t *work);
 
-void protocore_directnet_lrc(uint8_t *work)
+void protocore_directnet_lrc(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = DirectnetV.lrc_args.bytes;

@@ -50,7 +50,7 @@ static embed_bool hex_val(uint8_t c, int *v)
 }
 
 // After the final zero-length chunk's size line (offset j), true once the trailer section reaches the
-// empty line (CRLF) that ends the message; false while the buffer is still short.
+// empty line (CRLF) that ends the message. False while the buffer is still short.
 static embed_bool chunked_trailer_complete(const uint8_t *b, size_t n, size_t j)
 {
     for (;;)
@@ -182,7 +182,7 @@ embed_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_
     return conn_closed; // close-delimited body
 }
 
-void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
+void protocore_edge_fetcher_begin(const uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, const char *host,
                                   uint16_t port, const void *request, size_t req_len, uint32_t now_ms)
 {
     (void)work;
@@ -202,7 +202,7 @@ void protocore_edge_fetcher_begin(uint8_t *work, EdgeFetch *f, const EdgeFetchTr
         f->st = EDGE_FETCH_STATUS_FAILED;
         return;
     }
-    // The connection is not up yet. Nothing has arrived to occupy the response buffer, so the
+    // The connection is not up yet. Nothing arrived to occupy the response buffer, so the
     // request waits at the head of it until the pump finds the transport connected.
     EMBED_CALL(proxim.read, ProximusCfg, .dst = f->buf, .at = request, .size = req_len);
     f->req_len = (uint32_t)req_len;
@@ -289,7 +289,7 @@ EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const E
     return EDGE_FETCH_STATUS_PENDING;
 }
 
-void protocore_edge_fetcher_end(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t)
+void protocore_edge_fetcher_end(const uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t)
 {
     (void)work;
 

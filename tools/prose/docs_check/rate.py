@@ -47,6 +47,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 from .bans import BANNED
 from . import human_rate
 
+WORD_PATTERN = r"[A-Za-z][A-Za-z'-]*"
+
 MACHINE_RATE = 643.4
 HUMAN_RATE = 387.9
 TREE_RATE = 112.8
@@ -65,7 +67,7 @@ def words_and_hits(text):
     text = re.sub(r"^\s*[%#].*$", " ", text, flags=re.M)
     text = re.sub(r"\\[a-zA-Z]+", " ", text)
 
-    words = len(re.findall(r"[A-Za-z][A-Za-z'-]*", text))
+    words = len(re.findall(WORD_PATTERN, text))
 
     hits = []
     for pattern in BANNED:
@@ -90,8 +92,8 @@ def sentences(text):
     """
     text = re.sub(r"\s+", " ", text)
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z(])", text)
-    return [len(re.findall(r"[A-Za-z][A-Za-z'-]*", p)) for p in parts
-            if len(re.findall(r"[A-Za-z][A-Za-z'-]*", p)) >= 3]
+    return [len(re.findall(WORD_PATTERN, p)) for p in parts
+            if len(re.findall(WORD_PATTERN, p)) >= 3]
 
 
 def burstiness(lengths):

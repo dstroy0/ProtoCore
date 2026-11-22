@@ -59,7 +59,7 @@ static void sw_manifest_handler(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-void protocore_http_delivery_serve_sw(uint8_t *work)
+void protocore_http_delivery_serve_sw(const uint8_t *work)
 {
     (void)work;
     const char *const *paths = HttpDeliveryV.serve_sw_args.paths;
@@ -74,7 +74,7 @@ void protocore_http_delivery_serve_sw(uint8_t *work)
     s_delr.paths = paths;
     s_delr.n = n;
     s_delr.version = version;
-    // The worker's scope is the path it is served from, so it must sit at the root to control the
+    // The worker's scope is the path it is served from. So it must sit at the root to control the
     // whole origin - "/sw.js", not "/assets/sw.js".
     on_http("/sw.js", HTTP_GET, sw_script_handler);
     on_http("/precache.json", HTTP_GET, sw_manifest_handler);

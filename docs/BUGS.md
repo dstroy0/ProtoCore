@@ -88,7 +88,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   `-DPROTOCORE_LOG_LEVEL=PROTOCORE_LOG_LEVEL_WARN` (reverted after), which printed the client's own `cli_fail`
   reason: `ssh-tunnel: KEXINIT negotiation failed`.
 - **Oracle:** RFC 4253 sec 7.1, `server_host_key_algorithms`: "The server lists the algorithms for
-  which it has host keys; the client lists the algorithms that it is willing to accept." And on
+  which it has host keys. The client lists the algorithms that it is willing to accept." And on
   selection: "Iterate over client's kex algorithms, one at a time. Choose the first algorithm that
   satisfies the following conditions: the server also supports the algorithm, ..."
 - **What happens:** `ssh_kexinit_parse` (`ssh_transport.c:622`) is reached by both roles through
@@ -311,7 +311,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
        very next line turns `enc_out` on regardless.
 - **Nothing drains in between.** `Workers.wake` -> `protocore_worker_wake` (`worker.c`) is
   `protocore_platform_task_notify` - it signals a task, it does not run one. The only drain is
-  `ssh_tx_drain`, called at `ssh_conn.c:419`, _after_ `ssh_pkt_recv` at `:414` has returned, and at
+  `ssh_tx_drain`, called at `ssh_conn.c:419`, _after_ `ssh_pkt_recv` at `:414` returned, and at
   `:316` on a later poll.
 - **Consequence:** the peer never sees NEWKEYS, so it never switches its inbound cipher, while the
   server encrypts from the next packet on. Every subsequent server packet arrives encrypted into a
@@ -449,7 +449,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   these TUs were benched, and the pragma on at least curve25519/ed25519 buys a measured win.
 - **The exposure, stated honestly:** `#pragma GCC optimize` applies to the whole TU, and the
   documented risk is if-conversion running backwards on a mask-select, turning
-  `dst->X[i] |= table[e].X[i] & mask;` into a branch on a secret index. Nobody has disassembled to
+  `dst->X[i] |= table[e].X[i] & mask;` into a branch on a secret index. Nobody disassembled to
   show it happens here. `SRC_LAW.md`'s "Guarantees are proven at the binary" requires exactly that
   chain for a constant-time claim, and the chain does not exist for these five either way.
 - **What would settle it:** disassemble the five mask-select sites at the level each TU actually
@@ -518,7 +518,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Why it is deferred rather than fixed:** the finding is indirect, inferred through a vendor
   library rather than observed. `SRC_LAW.md` requires a guarantee about emitted code to be proven at
   the binary, and that proof does not exist either way here. Confirming it needs the linked `.text`
-  checked for a reachable allocator call on a real ESP32 build; the audit that raised it says the
+  checked for a reachable allocator call on a real ESP32 build. The audit that raised it says the
   same about itself. Acting on an unconfirmed vendor-behavior claim would mean rewriting four
   working crypto paths on a guess.
 - **What would settle it:** build for `esp32dev`, disassemble the linked image, and check whether
@@ -762,7 +762,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   Found 2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/ssh-transport-kex.md` #5).
 - **Symptom:** the KEXINIT parser returned after the two compression name-lists and never read the two
   language lists, the `first_kex_packet_follows` boolean, or the reserved uint32. A client that guesses
-  sends its KEXDH_INIT ahead of our reply; when the guess lost negotiation that packet carries an
+  sends its KEXDH_INIT ahead of our reply. When the guess lost negotiation that packet carries an
   algorithm nobody agreed on, and RFC 4253 sec 7.1 says it MUST be silently ignored. It was parsed as
   the genuine one instead.
 - **Root cause:** the fields after compression were simply never consumed, so the flag that says "a
@@ -908,7 +908,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Fix:** `tls_conn_slot_storage(TlsConn *c)` is `ssh_pkt_slot_storage` against `TlsConn`: returns
   early when `c->tx` is set, otherwise takes the one borrow and splits it across `tx`, `rx`,
   `terms`, `hash_work`, `sign_work`, `ks_work` and `hello`. `ks_work` is new - the key schedule
-  reached its region by arithmetic on the borrow base, so it now has a field like the rest. init
+  reached its region by arithmetic on the borrow base. So it now has a field like the rest. init
   wipes the borrowed bytes and the session state, never the pointers. `native_tls_conn` is the env
   that was missing; the suite holds its connection in static storage, the way a pool slot is, and
   re-initialises the one slot per case, which is the path that was broken.
@@ -934,7 +934,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Nothing can catch it:** `test_empty_plaintext_carries_only_the_type` sealed a zero-length alert
   and asserted it was accepted, pinning both halves of the violation.
 - **Fix:** both directions refuse it, for Handshake and Alert only - application_data may be empty,
-  which is how a sender pads a stream, and there is a test holding that open. The receive-side test
+  which is how a sender pads a stream. There is a test holding that open. The receive-side test
   builds the offending record through `protect` with a crafted content-type byte, since our own
   `protect` now declines to build it directly. The sec 5.4 all-zero-inner and sec 5.2 record-overflow
   guards were already correct but untested; both now have one. Verified: `native_tls_record` 20/20.
@@ -1035,7 +1035,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   never read, though sec 17.2 makes a non-zero value a PROTOCOL_VIOLATION. `initial_max_streams_bidi`
   and `_uni` took any 62-bit varint, where sec 4.6 caps them at 2^60.
 - **Fix:** the long-header test exempts version 0, which is the Version Negotiation packet the RFC
-  excludes; a short header is never one, so it holds there without exception. The Reserved Bits are
+  excludes; a short header is never one. So it holds there without exception. The Reserved Bits are
   read in `quic_conn` after the AEAD open rather than inside `protocore_quic_packet_unprotect`: the header
   is authenticated by then, so a bit flipped in flight cannot close a connection, and the connection
   is also the only layer that can send the error. Verified: `native_quic_packet`, `native_quic_tp`
@@ -1117,7 +1117,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Status:** FIXED 2026-08-09 (`h2_conn.c` `content_length_holds`, `note_content_length`). Found
   2026-08-08 auditing `test/` for RFC conformance (`git_project/audit/http2-hpack.md`, remainder).
 - **Symptom:** a request could declare `content-length: 10`, send five octets, and have them
-  delivered as a complete body; or declare 2 and send 5; or declare a body and end the stream with
+  delivered as a complete body; or declare 2 and send 5. Or declare a body and end the stream with
   its headers. RFC 9113 sec 8.1.1 makes each of those malformed. Two disagreeing accounts of one
   body's length is the primitive every request-smuggling attack is built from.
 - **Root cause:** `h2_server` parsed content-length into `HttpReq` for the application's benefit
@@ -1154,7 +1154,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Symptom:** `handle_data` called `c->cb.on_data(...)` and only then looked the stream up, and it
   never read `H2Stream.state` at all. A DATA frame naming a stream no HEADERS had ever opened had its
   payload handed to the application as a legitimate request body. RFC 9113 sec 5.1 makes any frame
-  other than HEADERS or PRIORITY on an idle stream a connection error of type PROTOCOL_ERROR; sec 6.1
+  other than HEADERS or PRIORITY on an idle stream a connection error of type PROTOCOL_ERROR. Sec 6.1
   makes DATA on a stream that is not open a stream error of type STREAM_CLOSED.
 - **Root cause:** the lookup existed only to update `state` on END_STREAM, so it was placed after the
   delivery it should have gated. The audit names this the request-smuggling surface.
@@ -1190,7 +1190,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   MUST be a decoding error, and RFC 9113 sec 4.3 makes a decoding error in a field block a connection
   error of type COMPRESSION_ERROR. So a peer's illegal update was taken as a legal one.
 - **Root cause:** the clamp reads as defensive, and it does keep the table inside its storage, but it
-  is answering a different question than the RFC asks. The limit here is 4096: `h2_conn.c` advertises
+  answers a different question than the RFC asks. The limit here is 4096: `h2_conn.c` advertises
   no SETTINGS_HEADER_TABLE_SIZE, so the RFC 9113 sec 6.5.2 default applies and it equals
   `PROTOCORE_HPACK_TABLE_BYTES`.
 - **Nothing can catch it:** `test_dyn_size_update` encoded an update to 100000 and asserted the decode
@@ -1227,7 +1227,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Root cause:** the branch is commented "optional padding ends the input (public length information)",
   which is the base64 rule, not the base64url one. RFC 4648 sec 3.2/sec 5 and RFC 7515 sec 2 give
   base64url no padding at all, and sec 3.3 requires rejecting any character outside the alphabet. The
-  surrounding decoder is carefully branchless for constant time; this one early `break` is the hole in
+  surrounding decoder is carefully branchless for constant time. This one early `break` is the hole in
   it, and it is also the only place the function can return a short count as success.
 - **Nothing can catch it:** `test_base64.c:141-147` asserts the 3 and pins the behavior as correct.
 - **Fix:** not written. Fold `'='` into the `bad` accumulator like every other non-alphabet byte and
@@ -1344,7 +1344,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 - **Root cause:** it is a leaf primitive that every caller exercises indirectly, so no suite claimed it.
   An indirect exercise proves the callers agree with it, not that it is correct.
 - **Fix:** not written. A functional suite (equal, differing at first byte, differing at last byte,
-  zero length) is cheap; the timing claim wants the off-host CCOUNT harness `test_base64.c:6-7` already
+  zero length) is cheap. The timing claim wants the off-host CCOUNT harness `test_base64.c:6-7` already
   uses.
 
 ## DSCP is written as a whole byte, clobbering the ECN bits
@@ -1370,7 +1370,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   caller's `out_cap`, so with a large buffer a chain of 63-octet labels yields a name past the RFC 1035
   sec 2.3.4 limit of 255 octets.
 - **Root cause:** RFC 1035 sec 4.1.4 defines a pointer as referring to "a prior occurrence of the same
-  name". The hop counter makes the loop terminate, which is the DoS half; the direction rule and the
+  name". The hop counter makes the loop terminate, which is the DoS half. The direction rule and the
   total-length rule are the correctness half and neither is enforced.
 - **Nothing can catch it:** `test_dns_wire.c:102-107` covers the self-pointer `{0xC0,0x00}` only - not a
   forward pointer, not a pointer past `len`, not an over-long assembled name.
@@ -1448,7 +1448,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   release.
 - **Root cause:** their separation is incidental linker placement, which `ssh_keymat.h:85` already
   says out loud ("physical separation only raises the bar, not a hard wall"). The secure pool exists
-  for exactly this content and wipes on release; as BSS these arrays are outside both it and the
+  for exactly this content and wipes on release. As BSS these arrays are outside both it and the
   plaintext arena, so they are covered by neither derived worst case.
 - **Fix:** not written. Both borrow from the secure pool with a declared `PROTOCORE_WORK_SSH_*` term proved
   by a `static_assert` at the borrow site, the shape `crypto/aead/aes128gcm.h` already uses.
@@ -1547,7 +1547,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
   `tcp_client.c:268` (connect wait), and the `tls.c` handshake waits at `:915`, `:954`, `:977`.
 - **Fix:** not written. The shape it takes: every TU that needs a delay owns one module-wide timer
   and never sleeps. A call enters, the functional block sits behind the timer, and
-  `if (now - tu_timer >= delay)` clears busy and runs it; otherwise the call returns busy and the
+  `if (now - tu_timer >= delay)` clears busy and runs it. Otherwise the call returns busy and the
   caller comes back on its own tick. Busy is marked on the TX side only, so RX stays open and the
   reply handler always runs. `resolve()` collapses to one entry point returning READY / BUSY /
   FAILED, which is the shape `ntp_service.h` already states ("Returns immediately; the first sync
@@ -1657,7 +1657,7 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   `Tcp`, and `Http`. It carries neither the HTTP owner nor the TCP owner that define them, so
   `ld` reports eight undefined references out of `h3_server.o`.
 - **Fix:** the env drops `h3_server.c` and tests `quic_server.c` alone. The dispatch bridge is what
-  `native_h3_server` is for: it extends the full-app base, so the route table and the slot pools the
+  `native_h3_server` is for. It extends the full-app base, so the route table and the slot pools the
   bridge reaches are already in the image. The env now also carries the UDP listener, the client, the
   address mapping and `ip.c`, which is what `quic_server.c` binds its port through.
 
@@ -1669,7 +1669,7 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   rebinds the handler without a fresh pcb.
 - **Root cause:** `protocore_quic_server_stop()` cleared the running flag, the pool and the ring cursors,
   but never called `Udp.listener->close()`, so the bind outlived the server it belonged to and a
-  datagram arriving after the stop still filled the ingest ring. `quic_server.h` has documented the
+  datagram arriving after the stop still filled the ingest ring. `quic_server.h` documented the
   call as closing the binding since it was written.
 - **Fix:** `protocore_quic_server_stop()` closes the port first, before releasing the pool, so nothing more
   reaches the ring while it is being torn down.
@@ -1684,7 +1684,7 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   callers are elsewhere: `protocore_millis()` runs the QUIC poll under `PROTOCORE_ENABLE_HTTP3` and the request
   timeout under `PROTOCORE_REQUEST_TIMEOUT_MS`, and `protocore_delivery_cache_control()` runs under
   `PROTOCORE_ENABLE_HTTP_DELIVERY` alone. An include nested under a flag it does not belong to reads as
-  correct as long as one flag implies the other in every configuration anyone has built.
+  correct as long as one flag implies the other in every configuration anyone built.
 - **Fix:** `clock.h` is unconditional and `http_delivery.h` takes its own `PROTOCORE_ENABLE_HTTP_DELIVERY`
   guard. `sha1.h`, `base64.h` and `sha256.h` came out with them: nothing in the file names a symbol
   from any of the three.
@@ -1768,7 +1768,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   invisible from 2026-08-05 until those were fixed.
 - **Fix:** the borrow moves into a `bind_route()` taken on first use, the shape `auth.c` already
   uses for the same reason, and `init` leaves `HttpRouteNs`. A registration is the first thing that
-  touches the table and every reader runs after one, so there is no moment a caller has to remember.
+  touches the table and every reader runs after one. So there is no moment a caller has to remember.
 
 ---
 
@@ -1780,7 +1780,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Root cause:** `TcpEvt` and `EvtType` moved out of `tcp.h` into their own `tcp_evt.h`, and
   `presentation.h`, `session.h` and `listener.h` each narrowed their include to the new header,
   which is what they need. The slot types stayed in `tcp.h`. 24 white-box suites named the slot
-  types while including only a layer header, so they were reaching `tcp.h` transitively and lost it
+  types while including only a layer header. So they were reaching `tcp.h` transitively and lost it
   the moment the layer stopped needing it.
 - **Fix:** each of the 24 suites includes `network_drivers/transport/tcp.h` for the names it uses.
   The layer headers keep the narrow include.
@@ -1894,7 +1894,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   that sit on them still split on `#if PROTOCORE_HOT`, so each took its own refusing stub and never
   composed a byte. The owner worked and the driver above it did not.
 - **What it hid:** the interesting half of every driver - which bytes it composes, in what order, to
-  which address - was unreachable on host, so it was asserted only by reading the code.
+  which address - was unreachable on host. So it was asserted only by reading the code.
 - **Fix:** the same `PROTOCORE_HOT || PROTOCORE_PLATFORM_HAS_BUS` condition on all thirteen drivers.
 
 ---
@@ -1904,7 +1904,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Status:** FIXED (2026-08-05). Found while making the drivers' real body reachable on host.
 - **Symptom:** latent until then. `pcdelay`'s host arm spun on `protocore_millis()`, and the host virtual
   clock only moves when a test calls `set_millis`, so any wait with a non-zero argument never
-  terminated. Nothing had reached it because the host arm of every driver refused before delaying.
+  terminated. Nothing reached it because the host arm of every driver refused before delaying.
 - **Root cause:** the host arm was written as a bare spin on the assumption that only device code
   paths call it. Making the drivers real broke that assumption - `protocore_pca9685_begin` waits 500 us for
   the oscillator and `protocore_sht3x_read` waits 20 ms for a measurement.
@@ -1917,7 +1917,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 ## Every OIDC token verification leaked four scratch borrows, and the arena never came back
 
 - **Status:** FIXED (2026-08-03). Found by running `native_oidc` for the first time: the suite had
-  not compiled since the C conversion, so nothing had executed `protocore_oidc_verify_with_key` at all.
+  not compiled since the C conversion, so nothing executed `protocore_oidc_verify_with_key` at all.
 - **Symptom:** every verify returned `PROTOCORE_OIDC_ERR_FORMAT` (-1), including a valid, correctly-signed
   token that should have returned 0. Twelve of the suite's tests failed with the same code whatever
   they were actually testing, because the failure happened before any of their input was examined.
@@ -2071,7 +2071,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
 - **Fix:** the generator emits `.c` and emits C (`NULL`, braced bodies); `--check` now reproduces
   the committed `.c` byte for byte. `feature-tables.yml` and `.clang-format-ignore` follow the
   rename. The dead `binary_asset_blobs.c` still has to be deleted - pending, because deleting it
-  before the generator fix landed would only have brought it back.
+  before the generator fix landed would only brought it back.
 
 ## `webdav.c` and `webdav.c` are two different modules sharing one name in one directory
 
@@ -2131,7 +2131,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   which is a byte for each of these, and `protocore_types.h` already proves the toolchain honors it with a
   `static_assert` on `proto_enum_probe`. `protocore_phy_ps` in `physical/physical.h` was the same defect,
   found and fixed separately, which is what prompted pairing every `enum class X : T` in v0.0.1
-  against its counterpart here: 34 enums carried a declared width, 6 had lost it.
+  against its counterpart here: 34 enums carried a declared width, 6 lost it.
 - **Not affected:** `WsCloseCode` (`uint16_t` -> packed) still occupies two bytes because its values
   run 1000-4999 and packed widens to fit. `DeflateResult` and `InflateResult` (`int32_t` -> packed)
   narrow to a byte, and both are return values rather than stored fields. `CborType` and

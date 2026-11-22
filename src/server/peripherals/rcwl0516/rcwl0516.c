@@ -55,7 +55,7 @@ uint8_t *protocore_rcwl0516_span(void)
     return s_own.span;
 }
 
-void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
+void protocore_rcwl0516_presence_init(const uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms,
                                       uint32_t now)
 {
     (void)work;
@@ -74,7 +74,7 @@ void protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t d
     c->changed = 0;
 }
 
-embed_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, embed_bool pin_high, uint32_t now)
+embed_bool protocore_rcwl0516_presence_update(const uint8_t *work, PresenceCore *c, embed_bool pin_high, uint32_t now)
 {
     (void)work;
 
@@ -91,7 +91,7 @@ embed_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, em
         c->raw_since_ms = now;
     }
 
-    // 2) believe the raw level once it has outlasted the debounce
+    // 2) believe the raw level once it outlasted the debounce
     if (elapsed(now, c->raw_since_ms, c->debounce_ms))
     {
         c->stable = c->raw;
@@ -116,14 +116,14 @@ embed_bool protocore_rcwl0516_presence_update(uint8_t *work, PresenceCore *c, em
     return c->present != 0;
 }
 
-embed_bool protocore_rcwl0516_presence_get(uint8_t *work, const PresenceCore *c)
+embed_bool protocore_rcwl0516_presence_get(const uint8_t *work, const PresenceCore *c)
 {
     (void)work;
 
     return c && c->present != 0;
 }
 
-embed_bool protocore_rcwl0516_presence_take_event(uint8_t *work, PresenceCore *c)
+embed_bool protocore_rcwl0516_presence_take_event(const uint8_t *work, PresenceCore *c)
 {
     (void)work;
 
@@ -170,7 +170,10 @@ static_assert(RCWL0516_OFF_CTX % _Alignof(Rcwl0516Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define RCWL0516_CTX(w) ((Rcwl0516Ctx *)(void *)((w) + RCWL0516_OFF_CTX))
+#define RCWL0516_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Rcwl0516Ctx *)(const void *)((w) + RCWL0516_OFF_CTX),                                  \
+        default: (Rcwl0516Ctx *)(void *)((w) + RCWL0516_OFF_CTX))
 
 // The pin, or -1 for "there is none" - which is what a failed or absent begin() reports, the way a
 // main() reports failure. Stated here rather than as an initializer on the declaration so the

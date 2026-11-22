@@ -1072,7 +1072,7 @@ void test_rfc7296_stateless_cookie(void)
     IkeV.notify.secret = SECRET;
 
     // sec 2.6 writes the cookie as <VersionIDofSecret> | Hash(Ni | IPi | SPIi | <secret>), so the
-    // version octet sits outside the hash: it names which secret to recompute with, and a verify
+    // version octet sits outside the hash. It names which secret to recompute with, and a verify
     // takes it from the cookie itself. Changing it therefore changes which secret the caller looks
     // up, not whether the hash agrees.
     uint8_t reversioned[PROTOCORE_IKE_COOKIE_LEN];

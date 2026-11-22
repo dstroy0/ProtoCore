@@ -123,7 +123,10 @@ static_assert(COAPS_SERVER_OFF_CTX + sizeof(struct CoapsServerStorage) <= PROTOC
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define COAPS_SERVER_CTX(w) ((struct CoapsServerStorage *)(void *)((w) + COAPS_SERVER_OFF_CTX))
+#define COAPS_SERVER_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct CoapsServerStorage *)(const void *)((w) + COAPS_SERVER_OFF_CTX),                \
+        default: (struct CoapsServerStorage *)(void *)((w) + COAPS_SERVER_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Pure helpers: they read what they are given and hold nothing

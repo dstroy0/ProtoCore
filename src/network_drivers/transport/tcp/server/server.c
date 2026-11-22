@@ -59,8 +59,8 @@ uint8_t *protocore_tcp_listener_span(void)
 }
 
 // Both teardowns are called by the add that replaces an active row, above their definitions.
-void protocore_tcp_listener_stop(uint8_t *work);
-void protocore_tcp_listener_stop_dynamic(uint8_t *work);
+void protocore_tcp_listener_stop(const uint8_t *work);
+void protocore_tcp_listener_stop_dynamic(const uint8_t *work);
 
 // ---------------------------------------------------------------------------
 // The accepting side's state: every bounded table, and the handle that reaches it
@@ -142,7 +142,10 @@ static_assert(TCP_LISTENER_OFF_CTX + sizeof(struct TcpListenerStorage) <= PROTOC
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TCP_LISTENER_CTX(w) ((struct TcpListenerStorage *)(void *)((w) + TCP_LISTENER_OFF_CTX))
+#define TCP_LISTENER_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TcpListenerStorage *)(const void *)((w) + TCP_LISTENER_OFF_CTX),                \
+        default: (struct TcpListenerStorage *)(void *)((w) + TCP_LISTENER_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Accept-rate throttle (fixed window, global). State persists across accepts.
@@ -152,8 +155,7 @@ static_assert(TCP_LISTENER_OFF_CTX + sizeof(struct TcpListenerStorage) <= PROTOC
 void protocore_tcp_listener_accept_allowed(uint8_t *work)
 {
     // Unsigned subtraction wraps correctly across the millis() rollover.
-    if ((uint32_t)(TcpListenerV.gate.now_ms - TCP_LISTENER_CTX(work)->accept.window_start) >=
-        PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS)
+    if ((TcpListenerV.gate.now_ms - TCP_LISTENER_CTX(work)->accept.window_start) >= PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS)
     {
         TCP_LISTENER_CTX(work)->accept.window_start = TcpListenerV.gate.now_ms;
         TCP_LISTENER_CTX(work)->accept.count = 0;
@@ -201,7 +203,7 @@ void protocore_tcp_listener_accept_allowed_ip(uint8_t *work)
         if (b->addr.family != PROTOCORE_IP_NONE && IpV.ok)
         {
             // Unsigned subtraction wraps correctly across the millis() rollover.
-            if ((uint32_t)(TcpListenerV.gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
+            if ((TcpListenerV.gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
             {
                 b->window_start = TcpListenerV.gate.now_ms;
                 b->count = 0;
@@ -224,14 +226,13 @@ void protocore_tcp_listener_accept_allowed_ip(uint8_t *work)
         }
         else
         {
-            if (expired < 0 &&
-                (uint32_t)(TcpListenerV.gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
+            if (expired < 0 && (TcpListenerV.gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
             {
                 expired = i;
             }
             // Track the oldest active bucket (largest elapsed) as the eviction victim.
-            if ((uint32_t)(TcpListenerV.gate.now_ms - b->window_start) >
-                (uint32_t)(TcpListenerV.gate.now_ms - TCP_LISTENER_CTX(work)->iptt.buckets[lru].window_start))
+            if ((TcpListenerV.gate.now_ms - b->window_start) >
+                (TcpListenerV.gate.now_ms - TCP_LISTENER_CTX(work)->iptt.buckets[lru].window_start))
             {
                 lru = i;
             }
@@ -356,6 +357,7 @@ void protocore_tcp_listener_ip_allow_add_cidr(uint8_t *work)
     TcpListenerV.gate.addr = &net;
     TcpListenerV.gate.prefix_len = prefix;
     protocore_tcp_listener_ip_allow_add(work);
+    TcpListenerV.gate.addr = NULL;
 }
 
 void protocore_tcp_listener_ip_allowed(uint8_t *work)
@@ -417,7 +419,7 @@ void protocore_tcp_listener_worker_queue(uint8_t *work)
 #else
 // The queue listener ns->idx drains, NULL when the row is inactive or out of range. One worker owns
 // every slot here, so the listener's own queue is the only path an event takes.
-void protocore_tcp_listener_listener_queue(uint8_t *work)
+void protocore_tcp_listener_listener_queue(const uint8_t *work)
 {
     (void)work;
     TcpListenerV.queue = NULL;
@@ -534,7 +536,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // (protocore_ip_is_unspecified) always allows an unspecified address through, deferring to
     // the global throttle - see test_accept_gate.cpp's test_per_ip_unspecified_defers.
     // The function's own reject path IS fully host-tested directly with a synthetic
-    // protocore_ip (test_per_ip_independent_budgets et al.); only ITS USE HERE, gated behind a
+    // protocore_ip (test_per_ip_independent_budgets et al.). Only ITS USE HERE, gated behind a
     // peer address this host build can never resolve, cannot be driven to the false case.
     TcpListenerV.gate.addr = &remote;
     TcpListenerV.gate.now_ms = Clock.ms;
@@ -654,6 +656,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     TcpListenerV.idx = idx;
     TcpListenerV.q.evt = &evt;
     protocore_tcp_listener_enqueue(protocore_tcp_listener_span());
+    TcpListenerV.q.evt = NULL;
     if (!TcpListenerV.ok)
     {
         PROTOCORE_OBS_NOTICE((uint8_t)free_slot, CONN_ACTIVE, PROTOCORE_CONN_R_DEFER_DROP);
@@ -713,7 +716,7 @@ void protocore_tcp_listener_add(uint8_t *work)
     TcpListenerV.i32 = 1;
 }
 
-void protocore_tcp_listener_stop(uint8_t *work)
+void protocore_tcp_listener_stop(const uint8_t *work)
 {
     (void)work;
     if (TcpListenerV.idx >= MAX_LISTENERS)
@@ -813,7 +816,7 @@ static protocore_net_err listener_pcb_marshal(uint8_t idx, uint16_t port, embed_
 // Install the code point every connection accepted on a port takes. The store is unconditional:
 // PROTOCORE_ENABLE_DIFFSERV decides whether the accept callback stamps it, not whether a caller can
 // name it.
-void protocore_tcp_listener_set_dscp(uint8_t *work)
+void protocore_tcp_listener_set_dscp(const uint8_t *work)
 {
     (void)work;
     for (uint8_t i = 0; i < MAX_LISTENERS; i++)
@@ -880,7 +883,7 @@ void protocore_tcp_listener_add_dynamic(uint8_t *work)
     TcpListenerV.i32 = 1;
 }
 
-void protocore_tcp_listener_stop_dynamic(uint8_t *work)
+void protocore_tcp_listener_stop_dynamic(const uint8_t *work)
 {
     (void)work;
     if (TcpListenerV.idx >= MAX_LISTENERS)

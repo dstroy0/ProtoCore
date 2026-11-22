@@ -667,7 +667,7 @@ static const char OPCUA_TRANSPORT_URI[] =
     "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary"; // NOSONAR
 
 // The server-identity defaults (PROTOCORE_PROTOCORE_OPCUA_DEFAULT_ENDPOINT / _APP_URI / _APP_NAME) live in
-// protocore_config.h under PROTOCORE_ENABLE_OPCUA so a deployment can override them; used here for both
+// protocore_config.h under PROTOCORE_ENABLE_OPCUA so a deployment can override them. Used here for both
 // the struct default and the builder fallback so the two cannot drift apart.
 
 // All OPC UA agent state, owned by one instance (internal linkage): the advertised server
@@ -1348,7 +1348,7 @@ static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
     ConnPoolV.io.count = n;
     ConnPool.peek(protocore_conn_pool_span());
 }
-static void ring_consume(TcpConn *c, size_t n)
+static void ring_consume(const TcpConn *c, size_t n)
 {
     ConnPoolV.slot = c->id;
     ConnPoolV.io.count = n;
@@ -1548,7 +1548,7 @@ void protocore_opcua_rx(uint8_t slot)
     }
 }
 
-// The OPC UA ProtoHandler (Layer 5 dispatch seam) - only a data handler; the handshake reads from
+// The OPC UA ProtoHandler (Layer 5 dispatch seam) - only a data handler. The handshake reads from
 // the rx ring, so there is no per-connection accept/close/poll state. Returned by accessor (no
 // session dependency); Session.proto->register_builtins() installs it.
 // Designated, so a member's position in the struct does not decide what it binds to. Only the data

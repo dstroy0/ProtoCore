@@ -257,7 +257,7 @@ typedef struct
  * @c delivery.on_message and run the QoS 1 and QoS 2 acknowledgement flows, re-deliver unacknowledged
  * in-flight messages, and send PINGREQ when Keep Alive is due (sec 3.1.2.10). Call once per loop().
  * False once the Network Connection is gone.
- * @var MqttNs::connected  true while the Server has accepted the CONNECT
+ * @var MqttNs::connected  true while the Server accepted the CONNECT
  * @var MqttNs::disconnect
  * Send DISCONNECT and close the Network Connection (sec 3.14).
  */
@@ -284,54 +284,54 @@ extern MqttVars MqttV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const encode_remaining_length)(uint8_t *work);
-    void (*const decode_remaining_length)(uint8_t *work);
-    void (*const build_connect)(uint8_t *work);
-    void (*const build_publish)(uint8_t *work);
-    void (*const build_subscribe)(uint8_t *work);
-    void (*const build_unsubscribe)(uint8_t *work);
-    void (*const build_ack)(uint8_t *work);
-    void (*const build_pingreq)(uint8_t *work);
-    void (*const build_disconnect)(uint8_t *work);
-    void (*const parse_fixed_header)(uint8_t *work);
+    void (*const encode_remaining_length)(const uint8_t *work);
+    void (*const decode_remaining_length)(const uint8_t *work);
+    void (*const build_connect)(const uint8_t *work);
+    void (*const build_publish)(const uint8_t *work);
+    void (*const build_subscribe)(const uint8_t *work);
+    void (*const build_unsubscribe)(const uint8_t *work);
+    void (*const build_ack)(const uint8_t *work);
+    void (*const build_pingreq)(const uint8_t *work);
+    void (*const build_disconnect)(const uint8_t *work);
+    void (*const parse_fixed_header)(const uint8_t *work);
     void (*const parse_publish)(uint8_t *work);
-    void (*const parse_ack)(uint8_t *work);
-    void (*const parse_connack)(uint8_t *work);
-    void (*const parse_suback)(uint8_t *work);
-    void (*const on_message)(uint8_t *work);
-    void (*const connect)(uint8_t *work);
-    void (*const publish)(uint8_t *work);
-    void (*const subscribe)(uint8_t *work);
-    void (*const unsubscribe)(uint8_t *work);
-    void (*const loop)(uint8_t *work);
-    void (*const connected)(uint8_t *work);
-    void (*const disconnect)(uint8_t *work);
+    void (*const parse_ack)(const uint8_t *work);
+    void (*const parse_connack)(const uint8_t *work);
+    void (*const parse_suback)(const uint8_t *work);
+    void (*const on_message)(const uint8_t *work);
+    void (*const connect)(const uint8_t *work);
+    void (*const publish)(const uint8_t *work);
+    void (*const subscribe)(const uint8_t *work);
+    void (*const unsubscribe)(const uint8_t *work);
+    void (*const loop)(const uint8_t *work);
+    void (*const connected)(const uint8_t *work);
+    void (*const disconnect)(const uint8_t *work);
 } MqttNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MqttV or a region of the borrow at a fixed offset.
-void protocore_mqtt_encode_remaining_length(uint8_t *work);
-void protocore_mqtt_decode_remaining_length(uint8_t *work);
-void protocore_mqtt_build_connect(uint8_t *work);
-void protocore_mqtt_build_publish(uint8_t *work);
-void protocore_mqtt_build_subscribe(uint8_t *work);
-void protocore_mqtt_build_unsubscribe(uint8_t *work);
-void protocore_mqtt_build_ack(uint8_t *work);
-void protocore_mqtt_build_pingreq(uint8_t *work);
-void protocore_mqtt_build_disconnect(uint8_t *work);
-void protocore_mqtt_parse_fixed_header(uint8_t *work);
+void protocore_mqtt_encode_remaining_length(const uint8_t *work);
+void protocore_mqtt_decode_remaining_length(const uint8_t *work);
+void protocore_mqtt_build_connect(const uint8_t *work);
+void protocore_mqtt_build_publish(const uint8_t *work);
+void protocore_mqtt_build_subscribe(const uint8_t *work);
+void protocore_mqtt_build_unsubscribe(const uint8_t *work);
+void protocore_mqtt_build_ack(const uint8_t *work);
+void protocore_mqtt_build_pingreq(const uint8_t *work);
+void protocore_mqtt_build_disconnect(const uint8_t *work);
+void protocore_mqtt_parse_fixed_header(const uint8_t *work);
 void protocore_mqtt_parse_publish(uint8_t *work);
-void protocore_mqtt_parse_ack(uint8_t *work);
-void protocore_mqtt_parse_connack(uint8_t *work);
-void protocore_mqtt_parse_suback(uint8_t *work);
-void protocore_mqtt_on_message(uint8_t *work);
-void protocore_mqtt_connect(uint8_t *work);
-void protocore_mqtt_publish(uint8_t *work);
-void protocore_mqtt_subscribe(uint8_t *work);
-void protocore_mqtt_unsubscribe(uint8_t *work);
-void protocore_mqtt_loop(uint8_t *work);
-void protocore_mqtt_connected(uint8_t *work);
-void protocore_mqtt_disconnect(uint8_t *work);
+void protocore_mqtt_parse_ack(const uint8_t *work);
+void protocore_mqtt_parse_connack(const uint8_t *work);
+void protocore_mqtt_parse_suback(const uint8_t *work);
+void protocore_mqtt_on_message(const uint8_t *work);
+void protocore_mqtt_connect(const uint8_t *work);
+void protocore_mqtt_publish(const uint8_t *work);
+void protocore_mqtt_subscribe(const uint8_t *work);
+void protocore_mqtt_unsubscribe(const uint8_t *work);
+void protocore_mqtt_loop(const uint8_t *work);
+void protocore_mqtt_connected(const uint8_t *work);
+void protocore_mqtt_disconnect(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

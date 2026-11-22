@@ -13,7 +13,7 @@ EMBED_BEGIN_DECLS
  * @brief SP800-108 counter-mode key derivation (HMAC-SHA256 PRF).
  *
  * The shared NIST SP800-108 §5.1 counter-mode KDF. SMB 3.x uses it to derive its signing and
- * encryption keys (MS-SMB2 §3.1.4.2); the caller assembles the fixed input, keeping this independent
+ * encryption keys (MS-SMB2 §3.1.4.2). The caller assembles the fixed input, keeping this independent
  * of any protocol's label/context choices. Verified against the NIST CAVP KBKDF (KDFCTR) vectors.
  * Built over the @ref HmacSha256Ns entries, so which arm compresses the PRF is not visible here.
  *

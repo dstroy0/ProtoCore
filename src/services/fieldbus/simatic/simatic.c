@@ -57,10 +57,10 @@ uint8_t *protocore_simatic_span(void)
     return s_own.span;
 }
 
-void protocore_simatic_bcc_3964r(uint8_t *work);
+void protocore_simatic_bcc_3964r(const uint8_t *work);
 void protocore_simatic_build_block_3964r(uint8_t *work);
 
-void protocore_simatic_bcc_3964r(uint8_t *work)
+void protocore_simatic_bcc_3964r(const uint8_t *work)
 {
     (void)work;
     const uint8_t *data = SimaticV.bcc_3964r_args.data;
@@ -168,7 +168,10 @@ static_assert(SIMATIC_OFF_CTX % _Alignof(SimaticCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SIMATIC_CTX(w) ((SimaticCtx *)(void *)((w) + SIMATIC_OFF_CTX))
+#define SIMATIC_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SimaticCtx *)(const void *)((w) + SIMATIC_OFF_CTX),                                    \
+        default: (SimaticCtx *)(void *)((w) + SIMATIC_OFF_CTX))
 
 // DLE ETX consumed at the walk position: the trailing BCC must be present and match the XOR over
 // the stuffed data + DLE ETX.
@@ -294,7 +297,7 @@ static void begin_receive(Simatic3964Ctx *ctx, uint32_t now_ms)
     ctx->deadline_ms = now_ms + PROTOCORE_SIMATIC_ZVZ_MS;
 }
 
-void protocore_simatic_init_3964r(uint8_t *work)
+void protocore_simatic_init_3964r(const uint8_t *work)
 {
     (void)work;
     Simatic3964Ctx *ctx = SimaticV.init_3964r_args.ctx;
@@ -356,6 +359,8 @@ static void deliver_or_nak(uint8_t *work)
     SimaticV.parse_block_3964r_args.out_cap = sizeof(out);
     SimaticV.parse_block_3964r_args.out_len = &olen;
     protocore_simatic_parse_block_3964r(work);
+    SimaticV.parse_block_3964r_args.out_len = NULL;
+    SimaticV.parse_block_3964r_args.out = NULL;
     if (SimaticV.ok)
     {
         emit(ctx, SIMATIC_DLE); // ack the received block
@@ -490,7 +495,7 @@ void protocore_simatic_rx_byte_3964r(uint8_t *work)
     }
 }
 
-void protocore_simatic_tick_3964r(uint8_t *work)
+void protocore_simatic_tick_3964r(const uint8_t *work)
 {
     (void)work;
     Simatic3964Ctx *ctx = SimaticV.tick_3964r_args.ctx;
@@ -535,7 +540,7 @@ void protocore_simatic_tick_3964r(uint8_t *work)
     }
 }
 
-void protocore_simatic_idle_3964r(uint8_t *work)
+void protocore_simatic_idle_3964r(const uint8_t *work)
 {
     (void)work;
     const Simatic3964Ctx *ctx = SimaticV.idle_3964r_args.ctx;
@@ -551,7 +556,7 @@ void protocore_simatic_idle_3964r(uint8_t *work)
 // Request header: [cmd, coord=0, area, dbnr, addr_hi, addr_lo, count_hi, count_lo]  (8 bytes)
 #define RK512_HDR_LEN 8
 
-void protocore_simatic_build_send_rk512(uint8_t *work)
+void protocore_simatic_build_send_rk512(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_send_rk512_args.buf;
@@ -586,7 +591,7 @@ void protocore_simatic_build_send_rk512(uint8_t *work)
     SimaticV.n = need;
 }
 
-void protocore_simatic_build_fetch_rk512(uint8_t *work)
+void protocore_simatic_build_fetch_rk512(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_fetch_rk512_args.buf;
@@ -611,7 +616,7 @@ void protocore_simatic_build_fetch_rk512(uint8_t *work)
 }
 
 // Reaction: [cmd=REACTION, status_hi, status_lo]  (+ FETCH-response data words appended by the caller)
-void protocore_simatic_build_reaction_rk512(uint8_t *work)
+void protocore_simatic_build_reaction_rk512(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = SimaticV.build_reaction_rk512_args.buf;
@@ -633,7 +638,7 @@ static embed_bool area_valid(uint8_t a)
     return a >= (uint8_t)RK512_AREA_DB && a <= (uint8_t)RK512_AREA_TB;
 }
 
-void protocore_simatic_parse_header_rk512(uint8_t *work)
+void protocore_simatic_parse_header_rk512(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = SimaticV.parse_header_rk512_args.buf;
@@ -664,7 +669,7 @@ void protocore_simatic_parse_header_rk512(uint8_t *work)
     SimaticV.ok = EMBED_TRUE;
 }
 
-void protocore_simatic_parse_reaction_rk512(uint8_t *work)
+void protocore_simatic_parse_reaction_rk512(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = SimaticV.parse_reaction_rk512_args.buf;

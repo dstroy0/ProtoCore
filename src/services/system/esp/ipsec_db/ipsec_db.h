@@ -5,13 +5,13 @@
  * @file ipsec_db.h
  * @brief IPsec Security Policy Database (SPD) + Security Association Database (SAD) - RFC 4301.
  *
- * The ESP datapath (esp.h) is the crypto transform; this file is the two databases that decide, for a
+ * The ESP datapath (esp.h) is the crypto transform. This file is the two databases that decide, for a
  * given packet, WHETHER and WITH WHICH SA to apply it. Both are pure, host-testable data structures with
  * no heap and no lwIP dependency - the remaining device-side piece is only the IP input/output hook that
  * feeds packets through these lookups.
  *
  *   - SPD (RFC 4301 §4.4.1): an ordered list of policies matched against a packet's selectors (source /
- *     destination address ranges, protocol, port ranges); the FIRST matching policy wins and names an
+ *     destination address ranges, protocol, port ranges). The FIRST matching policy wins and names an
  *     action - PROTECT (apply ESP with a bound SA), BYPASS (send in the clear), or DISCARD (drop).
  *   - SAD (RFC 4301 §4.4.2): the active Security Associations keyed by SPI. An inbound ESP packet is
  *     demuxed to its SA by SPI; an outbound PROTECT policy names the SA to encapsulate with. Each SA
@@ -261,30 +261,30 @@ extern IpsecDbVars IpsecDbV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const protocore_ipsec_spd_init)(uint8_t *work);
-    void (*const protocore_ipsec_spd_add)(uint8_t *work);
+    void (*const protocore_ipsec_spd_init)(const uint8_t *work);
+    void (*const protocore_ipsec_spd_add)(const uint8_t *work);
     void (*const protocore_ipsec_spd_lookup)(uint8_t *work);
-    void (*const protocore_ipsec_selector_match)(uint8_t *work);
-    void (*const protocore_ipsec_selector_from_ts)(uint8_t *work);
-    void (*const protocore_ipsec_sad_init)(uint8_t *work);
+    void (*const protocore_ipsec_selector_match)(const uint8_t *work);
+    void (*const protocore_ipsec_selector_from_ts)(const uint8_t *work);
+    void (*const protocore_ipsec_sad_init)(const uint8_t *work);
     void (*const protocore_ipsec_sad_add)(uint8_t *work);
-    void (*const protocore_ipsec_sad_find)(uint8_t *work);
+    void (*const protocore_ipsec_sad_find)(const uint8_t *work);
     void (*const protocore_ipsec_sad_remove)(uint8_t *work);
-    void (*const protocore_ipsec_sad_next_seq)(uint8_t *work);
+    void (*const protocore_ipsec_sad_next_seq)(const uint8_t *work);
 } IpsecDbNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IpsecDbV or a region of the borrow at a fixed offset.
-void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_spd_init(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_spd_add(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_match(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_selector_from_ts(const uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_init(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_find(const uint8_t *work);
 void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *work);
-void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *work);
+void protocore_ipsec_db_protocore_ipsec_sad_next_seq(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

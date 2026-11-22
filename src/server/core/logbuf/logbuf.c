@@ -31,7 +31,7 @@ struct LogbufStorage
     uint16_t head;                                           // index of the oldest line
     uint16_t count;                                          // lines currently held
     uint8_t trap_threshold;                                  // set with `trap` by the set_trap call; 0xFF disables
-    protocore_log_trap_fn trap;                              // NULL until set; the null check gates trap_threshold
+    protocore_log_trap_fn trap;                              // NULL until set. The null check gates trap_threshold
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -43,7 +43,10 @@ static_assert(LOGBUF_OFF_CTX + sizeof(struct LogbufStorage) <= PROTOCORE_LOGBUF_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define LOGBUF_CTX(w) ((struct LogbufStorage *)(void *)((w) + LOGBUF_OFF_CTX))
+#define LOGBUF_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct LogbufStorage *)(const void *)((w) + LOGBUF_OFF_CTX),                           \
+        default: (struct LogbufStorage *)(void *)((w) + LOGBUF_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 

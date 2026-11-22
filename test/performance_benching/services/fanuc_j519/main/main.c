@@ -6,7 +6,7 @@
 // Robot Status and Ack packets - straight-line field packing at fixed offsets (integers
 // little-endian via shared/endian.h, floats moved through a uint32_t with memcpy), pure
 // (no sockets, no heap). Worked pattern follows performance_benching/device/modbus (a pure protocol codec with no
-// hardware involved), so every call here exercises the real production code path; there is no
+// hardware involved), so every call here exercises the real production code path. There is no
 // hardware to stub (Stream Motion is a plain UDP payload codec - the caller owns the socket).
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):

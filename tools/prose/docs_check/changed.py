@@ -103,7 +103,7 @@ def changed_scope(argv, option_value):
         return None
     if untracked:
         added = untracked_lines(added)
-    return dict((name, lines) for name, lines in added.items() if lines)
+    return {name: lines for name, lines in added.items() if lines}
 
 
 def changed_paths(added):

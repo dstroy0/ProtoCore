@@ -61,7 +61,7 @@ static uint8_t *slot_of(uintptr_t addr)
     return s_hw.discard; // window full: absorb the access rather than alias another register
 }
 
-// Where octet @p k of the value sits once the bus has carried it. A unit is bits/8 octets wide; the
+// Where octet @p k of the value sits once the bus carried it. A unit is bits/8 octets wide; the
 // value's octets keep their order inside a unit on a little-endian bus and reverse on a big-endian
 // one. A bus wider than the register carries it in one unit, so 64 behaves as 32 does for the
 // register's own four octets and differs only in the unit a driver must align to.

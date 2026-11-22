@@ -13,12 +13,12 @@
  * both sockets.
  *
  * Correctness details:
- *  - **Backpressure**: a `send` seam may accept fewer bytes than offered; the un-accepted bytes are
+ *  - **Backpressure**: a `send` seam may accept fewer bytes than offered. The un-accepted bytes are
  *    carried in a per-direction buffer and retried on the next step before more are read.
  *  - **Independent half-close**: each direction finishes when its source signals EOF and its buffer
  *    drains. When a direction finishes, the opposite peer's optional `shutdown` seam is called once
- *    (propagating the half-close so the origin sees the client's FIN); the relay is DONE only when
- *    both directions have finished.
+ *    (propagating the half-close so the origin sees the client's FIN). The relay is DONE only when
+ *    both directions finished.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -46,7 +46,7 @@ EMBED_ENUM_BYTE(protocore_relay_status,
 
 /**
  * @brief Read up to @p cap bytes from the peer into @p buf.
- * @return bytes read (> 0), 0 if none are available now, or < 0 once the peer has closed its send
+ * @return bytes read (> 0), 0 if none are available now, or < 0 once the peer closed its send
  *         side (EOF) or errored.
  */
 typedef int (*protocore_relay_recv_fn)(void *ctx, uint8_t *buf, size_t cap);
@@ -83,8 +83,8 @@ typedef struct
     uint16_t b2a_off;
     embed_bool a_eof;       ///< the recv side of a has hit EOF
     embed_bool b_eof;       ///< the recv side of b has hit EOF
-    embed_bool a2b_done;    ///< the a->b direction has finished (EOF + drained)
-    embed_bool b2a_done;    ///< the b->a direction has finished (EOF + drained)
+    embed_bool a2b_done;    ///< the a->b direction finished (EOF + drained)
+    embed_bool b2a_done;    ///< the b->a direction finished (EOF + drained)
     embed_bool a_shut_sent; ///< the shutdown seam of a has been called
     embed_bool b_shut_sent; ///< the shutdown seam of b has been called
     uint32_t bytes_a2b;     ///< bytes relayed a->b (observability)
@@ -131,7 +131,7 @@ typedef struct
  * @var RelayNs::status  a ::protocore_relay_status. Call repeatedly (per poll tick) until ...
  * @var RelayNs::init  initialize a relay between client (the inbound connection) and ...
  * @var RelayNs::step  do one non-blocking pass: flush any pending bytes and read more, in ...
- * @var RelayNs::note_eof  signal that a peer's send side has closed, when the transport ...
+ * @var RelayNs::note_eof  signal that a peer's send side closed, when the transport ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
@@ -152,16 +152,16 @@ extern RelayVars RelayV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const init)(uint8_t *work);
-    void (*const step)(uint8_t *work);
-    void (*const note_eof)(uint8_t *work);
+    void (*const init)(const uint8_t *work);
+    void (*const step)(const uint8_t *work);
+    void (*const note_eof)(const uint8_t *work);
 } RelayNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in RelayV or a region of the borrow at a fixed offset.
-void protocore_relay_init(uint8_t *work);
-void protocore_relay_step(uint8_t *work);
-void protocore_relay_note_eof(uint8_t *work);
+void protocore_relay_init(const uint8_t *work);
+void protocore_relay_step(const uint8_t *work);
+void protocore_relay_note_eof(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

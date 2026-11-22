@@ -166,8 +166,8 @@ typedef struct
     void (*const map)(uint8_t *work);
     void (*const find)(uint8_t *work);
     void (*const count)(uint8_t *work);
-    void (*const txn_parse)(uint8_t *work);
-    void (*const txn_build)(uint8_t *work);
+    void (*const txn_parse)(const uint8_t *work);
+    void (*const txn_build)(const uint8_t *work);
 } IfaceBridgeNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -177,8 +177,8 @@ void protocore_iface_bridge_add(uint8_t *work);
 void protocore_iface_bridge_map(uint8_t *work);
 void protocore_iface_bridge_find(uint8_t *work);
 void protocore_iface_bridge_count(uint8_t *work);
-void protocore_iface_bridge_txn_parse(uint8_t *work);
-void protocore_iface_bridge_txn_build(uint8_t *work);
+void protocore_iface_bridge_txn_parse(const uint8_t *work);
+void protocore_iface_bridge_txn_build(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

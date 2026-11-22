@@ -95,7 +95,7 @@ static const mmgr_field FILESYSTEM_ROOT[] = {MMGR_STR, MMGR_END};
 /** @brief Join a mount @p root, a request @p dir, and a leaf @p name into @p out.
  *
  * @param name the leaf, or "" when @p dir is the whole path. When @p name is given, @p dir must end
- *             with '/' - that is what a directory destination means, and it is known at the call
+ *             with '/' - that is what a directory destination means. It is known at the call
  *             site rather than tested here.
  * @return bytes written, or 0 on overflow - the engine already knows the length, so it is handed
  *         back rather than left for the caller to rediscover with a scan. */

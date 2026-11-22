@@ -569,7 +569,7 @@ void test_a_peer_fin_closes_the_slot(void)
     TEST_ASSERT_FALSE(TcpClientV.ok); // connected is false once closed
 }
 
-// The error callback fires after the stack has freed the control block, so the slot drops its
+// The error callback fires after the stack freed the control block, so the slot drops its
 // reference and must not close or abort it again.
 void test_the_error_callback_drops_the_control_block_without_reusing_it(void)
 {

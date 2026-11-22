@@ -36,7 +36,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define IFACE_BRIDGE_CTX(w) ((BridgeCtx *)(void *)((w) + IFACE_BRIDGE_OFF_CTX))
+#define IFACE_BRIDGE_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const BridgeCtx *)(const void *)((w) + IFACE_BRIDGE_OFF_CTX),                                \
+        default: (BridgeCtx *)(void *)((w) + IFACE_BRIDGE_OFF_CTX))
 
 // The entries this file calls before reaching their definitions.
 void protocore_iface_bridge_find(uint8_t *work);
@@ -135,6 +138,7 @@ void protocore_iface_bridge_map(uint8_t *work)
     r.target = *target;
     IfaceBridgeV.add_args.rule = &r;
     protocore_iface_bridge_add(work);
+    IfaceBridgeV.add_args.rule = NULL;
 }
 
 void protocore_iface_bridge_find(uint8_t *work)
@@ -160,7 +164,7 @@ void protocore_iface_bridge_count(uint8_t *work)
     IfaceBridgeV.u8 = IFACE_BRIDGE_CTX(work)->count;
 }
 
-void protocore_iface_bridge_txn_parse(uint8_t *work)
+void protocore_iface_bridge_txn_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *buf = IfaceBridgeV.txn_parse_args.buf;
@@ -196,7 +200,7 @@ void protocore_iface_bridge_txn_parse(uint8_t *work)
     IfaceBridgeV.n = (size_t)PROTOCORE_BRIDGE_TXN_HDR + wl;
 }
 
-void protocore_iface_bridge_txn_build(uint8_t *work)
+void protocore_iface_bridge_txn_build(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = IfaceBridgeV.txn_build_args.out;

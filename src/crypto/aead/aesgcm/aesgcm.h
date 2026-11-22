@@ -145,7 +145,7 @@ typedef struct
     void (*const key_wipe)(uint8_t *work);
     void (*const seal)(uint8_t *work);
     void (*const open)(uint8_t *work);
-    void (*const iv_increment)(uint8_t *work);
+    void (*const iv_increment)(const uint8_t *work);
 } AesGcmNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -154,7 +154,7 @@ void protocore_aes_gcm_key_init(uint8_t *work);
 void protocore_aes_gcm_key_wipe(uint8_t *work);
 void protocore_aes_gcm_seal(uint8_t *work);
 void protocore_aes_gcm_open(uint8_t *work);
-void protocore_aes_gcm_iv_increment(uint8_t *work);
+void protocore_aes_gcm_iv_increment(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

@@ -124,9 +124,18 @@ static_assert(QSRV_OFF_RING % _Alignof(QuicIngest) == 0,
               "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
-#define QSRV_CTX(w) ((QuicServerCtx *)(void *)((w) + QSRV_OFF_CTX))
-#define QSRV_POOL(w) ((QuicSlot *)(void *)((w) + QSRV_OFF_POOL))
-#define QSRV_RING(w) ((QuicIngest *)(void *)((w) + QSRV_OFF_RING))
+#define QSRV_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const QuicServerCtx *)(const void *)((w) + QSRV_OFF_CTX),                                    \
+        default: (QuicServerCtx *)(void *)((w) + QSRV_OFF_CTX))
+#define QSRV_POOL(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const QuicSlot *)(const void *)((w) + QSRV_OFF_POOL),                                        \
+        default: (QuicSlot *)(void *)((w) + QSRV_OFF_POOL))
+#define QSRV_RING(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const QuicIngest *)(const void *)((w) + QSRV_OFF_RING),                                      \
+        default: (QuicIngest *)(void *)((w) + QSRV_OFF_RING))
 
 // The one owned instance, private to this TU: the pointer to the bytes this server took for
 // itself. The two callbacks below carry the transport's signature and reach it through here.
@@ -223,7 +232,7 @@ static QuicSlot *slot_by_id(uint8_t *work, uint32_t id)
     {
         if (QSRV_POOL(work)[i].used && QSRV_POOL(work)[i].id == id)
         {
-            return &QSRV_POOL(work)[i];
+            return &QSRV_POOL(work)[i]; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
         }
     }
     return NULL;
@@ -255,13 +264,13 @@ static QuicSlot *alloc_slot(uint8_t *work)
             {
                 QSRV_CTX(work)->next_id = 1;
             }
-            return s;
+            return s; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
         }
     }
     return NULL;
 }
 
-// The HTTP/3 engine surfaces a completed request here; forward it to the application by conn id.
+// The HTTP/3 engine surfaces a completed request here. Forward it to the application by conn id.
 static void protocore_h3_on_request(void *app, uint8_t * /*h3*/, uint64_t stream_id, const char *method,
                                     const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
@@ -368,8 +377,8 @@ static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, embed_bool 
     embed_bool quic_packet_ok = QuicPacket.is_long_header(work, dg[0]);
     if (quic_packet_ok)
     {
-        embed_bool quic_packet_ok = QuicPacket.parse_long_header(work, dg, len, lh_out);
-        if (!quic_packet_ok)
+        const embed_bool quic_long_ok = QuicPacket.parse_long_header(work, dg, len, lh_out);
+        if (!quic_long_ok)
         {
             return NULL;
         }
@@ -385,7 +394,7 @@ static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, embed_bool 
             QuicConn.owns(s->qc);
             if (QuicConnV.ok)
             {
-                return s;
+                return s; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
             }
         }
         if (lh_out->version == QUIC_VERSION_1 && lh_out->type == QUIC_LP_INITIAL)
@@ -412,7 +421,7 @@ static QuicSlot *route(uint8_t *work, const uint8_t *dg, size_t len, embed_bool 
         QuicConn.owns(s->qc);
         if (QuicConnV.ok)
         {
-            return s;
+            return s; // NOSONAR(c:S3519): a static_assert on QSRV_OFF_RING bounds the pool
         }
     }
     return NULL;
@@ -446,7 +455,7 @@ static void flush_and_reap(uint8_t *work, uint32_t now_ms)
         // Reap a closed connection, or one idle past the timeout (wrap-safe delta) so a client that
         // never closes cannot leak the fixed pool.
         QuicConn.is_closed(s->qc);
-        if (QuicConnV.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
+        if (QuicConnV.closed || (now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
         {
             s->used = EMBED_FALSE;
         }

@@ -21,9 +21,9 @@ EMBED_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cclink_sum(uint8_t *work);
+void protocore_cclink_sum(const uint8_t *work);
 
-void protocore_cclink_sum(uint8_t *work)
+void protocore_cclink_sum(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bytes = CclinkV.sum_args.bytes;
@@ -107,7 +107,7 @@ void protocore_cclink_parse(uint8_t *work)
     CclinkV.ok = EMBED_TRUE;
 }
 
-void protocore_cclink_get_bit(uint8_t *work)
+void protocore_cclink_get_bit(const uint8_t *work)
 {
     (void)work;
     const uint8_t *bits = CclinkV.get_bit_args.bits;
@@ -122,7 +122,7 @@ void protocore_cclink_get_bit(uint8_t *work)
     CclinkV.ok = (bits[index / 8] >> (index % 8)) & 1u;
 }
 
-void protocore_cclink_set_bit(uint8_t *work)
+void protocore_cclink_set_bit(const uint8_t *work)
 {
     (void)work;
     uint8_t *bits = CclinkV.set_bit_args.bits;
@@ -145,7 +145,7 @@ void protocore_cclink_set_bit(uint8_t *work)
     }
 }
 
-void protocore_cclink_get_word(uint8_t *work)
+void protocore_cclink_get_word(const uint8_t *work)
 {
     (void)work;
     const uint8_t *words = CclinkV.get_word_args.words;

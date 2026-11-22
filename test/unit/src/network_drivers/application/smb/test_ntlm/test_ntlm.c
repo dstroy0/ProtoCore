@@ -222,7 +222,7 @@ void test_timestamp_is_carried_and_bound_in(void)
     TEST_ASSERT_TRUE(memcmp(out, other, 16) != 0);
 }
 
-// The server challenge is the replay defense, so it must be bound into the proof string: the same
+// The server challenge is the replay defense. So it must be bound into the proof string: the same
 // credentials against a different challenge must produce a different response.
 void test_server_challenge_is_bound_into_the_proof(void)
 {

@@ -72,7 +72,7 @@ static const char *entity_of(char c)
 }
 
 // Open a run at the head of the caller's buffer. A missing buffer or no room fails it here.
-static void start(uint8_t *work)
+static void start(const uint8_t *work)
 {
     (void)work;
     XmppV.n = 0;
@@ -84,7 +84,7 @@ static void start(uint8_t *work)
 }
 
 // Terminate the run, or report nothing written.
-static void finish(uint8_t *work)
+static void finish(const uint8_t *work)
 {
     (void)work;
     if (!XmppV.ok)

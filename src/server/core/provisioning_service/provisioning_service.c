@@ -156,7 +156,10 @@ static_assert(PROVISIONING_SERVICE_OFF_CTX % _Alignof(ProvCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define PROVISIONING_SERVICE_CTX(w) ((ProvCtx *)(void *)((w) + PROVISIONING_SERVICE_OFF_CTX))
+#define PROVISIONING_SERVICE_CTX(w)                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const ProvCtx *)(const void *)((w) + PROVISIONING_SERVICE_OFF_CTX),                          \
+        default: (ProvCtx *)(void *)((w) + PROVISIONING_SERVICE_OFF_CTX))
 
 // One octet of the softAP address the catch-all DNS answers with. All-zero is "begin() has not
 // stamped one yet", which reads as the 192.168.4.1 a softAP comes up on - stated here rather than as
@@ -169,7 +172,7 @@ static uint8_t ap_octet(uint8_t *work, uint32_t i)
 }
 
 // The NVS namespace + credential keys (PROTOCORE_PROV_NVS_NAMESPACE / _KEY_SSID / _KEY_PSK) live in
-// protocore_config.h under PROTOCORE_ENABLE_PROVISIONING so a deployment can override them; used across
+// protocore_config.h under PROTOCORE_ENABLE_PROVISIONING so a deployment can override them. Used across
 // the read / clear / save paths (and, for ssid/psk, as the HTML form field names).
 
 // Catch-all DNS: answer every query with our softAP IP (captive-portal hijack).
@@ -234,7 +237,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     UdpListener.reply(protocore_udp_listener_span());
 }
 
-embed_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+embed_bool protocore_prov_load(const uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     (void)work;
 
@@ -259,7 +262,7 @@ embed_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char 
     return EMBED_TRUE;
 }
 
-void protocore_prov_clear(uint8_t *work)
+void protocore_prov_clear(const uint8_t *work)
 {
     (void)work;
 

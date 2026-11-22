@@ -77,7 +77,10 @@ static_assert(SSH_SFTP_OFF_CTX % _Alignof(SshSftpCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define SSH_SFTP_CTX(w) ((SshSftpCtx *)(void *)((w) + SSH_SFTP_OFF_CTX))
+#define SSH_SFTP_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const SshSftpCtx *)(const void *)((w) + SSH_SFTP_OFF_CTX),                                   \
+        default: (SshSftpCtx *)(void *)((w) + SSH_SFTP_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -129,13 +132,13 @@ static void free_all_handles(SftpSession *s)
         free_handle(s, __builtin_ctz(s->open_mask));
     }
 }
-static int alloc_handle(SftpSession *s)
+static int alloc_handle(const SftpSession *s)
 {
     uint32_t free_bits = ~s->open_mask & PROTOCORE_SFTP_HANDLE_BITS;
-    return (free_bits == 0) ? -1 : (int)__builtin_ctz(free_bits);
+    return (free_bits == 0) ? -1 : __builtin_ctz(free_bits);
 }
 // A handle string is our 4-byte big-endian table index. @return the valid index, or -1.
-static int handle_index(SftpSession *s, const uint8_t *h, uint32_t hl)
+static int handle_index(const SftpSession *s, const uint8_t *h, uint32_t hl)
 {
     if (hl != 4)
     {
@@ -850,7 +853,7 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
     }
     case PROTOCORE_SSH_FXP_SETSTAT:
     case PROTOCORE_SSH_FXP_FSETSTAT:
-        // We do not implement chmod/chown/truncate-via-setstat; accept it (OK) so `put` does not fail on the
+        // We do not implement chmod/chown/truncate-via-setstat. Accept it (OK) so `put` does not fail on the
         // trailing FSETSTAT that sets mode/mtime - the values are simply not applied.
         send_status(work, s, id, PROTOCORE_SSH_FX_OK, "");
         return;

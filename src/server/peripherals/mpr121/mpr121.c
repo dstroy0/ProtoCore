@@ -50,11 +50,11 @@ uint8_t *protocore_mpr121_span(void)
     return s_own.span;
 }
 
-void protocore_mpr121_build_init(uint8_t *work);
-void protocore_mpr121_touched(uint8_t *work);
-void protocore_mpr121_word10(uint8_t *work);
+void protocore_mpr121_build_init(const uint8_t *work);
+void protocore_mpr121_touched(const uint8_t *work);
+void protocore_mpr121_word10(const uint8_t *work);
 
-void protocore_mpr121_touched(uint8_t *work)
+void protocore_mpr121_touched(const uint8_t *work)
 {
     (void)work;
     uint8_t status_lo = Mpr121V.touched_args.status_lo;
@@ -63,7 +63,7 @@ void protocore_mpr121_touched(uint8_t *work)
     Mpr121V.value = (uint16_t)(((uint16_t)status_lo | ((uint16_t)status_hi << 8)) & 0x0FFF);
 }
 
-void protocore_mpr121_is_touched(uint8_t *work)
+void protocore_mpr121_is_touched(const uint8_t *work)
 {
     (void)work;
     uint16_t mask = Mpr121V.is_touched_args.mask;
@@ -72,7 +72,7 @@ void protocore_mpr121_is_touched(uint8_t *work)
     Mpr121V.ok = e < MPR121_ELECTRODES && (mask & (uint16_t)(1u << e)) != 0;
 }
 
-void protocore_mpr121_proximity(uint8_t *work)
+void protocore_mpr121_proximity(const uint8_t *work)
 {
     (void)work;
     uint8_t status_hi = Mpr121V.proximity_args.status_hi;
@@ -80,7 +80,7 @@ void protocore_mpr121_proximity(uint8_t *work)
     Mpr121V.ok = (status_hi & 0x10) != 0; // status bit 12
 }
 
-void protocore_mpr121_overcurrent(uint8_t *work)
+void protocore_mpr121_overcurrent(const uint8_t *work)
 {
     (void)work;
     uint8_t status_hi = Mpr121V.overcurrent_args.status_hi;
@@ -88,7 +88,7 @@ void protocore_mpr121_overcurrent(uint8_t *work)
     Mpr121V.ok = (status_hi & 0x80) != 0; // status bit 15
 }
 
-void protocore_mpr121_word10(uint8_t *work)
+void protocore_mpr121_word10(const uint8_t *work)
 {
     (void)work;
     uint8_t lsb = Mpr121V.word10_args.lsb;
@@ -97,7 +97,7 @@ void protocore_mpr121_word10(uint8_t *work)
     Mpr121V.value = (uint16_t)(((uint16_t)lsb | ((uint16_t)msb << 8)) & 0x03FF);
 }
 
-void protocore_mpr121_build_init(uint8_t *work)
+void protocore_mpr121_build_init(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = Mpr121V.build_init_args.buf;
@@ -180,7 +180,10 @@ static_assert(MPR121_OFF_CTX % _Alignof(Mpr121Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define MPR121_CTX(w) ((Mpr121Ctx *)(void *)((w) + MPR121_OFF_CTX))
+#define MPR121_CTX(w)                                                                                                  \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Mpr121Ctx *)(const void *)((w) + MPR121_OFF_CTX),                                      \
+        default: (Mpr121Ctx *)(void *)((w) + MPR121_OFF_CTX))
 
 // Zero is "no address set yet", which is the default address - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.

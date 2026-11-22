@@ -92,7 +92,10 @@ static_assert(TCP_CLIENT_OFF_CTX + sizeof(struct TcpClientStorage) <= PROTOCORE_
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define TCP_CLIENT_CTX(w) ((struct TcpClientStorage *)(void *)((w) + TCP_CLIENT_OFF_CTX))
+#define TCP_CLIENT_CTX(w)                                                                                              \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct TcpClientStorage *)(const void *)((w) + TCP_CLIENT_OFF_CTX),                    \
+        default: (struct TcpClientStorage *)(void *)((w) + TCP_CLIENT_OFF_CTX))
 
 // Hostname resolution goes through @ref Resolver, the library's one DNS owner.
 
@@ -125,7 +128,7 @@ static protocore_net_err cc_recv(void *arg, protocore_pcb *tpcb, protocore_pbuf 
                          .bytes = q->len);
     }
     // Do NOT tcp_recved() here. The window is reopened by protocore_client_read() as the
-    // caller drains (ack-on-consume), so it tracks ring occupancy and the peer can
+    // caller drains (ack-on-consume). So it tracks ring occupancy and the peer can
     // never overflow the ring - same model as the server transport. ACKing on copy
     // would decouple the window from drainage and deadlock a large inbound transfer
     // once PROTOCORE_CLIENT_RX_BUF < TCP_WND.

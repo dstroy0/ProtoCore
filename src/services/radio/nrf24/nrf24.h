@@ -64,11 +64,11 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*init)(uint8_t *, const nrf_bus *, const nrf_config *);
-    embed_bool (*send)(uint8_t *, const nrf_bus *, const uint8_t *, uint8_t);
-    embed_bool (*tx_done)(uint8_t *, const nrf_bus *);
-    void (*set_rx)(uint8_t *, const nrf_bus *);
-    int (*recv)(uint8_t *, const nrf_bus *, uint8_t *, uint8_t, uint8_t *);
+    embed_bool (*init)(const uint8_t *, const nrf_bus *, const nrf_config *);
+    embed_bool (*send)(const uint8_t *, const nrf_bus *, const uint8_t *, uint8_t);
+    embed_bool (*tx_done)(const uint8_t *, const nrf_bus *);
+    void (*set_rx)(const uint8_t *, const nrf_bus *);
+    int (*recv)(const uint8_t *, const nrf_bus *, uint8_t *, uint8_t, uint8_t *);
 } Nrf24Ns;
 PROTOCORE_NS_LAYOUT(Nrf24Ns, init, send, tx_done, set_rx, recv);
 
@@ -79,7 +79,7 @@ PROTOCORE_NS_LAYOUT(Nrf24Ns, init, send, tx_done, set_rx, recv);
  * @param cfg Cfg
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_config *cfg);
+embed_bool protocore_nrf24_init(const uint8_t *work, const nrf_bus *bus, const nrf_config *cfg);
 /**
  * @brief Transmit len bytes (zero-padded to PROTOCORE_NRF24_PAYLOAD). Poll .
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
@@ -88,20 +88,20 @@ embed_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_con
  * @param len Len
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len);
+embed_bool protocore_nrf24_send(const uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len);
 /**
- * @brief True once a transmit has finished (STATUS TX_DS); clears the flag.
+ * @brief True once a transmit finished (STATUS TX_DS); clears the flag.
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_nrf24_tx_done(uint8_t *work, const nrf_bus *bus);
+embed_bool protocore_nrf24_tx_done(const uint8_t *work, const nrf_bus *bus);
 /**
  * @brief Enter receive mode (PRX + CE high); then poll protocore_nrf24_recv().
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  */
-void protocore_nrf24_set_rx(uint8_t *work, const nrf_bus *bus);
+void protocore_nrf24_set_rx(const uint8_t *work, const nrf_bus *bus);
 /**
  * @brief If a frame is waiting, copy it into buf and report the pipe it .
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
@@ -111,7 +111,7 @@ void protocore_nrf24_set_rx(uint8_t *work, const nrf_bus *bus);
  * @param pipe Pipe
  * @return The int.
  */
-int protocore_nrf24_recv(uint8_t *work, const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe);
+int protocore_nrf24_recv(const uint8_t *work, const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe);
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*nrf_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);

@@ -39,7 +39,7 @@ EMBED_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*init)(uint8_t *);
+    embed_bool (*init)(const uint8_t *);
 } DatalinkNs;
 PROTOCORE_NS_LAYOUT(DatalinkNs, init);
 
@@ -48,7 +48,7 @@ PROTOCORE_NS_LAYOUT(DatalinkNs, init);
  * @param work PROTOCORE_DATALINK_BORROW bytes the caller took. Not held past the call.
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_datalink_init(uint8_t *work);
+embed_bool protocore_datalink_init(const uint8_t *work);
 
 /** @brief Module namespace. */
 PROTOCORE_NS DatalinkNs Datalink PROTOCORE_UNUSED = {.init = protocore_datalink_init};

@@ -37,7 +37,7 @@ import re
 #
 # AN UNCLOSED MARKER IS ITSELF REPORTED. A BEGIN with no END would otherwise annotate the rest of
 # the file as generated, the fail-open shape this whole section exists against.
-GENERATED_OPEN = re.compile(r"<!--\s*BEGIN GENERATED\b\s*(?P<label>[^>]*?)\s*-->")
+GENERATED_OPEN = re.compile(r"<!--\s*BEGIN GENERATED\b(?P<label>[^>]*)-->")
 GENERATED_CLOSE = re.compile(r"<!--\s*END GENERATED\b")
 GENERATED_BY = re.compile(r"\(([^)]+)\)\s*$")
 

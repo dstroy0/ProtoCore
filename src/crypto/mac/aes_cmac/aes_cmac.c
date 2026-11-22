@@ -61,11 +61,11 @@ static inline void blk_init(AesBlk *b, const uint8_t key[16])
 {
     protocore_aes_key_expand(key, 4, b->rk);
 }
-static inline void blk_enc(AesBlk *b, const uint8_t in[16], uint8_t out[16])
+static inline void blk_enc(const AesBlk *b, const uint8_t in[16], uint8_t out[16])
 {
     protocore_aes_encrypt_block(b->rk, 10, in, out);
 }
-static inline void blk_free(AesBlk *b)
+static inline void blk_free(const AesBlk *b)
 {
     (void)b; // the software path holds no vendor allocation to release
 }
@@ -97,7 +97,10 @@ static_assert(AES_CMAC_OFF_Y + PROTOCORE_AES_CMAC_LEN <= PROTOCORE_AES_CMAC_BORR
               "blocks - raise it in protocore_config.h, which sums it into the secure arena");
 
 // The regions, at their offsets in the caller's borrow.
-#define AES_CMAC_CTX(w) ((struct AesCmacCtx *)(void *)((w) + AES_CMAC_OFF_CTX))
+#define AES_CMAC_CTX(w)                                                                                                \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct AesCmacCtx *)(const void *)((w) + AES_CMAC_OFF_CTX),                            \
+        default: (struct AesCmacCtx *)(void *)((w) + AES_CMAC_OFF_CTX))
 #define AES_CMAC_LAST(w) ((w) + AES_CMAC_OFF_LAST)
 #define AES_CMAC_X(w) ((w) + AES_CMAC_OFF_X)
 #define AES_CMAC_Y(w) ((w) + AES_CMAC_OFF_Y)

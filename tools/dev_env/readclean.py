@@ -320,7 +320,7 @@ class Blinder(object):
                 out = "PROTOCORE_%s_H" % self._object(m.group(1))
         if out is None:
             # A carved region: `SHA256_OFF_W` and `SHA256_CTX(w)` are the offset and the cast that
-            # reads it. The module stem is blinded; which region it is becomes a letter, because
+            # reads it. The module stem is blinded. Which region it is becomes a letter, because
             # "the second region" is the only thing about it a reader should be trusting.
             m = re.match(r"^([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*?)_OFF_([A-Z0-9_]+)$", name)
             if m:

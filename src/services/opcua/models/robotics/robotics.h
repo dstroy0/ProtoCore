@@ -140,7 +140,7 @@ typedef struct
 
 /**
  * @brief The whole MotionDeviceSystem the server exposes. Own it in your sketch and refresh its fields
- *        each loop from your robot I/O; the robotics resolvers read straight out of it (no copy). String
+ *        each loop from your robot I/O. The robotics resolvers read straight out of it (no copy). String
  *        fields may be null (served as an empty String).
  */
 typedef struct

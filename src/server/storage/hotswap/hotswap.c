@@ -44,13 +44,13 @@ uint8_t *protocore_hotswap_span(void)
     return s_own.span;
 }
 
-void protocore_hotswap_core_init(uint8_t *work);
-void protocore_hotswap_core_io(uint8_t *work);
-void protocore_hotswap_core_probe(uint8_t *work);
+void protocore_hotswap_core_init(const uint8_t *work);
+void protocore_hotswap_core_io(const uint8_t *work);
+void protocore_hotswap_core_probe(const uint8_t *work);
 void protocore_hotswap_poll_at(uint8_t *work);
-void protocore_hotswap_state_name(uint8_t *work);
+void protocore_hotswap_state_name(const uint8_t *work);
 
-void protocore_hotswap_core_init(uint8_t *work)
+void protocore_hotswap_core_init(const uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_init_args.c;
@@ -73,7 +73,7 @@ void protocore_hotswap_core_init(uint8_t *work)
     c->faults = 0;
 }
 
-void protocore_hotswap_core_io(uint8_t *work)
+void protocore_hotswap_core_io(const uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_io_args.c;
@@ -108,7 +108,7 @@ void protocore_hotswap_core_io(uint8_t *work)
     HotswapV.ok = EMBED_TRUE;
 }
 
-void protocore_hotswap_core_due(uint8_t *work)
+void protocore_hotswap_core_due(const uint8_t *work)
 {
     (void)work;
     const HotswapCore *c = HotswapV.core_due_args.c;
@@ -123,7 +123,7 @@ void protocore_hotswap_core_due(uint8_t *work)
     HotswapV.ok = (now - c->last_probe_ms) >= c->probe_interval_ms;
 }
 
-void protocore_hotswap_core_probe(uint8_t *work)
+void protocore_hotswap_core_probe(const uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_probe_args.c;
@@ -188,7 +188,10 @@ static_assert(HOTSWAP_OFF_CTX % _Alignof(HotswapCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define HOTSWAP_CTX(w) ((HotswapCtx *)(void *)((w) + HOTSWAP_OFF_CTX))
+#define HOTSWAP_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HotswapCtx *)(const void *)((w) + HOTSWAP_OFF_CTX),                                    \
+        default: (HotswapCtx *)(void *)((w) + HOTSWAP_OFF_CTX))
 
 static void hs_notify(uint8_t *work, StorageState from, StorageState to)
 {
@@ -310,7 +313,7 @@ void protocore_hotswap_state(uint8_t *work)
     HotswapV.value = HOTSWAP_CTX(work)->core.state;
 }
 
-void protocore_hotswap_state_name(uint8_t *work)
+void protocore_hotswap_state_name(const uint8_t *work)
 {
     (void)work;
     StorageState s = HotswapV.state_name_args.s;

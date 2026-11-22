@@ -62,7 +62,10 @@ static_assert(FLOW_EXPORT_OFF_CTX + sizeof(struct FlowExportStorage) <= PROTOCOR
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define FLOW_EXPORT_CTX(w) ((struct FlowExportStorage *)(void *)((w) + FLOW_EXPORT_OFF_CTX))
+#define FLOW_EXPORT_CTX(w)                                                                                             \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct FlowExportStorage *)(const void *)((w) + FLOW_EXPORT_OFF_CTX),                  \
+        default: (struct FlowExportStorage *)(void *)((w) + FLOW_EXPORT_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -170,7 +173,7 @@ static void patch_u16(uint8_t *work, size_t off, uint16_t v)
 // specification covers this format; RFC 3954 specifies Version 9 only.
 // ---------------------------------------------------------------------------
 
-void protocore_flow_export_v5_header(uint8_t *work)
+void protocore_flow_export_v5_header(const uint8_t *work)
 {
     (void)work;
     FlowExportV.ok = EMBED_FALSE;
@@ -196,7 +199,7 @@ void protocore_flow_export_v5_header(uint8_t *work)
     FlowExportV.ok = EMBED_TRUE;
 }
 
-void protocore_flow_export_v5_record(uint8_t *work)
+void protocore_flow_export_v5_record(const uint8_t *work)
 {
     (void)work;
     FlowExportV.ok = EMBED_FALSE;

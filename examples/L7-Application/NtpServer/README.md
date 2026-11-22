@@ -72,7 +72,7 @@ NTP server listening on UDP/123 (point your devices at this IP)
 [ntp] epoch=1783197559 source=ntp
 ```
 
-`source=ntp` means it is using the internet fallback; once your GPS gets a fix it flips to
+`source=ntp` means it uses the internet fallback; once your GPS gets a fix it flips to
 `source=gps`. `epoch` is the current time in seconds since 1970 (a big number that ticks up).
 
 ---

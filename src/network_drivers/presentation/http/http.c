@@ -57,7 +57,10 @@ static_assert(HTTP_OFF_CTX + sizeof(struct HttpStorage) <= PROTOCORE_HTTP_BORROW
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define HTTP_CTX(w) ((struct HttpStorage *)(void *)((w) + HTTP_OFF_CTX))
+#define HTTP_CTX(w)                                                                                                    \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct HttpStorage *)(const void *)((w) + HTTP_OFF_CTX),                               \
+        default: (struct HttpStorage *)(void *)((w) + HTTP_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -84,7 +87,7 @@ void protocore_http_set_not_found(uint8_t *work)
     HTTP_CTX(work)->not_found = HttpV.cb;
 }
 
-// Every other owner protocore_server_reset() calls exposes this; without it a handler registered here
+// Every other owner protocore_server_reset() calls exposes this. Without it a handler registered here
 // outlives the reset and answers requests the route table no longer knows about.
 void protocore_http_reset(uint8_t *work)
 {
@@ -110,7 +113,7 @@ void protocore_http_set_edge_poll(uint8_t *work)
  * @param code HTTP status integer.
  * @return Pointer to a string-literal reason phrase; never null.
  */
-void protocore_http_status_text(uint8_t *work)
+void protocore_http_status_text(const uint8_t *work)
 {
     (void)work;
     const int code = HttpV.code;
@@ -220,7 +223,7 @@ void protocore_http_status_text(uint8_t *work)
  * @param m Null-terminated method string, e.g. "POST".
  * @return Matching HttpMethod enum value, or HTTP_METHOD_UNKNOWN.
  */
-void protocore_http_parse_method(uint8_t *work)
+void protocore_http_parse_method(const uint8_t *work)
 {
     (void)work;
     const char *m = HttpV.method_args.token;
@@ -271,7 +274,7 @@ void protocore_http_parse_method(uint8_t *work)
 /**
  * @brief Canonical method token for an HttpMethod (for the Allow header).
  */
-void protocore_http_method_name(uint8_t *work)
+void protocore_http_method_name(const uint8_t *work)
 {
     (void)work;
     const HttpMethod m = HttpV.method_args.method;
@@ -315,7 +318,7 @@ void protocore_http_method_name(uint8_t *work)
  * @param req_path    Incoming request path from the parsed HTTP request line.
  * @return True if the route matches the request path.
  */
-void protocore_http_path_matches(uint8_t *work)
+void protocore_http_path_matches(const uint8_t *work)
 {
     (void)work;
     const char *route = HttpV.route_args.route;
@@ -369,7 +372,7 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
  *
  * @return True on a full match (params captured); false otherwise.
  */
-void protocore_http_match_path_params(uint8_t *work)
+void protocore_http_match_path_params(const uint8_t *work)
 {
     (void)work;
     const char *route = HttpV.route_args.route;
@@ -420,7 +423,7 @@ void protocore_http_match_path_params(uint8_t *work)
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
 // linkage (declared in protocore.h): the split handler TUs call it.
-void protocore_http_req_is_head(uint8_t *work)
+void protocore_http_req_is_head(const uint8_t *work)
 {
     (void)work;
     HttpV.ok = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = http_pool[HttpV.slot].method, .other = "HEAD",
@@ -428,7 +431,7 @@ void protocore_http_req_is_head(uint8_t *work)
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
-void protocore_http_allow_append(uint8_t *work)
+void protocore_http_allow_append(const uint8_t *work)
 {
     (void)work;
     char *buf = HttpV.allow.buf;
@@ -598,12 +601,27 @@ static embed_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     {
         return EMBED_FALSE;
     }
-    embed_bool matched = r->is_regex ? regex_match(r->path, req->path)
-                                     : (HttpV.route_args.route = r->path, HttpV.route_args.path = req->path,
-                                        HttpV.route_args.req = req, HttpV.route_args.is_wildcard = r->is_wildcard,
-                                        r->is_param ? Http.match_path_params(protocore_http_span())
-                                                    : Http.path_matches(protocore_http_span()),
-                                        HttpV.ok);
+    embed_bool matched = EMBED_FALSE;
+    if (r->is_regex)
+    {
+        matched = regex_match(r->path, req->path);
+    }
+    else
+    {
+        HttpV.route_args.route = r->path;
+        HttpV.route_args.path = req->path;
+        HttpV.route_args.req = req;
+        HttpV.route_args.is_wildcard = r->is_wildcard;
+        if (r->is_param)
+        {
+            Http.match_path_params(protocore_http_span());
+        }
+        else
+        {
+            Http.path_matches(protocore_http_span());
+        }
+        matched = HttpV.ok;
+    }
     if (!matched)
     {
         return EMBED_FALSE;
@@ -795,8 +813,9 @@ static embed_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
-static embed_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
-                                         embed_bool *path_matched, char *allow_buf, size_t allow_cap)
+static embed_bool dispatch_matched_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMethod method,
+                                         const HttpRoute *r, embed_bool *path_matched, char *allow_buf,
+                                         size_t allow_cap)
 {
 #if PROTOCORE_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)

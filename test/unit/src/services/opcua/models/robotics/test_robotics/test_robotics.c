@@ -23,7 +23,7 @@
 // published numbers.
 
 // The .c, so the Read and Browse resolvers are reachable: they answer the OPC UA server's
-// handler contract (Part 4 sec 5.9.2 / sec 5.11.2), so they are internal to the module and the
+// handler contract (Part 4 sec 5.9.2 / sec 5.11.2). So they are internal to the module and the
 // env does not build this .c itself.
 #include "services/opcua/models/robotics/robotics.c"
 #include "services/opcua/opcua.h"

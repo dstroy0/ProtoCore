@@ -111,7 +111,10 @@ static_assert(SNMP_V3_OFF_CTX + sizeof(struct SnmpV3Storage) <= PROTOCORE_SNMP_V
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define SNMP_V3_CTX(w) ((struct SnmpV3Storage *)(void *)((w) + SNMP_V3_OFF_CTX))
+#define SNMP_V3_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct SnmpV3Storage *)(const void *)((w) + SNMP_V3_OFF_CTX),                          \
+        default: (struct SnmpV3Storage *)(void *)((w) + SNMP_V3_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -275,7 +278,7 @@ static embed_bool parse_scoped(const uint8_t *buf, size_t len, const uint8_t **c
         return EMBED_FALSE;
     }
     *pdu = buf + pdu_start;
-    *pdu_len = (size_t)(d.pos - pdu_start) + SnmpBerV.vlen;
+    *pdu_len = (d.pos - pdu_start) + SnmpBerV.vlen;
     return d.ok;
 }
 
@@ -412,7 +415,7 @@ static size_t build_message(uint8_t *work, long msg_id, embed_bool auth, embed_b
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
     SnmpBer.seq_begin(work);
     const size_t msg = SnmpBerV.tlv.token;
-    SnmpBerV.tlv.ival = (int)SNMP_V3; // msgVersion
+    SnmpBerV.tlv.ival = SNMP_V3; // msgVersion
     SnmpBer.put_integer(work);
     SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
     SnmpBer.seq_begin(work); // msgGlobalData
@@ -572,7 +575,7 @@ void protocore_snmp_v3_process(uint8_t *work)
         return;
     }
     SnmpBer.read_integer(work); // msgVersion
-    if (!SnmpBerV.ok || SnmpBerV.ival != (int)SNMP_V3)
+    if (!SnmpBerV.ok || SnmpBerV.ival != SNMP_V3)
     {
         return;
     }
@@ -694,9 +697,9 @@ void protocore_snmp_v3_process(uint8_t *work)
     if (!engine_match)
     {
         SNMP_V3_CTX(work)->stat_unknown_engine++;
-        SnmpV3V.n = build_report(work, msg_id, EMBED_FALSE, (int)USM_STAT_UNKNOWN_ENGINE,
-                                 SNMP_V3_CTX(work)->stat_unknown_engine, inner_request_id(mdata, mdata_len, req_priv),
-                                 resp, resp_cap);
+        SnmpV3V.n =
+            build_report(work, msg_id, EMBED_FALSE, USM_STAT_UNKNOWN_ENGINE, SNMP_V3_CTX(work)->stat_unknown_engine,
+                         inner_request_id(mdata, mdata_len, req_priv), resp, resp_cap);
         return;
     }
 
@@ -713,8 +716,8 @@ void protocore_snmp_v3_process(uint8_t *work)
           EMBED_CALL(memor.cmp, MemoriaCfg, .src = uname, .other = SNMP_V3_CTX(work)->user, .bytes = uname_len) == 0))
     {
         SNMP_V3_CTX(work)->stat_unknown_user++;
-        SnmpV3V.n = build_report(work, msg_id, EMBED_FALSE, (int)USM_STAT_UNKNOWN_USER,
-                                 SNMP_V3_CTX(work)->stat_unknown_user, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, EMBED_FALSE, USM_STAT_UNKNOWN_USER, SNMP_V3_CTX(work)->stat_unknown_user,
+                                 0, resp, resp_cap);
         return;
     }
 
@@ -723,8 +726,8 @@ void protocore_snmp_v3_process(uint8_t *work)
     if (aparm_len != SNMP_V3_AUTH_PARAM_LEN || req_len > sizeof(SNMP_V3_CTX(work)->v3_a))
     {
         SNMP_V3_CTX(work)->stat_wrong_digest++;
-        SnmpV3V.n = build_report(work, msg_id, EMBED_FALSE, (int)USM_STAT_WRONG_DIGEST,
-                                 SNMP_V3_CTX(work)->stat_wrong_digest, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, EMBED_FALSE, USM_STAT_WRONG_DIGEST, SNMP_V3_CTX(work)->stat_wrong_digest,
+                                 0, resp, resp_cap);
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SNMP_V3_CTX(work)->v3_a, .src = req, .bytes = req_len);
@@ -736,8 +739,8 @@ void protocore_snmp_v3_process(uint8_t *work)
     if (!ct_eq(mac, aparm, SNMP_V3_AUTH_PARAM_LEN))
     {
         SNMP_V3_CTX(work)->stat_wrong_digest++;
-        SnmpV3V.n = build_report(work, msg_id, EMBED_FALSE, (int)USM_STAT_WRONG_DIGEST,
-                                 SNMP_V3_CTX(work)->stat_wrong_digest, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, EMBED_FALSE, USM_STAT_WRONG_DIGEST, SNMP_V3_CTX(work)->stat_wrong_digest,
+                                 0, resp, resp_cap);
         return;
     }
 
@@ -752,8 +755,8 @@ void protocore_snmp_v3_process(uint8_t *work)
     if ((uint32_t)req_boots != SNMP_V3_CTX(work)->boots || dt > 150)
     {
         SNMP_V3_CTX(work)->stat_not_in_time++;
-        SnmpV3V.n = build_report(work, msg_id, EMBED_TRUE, (int)USM_STAT_NOT_IN_TIME,
-                                 SNMP_V3_CTX(work)->stat_not_in_time, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, EMBED_TRUE, USM_STAT_NOT_IN_TIME, SNMP_V3_CTX(work)->stat_not_in_time, 0,
+                                 resp, resp_cap);
         return;
     }
 
@@ -766,8 +769,8 @@ void protocore_snmp_v3_process(uint8_t *work)
         if (!SNMP_V3_CTX(work)->priv_set || pparm_len != SNMP_V3_PRIV_PARAM_LEN)
         {
             SNMP_V3_CTX(work)->stat_decrypt++;
-            SnmpV3V.n = build_report(work, msg_id, EMBED_TRUE, (int)USM_STAT_DECRYPT, SNMP_V3_CTX(work)->stat_decrypt,
-                                     0, resp, resp_cap);
+            SnmpV3V.n = build_report(work, msg_id, EMBED_TRUE, USM_STAT_DECRYPT, SNMP_V3_CTX(work)->stat_decrypt, 0,
+                                     resp, resp_cap);
             return;
         }
         BerDec md;

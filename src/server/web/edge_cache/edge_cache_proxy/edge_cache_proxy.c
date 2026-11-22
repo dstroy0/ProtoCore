@@ -87,7 +87,8 @@ typedef struct
 {
     embed_bool active;
     EdgeEntry *entry;
-    uint32_t off, end;
+    uint32_t off;
+    uint32_t end;
 } EdgeServeCursor;
 
 #if PROTOCORE_ENABLE_EDGE_MESH
@@ -158,7 +159,10 @@ static_assert(EDGE_CACHE_PROXY_OFF_CTX % _Alignof(EdgeCacheProxyCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define EDGE_CACHE_PROXY_CTX(w) ((EdgeCacheProxyCtx *)(void *)((w) + EDGE_CACHE_PROXY_OFF_CTX))
+#define EDGE_CACHE_PROXY_CTX(w)                                                                                        \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const EdgeCacheProxyCtx *)(const void *)((w) + EDGE_CACHE_PROXY_OFF_CTX),                    \
+        default: (EdgeCacheProxyCtx *)(void *)((w) + EDGE_CACHE_PROXY_OFF_CTX))
 
 #if PROTOCORE_ENABLE_DBM
 // L1 write-back hook: spill an evicted victim to L2 (edge_sd_put skips no-validator / oversize entries).
@@ -402,7 +406,7 @@ static void serve_hit(uint8_t *work, uint8_t slot, EdgeEntry *e, uint32_t now, c
 
 // Serve a non-cacheable / non-200 origin response through a transient unindexed store slot, so the
 // serve source outlives the fetch (which the caller frees) and no-store content is never re-served.
-static void serve_passthrough(uint8_t *work, uint8_t slot, EdgeFetch *f)
+static void serve_passthrough(uint8_t *work, uint8_t slot, const EdgeFetch *f)
 {
     EdgeCacheV.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCacheV.store_alloc_args.canon = "";
@@ -859,7 +863,7 @@ static embed_bool mesh_advance_or_origin(uint8_t *work, EdgeFetchSlot *fs, uint3
 }
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 
-static embed_bool start_fetch(uint8_t *work, uint8_t slot, HttpReq *req, EdgeRouteMap *m, const char *canon,
+static embed_bool start_fetch(uint8_t *work, uint8_t slot, const HttpReq *req, EdgeRouteMap *m, const char *canon,
                               EdgeEntry *reval, uint32_t now)
 {
     int fi = alloc_fetch(work);
@@ -974,7 +978,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     // accessor rather than a parameter.
     uint8_t *work = protocore_edge_cache_proxy_span();
 
-    // `registered` is the whole test now: it was always the real question, and the stored server
+    // `registered` is the whole test now. It was always the real question, and the stored server
     // pointer it was AND-ed with was set by the same call that set it.
     if (!EDGE_CACHE_PROXY_CTX(work)->registered || slot >= MAX_CONNS)
     {
@@ -1021,7 +1025,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 
 #if PROTOCORE_ENABLE_RANGE
     // Capture the Range header now, while http_pool[slot] is the client request: a miss serves from the
-    // poll after the async fetch has reused that buffer, so serve_hit resolves the window against this copy.
+    // poll after the async fetch reused that buffer, so serve_hit resolves the window against this copy.
     const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), req, "Range");
     const char *rh = http_parser_text3;
     EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot], .src = rh ? rh : "",

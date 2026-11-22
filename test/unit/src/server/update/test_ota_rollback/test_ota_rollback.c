@@ -148,7 +148,7 @@ void test_a_tick_commits_a_confirmed_image_through_the_seam(void)
     TEST_ASSERT_FALSE(protocore_host_img_rolled_back());
 }
 
-// An image that never confirms itself is rolled back through the seam once the window has closed.
+// An image that never confirms itself is rolled back through the seam once the window closed.
 void test_a_tick_rolls_back_an_unconfirmed_image_through_the_seam(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);

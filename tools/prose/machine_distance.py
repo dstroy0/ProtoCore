@@ -137,7 +137,7 @@ def top_words(profiles, ranks=RANKS):
     """The union of the commonest words of each profile, as the axis to compare on."""
     held = set()
     for one in profiles:
-        held.update(sorted(one, key=lambda key: -one[key])[:ranks])
+        held.update(sorted(one, key=one.__getitem__, reverse=True)[:ranks])
     return held
 
 

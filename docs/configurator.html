@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ProtoCore - build configurator</title>
 <style>
-  /* Light is the default; dark applies from the OS preference, and the header toggle
+  /* Light is the default. Dark applies from the OS preference, and the header toggle
      forces either theme via [data-theme] (which beats the media query both ways). */
   :root {
     color-scheme: light dark;
@@ -585,7 +585,7 @@ document.getElementById("theme").onclick = () => { state.theme = currentTheme() 
 
 /* ---- init -------------------------------------------------------------- */
 function initCollapse() {
-  // Open a section by default only if it holds an enabled feature; collapse the rest
+  // Open a section by default only if it holds an enabled feature. Collapse the rest
   // (incl. the big core-knob bucket) so the page opens compact instead of 30 screens tall.
   MODEL.groups.forEach(g => { state.collapsed[g] = g === CORE ? true : onCount(g) === 0; });
 }

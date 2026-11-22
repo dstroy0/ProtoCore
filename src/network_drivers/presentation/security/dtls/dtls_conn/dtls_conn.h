@@ -301,8 +301,8 @@ typedef struct
  * @var DtlsConnNs::init  bind a connection to its configuration and peer address
  * @var DtlsConnNs::process  turn one received datagram, writing whatever it owes back into out
  * @var DtlsConnNs::timeout_ms  milliseconds until the flight needs retransmitting
- * @var DtlsConnNs::on_timeout  retransmit the current flight once that timeout has passed
- * @var DtlsConnNs::established  whether the handshake has completed
+ * @var DtlsConnNs::on_timeout  retransmit the current flight once that timeout passed
+ * @var DtlsConnNs::established  whether the handshake completed
  * @var DtlsConnNs::alert  the alert that ended the connection, or 0
  * @var DtlsConnNs::app_write_keys  the application-epoch write keys
  * @var DtlsConnNs::app_read_keys  the application-epoch read keys
@@ -341,13 +341,13 @@ typedef struct
 {
     void (*const init)(uint8_t *work);
     void (*const process)(uint8_t *work);
-    void (*const timeout_ms)(uint8_t *work);
+    void (*const timeout_ms)(const uint8_t *work);
     void (*const on_timeout)(uint8_t *work);
-    void (*const established)(uint8_t *work);
-    void (*const alert)(uint8_t *work);
-    void (*const app_write_keys)(uint8_t *work);
-    void (*const app_read_keys)(uint8_t *work);
-    void (*const local_cid)(uint8_t *work);
+    void (*const established)(const uint8_t *work);
+    void (*const alert)(const uint8_t *work);
+    void (*const app_write_keys)(const uint8_t *work);
+    void (*const app_read_keys)(const uint8_t *work);
+    void (*const local_cid)(const uint8_t *work);
     void (*const open_app)(uint8_t *work);
     void (*const seal_app)(uint8_t *work);
 } DtlsConnNs;
@@ -356,13 +356,13 @@ typedef struct
 // else an entry needs is an operand in DtlsServerV or a region of the borrow at a fixed offset.
 void protocore_dtls_server_init(uint8_t *work);
 void protocore_dtls_server_process(uint8_t *work);
-void protocore_dtls_server_timeout_ms(uint8_t *work);
+void protocore_dtls_server_timeout_ms(const uint8_t *work);
 void protocore_dtls_server_on_timeout(uint8_t *work);
-void protocore_dtls_server_established(uint8_t *work);
-void protocore_dtls_server_alert(uint8_t *work);
-void protocore_dtls_server_app_write_keys(uint8_t *work);
-void protocore_dtls_server_app_read_keys(uint8_t *work);
-void protocore_dtls_server_local_cid(uint8_t *work);
+void protocore_dtls_server_established(const uint8_t *work);
+void protocore_dtls_server_alert(const uint8_t *work);
+void protocore_dtls_server_app_write_keys(const uint8_t *work);
+void protocore_dtls_server_app_read_keys(const uint8_t *work);
+void protocore_dtls_server_local_cid(const uint8_t *work);
 void protocore_dtls_server_open_app(uint8_t *work);
 void protocore_dtls_server_seal_app(uint8_t *work);
 

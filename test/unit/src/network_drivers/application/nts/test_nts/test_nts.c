@@ -230,7 +230,7 @@ void test_ke_parse_recovers_the_request_it_was_built_from(void)
 }
 
 // sec 4: "The sequence SHALL be terminated by a 'End of Message' record." A Next Protocol record on
-// its own is not terminated, so it is not a message. A record whose Body Length runs past the buffer
+// its own is not terminated. So it is not a message. A record whose Body Length runs past the buffer
 // is not a record at all. A lone End of Message record is the shortest legal message: 4 octets.
 void test_ke_parse_requires_end_of_message(void)
 {

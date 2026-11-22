@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the P4 crypto microbench (the ESP32-P4 twin of pio's rig_s3_cryptobench) via arduino-cli, then print
-# the esptool flash command. The bench source is the SHARED ../src/main_cryptobench.cpp; this script stages it
+# the esptool flash command. The bench source is the SHARED ../src/main_cryptobench.cpp. This script stages it
 # and the RSA host-key fixture into the P4CryptoBench sketch dir so the one bench builds under both toolchains.
 #
 #   REPO=/path/to/ProtoCore ./build_p4_cryptobench.sh

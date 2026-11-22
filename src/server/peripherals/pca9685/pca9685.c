@@ -52,11 +52,11 @@ uint8_t *protocore_pca9685_span(void)
     return s_own.span;
 }
 
-void protocore_pca9685_channel_reg(uint8_t *work);
-void protocore_pca9685_prescale(uint8_t *work);
+void protocore_pca9685_channel_reg(const uint8_t *work);
+void protocore_pca9685_prescale(const uint8_t *work);
 void protocore_pca9685_set_pwm_bytes(uint8_t *work);
 
-void protocore_pca9685_prescale(uint8_t *work)
+void protocore_pca9685_prescale(const uint8_t *work)
 {
     (void)work;
     uint32_t freq_hz = Pca9685V.prescale_args.freq_hz;
@@ -80,7 +80,7 @@ void protocore_pca9685_prescale(uint8_t *work)
     Pca9685V.value = (uint8_t)pre;
 }
 
-void protocore_pca9685_channel_reg(uint8_t *work)
+void protocore_pca9685_channel_reg(const uint8_t *work)
 {
     (void)work;
     uint8_t channel = Pca9685V.channel_reg_args.channel;
@@ -93,7 +93,7 @@ void protocore_pca9685_channel_reg(uint8_t *work)
     Pca9685V.value = (uint8_t)(PCA9685_REG_LED0_ON_L + 4 * channel);
 }
 
-void protocore_pca9685_us_to_count(uint8_t *work)
+void protocore_pca9685_us_to_count(const uint8_t *work)
 {
     (void)work;
     uint32_t microseconds = Pca9685V.us_to_count_args.microseconds;
@@ -160,7 +160,10 @@ static_assert(PCA9685_OFF_CTX % _Alignof(Pca9685Ctx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define PCA9685_CTX(w) ((Pca9685Ctx *)(void *)((w) + PCA9685_OFF_CTX))
+#define PCA9685_CTX(w)                                                                                                 \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const Pca9685Ctx *)(const void *)((w) + PCA9685_OFF_CTX),                                    \
+        default: (Pca9685Ctx *)(void *)((w) + PCA9685_OFF_CTX))
 
 // Zero is "not set yet", which is the configured default - stated here rather than on the
 // declaration so the context carries no initializer and can live in a borrow that arrives zeroed.

@@ -96,7 +96,7 @@ embed_bool protocore_sunspec_write_i32(SunSpecWriter *w, int32_t v);
 embed_bool protocore_sunspec_write_string(SunSpecWriter *w, const char *s,
                                           size_t nregs);        ///< nregs registers, NUL-padded
 embed_bool protocore_sunspec_write_end_model(SunSpecWriter *w); ///< [0xFFFF][0]
-size_t protocore_sunspec_writer_finish(SunSpecWriter *w);       ///< bytes written, or 0 on overflow
+size_t protocore_sunspec_writer_finish(const SunSpecWriter *w); ///< bytes written, or 0 on overflow
 
 EMBED_END_DECLS
 

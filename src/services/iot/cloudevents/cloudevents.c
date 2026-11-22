@@ -158,7 +158,7 @@ void protocore_cloud_events_build_structured(uint8_t *work)
 // Take the context attributes off the message's headers, and report whether the three REQUIRED ones
 // arrived. The payload is the HTTP body in this mode (HTTP Protocol Binding 1.0.2 sec 3.1.2), so the
 // data members are cleared rather than filled.
-void protocore_cloud_events_read_binary(uint8_t *work)
+void protocore_cloud_events_read_binary(const uint8_t *work)
 {
     (void)work;
     CloudEventsV.ok = EMBED_FALSE;

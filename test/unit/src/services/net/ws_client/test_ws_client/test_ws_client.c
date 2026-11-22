@@ -361,7 +361,7 @@ void test_rfc6455_64kib_frame(void)
     TEST_ASSERT_EQUAL_size_t(65546, WsClientV.frame.consumed);
 }
 
-// A frame is delivered only once all of it has arrived: an announced length longer than what is
+// A frame is delivered only once all of it arrived: an announced length longer than what is
 // present is refused, in the short form and in both extended forms.
 void test_parse_refuses_an_incomplete_frame(void)
 {

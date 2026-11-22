@@ -9,6 +9,12 @@ from .bans import BANNED
 from .grammar import GRAMMAR_AUTHORITY
 from .locale import LOCALE
 
+DOC_119 = "code-documentation:119"
+DOC_146 = "code-documentation:146"
+DOC_148_COMMENTS_155 = "code-documentation:148, code-comments:155"
+DOC_141 = "code-documentation:141"
+DOC_141_ONE_AUTHOR = "code-documentation:141, one author"
+
 
 
 # ====================================================================
@@ -69,9 +75,9 @@ AUTHORITY = {
     r"\bis the one\b": "code-documentation:116",
     r"\bwhich is (why|what|the)\b": "code-documentation:117, code-comments:206",
     r"\band nothing else\b": "code-documentation:118, code-comments:207",
-    r"\bthat is the whole\b": "code-documentation:119",
-    r"\bis the whole (of|rule|point|thing|question|claim|job|story)\b": "code-documentation:119",
-    r"\bthe whole (point|question|claim|rule|job|story) (is|was)\b": "code-documentation:119",
+    r"\bthat is the whole\b": DOC_119,
+    r"\bis the whole (of|rule|point|thing|question|claim|job|story)\b": DOC_119,
+    r"\bthe whole (point|question|claim|rule|job|story) (is|was)\b": DOC_119,
     r"\bwhat survives\b": "code-documentation:120",
     # The second pass. code-documentation:126 through :131.
     r"\bis what makes\b": "code-documentation:126, code-comments:205",
@@ -85,46 +91,46 @@ AUTHORITY = {
     r"\bis precisely (what|why|the)\b": "code-documentation:131",
     r"\b(what|that) matters (is|here|max)\b": "code-documentation:131",
     # No rhetorical sentence shapes. code-documentation:146, code-comments:199.
-    r"cost and not a defect": "code-documentation:146",
-    r"\b(is|was|are|were) an? [\w-]+ and not an? [\w-]+": "code-documentation:146",
-    r"\b(is|was|are|were) the [\w-]+ and not the [\w-]+": "code-documentation:146",
-    r"(?m)(?:\A|(?<=[.!?] ))(?:(?:An?|The) )?[\w-]+, not (?:(?:an?|the) )?[\w-]+\.(?:\s|\Z)": "code-documentation:146",
-    r"\bhas no call and no text:": "code-documentation:146",
+    r"cost and not a defect": DOC_146,
+    r"\b(is|was|are|were) an? [\w-]+ and not an? [\w-]+": DOC_146,
+    r"\b(is|was|are|were) the [\w-]+ and not the [\w-]+": DOC_146,
+    r"(?m)(?:\A|(?<=[.!?] ))(?:(?:An?|The) )?[\w-]+, not (?:(?:an?|the) )?[\w-]+\.(?:\s|\Z)": DOC_146,
+    r"\bhas no call and no text:": DOC_146,
     # Nothing inanimate speaks. code-documentation:147, code-comments:156.
     r"\b(name|definition|token|type|structure|constraint)s?\s+(says|say|signals|signal|encodes|encode|"
     r"conveys|convey|announces|announce|advertises|advertise|makes clear|make clear)\b": "code-documentation:147, code-comments:156",
     # No conversational filler. Four forms are named by name in both files.
     r"load-bearing": "code-documentation:148",
-    r"\blet['’]s\b": "code-documentation:148, code-comments:155",
-    r"\bdiv(e|es|ing) (into|in|deeper)\b": "code-documentation:148, code-comments:155",
-    r"\b(certainly|absolutely|of course)[!,]": "code-documentation:148, code-comments:155",
-    r"\bit (is|'s) (important|worth|useful|helpful) (to note|noting|to remember|to mention|mentioning)\b": "code-documentation:148, code-comments:155",
+    r"\blet['’]s\b": DOC_148_COMMENTS_155,
+    r"\bdiv(e|es|ing) (into|in|deeper)\b": DOC_148_COMMENTS_155,
+    r"\b(certainly|absolutely|of course)[!,]": DOC_148_COMMENTS_155,
+    r"\bit (is|'s) (important|worth|useful|helpful) (to note|noting|to remember|to mention|mentioning)\b": DOC_148_COMMENTS_155,
     # The machine register. code-documentation:141.
-    r"\bas an ai\b": "code-documentation:141",
-    r"\bas a language model\b": "code-documentation:141",
-    r"\bmy training data\b": "code-documentation:141",
-    r"\b(i apologi[sz]e|my apologies|sorry for the)\b": "code-documentation:141",
+    r"\bas an ai\b": DOC_141,
+    r"\bas a language model\b": DOC_141,
+    r"\bmy training data\b": DOC_141,
+    r"\b(i apologi[sz]e|my apologies|sorry for the)\b": DOC_141,
     # One author. The register code-documentation:141 bans, in the form that credits a session, a
     # role or orior with the author's own observation.
     r"\b(a|the|one|each|every|another) (later|earlier|previous|next|other|second|third|peer"
-    r"|builder) sessions?\b": "code-documentation:141, one author",
-    r"\bpeer sessions?\b": "code-documentation:141, one author",
-    r"\b(every|each) session (builds|reads|takes|writes|runs)\b": "code-documentation:141, one author",
-    r"\bin (one|a single|the same|an earlier|a later) session\b": "code-documentation:141, one author",
-    r"\bthis session(?: (?:read|wrote|found|ran|measured|produced)\b|['’]s work\b)": "code-documentation:141, one author",
-    r"\bsessions? (fed|relayed|reported|contributed)\b": "code-documentation:141, one author",
-    r"\b(the|your|our) theorists?\b": "code-documentation:141, one author",
-    r"\bproject architect\b": "code-documentation:141, one author",
-    r"\bprecision measurement specialist\b": "code-documentation:141, one author",
-    r"\blead of the private\b": "code-documentation:141, one author",
+    r"|builder) sessions?\b": DOC_141_ONE_AUTHOR,
+    r"\bpeer sessions?\b": DOC_141_ONE_AUTHOR,
+    r"\b(every|each) session (builds|reads|takes|writes|runs)\b": DOC_141_ONE_AUTHOR,
+    r"\bin (one|a single|the same|an earlier|a later) session\b": DOC_141_ONE_AUTHOR,
+    r"\bthis session(?: (?:read|wrote|found|ran|measured|produced)\b|['’]s work\b)": DOC_141_ONE_AUTHOR,
+    r"\bsessions? (fed|relayed|reported|contributed)\b": DOC_141_ONE_AUTHOR,
+    r"\b(the|your|our) theorists?\b": DOC_141_ONE_AUTHOR,
+    r"\bproject architect\b": DOC_141_ONE_AUTHOR,
+    r"\bprecision measurement specialist\b": DOC_141_ONE_AUTHOR,
+    r"\blead of the private\b": DOC_141_ONE_AUTHOR,
     r"\b(relayed|reported|flagged|found|caught|reproduced) by (the |a )?(\w+ )?(session|peer"
-    r"|theorist|writer|specialist|architect)\b": "code-documentation:141, one author",
-    r"\b(relayed|reported|flagged|found|caught|written) by orior\b": "code-documentation:141, one author",
-    r"\borior['’]s (reading|framing|bounds?|why|formalization|hand conversion)\b": "code-documentation:141, one author",
-    r"\b(agreed with|per) orior\b": "code-documentation:141, one author",
-    r"\borior (confirmed|checked|changed|gave|framed)\b": "code-documentation:141, one author",
-    r"\bbiohub-cell-tracking-\d+\b": "code-documentation:141, one author",
-    r"\bleaderboard disruptor\b": "code-documentation:141, one author",
+    r"|theorist|writer|specialist|architect)\b": DOC_141_ONE_AUTHOR,
+    r"\b(relayed|reported|flagged|found|caught|written) by orior\b": DOC_141_ONE_AUTHOR,
+    r"\borior['’]s (reading|framing|bounds?|why|formalization|hand conversion)\b": DOC_141_ONE_AUTHOR,
+    r"\b(agreed with|per) orior\b": DOC_141_ONE_AUTHOR,
+    r"\borior (confirmed|checked|changed|gave|framed)\b": DOC_141_ONE_AUTHOR,
+    r"\bbiohub-cell-tracking-\d+\b": DOC_141_ONE_AUTHOR,
+    r"\bleaderboard disruptor\b": DOC_141_ONE_AUTHOR,
     # The which-is clause again, in the form the later tier wrote it.
     r"\bwhich is (what|why|how|the (difference|point|whole|answer|reason|rule))\b": "code-comments:206",
 }

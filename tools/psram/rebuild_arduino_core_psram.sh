@@ -11,7 +11,7 @@
 #   The stock precompiled arduino-esp32 core (verified 2.0.x and 3.3.x) ships
 #   CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY OFF. With it off, EXT_RAM_BSS_ATTR expands
 #   to nothing and the "PSRAM" array silently stays in internal DRAM (empirically: the
-#   symbol lands at 0x3fxxxxxx, and there is no .ext_ram.bss output section). The linker
+#   symbol lands at 0x3fxxxxxx. There is no .ext_ram.bss output section). The linker
 #   script even routes .ext_ram.bss *into* .dram0.bss. Only a core rebuilt with the flag
 #   regenerates sections.ld to place .ext_ram.bss in the external-RAM segment (0x3Cxxxxxx)
 #   and compiles the startup code that maps/zeroes it. Just -D-defining the macro against

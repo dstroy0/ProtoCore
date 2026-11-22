@@ -9,7 +9,7 @@ regenerates them from their real sources so they cannot drift again, writing eac
 into a marked region:
 
   FEATURE-FLAGS    every PROTOCORE_ENABLE_* flag + default + one line   (protocore_config.h)
-  CONFIG-OVERRIDES every tunable #define constant + default + desc  (protocore_config.h)
+  CONFIG-OVERRIDES every tunable #define constant + default + desc  (protocore_config.h, buffer_sizing.h)
   SOURCE-TREE      an ASCII tree of every library file              (src/)
   BUILD-FOOTPRINT  measured flash/RAM per feature                   (docs/footprints.json)
 
@@ -27,6 +27,8 @@ from tools.ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 CONFIG_H = os.path.join(ROOT, "src", "protocore_config.h")
+# The tunable constants: the feature flags and the few knobs of the entry point, and the sizes of buffer_sizing.h.
+SIZING_H = os.path.join(ROOT, "src", "config", "memory_sizing", "buffer_sizing.h")
 SRC_DIR = os.path.join(ROOT, "src")
 FOOTPRINTS = os.path.join(ROOT, "docs", "footprints.json")
 README = os.path.join(ROOT, "docs", "README.md")
@@ -57,7 +59,7 @@ def _doc_brief(cfg, name):
 
 def parse_config():
     """Return (flags, consts): each a list of (name, default, description)."""
-    cfg = open(CONFIG_H, encoding="utf-8").read()
+    cfg = "\n".join(open(path, encoding="utf-8").read() for path in (CONFIG_H, SIZING_H))
     guards = re.findall(r"^#ifndef ([A-Z][A-Z0-9_]+)\s*\n#define \1(?:\s+(.+?))?\s*$", cfg, re.M)
     flags, consts = [], []
     for name, val in guards:

@@ -11,7 +11,7 @@
  * 1005 (no height) and 1006 (with antenna height) that advertise the base's surveyed position.
  *
  * RTCM 10403.x numbers every field (DFxxx) and packs them big-endian, MSB-first, with no byte alignment
- * inside the payload; this codec follows that layout exactly and is verified byte-for-byte against pyrtcm
+ * inside the payload. This codec follows that layout exactly and is verified byte-for-byte against pyrtcm
  * / RTKLIB. ECEF coordinates use the standard 0.0001 m (0.1 mm) resolution as 38-bit signed integers, so
  * they are carried here in units of 0.1 mm.
  *

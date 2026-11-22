@@ -11,7 +11,7 @@
 //   * pc_oidc_verify           - the end-to-end entry point (jwks_find + verify_with_key combined)
 // Everything here is deterministic CPU work over fixed BSS/scratch buffers - the verifier never
 // fetches anything (JWKS/discovery retrieval over HTTPS is the caller's job and is deliberately out
-// of scope on this rig, which has no network attached). The cheap parse ops get a large N; the two
+// of scope on this rig, which has no network attached). The cheap parse ops get a large N. The two
 // crypto-bearing verify ops get a small N (mirroring ssh_rsa_2048_verify's N=8 in the crypto rig),
 // since each does a full RSA public-key operation.
 //

@@ -83,7 +83,7 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    void (*defaults)(uint8_t *, QuicTransportParams *);
+    void (*defaults)(const uint8_t *, QuicTransportParams *);
     size_t (*encode)(uint8_t *, const QuicTransportParams *, uint8_t *, size_t);
     embed_bool (*parse)(uint8_t *, const uint8_t *, size_t, QuicTransportParams *);
 } QuicTpNs;
@@ -94,7 +94,7 @@ PROTOCORE_NS_LAYOUT(QuicTpNs, defaults, encode, parse);
  * @param work PROTOCORE_QUIC_TP_BORROW bytes the caller took. Not held past the call.
  * @param tp Tp
  */
-void protocore_quic_tp_defaults(uint8_t *work, QuicTransportParams *tp);
+void protocore_quic_tp_defaults(const uint8_t *work, QuicTransportParams *tp);
 /**
  * @brief Encode the server's transport parameters into out. Emits, in .
  * @param work PROTOCORE_QUIC_TP_BORROW bytes the caller took. Not held past the call.

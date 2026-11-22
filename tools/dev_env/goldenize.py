@@ -21,6 +21,8 @@ import nsconv as N
 from codemask import code_mask
 from funnel import find_context, funnel
 
+DECLS_OPEN = "EMBED_BEGIN_DECLS\n\n"
+
 R = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # --dry: every write goes through emit(), which prints the diff and leaves the file alone. The
@@ -161,7 +163,7 @@ RESULT = {
 }
 
 
-# widths and shapes protocore_config.h already brings in; anything else a parameter names has to be
+# widths and shapes protocore_config.h already brings in. Anything else a parameter names has to be
 # forward-declared, or the golden header would need a sibling include to see it.
 BUILTIN = {
     "void",
@@ -853,7 +855,7 @@ def wraps_body(s, at):
             depth -= 1
             continue
         # The gate's own #endif. Only the linkage close and the include guard's #endif may follow
-        # it - a declaration after it is one this condition does not cover, so it is not the gate.
+        # it - a declaration after it is one this condition does not cover. So it is not the gate.
         rest = re.sub(r"/\*.*?\*/|//[^\n]*", " ", s[at + m.end() :], flags=re.S)
         rest = re.sub(r"^[ \t]*PROTOCORE_(?:BEGIN|END)_DECLS[ \t]*$", "", rest, flags=re.M)
         return re.sub(r"^[ \t]*#[ \t]*endif\b[^\n]*$", "", rest, count=1, flags=re.M).strip() == ""
@@ -1042,7 +1044,7 @@ def gen_ns(spec):
     # a local, and handed straight to a helper as an argument.
     inst = re.search(r"static\s+(?:struct\s+)?\w+Internal\s+(s_\w+)\s*=", c)
     # A _Static_assert sized against a member of the storage instance outlives that instance, and
-    # has to stay a constant expression, so it asks the type rather than an object.
+    # has to stay a constant expression. So it asks the type rather than an object.
     store = re.search(r"static\s+(?:struct\s+)?(\w+Storage)\s+(s_\w+)\s*[=;]", c)
     # How the storage type is spelled, read from the ORIGINAL source: `struct <X>Storage { ... };`
     # carries a tag, `typedef struct { ... } <X>Storage;` does not, and naming a tagless one
@@ -1432,7 +1434,7 @@ def scan(hpath):
         )
     moved, held = classify_includes(s)
     suites = find_suites(hpath, mod)
-    # A module with no file-static context holds nothing between calls, so it carves no borrow,
+    # A module with no file-static context holds nothing between calls. So it carves no borrow,
     # states none, and needs no span accessor - tls_policy is the shape. That is read off the .c
     # rather than chosen: the state is there or it is not.
     collide_notes = []
@@ -1725,7 +1727,7 @@ def gen_header(spec, original):
         )
         + "\n"
         + "#if %s\n\n" % spec["gate"]
-        + "EMBED_BEGIN_DECLS\n\n"
+        + DECLS_OPEN
         + note
         + "\n".join(lines)
         + "\n".join(body)
@@ -1753,7 +1755,7 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
 
     A vtable module is already called through its namespace - `Base64.decode(a, b, c)` - so what a
     caller writes is `<Obj>.<entry>`, not the flat name the .c defines. The entry states that
-    spelling as `call`, and it is what the pattern matches; the lookbehind that keeps a flat name off
+    spelling as `call`, and it is what the pattern matches. The lookbehind that keeps a flat name off
     `x.name(` is dropped for it, since the dot IS the call here.
     """
     obj = spec["object"]
@@ -1871,7 +1873,7 @@ def above_capability_split(s, pos):
     exist for the other arm, and the link fails on whichever arm the env actually builds:
     mdns_service's portable responder called a `protocore_mdns_service_span` that only the vendor
     arm defined. The outermost open `#if` at @p pos is the module's own gate and the accessor
-    belongs under it; the next one in is a capability split and the accessor belongs above it.
+    belongs under it. The next one in is a capability split and the accessor belongs above it.
     """
     open_ifs = []
     for m in re.finditer(r"^[ \t]*#[ \t]*(if\w*|endif)\b[^\n]*\n", s[:pos], re.M):
@@ -2229,10 +2231,10 @@ def restructure_source(spec):
                 if not m2:
                     break
                 k += m2.end()
-            s = s[:k] + "EMBED_BEGIN_DECLS\n\n" + s[k:]
+            s = s[:k] + DECLS_OPEN + s[k:]
 
     # a module that called its own flat names now stages the args and calls the static entry: the
-    # borrow is already in hand, so there is no span to fetch.
+    # borrow is already in hand. So there is no span to fetch.
     # A module with no flat entries left has no self-calls to rewrite. The guard is not cosmetic:
     # "|".join over an empty set is the EMPTY STRING, so the alternation below becomes `()` - which
     # matches at every `(` in the file with an empty group - and the first lookup raises KeyError on
@@ -2379,7 +2381,7 @@ def restructure_source(spec):
     # file, and the shape pass below wraps it.
     end = gate_endif(s)
     s = s[:end] + defn + "\n\nEMBED_END_DECLS\n\n" + s[end:]
-    # the golden file shape is the same pass `shape` runs, so it runs here rather than being a
+    # the golden file shape is the same pass `shape` runs. So it runs here rather than being a
     # second command a conversion can forget: config alone above the gate, everything else below
     s, how = shape_text(s, p, spec.get("gate"))
     notes.append("shape: " + how)
@@ -2759,7 +2761,7 @@ def handle_members(data_lines):
     A function-pointer member is read from INSIDE its parentheses. Taking the last identifier on the
     line gives the last PARAMETER instead: presentation.h stores an application callback as
     `void (*poll)(uint8_t slot);`, which came back as `slot`, so every `HttpConn.poll` call site was
-    left behind pointing at a member that had moved.
+    left behind pointing at a member that moved.
     """
     out = []
     for line in data_lines:
@@ -3287,7 +3289,7 @@ def scan_worked(hpath):
         # Aes128GcmV.key_args, whose type is Aes128GcmKeyArgs, not Aes128GcmKeyInitArgs. Guessing
         # found no struct, so every entry read as taking no operands at all.
         #
-        # The prefix guess is still the fallback, and it uses the TABLE TYPE'S name rather than the
+        # The prefix guess is still the fallback. It uses the TABLE TYPE'S name rather than the
         # module name through camel() - aes128gcm.h declares Aes128GcmKeyArgs and camel("aes128gcm")
         # gives "Aes128gcm", one letter apart.
         params, group = [], name
@@ -3592,7 +3594,7 @@ def gen_header_ns(spec, original):
         + "".join("#include %s\n" % h for h in spec.get("moved_includes", []) if h not in spec.get("held_includes", []))
         + "\n"
         + ("#if %s\n\n" % gate if gate else "")
-        + "EMBED_BEGIN_DECLS\n\n"
+        + DECLS_OPEN
         + filedoc
         + note
         + "\n"
@@ -3651,7 +3653,7 @@ DECLARED_FN = re.compile(r"^\s*(?:[A-Za-z_][\w ]*?[\s*])(\w+)\s*\([^;{]*\)\s*;",
 def dropped_declarations(original, converted, spec):
     """Function names the old header declared and the new one does not, minus the entries.
 
-    An entry's flat declaration is REPLACED by the converted one, so it is expected to move; any
+    An entry's flat declaration is REPLACED by the converted one, so it is expected to move. Any
     other name that disappears is a published function this conversion would delete.
     """
     keep = {e["flat"] for e in spec["entries"]} | {e["entry"] for e in spec["entries"]}
@@ -3779,7 +3781,7 @@ def fold_comma_calls(s, spec, byname, pat, mask):
               Ed25519.verify(work), Ed25519V.ok);
 
     This form is easier to convert than the statement one and gives a better result: the whole
-    parenthesised expression IS the call plus its result, so it becomes the call, with no local and
+    parenthesised expression IS the call plus its result. So it becomes the call, with no local and
     nothing hoisted.
 
         ok = parse_ed25519_pubkey(...) && raw_len == 64 &&
@@ -4118,7 +4120,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                             out = "%s%s %s = %s;" % (indent, e["ret"], local, call)
                             s = s[:stmt_end] + rd.sub(local, window) + s[stop:]
                         else:
-                            # Nothing reads it. The rule is that a result becomes a local; where
+                            # Nothing reads it. The rule is that a result becomes a local. Where
                             # there is no result to carry, a local is a variable the compiler warns
                             # about and a reader has to work out is unused.
                             out = "%s%s;" % (indent, call)
@@ -4213,7 +4215,7 @@ def unwork_source(spec, write=True, text=None):
     objv, notes = spec.get("objv", ""), []
 
     # A standalone prototype of an entry inside the .c. robotics.c forward-declares
-    # protocore_robotics_bind above its own definition; the definition gets its real signature back
+    # protocore_robotics_bind above its own definition. The definition gets its real signature back
     # and the prototype keeps the old one, so the two conflict and the module does not compile. The
     # header declares every entry, so a second declaration in the .c has nothing to say.
     for e in spec["entries"]:
@@ -4772,7 +4774,7 @@ def main():
                 if obj + "." not in s:
                     continue
                 out, n = move_operands(s, obj, objv, members)
-                # A pointer to this namespace reaches the operands too, and they have moved.
+                # A pointer to this namespace reaches the operands too, and they moved.
                 out, n2 = move_ptr_operands(out, ns, objv, members, ptr_names)
                 n += n2
                 if n:
@@ -4803,7 +4805,7 @@ def main():
     if cmd == "align":
         # State, per region reached through a cast, that its OFFSET is a multiple of the alignment
         # the cast requires. The arena aligns the base up to PROTOCORE_ARENA_MAX_ALIGN, so the
-        # offset is the whole claim - and it is a compile-time constant, so it is a static_assert
+        # offset is the whole claim - and it is a compile-time constant. So it is a static_assert
         # and never a runtime branch. The size assert already in each file bounds the far end of the
         # chain and says nothing about where any region BEGINS: one odd-sized region inserted
         # earlier leaves every later cast misaligned while the total still fits.

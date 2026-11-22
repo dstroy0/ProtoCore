@@ -76,7 +76,10 @@ static_assert(
     "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define FILE_SERVING_CTX(w) ((FileCtx *)(void *)((w) + FILE_SERVING_OFF_CTX))
+#define FILE_SERVING_CTX(w)                                                                                            \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const FileCtx *)(const void *)((w) + FILE_SERVING_OFF_CTX),                                  \
+        default: (FileCtx *)(void *)((w) + FILE_SERVING_OFF_CTX))
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -120,11 +123,11 @@ static int file_root(uint8_t *work)
 }
 
 // The entries this file calls before reaching their definitions.
-void protocore_file_serving_file_send_pump(uint8_t *work);
+void protocore_file_serving_file_send_pump(const uint8_t *work);
 void protocore_file_serving_http_rfc1123(uint8_t *work);
 void protocore_file_serving_serve_file_internal(uint8_t *work);
 
-void protocore_file_serving_holds_slot(uint8_t *work)
+void protocore_file_serving_holds_slot(const uint8_t *work)
 {
     (void)work;
     uint8_t slot = FileServingV.holds_slot_args.slot;
@@ -228,6 +231,17 @@ static embed_bool http_date_word(const char **text, char *out, size_t cap)
     return EMBED_TRUE;
 }
 
+// The time of day of an RFC 9110 sec 5.6.7 IMF-fixdate, "08:49:37": the hour, a colon, the minute, a colon,
+// the second.
+static embed_bool http_date_clock(const char **text, int *hour, int *minute, int *second)
+{
+    if (!http_date_number(text, hour) || !http_date_literal(text, ':') || !http_date_number(text, minute))
+    {
+        return EMBED_FALSE;
+    }
+    return http_date_literal(text, ':') && http_date_number(text, second);
+}
+
 // True if a resource last modified at @p mtime is NOT newer than the client's
 // If-Modified-Since date @p ims (RFC 1123 form), i.e. a conditional GET should
 // answer 304. Parses the date by hand (sscanf, no stdlib) and compares the two
@@ -249,9 +263,7 @@ static embed_bool http_not_modified_since(time_t mtime, const char *ims)
     // "Sun, 06 Nov 1994 08:49:37 GMT" - skip the weekday, read the rest.
     const char *at = ims;
     if (!http_date_word(&at, NULL, 3u) || !http_date_literal(&at, ',') || !http_date_number(&at, &day) ||
-        !http_date_word(&at, mon, 3u) || !http_date_number(&at, &year) || !http_date_number(&at, &hh) ||
-        !http_date_literal(&at, ':') || !http_date_number(&at, &mm) || !http_date_literal(&at, ':') ||
-        !http_date_number(&at, &ss))
+        !http_date_word(&at, mon, 3u) || !http_date_number(&at, &year) || !http_date_clock(&at, &hh, &mm, &ss))
     {
         return EMBED_FALSE;
     }
@@ -693,10 +705,10 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
 }
 
 // Page out a pending file response across worker loops: send up to ConnPool.sndbuf()
-// bytes now and return; the next loop resumes (woken by the sent callback) until the
+// bytes now and return. The next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
-void protocore_file_serving_file_send_pump(uint8_t *work)
+void protocore_file_serving_file_send_pump(const uint8_t *work)
 {
     (void)work;
     uint8_t slot_id = FileServingV.file_send_pump_args.slot_id;
@@ -740,7 +752,7 @@ void protocore_file_serving_file_send_pump(uint8_t *work)
         {
             want = avail;
         }
-        // The backend reports a fault as -1 and end-of-data as 0; both stop the transfer, and the
+        // The backend reports a fault as -1 and end-of-data as 0. Both stop the transfer, and the
         // comparison is <= so a fault can never be added to the offset as a negative count.
         Fs.io.handle = s->fh;
         Fs.io.buf = chunk;

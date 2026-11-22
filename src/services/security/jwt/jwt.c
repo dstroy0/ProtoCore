@@ -406,7 +406,7 @@ void protocore_jwt_claim_str(uint8_t *work)
 // RFC 6749 sec 3.3: a scope is a list of space-delimited, case-sensitive strings, which is the
 // syntax RFC 8693 sec 4.2 gives the `scope` claim. The match is on a whole token, so a prefix of one
 // never passes.
-void protocore_jwt_scope_allows(uint8_t *work)
+void protocore_jwt_scope_allows(const uint8_t *work)
 {
     (void)work;
     const char *claim = JwtV.scope.claim;

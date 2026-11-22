@@ -119,15 +119,15 @@ typedef struct
 typedef struct
 {
     void (*keys_derive)(uint8_t *, DtlsRecordKeys *, DtlsCipher, uint16_t, const uint8_t *);
-    size_t (*plaintext_build)(uint8_t *, uint8_t, uint16_t, uint64_t, const uint8_t *, size_t, uint8_t *, size_t);
-    size_t (*plaintext_parse)(uint8_t *, const uint8_t *, size_t, DtlsPlaintext *);
-    size_t (*protect)(uint8_t *, DtlsRecordKeys *, uint64_t, uint8_t, const uint8_t *, size_t, uint8_t *, size_t,
+    size_t (*plaintext_build)(const uint8_t *, uint8_t, uint16_t, uint64_t, const uint8_t *, size_t, uint8_t *, size_t);
+    size_t (*plaintext_parse)(const uint8_t *, const uint8_t *, size_t, DtlsPlaintext *);
+    size_t (*protect)(const uint8_t *, DtlsRecordKeys *, uint64_t, uint8_t, const uint8_t *, size_t, uint8_t *, size_t,
                       const uint8_t *, size_t);
-    embed_bool (*unprotect)(uint8_t *, DtlsRecordKeys *, uint64_t, const uint8_t *, size_t, uint8_t *, size_t,
+    embed_bool (*unprotect)(const uint8_t *, DtlsRecordKeys *, uint64_t, const uint8_t *, size_t, uint8_t *, size_t,
                             DtlsCiphertext *, const uint8_t *, size_t);
-    void (*replay_init)(uint8_t *, DtlsReplayWindow *);
-    embed_bool (*replay_check)(uint8_t *, const DtlsReplayWindow *, uint64_t);
-    void (*replay_mark)(uint8_t *, DtlsReplayWindow *, uint64_t);
+    void (*replay_init)(const uint8_t *, DtlsReplayWindow *);
+    embed_bool (*replay_check)(const uint8_t *, const DtlsReplayWindow *, uint64_t);
+    void (*replay_mark)(const uint8_t *, DtlsReplayWindow *, uint64_t);
 } DtlsRecordNs;
 PROTOCORE_NS_LAYOUT(DtlsRecordNs, keys_derive, plaintext_build, plaintext_parse, protect, unprotect, replay_init,
                     replay_check, replay_mark);
@@ -154,7 +154,7 @@ void protocore_dtls_record_keys_derive(uint8_t *work, DtlsRecordKeys *out, DtlsC
  * @param out_cap Out cap
  * @return The size_t.
  */
-size_t protocore_dtls_record_plaintext_build(uint8_t *work, uint8_t content_type, uint16_t epoch, uint64_t seq,
+size_t protocore_dtls_record_plaintext_build(const uint8_t *work, uint8_t content_type, uint16_t epoch, uint64_t seq,
                                              const uint8_t *fragment, size_t frag_len, uint8_t *out, size_t out_cap);
 /**
  * @brief The same record back, validating legacy_version and the length .
@@ -164,7 +164,8 @@ size_t protocore_dtls_record_plaintext_build(uint8_t *work, uint8_t content_type
  * @param out Out
  * @return The size_t.
  */
-size_t protocore_dtls_record_plaintext_parse(uint8_t *work, const uint8_t *rec, size_t rec_len, DtlsPlaintext *out);
+size_t protocore_dtls_record_plaintext_parse(const uint8_t *work, const uint8_t *rec, size_t rec_len,
+                                             DtlsPlaintext *out);
 /**
  * @brief Seal one record (RFC 9147 sec 4.2): the unified header, the .
  * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
@@ -179,7 +180,7 @@ size_t protocore_dtls_record_plaintext_parse(uint8_t *work, const uint8_t *rec, 
  * @param cid_len Cid len
  * @return The size_t.
  */
-size_t protocore_dtls_record_protect(uint8_t *work, DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
+size_t protocore_dtls_record_protect(const uint8_t *work, DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
                                      const uint8_t *plaintext, size_t pt_len, uint8_t *out, size_t out_cap,
                                      const uint8_t *cid, size_t cid_len);
 /**
@@ -196,15 +197,15 @@ size_t protocore_dtls_record_protect(uint8_t *work, DtlsRecordKeys *keys, uint64
  * @param expected_cid_len Expected cid len
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_dtls_record_unprotect(uint8_t *work, DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec,
-                                           size_t rec_len, uint8_t *out, size_t out_cap, DtlsCiphertext *info,
-                                           const uint8_t *expected_cid, size_t expected_cid_len);
+embed_bool protocore_dtls_record_unprotect(const uint8_t *work, DtlsRecordKeys *keys, uint64_t next_seq,
+                                           const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
+                                           DtlsCiphertext *info, const uint8_t *expected_cid, size_t expected_cid_len);
 /**
  * @brief Reset a replay window to empty.
  * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
  * @param w W
  */
-void protocore_dtls_record_replay_init(uint8_t *work, DtlsReplayWindow *w);
+void protocore_dtls_record_replay_init(const uint8_t *work, DtlsReplayWindow *w);
 /**
  * @brief Whether seq is new and inside the window, rather than a replay or .
  * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
@@ -212,14 +213,14 @@ void protocore_dtls_record_replay_init(uint8_t *work, DtlsReplayWindow *w);
  * @param seq Seq
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_dtls_record_replay_check(uint8_t *work, const DtlsReplayWindow *w, uint64_t seq);
+embed_bool protocore_dtls_record_replay_check(const uint8_t *work, const DtlsReplayWindow *w, uint64_t seq);
 /**
  * @brief Record seq as accepted and advance the window; only after a .
  * @param work PROTOCORE_DTLS_RECORD_BORROW bytes the caller took. Not held past the call.
  * @param w W
  * @param seq Seq
  */
-void protocore_dtls_record_replay_mark(uint8_t *work, DtlsReplayWindow *w, uint64_t seq);
+void protocore_dtls_record_replay_mark(const uint8_t *work, DtlsReplayWindow *w, uint64_t seq);
 
 /** @brief Module namespace. */
 PROTOCORE_NS DtlsRecordNs DtlsRecord PROTOCORE_UNUSED = {.keys_derive = protocore_dtls_record_keys_derive,

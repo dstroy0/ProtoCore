@@ -18,7 +18,7 @@
  *
  * **HttpRoute table**
  * Routes are stored in a fixed-size array of `HttpRoute` structs.  Both exact
- * and wildcard (suffix `*`) routes are supported; exact routes always take
+ * and wildcard (suffix `*`) routes are supported. Exact routes always take
  * priority because the loop checks them in insertion order and returns on
  * the first match.
  *
@@ -117,7 +117,7 @@ static ServerCtx s_inst;
 void protocore_server_reset(void)
 {
     // The server's state is spread across the files that own it, which is the point - but "start
-    // over" is one concern, so it is one call rather than a checklist each caller has to keep in
+    // over" is one concern. So it is one call rather than a checklist each caller has to keep in
     // agreement. The blank template lives in rodata, so the reset is a plain copy and never
     // materializes a sizeof(ServerCtx) temporary on the caller's stack.
     static const ServerCtx blank = {0};
@@ -220,7 +220,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     {
         return (int32_t)PROTOCORE_ERR_NO_LISTENERS;
     }
-    // The connection's idle deadline is its lifetime, which this layer owns; the pool is told the
+    // The connection's idle deadline is its lifetime, which this layer owns. The pool is told the
     // number rather than handed the config to read it out of.
     SessionV.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
     ConnPoolV.life.conn_timeout_ms = SessionV.conn_timeout_ms;
@@ -579,7 +579,7 @@ void ws_dispatch_message(const WsConn *ws)
     uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
     for (uint8_t r = 0; r < http_routes_value; r++)
     {
-        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
+        const HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
         const HttpRoute *rt = http_routes_ptr;
         if (rt->type != ROUTE_WS)
         {
@@ -600,7 +600,7 @@ void ws_dispatch_close(const WsConn *ws)
     uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
     for (uint8_t r = 0; r < http_routes_value; r++)
     {
-        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
+        const HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), r);
         const HttpRoute *rt = http_routes_ptr;
         if (rt->type != ROUTE_WS)
         {

@@ -801,7 +801,7 @@ void test_add_unwinds_when_the_queue_cannot_be_created(void)
     TEST_ASSERT_FALSE(listener_pool[1].active);
 }
 
-// A port already in use unwinds the add and releases the queue it had built.
+// A port already in use unwinds the add and releases the queue it built.
 void test_add_unwinds_and_releases_its_queue_when_the_bind_fails(void)
 {
     TcpListenerV.idx = 1;

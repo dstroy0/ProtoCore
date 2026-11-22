@@ -174,7 +174,7 @@ static embed_bool read_head(mmgr_cspan *r, uint8_t *major, uint64_t *val)
     return EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .bytes = need, .out = val);
 }
 
-static protocore_codec_type protocore_cbor_peek(mmgr_cspan *r)
+static protocore_codec_type protocore_cbor_peek(mmgr_cspan *r) // NOSONAR(c:S995): the codec table fixes it
 {
     if (r->err || r->pos >= r->len)
     {

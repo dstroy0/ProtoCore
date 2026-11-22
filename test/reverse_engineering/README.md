@@ -13,7 +13,7 @@ expensive one-time characterization pass for needing only a handful of live trac
 (template attacks), and the one that needs no probe, amplifier, or ADC at all - just a
 stopwatch and a socket (timing side channels). See "Exotic technique: single-trace SPA"
 below - it is the one most worth learning early, because it is the attack that makes
-constant-time code non-optional; the timing section further down makes the same case from a
+constant-time code non-optional. The timing section further down makes the same case from a
 completely different angle, with no analog signal involved anywhere.
 
 The same probe -> amplifier -> DAQ -> windowed-capture -> network pipeline applies to side-
@@ -31,7 +31,7 @@ authorized red-team work, all on hardware you own or are authorized to assess - 
 posture as published academic SCA tooling (ChipWhisperer, Riscure Inspector) and the
 TVLA/ISO-17825 leakage-assessment methodology it implements.
 
-A deliberate design goal is being a **low-cost teaching platform for a school cyber range**:
+A deliberate design goal bees a **low-cost teaching platform for a school cyber range**:
 an ESP32 plus an off-the-shelf ADC front end (or just a lab bench scope you already have) is a
 fraction of the cost of a commercial SCA rig, and running it against intentionally weak or
 unprotected crypto (a bare AES implementation with no masking, no hiding) is a concrete way to
@@ -180,7 +180,7 @@ it possible to correlate multiple DAQ nodes' captures in absolute time - an EM p
 power-rail node capturing the _same_ physical event from two vantage points, or lining a
 capture up against an externally logged event time - without needing a shared trigger line
 between them. (`services/gnss_survey` in this library is position-surveying only, not a
-GNSS-PPS time source, so it is not a path to tighter-than-NTP sync today; ordinary NTP is
+GNSS-PPS time source, so it is not a path to tighter-than-NTP sync today. Ordinary NTP is
 typically low-single-digit milliseconds, fine for this correlation use case, not for
 sub-microsecond multi-node alignment.)
 
@@ -194,7 +194,7 @@ sub-microsecond multi-node alignment.)
   phase shift a causal filter would reintroduce as apparent jitter.
 - **TVLA** (fixed-vs-random Welch's t-test, `|t| > 4.5`) - the ISO/IEC 17825 non-specific
   leakage-detection standard: answers "does this implementation leak at all" without assuming
-  an AES Hamming model, so it is the right first pass before spending traces on a targeted
+  an AES Hamming model. So it is the right first pass before spending traces on a targeted
   CPA. Goodwill et al., _A testing methodology for side-channel resistance validation_ (NIST
   NIAT 2011); recent work rethinking TVLA for post-quantum targets is a live reminder that a
   clean result is "no leakage **found**", not "no leakage" (Keysight, _Rethinking TVLA for
@@ -202,7 +202,7 @@ sub-microsecond multi-node alignment.)
 - **SNR** per sample point - the standard points-of-interest metric, and the pre-filter step
   ahead of a deep-learning SCA model in the current literature (2025-2026 CNN/Transformer
   attacks reduce to the highest-SNR few hundred samples before training).
-- **Streaming (incremental) CPA** - running sums of x, x², y, y², xy update per batch; the
+- **Streaming (incremental) CPA** - running sums of x, x², y, y², xy update per batch. The
   correlation matrix is a closed-form read of those sums (Le Bouder et al., _Computational
   Aspects of Correlation Power Analysis_, IACR ePrint 2015/260). No full trace matrix is ever
   held, so this scales to however long the DAQ link runs - the actual constraint a "chunking
@@ -299,7 +299,7 @@ specific implementation choice actually does to it," with both directions run an
 
 - **Masking vs. CPA order.** A first-order Boolean-masked target (`intermediate = share1 ^
 mask`, a fresh uniform-random `mask` every trace) defeats a first-order CPA outright -
-  individually, neither share's Hamming weight correlates with the real intermediate; that IS
+  individually, neither share's Hamming weight correlates with the real intermediate. That IS
   the security property masking buys. `compute_second_order_cpa`'s centered-product combiner
   over both share positions recovers the key anyway (Messerges, _Using Second-Order Power
   Analysis to Attack DPA Resistant Software_, CHES 2000): masking raises the bar, it does not

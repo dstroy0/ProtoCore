@@ -21,7 +21,7 @@
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_tp_defaults(uint8_t *work, QuicTransportParams *tp)
+void protocore_quic_tp_defaults(const uint8_t *work, QuicTransportParams *tp)
 {
     (void)work;
 
@@ -139,7 +139,7 @@ static embed_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t
 }
 
 // Apply a connection-ID transport parameter. *handled is set true if id names a CID param (whether or
-// not the copy succeeded); false leaves it for another category. Returns false only on a bad value.
+// not the copy succeeded). False leaves it for another category. Returns false only on a bad value.
 static embed_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
                                     embed_bool *handled)
 {

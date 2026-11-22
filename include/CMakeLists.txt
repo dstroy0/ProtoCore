@@ -13,7 +13,7 @@ protocore_add_module(include
 )
 
 # MMgr is a separate repository, vendored as a submodule. Its own build description is not entered:
-# it builds MMgr once per width environment for MMgr's suites, and it reaches its include root
+# it builds MMgr once per width environment for MMgr's suites. It reaches its include root
 # through CMAKE_SOURCE_DIR, which names this tree's top rather than MMgr's once it is a
 # subdirectory. ProtoCore builds MMgr's sources as one more target under ProtoCore's own flags, as
 # the Arduino, PlatformIO and ESP-IDF builds do.

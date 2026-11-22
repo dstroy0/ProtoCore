@@ -62,7 +62,10 @@ static_assert(HPACK_OFF_CTX % _Alignof(HpackDynTable) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define HPACK_CTX(w) ((HpackDynTable *)(void *)((w) + HPACK_OFF_CTX))
+#define HPACK_CTX(w)                                                                                                   \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const HpackDynTable *)(const void *)((w) + HPACK_OFF_CTX),                                   \
+        default: (HpackDynTable *)(void *)((w) + HPACK_OFF_CTX))
 
 #define HPACK_BYTES PROTOCORE_HPACK_TABLE_BYTES
 #define HPACK_ENTS PROTOCORE_HPACK_MAX_ENTRIES
@@ -253,10 +256,11 @@ static embed_bool resolve_name(const HpackDynTable *t, uint32_t idx, char *out, 
     return EMBED_TRUE;
 }
 
-// Emit a fully-indexed field (idx resolves to name+value); copies both into scratch.
+// Emit a fully-indexed field (idx resolves to name+value). Copies both into scratch.
 // idx>=1 is always true here: the only caller (protocore_hpack_decode's 6.1 Indexed Header Field case)
 // already rejects idx==0 before calling emit_indexed.
-static embed_bool emit_indexed(HpackDynTable *t, uint32_t idx, char *scratch, size_t cap, HpackEmitFn emit, void *ctx)
+static embed_bool emit_indexed(const HpackDynTable *t, uint32_t idx, char *scratch, size_t cap, HpackEmitFn emit,
+                               void *ctx)
 {
     size_t nl;
     size_t vl;

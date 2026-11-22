@@ -24,7 +24,7 @@ bool ok = protocore_totp_verify(g_secret, g_secret_len, now_unix(), code, 30, 6,
 
 The last argument to `protocore_totp_verify` is the allowed step skew, which absorbs
 clock drift between the device and the authenticator. For codes that match a real
-app, sync the device clock to real time via NTP ([SNTP](../SNTP)); this
+app, sync the device clock to real time via NTP ([SNTP](../SNTP)). This
 example uses a fixed clock base so it is self-contained.
 
 **Security note.** The `/totp` endpoint that reveals the live code exists only to

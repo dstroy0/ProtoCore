@@ -24,7 +24,7 @@ EMBED_BEGIN_DECLS
 // --- the entries -----------------------------------------------------------
 
 // XOR-accumulate over the caller's two buffers; the borrow goes unread.
-void protocore_ct_eq_eq(uint8_t *work)
+void protocore_ct_eq_eq(const uint8_t *work)
 {
     (void)work;
     CtEqV.ok = EMBED_FALSE;

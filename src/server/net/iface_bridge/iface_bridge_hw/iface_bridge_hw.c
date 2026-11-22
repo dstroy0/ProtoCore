@@ -31,7 +31,7 @@ EMBED_BEGIN_DECLS
 #endif
 
 // One published listener -> hardware rule. Dispatch is by the listener id the transport stamps on each
-// accepted slot (identical to server/net/relay); the rule pointer is stable for the life of the binding
+// accepted slot (identical to server/net/relay). The rule pointer is stable for the life of the binding
 // because rules live in the pure table's static storage.
 typedef struct
 {
@@ -67,7 +67,10 @@ static_assert(IFACE_BRIDGE_HW_OFF_CTX % _Alignof(BridgeGlueCtx) == 0,
               "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
-#define IFACE_BRIDGE_HW_CTX(w) ((BridgeGlueCtx *)(void *)((w) + IFACE_BRIDGE_HW_OFF_CTX))
+#define IFACE_BRIDGE_HW_CTX(w)                                                                                         \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const BridgeGlueCtx *)(const void *)((w) + IFACE_BRIDGE_HW_OFF_CTX),                         \
+        default: (BridgeGlueCtx *)(void *)((w) + IFACE_BRIDGE_HW_OFF_CTX))
 
 static const BridgeRule *rule_for_slot(uint8_t *work, uint8_t slot)
 {

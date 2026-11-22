@@ -5,7 +5,7 @@
  * @file webdav_handler.h
  * @brief WebDAV request handling against a mounted filesystem (RFC 4918).
  *
- * The server half of WebDAV: it resolves a request path against a ROUTE_DAV mount, dispatches the
+ * The server half of WebDAV. It resolves a request path against a ROUTE_DAV mount, dispatches the
  * method, walks directories for PROPFIND, and streams a PUT body to the file. The wire format it
  * speaks - method classification, Depth parsing, the 207 Multi-Status builder, and the lock table -
  * is the pure codec in network_drivers/application/webdav/webdav.h, which this file calls.

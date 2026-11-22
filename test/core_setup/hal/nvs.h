@@ -6,7 +6,7 @@
  * @brief Non-volatile key-value storage, in the library's own terms.
  *
  * Small named values that outlive a reboot: a WiFi passphrase, an SSH host key, a config field.
- * Every operation names its namespace and its key and completes on its own, so there is no handle
+ * Every operation names its namespace and its key and completes on its own. So there is no handle
  * to keep, no pool to size, and no open namespace whose lifetime can outlast its caller.
  *
  * Two backends, selected by the vendor: hal/esp/esp_nvs.cpp over the Arduino `Preferences` NVS

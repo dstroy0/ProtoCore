@@ -67,12 +67,12 @@ static uint64_t get_u64(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ptp_build_header(uint8_t *work);
-void protocore_ptp_parse_header(uint8_t *work);
-void protocore_ptp_ts_read(uint8_t *work);
-void protocore_ptp_ts_write(uint8_t *work);
+void protocore_ptp_build_header(const uint8_t *work);
+void protocore_ptp_parse_header(const uint8_t *work);
+void protocore_ptp_ts_read(const uint8_t *work);
+void protocore_ptp_ts_write(const uint8_t *work);
 
-void protocore_ptp_ts_write(uint8_t *work)
+void protocore_ptp_ts_write(const uint8_t *work)
 {
     (void)work;
     uint8_t *p = PtpV.ts_write_args.p;
@@ -88,7 +88,7 @@ void protocore_ptp_ts_write(uint8_t *work)
     put_u32(p + 6, ts->nanoseconds);
 }
 
-void protocore_ptp_ts_read(uint8_t *work)
+void protocore_ptp_ts_read(const uint8_t *work)
 {
     (void)work;
     const uint8_t *p = PtpV.ts_read_args.p;
@@ -99,7 +99,7 @@ void protocore_ptp_ts_read(uint8_t *work)
     ts->nanoseconds = get_u32(p + 6);
 }
 
-void protocore_ptp_ts_to_ns(uint8_t *work)
+void protocore_ptp_ts_to_ns(const uint8_t *work)
 {
     (void)work;
     const protocore_ptp_timestamp *ts = PtpV.ts_to_ns_args.ts;
@@ -107,7 +107,7 @@ void protocore_ptp_ts_to_ns(uint8_t *work)
     PtpV.value = (int64_t)ts->seconds * 1000000000LL + (int64_t)ts->nanoseconds;
 }
 
-void protocore_ptp_ts_from_ns(uint8_t *work)
+void protocore_ptp_ts_from_ns(const uint8_t *work)
 {
     (void)work;
     int64_t ns = PtpV.ts_from_ns_args.ns;
@@ -123,7 +123,7 @@ void protocore_ptp_ts_from_ns(uint8_t *work)
 
 // -- header --
 
-void protocore_ptp_build_header(uint8_t *work)
+void protocore_ptp_build_header(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = PtpV.build_header_args.buf;
@@ -151,7 +151,7 @@ void protocore_ptp_build_header(uint8_t *work)
     PtpV.n = PROTOCORE_PTP_HEADER_LEN;
 }
 
-void protocore_ptp_parse_header(uint8_t *work)
+void protocore_ptp_parse_header(const uint8_t *work)
 {
     (void)work;
     const uint8_t *s = PtpV.parse_header_args.s;
@@ -648,7 +648,7 @@ void protocore_ptp_parse_announce(uint8_t *work)
 
 // -- slave clock math --
 
-void protocore_ptp_compute(uint8_t *work)
+void protocore_ptp_compute(const uint8_t *work)
 {
     (void)work;
     int64_t t1 = PtpV.compute_args.t1;
@@ -667,7 +667,7 @@ void protocore_ptp_compute(uint8_t *work)
     out->delay_ns = (ms + sm) / 2;
 }
 
-void protocore_ptp_compute_link_delay(uint8_t *work)
+void protocore_ptp_compute_link_delay(const uint8_t *work)
 {
     (void)work;
     int64_t t1 = PtpV.compute_link_delay_args.t1;

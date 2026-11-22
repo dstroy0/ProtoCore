@@ -31,14 +31,15 @@ static void wr_be32(uint8_t *p, uint32_t v)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-embed_bool protocore_quic_packet_is_long_header(uint8_t *work, uint8_t first)
+embed_bool protocore_quic_packet_is_long_header(const uint8_t *work, uint8_t first)
 {
     (void)work;
 
     return (first & 0x80) != 0;
 }
 
-embed_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t *buf, size_t len, QuicLongHeader *out)
+embed_bool protocore_quic_packet_parse_long_header(const uint8_t *work, const uint8_t *buf, size_t len,
+                                                   QuicLongHeader *out)
 {
     (void)work;
 
@@ -77,9 +78,9 @@ embed_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t 
     return EMBED_TRUE;
 }
 
-size_t protocore_quic_packet_build_long_header(uint8_t *work, uint8_t *out, size_t cap, uint8_t type, uint32_t version,
-                                               const uint8_t *dcid, uint8_t dcid_len, const uint8_t *scid,
-                                               uint8_t scid_len, uint8_t pn_len)
+size_t protocore_quic_packet_build_long_header(const uint8_t *work, uint8_t *out, size_t cap, uint8_t type,
+                                               uint32_t version, const uint8_t *dcid, uint8_t dcid_len,
+                                               const uint8_t *scid, uint8_t scid_len, uint8_t pn_len)
 {
     (void)work;
 
@@ -105,8 +106,8 @@ size_t protocore_quic_packet_build_long_header(uint8_t *work, uint8_t *out, size
     return pos;
 }
 
-embed_bool protocore_quic_packet_parse_short_header(uint8_t *work, const uint8_t *buf, size_t len, uint8_t dcid_len,
-                                                    QuicShortHeader *out)
+embed_bool protocore_quic_packet_parse_short_header(const uint8_t *work, const uint8_t *buf, size_t len,
+                                                    uint8_t dcid_len, QuicShortHeader *out)
 {
     (void)work;
 
@@ -126,9 +127,9 @@ embed_bool protocore_quic_packet_parse_short_header(uint8_t *work, const uint8_t
     return EMBED_TRUE;
 }
 
-size_t protocore_quic_packet_build_version_negotiation(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *dcid,
-                                                       uint8_t dcid_len, const uint8_t *scid, uint8_t scid_len,
-                                                       const uint32_t *versions, size_t nversions)
+size_t protocore_quic_packet_build_version_negotiation(const uint8_t *work, uint8_t *out, size_t cap,
+                                                       const uint8_t *dcid, uint8_t dcid_len, const uint8_t *scid,
+                                                       uint8_t scid_len, const uint32_t *versions, size_t nversions)
 {
     (void)work;
 
@@ -158,7 +159,7 @@ size_t protocore_quic_packet_build_version_negotiation(uint8_t *work, uint8_t *o
     return pos;
 }
 
-uint8_t protocore_quic_packet_pn_length(uint8_t *work, uint64_t full_pn, int64_t largest_acked)
+uint8_t protocore_quic_packet_pn_length(const uint8_t *work, uint64_t full_pn, int64_t largest_acked)
 {
     (void)work;
 
@@ -190,7 +191,8 @@ size_t protocore_quic_packet_pn_encode(uint8_t *work, uint8_t *out, size_t cap, 
     return n;
 }
 
-uint64_t protocore_quic_packet_pn_decode(uint8_t *work, uint64_t largest_pn, uint64_t truncated_pn, uint8_t pn_nbits)
+uint64_t protocore_quic_packet_pn_decode(const uint8_t *work, uint64_t largest_pn, uint64_t truncated_pn,
+                                         uint8_t pn_nbits)
 {
     (void)work;
 

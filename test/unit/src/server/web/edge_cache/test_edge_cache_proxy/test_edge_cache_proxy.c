@@ -41,7 +41,7 @@ void test_reset_zeroes_every_counter(void)
     TEST_ASSERT_EQUAL_UINT64(0, st.bytes_stored);
 }
 
-// A map needs both a prefix and an origin; neither is optional and a null is refused rather than
+// A map needs both a prefix and an origin. Neither is optional and a null is refused rather than
 // stored as an empty route that would match every path.
 void test_a_map_needs_both_a_prefix_and_an_origin(void)
 {

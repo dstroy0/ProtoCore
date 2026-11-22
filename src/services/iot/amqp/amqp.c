@@ -32,7 +32,7 @@ static size_t write_frame_header(uint8_t *buf, uint8_t type, uint16_t channel, u
 }
 
 // The 8 octet protocol-header, "AMQP" %d0 %d0.9.1 (sec 4.2.2).
-void protocore_amqp_protocol_header(uint8_t *work)
+void protocore_amqp_protocol_header(const uint8_t *work)
 {
     (void)work;
     static const uint8_t hdr[8] = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
@@ -49,7 +49,7 @@ void protocore_amqp_protocol_header(uint8_t *work)
 
 // One frame: header, ns->payload, frame-end (sec 4.2.3). The size field is a long-uint, so a
 // payload wider than 32 bits has no size to write.
-void protocore_amqp_build_frame(uint8_t *work)
+void protocore_amqp_build_frame(const uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
@@ -78,7 +78,7 @@ void protocore_amqp_build_frame(uint8_t *work)
 
 // A METHOD frame on ns->frame.channel: class-id, method-id, then the arguments (sec 4.2.4). The
 // payload is written straight into ns->out.buf, no intermediate copy.
-void protocore_amqp_build_method(uint8_t *work)
+void protocore_amqp_build_method(const uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
@@ -112,7 +112,7 @@ void protocore_amqp_build_method(uint8_t *work)
 
 // A content HEADER frame on ns->frame.channel: class-id, weight, body size, property flags, then
 // the property list (sec 4.2.6.1). The weight field is unused and written as zero.
-void protocore_amqp_build_content_header(uint8_t *work)
+void protocore_amqp_build_content_header(const uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
@@ -149,7 +149,7 @@ void protocore_amqp_build_content_header(uint8_t *work)
 
 // A heartbeat: type 8, channel 0, size 0, frame-end (sec 4.2.1 grammar, sec 4.2.7). Reads ns->out
 // alone and leaves ns->frame and ns->payload as the caller set them.
-void protocore_amqp_build_heartbeat(uint8_t *work)
+void protocore_amqp_build_heartbeat(const uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
@@ -166,7 +166,7 @@ void protocore_amqp_build_heartbeat(uint8_t *work)
 
 // One frame off the head of ns->in, the frame-end checked before anything is decoded (sec 4.2.3).
 // ns->payload points into ns->in.buf; ns->consumed spans header, payload and frame-end.
-void protocore_amqp_parse_frame(uint8_t *work)
+void protocore_amqp_parse_frame(const uint8_t *work)
 {
     (void)work;
     AmqpV.ok = EMBED_FALSE;
@@ -197,7 +197,7 @@ void protocore_amqp_parse_frame(uint8_t *work)
 }
 
 // ns->payload split into class-id, method-id and the arguments behind them (sec 4.2.4).
-void protocore_amqp_parse_method(uint8_t *work)
+void protocore_amqp_parse_method(const uint8_t *work)
 {
     (void)work;
     AmqpV.ok = EMBED_FALSE;

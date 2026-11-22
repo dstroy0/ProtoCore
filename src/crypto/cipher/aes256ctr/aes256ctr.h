@@ -86,7 +86,7 @@ typedef struct
  * @c crypt_args.out may alias, which is the in-place form the SSH packet layer uses.
  *
  * @ref Aes256CtrNs::get_length leaves @c get_length_args.counter where it was, so a receiver learns a
- * packet's length - and thus how many bytes to wait for - before the whole packet has arrived, without
+ * packet's length - and thus how many bytes to wait for - before the whole packet arrived, without
  * consuming counter state.
  *
  * @c work is PROTOCORE_AES256CTR_BORROW secure bytes the CALLER took, at an address it knows. It

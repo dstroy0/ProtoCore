@@ -8,7 +8,7 @@
 // "successively exclusive OR-ing the next message byte and then rotating the cumulative BCC value
 // left one bit", seeded at zero, over every byte of the message but the BCC itself. Pages 7-73 and
 // 7-74 then print three complete X-Attach messages with their computed BCC octets: B2, A2 and 79.
-// Those three octets are check values the standard publishes, so they pin the operation, the seed
+// Those three octets are check values the standard publishes. So they pin the operation, the seed
 // and the rotate that a plain sum or a plain XOR would both get wrong.
 //
 // SNP_ENQ / SNP_ACK / SNP_NAK / SNP_SOH / SNP_EOT are checked against Table 7-1 of the same manual.

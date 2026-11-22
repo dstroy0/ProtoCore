@@ -434,7 +434,7 @@ void test_a_name_this_host_does_not_own_draws_silence(void)
     ask("myhost.local", T_SRV); // the host name owns an A record, not an SRV
     TEST_ASSERT_EQUAL_size_t(0u, protocore_net_host_udp_sent());
 
-    // The A record is the egress address, and there is none on a host with no link up, so the name
+    // The A record is the egress address. There is none on a host with no link up, so the name
     // this responder does own is still answered with silence rather than with 0.0.0.0.
     ask("myhost.local", T_A);
     TEST_ASSERT_EQUAL_size_t(0u, protocore_net_host_udp_sent());

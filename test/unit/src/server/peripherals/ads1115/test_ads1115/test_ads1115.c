@@ -231,7 +231,7 @@ void test_sbas444_table4_endpoints(void)
     }
 }
 
-// The conversion is a scale by a constant, so it is odd about zero: the same magnitude of input
+// The conversion is a scale by a constant. So it is odd about zero: the same magnitude of input
 // gives the same magnitude of output on either side.
 void test_conversion_is_odd_about_zero(void)
 {
@@ -322,7 +322,7 @@ void test_sbas444e_model_reset_values_and_a_persistent_address_pointer(void)
     reg = 0x03u; // Hi_thresh, reset 7FFFh
     TEST_ASSERT_TRUE(protocore_platform_i2c_write_read(0u, (uint16_t)PROTOCORE_ADS1115_I2C_ADDR, &reg, 1u, r, 2u, 10u));
     TEST_ASSERT_EQUAL_HEX16(0x7FFFu, (uint16_t)(((uint16_t)r[0] << 8) | r[1]));
-    reg = 0x00u; // conversion, reset 0000h, and nothing has started one
+    reg = 0x00u; // conversion, reset 0000h, and nothing started one
     TEST_ASSERT_TRUE(protocore_platform_i2c_write_read(0u, (uint16_t)PROTOCORE_ADS1115_I2C_ADDR, &reg, 1u, r, 2u, 10u));
     TEST_ASSERT_EQUAL_HEX16(0x0000u, (uint16_t)(((uint16_t)r[0] << 8) | r[1]));
 }

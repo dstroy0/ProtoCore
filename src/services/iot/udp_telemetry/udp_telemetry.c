@@ -63,7 +63,10 @@ static_assert(UDP_TELEMETRY_OFF_CTX + sizeof(struct UdpTelemetryStorage) <= PROT
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define UDP_TELEMETRY_CTX(w) ((struct UdpTelemetryStorage *)(void *)((w) + UDP_TELEMETRY_OFF_CTX))
+#define UDP_TELEMETRY_CTX(w)                                                                                           \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct UdpTelemetryStorage *)(const void *)((w) + UDP_TELEMETRY_OFF_CTX),              \
+        default: (struct UdpTelemetryStorage *)(void *)((w) + UDP_TELEMETRY_OFF_CTX))
 
 // Append s while the line still leaves room for a trailing NUL, latching overflow the first time it
 // does not, so every later append is a no-op.

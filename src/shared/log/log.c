@@ -57,14 +57,17 @@ static_assert(LOG_OFF_CTX + sizeof(struct LogStorage) <= PROTOCORE_LOG_BORROW,
               " sums it into its arena");
 
 // The region, at its offset in the caller's borrow.
-#define LOG_CTX(w) ((struct LogStorage *)(void *)((w) + LOG_OFF_CTX))
+#define LOG_CTX(w)                                                                                                     \
+    _Generic((w),                                                                                                      \
+        const uint8_t *: (const struct LogStorage *)(const void *)((w) + LOG_OFF_CTX),                                 \
+        default: (struct LogStorage *)(void *)((w) + LOG_OFF_CTX))
 
 void protocore_log_set_sink(uint8_t *work)
 {
     LOG_CTX(work)->sink = LogV.sink;
 }
 
-void protocore_log_emit(uint8_t *work)
+void protocore_log_emit(const uint8_t *work)
 {
     const uint8_t level = LogV.frame.level;
     const mmgr_field *spec = LogV.frame.spec;
@@ -99,7 +102,7 @@ LogVars LogV;
 
 #else // every level compiled out: the handle stays so a caller still compiles
 
-void protocore_log_emit(uint8_t *work)
+void protocore_log_emit(const uint8_t *work)
 {
     (void)work;
 }

@@ -42,8 +42,8 @@ EMBED_ENUM_BYTE(protocore_sigfox_result,
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    uint16_t (*build_uplink)(uint8_t *, const uint8_t *, uint8_t, char *, uint16_t);
-    protocore_sigfox_result (*parse_response)(uint8_t *, const char *, uint16_t);
+    uint16_t (*build_uplink)(const uint8_t *, const uint8_t *, uint8_t, char *, uint16_t);
+    protocore_sigfox_result (*parse_response)(const uint8_t *, const char *, uint16_t);
 } SigfoxNs;
 PROTOCORE_NS_LAYOUT(SigfoxNs, build_uplink, parse_response);
 
@@ -56,7 +56,8 @@ PROTOCORE_NS_LAYOUT(SigfoxNs, build_uplink, parse_response);
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_sigfox_build_uplink(uint8_t *work, const uint8_t *payload, uint8_t len, char *out, uint16_t cap);
+uint16_t protocore_sigfox_build_uplink(const uint8_t *work, const uint8_t *payload, uint8_t len, char *out,
+                                       uint16_t cap);
 /**
  * @brief Classify a modem reply (scans buf for "OK" / "ERROR").
  * @param work PROTOCORE_SIGFOX_BORROW bytes the caller took. Not held past the call.
@@ -64,7 +65,7 @@ uint16_t protocore_sigfox_build_uplink(uint8_t *work, const uint8_t *payload, ui
  * @param len Len
  * @return The protocore_sigfox_result.
  */
-protocore_sigfox_result protocore_sigfox_parse_response(uint8_t *work, const char *buf, uint16_t len);
+protocore_sigfox_result protocore_sigfox_parse_response(const uint8_t *work, const char *buf, uint16_t len);
 
 /** @brief Module namespace. */
 PROTOCORE_NS SigfoxNs Sigfox PROTOCORE_UNUSED = {.build_uplink = protocore_sigfox_build_uplink,

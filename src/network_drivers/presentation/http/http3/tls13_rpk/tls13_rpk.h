@@ -35,8 +35,8 @@ EMBED_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*ed25519_spki)(uint8_t *, uint8_t *, size_t, const uint8_t *);
-    embed_bool (*ed25519_from_spki)(uint8_t *, const uint8_t *, size_t, const uint8_t **);
+    size_t (*ed25519_spki)(const uint8_t *, uint8_t *, size_t, const uint8_t *);
+    embed_bool (*ed25519_from_spki)(const uint8_t *, const uint8_t *, size_t, const uint8_t **);
     size_t (*build_certificate)(uint8_t *, uint8_t *, size_t, const uint8_t *);
 } Tls13RpkNs;
 PROTOCORE_NS_LAYOUT(Tls13RpkNs, ed25519_spki, ed25519_from_spki, build_certificate);
@@ -49,7 +49,7 @@ PROTOCORE_NS_LAYOUT(Tls13RpkNs, ed25519_spki, ed25519_from_spki, build_certifica
  * @param pub 32 bytes
  * @return The size_t.
  */
-size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap, const uint8_t *pub);
+size_t protocore_tls13_rpk_ed25519_spki(const uint8_t *work, uint8_t *out, size_t cap, const uint8_t *pub);
 /**
  * @brief The 32-byte Ed25519 key inside a DER SubjectPublicKeyInfo (RFC 8410 .
  * @param work PROTOCORE_TLS13_RPK_BORROW bytes the caller took. Not held past the call.
@@ -58,7 +58,8 @@ size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap,
  * @param pub Pub
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *spki, size_t len, const uint8_t **pub);
+embed_bool protocore_tls13_rpk_ed25519_from_spki(const uint8_t *work, const uint8_t *spki, size_t len,
+                                                 const uint8_t **pub);
 /**
  * @brief Build a Certificate message (RFC 8446 sec 4.4.2) carrying an RFC .
  * @param work PROTOCORE_TLS13_RPK_BORROW bytes the caller took. Not held past the call.
