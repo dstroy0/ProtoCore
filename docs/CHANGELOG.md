@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`04f72dc`](https://github.com/dstroy0/ProtoCore/commit/04f72dc0413f0a65674e66000725e15eef5525ba))
 - update CHANGELOG.md [skip ci] ([`885a62a`](https://github.com/dstroy0/ProtoCore/commit/885a62a4cf8167030e2c879f20ec795ef9d922c1))
 - update CHANGELOG.md [skip ci] ([`3342c52`](https://github.com/dstroy0/ProtoCore/commit/3342c52c4d6146a90950638e5f9c514066e931e3))
 - update CHANGELOG.md [skip ci] ([`2e6ebf2`](https://github.com/dstroy0/ProtoCore/commit/2e6ebf27d7283b4d88c646b64ef4b7700cd676cd))
@@ -471,6 +472,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Every read-only borrow is const down to its context, the operand records drop each dead pointer, and the prose and ASD-STE100 ratchets gate each commit over a list of common engineering words. ([`2de01bf`](https://github.com/dstroy0/ProtoCore/commit/2de01bf050aa96104a189abdebaddffeef51de1a))
 - CI scans a coverage report fitted to the checkout, the core keeps the TCP transport and the HTTP parser, and the tree passes clang-format and Prettier. ([`e47bf0c`](https://github.com/dstroy0/ProtoCore/commit/e47bf0c4ae638c823a79fea3ca0df4d89737ac8a))
 - ProtoCore runs on embedded_types, MMgr and idemIP in place of its own types, libc and lwIP, and the classic ESP32 profile turns each feature off that a build does not ask for. ([`92c7e6e`](https://github.com/dstroy0/ProtoCore/commit/92c7e6e319051766f5e6f83bf926f1c08b38d9a9))
 - The TCP engine resends what the peer does not acknowledge, with the RFC 6298 timer and RFC 5681 fast retransmit, probes a closed window, and ends a connection after R2 or a silent FIN-WAIT-2. ([`783ae11`](https://github.com/dstroy0/ProtoCore/commit/783ae119d9391303de41aecfd77f9f55421f6578))
@@ -773,7 +775,7 @@ All notable changes to ProtoCore are documented here.
 - convert shape: say what it guesses and what it must not move ([`d43c677`](https://github.com/dstroy0/ProtoCore/commit/d43c677f163b49a5588bd12fb9f547e169c6a8c3))
 - clang-format the vendor HAL headers ([`d126f0f`](https://github.com/dstroy0/ProtoCore/commit/d126f0fabcb0c8e2e159b63b866ec82a941c9908))
 - black over tools/ ([`4067311`](https://github.com/dstroy0/ProtoCore/commit/40673111739ffa30840b4e764423e77d9cd65d14))
-- clang-format the 77 files that drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
+- clang-format the 77 files that had drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
 - retire the stand-in arrays, 663 sites ([`c78ea4b`](https://github.com/dstroy0/ProtoCore/commit/c78ea4b9ebe232ba6da845628c6e45d575ce3080))
 - only the config include above the gate, 195 files ([`1cd928d`](https://github.com/dstroy0/ProtoCore/commit/1cd928d6a858f175eeae18d2705d0ebb75367e09))
 - read the gate, and see a static with no initializer ([`96b0057`](https://github.com/dstroy0/ProtoCore/commit/96b00576c692dcff7ae4859f0a4a57eb5c573bb4))
@@ -907,6 +909,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`ea27317`](https://github.com/dstroy0/ProtoCore/commit/ea27317591cae922993fcb2c8fba8c86b79ea9f3))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`17bea8d`](https://github.com/dstroy0/ProtoCore/commit/17bea8d69f30db5e7679b58d590fbcb99dcda13e))
 - update ESP32 build footprints [skip ci] ([`c4421fd`](https://github.com/dstroy0/ProtoCore/commit/c4421fdd849b5175bb4a77b2966c6ffc518f896d))
 - update ESP32 build footprints [skip ci] ([`a7213fa`](https://github.com/dstroy0/ProtoCore/commit/a7213fa119defb3eeb1307c611261849861ee820))
 - update ESP32 build footprints [skip ci] ([`b08a7ae`](https://github.com/dstroy0/ProtoCore/commit/b08a7aeee7a3671208364a8d3eaf7bcd849e2877))
