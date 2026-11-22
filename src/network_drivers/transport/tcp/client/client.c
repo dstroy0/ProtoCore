@@ -22,7 +22,7 @@
 
 #include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "config/platform/platform.h" // the stack's TCP, under our names
-#include "memoria_anularis/memoria_anularis.h" // the SPSC ring drain (same primitive as the server)
+#include "memoria_anularis/memoria_anularis.h"                     // the SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
 #include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
 #include "server/clock/clock.h"                                    // Clock.millis
@@ -57,7 +57,7 @@ typedef struct
     embed_atomic_u32 in_use;
     embed_atomic_u32 connected;
     embed_atomic_u32 closed; // peer FIN or error
-    const char *host;          // the caller's name, read each pump until it resolves
+    const char *host;        // the caller's name, read each pump until it resolves
     uint16_t port;
     uint32_t timer;      // millis the open started at
     uint32_t timeout_ms; // what the whole open, resolve included, is given
@@ -108,7 +108,8 @@ static protocore_net_err cc_recv(void *arg, protocore_pcb *tpcb, protocore_pbuf 
     }
     if (p == NULL)
     {
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed, .value = EMBED_TRUE); // peer closed
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed,
+                   .value = EMBED_TRUE); // peer closed
         return PROTOCORE_NET_OK;
     }
     // Wire bytes -> ring (same as the server): if the whole segment will not fit, refuse it
@@ -140,7 +141,8 @@ static protocore_net_err cc_connected(void *arg, protocore_pcb *tpcb, protocore_
     {
         if (err == PROTOCORE_NET_OK)
         {
-            EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->connected, .value = EMBED_TRUE);
+            EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->connected,
+                       .value = EMBED_TRUE);
         }
         else
         {
@@ -280,13 +282,16 @@ static uint32_t cc_now(void)
 static void cc_pump(uint8_t *work)
 {
     ClientConn *c = TCP_CLIENT_CTX(work)->conn;
-    if (!EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->in_use) || EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->connected) || EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->closed))
+    if (!EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->in_use) ||
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->connected) ||
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->closed))
     {
         return;
     }
     if ((uint32_t)(cc_now() - c->timer) >= c->timeout_ms)
     {
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed, .value = EMBED_TRUE); // out of time, whether it was still resolving or already connecting
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &c->closed,
+                   .value = EMBED_TRUE); // out of time, whether it was still resolving or already connecting
         return;
     }
     if (!c->resolving)
@@ -332,7 +337,8 @@ void protocore_tcp_client_open(uint8_t *work)
     TcpClientV.i32 = -1;
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        if (!EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &TCP_CLIENT_CTX(work)->cc[i].in_use))
+        if (!EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                        .word = &TCP_CLIENT_CTX(work)->cc[i].in_use))
         {
             TcpClientV.i32 = i;
             break;
@@ -362,17 +368,18 @@ void protocore_tcp_client_open(uint8_t *work)
 void protocore_tcp_client_connected(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
-        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
+        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                    .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
     {
         TcpClientV.ok = EMBED_FALSE;
         return;
     }
     TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     cc_pump(work);
-    TcpClientV.ok =
-        (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &TCP_CLIENT_CTX(work)->conn->connected) !=
-         0u) &&
-        (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &TCP_CLIENT_CTX(work)->conn->closed) == 0u);
+    TcpClientV.ok = (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                .word = &TCP_CLIENT_CTX(work)->conn->connected) != 0u) &&
+                    (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                .word = &TCP_CLIENT_CTX(work)->conn->closed) == 0u);
 }
 
 void protocore_tcp_client_is_closed(uint8_t *work)
@@ -391,7 +398,8 @@ void protocore_tcp_client_is_closed(uint8_t *work)
 void protocore_tcp_client_send(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
-        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
+        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                    .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
     {
         TcpClientV.ok = EMBED_FALSE;
         return;
@@ -445,7 +453,8 @@ void protocore_tcp_client_read(uint8_t *work)
 void protocore_tcp_client_close(uint8_t *work)
 {
     if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
-        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
+        !EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                    .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use))
     {
         return;
     }
@@ -453,7 +462,8 @@ void protocore_tcp_client_close(uint8_t *work)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &k, .val = 0, .bytes = sizeof(k));
     k.c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     protocore_net_call_marshal(cc_do_close, &k.base);
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use, .value = EMBED_FALSE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg,
+               .word = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use, .value = EMBED_FALSE);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

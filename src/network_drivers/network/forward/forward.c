@@ -131,11 +131,7 @@ static embed_bool fwd_iface_send(uint8_t *work, uint8_t id)
 }
 
 // What the controls on forwarding say about one (src, dst) pair. RFC 1812 sec 5.3.11.
-EMBED_ENUM_BYTE(resolve_result,
-    RESOLVE_RESULT_R_NOROUTE,
-    RESOLVE_RESULT_R_DENY,
-    RESOLVE_RESULT_R_ALLOW,
-);
+EMBED_ENUM_BYTE(resolve_result, RESOLVE_RESULT_R_NOROUTE, RESOLVE_RESULT_R_DENY, RESOLVE_RESULT_R_ALLOW, );
 
 // Resolve the control on forwarding for (src_if -> dst): a DENY wins; otherwise the first matching
 // ALLOW governs and its index lands in @p allow_idx; otherwise nothing matched.

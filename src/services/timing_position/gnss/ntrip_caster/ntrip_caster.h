@@ -35,8 +35,8 @@ EMBED_BEGIN_DECLS
 
 /** @brief NTRIP protocol revision detected in / used for a request or response. */
 EMBED_ENUM_BYTE(NtripVersion,
-    NTRIP_V1 = 1, ///< legacy: ICY 200 OK / SOURCETABLE 200 OK
-    NTRIP_V2 = 2, ///< RFC-style: HTTP/1.1 200 OK, Content-Type: gnss/data
+                NTRIP_V1 = 1, ///< legacy: ICY 200 OK / SOURCETABLE 200 OK
+                NTRIP_V2 = 2, ///< RFC-style: HTTP/1.1 200 OK, Content-Type: gnss/data
 );
 
 /** @brief A parsed NTRIP rover request. String spans point into the caller's request buffer. */

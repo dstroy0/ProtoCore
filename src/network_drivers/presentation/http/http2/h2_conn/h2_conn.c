@@ -21,12 +21,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief Per-stream state (RFC 9113 sec 5.1, server side of a client-initiated stream). A
  *  mutually-exclusive internal lifecycle state, not a wire value. */
-EMBED_ENUM_BYTE(H2StreamState,
-    H2_ST_IDLE = 0,
-    H2_ST_OPEN,        ///< receiving (headers seen, no END_STREAM yet)
-    H2_ST_HALF_CLOSED, ///< client finished (END_STREAM); we may still respond
-    H2_ST_CLOSED,
-);
+EMBED_ENUM_BYTE(H2StreamState, H2_ST_IDLE = 0,
+                H2_ST_OPEN,        ///< receiving (headers seen, no END_STREAM yet)
+                H2_ST_HALF_CLOSED, ///< client finished (END_STREAM); we may still respond
+                H2_ST_CLOSED, );
 
 typedef struct
 {

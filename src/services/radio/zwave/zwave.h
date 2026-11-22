@@ -49,8 +49,8 @@ EMBED_BEGIN_DECLS
 
 /** @brief Data-frame type. */
 EMBED_ENUM_BYTE(protocore_zwave_type,
-    ZWAVE_REQ = 0x00, ///< request
-    ZWAVE_RES = 0x01, ///< response
+                ZWAVE_REQ = 0x00, ///< request
+                ZWAVE_RES = 0x01, ///< response
 );
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

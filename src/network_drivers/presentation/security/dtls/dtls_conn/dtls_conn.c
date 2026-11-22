@@ -703,9 +703,9 @@ static void process_ack(uint8_t *work, DtlsConn *c, const uint8_t *body, size_t 
 
 // One-record outcome for the protocore_dtls_conn_process datagram walk.
 EMBED_ENUM_BYTE(DtlsRecStep,
-    DTLS_REC_STEP_NEXT,  // record consumed; keep walking the datagram
-    DTLS_REC_STEP_STOP,  // malformed/short record; stop walking (leave the rest)
-    DTLS_REC_STEP_FATAL, // fatal error already recorded via fail(); caller returns -1
+                DTLS_REC_STEP_NEXT,  // record consumed; keep walking the datagram
+                DTLS_REC_STEP_STOP,  // malformed/short record; stop walking (leave the rest)
+                DTLS_REC_STEP_FATAL, // fatal error already recorded via fail(); caller returns -1
 );
 
 // Process one ciphertext (epoch-2) record at dgram[*off], advancing *off past a well-formed record.

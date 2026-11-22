@@ -39,12 +39,12 @@ EMBED_BEGIN_DECLS
 
 /** @brief Message types RFC 4443 assigns. Numbered apart from RFC 792's. */
 EMBED_ENUM_BYTE(IdemIpIcmp6Type,
-    IDEMIP_ICMP6_DEST_UNREACHABLE = 1,  ///< sec 3.1
-    IDEMIP_ICMP6_PACKET_TOO_BIG = 2,    ///< sec 3.2
-    IDEMIP_ICMP6_TIME_EXCEEDED = 3,     ///< sec 3.3
-    IDEMIP_ICMP6_PARAMETER_PROBLEM = 4, ///< sec 3.4
-    IDEMIP_ICMP6_ECHO_REQUEST = 128,    ///< sec 4.1
-    IDEMIP_ICMP6_ECHO_REPLY = 129,      ///< sec 4.2
+                IDEMIP_ICMP6_DEST_UNREACHABLE = 1,  ///< sec 3.1
+                IDEMIP_ICMP6_PACKET_TOO_BIG = 2,    ///< sec 3.2
+                IDEMIP_ICMP6_TIME_EXCEEDED = 3,     ///< sec 3.3
+                IDEMIP_ICMP6_PARAMETER_PROBLEM = 4, ///< sec 3.4
+                IDEMIP_ICMP6_ECHO_REQUEST = 128,    ///< sec 4.1
+                IDEMIP_ICMP6_ECHO_REPLY = 129,      ///< sec 4.2
 );
 
 // ---------------------------------------------------------------------------
@@ -157,8 +157,7 @@ EMBED_INLINE uint32_t idemip_icmp6_pointer(const uint8_t *m)
  * The caller zeroes the checksum field first. Unlike RFC 792, the addresses are covered, because
  * IPv6 carries no header checksum of its own.
  */
-EMBED_INLINE uint16_t idemip_icmp6_cksum_compute(const uint8_t *m, size_t len, const uint8_t *src,
-                                                     const uint8_t *dst)
+EMBED_INLINE uint16_t idemip_icmp6_cksum_compute(const uint8_t *m, size_t len, const uint8_t *src, const uint8_t *dst)
 {
     uint32_t sum = idemip_ip6_pseudo_accum(0u, src, dst, (uint32_t)len, IDEMIP_IP6_NH_ICMPV6);
     return idemip_cksum_final(idemip_cksum_accum(sum, m, len));

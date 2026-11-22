@@ -39,10 +39,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief What happened to the connection of one entry. */
 EMBED_ENUM_BYTE(StackTcpEventKind,
-    STACK_TCP_CONNECT = 0, ///< a passive open completed on the entry
-    STACK_TCP_DATA,        ///< text arrived on the receive ring of the entry
-    STACK_TCP_DISCONNECT,  ///< the peer sent its FIN
-    STACK_TCP_ERROR,       ///< a reset or a timeout ended the connection
+                STACK_TCP_CONNECT = 0, ///< a passive open completed on the entry
+                STACK_TCP_DATA,        ///< text arrived on the receive ring of the entry
+                STACK_TCP_DISCONNECT,  ///< the peer sent its FIN
+                STACK_TCP_ERROR,       ///< a reset or a timeout ended the connection
 );
 
 /**

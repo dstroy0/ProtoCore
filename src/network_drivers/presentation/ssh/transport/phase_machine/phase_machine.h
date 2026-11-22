@@ -30,13 +30,13 @@ EMBED_BEGIN_DECLS
 
 /** @brief SSH connection lifecycle phase. */
 EMBED_ENUM_BYTE(SshPhase,
-    SSH_PHASE_IDENT,   ///< Awaiting the peer identification string.
-    SSH_PHASE_KEXINIT, ///< Awaiting the peer KEXINIT.
-    SSH_PHASE_DH_INIT, ///< Awaiting SSH_MSG_KEXDH_INIT.
-    SSH_PHASE_NEWKEYS, ///< Awaiting SSH_MSG_NEWKEYS.
-    SSH_PHASE_SERVICE, ///< Awaiting SERVICE_REQUEST ("ssh-userauth").
-    SSH_PHASE_AUTH,    ///< User authentication in progress (RFC 4252).
-    SSH_PHASE_OPEN     ///< Authenticated; connection/channel protocol active.
+                SSH_PHASE_IDENT,   ///< Awaiting the peer identification string.
+                SSH_PHASE_KEXINIT, ///< Awaiting the peer KEXINIT.
+                SSH_PHASE_DH_INIT, ///< Awaiting SSH_MSG_KEXDH_INIT.
+                SSH_PHASE_NEWKEYS, ///< Awaiting SSH_MSG_NEWKEYS.
+                SSH_PHASE_SERVICE, ///< Awaiting SERVICE_REQUEST ("ssh-userauth").
+                SSH_PHASE_AUTH,    ///< User authentication in progress (RFC 4252).
+                SSH_PHASE_OPEN     ///< Authenticated; connection/channel protocol active.
 );
 
 /** @brief What get takes: i. */

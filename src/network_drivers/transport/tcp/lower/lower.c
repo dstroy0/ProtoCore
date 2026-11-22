@@ -9,10 +9,6 @@
  * module below it.
  */
 
-#include "protocore_config.h" // the entry point: the gate below
-
-#if PROTOCORE_ENABLE_TCP
-
 #include "lower.h"
 #include "../protocol/protocol.h" // closing_check: the CLOSE_CHECK op finalizes a drained slot
 #include "config/platform/platform.h"
@@ -301,5 +297,3 @@ void protocore_tcp_lower_apply_ttl(uint8_t *work)
 
 /** @brief The operands and the outcome. */
 TcpLowerVars TcpLowerV;
-
-#endif // PROTOCORE_ENABLE_TCP

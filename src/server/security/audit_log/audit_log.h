@@ -46,12 +46,12 @@ EMBED_BEGIN_DECLS
 
 /** @brief Standard audit event categories (extend with your own values). */
 EMBED_ENUM_BYTE(protocore_audit_cat,
-    PROTOCORE_AUDIT_SYSTEM = 0,    ///< Boot, shutdown, time change, generic.
-    PROTOCORE_AUDIT_AUTH = 1,      ///< Authentication success (login).
-    PROTOCORE_AUDIT_AUTH_FAIL = 2, ///< Authentication failure.
-    PROTOCORE_AUDIT_ACCESS = 3,    ///< Resource access (request served / denied).
-    PROTOCORE_AUDIT_CONFIG = 4,    ///< Configuration change.
-    PROTOCORE_AUDIT_ADMIN = 5,     ///< Privileged / administrative action.
+                PROTOCORE_AUDIT_SYSTEM = 0,    ///< Boot, shutdown, time change, generic.
+                PROTOCORE_AUDIT_AUTH = 1,      ///< Authentication success (login).
+                PROTOCORE_AUDIT_AUTH_FAIL = 2, ///< Authentication failure.
+                PROTOCORE_AUDIT_ACCESS = 3,    ///< Resource access (request served / denied).
+                PROTOCORE_AUDIT_CONFIG = 4,    ///< Configuration change.
+                PROTOCORE_AUDIT_ADMIN = 5,     ///< Privileged / administrative action.
 );
 
 /** @brief One audit record. seq is monotonic and never reused across evictions. */

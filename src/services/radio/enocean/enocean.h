@@ -50,16 +50,9 @@ EMBED_BEGIN_DECLS
 #define PROTOCORE_ERP_RORG_UTE 0xD4 ///< Universal Teach-in
 
 /** @brief ESP3 packet types (the common ones). */
-EMBED_ENUM_BYTE(protocore_esp3_type,
-    ESP3_RADIO_ERP1 = 0x01,
-    ESP3_RESPONSE = 0x02,
-    ESP3_RADIO_SUB_TEL = 0x03,
-    ESP3_EVENT = 0x04,
-    ESP3_COMMON_COMMAND = 0x05,
-    ESP3_SMART_ACK = 0x06,
-    ESP3_REMOTE_MAN = 0x07,
-    ESP3_RADIO_ERP2 = 0x0A,
-);
+EMBED_ENUM_BYTE(protocore_esp3_type, ESP3_RADIO_ERP1 = 0x01, ESP3_RESPONSE = 0x02, ESP3_RADIO_SUB_TEL = 0x03,
+                ESP3_EVENT = 0x04, ESP3_COMMON_COMMAND = 0x05, ESP3_SMART_ACK = 0x06, ESP3_REMOTE_MAN = 0x07,
+                ESP3_RADIO_ERP2 = 0x0A, );
 
 /** @brief A parsed ESP3 telegram (pointers alias the caller's buffer). */
 typedef struct

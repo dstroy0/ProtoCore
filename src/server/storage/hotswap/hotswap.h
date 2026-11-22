@@ -48,9 +48,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief Where a removable volume currently stands. */
 EMBED_ENUM_BYTE(StorageState,
-    STORAGE_STATE_ABSENT = 0,  ///< nothing mounted; no filesystem call is safe.
-    STORAGE_STATE_READY = 1,   ///< mounted and healthy.
-    STORAGE_STATE_FAULTED = 2, ///< was mounted, I/O is failing; unmounted and awaiting a remount probe.
+                STORAGE_STATE_ABSENT = 0,  ///< nothing mounted; no filesystem call is safe.
+                STORAGE_STATE_READY = 1,   ///< mounted and healthy.
+                STORAGE_STATE_FAULTED = 2, ///< was mounted, I/O is failing; unmounted and awaiting a remount probe.
 );
 
 /** @brief The whole state machine. Pure: it decides, the binding acts. */

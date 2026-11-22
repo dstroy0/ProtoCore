@@ -123,11 +123,10 @@ static embed_bool stack_take_all(StackUnits *units)
     }
     return taken && units->netif && units->loopif && units->arp && units->ip4_route && units->ip4_forward &&
            units->ip6_forward && units->ip4_reass && units->ip4_frag && units->igmp && units->ip6_reass &&
-           units->ip6_frag && units->mld6 && units->icmp_in && units->icmp6_in && units->raw_pcb &&
-           units->udp_pcb && units->udplite && units->tcp_pcb && units->tcp_in && units->tcp_out &&
-           units->tcp_isn && units->ip4_addr && units->ip6_addr && units->ip6_select && units->pmtu4 &&
-           units->dns && units->timeouts && units->tick && units->dispatch && units->stats && units->vlan &&
-           units->ethip6;
+           units->ip6_frag && units->mld6 && units->icmp_in && units->icmp6_in && units->raw_pcb && units->udp_pcb &&
+           units->udplite && units->tcp_pcb && units->tcp_in && units->tcp_out && units->tcp_isn && units->ip4_addr &&
+           units->ip6_addr && units->ip6_select && units->pmtu4 && units->dns && units->timeouts && units->tick &&
+           units->dispatch && units->stats && units->vlan && units->ethip6;
 }
 
 // Clears each unit. Each entry of a unit refuses a borrow that its clear did not run on. The PHY unit
@@ -371,8 +370,8 @@ static embed_bool stack_transmit_post(struct StackStorage *context, uint8_t inde
 }
 
 // Writes the IP header and the Ethernet header of an ICMP reply in front of its message. The two go in
-// the reply buffer of the interface, and the call gives the length of the frame. The frame goes to the link source of the request. That
-// address is the next hop back to the requester. Zero where Netif has no record of the interface.
+// the reply buffer of the interface, and the call gives the length of the frame. The frame goes to the link source of
+// the request. That address is the next hop back to the requester. Zero where Netif has no record of the interface.
 static size_t stack_icmp_frame(const struct StackStorage *context, uint8_t index, const uint8_t *request)
 {
     NetifIo *const netif_io = IDEMIP_NETIF_IO(context->units.netif);

@@ -43,7 +43,8 @@ void setUp()
     TcpListener.add(protocore_tcp_listener_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         HttpConnV.slot = (uint8_t)i;
         HttpConn.reset(protocore_http_conn_span());
@@ -85,7 +86,8 @@ void test_tick_fires_check_timeouts_stale_slot_freed()
     set_now_ms(CONN_TIMEOUT_MS);
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 void test_tick_does_not_free_fresh_connection()
@@ -94,7 +96,8 @@ void test_tick_does_not_free_fresh_connection()
     set_now_ms(CONN_TIMEOUT_MS - 1);
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 void test_fn_tick_timeout_before_event_drain_ordering()
@@ -103,9 +106,11 @@ void test_fn_tick_timeout_before_event_drain_ordering()
     set_now_ms(CONN_TIMEOUT_MS);
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[1].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[1].state));
 
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[1].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[1].state));
 }
 
 void test_fn_tick_only_active_slots_expire()
@@ -121,10 +126,14 @@ void test_fn_tick_only_active_slots_expire()
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[1].state));
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[2].state));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[3].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[1].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[2].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[3].state));
 }
 
 void test_stress_1000_idle_ticks_stable()
@@ -137,7 +146,8 @@ void test_stress_1000_idle_ticks_stable()
     }
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state));
+        TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                             .word = &conn_pool[i].state));
     }
 }
 
@@ -147,7 +157,8 @@ void test_stress_timeout_all_slots_10_cycles()
     {
         for (int i = 0; i < MAX_CONNS; i++)
         {
-            EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+            EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                       .value = CONN_ACTIVE);
             conn_pool[i].pcb = NULL;
             conn_pool[i].last_activity_ms = 0;
         }
@@ -156,7 +167,8 @@ void test_stress_timeout_all_slots_10_cycles()
         Session.tick(protocore_session_span());
         for (int i = 0; i < MAX_CONNS; i++)
         {
-            TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state));
+            TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                               .word = &conn_pool[i].state));
         }
     }
 }
@@ -179,10 +191,14 @@ void test_stress_mixed_fresh_stale_slots_many_ticks()
         Session.tick(protocore_session_span());
     }
 
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[1].state));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[2].state));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[3].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[1].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[2].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[3].state));
 }
 
 void test_evt_connect_calls_http_reset()
@@ -424,12 +440,14 @@ void test_race_external_free_between_ticks()
     set_now_ms(CONN_TIMEOUT_MS);
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 
     SessionV.worker_id = 0;
 
     Session.tick(protocore_session_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 void test_race_activity_update_saves_slot_from_timeout()
@@ -440,21 +458,24 @@ void test_race_activity_update_saves_slot_from_timeout()
     SessionV.worker_id = 0;
 
     Session.tick(protocore_session_span());
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 
     conn_pool[0].last_activity_ms = CONN_TIMEOUT_MS - 1;
 
     set_now_ms(CONN_TIMEOUT_MS);
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 void test_race_all_expire_then_idle_tick()
 {
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].last_activity_ms = 0;
     }
     set_now_ms(CONN_TIMEOUT_MS);
@@ -462,7 +483,8 @@ void test_race_all_expire_then_idle_tick()
     Session.tick(protocore_session_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state));
+        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[i].state));
     }
 
     SessionV.worker_id = 0;
@@ -470,7 +492,8 @@ void test_race_all_expire_then_idle_tick()
     Session.tick(protocore_session_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state));
+        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[i].state));
     }
 }
 
@@ -484,7 +507,8 @@ void test_race_millis_wraparound_no_spurious_timeout()
     SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 static void stage_data_evt(uint8_t slot)

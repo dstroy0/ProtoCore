@@ -31,8 +31,8 @@ EMBED_BEGIN_DECLS
 
 /** @brief Type of a config field (selects the typed get/set used). */
 EMBED_ENUM_BYTE(protocore_cfg_type,
-    PROTOCORE_CFG_STR = 0, ///< null-terminated string.
-    PROTOCORE_CFG_U32 = 1, ///< unsigned 32-bit integer (serialized as decimal).
+                PROTOCORE_CFG_STR = 0, ///< null-terminated string.
+                PROTOCORE_CFG_U32 = 1, ///< unsigned 32-bit integer (serialized as decimal).
 );
 
 /** @brief One field in an export/restore schema. */

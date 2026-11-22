@@ -1,8 +1,7 @@
 name: SonarCloud
 
-# The SonarCloud C/C++ + Python analysis, on its own. It used to be the last step of Test & Analyze,
-# behind env selection, the compile database, the whole test matrix and a Prettier pass; any of those
-# failing skipped the scan, so a broken tooling path or a red suite silently meant no analysis at all.
+# The SonarCloud C/C++ + Python analysis, on its own. It does not run behind the test matrix, so a broken
+# tooling path or a red suite does not skip the scan.
 #
 # Nothing here depends on the suite. The scan needs two inputs:
 #   * compile_commands.json - generated below (every native env merged, so feature-gated files are
@@ -56,6 +55,12 @@ jobs:
       - name: Generate merged compile_commands.json
         if: ${{ env.SONAR_TOKEN != '' }}
         run: bash tools/ci_tooling/sonar/gen_compiledb.sh
+
+      # The committed report can name lines that a later commit removed, and the coverage sensor then refuses the
+      # whole report. This drops each line past the end of its file, and each file that is gone.
+      - name: Fit the coverage report to the checkout
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: python3 tools/ci_tooling/sonar/trim_coverage.py
 
       - name: SonarQube Scan
         if: ${{ env.SONAR_TOKEN != '' }}

@@ -36,13 +36,13 @@ EMBED_BEGIN_DECLS
 #include "services/net/snmp/snmp_ber/snmp_ber.h" // BerEnc: the open encoder a PDU append writes into
 /** @brief Which SMIv2 type a caller variable-binding carries (RFC 2578 sec 7.1). */
 EMBED_ENUM_BYTE(SnmpVbType,
-    SNMP_VB_INT = 0,       ///< INTEGER, in ival
-    SNMP_VB_STRING = 1,    ///< OCTET STRING, in bytes/blen
-    SNMP_VB_OID = 2,       ///< OBJECT IDENTIFIER, in oid_val/oid_val_len
-    SNMP_VB_COUNTER32 = 3, ///< Counter32, in ival (RFC 2578 sec 7.1.6)
-    SNMP_VB_GAUGE32 = 4,   ///< Gauge32, in ival (RFC 2578 sec 7.1.7)
-    SNMP_VB_TIMETICKS = 5, ///< TimeTicks, in ival (RFC 2578 sec 7.1.8)
-    SNMP_VB_IPADDR = 6,    ///< IpAddress, 4 octets in bytes (RFC 2578 sec 7.1.5)
+                SNMP_VB_INT = 0,       ///< INTEGER, in ival
+                SNMP_VB_STRING = 1,    ///< OCTET STRING, in bytes/blen
+                SNMP_VB_OID = 2,       ///< OBJECT IDENTIFIER, in oid_val/oid_val_len
+                SNMP_VB_COUNTER32 = 3, ///< Counter32, in ival (RFC 2578 sec 7.1.6)
+                SNMP_VB_GAUGE32 = 4,   ///< Gauge32, in ival (RFC 2578 sec 7.1.7)
+                SNMP_VB_TIMETICKS = 5, ///< TimeTicks, in ival (RFC 2578 sec 7.1.8)
+                SNMP_VB_IPADDR = 6,    ///< IpAddress, 4 octets in bytes (RFC 2578 sec 7.1.5)
 );
 
 /** @brief One variable-binding of the VarBindList: a name and its typed value (RFC 3416 sec 3). */

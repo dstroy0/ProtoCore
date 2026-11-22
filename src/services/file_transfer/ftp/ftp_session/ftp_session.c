@@ -41,16 +41,16 @@ typedef struct
 
 /** @brief The reply the sequence is waiting on, and so where the next call resumes. */
 EMBED_ENUM_BYTE(FtpStep,
-    FTP_STEP_IDLE = 0, ///< nothing in flight
-    FTP_STEP_GREETING, ///< the server's 220
-    FTP_STEP_USER,     ///< the answer to USER
-    FTP_STEP_PASS,     ///< the answer to PASS
-    FTP_STEP_TYPE,     ///< the answer to TYPE I
-    FTP_STEP_EPSV,     ///< the answer to EPSV
-    FTP_STEP_PASV,     ///< the answer to PASV
-    FTP_STEP_STOR,     ///< the preliminary 1xx
-    FTP_STEP_STREAM,   ///< the payload is going out
-    FTP_STEP_DONE,     ///< the completion 226
+                FTP_STEP_IDLE = 0, ///< nothing in flight
+                FTP_STEP_GREETING, ///< the server's 220
+                FTP_STEP_USER,     ///< the answer to USER
+                FTP_STEP_PASS,     ///< the answer to PASS
+                FTP_STEP_TYPE,     ///< the answer to TYPE I
+                FTP_STEP_EPSV,     ///< the answer to EPSV
+                FTP_STEP_PASV,     ///< the answer to PASV
+                FTP_STEP_STOR,     ///< the preliminary 1xx
+                FTP_STEP_STREAM,   ///< the payload is going out
+                FTP_STEP_DONE,     ///< the completion 226
 );
 // Designated, so a member's position in the struct does not decide what it binds to.
 // The caller's borrow, split: the context at its offset. One pointer arrives and every

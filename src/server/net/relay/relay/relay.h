@@ -39,9 +39,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief protocore_relay_step() outcome. */
 EMBED_ENUM_BYTE(protocore_relay_status,
-    PROTOCORE_RELAY_ERROR = -1,  ///< a send/recv seam reported an error; the caller should close both sides
-    PROTOCORE_RELAY_RUNNING = 0, ///< still relaying (keep stepping)
-    PROTOCORE_RELAY_DONE = 1,    ///< both directions finished (EOF + drained); the caller closes both sides
+                PROTOCORE_RELAY_ERROR = -1,  ///< a send/recv seam reported an error; the caller should close both sides
+                PROTOCORE_RELAY_RUNNING = 0, ///< still relaying (keep stepping)
+                PROTOCORE_RELAY_DONE = 1,    ///< both directions finished (EOF + drained); the caller closes both sides
 );
 
 /**

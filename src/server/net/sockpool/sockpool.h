@@ -46,9 +46,9 @@ typedef struct
 
 /** @brief Acquire outcome (the sole return of protocore_sockpool_acquire). */
 EMBED_ENUM_BYTE(SockAcq,
-    SOCK_ACQ_FREE = 0,     ///< a free slot was used.
-    SOCK_ACQ_RECYCLED = 1, ///< the pool was full; the LRU slot was recycled (see evicted_id).
-    SOCK_ACQ_FAIL = 2      ///< the pool has zero slots / bad args.
+                SOCK_ACQ_FREE = 0,     ///< a free slot was used.
+                SOCK_ACQ_RECYCLED = 1, ///< the pool was full; the LRU slot was recycled (see evicted_id).
+                SOCK_ACQ_FAIL = 2      ///< the pool has zero slots / bad args.
 );
 
 /** @brief What init takes: p, slots, n. */

@@ -103,15 +103,14 @@ EMBED_INLINE embed_bool protocore_i2c_read(uint16_t addr, uint8_t *buf, size_t l
 
 /** @brief Write @p wlen bytes to @p addr on @p bus, then read @p rlen back through a repeated start. */
 EMBED_INLINE embed_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint8_t *w, size_t wlen,
-                                                        uint8_t *r, size_t rlen)
+                                                    uint8_t *r, size_t rlen)
 {
     return protocore_platform_i2c_write_read(bus, addr, w, (uint32_t)wlen, r, (uint32_t)rlen,
                                              PROTOCORE_I2C_TIMEOUT_MS) != 0;
 }
 
 /** @brief Write @p wlen bytes, then read @p rlen back in the same transaction (repeated start). */
-EMBED_INLINE embed_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r,
-                                                     size_t rlen)
+EMBED_INLINE embed_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r, size_t rlen)
 {
     return protocore_i2c_write_read_on((uint8_t)PROTOCORE_I2C_BUS, addr, w, wlen, r, rlen);
 }
@@ -234,7 +233,7 @@ EMBED_INLINE embed_bool protocore_i2c_read(uint16_t addr, uint8_t *buf, size_t l
 }
 
 EMBED_INLINE embed_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint8_t *w, size_t wlen,
-                                                        uint8_t *r, size_t rlen)
+                                                    uint8_t *r, size_t rlen)
 {
     (void)bus;
     (void)addr;
@@ -245,8 +244,7 @@ EMBED_INLINE embed_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t addr, 
     return EMBED_FALSE;
 }
 
-EMBED_INLINE embed_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r,
-                                                     size_t rlen)
+EMBED_INLINE embed_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r, size_t rlen)
 {
     return protocore_i2c_write_read_on((uint8_t)PROTOCORE_I2C_BUS, addr, w, wlen, r, rlen);
 }

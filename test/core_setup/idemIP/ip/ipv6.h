@@ -266,8 +266,8 @@ EMBED_INLINE uint8_t idemip_ip6_rt_segs_left(const uint8_t *r)
  * The addresses are summed where they lie, sixteen octets each, which is the same word pairing the
  * figure lays out. Not part of the packet: it is summed, never sent.
  */
-EMBED_INLINE uint32_t idemip_ip6_pseudo_accum(uint32_t sum, const uint8_t *src, const uint8_t *dst,
-                                                  uint32_t upper_len, uint8_t next_hdr)
+EMBED_INLINE uint32_t idemip_ip6_pseudo_accum(uint32_t sum, const uint8_t *src, const uint8_t *dst, uint32_t upper_len,
+                                              uint8_t next_hdr)
 {
     sum = idemip_cksum_accum(sum, src, IDEMIP_IP6_ADDR_LEN);
     sum = idemip_cksum_accum(sum, dst, IDEMIP_IP6_ADDR_LEN);

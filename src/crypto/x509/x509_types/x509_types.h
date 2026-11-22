@@ -27,22 +27,22 @@ EMBED_BEGIN_DECLS
 
 /** @brief The signature algorithms this profile reads (RFC 5280 sec 4.1.1.2). */
 EMBED_ENUM_BYTE(protocore_x509_sig_alg,
-    PROTOCORE_X509_SIG_UNKNOWN = 0,  ///< an algorithm this build does not verify
-    PROTOCORE_X509_SIG_RSA_SHA256,   ///< sha256WithRSAEncryption, {pkcs-1 11} (RFC 8017 A.2.4)
-    PROTOCORE_X509_SIG_RSA_SHA384,   ///< sha384WithRSAEncryption, {pkcs-1 12}
-    PROTOCORE_X509_SIG_RSA_SHA512,   ///< sha512WithRSAEncryption, {pkcs-1 13}
-    PROTOCORE_X509_SIG_RSA_PSS,      ///< id-RSASSA-PSS, {pkcs-1 10}
-    PROTOCORE_X509_SIG_ECDSA_SHA256, ///< ecdsa-with-SHA256, 1.2.840.10045.4.3.2 (RFC 5480 sec 2.1.1)
-    PROTOCORE_X509_SIG_ECDSA_SHA384, ///< ecdsa-with-SHA384, 1.2.840.10045.4.3.3
-    PROTOCORE_X509_SIG_ED25519,      ///< id-Ed25519, 1.3.101.112 (RFC 8410 sec 3)
+                PROTOCORE_X509_SIG_UNKNOWN = 0,  ///< an algorithm this build does not verify
+                PROTOCORE_X509_SIG_RSA_SHA256,   ///< sha256WithRSAEncryption, {pkcs-1 11} (RFC 8017 A.2.4)
+                PROTOCORE_X509_SIG_RSA_SHA384,   ///< sha384WithRSAEncryption, {pkcs-1 12}
+                PROTOCORE_X509_SIG_RSA_SHA512,   ///< sha512WithRSAEncryption, {pkcs-1 13}
+                PROTOCORE_X509_SIG_RSA_PSS,      ///< id-RSASSA-PSS, {pkcs-1 10}
+                PROTOCORE_X509_SIG_ECDSA_SHA256, ///< ecdsa-with-SHA256, 1.2.840.10045.4.3.2 (RFC 5480 sec 2.1.1)
+                PROTOCORE_X509_SIG_ECDSA_SHA384, ///< ecdsa-with-SHA384, 1.2.840.10045.4.3.3
+                PROTOCORE_X509_SIG_ED25519,      ///< id-Ed25519, 1.3.101.112 (RFC 8410 sec 3)
 );
 
 /** @brief The public key algorithms this profile reads (RFC 5280 sec 4.1.2.7). */
 EMBED_ENUM_BYTE(protocore_x509_key_alg,
-    PROTOCORE_X509_KEY_UNKNOWN = 0, ///< an algorithm this build cannot use
-    PROTOCORE_X509_KEY_RSA,         ///< rsaEncryption, {pkcs-1 1}
-    PROTOCORE_X509_KEY_EC_P256,     ///< id-ecPublicKey over secp256r1 (RFC 5480 sec 2.1.1)
-    PROTOCORE_X509_KEY_ED25519,     ///< id-Ed25519 (RFC 8410 sec 4)
+                PROTOCORE_X509_KEY_UNKNOWN = 0, ///< an algorithm this build cannot use
+                PROTOCORE_X509_KEY_RSA,         ///< rsaEncryption, {pkcs-1 1}
+                PROTOCORE_X509_KEY_EC_P256,     ///< id-ecPublicKey over secp256r1 (RFC 5480 sec 2.1.1)
+                PROTOCORE_X509_KEY_ED25519,     ///< id-Ed25519 (RFC 8410 sec 4)
 );
 
 /** @name RFC 5280 sec 4.2.1.3 KeyUsage bits, in the order the BIT STRING numbers them.

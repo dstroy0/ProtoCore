@@ -49,20 +49,20 @@ EMBED_BEGIN_DECLS
 
 /** @brief The decoded type, named after the "RESP protocol description" table of first bytes. */
 EMBED_ENUM_BYTE(RespType,
-    RESP_SIMPLE_STRING,   ///< Simple strings (+); the text in str/str_len
-    RESP_SIMPLE_ERROR,    ///< Simple errors (-); the message in str/str_len
-    RESP_INTEGER,         ///< Integers (:); the signed 64-bit value in ival
-    RESP_BULK_STRING,     ///< Bulk strings ($); the octets in str/str_len
-    RESP_ARRAY,           ///< Arrays (*); the element count in count
-    RESP_NULL,            ///< Null bulk strings ($-1), Null arrays (*-1), and RESP3 Nulls (_)
-    RESP_BOOLEAN,         ///< Booleans (#); 0 or 1 in ival
-    RESP_DOUBLE,          ///< Doubles (,); the text in str/str_len and its value in dval
-    RESP_BIG_NUMBER,      ///< Big numbers ((); the digits in str/str_len
-    RESP_BULK_ERROR,      ///< Bulk errors (!); the message in str/str_len
-    RESP_VERBATIM_STRING, ///< Verbatim strings (=); str holds the 3-octet encoding, ':' and the data
-    RESP_MAP,             ///< Maps (%); count = 2 * entries
-    RESP_SET,             ///< Sets (~); the element count in count
-    RESP_PUSH,            ///< Pushes (>); the element count in count
+                RESP_SIMPLE_STRING,   ///< Simple strings (+); the text in str/str_len
+                RESP_SIMPLE_ERROR,    ///< Simple errors (-); the message in str/str_len
+                RESP_INTEGER,         ///< Integers (:); the signed 64-bit value in ival
+                RESP_BULK_STRING,     ///< Bulk strings ($); the octets in str/str_len
+                RESP_ARRAY,           ///< Arrays (*); the element count in count
+                RESP_NULL,            ///< Null bulk strings ($-1), Null arrays (*-1), and RESP3 Nulls (_)
+                RESP_BOOLEAN,         ///< Booleans (#); 0 or 1 in ival
+                RESP_DOUBLE,          ///< Doubles (,); the text in str/str_len and its value in dval
+                RESP_BIG_NUMBER,      ///< Big numbers ((); the digits in str/str_len
+                RESP_BULK_ERROR,      ///< Bulk errors (!); the message in str/str_len
+                RESP_VERBATIM_STRING, ///< Verbatim strings (=); str holds the 3-octet encoding, ':' and the data
+                RESP_MAP,             ///< Maps (%); count = 2 * entries
+                RESP_SET,             ///< Sets (~); the element count in count
+                RESP_PUSH,            ///< Pushes (>); the element count in count
 );
 
 /** @brief One decoded value. Every string member points into the parsed octets; nothing is copied. */

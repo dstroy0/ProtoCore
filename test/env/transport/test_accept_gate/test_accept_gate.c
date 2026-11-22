@@ -431,7 +431,8 @@ void test_accept_cb_ip_allowlist_allows_when_empty()
 
     protocore_pcb pcb = {0};
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, &pcb, PROTOCORE_NET_OK));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
@@ -453,5 +454,6 @@ void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
     int before_aborts = mock_abort_call_count();
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_ERR_ABRT, listener_accept_cb((void *)(uintptr_t)0, &pcb, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL_INT(before_aborts + 1, mock_abort_call_count());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }

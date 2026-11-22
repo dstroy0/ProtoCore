@@ -55,9 +55,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief deflate_raw() return codes (mirror ::InflateResult). */
 EMBED_ENUM_BYTE(DeflateResult,
-    DEFLATE_OK = 0,            ///< success; *out_len holds the compressed length
-    DEFLATE_ERR_OVERFLOW = -2, ///< output would exceed dst_cap (incompressible)
-    DEFLATE_ERR_SCRATCH = -3   ///< scratch_len < DEFLATE_SCRATCH_SIZE
+                DEFLATE_OK = 0,            ///< success; *out_len holds the compressed length
+                DEFLATE_ERR_OVERFLOW = -2, ///< output would exceed dst_cap (incompressible)
+                DEFLATE_ERR_SCRATCH = -3   ///< scratch_len < DEFLATE_SCRATCH_SIZE
 );
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

@@ -32,23 +32,23 @@ EMBED_BEGIN_DECLS
 
 /** @brief Rail sample verdict (the sole return of protocore_hwhealth_rail_sample). */
 EMBED_ENUM_BYTE(HwRailVerdict,
-    HW_RAIL_OK = 0,      ///< at or above the warn threshold.
-    HW_RAIL_SAG = 1,     ///< below warn, at or above crit.
-    HW_RAIL_BROWNOUT = 2 ///< below the crit threshold.
+                HW_RAIL_OK = 0,      ///< at or above the warn threshold.
+                HW_RAIL_SAG = 1,     ///< below warn, at or above crit.
+                HW_RAIL_BROWNOUT = 2 ///< below the crit threshold.
 );
 
 /** @brief GPIO short-circuit verdict (the sole return of protocore_hwhealth_gpio_short). */
 EMBED_ENUM_BYTE(HwGpioVerdict,
-    HW_GPIO_OK = 0,        ///< readback matches the driven level.
-    HW_GPIO_SHORT_GND = 1, ///< drove high, read low: shorted to ground.
-    HW_GPIO_SHORT_VCC = 2  ///< drove low, read high: shorted to Vcc.
+                HW_GPIO_OK = 0,        ///< readback matches the driven level.
+                HW_GPIO_SHORT_GND = 1, ///< drove high, read low: shorted to ground.
+                HW_GPIO_SHORT_VCC = 2  ///< drove low, read high: shorted to Vcc.
 );
 
 /** @brief Capacitor-leakage verdict (the sole return of protocore_hwhealth_cap_leak). */
 EMBED_ENUM_BYTE(HwCapVerdict,
-    HW_CAP_OK = 0,      ///< decay time within tolerance of expected.
-    HW_CAP_LEAK = 1,    ///< decays too fast: leaky capacitor.
-    HW_CAP_HIGH_ESR = 2 ///< decays too slow: high-ESR / open charge path.
+                HW_CAP_OK = 0,      ///< decay time within tolerance of expected.
+                HW_CAP_LEAK = 1,    ///< decays too fast: leaky capacitor.
+                HW_CAP_HIGH_ESR = 2 ///< decays too slow: high-ESR / open charge path.
 );
 
 /** @brief Rolling monitor for one power rail (in millivolts). */

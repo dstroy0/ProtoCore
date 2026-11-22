@@ -84,9 +84,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief Where an outbound QoS 1 or QoS 2 exchange has got to (MQTT 3.1.1 sec 4.3.2, sec 4.3.3). */
 EMBED_ENUM_BYTE(MqttInflightState,
-    MQTT_INFLIGHT_FREE = 0, ///< the slot holds no exchange
-    MQTT_INFLIGHT_ACK,      ///< sent, awaiting PUBACK (QoS 1) or PUBREC (QoS 2)
-    MQTT_INFLIGHT_COMP,     ///< PUBREC seen, awaiting PUBCOMP (QoS 2)
+                MQTT_INFLIGHT_FREE = 0, ///< the slot holds no exchange
+                MQTT_INFLIGHT_ACK,      ///< sent, awaiting PUBACK (QoS 1) or PUBREC (QoS 2)
+                MQTT_INFLIGHT_COMP,     ///< PUBREC seen, awaiting PUBCOMP (QoS 2)
 );
 
 // One outbound QoS 1 or QoS 2 exchange. The PUBLISH stays in tx - a re-delivery rewinds the worker
@@ -101,10 +101,10 @@ typedef struct
 
 /** @brief How far the Network Connection has come up. Anything but IDLE means a connect is in flight. */
 EMBED_ENUM_BYTE(MqttLinkState,
-    MQTT_LINK_IDLE = 0, ///< no connect in flight
-    MQTT_LINK_TCP,      ///< the transport slot is coming up
-    MQTT_LINK_TLS,      ///< the TLS handshake advances one flight per step
-    MQTT_LINK_CONNACK,  ///< CONNECT is on the wire, its CONNACK has not arrived (sec 3.2)
+                MQTT_LINK_IDLE = 0, ///< no connect in flight
+                MQTT_LINK_TCP,      ///< the transport slot is coming up
+                MQTT_LINK_TLS,      ///< the TLS handshake advances one flight per step
+                MQTT_LINK_CONNACK,  ///< CONNECT is on the wire, its CONNACK has not arrived (sec 3.2)
 );
 
 /**

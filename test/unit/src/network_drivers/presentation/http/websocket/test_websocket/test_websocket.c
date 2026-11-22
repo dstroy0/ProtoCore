@@ -91,7 +91,8 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].pcb = protocore_net_host_pcb();
     }
 }
@@ -1626,7 +1627,8 @@ void test_ws_send_frame_paths_and_parse_guard()
     WsV.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state,
+               .value = CONN_CLOSING);
     WsV.conn = ws;
     WsV.frame.opcode = WS_OP_TEXT;
     WsV.frame.payload = payload;
@@ -1762,7 +1764,8 @@ void test_ws_close_when_conn_inactive_skips_flush()
     WsV.slot = 0;
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state,
+               .value = CONN_CLOSING);
     WsV.conn = ws;
     WsV.frame.code = WS_CLOSE_NORMAL;
     Ws.close(protocore_ws_span());
@@ -1776,7 +1779,8 @@ void test_ws_ping_flush_skipped_when_conn_inactive()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     uint8_t frame[6] = {0x89, 0x80, 0, 0, 0, 0};
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state,
+               .value = CONN_CLOSING);
     for (size_t i = 0; i < sizeof(frame); i++)
     {
         WsV.conn = ws;

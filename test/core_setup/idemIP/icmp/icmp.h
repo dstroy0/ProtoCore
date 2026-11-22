@@ -28,18 +28,11 @@ EMBED_BEGIN_DECLS
 
 /** @brief Message types RFC 792 assigns. */
 EMBED_ENUM_BYTE(IdemIpIcmpType,
-    IDEMIP_ICMP_ECHO_REPLY = 0, ///< "0 for echo reply message"
-    IDEMIP_ICMP_DEST_UNREACHABLE = 3,
-    IDEMIP_ICMP_SOURCE_QUENCH = 4,
-    IDEMIP_ICMP_REDIRECT = 5,
-    IDEMIP_ICMP_ECHO = 8, ///< "8 for echo message"
-    IDEMIP_ICMP_TIME_EXCEEDED = 11,
-    IDEMIP_ICMP_PARAMETER_PROBLEM = 12,
-    IDEMIP_ICMP_TIMESTAMP = 13,
-    IDEMIP_ICMP_TIMESTAMP_REPLY = 14,
-    IDEMIP_ICMP_INFO_REQUEST = 15,
-    IDEMIP_ICMP_INFO_REPLY = 16,
-);
+                IDEMIP_ICMP_ECHO_REPLY = 0, ///< "0 for echo reply message"
+                IDEMIP_ICMP_DEST_UNREACHABLE = 3, IDEMIP_ICMP_SOURCE_QUENCH = 4, IDEMIP_ICMP_REDIRECT = 5,
+                IDEMIP_ICMP_ECHO = 8, ///< "8 for echo message"
+                IDEMIP_ICMP_TIME_EXCEEDED = 11, IDEMIP_ICMP_PARAMETER_PROBLEM = 12, IDEMIP_ICMP_TIMESTAMP = 13,
+                IDEMIP_ICMP_TIMESTAMP_REPLY = 14, IDEMIP_ICMP_INFO_REQUEST = 15, IDEMIP_ICMP_INFO_REPLY = 16, );
 
 // ---------------------------------------------------------------------------
 // Echo or Echo Reply (RFC 792), the type this end answers

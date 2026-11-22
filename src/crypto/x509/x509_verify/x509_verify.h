@@ -30,18 +30,18 @@ EMBED_BEGIN_DECLS
 
 /** @brief Why a link was refused. A caller that only needs yes or no reads ::X509VerifyNs::ok. */
 EMBED_ENUM_BYTE(protocore_x509_status,
-    PROTOCORE_X509_OK = 0,              ///< the link holds
-    PROTOCORE_X509_ERR_ARGS,            ///< a certificate was not supplied
-    PROTOCORE_X509_ERR_ISSUER_NAME,     ///< sec 6.1.3 (a)(4): the issuer name is not the subject above it
-    PROTOCORE_X509_ERR_NOT_YET_VALID,   ///< sec 6.1.3 (a)(2): the current time is before notBefore
-    PROTOCORE_X509_ERR_EXPIRED,         ///< sec 6.1.3 (a)(2): the current time is after notAfter
-    PROTOCORE_X509_ERR_NOT_A_CA,        ///< sec 6.1.4 (k): the issuer has no basicConstraints cA TRUE
-    PROTOCORE_X509_ERR_NO_CERT_SIGN,    ///< sec 6.1.4 (n): the issuer's keyUsage omits keyCertSign
-    PROTOCORE_X509_ERR_PATH_LEN,        ///< sec 6.1.4 (m): pathLenConstraint does not reach this far
-    PROTOCORE_X509_ERR_ALG_UNSUPPORTED, ///< an algorithm this build does not verify
-    PROTOCORE_X509_ERR_KEY_MALFORMED,   ///< the issuer's public key did not decode
-    PROTOCORE_X509_ERR_SIG_MALFORMED,   ///< the signature did not decode
-    PROTOCORE_X509_ERR_BAD_SIGNATURE,   ///< it decoded, and it does not verify
+                PROTOCORE_X509_OK = 0,              ///< the link holds
+                PROTOCORE_X509_ERR_ARGS,            ///< a certificate was not supplied
+                PROTOCORE_X509_ERR_ISSUER_NAME,     ///< sec 6.1.3 (a)(4): the issuer name is not the subject above it
+                PROTOCORE_X509_ERR_NOT_YET_VALID,   ///< sec 6.1.3 (a)(2): the current time is before notBefore
+                PROTOCORE_X509_ERR_EXPIRED,         ///< sec 6.1.3 (a)(2): the current time is after notAfter
+                PROTOCORE_X509_ERR_NOT_A_CA,        ///< sec 6.1.4 (k): the issuer has no basicConstraints cA TRUE
+                PROTOCORE_X509_ERR_NO_CERT_SIGN,    ///< sec 6.1.4 (n): the issuer's keyUsage omits keyCertSign
+                PROTOCORE_X509_ERR_PATH_LEN,        ///< sec 6.1.4 (m): pathLenConstraint does not reach this far
+                PROTOCORE_X509_ERR_ALG_UNSUPPORTED, ///< an algorithm this build does not verify
+                PROTOCORE_X509_ERR_KEY_MALFORMED,   ///< the issuer's public key did not decode
+                PROTOCORE_X509_ERR_SIG_MALFORMED,   ///< the signature did not decode
+                PROTOCORE_X509_ERR_BAD_SIGNATURE,   ///< it decoded, and it does not verify
 );
 
 /** @brief What a signature check is given: the certificate, and the one whose key signed it. */

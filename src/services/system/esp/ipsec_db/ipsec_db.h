@@ -52,9 +52,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief SPD policy action (RFC 4301 §4.4.1). */
 EMBED_ENUM_BYTE(IpsecAction,
-    IPSEC_ACTION_DISCARD = 0, ///< drop the packet
-    IPSEC_ACTION_BYPASS = 1,  ///< forward without IPsec
-    IPSEC_ACTION_PROTECT = 2, ///< apply ESP with the bound SA
+                IPSEC_ACTION_DISCARD = 0, ///< drop the packet
+                IPSEC_ACTION_BYPASS = 1,  ///< forward without IPsec
+                IPSEC_ACTION_PROTECT = 2, ///< apply ESP with the bound SA
 );
 
 /**

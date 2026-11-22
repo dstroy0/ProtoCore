@@ -106,8 +106,8 @@ EMBED_INLINE embed_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_udp_
  * Peeks the header, consumes it, then reads exactly its payload length, so the tail always lands on
  * the next entry boundary. Reports false when the ring holds no whole entry.
  */
-EMBED_INLINE embed_bool protocore_udp_dgram_take(mmgr_ring *ring, uint8_t *hdr, protocore_udp_dgram *d,
-                                                     uint8_t *stage, size_t stage_cap)
+EMBED_INLINE embed_bool protocore_udp_dgram_take(mmgr_ring *ring, uint8_t *hdr, protocore_udp_dgram *d, uint8_t *stage,
+                                                 size_t stage_cap)
 {
     if (EMBED_CALL(anularis.available, AnularisCfg, .ring = ring) < PROTOCORE_UDP_DGRAM_HDR)
     {

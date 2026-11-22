@@ -60,11 +60,13 @@ void test_peer_fin_through_the_wired_callback_closes_the_slot()
 {
     protocore_pcb *peer = protocore_net_new(PROTOCORE_NET_TYPE_ANY);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, peer, PROTOCORE_NET_OK));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 
     (void)protocore_net_host_close_peer(peer);
 
-    TEST_ASSERT_NOT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_NOT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                             .word = &conn_pool[0].state));
 }
 
 void test_marshaled_send_reaches_the_capture()
@@ -91,6 +93,7 @@ void test_marshaled_close_releases_the_slot()
     ConnPoolV.slot = 0;
     ConnPool.close(protocore_conn_pool_span());
 
-    TEST_ASSERT_NOT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_NOT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                             .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }

@@ -36,19 +36,19 @@ typedef struct
 
 /** @brief Negotiated key-exchange method. */
 EMBED_ENUM_BYTE(SshKexAlg,
-    SSH_KEX_DH_GROUP14 = 0,      ///< diffie-hellman-group14-sha256 (RFC 8268)
-    SSH_KEX_CURVE25519 = 1,      ///< curve25519-sha256 (RFC 8731)
-    SSH_KEX_MLKEM768_X25519 = 2, ///< mlkem768x25519-sha256
-    SSH_KEX_ECDH_NISTP256 = 3,   ///< ecdh-sha2-nistp256 (RFC 5656 sec 4)
-    SSH_KEX_SNTRUP761_X25519 = 4 ///< sntrup761x25519-sha512@openssh.com
+                SSH_KEX_DH_GROUP14 = 0,      ///< diffie-hellman-group14-sha256 (RFC 8268)
+                SSH_KEX_CURVE25519 = 1,      ///< curve25519-sha256 (RFC 8731)
+                SSH_KEX_MLKEM768_X25519 = 2, ///< mlkem768x25519-sha256
+                SSH_KEX_ECDH_NISTP256 = 3,   ///< ecdh-sha2-nistp256 (RFC 5656 sec 4)
+                SSH_KEX_SNTRUP761_X25519 = 4 ///< sntrup761x25519-sha512@openssh.com
 );
 
 /** @brief Negotiated host-key / signature algorithm. */
 EMBED_ENUM_BYTE(SshHostkeyAlg,
-    SSH_HOSTKEY_RSA_SHA256 = 0,    ///< rsa-sha2-256 (RFC 8332)
-    SSH_HOSTKEY_ED25519 = 1,       ///< ssh-ed25519 (RFC 8709)
-    SSH_HOSTKEY_RSA_SHA512 = 2,    ///< rsa-sha2-512 (RFC 8332)
-    SSH_HOSTKEY_ECDSA_NISTP256 = 3 ///< ecdsa-sha2-nistp256 (RFC 5656)
+                SSH_HOSTKEY_RSA_SHA256 = 0,    ///< rsa-sha2-256 (RFC 8332)
+                SSH_HOSTKEY_ED25519 = 1,       ///< ssh-ed25519 (RFC 8709)
+                SSH_HOSTKEY_RSA_SHA512 = 2,    ///< rsa-sha2-512 (RFC 8332)
+                SSH_HOSTKEY_ECDSA_NISTP256 = 3 ///< ecdsa-sha2-nistp256 (RFC 5656)
 );
 
 /**

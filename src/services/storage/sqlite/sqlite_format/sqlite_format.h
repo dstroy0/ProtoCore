@@ -246,13 +246,7 @@ embed_bool protocore_sqlite_table_cursor_next(SqliteTableCursor *c, uint64_t *ro
 size_t protocore_sqlite_varint_encode(uint64_t v, uint8_t *out, size_t cap);
 
 /** @brief Column value kind for the record writer. */
-EMBED_ENUM_BYTE(SqliteColType,
-    SQLITE_COL_NULL,
-    SQLITE_COL_INT,
-    SQLITE_COL_FLOAT,
-    SQLITE_COL_TEXT,
-    SQLITE_COL_BLOB
-);
+EMBED_ENUM_BYTE(SqliteColType, SQLITE_COL_NULL, SQLITE_COL_INT, SQLITE_COL_FLOAT, SQLITE_COL_TEXT, SQLITE_COL_BLOB);
 
 /** @brief A typed column value to write (TEXT/BLOB bytes are referenced, not copied, until encode time). */
 typedef struct

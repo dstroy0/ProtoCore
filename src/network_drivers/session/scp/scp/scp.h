@@ -37,10 +37,9 @@ EMBED_BEGIN_DECLS
 #define PROTOCORE_SCP_ACK_ERROR 2 ///< fatal error: followed by a message + '\n'
 
 /** @brief The role of an `scp` invocation, parsed from the exec command. */
-EMBED_ENUM_BYTE(ScpMode,
-    SCP_MODE_INVALID = 0,
-    SCP_MODE_SINK,  ///< `scp -t <path>`: the client sends a file TO the device (device receives)
-    SCP_MODE_SOURCE ///< `scp -f <path>`: the client fetches a file FROM the device (device sends)
+EMBED_ENUM_BYTE(ScpMode, SCP_MODE_INVALID = 0,
+                SCP_MODE_SINK,  ///< `scp -t <path>`: the client sends a file TO the device (device receives)
+                SCP_MODE_SOURCE ///< `scp -f <path>`: the client fetches a file FROM the device (device sends)
 );
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

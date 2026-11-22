@@ -73,7 +73,8 @@ static void arm_slot(uint8_t slot, const char *raw)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+               .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = NULL;
 
@@ -175,7 +176,8 @@ void setUp(void)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = i;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
@@ -628,7 +630,8 @@ void test_redirect_emits_location_and_status(void)
     TEST_ASSERT_NOT_NULL(strstr(out, "Location: /index.html\r\n"));
     TEST_ASSERT_NOT_NULL(strstr(out, "Content-Length: 0\r\n"));
     tcp_capture_disable();
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 void test_redirect_invalid_code_defaults_to_302(void)
@@ -1402,7 +1405,8 @@ void test_status_text_reason_phrases(void)
     {
         conn_pool[0] = (TcpConn){0};
         conn_pool[0].id = 0;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state,
+                   .value = CONN_ACTIVE);
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
         HttpConnV.slot = 0;
@@ -1691,7 +1695,8 @@ static void live_slot(uint8_t slot)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+               .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConnV.slot = slot;
@@ -1914,7 +1919,8 @@ void test_error_close_head_and_dead_connection(void)
 
     arm_slot(0, "GET /po HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state,
+               .value = CONN_CLOSING);
     tcp_capture_reset();
     handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
@@ -2017,7 +2023,8 @@ void test_send_body_framing_paths(void)
 void test_send_empty_and_redirect_dead_connection_guards(void)
 {
     live_slot(0);
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state,
+               .value = CONN_CLOSING);
     tcp_capture_reset();
     send_empty(0, 204);
     redirect(0, 302, "/x");

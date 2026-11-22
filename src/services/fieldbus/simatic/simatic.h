@@ -55,10 +55,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief Link state (one job in flight; half-duplex). */
 EMBED_ENUM_BYTE(Simatic3964State,
-    SIMATIC3964_STATE_IDLE,          ///< nothing in flight
-    SIMATIC3964_STATE_TX_AWAIT_CONN, ///< sent STX, awaiting the partner's connect DLE (QVZ)
-    SIMATIC3964_STATE_TX_AWAIT_END,  ///< sent the block, awaiting the partner's end DLE / NAK (QVZ)
-    SIMATIC3964_STATE_RX_COLLECT     ///< replied DLE to a partner STX, collecting the block (ZVZ per-char)
+                SIMATIC3964_STATE_IDLE,          ///< nothing in flight
+                SIMATIC3964_STATE_TX_AWAIT_CONN, ///< sent STX, awaiting the partner's connect DLE (QVZ)
+                SIMATIC3964_STATE_TX_AWAIT_END,  ///< sent the block, awaiting the partner's end DLE / NAK (QVZ)
+                SIMATIC3964_STATE_RX_COLLECT     ///< replied DLE to a partner STX, collecting the block (ZVZ per-char)
 );
 
 /** @brief Sink for one outbound byte (the state machine writes to the UART through this). */
@@ -94,21 +94,21 @@ typedef struct
 
 /** @brief RK512 job / telegram identifier (the "Kennung" command byte). */
 EMBED_ENUM_BYTE(Rk512Cmd,
-    RK512_CMD_SEND = 0x00,    ///< write words to the partner
-    RK512_CMD_FETCH = 0x01,   ///< read words from the partner
-    RK512_CMD_REACTION = 0x02 ///< the partner's reaction (acknowledge) telegram
+                RK512_CMD_SEND = 0x00,    ///< write words to the partner
+                RK512_CMD_FETCH = 0x01,   ///< read words from the partner
+                RK512_CMD_REACTION = 0x02 ///< the partner's reaction (acknowledge) telegram
 );
 
 /** @brief RK512 memory area code (the operand area a job addresses). */
 EMBED_ENUM_BYTE(Rk512Area,
-    RK512_AREA_DB = 0x01, ///< data block (DBNR selects which)
-    RK512_AREA_DX = 0x02, ///< extended data block
-    RK512_AREA_MB = 0x03, ///< flag / marker (M)
-    RK512_AREA_EB = 0x04, ///< process input image (E)
-    RK512_AREA_AB = 0x05, ///< process output image (A)
-    RK512_AREA_PB = 0x06, ///< peripheral / I-O
-    RK512_AREA_ZB = 0x07, ///< counter (Z)
-    RK512_AREA_TB = 0x08  ///< timer (T)
+                RK512_AREA_DB = 0x01, ///< data block (DBNR selects which)
+                RK512_AREA_DX = 0x02, ///< extended data block
+                RK512_AREA_MB = 0x03, ///< flag / marker (M)
+                RK512_AREA_EB = 0x04, ///< process input image (E)
+                RK512_AREA_AB = 0x05, ///< process output image (A)
+                RK512_AREA_PB = 0x06, ///< peripheral / I-O
+                RK512_AREA_ZB = 0x07, ///< counter (Z)
+                RK512_AREA_TB = 0x08  ///< timer (T)
 );
 
 /** @brief A decoded RK512 header. */

@@ -52,8 +52,8 @@
 #endif
 
 // --- Features ---
-// Each feature that protocore_config.h turns on is off here. A build turns on what it needs with a compile
-// definition or a build_opt.h, as each demo does.
+// Each feature that protocore_config.h turns on is off here, except the HTTP parser, which the core feeds on
+// every build. A build turns on what it needs with a compile definition or a build_opt.h, as each demo does.
 #ifndef PROTOCORE_ENABLE_SHA1
 #define PROTOCORE_ENABLE_SHA1 0
 #endif
@@ -86,9 +86,6 @@
 #endif
 #ifndef PROTOCORE_ENABLE_RAWMEMCPY
 #define PROTOCORE_ENABLE_RAWMEMCPY 0
-#endif
-#ifndef PROTOCORE_ENABLE_HTTP_PARSER
-#define PROTOCORE_ENABLE_HTTP_PARSER 0
 #endif
 #ifndef PROTOCORE_ENABLE_SSH_RSA
 #define PROTOCORE_ENABLE_SSH_RSA 0

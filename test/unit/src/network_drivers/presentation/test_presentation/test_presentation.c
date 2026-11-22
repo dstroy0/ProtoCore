@@ -38,7 +38,8 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = i;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
@@ -747,7 +748,8 @@ void race_aba_slot_reuse_fresh_timestamp()
     set_now_ms(T_DEAD);
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 
     EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
     conn_pool[0].last_activity_ms = T_NEW;
@@ -755,7 +757,8 @@ void race_aba_slot_reuse_fresh_timestamp()
     set_now_ms(T_NEW);
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 void race_double_free_is_nop()
@@ -766,7 +769,8 @@ void race_double_free_is_nop()
     ConnPool.check_timeouts(protocore_conn_pool_span());
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 void race_concurrent_slot_parse_isolation()

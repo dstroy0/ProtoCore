@@ -33,19 +33,16 @@ EMBED_BEGIN_DECLS
 
 /** @brief Handshake progress. A client and a server walk the same phases from opposite ends. */
 EMBED_ENUM_BYTE(TlsConnState,
-    TLS_CONN_START,         ///< server: awaiting ClientHello; client: nothing sent yet
-    TLS_CONN_WAIT_SH,       ///< client only: ClientHello sent, awaiting ServerHello
-    TLS_CONN_WAIT_FLIGHT,   ///< client only: awaiting the encrypted server flight
-    TLS_CONN_WAIT_FINISHED, ///< server only: flight sent, awaiting the client Finished
-    TLS_CONN_DONE,          ///< handshake complete; application keys installed
-    TLS_CONN_FAILED         ///< fatal (see @ref TlsConnNs::alert)
+                TLS_CONN_START,         ///< server: awaiting ClientHello; client: nothing sent yet
+                TLS_CONN_WAIT_SH,       ///< client only: ClientHello sent, awaiting ServerHello
+                TLS_CONN_WAIT_FLIGHT,   ///< client only: awaiting the encrypted server flight
+                TLS_CONN_WAIT_FINISHED, ///< server only: flight sent, awaiting the client Finished
+                TLS_CONN_DONE,          ///< handshake complete; application keys installed
+                TLS_CONN_FAILED         ///< fatal (see @ref TlsConnNs::alert)
 );
 
 /** @brief Which end of the handshake this connection drives. */
-EMBED_ENUM_BYTE(TlsRole,
-    TLS_ROLE_SERVER = 0,
-    TLS_ROLE_CLIENT
-);
+EMBED_ENUM_BYTE(TlsRole, TLS_ROLE_SERVER = 0, TLS_ROLE_CLIENT);
 
 /**
  * @brief The long-lived credential plus this handshake's fresh randomness.
@@ -241,9 +238,9 @@ const char *protocore_tls_alpn(uint8_t slot);
 
 /** @brief Where a stepped TLS exchange stands. */
 EMBED_ENUM_BYTE(protocore_tls_state,
-    PROTOCORE_TLS_READY = 0, ///< the move landed
-    PROTOCORE_TLS_BUSY,      ///< the peer's bytes are still in flight; ask again on the next tick
-    PROTOCORE_TLS_FAILED,    ///< the session did not stand up, or it is closed / fatal
+                PROTOCORE_TLS_READY = 0, ///< the move landed
+                PROTOCORE_TLS_BUSY,      ///< the peer's bytes are still in flight; ask again on the next tick
+                PROTOCORE_TLS_FAILED,    ///< the session did not stand up, or it is closed / fatal
 );
 
 /**

@@ -41,7 +41,8 @@ EMBED_BEGIN_DECLS
 // call. The borrow IS the document, so two documents are two borrows and never collide.
 
 /** @brief The MTConnect DataItem category (which stream element wraps the value). */
-EMBED_ENUM_BYTE(protocore_mtc_category,
+EMBED_ENUM_BYTE(
+    protocore_mtc_category,
     PROTOCORE_MTC_SAMPLE,   ///< a measured value (<Samples>).
     PROTOCORE_MTC_EVENT,    ///< a discrete state (<Events>).
     PROTOCORE_MTC_CONDITION ///< a condition (<Condition>): value is the sub-element name (Normal/Warning/Fault).

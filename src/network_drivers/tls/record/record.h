@@ -80,8 +80,8 @@ EMBED_BEGIN_DECLS
  *  name them. The suite fixes both the AEAD and the hash the key schedule under it runs. Zero is the
  *  sec 9.1 mandatory-to-implement suite, so a zero-initialised config names it. */
 EMBED_ENUM_BYTE(TlsCipher,
-    TLS_CIPHER_AES_128_GCM_SHA256 = 0, ///< 0x1301: AEAD_AES_128_GCM, 16-byte key, SHA-256 schedule
-    TLS_CIPHER_AES_256_GCM_SHA384 = 1  ///< 0x1302: AEAD_AES_256_GCM, 32-byte key, SHA-384 schedule
+                TLS_CIPHER_AES_128_GCM_SHA256 = 0, ///< 0x1301: AEAD_AES_128_GCM, 16-byte key, SHA-256 schedule
+                TLS_CIPHER_AES_256_GCM_SHA384 = 1  ///< 0x1302: AEAD_AES_256_GCM, 32-byte key, SHA-384 schedule
 );
 
 /** @brief Whether @p c runs its key schedule and Transcript-Hash on SHA-384 (RFC 8446 sec 7.1).

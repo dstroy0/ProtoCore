@@ -69,12 +69,12 @@ EMBED_BEGIN_DECLS
  *        values are the companion-spec enumeration.
  */
 EMBED_ENUM_BYTE(EmMachineMode,
-    EM_MODE_OTHER = 0,          ///< a mode outside the ones below.
-    EM_MODE_AUTOMATIC = 1,      ///< automatic production.
-    EM_MODE_SEMI_AUTOMATIC = 2, ///< semi-automatic (operator-triggered cycles).
-    EM_MODE_MANUAL = 3,         ///< manual / hand operation.
-    EM_MODE_SETUP = 4,          ///< set-up / preparation.
-    EM_MODE_SLEEP = 5,          ///< energy-saving sleep.
+                EM_MODE_OTHER = 0,          ///< a mode outside the ones below.
+                EM_MODE_AUTOMATIC = 1,      ///< automatic production.
+                EM_MODE_SEMI_AUTOMATIC = 2, ///< semi-automatic (operator-triggered cycles).
+                EM_MODE_MANUAL = 3,         ///< manual / hand operation.
+                EM_MODE_SETUP = 4,          ///< set-up / preparation.
+                EM_MODE_SLEEP = 5,          ///< energy-saving sleep.
 );
 
 /**
@@ -82,18 +82,18 @@ EMBED_ENUM_BYTE(EmMachineMode,
  *        values are the companion-spec enumeration.
  */
 EMBED_ENUM_BYTE(EmJobStatus,
-    EM_JOB_OTHER = 0,                  ///< a status outside the ones below.
-    EM_JOB_TRANSFERRED_ASSIGNED = 1,   ///< transferred / assigned to the machine.
-    EM_JOB_SET_UP_ACTIVE = 2,          ///< set-up in progress.
-    EM_JOB_SET_UP_INTERRUPTED = 3,     ///< set-up interrupted.
-    EM_JOB_SET_UP_FINISHED = 4,        ///< set-up finished.
-    EM_JOB_START_UP_ACTIVE = 5,        ///< start-up in progress.
-    EM_JOB_IN_PRODUCTION = 6,          ///< running production.
-    EM_JOB_INTERRUPTED = 7,            ///< production interrupted.
-    EM_JOB_FINISHED = 8,               ///< job finished.
-    EM_JOB_TEAR_DOWN_ACTIVE = 9,       ///< tear-down in progress.
-    EM_JOB_TEAR_DOWN_INTERRUPTED = 10, ///< tear-down interrupted.
-    EM_JOB_TEAR_DOWN_FINISHED = 11,    ///< tear-down finished.
+                EM_JOB_OTHER = 0,                  ///< a status outside the ones below.
+                EM_JOB_TRANSFERRED_ASSIGNED = 1,   ///< transferred / assigned to the machine.
+                EM_JOB_SET_UP_ACTIVE = 2,          ///< set-up in progress.
+                EM_JOB_SET_UP_INTERRUPTED = 3,     ///< set-up interrupted.
+                EM_JOB_SET_UP_FINISHED = 4,        ///< set-up finished.
+                EM_JOB_START_UP_ACTIVE = 5,        ///< start-up in progress.
+                EM_JOB_IN_PRODUCTION = 6,          ///< running production.
+                EM_JOB_INTERRUPTED = 7,            ///< production interrupted.
+                EM_JOB_FINISHED = 8,               ///< job finished.
+                EM_JOB_TEAR_DOWN_ACTIVE = 9,       ///< tear-down in progress.
+                EM_JOB_TEAR_DOWN_INTERRUPTED = 10, ///< tear-down interrupted.
+                EM_JOB_TEAR_DOWN_FINISHED = 11,    ///< tear-down finished.
 );
 
 /** @brief IMM identity (EUROMAP 77 MachineInformation, common subset; all String). */

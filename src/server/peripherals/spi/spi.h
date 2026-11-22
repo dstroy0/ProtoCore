@@ -85,14 +85,14 @@ EMBED_INLINE embed_bool protocore_spi_begin(void)
  *        @p rx in. A null @p rx discards the inbound bits; a null @p tx clocks zeros out.
  */
 EMBED_INLINE embed_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
-                                                 const uint8_t *tx, uint8_t *rx, size_t len)
+                                             const uint8_t *tx, uint8_t *rx, size_t len)
 {
     return protocore_platform_spi_txn(host, hz, bit_order, mode, tx, rx, (uint32_t)len) != 0;
 }
 
 /** @brief Clock @p len bytes on the shared bus at @p hz, @p bit_order and @p mode. */
 EMBED_INLINE embed_bool protocore_spi_txn_at(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
-                                                 uint8_t *rx, size_t len)
+                                             uint8_t *rx, size_t len)
 {
     return protocore_spi_txn_on((uint8_t)PROTOCORE_SPI_HOST, hz, bit_order, mode, tx, rx, len);
 }
@@ -126,9 +126,9 @@ EMBED_INLINE embed_bool protocore_spi_read(uint8_t *rx, size_t len)
  * A zero bit count omits that phase. @p lanes is PROTOCORE_SPI_LANES_1, _2 or _4.
  */
 EMBED_INLINE embed_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
-                                                     uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
-                                                     uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
-                                                     size_t len)
+                                                 uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
+                                                 uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
+                                                 size_t len)
 {
     return protocore_platform_spi_txn_ext(host, hz, bit_order, mode, cmd, cmd_bits, addr, addr_bits, dummy_bits, lanes,
                                           tx, rx, (uint32_t)len) != 0;
@@ -136,8 +136,8 @@ EMBED_INLINE embed_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint
 
 /** @brief A framed transfer on the shared bus at the configured clock, bit order and mode. */
 EMBED_INLINE embed_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
-                                                  uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
-                                                  size_t len)
+                                              uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
+                                              size_t len)
 {
     return protocore_spi_txn_ext_on((uint8_t)PROTOCORE_SPI_HOST, PROTOCORE_SPI_HZ, PROTOCORE_SPI_MSBFIRST,
                                     (uint8_t)PROTOCORE_SPI_MODE, cmd, cmd_bits, addr, addr_bits, dummy_bits, lanes, tx,
@@ -182,7 +182,7 @@ EMBED_INLINE embed_bool protocore_spi_begin(void)
 }
 
 EMBED_INLINE embed_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
-                                                 const uint8_t *tx, uint8_t *rx, size_t len)
+                                             const uint8_t *tx, uint8_t *rx, size_t len)
 {
     (void)host;
     (void)hz;
@@ -195,7 +195,7 @@ EMBED_INLINE embed_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint8_t 
 }
 
 EMBED_INLINE embed_bool protocore_spi_txn_at(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
-                                                 uint8_t *rx, size_t len)
+                                             uint8_t *rx, size_t len)
 {
     return protocore_spi_txn_on((uint8_t)PROTOCORE_SPI_HOST, hz, bit_order, mode, tx, rx, len);
 }
@@ -216,9 +216,9 @@ EMBED_INLINE embed_bool protocore_spi_read(uint8_t *rx, size_t len)
 }
 
 EMBED_INLINE embed_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
-                                                     uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
-                                                     uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
-                                                     size_t len)
+                                                 uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
+                                                 uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
+                                                 size_t len)
 {
     (void)host;
     (void)hz;
@@ -237,8 +237,8 @@ EMBED_INLINE embed_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint
 }
 
 EMBED_INLINE embed_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
-                                                  uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
-                                                  size_t len)
+                                              uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
+                                              size_t len)
 {
     (void)cmd;
     (void)cmd_bits;

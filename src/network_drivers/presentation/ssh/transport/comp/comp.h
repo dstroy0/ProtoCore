@@ -23,9 +23,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief Negotiated compression algorithm, held per direction. */
 EMBED_ENUM_BYTE(SshCompAlg,
-    SSH_COMP_NONE = 0,        ///< no compression
-    SSH_COMP_ZLIB = 1,        ///< "zlib" (RFC 4253) - starts right after NEWKEYS
-    SSH_COMP_ZLIB_DELAYED = 2 ///< "zlib@openssh.com" - starts after SSH_MSG_USERAUTH_SUCCESS
+                SSH_COMP_NONE = 0,        ///< no compression
+                SSH_COMP_ZLIB = 1,        ///< "zlib" (RFC 4253) - starts right after NEWKEYS
+                SSH_COMP_ZLIB_DELAYED = 2 ///< "zlib@openssh.com" - starts after SSH_MSG_USERAUTH_SUCCESS
 );
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

@@ -37,11 +37,11 @@ static const uint32_t kUsmStatsBase[] = {1, 3, 6, 1, 6, 3, 15, 1, 1};
 
 /** @brief The usmStats counter a Report names (RFC 3414 sec 5). */
 EMBED_ENUM_BYTE(UsmStat,
-    USM_STAT_NOT_IN_TIME = 2,    ///< usmStatsNotInTimeWindows
-    USM_STAT_UNKNOWN_USER = 3,   ///< usmStatsUnknownUserNames
-    USM_STAT_UNKNOWN_ENGINE = 4, ///< usmStatsUnknownEngineIDs
-    USM_STAT_WRONG_DIGEST = 5,   ///< usmStatsWrongDigests
-    USM_STAT_DECRYPT = 6,        ///< usmStatsDecryptionErrors
+                USM_STAT_NOT_IN_TIME = 2,    ///< usmStatsNotInTimeWindows
+                USM_STAT_UNKNOWN_USER = 3,   ///< usmStatsUnknownUserNames
+                USM_STAT_UNKNOWN_ENGINE = 4, ///< usmStatsUnknownEngineIDs
+                USM_STAT_WRONG_DIGEST = 5,   ///< usmStatsWrongDigests
+                USM_STAT_DECRYPT = 6,        ///< usmStatsDecryptionErrors
 );
 
 /**

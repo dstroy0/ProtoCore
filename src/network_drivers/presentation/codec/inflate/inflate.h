@@ -48,10 +48,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief inflate_raw() return codes. */
 EMBED_ENUM_BYTE(InflateResult,
-    INFLATE_OK = 0,             ///< success; *out_len holds the decompressed length
-    INFLATE_ERR_MALFORMED = -1, ///< invalid / truncated DEFLATE stream
-    INFLATE_ERR_OVERFLOW = -2,  ///< output would exceed dst_cap
-    INFLATE_ERR_SCRATCH = -3    ///< scratch_len < INFLATE_SCRATCH_SIZE
+                INFLATE_OK = 0,             ///< success; *out_len holds the decompressed length
+                INFLATE_ERR_MALFORMED = -1, ///< invalid / truncated DEFLATE stream
+                INFLATE_ERR_OVERFLOW = -2,  ///< output would exceed dst_cap
+                INFLATE_ERR_SCRATCH = -3    ///< scratch_len < INFLATE_SCRATCH_SIZE
 );
 
 /** @brief What raw takes: src, src_len, dst, dst_cap, out_len, ... */

@@ -77,7 +77,7 @@ struct ResolverStorage
 {
     mmgr_span name; ///< where a record's owner name lands while the walk steps over it
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
-    protocore_net_ip addr;   ///< the address the stack's callback reported
+    protocore_net_ip addr; ///< the address the stack's callback reported
     embed_atomic_u32 done; ///< the callback ran
     embed_atomic_u32 ok;   ///< and it carried an address
 #else

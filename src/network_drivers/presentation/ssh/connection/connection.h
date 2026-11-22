@@ -131,9 +131,9 @@ int32_t protocore_ssh_sig_build_close(uint32_t peer_id, uint8_t *out, size_t cap
 
 /** @brief Channel type (RFC 4254). */
 EMBED_ENUM_BYTE(SshChanType,
-    SSH_CHAN_SESSION = 0,        ///< "session" - shell / exec / data
-    SSH_CHAN_DIRECT_TCPIP = 1,   ///< "direct-tcpip" - client-initiated TCP forward (ssh -L)
-    SSH_CHAN_FORWARDED_TCPIP = 2 ///< "forwarded-tcpip" - server-initiated TCP forward (ssh -R)
+                SSH_CHAN_SESSION = 0,        ///< "session" - shell / exec / data
+                SSH_CHAN_DIRECT_TCPIP = 1,   ///< "direct-tcpip" - client-initiated TCP forward (ssh -L)
+                SSH_CHAN_FORWARDED_TCPIP = 2 ///< "forwarded-tcpip" - server-initiated TCP forward (ssh -R)
 );
 
 /**
@@ -144,9 +144,9 @@ EMBED_ENUM_BYTE(SshChanType,
  * The type says how the channel was opened; this says what its data means.
  */
 EMBED_ENUM_BYTE(SshChanService,
-    SSH_CHAN_SERVICE_NONE = 0, ///< shell / exec output, handed to the channel-data callback
-    SSH_CHAN_SERVICE_SFTP = 1, ///< subsystem "sftp" (PROTOCORE_ENABLE_SSH_SFTP)
-    SSH_CHAN_SERVICE_SCP = 2   ///< exec "scp ..." (PROTOCORE_ENABLE_SSH_SCP)
+                SSH_CHAN_SERVICE_NONE = 0, ///< shell / exec output, handed to the channel-data callback
+                SSH_CHAN_SERVICE_SFTP = 1, ///< subsystem "sftp" (PROTOCORE_ENABLE_SSH_SFTP)
+                SSH_CHAN_SERVICE_SCP = 2   ///< exec "scp ..." (PROTOCORE_ENABLE_SSH_SCP)
 );
 
 /** @brief Per-connection channel state. */

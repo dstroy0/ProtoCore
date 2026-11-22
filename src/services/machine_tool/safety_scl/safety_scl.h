@@ -53,17 +53,17 @@ EMBED_BEGIN_DECLS
 
 /** @brief Where a safety connection stands. */
 EMBED_ENUM_BYTE(SclState,
-    SCL_STATE_INIT = 0,     ///< initialized, no valid frame accepted yet.
-    SCL_STATE_RUNNING = 1,  ///< at least one frame accepted and no fault since.
-    SCL_STATE_FAILSAFE = 2, ///< a check failed; latched until protocore_scl_reset().
+                SCL_STATE_INIT = 0,     ///< initialized, no valid frame accepted yet.
+                SCL_STATE_RUNNING = 1,  ///< at least one frame accepted and no fault since.
+                SCL_STATE_FAILSAFE = 2, ///< a check failed; latched until protocore_scl_reset().
 );
 
 /** @brief Why a connection went fail-safe. */
 EMBED_ENUM_BYTE(SclFault,
-    SCL_FAULT_PROTOCORE_NONE = 0, ///< no fault.
-    SCL_FAULT_SIGNATURE = 1,      ///< the caller's CRC check rejected the frame (corruption).
-    SCL_FAULT_COUNTER = 2,        ///< the monitoring counter was not the expected next value.
-    SCL_FAULT_TIMEOUT = 3,        ///< no valid frame arrived within the watchdog.
+                SCL_FAULT_PROTOCORE_NONE = 0, ///< no fault.
+                SCL_FAULT_SIGNATURE = 1,      ///< the caller's CRC check rejected the frame (corruption).
+                SCL_FAULT_COUNTER = 2,        ///< the monitoring counter was not the expected next value.
+                SCL_FAULT_TIMEOUT = 3,        ///< no valid frame arrived within the watchdog.
 );
 
 /**

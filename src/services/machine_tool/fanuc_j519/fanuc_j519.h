@@ -92,42 +92,42 @@ enum : size_t // NOSONAR(cpp:S3642): anonymous table of exact wire lengths compa
  *        0 and 3 each mean one thing from the PC and another from the robot.
  */
 EMBED_ENUM_BYTE(J519Type,
-    J519_START_OR_STATUS = 0, ///< PC -> robot Start; robot -> PC Robot Status.
-    J519_MOTION = 1,          ///< PC -> robot Motion Command.
-    J519_STOP = 2,            ///< PC -> robot Stop.
-    J519_REQUEST_OR_ACK = 3,  ///< PC -> robot Request; robot -> PC Ack.
+                J519_START_OR_STATUS = 0, ///< PC -> robot Start; robot -> PC Robot Status.
+                J519_MOTION = 1,          ///< PC -> robot Motion Command.
+                J519_STOP = 2,            ///< PC -> robot Stop.
+                J519_REQUEST_OR_ACK = 3,  ///< PC -> robot Request; robot -> PC Ack.
 );
 
 /** @brief Motion Command `data_style` - how the 9 setpoints are interpreted. */
 EMBED_ENUM_BYTE(J519DataStyle,
-    J519_STYLE_CARTESIAN = 0, ///< setpoints are a Cartesian pose.
-    J519_STYLE_JOINT = 1,     ///< setpoints are joint angles.
+                J519_STYLE_CARTESIAN = 0, ///< setpoints are a Cartesian pose.
+                J519_STYLE_JOINT = 1,     ///< setpoints are joint angles.
 );
 
 /** @brief FANUC I/O port class, for the read-/write-IO selectors carried alongside a Motion Command. */
 EMBED_ENUM_BYTE(J519IoType,
-    J519_IO_NONE = 0, ///< no I/O access requested.
-    J519_IO_DI = 1,   ///< digital in.
-    J519_IO_DO = 2,   ///< digital out.
-    J519_IO_RI = 8,   ///< robot in.
-    J519_IO_RO = 9,   ///< robot out.
-    J519_IO_SI = 11,  ///< operator-panel in.
-    J519_IO_SO = 12,  ///< operator-panel out.
-    J519_IO_WI = 16,  ///< weld in.
-    J519_IO_WO = 17,  ///< weld out.
-    J519_IO_UI = 20,  ///< peripheral (UOP) in.
-    J519_IO_UO = 21,  ///< peripheral (UOP) out.
-    J519_IO_WSI = 26, ///< weld stick in.
-    J519_IO_WSO = 27, ///< weld stick out.
-    J519_IO_F = 35,   ///< flag.
-    J519_IO_M = 36,   ///< marker.
+                J519_IO_NONE = 0, ///< no I/O access requested.
+                J519_IO_DI = 1,   ///< digital in.
+                J519_IO_DO = 2,   ///< digital out.
+                J519_IO_RI = 8,   ///< robot in.
+                J519_IO_RO = 9,   ///< robot out.
+                J519_IO_SI = 11,  ///< operator-panel in.
+                J519_IO_SO = 12,  ///< operator-panel out.
+                J519_IO_WI = 16,  ///< weld in.
+                J519_IO_WO = 17,  ///< weld out.
+                J519_IO_UI = 20,  ///< peripheral (UOP) in.
+                J519_IO_UO = 21,  ///< peripheral (UOP) out.
+                J519_IO_WSI = 26, ///< weld stick in.
+                J519_IO_WSO = 27, ///< weld stick out.
+                J519_IO_F = 35,   ///< flag.
+                J519_IO_M = 36,   ///< marker.
 );
 
 /** @brief Request / Ack `threshold_type` - which motion-limit table is being asked for. */
 EMBED_ENUM_BYTE(J519ThresholdType,
-    J519_THR_VELOCITY = 0,     ///< deg/s.
-    J519_THR_ACCELERATION = 1, ///< deg/s^2.
-    J519_THR_JERK = 2,         ///< deg/s^3.
+                J519_THR_VELOCITY = 0,     ///< deg/s.
+                J519_THR_ACCELERATION = 1, ///< deg/s^2.
+                J519_THR_JERK = 2,         ///< deg/s^3.
 );
 
 /** @brief Robot Status `status` bit masks. */

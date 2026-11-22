@@ -36,12 +36,7 @@ EMBED_BEGIN_DECLS
  */
 
 /** @brief 802.11 frame type (frame-control bits 2-3). */
-EMBED_ENUM_BYTE(WifiFrameType,
-    WIFI_FT_MGMT = 0,
-    WIFI_FT_CTRL = 1,
-    WIFI_FT_DATA = 2,
-    WIFI_FT_EXT = 3,
-);
+EMBED_ENUM_BYTE(WifiFrameType, WIFI_FT_MGMT = 0, WIFI_FT_CTRL = 1, WIFI_FT_DATA = 2, WIFI_FT_EXT = 3, );
 
 /** @brief Decoded 802.11 MAC header. src / dst / bssid point into the frame (6 bytes) or null. */
 typedef struct

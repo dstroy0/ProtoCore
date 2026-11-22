@@ -1084,7 +1084,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `hmmd` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HMMD` |
 | `pmbus` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_PMBUS` |
 | `rcwl0516` | caller-supplied link | `protocore_rcwl0516_presence_init(uint8_t *work, PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms, uint32_t now)` | `PROTOCORE_ENABLE_RCWL0516` |
-| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
+| `sen0192` | caller-supplied link | `protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high)` | `PROTOCORE_ENABLE_SEN0192` |
 | `smbus` | caller-supplied link | `protocore_smbus_begin(uint8_t *work)` | `PROTOCORE_ENABLE_SMBUS` |
 | `gpib` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_GPIB` |
 | `hislip` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_HISLIP` |

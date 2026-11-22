@@ -65,15 +65,15 @@ EMBED_BEGIN_DECLS
 
 /** @brief Validation result codes (0 = the ID Token passes every step of OIDC Core sec 3.1.3.7). */
 EMBED_ENUM_BYTE(protocore_oidc_result,
-    PROTOCORE_OIDC_OK = 0,             ///< Signature and Claims all pass.
-    PROTOCORE_OIDC_ERR_FORMAT = -1,    ///< Not a 3-part Compact Serialization / bad base64url / oversized.
-    PROTOCORE_OIDC_ERR_ALG = -2,       ///< JOSE Header `alg` is not RS256 (RFC 7515 sec 4.1.1).
-    PROTOCORE_OIDC_ERR_KEY = -3,       ///< No usable RSA JWK (`kid` not found / malformed `n` or `e`).
-    PROTOCORE_OIDC_ERR_SIGNATURE = -4, ///< The RSASSA-PKCS1-v1_5 check failed (RFC 7518 sec 3.3).
-    PROTOCORE_OIDC_ERR_ISS = -5,       ///< `iss` is not the Issuer Identifier (sec 3.1.3.7 step 2).
-    PROTOCORE_OIDC_ERR_AUD = -6,       ///< `aud` does not contain the client_id (sec 3.1.3.7 step 3).
-    PROTOCORE_OIDC_ERR_EXPIRED = -7,   ///< `exp` is missing or not after now (sec 3.1.3.7 step 9).
-    PROTOCORE_OIDC_ERR_NOT_YET = -8,   ///< `nbf` is in the future (RFC 7519 sec 4.1.5).
+                PROTOCORE_OIDC_OK = 0,             ///< Signature and Claims all pass.
+                PROTOCORE_OIDC_ERR_FORMAT = -1,    ///< Not a 3-part Compact Serialization / bad base64url / oversized.
+                PROTOCORE_OIDC_ERR_ALG = -2,       ///< JOSE Header `alg` is not RS256 (RFC 7515 sec 4.1.1).
+                PROTOCORE_OIDC_ERR_KEY = -3,       ///< No usable RSA JWK (`kid` not found / malformed `n` or `e`).
+                PROTOCORE_OIDC_ERR_SIGNATURE = -4, ///< The RSASSA-PKCS1-v1_5 check failed (RFC 7518 sec 3.3).
+                PROTOCORE_OIDC_ERR_ISS = -5,       ///< `iss` is not the Issuer Identifier (sec 3.1.3.7 step 2).
+                PROTOCORE_OIDC_ERR_AUD = -6,       ///< `aud` does not contain the client_id (sec 3.1.3.7 step 3).
+                PROTOCORE_OIDC_ERR_EXPIRED = -7,   ///< `exp` is missing or not after now (sec 3.1.3.7 step 9).
+                PROTOCORE_OIDC_ERR_NOT_YET = -8,   ///< `nbf` is in the future (RFC 7519 sec 4.1.5).
 );
 
 /** @brief An RSA public key from one JWK (RFC 7518 sec 6.3.1). */

@@ -34,9 +34,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief Classification of a Sigfox modem response line. */
 EMBED_ENUM_BYTE(protocore_sigfox_result,
-    SIGFOX_PENDING = 0, ///< nothing conclusive yet (echo / partial); keep reading
-    SIGFOX_OK = 1,      ///< the modem accepted / completed the command
-    SIGFOX_ERROR = 2,   ///< the modem reported an error
+                SIGFOX_PENDING = 0, ///< nothing conclusive yet (echo / partial); keep reading
+                SIGFOX_OK = 1,      ///< the modem accepted / completed the command
+                SIGFOX_ERROR = 2,   ///< the modem reported an error
 );
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

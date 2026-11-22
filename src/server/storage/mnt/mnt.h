@@ -47,10 +47,10 @@ EMBED_BEGIN_DECLS
  * caller that overwrites in place has to ask for RDWR and a backend that cannot offer it answers -1.
  */
 EMBED_ENUM_BYTE(protocore_mnt_mode,
-    PROTOCORE_MNT_READ = 0,   ///< Read existing file (fails if absent).
-    PROTOCORE_MNT_WRITE = 1,  ///< Create/truncate for writing.
-    PROTOCORE_MNT_APPEND = 2, ///< Create/open for appending at end.
-    PROTOCORE_MNT_RDWR = 3,   ///< Open existing for random read+write, no truncation (fails if absent).
+                PROTOCORE_MNT_READ = 0,   ///< Read existing file (fails if absent).
+                PROTOCORE_MNT_WRITE = 1,  ///< Create/truncate for writing.
+                PROTOCORE_MNT_APPEND = 2, ///< Create/open for appending at end.
+                PROTOCORE_MNT_RDWR = 3,   ///< Open existing for random read+write, no truncation (fails if absent).
 );
 
 /**

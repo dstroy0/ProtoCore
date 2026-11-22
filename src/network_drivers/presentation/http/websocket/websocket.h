@@ -97,22 +97,22 @@ EMBED_BEGIN_DECLS
 
 /** @brief WebSocket frame opcodes. */
 EMBED_ENUM_BYTE(WsOpcode,
-    WS_OP_CONTINUATION = 0x0, ///< Continuation frame (data-message fragment; reassembled into buf).
-    WS_OP_TEXT = 0x1,         ///< UTF-8 text payload.
-    WS_OP_BINARY = 0x2,       ///< Binary payload.
-    WS_OP_CLOSE = 0x8,        ///< Connection close.
-    WS_OP_PING = 0x9,         ///< Ping (auto-ponged by the library).
-    WS_OP_PONG = 0xA          ///< Pong (echoed ping; ignored by library).
+                WS_OP_CONTINUATION = 0x0, ///< Continuation frame (data-message fragment; reassembled into buf).
+                WS_OP_TEXT = 0x1,         ///< UTF-8 text payload.
+                WS_OP_BINARY = 0x2,       ///< Binary payload.
+                WS_OP_CLOSE = 0x8,        ///< Connection close.
+                WS_OP_PING = 0x9,         ///< Ping (auto-ponged by the library).
+                WS_OP_PONG = 0xA          ///< Pong (echoed ping; ignored by library).
 );
 
 /** @brief WebSocket close status codes (RFC 6455 §7.4.1). */
 EMBED_ENUM_BYTE(WsCloseCode,
-    WS_CLOSE_NORMAL = 1000,          ///< Normal closure.
-    WS_CLOSE_GOING_AWAY = 1001,      ///< Endpoint going away.
-    WS_CLOSE_PROTOCOL = 1002,        ///< Protocol error.
-    WS_CLOSE_UNSUPPORTED = 1003,     ///< Received a data type the endpoint cannot accept (RFC 6455).
-    WS_CLOSE_INVALID_PAYLOAD = 1007, ///< Text message that is not valid UTF-8 (RFC 6455 8.1).
-    WS_CLOSE_TOO_BIG = 1009          ///< Payload too large for WS_FRAME_SIZE.
+                WS_CLOSE_NORMAL = 1000,          ///< Normal closure.
+                WS_CLOSE_GOING_AWAY = 1001,      ///< Endpoint going away.
+                WS_CLOSE_PROTOCOL = 1002,        ///< Protocol error.
+                WS_CLOSE_UNSUPPORTED = 1003,     ///< Received a data type the endpoint cannot accept (RFC 6455).
+                WS_CLOSE_INVALID_PAYLOAD = 1007, ///< Text message that is not valid UTF-8 (RFC 6455 8.1).
+                WS_CLOSE_TOO_BIG = 1009          ///< Payload too large for WS_FRAME_SIZE.
 );
 
 // ---------------------------------------------------------------------------
@@ -121,19 +121,19 @@ EMBED_ENUM_BYTE(WsCloseCode,
 
 /** @brief States of the WebSocket frame parser. */
 EMBED_ENUM_BYTE(WsParseState,
-    WS_HEADER1,     ///< Awaiting first header byte (FIN, RSV, opcode).
-    WS_HEADER2,     ///< Awaiting second header byte (MASK, 7-bit length).
-    WS_LEN16_HI,    ///< Reading extended 16-bit length, high byte.
-    WS_LEN16_LO,    ///< Reading extended 16-bit length, low byte.
-    WS_LEN64,       ///< Consuming 8-byte 64-bit length (always rejected).
-    WS_MASK0,       ///< Reading masking key byte 0.
-    WS_MASK1,       ///< Reading masking key byte 1.
-    WS_MASK2,       ///< Reading masking key byte 2.
-    WS_MASK3,       ///< Reading masking key byte 3.
-    WS_PAYLOAD,     ///< Accumulating payload bytes.
-    WS_FRAME_READY, ///< Complete frame ready for dispatch.
-    WS_CLOSED,      ///< Connection closed; slot may be recycled.
-    WS_ERROR        ///< Protocol error; close frame has been queued.
+                WS_HEADER1,     ///< Awaiting first header byte (FIN, RSV, opcode).
+                WS_HEADER2,     ///< Awaiting second header byte (MASK, 7-bit length).
+                WS_LEN16_HI,    ///< Reading extended 16-bit length, high byte.
+                WS_LEN16_LO,    ///< Reading extended 16-bit length, low byte.
+                WS_LEN64,       ///< Consuming 8-byte 64-bit length (always rejected).
+                WS_MASK0,       ///< Reading masking key byte 0.
+                WS_MASK1,       ///< Reading masking key byte 1.
+                WS_MASK2,       ///< Reading masking key byte 2.
+                WS_MASK3,       ///< Reading masking key byte 3.
+                WS_PAYLOAD,     ///< Accumulating payload bytes.
+                WS_FRAME_READY, ///< Complete frame ready for dispatch.
+                WS_CLOSED,      ///< Connection closed; slot may be recycled.
+                WS_ERROR        ///< Protocol error; close frame has been queued.
 );
 
 // ---------------------------------------------------------------------------

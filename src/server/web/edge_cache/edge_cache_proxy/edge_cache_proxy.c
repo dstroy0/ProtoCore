@@ -51,10 +51,7 @@ typedef struct
 
 #if PROTOCORE_ENABLE_EDGE_MESH
 // A fetch runs the mesh phase (query siblings) first on a full miss, then falls to the origin.
-EMBED_ENUM_BYTE(EdgeFetchPhase,
-    EDGE_FETCH_PHASE_MESH,
-    EDGE_FETCH_PHASE_ORIGIN,
-);
+EMBED_ENUM_BYTE(EdgeFetchPhase, EDGE_FETCH_PHASE_MESH, EDGE_FETCH_PHASE_ORIGIN, );
 #endif
 
 typedef struct

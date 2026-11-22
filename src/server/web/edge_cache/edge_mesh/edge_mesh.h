@@ -52,7 +52,8 @@ EMBED_BEGIN_DECLS
 #define PROTOCORE_EDGE_MESH_REQ_MAX (2 + 1 + 1 + 32 + 2 + PROTOCORE_EDGE_KEY_MAX + 2 + PROTOCORE_MESH_HDRS_MAX)
 
 /** @brief Tri-state parse result for the length-delimited frames (partial reads accumulate to complete). */
-EMBED_ENUM_BYTE(EdgeMeshParse,
+EMBED_ENUM_BYTE(
+    EdgeMeshParse,
     EDGE_MESH_PARSE_MALFORMED = -1, ///< bad magic/version/opcode, or a field that cannot fit the destination
     EDGE_MESH_PARSE_INCOMPLETE = 0, ///< a valid prefix so far - need more bytes
     EDGE_MESH_PARSE_MISS = 1,       ///< a complete response with no object
@@ -61,10 +62,10 @@ EMBED_ENUM_BYTE(EdgeMeshParse,
 
 /** @brief Peer-query progress. */
 EMBED_ENUM_BYTE(EdgeMeshStatus,
-    EDGE_MESH_STATUS_PENDING, ///< still connecting / receiving
-    EDGE_MESH_STATUS_HIT,     ///< a complete entry frame arrived (entry_off / entry_len valid)
-    EDGE_MESH_STATUS_MISS,    ///< the peer does not have (a fresh copy of) the object
-    EDGE_MESH_STATUS_FAILED,  ///< connect / send / timeout / closed-before-complete / malformed
+                EDGE_MESH_STATUS_PENDING, ///< still connecting / receiving
+                EDGE_MESH_STATUS_HIT,     ///< a complete entry frame arrived (entry_off / entry_len valid)
+                EDGE_MESH_STATUS_MISS,    ///< the peer does not have (a fresh copy of) the object
+                EDGE_MESH_STATUS_FAILED,  ///< connect / send / timeout / closed-before-complete / malformed
 );
 
 /**

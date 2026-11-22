@@ -42,21 +42,21 @@ EMBED_BEGIN_DECLS
 
 /** @brief Which punched-tape character code the wire stream uses. */
 EMBED_ENUM_BYTE(DncCode,
-    DNC_CODE_ISO = 0, ///< ISO 7-bit / ASCII (RS-358), EOB = LF, marker = '%'.
-    DNC_CODE_EIA = 1, ///< EIA RS-244 odd-parity tape code, EOB = 0x80, marker = EOR 0x0B.
+                DNC_CODE_ISO = 0, ///< ISO 7-bit / ASCII (RS-358), EOB = LF, marker = '%'.
+                DNC_CODE_EIA = 1, ///< EIA RS-244 odd-parity tape code, EOB = 0x80, marker = EOR 0x0B.
 );
 
 /** @brief Software flow-control bytes (both tape codes; these are the raw ASCII controls). */
 EMBED_ENUM_BYTE(DncFlowByte,
-    DNC_XON = 0x11,  ///< DC1 - resume sending.
-    DNC_XOFF = 0x13, ///< DC3 - pause sending.
+                DNC_XON = 0x11,  ///< DC1 - resume sending.
+                DNC_XOFF = 0x13, ///< DC3 - pause sending.
 );
 
 /** @brief EIA RS-244 special codes (not general text characters). */
 EMBED_ENUM_BYTE(DncEiaCode,
-    DNC_EIA_EOB = 0x80, ///< EIA End-of-Block (channel 8 only; the ISO LF equivalent).
-    DNC_EIA_EOR = 0x0B, ///< EIA End-of-Record (the ISO '%' rewind-stop equivalent).
-    DNC_EIA_DEL = 0x7F, ///< EIA Delete / rubout (leader/trailer runout; skipped on read).
+                DNC_EIA_EOB = 0x80, ///< EIA End-of-Block (channel 8 only; the ISO LF equivalent).
+                DNC_EIA_EOR = 0x0B, ///< EIA End-of-Record (the ISO '%' rewind-stop equivalent).
+                DNC_EIA_DEL = 0x7F, ///< EIA Delete / rubout (leader/trailer runout; skipped on read).
 );
 
 /**
@@ -147,11 +147,11 @@ size_t protocore_dnc_encode_leader(const DncCfg *cfg, uint8_t *out, size_t out_c
 
 /** @brief What ::protocore_dnc_decode_feed produced for the byte just fed. */
 EMBED_ENUM_BYTE(DncEvent,
-    DNC_EV_NONE = 0,   ///< byte absorbed (mid-block, runout, or flow/ignored); nothing to report.
-    DNC_EV_LINE,       ///< a complete non-empty block is ready in DncDecoder::line (NUL-terminated).
-    DNC_EV_PROG_START, ///< the first `%` / EOR was seen (program start).
-    DNC_EV_PROG_END,   ///< a later `%` / EOR was seen (program end).
-    DNC_EV_OVERFLOW,   ///< the current block exceeded PROTOCORE_DNC_LINE_MAX; it was dropped.
+                DNC_EV_NONE = 0,   ///< byte absorbed (mid-block, runout, or flow/ignored); nothing to report.
+                DNC_EV_LINE,       ///< a complete non-empty block is ready in DncDecoder::line (NUL-terminated).
+                DNC_EV_PROG_START, ///< the first `%` / EOR was seen (program start).
+                DNC_EV_PROG_END,   ///< a later `%` / EOR was seen (program end).
+                DNC_EV_OVERFLOW,   ///< the current block exceeded PROTOCORE_DNC_LINE_MAX; it was dropped.
 );
 
 /** @brief Streaming block reassembler: wire bytes in, ASCII G-code lines out. */

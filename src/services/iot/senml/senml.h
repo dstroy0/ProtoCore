@@ -50,10 +50,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief Which value field a Record carries (RFC 8428 sec 4.2). */
 EMBED_ENUM_BYTE(SenmlValueKind,
-    SENML_VALUE_NONE,    ///< no value field, as in a Base-Fields-only Record
-    SENML_VALUE_NUMBER,  ///< Value (v), a Number; emitted as an integer when integral
-    SENML_VALUE_STRING,  ///< String Value (vs)
-    SENML_VALUE_BOOLEAN, ///< Boolean Value (vb)
+                SENML_VALUE_NONE,    ///< no value field, as in a Base-Fields-only Record
+                SENML_VALUE_NUMBER,  ///< Value (v), a Number; emitted as an integer when integral
+                SENML_VALUE_STRING,  ///< String Value (vs)
+                SENML_VALUE_BOOLEAN, ///< Boolean Value (vb)
 );
 
 /**

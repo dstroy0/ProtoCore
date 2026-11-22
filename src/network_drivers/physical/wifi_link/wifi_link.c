@@ -20,7 +20,7 @@
 
 #include "network_drivers/physical/wifi_link/wifi_link.h"
 
-#include "embed_atomic.h"                     // embed_atomic_u32: the association, and the dropped frames
+#include "embed_atomic.h"                      // embed_atomic_u32: the association, and the dropped frames
 #include "memoria_anularis/memoria_anularis.h" // the SPSC ring, its byte stream and its loculi
 
 EMBED_BEGIN_DECLS
@@ -70,7 +70,8 @@ embed_bool protocore_wifi_link_frame_receive(const WifiLinkFrameArgs *args)
                          .value = 1u);
         return EMBED_FALSE;
     }
-    const embed_word ready = EMBED_CALL(anularis.loculus_ready, AnularisCfg, .ring = &s_arrival) & WIFI_LINK_BUFFER_MASK;
+    const embed_word ready =
+        EMBED_CALL(anularis.loculus_ready, AnularisCfg, .ring = &s_arrival) & WIFI_LINK_BUFFER_MASK;
     const embed_iword next = EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = ready);
     if (next < 0)
     {
@@ -78,7 +79,8 @@ embed_bool protocore_wifi_link_frame_receive(const WifiLinkFrameArgs *args)
                          .value = 1u);
         return EMBED_FALSE;
     }
-    // Explicit cast takes the loculus index, which the test holds at 0 or above, and the mask below IDEMIP_RX_DESCRIPTORS
+    // Explicit cast takes the loculus index, which the test holds at 0 or above, and the mask below
+    // IDEMIP_RX_DESCRIPTORS
     const size_t loculus = (size_t)next;
     uint8_t *const buffer = mmgr_pars_storage_wifi_link_receive + (loculus * IDEMIP_DMA_BUF_STRIDE);
     if (!EMBED_CALL(anularis.loculus_hold, AnularisCfg, .ring = &s_arrival, .index = loculus, .src = buffer,
@@ -110,7 +112,7 @@ static IdemIpPhyLink wifi_link_link(void)
         .speed = IDEMIP_PHY_SPEED_NONE,
         .full_duplex = EMBED_FALSE,
         .up = (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &s_link.up) != 0u) ? EMBED_TRUE
-                                                                                                           : EMBED_FALSE,
+                                                                                                         : EMBED_FALSE,
     };
     return link;
 }
@@ -152,7 +154,8 @@ static uint8_t *wifi_link_tx_claim(size_t len)
     {
         return NULL;
     }
-    uint8_t *const buffer = mmgr_pars_storage_wifi_link_transmit + ((size_t)s_link.transmit_next * IDEMIP_DMA_BUF_STRIDE);
+    uint8_t *const buffer =
+        mmgr_pars_storage_wifi_link_transmit + ((size_t)s_link.transmit_next * IDEMIP_DMA_BUF_STRIDE);
     s_link.transmit_next = (s_link.transmit_next + 1u) & (IDEMIP_TX_DESCRIPTORS - 1u);
     s_link.transmit_claimed = buffer;
     return buffer;
@@ -215,9 +218,9 @@ static embed_bool wifi_link_lay(void)
 {
     if (!s_link.laid)
     {
-        s_link.laid = EMBED_CALL(anularis.init, AnularisCfg, .ring = &s_arrival,
-                                 .buf = mmgr_pars_storage_wifi_link_arrival, .capacity = WIFI_LINK_ARRIVAL_BYTES,
-                                 .segment_count = 1u);
+        s_link.laid =
+            EMBED_CALL(anularis.init, AnularisCfg, .ring = &s_arrival, .buf = mmgr_pars_storage_wifi_link_arrival,
+                       .capacity = WIFI_LINK_ARRIVAL_BYTES, .segment_count = 1u);
     }
     return s_link.laid;
 }

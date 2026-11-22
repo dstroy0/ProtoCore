@@ -41,46 +41,34 @@ EMBED_BEGIN_DECLS
  *        (1..17), so casting to the byte a PackTags Status.StateCurrent carries is a no-op at the boundary.
  */
 EMBED_ENUM_BYTE(PackMlState,
-    PACK_ML_STATE_UNDEFINED = 0,     ///< not yet initialized
-    PACK_ML_STATE_CLEARING = 1,      ///< acting: clearing a fault (Aborted -> Stopped)
-    PACK_ML_STATE_STOPPED = 2,       ///< wait: powered, safe, not producing
-    PACK_ML_STATE_STARTING = 3,      ///< acting: Idle -> Execute
-    PACK_ML_STATE_IDLE = 4,          ///< wait: ready to start
-    PACK_ML_STATE_SUSPENDED = 5,     ///< wait: paused by an external condition (starved/blocked)
-    PACK_ML_STATE_EXECUTE = 6,       ///< wait/producing: the machine is doing its work
-    PACK_ML_STATE_STOPPING = 7,      ///< acting: -> Stopped
-    PACK_ML_STATE_ABORTING = 8,      ///< acting: -> Aborted (fault)
-    PACK_ML_STATE_ABORTED = 9,       ///< wait: faulted; needs Clear
-    PACK_ML_STATE_HOLDING = 10,      ///< acting: Execute -> Held
-    PACK_ML_STATE_HELD = 11,         ///< wait: production paused by the operator
-    PACK_ML_STATE_UNHOLDING = 12,    ///< acting: Held -> Execute
-    PACK_ML_STATE_SUSPENDING = 13,   ///< acting: Execute -> Suspended
-    PACK_ML_STATE_UNSUSPENDING = 14, ///< acting: Suspended -> Execute
-    PACK_ML_STATE_RESETTING = 15,    ///< acting: Stopped/Complete -> Idle
-    PACK_ML_STATE_COMPLETING = 16,   ///< acting: Execute (production done) -> Complete
-    PACK_ML_STATE_COMPLETE = 17      ///< wait: the production run finished
+                PACK_ML_STATE_UNDEFINED = 0,     ///< not yet initialized
+                PACK_ML_STATE_CLEARING = 1,      ///< acting: clearing a fault (Aborted -> Stopped)
+                PACK_ML_STATE_STOPPED = 2,       ///< wait: powered, safe, not producing
+                PACK_ML_STATE_STARTING = 3,      ///< acting: Idle -> Execute
+                PACK_ML_STATE_IDLE = 4,          ///< wait: ready to start
+                PACK_ML_STATE_SUSPENDED = 5,     ///< wait: paused by an external condition (starved/blocked)
+                PACK_ML_STATE_EXECUTE = 6,       ///< wait/producing: the machine is doing its work
+                PACK_ML_STATE_STOPPING = 7,      ///< acting: -> Stopped
+                PACK_ML_STATE_ABORTING = 8,      ///< acting: -> Aborted (fault)
+                PACK_ML_STATE_ABORTED = 9,       ///< wait: faulted; needs Clear
+                PACK_ML_STATE_HOLDING = 10,      ///< acting: Execute -> Held
+                PACK_ML_STATE_HELD = 11,         ///< wait: production paused by the operator
+                PACK_ML_STATE_UNHOLDING = 12,    ///< acting: Held -> Execute
+                PACK_ML_STATE_SUSPENDING = 13,   ///< acting: Execute -> Suspended
+                PACK_ML_STATE_UNSUSPENDING = 14, ///< acting: Suspended -> Execute
+                PACK_ML_STATE_RESETTING = 15,    ///< acting: Stopped/Complete -> Idle
+                PACK_ML_STATE_COMPLETING = 16,   ///< acting: Execute (production done) -> Complete
+                PACK_ML_STATE_COMPLETE = 17      ///< wait: the production run finished
 );
 
 /** @brief PackML control command (the Command.CntrlCmd tag). Value is the conventional CntrlCmd number. */
-EMBED_ENUM_BYTE(PackMlCommand,
-    PACK_ML_COMMAND_PROTOCORE_NONE = 0,
-    PACK_ML_COMMAND_RESET = 1,
-    PACK_ML_COMMAND_START = 2,
-    PACK_ML_COMMAND_STOP = 3,
-    PACK_ML_COMMAND_HOLD = 4,
-    PACK_ML_COMMAND_UNHOLD = 5,
-    PACK_ML_COMMAND_SUSPEND = 6,
-    PACK_ML_COMMAND_UNSUSPEND = 7,
-    PACK_ML_COMMAND_ABORT = 8,
-    PACK_ML_COMMAND_CLEAR = 9
-);
+EMBED_ENUM_BYTE(PackMlCommand, PACK_ML_COMMAND_PROTOCORE_NONE = 0, PACK_ML_COMMAND_RESET = 1, PACK_ML_COMMAND_START = 2,
+                PACK_ML_COMMAND_STOP = 3, PACK_ML_COMMAND_HOLD = 4, PACK_ML_COMMAND_UNHOLD = 5,
+                PACK_ML_COMMAND_SUSPEND = 6, PACK_ML_COMMAND_UNSUSPEND = 7, PACK_ML_COMMAND_ABORT = 8,
+                PACK_ML_COMMAND_CLEAR = 9);
 
 /** @brief PackML unit mode (Command.UnitMode / Status.UnitModeCurrent). Producing is the full state model. */
-EMBED_ENUM_BYTE(PackMlMode,
-    PACK_ML_MODE_PRODUCING = 1,
-    PACK_ML_MODE_MAINTENANCE = 2,
-    PACK_ML_MODE_MANUAL = 3
-);
+EMBED_ENUM_BYTE(PackMlMode, PACK_ML_MODE_PRODUCING = 1, PACK_ML_MODE_MAINTENANCE = 2, PACK_ML_MODE_MANUAL = 3);
 
 // ---------------------------------------------------------------------------
 // Pure state engine (no state stored here - the caller holds the current state)

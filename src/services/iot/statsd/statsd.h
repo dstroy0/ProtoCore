@@ -54,10 +54,10 @@ EMBED_BEGIN_DECLS
  * and writes `ms`.
  */
 EMBED_ENUM_BYTE(StatsdType,
-    STATSD_COUNTER = 'c', ///< Counting: `gorets:1|c`
-    STATSD_GAUGE = 'g',   ///< Gauges: `gaugor:333|g`, or a signed value to adjust
-    STATSD_TIMING = 'm',  ///< Timing: written as `ms`, `glork:320|ms`
-    STATSD_SET = 's',     ///< Sets: `uniques:765|s`
+                STATSD_COUNTER = 'c', ///< Counting: `gorets:1|c`
+                STATSD_GAUGE = 'g',   ///< Gauges: `gaugor:333|g`, or a signed value to adjust
+                STATSD_TIMING = 'm',  ///< Timing: written as `ms`, `glork:320|ms`
+                STATSD_SET = 's',     ///< Sets: `uniques:765|s`
 );
 
 /** @brief The StatsD daemon every datagram is sent to. */

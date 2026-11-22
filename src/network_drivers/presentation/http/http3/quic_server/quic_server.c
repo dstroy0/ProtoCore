@@ -183,9 +183,11 @@ static embed_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const 
     {
         return EMBED_FALSE;
     }
-    size_t head = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_head);
+    size_t head =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_head);
     size_t next = (head + 1) % PROTOCORE_QUIC_INGEST_RING;
-    if (next == (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_tail))
+    if (next ==
+        (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_tail))
     {
         return EMBED_FALSE; // ring full: drop (QUIC recovers via retransmission)
     }
@@ -194,19 +196,23 @@ static embed_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const 
     e->len = (uint16_t)len;
     copy_str(e->ip, sizeof e->ip, ip);
     e->port = port;
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head, .value = next); // publish after the record is fully written
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head,
+               .value = next); // publish after the record is fully written
     return EMBED_TRUE;
 }
 
 static embed_bool ring_pop(uint8_t *work, QuicIngest *out)
 {
-    size_t tail = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_tail);
-    if (tail == (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_head))
+    size_t tail =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_tail);
+    if (tail ==
+        (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &QSRV_CTX(work)->ring_head))
     {
         return EMBED_FALSE;
     }
     *out = QSRV_RING(work)[tail];
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail, .value = (tail + 1) % PROTOCORE_QUIC_INGEST_RING);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail,
+               .value = (tail + 1) % PROTOCORE_QUIC_INGEST_RING);
     return EMBED_TRUE;
 }
 
@@ -480,8 +486,10 @@ static void begin(uint8_t *work)
     {
         QSRV_POOL(work)[i].used = EMBED_FALSE;
     }
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head, .value = 0);
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail, .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail,
+               .value = 0);
     QSRV_CTX(work)->next_id = 1;
     QSRV_CTX(work)->running = EMBED_TRUE;
     UdpListenerV.port = QSRV_CTX(work)->port;
@@ -561,8 +569,10 @@ static void stop(uint8_t *work)
     {
         QSRV_POOL(work)[i].used = EMBED_FALSE;
     }
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head, .value = 0);
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail, .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &QSRV_CTX(work)->ring_tail,
+               .value = 0);
 }
 
 // The HTTP/3 bridge installs this; its shape is the seam's, not this module's.

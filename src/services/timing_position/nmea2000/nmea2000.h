@@ -40,11 +40,11 @@ EMBED_BEGIN_DECLS
 
 /** @brief Result of feeding a frame to the Fast Packet reassembler. */
 EMBED_ENUM_BYTE(N2kFpResult,
-    N2K_FP_IGNORED = 0, ///< not part of the active sequence
-    N2K_FP_STARTED,     ///< first frame opened a sequence
-    N2K_FP_PROGRESS,    ///< a continuation frame was accepted
-    N2K_FP_COMPLETE,    ///< the message is fully reassembled
-    N2K_FP_ERR,         ///< out-of-order / too large
+                N2K_FP_IGNORED = 0, ///< not part of the active sequence
+                N2K_FP_STARTED,     ///< first frame opened a sequence
+                N2K_FP_PROGRESS,    ///< a continuation frame was accepted
+                N2K_FP_COMPLETE,    ///< the message is fully reassembled
+                N2K_FP_ERR,         ///< out-of-order / too large
 );
 
 /** @brief Fast Packet reassembly context (one in-flight message). */

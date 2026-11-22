@@ -81,11 +81,11 @@ typedef struct
 
 /** @brief Result of feeding a frame to the TP reassembler. */
 EMBED_ENUM_BYTE(J1939TpResult,
-    J1939_TP_IGNORED = 0, ///< not a TP frame for the active session
-    J1939_TP_STARTED,     ///< a BAM / RTS opened a session
-    J1939_TP_PROGRESS,    ///< a data packet was accepted, more to come
-    J1939_TP_COMPLETE,    ///< the message is fully reassembled (see fields below)
-    J1939_TP_ERROR,       ///< malformed / out-of-sequence / too large
+                J1939_TP_IGNORED = 0, ///< not a TP frame for the active session
+                J1939_TP_STARTED,     ///< a BAM / RTS opened a session
+                J1939_TP_PROGRESS,    ///< a data packet was accepted, more to come
+                J1939_TP_COMPLETE,    ///< the message is fully reassembled (see fields below)
+                J1939_TP_ERROR,       ///< malformed / out-of-sequence / too large
 );
 
 /** @brief Transport-Protocol reassembly context (one in-flight message). */

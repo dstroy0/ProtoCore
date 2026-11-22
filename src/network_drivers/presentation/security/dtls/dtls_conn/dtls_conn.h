@@ -96,10 +96,10 @@ typedef struct
 
 /** @brief Handshake progress. */
 EMBED_ENUM_BYTE(DtlsConnState,
-    DTLS_CONN_STATE_START,         ///< awaiting ClientHello
-    DTLS_CONN_STATE_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
-    DTLS_CONN_STATE_DONE,          ///< handshake complete; application keys installed
-    DTLS_CONN_STATE_FAILED         ///< fatal error (see @ref protocore_dtls_conn_alert)
+                DTLS_CONN_STATE_START,         ///< awaiting ClientHello
+                DTLS_CONN_STATE_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
+                DTLS_CONN_STATE_DONE,          ///< handshake complete; application keys installed
+                DTLS_CONN_STATE_FAILED         ///< fatal error (see @ref protocore_dtls_conn_alert)
 );
 
 /**

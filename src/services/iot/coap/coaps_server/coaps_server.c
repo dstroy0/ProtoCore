@@ -190,8 +190,8 @@ static embed_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const 
     {
         return EMBED_FALSE;
     }
-    size_t head = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg,
-                             .word = &COAPS_SERVER_CTX(work)->ring_head);
+    size_t head =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &COAPS_SERVER_CTX(work)->ring_head);
     size_t next = (head + 1) % PROTOCORE_COAPS_INGEST_RING;
     if (next == (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg,
                                    .word = &COAPS_SERVER_CTX(work)->ring_tail))
@@ -203,22 +203,24 @@ static embed_bool ring_push(uint8_t *work, const uint8_t *dg, size_t len, const 
     e->len = (uint16_t)len;
     (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = e->ip, .src = ip, .cap = sizeof(e->ip));
     e->port = port;
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head, .value = next); // published only once the entry is whole
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head,
+               .value = next); // published only once the entry is whole
     return EMBED_TRUE;
 }
 
 // Take the oldest queued datagram. False when the ring holds none.
 static embed_bool ring_pop(uint8_t *work, CoapsIngest *out)
 {
-    size_t tail = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg,
-                             .word = &COAPS_SERVER_CTX(work)->ring_tail);
+    size_t tail =
+        EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail);
     if (tail == (size_t)EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg,
                                    .word = &COAPS_SERVER_CTX(work)->ring_head))
     {
         return EMBED_FALSE;
     }
     *out = COAPS_SERVER_CTX(work)->ring[tail];
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail, .value = (tail + 1) % PROTOCORE_COAPS_INGEST_RING);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail,
+               .value = (tail + 1) % PROTOCORE_COAPS_INGEST_RING);
     return EMBED_TRUE;
 }
 
@@ -464,8 +466,10 @@ void protocore_coaps_server_begin(uint8_t *work)
     {
         COAPS_SERVER_CTX(work)->pool[i].used = EMBED_FALSE;
     }
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head, .value = 0);
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail, .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail,
+               .value = 0);
     COAPS_SERVER_CTX(work)->running = EMBED_TRUE;
 #if PROTOCORE_HAS_NET_STACK
     UdpListenerV.port = COAPS_SERVER_CTX(work)->port;
@@ -525,8 +529,10 @@ void protocore_coaps_server_stop(uint8_t *work)
     {
         COAPS_SERVER_CTX(work)->pool[i].used = EMBED_FALSE;
     }
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head, .value = 0);
-    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail, .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_head,
+               .value = 0);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &COAPS_SERVER_CTX(work)->ring_tail,
+               .value = 0);
     CoapsServerV.ok = EMBED_TRUE;
 }
 

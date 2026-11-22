@@ -35,17 +35,10 @@ EMBED_BEGIN_DECLS
  * "bin"; CBOR has "null" and MessagePack "nil". They are the same item, so they get one name here
  * and the format maps its own tag onto it.
  */
-EMBED_ENUM_BYTE(protocore_codec_type,
-    PROTOCORE_CODEC_UINT = 0,
-    PROTOCORE_CODEC_INT,
-    PROTOCORE_CODEC_BYTES,
-    PROTOCORE_CODEC_STR,
-    PROTOCORE_CODEC_ARRAY,
-    PROTOCORE_CODEC_MAP,
-    PROTOCORE_CODEC_BOOL,
-    PROTOCORE_CODEC_NULL,
-    PROTOCORE_CODEC_FLOAT,
-    PROTOCORE_CODEC_INVALID ///< end of buffer, a prior error, or an item this format does not carry
+EMBED_ENUM_BYTE(protocore_codec_type, PROTOCORE_CODEC_UINT = 0, PROTOCORE_CODEC_INT, PROTOCORE_CODEC_BYTES,
+                PROTOCORE_CODEC_STR, PROTOCORE_CODEC_ARRAY, PROTOCORE_CODEC_MAP, PROTOCORE_CODEC_BOOL,
+                PROTOCORE_CODEC_NULL, PROTOCORE_CODEC_FLOAT,
+                PROTOCORE_CODEC_INVALID ///< end of buffer, a prior error, or an item this format does not carry
 );
 
 /**

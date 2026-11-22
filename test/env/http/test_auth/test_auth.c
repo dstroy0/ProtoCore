@@ -34,7 +34,8 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -181,7 +182,8 @@ void stress_auth_50_valid_requests()
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
         conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+                   .value = CONN_ACTIVE);
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConnV.slot = slot;
@@ -207,7 +209,8 @@ void stress_auth_50_invalid_requests()
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
         conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+                   .value = CONN_ACTIVE);
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConnV.slot = slot;
@@ -226,7 +229,8 @@ static void rearm(uint8_t slot)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state,
+               .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConnV.slot = slot;

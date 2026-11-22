@@ -154,11 +154,10 @@ extern FileSend file_send[CONN_POOL_SLOTS];
  * A transfer spans many channel messages, so it is what the CONNECTION carries between them.
  * Session opens and closes the connection, so session holds it.
  */
-EMBED_ENUM_BYTE(ScpSt,
-    PROTOCORE_NONE,
-    WAIT_CLINE, ///< reading the C<mode> <size> <name> control line
-    RECV,       ///< streaming file data to disk
-    WAIT_END    ///< the file's bytes are in; awaiting the end-of-record byte
+EMBED_ENUM_BYTE(ScpSt, PROTOCORE_NONE,
+                WAIT_CLINE, ///< reading the C<mode> <size> <name> control line
+                RECV,       ///< streaming file data to disk
+                WAIT_END    ///< the file's bytes are in; awaiting the end-of-record byte
 );
 
 typedef struct

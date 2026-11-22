@@ -1,6 +1,6 @@
 # Examples
 
-The library ships 151 runnable examples under `examples/`, grouped by
+The library ships 152 runnable examples under `examples/`, grouped by
 the OSI layer the feature lives at and numbered within each group. **Each example
 has its own README** with a detailed walkthrough, the build flags it needs, how
 to build and run it, and the full source reproduced with teaching comments - so
@@ -40,7 +40,7 @@ pio ci --board=esp32dev --project-option="framework=arduino" \
 <div class="pc-examples">
 
 <details open>
-<summary>CORE · Foundation · 9 examples</summary>
+<summary>CORE · Foundation · 10 examples</summary>
 
 <p class="pc-desc">Start here: the core tutorial path (Basic -> Advanced -> Expert -> Sysadmin -> Configuration), then the server-architecture examples - the preempting task queue, lanes, and interface forwarding:</p>
 
@@ -48,6 +48,7 @@ pio ci --board=esp32dev --project-option="framework=arduino" \
 - @subpage md_examples_2Foundation_2Basic_2README "Basic"
 - @subpage md_examples_2Foundation_2Configuration_2README "Configuration"
 - @subpage md_examples_2Foundation_2Expert_2README "Expert"
+- @subpage md_examples_2Foundation_2IdemIpPing_2README "IdemIpPing"
 - @subpage md_examples_2Foundation_2InterfaceForward_2README "InterfaceForward"
 - @subpage md_examples_2Foundation_2IPv6_2README "IPv6"
 - @subpage md_examples_2Foundation_2PreemptLanes_2README "PreemptLanes"

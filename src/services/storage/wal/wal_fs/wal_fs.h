@@ -129,7 +129,7 @@ EMBED_INLINE embed_bool protocore_wal_fs_prealloc(const protocore_mnt_backend *f
  *         left open and @p dev is not usable.
  */
 EMBED_INLINE embed_bool protocore_wal_fs_open(protocore_wal_fs_ctx *c, WalDev *dev, const protocore_mnt_backend *fs,
-                                                  const char *path, uint64_t size)
+                                              const char *path, uint64_t size)
 {
     if (!c || !dev || !fs || !path || !fs->sync)
     {

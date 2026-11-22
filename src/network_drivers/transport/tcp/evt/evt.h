@@ -42,10 +42,10 @@
  * layer through protocore.h. The enum is one packed byte.
  */
 EMBED_ENUM_BYTE(ConnState,
-    CONN_FREE,   ///< Slot is available; no control block is attached.
-    CONN_ACTIVE, ///< Live connection; the control block is valid.
-    CONN_CLOSING ///< Transmit-drain dwell: holding the slot until the peer ACKs what was sent. No
-                 ///< FIN has been emitted yet - it goes out as the slot is released.
+                CONN_FREE,   ///< Slot is available; no control block is attached.
+                CONN_ACTIVE, ///< Live connection; the control block is valid.
+                CONN_CLOSING ///< Transmit-drain dwell: holding the slot until the peer ACKs what was sent. No
+                             ///< FIN has been emitted yet - it goes out as the slot is released.
 );
 static_assert(sizeof(ConnState) == 1,
               "ConnState must stay one byte (EMBED_ENUM_BYTE); TcpConn and conn_pool[] size themselves on it");
@@ -58,10 +58,10 @@ static_assert(sizeof(ConnState) == 1,
  * normally or was aborted.
  */
 EMBED_ENUM_BYTE(EvtType,
-    EVT_CONNECT,    ///< New connection accepted.
-    EVT_DATA,       ///< Data received; bytes are already in the ring buffer.
-    EVT_DISCONNECT, ///< Remote peer closed the connection gracefully.
-    EVT_ERROR       ///< The stack reported an error (the control block may already be freed).
+                EVT_CONNECT,    ///< New connection accepted.
+                EVT_DATA,       ///< Data received; bytes are already in the ring buffer.
+                EVT_DISCONNECT, ///< Remote peer closed the connection gracefully.
+                EVT_ERROR       ///< The stack reported an error (the control block may already be freed).
 );
 static_assert(sizeof(EvtType) == 1,
               "EvtType must stay one byte (EMBED_ENUM_BYTE); every listener's queue storage sizes itself on TcpEvt");
@@ -86,15 +86,15 @@ typedef struct TcpEvt
 
 /** @brief Why a connection event fired (the reason for a transition or notice). */
 EMBED_ENUM_BYTE(protocore_conn_reason,
-    PROTOCORE_CONN_R_ACCEPT,       ///< New connection accepted (CONN_FREE -> CONN_ACTIVE).
-    PROTOCORE_CONN_R_CLOSE_REMOTE, ///< Peer closed gracefully (FIN received).
-    PROTOCORE_CONN_R_CLOSE_LOCAL,  ///< Application initiated the close.
-    PROTOCORE_CONN_R_ERROR,        ///< The stack reported a fatal error on the connection.
-    PROTOCORE_CONN_R_TIMEOUT,      ///< Idle-timeout sweep reaped the slot.
-    PROTOCORE_CONN_R_ABORT,        ///< Forced abort (server stop / pool reset / data after close).
-    PROTOCORE_CONN_R_DRAINED,      ///< CONN_CLOSING slot finished draining -> closed.
-    PROTOCORE_CONN_R_BACKPRESSURE, ///< RX segment refused (ring full); no state change.
-    PROTOCORE_CONN_R_DEFER_DROP    ///< Event queue full; an event was dropped (no state change).
+                PROTOCORE_CONN_R_ACCEPT,       ///< New connection accepted (CONN_FREE -> CONN_ACTIVE).
+                PROTOCORE_CONN_R_CLOSE_REMOTE, ///< Peer closed gracefully (FIN received).
+                PROTOCORE_CONN_R_CLOSE_LOCAL,  ///< Application initiated the close.
+                PROTOCORE_CONN_R_ERROR,        ///< The stack reported a fatal error on the connection.
+                PROTOCORE_CONN_R_TIMEOUT,      ///< Idle-timeout sweep reaped the slot.
+                PROTOCORE_CONN_R_ABORT,        ///< Forced abort (server stop / pool reset / data after close).
+                PROTOCORE_CONN_R_DRAINED,      ///< CONN_CLOSING slot finished draining -> closed.
+                PROTOCORE_CONN_R_BACKPRESSURE, ///< RX segment refused (ring full); no state change.
+                PROTOCORE_CONN_R_DEFER_DROP    ///< Event queue full; an event was dropped (no state change).
 );
 static_assert(sizeof(protocore_conn_reason) == 1, "protocore_conn_reason must stay one byte (EMBED_ENUM_BYTE)");
 

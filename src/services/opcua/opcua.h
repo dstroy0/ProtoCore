@@ -298,17 +298,9 @@ size_t protocore_opcua_build_activate_session_response(const OpcUaMsg *req, uint
 #define OPCUA_STATUS_BAD_NODE_ID_UNKNOWN 0x80340000u
 
 /** @brief OPC UA built-in type ids for the scalar Variants the Read service encodes. */
-EMBED_ENUM_BYTE(OpcUaVariantType,
-    OPCUA_VAR_NULL = 0,
-    OPCUA_VAR_BOOL = 1,
-    OPCUA_VAR_INT32 = 6,
-    OPCUA_VAR_UINT32 = 7,
-    OPCUA_VAR_INT64 = 8,
-    OPCUA_VAR_UINT64 = 9,
-    OPCUA_VAR_FLOAT = 10,
-    OPCUA_VAR_DOUBLE = 11,
-    OPCUA_VAR_STRING = 12,
-);
+EMBED_ENUM_BYTE(OpcUaVariantType, OPCUA_VAR_NULL = 0, OPCUA_VAR_BOOL = 1, OPCUA_VAR_INT32 = 6, OPCUA_VAR_UINT32 = 7,
+                OPCUA_VAR_INT64 = 8, OPCUA_VAR_UINT64 = 9, OPCUA_VAR_FLOAT = 10, OPCUA_VAR_DOUBLE = 11,
+                OPCUA_VAR_STRING = 12, );
 
 /** @brief A scalar OPC UA Variant value (the supported built-in types). */
 typedef struct

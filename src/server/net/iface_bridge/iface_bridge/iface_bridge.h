@@ -42,21 +42,14 @@ EMBED_BEGIN_DECLS
 
 #define PROTOCORE_BRIDGE_TXN_HDR 4 ///< transaction frame header: write_len(2) + read_len(2), big-endian
 
-EMBED_ENUM_BYTE(BridgeBus,
-    BRIDGE_BUS_UART = 0,
-    BRIDGE_BUS_SPI = 1,
-    BRIDGE_BUS_I2C = 2
-);
+EMBED_ENUM_BYTE(BridgeBus, BRIDGE_BUS_UART = 0, BRIDGE_BUS_SPI = 1, BRIDGE_BUS_I2C = 2);
 
 EMBED_ENUM_BYTE(BridgeMode,
-    BRIDGE_MODE_STREAM = 0,     ///< raw bidirectional passthrough (UART)
-    BRIDGE_MODE_TRANSACTION = 1 ///< framed write-then-read (SPI / I2C; also usable for UART)
+                BRIDGE_MODE_STREAM = 0,     ///< raw bidirectional passthrough (UART)
+                BRIDGE_MODE_TRANSACTION = 1 ///< framed write-then-read (SPI / I2C; also usable for UART)
 );
 
-EMBED_ENUM_BYTE(BridgeProto,
-    BRIDGE_PROTO_TCP = 0,
-    BRIDGE_PROTO_UDP = 1
-);
+EMBED_ENUM_BYTE(BridgeProto, BRIDGE_PROTO_TCP = 0, BRIDGE_PROTO_UDP = 1);
 
 typedef struct BridgeTarget
 {

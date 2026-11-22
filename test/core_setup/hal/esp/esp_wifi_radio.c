@@ -21,10 +21,10 @@
 
 #include "network_drivers/physical/wifi_link/wifi_link.h"
 
-#include "esp_event.h"         // esp_event_loop_create_default, esp_event_handler_register: the station events
-#include "esp_private/wifi.h"  // esp_wifi_internal_reg_rxcb, esp_wifi_internal_free_rx_buffer, esp_wifi_internal_tx
-#include "esp_wifi.h"          // esp_wifi_init, esp_wifi_set_config, esp_wifi_start, esp_wifi_connect
-#include "nvs_flash.h"         // nvs_flash_init: the calibration data of the radio lives in NVS
+#include "esp_event.h"        // esp_event_loop_create_default, esp_event_handler_register: the station events
+#include "esp_private/wifi.h" // esp_wifi_internal_reg_rxcb, esp_wifi_internal_free_rx_buffer, esp_wifi_internal_tx
+#include "esp_wifi.h"         // esp_wifi_init, esp_wifi_set_config, esp_wifi_start, esp_wifi_connect
+#include "nvs_flash.h"        // nvs_flash_init: the calibration data of the radio lives in NVS
 
 // The station gives each received frame here, in the task of the driver. The link copies the frame, and
 // the buffer goes back to the driver whether the link took it or dropped it.

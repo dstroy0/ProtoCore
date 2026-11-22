@@ -19,11 +19,8 @@ EMBED_BEGIN_DECLS
 
 /** @brief Negotiated line rate, in megabits per second. */
 EMBED_ENUM_BYTE(IdemIpPhySpeed,
-    IDEMIP_PHY_SPEED_NONE = 0, ///< no link
-    IDEMIP_PHY_SPEED_10 = 10,
-    IDEMIP_PHY_SPEED_100 = 100,
-    IDEMIP_PHY_SPEED_1000 = 1000,
-);
+                IDEMIP_PHY_SPEED_NONE = 0, ///< no link
+                IDEMIP_PHY_SPEED_10 = 10, IDEMIP_PHY_SPEED_100 = 100, IDEMIP_PHY_SPEED_1000 = 1000, );
 
 /** @brief What the link reports about itself. */
 typedef struct

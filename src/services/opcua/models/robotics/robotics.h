@@ -61,13 +61,13 @@ EMBED_BEGIN_DECLS
  *        numeric values follow the companion-spec enumeration.
  */
 EMBED_ENUM_BYTE(RoboticsMotionDeviceCategory,
-    ROBOTICS_CAT_OTHER = 0,             ///< a category outside the ones below.
-    ROBOTICS_CAT_ARTICULATED_ROBOT = 1, ///< articulated (jointed-arm) robot.
-    ROBOTICS_CAT_SCARA_ROBOT = 2,       ///< SCARA robot.
-    ROBOTICS_CAT_CARTESIAN_ROBOT = 3,   ///< cartesian / gantry robot.
-    ROBOTICS_CAT_SPHERICAL_ROBOT = 4,   ///< spherical / polar robot.
-    ROBOTICS_CAT_PARALLEL_ROBOT = 5,    ///< parallel (delta) robot.
-    ROBOTICS_CAT_CYLINDRICAL_ROBOT = 6, ///< cylindrical robot.
+                ROBOTICS_CAT_OTHER = 0,             ///< a category outside the ones below.
+                ROBOTICS_CAT_ARTICULATED_ROBOT = 1, ///< articulated (jointed-arm) robot.
+                ROBOTICS_CAT_SCARA_ROBOT = 2,       ///< SCARA robot.
+                ROBOTICS_CAT_CARTESIAN_ROBOT = 3,   ///< cartesian / gantry robot.
+                ROBOTICS_CAT_SPHERICAL_ROBOT = 4,   ///< spherical / polar robot.
+                ROBOTICS_CAT_PARALLEL_ROBOT = 5,    ///< parallel (delta) robot.
+                ROBOTICS_CAT_CYLINDRICAL_ROBOT = 6, ///< cylindrical robot.
 );
 
 /**
@@ -75,11 +75,11 @@ EMBED_ENUM_BYTE(RoboticsMotionDeviceCategory,
  *        values follow the companion-spec enumeration.
  */
 EMBED_ENUM_BYTE(RoboticsMotionProfile,
-    ROBOTICS_PROFILE_OTHER = 0,          ///< a profile outside the ones below.
-    ROBOTICS_PROFILE_ROTARY = 1,         ///< rotary axis (bounded travel).
-    ROBOTICS_PROFILE_ROTARY_ENDLESS = 2, ///< rotary axis with endless rotation.
-    ROBOTICS_PROFILE_LINEAR = 3,         ///< linear axis (bounded travel).
-    ROBOTICS_PROFILE_LINEAR_ENDLESS = 4, ///< linear axis with endless travel.
+                ROBOTICS_PROFILE_OTHER = 0,          ///< a profile outside the ones below.
+                ROBOTICS_PROFILE_ROTARY = 1,         ///< rotary axis (bounded travel).
+                ROBOTICS_PROFILE_ROTARY_ENDLESS = 2, ///< rotary axis with endless rotation.
+                ROBOTICS_PROFILE_LINEAR = 3,         ///< linear axis (bounded travel).
+                ROBOTICS_PROFILE_LINEAR_ENDLESS = 4, ///< linear axis with endless travel.
 );
 
 /**
@@ -87,11 +87,11 @@ EMBED_ENUM_BYTE(RoboticsMotionProfile,
  *        numeric values follow the companion-spec enumeration.
  */
 EMBED_ENUM_BYTE(RoboticsOperationalMode,
-    ROBOTICS_MODE_OTHER = 0,                ///< a mode outside the ones below.
-    ROBOTICS_MODE_MANUAL_REDUCED_SPEED = 1, ///< manual jog, reduced speed (T1).
-    ROBOTICS_MODE_MANUAL_HIGH_SPEED = 2,    ///< manual, high speed (T2).
-    ROBOTICS_MODE_AUTOMATIC = 3,            ///< automatic program execution.
-    ROBOTICS_MODE_AUTOMATIC_EXTERNAL = 4,   ///< automatic, externally commanded.
+                ROBOTICS_MODE_OTHER = 0,                ///< a mode outside the ones below.
+                ROBOTICS_MODE_MANUAL_REDUCED_SPEED = 1, ///< manual jog, reduced speed (T1).
+                ROBOTICS_MODE_MANUAL_HIGH_SPEED = 2,    ///< manual, high speed (T2).
+                ROBOTICS_MODE_AUTOMATIC = 3,            ///< automatic program execution.
+                ROBOTICS_MODE_AUTOMATIC_EXTERNAL = 4,   ///< automatic, externally commanded.
 );
 
 /** @brief One axis' live monitoring values (OPC 40010-1 AxisType, common subset). */

@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SSH
 
-#include "network_drivers/presentation/ssh/app/server/server.h"
 #include "memoria_operor/memoria_operor.h"
+#include "network_drivers/presentation/ssh/app/server/server.h"
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.rd_str: the RFC 4251 sec 5 string reader
 #include "spatium/spatium.h"                                   // spat.cfrom: the request payload as a read span
 

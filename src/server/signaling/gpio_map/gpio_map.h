@@ -37,10 +37,10 @@ EMBED_BEGIN_DECLS
  * declaration order.
  */
 EMBED_ENUM_BYTE(protocore_gpio_dir,
-    PROTOCORE_GPIO_DIR_IN = 0,      ///< read-only input.
-    PROTOCORE_GPIO_DIR_IN_PULLUP,   ///< input with internal pull-up.
-    PROTOCORE_GPIO_DIR_IN_PULLDOWN, ///< input with internal pull-down.
-    PROTOCORE_GPIO_DIR_OUT,         ///< output (drivable from the panel).
+                PROTOCORE_GPIO_DIR_IN = 0,      ///< read-only input.
+                PROTOCORE_GPIO_DIR_IN_PULLUP,   ///< input with internal pull-up.
+                PROTOCORE_GPIO_DIR_IN_PULLDOWN, ///< input with internal pull-down.
+                PROTOCORE_GPIO_DIR_OUT,         ///< output (drivable from the panel).
 );
 
 /** @brief One mapped GPIO pin. */

@@ -1061,7 +1061,8 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         return;
     }
 #endif
-    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
+        conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -1177,7 +1178,8 @@ void send_empty(uint8_t slot_id, int code)
         return;
     }
 #endif
-    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
+        conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -1219,7 +1221,8 @@ void redirect(uint8_t slot_id, int code, const char *location)
         return;
     }
     TcpConn *conn = &conn_pool[slot_id];
-    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
+        conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());

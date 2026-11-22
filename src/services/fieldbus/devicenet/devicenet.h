@@ -69,12 +69,8 @@ EMBED_BEGIN_DECLS
 #define DEVICENET_FRAG_COUNT_MASK 0x3Fu
 
 /** @brief DeviceNet message groups. */
-EMBED_ENUM_BYTE(DeviceNetGroup,
-    DEVICENET_GROUP_1 = 1,
-    DEVICENET_GROUP_2 = 2,
-    DEVICENET_GROUP_3 = 3,
-    DEVICENET_GROUP_4 = 4,
-);
+EMBED_ENUM_BYTE(DeviceNetGroup, DEVICENET_GROUP_1 = 1, DEVICENET_GROUP_2 = 2, DEVICENET_GROUP_3 = 3,
+                DEVICENET_GROUP_4 = 4, );
 
 /** @brief A decoded DeviceNet identifier. */
 typedef struct
@@ -85,13 +81,8 @@ typedef struct
 } DeviceNetId;
 
 /** @brief Result of feeding a frame to the fragmentation reassembler. */
-EMBED_ENUM_BYTE(DeviceNetFragResult,
-    DEVICENET_FRAG_IGNORED = 0,
-    DEVICENET_FRAG_STARTED,
-    DEVICENET_FRAG_PROGRESS,
-    DEVICENET_FRAG_COMPLETE,
-    DEVICENET_FRAG_ERR,
-);
+EMBED_ENUM_BYTE(DeviceNetFragResult, DEVICENET_FRAG_IGNORED = 0, DEVICENET_FRAG_STARTED, DEVICENET_FRAG_PROGRESS,
+                DEVICENET_FRAG_COMPLETE, DEVICENET_FRAG_ERR, );
 
 /** @brief Fragmented-message reassembly context. */
 typedef struct

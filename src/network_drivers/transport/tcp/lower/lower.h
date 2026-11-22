@@ -47,16 +47,12 @@ EMBED_BEGIN_DECLS
 #endif
 
 /** @brief Which call into the lower-level module a marshaled op performs. */
-EMBED_ENUM_BYTE(protocore_tcp_op,
-    PROTOCORE_OP_SEND,
-    PROTOCORE_OP_OUTPUT,
-    PROTOCORE_OP_CLOSE,
-    PROTOCORE_OP_ABORT,
-    PROTOCORE_OP_DETACH,
-    PROTOCORE_OP_RAWSEND,     // raw write of already-encrypted bytes (TLS BIO), no TLS re-entry
-    PROTOCORE_OP_CLOSE_CHECK, // in stack context: finalize a CONN_CLOSING slot if its TX has drained
-    PROTOCORE_OP_RECVED,      // in stack context: reopen the receive window (ack-on-consume)
-    PROTOCORE_OP_SET_TTL,     // in stack context: stamp the TTL on a control block; len carries the value
+EMBED_ENUM_BYTE(protocore_tcp_op, PROTOCORE_OP_SEND, PROTOCORE_OP_OUTPUT, PROTOCORE_OP_CLOSE, PROTOCORE_OP_ABORT,
+                PROTOCORE_OP_DETACH,
+                PROTOCORE_OP_RAWSEND,     // raw write of already-encrypted bytes (TLS BIO), no TLS re-entry
+                PROTOCORE_OP_CLOSE_CHECK, // in stack context: finalize a CONN_CLOSING slot if its TX has drained
+                PROTOCORE_OP_RECVED,      // in stack context: reopen the receive window (ack-on-consume)
+                PROTOCORE_OP_SET_TTL,     // in stack context: stamp the TTL on a control block; len carries the value
 );
 static_assert(sizeof(protocore_tcp_op) == 1, "protocore_tcp_op must stay one byte (EMBED_ENUM_BYTE)");
 

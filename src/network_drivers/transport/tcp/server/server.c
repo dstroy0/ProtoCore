@@ -17,10 +17,6 @@
  * (server.h reaches tcp.h; protocol.c includes server.h).
  */
 
-#include "protocore_config.h" // the entry point: the gate below
-
-#if PROTOCORE_ENABLE_TCP
-
 #include "server.h"
 #include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "../../net_addr/net_addr.h"  // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
@@ -910,5 +906,3 @@ void protocore_tcp_listener_stop_dynamic(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 TcpListenerVars TcpListenerV;
-
-#endif // PROTOCORE_ENABLE_TCP

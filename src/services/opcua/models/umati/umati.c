@@ -24,7 +24,7 @@
 // Node identifiers (namespace PROTOCORE_UMATI_NS). Objects end in 0; their variables count up from it.
 // ---------------------------------------------------------------------------
 enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
-                       // wire compares); enum class would force a cast at every use
+                // wire compares); enum class would force a cast at every use
 {
     MACHINETOOL = 5000,
 

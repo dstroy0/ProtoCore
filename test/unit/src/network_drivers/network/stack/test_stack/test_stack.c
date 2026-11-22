@@ -131,11 +131,11 @@ void test_an_arp_request_for_the_interface_gets_a_reply(void)
     static const uint8_t broadcast[IDEMIP_MAC_LEN] = {0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu};
     uint8_t frame[60] = {0};
     ethernet_header(frame, broadcast, 0x0806u);
-    put16(frame + 14, 1u);       // hardware type: Ethernet
-    put16(frame + 16, 0x0800u);  // protocol type: IPv4
-    frame[18] = IDEMIP_MAC_LEN;  // hardware address length
-    frame[19] = 4u;              // protocol address length
-    put16(frame + 20, 1u);       // opcode: REQUEST
+    put16(frame + 14, 1u);      // hardware type: Ethernet
+    put16(frame + 16, 0x0800u); // protocol type: IPv4
+    frame[18] = IDEMIP_MAC_LEN; // hardware address length
+    frame[19] = 4u;             // protocol address length
+    put16(frame + 20, 1u);      // opcode: REQUEST
     memcpy(frame + 22, MAC_PEER, IDEMIP_MAC_LEN);
     put32(frame + 28, IP_PEER);
     put32(frame + 38, IP_OWN);

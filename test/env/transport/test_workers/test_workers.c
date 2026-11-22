@@ -42,13 +42,16 @@ void test_check_timeouts_reaps_only_owned_slots(void)
     ConnPoolV.life.worker_id = 0;
     Clock.ms = CONN_TIMEOUT_MS + 1u; // the slots were stamped at 0, so this makes them stale
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
-    TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[1].state));
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                             .word = &conn_pool[1].state));
 
     ConnPoolV.life.worker_id = 1;
     Clock.ms = CONN_TIMEOUT_MS + 1u; // the slots were stamped at 0, so this makes them stale
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[1].state));
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[1].state));
 }
 
 void test_pool_init_defaults_owner_zero(void)

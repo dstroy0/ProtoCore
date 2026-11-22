@@ -105,7 +105,8 @@ void test_accept_claims_a_slot_and_wires_the_connection(void)
     advance_to(4321);
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, accept_on(0, &g_newpcb));
 
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
     TEST_ASSERT_EQUAL_PTR(&g_newpcb, conn_pool[0].pcb);
     TEST_ASSERT_EQUAL_UINT8(0, conn_pool[0].listener_id);
     TEST_ASSERT_EQUAL(PROTO_HTTP, conn_pool[0].proto);
@@ -160,8 +161,10 @@ void test_successive_accepts_take_distinct_slots(void)
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, accept_on(0, &g_newpcb));
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, accept_on(0, &second));
 
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[1].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[1].state));
     TEST_ASSERT_EQUAL_PTR(&g_newpcb, conn_pool[0].pcb);
     TEST_ASSERT_EQUAL_PTR(&second, conn_pool[1].pcb);
 }
@@ -188,14 +191,16 @@ void test_accept_rejects_a_failed_handshake_or_a_null_control_block(void)
 {
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_VAL, listener_accept_cb((void *)0, NULL, PROTOCORE_NET_OK));
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_VAL, listener_accept_cb((void *)0, &g_newpcb, PROTOCORE_NET_ERR_ABRT));
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 void test_accept_rejects_a_listener_index_past_the_pool(void)
 {
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_VAL, accept_on(MAX_LISTENERS, &g_newpcb));
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_VAL, accept_on((uint8_t)(MAX_LISTENERS + 3), &g_newpcb));
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 // The connection is tagged with the interface it arrived on by comparing its local address against
@@ -249,7 +254,8 @@ void test_accept_survives_a_full_event_queue(void)
 {
     mock_queue_send_fail_once();
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, accept_on(0, &g_newpcb));
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
     TEST_ASSERT_EQUAL_PTR(&g_newpcb, conn_pool[0].pcb);
 }
 
@@ -355,7 +361,8 @@ void test_an_accept_over_the_global_budget_is_reset(void)
 
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_ABRT, accept_on(0, &g_newpcb));
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 // Each source address gets its own budget, so one noisy client cannot spend another's.
@@ -684,7 +691,8 @@ void test_an_address_outside_the_allowlist_is_reset_at_accept(void)
 
     TEST_ASSERT_EQUAL(PROTOCORE_NET_ERR_ABRT, accept_on(0, &g_newpcb));
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 // ---------------------------------------------------------------------------

@@ -479,7 +479,8 @@ void protocore_http_allow_append(uint8_t *work)
 static void send_error_close(uint8_t slot_id, const char *status, const char *extra_hdr, const char *body)
 {
     TcpConn *conn = &conn_pool[slot_id];
-    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
+        conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());

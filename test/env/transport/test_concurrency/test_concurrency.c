@@ -98,5 +98,6 @@ void test_state_handoff_no_race(void)
     pthread_join(flipper, NULL);
 
     (void)observed_free;
-    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &g_slot.state));
+    TEST_ASSERT_EQUAL_INT(
+        CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &g_slot.state));
 }

@@ -44,14 +44,14 @@ EMBED_BEGIN_DECLS
  * collide with one and @ref HttpClientNs::status carries both.
  */
 EMBED_ENUM_BYTE(HttpClientError,
-    HTTP_CLIENT_ERR_URL = -1,      ///< the target URI does not parse (RFC 9110 sec 4.2.1 / 4.2.2)
-    HTTP_CLIENT_ERR_DNS = -2,      ///< the uri-host did not resolve; the transport reports that as a close, so an
-                                   ///< exchange that fails to resolve reports ::HTTP_CLIENT_ERR_CONNECT
-    HTTP_CLIENT_ERR_CONNECT = -3,  ///< the connection did not come up (RFC 9112 sec 9.1)
-    HTTP_CLIENT_ERR_TIMEOUT = -4,  ///< no complete message arrived before the deadline
-    HTTP_CLIENT_ERR_SEND = -5,     ///< the request message did not go out
-    HTTP_CLIENT_ERR_RESPONSE = -6, ///< the response does not parse (RFC 9112 sec 4)
-    HTTP_CLIENT_ERR_TLS = -7,      ///< an https target URI with no TLS, or a failed handshake
+                HTTP_CLIENT_ERR_URL = -1, ///< the target URI does not parse (RFC 9110 sec 4.2.1 / 4.2.2)
+                HTTP_CLIENT_ERR_DNS = -2, ///< the uri-host did not resolve; the transport reports that as a close, so
+                                          ///< an exchange that fails to resolve reports ::HTTP_CLIENT_ERR_CONNECT
+                HTTP_CLIENT_ERR_CONNECT = -3,  ///< the connection did not come up (RFC 9112 sec 9.1)
+                HTTP_CLIENT_ERR_TIMEOUT = -4,  ///< no complete message arrived before the deadline
+                HTTP_CLIENT_ERR_SEND = -5,     ///< the request message did not go out
+                HTTP_CLIENT_ERR_RESPONSE = -6, ///< the response does not parse (RFC 9112 sec 4)
+                HTTP_CLIENT_ERR_TLS = -7,      ///< an https target URI with no TLS, or a failed handshake
 );
 
 /**

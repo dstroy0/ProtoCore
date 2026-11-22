@@ -24,8 +24,8 @@ struct ProtoHandler;
  * handle alone does not say which array it indexes.
  */
 EMBED_ENUM_BYTE(SshStreamKind,
-    SSH_STREAM_ACCEPTED = 0, ///< inbound: the handle indexes conn_pool[]
-    SSH_STREAM_DIALED        ///< outbound: the handle indexes the client transport's own pool
+                SSH_STREAM_ACCEPTED = 0, ///< inbound: the handle indexes conn_pool[]
+                SSH_STREAM_DIALED        ///< outbound: the handle indexes the client transport's own pool
 );
 
 /** @brief RFC 4254 sec 5: which pool a handle indexes, and the channel it carries. */

@@ -49,20 +49,9 @@ and the 207 Multi-Status XML builder.
 #define PROTOCORE_DAV_LOCK_TOKEN_MAX 48
 
 /** @brief WebDAV request methods recognized by the server. */
-EMBED_ENUM_BYTE(WebDavMethod,
-    DAV_M_OPTIONS,
-    DAV_M_GET,
-    DAV_M_HEAD,
-    DAV_M_PUT,
-    DAV_M_DELETE,
-    DAV_M_PROPFIND,
-    DAV_M_PROPPATCH,
-    DAV_M_MKCOL,
-    DAV_M_COPY,
-    DAV_M_MOVE,
-    DAV_M_LOCK,
-    DAV_M_UNLOCK,
-    DAV_M_UNSUPPORTED ///< Anything else - answered 405 Method Not Allowed.
+EMBED_ENUM_BYTE(WebDavMethod, DAV_M_OPTIONS, DAV_M_GET, DAV_M_HEAD, DAV_M_PUT, DAV_M_DELETE, DAV_M_PROPFIND,
+                DAV_M_PROPPATCH, DAV_M_MKCOL, DAV_M_COPY, DAV_M_MOVE, DAV_M_LOCK, DAV_M_UNLOCK,
+                DAV_M_UNSUPPORTED ///< Anything else - answered 405 Method Not Allowed.
 );
 
 /** @brief One active lock (RFC 4918 §6.4). */

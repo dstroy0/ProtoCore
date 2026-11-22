@@ -69,9 +69,7 @@ EMBED_BEGIN_DECLS
 #define PROTOCORE_DTLS_CID_MAX 8
 
 /** @brief Record-layer AEAD suites (phase 1: AEAD_AES_128_GCM with SHA-256). */
-EMBED_ENUM_BYTE(DtlsCipher,
-    DTLS_CIPHER_AES_128_GCM_SHA256 = 0
-);
+EMBED_ENUM_BYTE(DtlsCipher, DTLS_CIPHER_AES_128_GCM_SHA256 = 0);
 
 /**
  * @brief One direction's record-protection keys for one epoch (RFC 9147 §4).

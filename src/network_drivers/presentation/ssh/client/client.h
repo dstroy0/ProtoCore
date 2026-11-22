@@ -15,10 +15,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief Lifecycle phase of the forward, for observability. */
 EMBED_ENUM_BYTE(protocore_ssh_client_state,
-    PROTOCORE_SSH_CLIENT_IDLE = 0,   ///< not started.
-    PROTOCORE_SSH_CLIENT_CONNECTING, ///< TCP + SSH handshake + auth in progress.
-    PROTOCORE_SSH_CLIENT_UP,         ///< authenticated and the remote forward is established.
-    PROTOCORE_SSH_CLIENT_FAILED      ///< the last attempt failed (host-key mismatch, auth, or transport).
+                PROTOCORE_SSH_CLIENT_IDLE = 0,   ///< not started.
+                PROTOCORE_SSH_CLIENT_CONNECTING, ///< TCP + SSH handshake + auth in progress.
+                PROTOCORE_SSH_CLIENT_UP,         ///< authenticated and the remote forward is established.
+                PROTOCORE_SSH_CLIENT_FAILED      ///< the last attempt failed (host-key mismatch, auth, or transport).
 );
 
 #if PROTOCORE_ENABLE_SSH_CLIENT

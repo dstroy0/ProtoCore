@@ -62,7 +62,8 @@ EMBED_BEGIN_DECLS
 #define LWM2M_TLV_INLINE_LEN_MASK 0x07 ///< bits 2-0: the Length of the Value when there is no Length field
 
 /** @brief LwM2M Core sec 7.4.5 Table 7.4.5.-1, Type bits 7-6: what the Identifier names. */
-EMBED_ENUM_BYTE(Lwm2mTlvIdType,
+EMBED_ENUM_BYTE(
+    Lwm2mTlvIdType,
     LWM2M_TLV_OBJECT_INSTANCE = 0x00,     ///< 00: the Value contains one or more Resource TLVs
     LWM2M_TLV_RESOURCE_INSTANCE = 0x40,   ///< 01: Resource Instance with Value, within a multiple Resource TLV
     LWM2M_TLV_MULTIPLE_RESOURCE = 0x80,   ///< 10: the Value contains one or more Resource Instance TLVs

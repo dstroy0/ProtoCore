@@ -25,7 +25,6 @@
 #include "embed_dispatch_layout.h"     // EMBED_CALL, which the C++ arm below restates
 #include "embed_types.h"               // the widths, embed_bool, embed_word and embed_index
 
-
 // C++ has no compound literal to take the address of, so a C++ translation unit builds the
 // argument struct as a temporary. It lives to the end of the full expression, which is the call.
 #ifdef __cplusplus

@@ -60,13 +60,13 @@ EMBED_BEGIN_DECLS
 
 /** @brief The server-to-client operation a parse decoded (NATS Protocol). */
 EMBED_ENUM_BYTE(NatsOp,
-    NATS_OP_MSG,     ///< MSG, or HMSG when the header section is set: subject, sid, reply-to, payload
-    NATS_OP_INFO,    ///< INFO: the options JSON lands in @c arg
-    NATS_OP_PING,    ///< PING
-    NATS_OP_PONG,    ///< PONG
-    NATS_OP_OK,      ///< +OK
-    NATS_OP_ERR,     ///< -ERR: the error message lands in @c arg
-    NATS_OP_UNKNOWN, ///< an operation name this decoder does not carry
+                NATS_OP_MSG,     ///< MSG, or HMSG when the header section is set: subject, sid, reply-to, payload
+                NATS_OP_INFO,    ///< INFO: the options JSON lands in @c arg
+                NATS_OP_PING,    ///< PING
+                NATS_OP_PONG,    ///< PONG
+                NATS_OP_OK,      ///< +OK
+                NATS_OP_ERR,     ///< -ERR: the error message lands in @c arg
+                NATS_OP_UNKNOWN, ///< an operation name this decoder does not carry
 );
 
 /**

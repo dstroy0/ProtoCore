@@ -61,20 +61,20 @@ EMBED_BEGIN_DECLS
 
 /** @brief MQTT Control Packet type, byte 1 bits 7-4 (MQTT 3.1.1 sec 2.2.1, Table 2.1). */
 EMBED_ENUM_BYTE(MqttType,
-    MQTT_CONNECT = 1,      ///< Client request to connect to a Server
-    MQTT_CONNACK = 2,      ///< Connect acknowledgment
-    MQTT_PUBLISH = 3,      ///< Publish message
-    MQTT_PUBACK = 4,       ///< Publish acknowledgment
-    MQTT_PUBREC = 5,       ///< Publish received (QoS 2 publish received, part 1)
-    MQTT_PUBREL = 6,       ///< Publish release (QoS 2 publish received, part 2)
-    MQTT_PUBCOMP = 7,      ///< Publish complete (QoS 2 publish received, part 3)
-    MQTT_SUBSCRIBE = 8,    ///< Client subscribe request
-    MQTT_SUBACK = 9,       ///< Subscribe acknowledgment
-    MQTT_UNSUBSCRIBE = 10, ///< Unsubscribe request
-    MQTT_UNSUBACK = 11,    ///< Unsubscribe acknowledgment
-    MQTT_PINGREQ = 12,     ///< PING request
-    MQTT_PINGRESP = 13,    ///< PING response
-    MQTT_DISCONNECT = 14,  ///< Client is disconnecting
+                MQTT_CONNECT = 1,      ///< Client request to connect to a Server
+                MQTT_CONNACK = 2,      ///< Connect acknowledgment
+                MQTT_PUBLISH = 3,      ///< Publish message
+                MQTT_PUBACK = 4,       ///< Publish acknowledgment
+                MQTT_PUBREC = 5,       ///< Publish received (QoS 2 publish received, part 1)
+                MQTT_PUBREL = 6,       ///< Publish release (QoS 2 publish received, part 2)
+                MQTT_PUBCOMP = 7,      ///< Publish complete (QoS 2 publish received, part 3)
+                MQTT_SUBSCRIBE = 8,    ///< Client subscribe request
+                MQTT_SUBACK = 9,       ///< Subscribe acknowledgment
+                MQTT_UNSUBSCRIBE = 10, ///< Unsubscribe request
+                MQTT_UNSUBACK = 11,    ///< Unsubscribe acknowledgment
+                MQTT_PINGREQ = 12,     ///< PING request
+                MQTT_PINGRESP = 13,    ///< PING response
+                MQTT_DISCONNECT = 14,  ///< Client is disconnecting
 );
 
 /** @brief Where an inbound PUBLISH's Topic Name and Payload are delivered (MQTT 3.1.1 sec 3.3). */

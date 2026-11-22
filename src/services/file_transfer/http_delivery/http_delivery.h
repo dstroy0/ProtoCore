@@ -36,7 +36,8 @@ EMBED_BEGIN_DECLS
 // same way.
 
 /** @brief Cache-freshness verdict (the sole return of swr). */
-EMBED_ENUM_BYTE(DeliveryVerdict,
+EMBED_ENUM_BYTE(
+    DeliveryVerdict,
     DELIVERY_FRESH = 0,            ///< age <= max-age: serve from cache, no revalidation.
     DELIVERY_STALE_REVALIDATE = 1, ///< within the stale-while-revalidate window: serve stale, refresh in bg.
     DELIVERY_EXPIRED = 2           ///< past both windows: must revalidate before serving.

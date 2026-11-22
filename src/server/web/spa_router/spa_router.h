@@ -48,10 +48,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief What to do with a request path. */
 EMBED_ENUM_BYTE(protocore_spa_action,
-    PROTOCORE_SPA_SERVE_FILE,     ///< a real asset (has a file extension): serve it statically.
-    PROTOCORE_SPA_SERVE_SHELL,    ///< a client route (extensionless): serve the SPA shell (index.html).
-    PROTOCORE_SPA_PASSTHROUGH,    ///< under the API prefix: let the app's handlers run.
-    PROTOCORE_SPA_SERVE_FALLBACK, ///< a client route the SPA cannot serve: serve the no-JS control page.
+                PROTOCORE_SPA_SERVE_FILE,     ///< a real asset (has a file extension): serve it statically.
+                PROTOCORE_SPA_SERVE_SHELL,    ///< a client route (extensionless): serve the SPA shell (index.html).
+                PROTOCORE_SPA_PASSTHROUGH,    ///< under the API prefix: let the app's handlers run.
+                PROTOCORE_SPA_SERVE_FALLBACK, ///< a client route the SPA cannot serve: serve the no-JS control page.
 );
 
 /** @brief What the server currently knows about its ability to serve the SPA. */

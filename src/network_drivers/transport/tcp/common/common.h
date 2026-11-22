@@ -58,7 +58,7 @@ EMBED_BEGIN_DECLS
 typedef struct TcpConn
 {
     uint8_t id;                ///< Fixed slot index (0 … MAX_CONNS-1).
-    embed_atomic_u32 state;   ///< Lifecycle state; acquire/release for inter-task visibility.
+    embed_atomic_u32 state;    ///< Lifecycle state; acquire/release for inter-task visibility.
     protocore_pcb *pcb;        ///< Stack control block; null when slot is free.
     uint32_t last_activity_ms; ///< `protocore_millis()` timestamp of last TX/RX event.
 

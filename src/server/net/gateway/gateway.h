@@ -41,20 +41,9 @@ nothing here aliases it. How those bytes are
  */
 
 /** @brief Southbound radio / bus kind a port bridges (informational + topic hint). */
-EMBED_ENUM_BYTE(protocore_gateway_kind,
-    PROTOCORE_GW_OTHER = 0,
-    PROTOCORE_GW_LORA,
-    PROTOCORE_GW_NRF24,
-    PROTOCORE_GW_CC1101,
-    PROTOCORE_GW_THREAD,
-    PROTOCORE_GW_ZIGBEE,
-    PROTOCORE_GW_ZWAVE,
-    PROTOCORE_GW_ENOCEAN,
-    PROTOCORE_GW_SIGFOX,
-    PROTOCORE_GW_WISUN,
-    PROTOCORE_GW_NFC,
-    PROTOCORE_GW_BLE,
-);
+EMBED_ENUM_BYTE(protocore_gateway_kind, PROTOCORE_GW_OTHER = 0, PROTOCORE_GW_LORA, PROTOCORE_GW_NRF24,
+                PROTOCORE_GW_CC1101, PROTOCORE_GW_THREAD, PROTOCORE_GW_ZIGBEE, PROTOCORE_GW_ZWAVE, PROTOCORE_GW_ENOCEAN,
+                PROTOCORE_GW_SIGFOX, PROTOCORE_GW_WISUN, PROTOCORE_GW_NFC, PROTOCORE_GW_BLE, );
 
 /**
  * @brief A northbound message: a southbound frame enveloped with its routing metadata.

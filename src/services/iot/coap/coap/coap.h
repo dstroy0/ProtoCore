@@ -55,23 +55,23 @@ EMBED_BEGIN_DECLS
 
 /** @brief RFC 7252 sec 3 Type (T), the 2-bit field. */
 EMBED_ENUM_BYTE(CoapType,
-    COAP_TYPE_CON = 0, ///< Confirmable
-    COAP_TYPE_NON = 1, ///< Non-confirmable
-    COAP_TYPE_ACK = 2, ///< Acknowledgement
-    COAP_TYPE_RST = 3, ///< Reset
+                COAP_TYPE_CON = 0, ///< Confirmable
+                COAP_TYPE_NON = 1, ///< Non-confirmable
+                COAP_TYPE_ACK = 2, ///< Acknowledgement
+                COAP_TYPE_RST = 3, ///< Reset
 );
 
 /** @brief RFC 7252 sec 12.1.1 Method Codes, the detail of a class-0 Code byte. */
 EMBED_ENUM_BYTE(CoapMethod,
-    COAP_GET = 1,    ///< 0.01 GET (RFC 7252 sec 5.8.1)
-    COAP_POST = 2,   ///< 0.02 POST (sec 5.8.2)
-    COAP_PUT = 3,    ///< 0.03 PUT (sec 5.8.3)
-    COAP_DELETE = 4, ///< 0.04 DELETE (sec 5.8.4)
+                COAP_GET = 1,    ///< 0.01 GET (RFC 7252 sec 5.8.1)
+                COAP_POST = 2,   ///< 0.02 POST (sec 5.8.2)
+                COAP_PUT = 3,    ///< 0.03 PUT (sec 5.8.3)
+                COAP_DELETE = 4, ///< 0.04 DELETE (sec 5.8.4)
 );
 
 /** @brief RFC 7252 sec 5.9 Response Codes, plus the three RFC 7959 sec 2.9 adds. */
-EMBED_ENUM_BYTE(CoapResponseCode,
-    COAP_RSP_CREATED = COAP_CODE(2, 1),                   ///< 2.01 Created
+EMBED_ENUM_BYTE(
+    CoapResponseCode, COAP_RSP_CREATED = COAP_CODE(2, 1), ///< 2.01 Created
     COAP_RSP_DELETED = COAP_CODE(2, 2),                   ///< 2.02 Deleted
     COAP_RSP_VALID = COAP_CODE(2, 3),                     ///< 2.03 Valid
     COAP_RSP_CHANGED = COAP_CODE(2, 4),                   ///< 2.04 Changed
@@ -90,13 +90,13 @@ EMBED_ENUM_BYTE(CoapResponseCode,
 
 /** @brief CoAP Content-Formats (RFC 7252 sec 12.3 Table 9; 60 from the IANA sub-registry, RFC 8949). */
 EMBED_ENUM_BYTE(CoapContentFormat,
-    COAP_CF_TEXT = 0,      ///< text/plain;charset=utf-8
-    COAP_CF_LINK = 40,     ///< application/link-format (RFC 6690)
-    COAP_CF_XML = 41,      ///< application/xml
-    COAP_CF_OCTET = 42,    ///< application/octet-stream
-    COAP_CF_JSON = 50,     ///< application/json
-    COAP_CF_CBOR = 60,     ///< application/cbor (RFC 8949)
-    COAP_CF_NONE = 0xFFFF, ///< no Content-Format option present or emitted
+                COAP_CF_TEXT = 0,      ///< text/plain;charset=utf-8
+                COAP_CF_LINK = 40,     ///< application/link-format (RFC 6690)
+                COAP_CF_XML = 41,      ///< application/xml
+                COAP_CF_OCTET = 42,    ///< application/octet-stream
+                COAP_CF_JSON = 50,     ///< application/json
+                COAP_CF_CBOR = 60,     ///< application/cbor (RFC 8949)
+                COAP_CF_NONE = 0xFFFF, ///< no Content-Format option present or emitted
 );
 
 /**

@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_UDP
 
-#include "network_drivers/transport/udp/server/server.h"
 #include "network_drivers/transport/udp/common/common.h" // the wire layout the receive ring carries
+#include "network_drivers/transport/udp/server/server.h"
 #include "proximus_operor/proximus_operor.h"
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "spatium/spatium.h"
@@ -133,7 +133,8 @@ static uint32_t bind_all(void)
 /** @brief True when slot @p idx is bound. */
 static embed_bool bind_used(uint8_t *work, size_t idx)
 {
-    return (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) & bind_bit(idx)) != 0u;
+    return (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) &
+            bind_bit(idx)) != 0u;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -159,7 +160,9 @@ uint8_t *protocore_udp_listener_span(void)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the bound slot for ns->port, or NULL. */
 static void find_bind(uint8_t *work)
 {
-    uint32_t m = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) & bind_all();
+    uint32_t m =
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) &
+        bind_all();
     while (m != 0u)
     {
         const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = m);
@@ -176,7 +179,9 @@ static void find_bind(uint8_t *work)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the first free slot, or NULL when the pool is full. */
 static void free_bind(uint8_t *work)
 {
-    const uint32_t free_slots = ~EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) & bind_all();
+    const uint32_t free_slots =
+        ~EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) &
+        bind_all();
     const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = free_slots);
     UDP_LISTENER_CTX(work)->slot = NULL;
     if (i >= 0)
@@ -194,7 +199,8 @@ static void bind_clear(uint8_t *work)
     UDP_LISTENER_CTX(work)->slot->ctx = NULL;
     UDP_LISTENER_CTX(work)->slot->group = empty;
     UDP_LISTENER_CTX(work)->slot->mcast = EMBED_FALSE;
-    EMBED_CALL(embed_atomic_u32_table.fetch_and, EmbedAtomicU32FetchAndCfg, .word = &UDP_LISTENER_CTX(work)->bound, .value = ~bind_bit(bind_idx(work)));
+    EMBED_CALL(embed_atomic_u32_table.fetch_and, EmbedAtomicU32FetchAndCfg, .word = &UDP_LISTENER_CTX(work)->bound,
+               .value = ~bind_bit(bind_idx(work)));
 }
 
 // ---------------------------------------------------------------------------
@@ -203,10 +209,10 @@ static void bind_clear(uint8_t *work)
 
 /** @brief Ops that must run in the stack's thread, reached through protocore_net_call_marshal. */
 EMBED_ENUM_BYTE(protocore_udp_op,
-    UDP_OP_BIND,        ///< new + bind + arm recv on a slot
-    UDP_OP_BIND_MCAST,  ///< as BIND, plus SO_REUSEADDR + IGMP join
-    UDP_OP_LEAVE_MCAST, ///< IGMP leave + remove
-    UDP_OP_UNBIND       ///< remove
+                UDP_OP_BIND,        ///< new + bind + arm recv on a slot
+                UDP_OP_BIND_MCAST,  ///< as BIND, plus SO_REUSEADDR + IGMP join
+                UDP_OP_LEAVE_MCAST, ///< IGMP leave + remove
+                UDP_OP_UNBIND       ///< remove
 );
 
 typedef struct
@@ -505,7 +511,8 @@ void protocore_udp_listener_listen(uint8_t *work)
         UdpListenerV.ok = EMBED_FALSE;
         return;
     }
-    EMBED_CALL(embed_atomic_u32_table.fetch_or, EmbedAtomicU32FetchOrCfg, .word = &UDP_LISTENER_CTX(work)->bound, .value = bind_bit(bind_idx(work)));
+    EMBED_CALL(embed_atomic_u32_table.fetch_or, EmbedAtomicU32FetchOrCfg, .word = &UDP_LISTENER_CTX(work)->bound,
+               .value = bind_bit(bind_idx(work)));
     UdpListenerV.ok = EMBED_TRUE;
 }
 
@@ -540,7 +547,8 @@ void protocore_udp_listener_listen_multicast(uint8_t *work)
         UDP_LISTENER_CTX(work)->slot->handler = NULL;
         return;
     }
-    EMBED_CALL(embed_atomic_u32_table.fetch_or, EmbedAtomicU32FetchOrCfg, .word = &UDP_LISTENER_CTX(work)->bound, .value = bind_bit(bind_idx(work)));
+    EMBED_CALL(embed_atomic_u32_table.fetch_or, EmbedAtomicU32FetchOrCfg, .word = &UDP_LISTENER_CTX(work)->bound,
+               .value = bind_bit(bind_idx(work)));
     UdpListenerV.ok = EMBED_TRUE;
 }
 

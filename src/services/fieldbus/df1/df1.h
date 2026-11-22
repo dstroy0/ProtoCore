@@ -43,8 +43,8 @@ EMBED_BEGIN_DECLS
 
 /** @brief Which error check the frame carries. */
 EMBED_ENUM_BYTE(Df1Check,
-    DF1_CHECK_BCC, ///< 1-octet block check character
-    DF1_CHECK_CRC  ///< 2-octet CRC-16
+                DF1_CHECK_BCC, ///< 1-octet block check character
+                DF1_CHECK_CRC  ///< 2-octet CRC-16
 );
 
 /** @brief What bcc takes: data, len. */

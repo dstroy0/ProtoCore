@@ -29,13 +29,12 @@ static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint ne
 EMBED_BEGIN_DECLS
 
 // HTTP/3 stream roles (a mutually-exclusive internal role, not a wire value).
-EMBED_ENUM_BYTE(H3StreamRole,
-    H3_ROLE_FREE = 0,
-    H3_ROLE_REQUEST,   ///< client-initiated bidirectional request stream
-    H3_ROLE_CONTROL,   ///< client control stream (type 0x00)
-    H3_ROLE_QPACK_ENC, ///< client QPACK encoder stream (type 0x02)
-    H3_ROLE_QPACK_DEC, ///< client QPACK decoder stream (type 0x03)
-    H3_ROLE_OTHER_UNI, ///< an unknown unidirectional stream (drained/ignored)
+EMBED_ENUM_BYTE(H3StreamRole, H3_ROLE_FREE = 0,
+                H3_ROLE_REQUEST,   ///< client-initiated bidirectional request stream
+                H3_ROLE_CONTROL,   ///< client control stream (type 0x00)
+                H3_ROLE_QPACK_ENC, ///< client QPACK encoder stream (type 0x02)
+                H3_ROLE_QPACK_DEC, ///< client QPACK decoder stream (type 0x03)
+                H3_ROLE_OTHER_UNI, ///< an unknown unidirectional stream (drained/ignored)
 );
 
 // Per-stream state. The bytes it reassembles into are the span at a fixed offset, so only what is

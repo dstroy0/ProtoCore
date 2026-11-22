@@ -55,11 +55,7 @@ embed_bool protocore_docstore_sync(protocore_doc_store *ds)
     return protocore_dbm_sync(ds->db);
 }
 
-EMBED_ENUM_BYTE(FindKind,
-    FIND_STR,
-    FIND_INT,
-    FIND_BOOL
-);
+EMBED_ENUM_BYTE(FindKind, FIND_STR, FIND_INT, FIND_BOOL);
 
 // Per-scan state carried through protocore_dbm_iterate. `doc` reads each document's JSON body (NUL-terminated
 // for the reader); `fieldtmp` extracts a string field for comparison. Both are bounded (no heap).

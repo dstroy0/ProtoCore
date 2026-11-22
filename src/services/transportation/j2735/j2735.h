@@ -93,16 +93,16 @@ embed_bool protocore_j2735_bsm_core_decode(const uint8_t *in, size_t len, J2735B
 
 /** @brief J2735 MovementPhaseState (the signal-group state in a SPaT MovementState). */
 EMBED_ENUM_BYTE(J2735PhaseState,
-    J2735_PHASE_UNAVAILABLE = 0,                 ///< the phase is not known or not sent.
-    J2735_PHASE_DARK = 1,                        ///< dark, no indication.
-    J2735_PHASE_STOP_THEN_PROCEED = 2,           ///< flashing red.
-    J2735_PHASE_STOP_AND_REMAIN = 3,             ///< red.
-    J2735_PHASE_PRE_MOVEMENT = 4,                ///< red + yellow, about to change.
-    J2735_PHASE_PERMISSIVE_MOVEMENT_ALLOWED = 5, ///< permissive green.
-    J2735_PHASE_PROTECTED_MOVEMENT_ALLOWED = 6,  ///< protected green.
-    J2735_PHASE_PERMISSIVE_CLEARANCE = 7,        ///< permissive yellow.
-    J2735_PHASE_PROTECTED_CLEARANCE = 8,         ///< protected yellow.
-    J2735_PHASE_CAUTION_CONFLICTING_TRAFFIC = 9  ///< flashing yellow.
+                J2735_PHASE_UNAVAILABLE = 0,                 ///< the phase is not known or not sent.
+                J2735_PHASE_DARK = 1,                        ///< dark, no indication.
+                J2735_PHASE_STOP_THEN_PROCEED = 2,           ///< flashing red.
+                J2735_PHASE_STOP_AND_REMAIN = 3,             ///< red.
+                J2735_PHASE_PRE_MOVEMENT = 4,                ///< red + yellow, about to change.
+                J2735_PHASE_PERMISSIVE_MOVEMENT_ALLOWED = 5, ///< permissive green.
+                J2735_PHASE_PROTECTED_MOVEMENT_ALLOWED = 6,  ///< protected green.
+                J2735_PHASE_PERMISSIVE_CLEARANCE = 7,        ///< permissive yellow.
+                J2735_PHASE_PROTECTED_CLEARANCE = 8,         ///< protected yellow.
+                J2735_PHASE_CAUTION_CONFLICTING_TRAFFIC = 9  ///< flashing yellow.
 );
 
 /** @brief One SPaT MovementState: a signal group, its current phase, and the min/max end times. */

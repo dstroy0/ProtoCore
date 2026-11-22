@@ -52,12 +52,12 @@ EMBED_BEGIN_DECLS
 
 /** @brief The 4-bit opcode a frame carries (RFC 6455 sec 5.2); sec 5.6 data, sec 5.5 control. */
 EMBED_ENUM_BYTE(WsClientOpcode,
-    WSC_OP_CONT = 0x0,   ///< continuation frame (RFC 6455 sec 5.4)
-    WSC_OP_TEXT = 0x1,   ///< text frame, UTF-8 Application data (RFC 6455 sec 5.6)
-    WSC_OP_BINARY = 0x2, ///< binary frame (RFC 6455 sec 5.6)
-    WSC_OP_CLOSE = 0x8,  ///< connection close (RFC 6455 sec 5.5.1)
-    WSC_OP_PING = 0x9,   ///< ping (RFC 6455 sec 5.5.2)
-    WSC_OP_PONG = 0xA,   ///< pong (RFC 6455 sec 5.5.3)
+                WSC_OP_CONT = 0x0,   ///< continuation frame (RFC 6455 sec 5.4)
+                WSC_OP_TEXT = 0x1,   ///< text frame, UTF-8 Application data (RFC 6455 sec 5.6)
+                WSC_OP_BINARY = 0x2, ///< binary frame (RFC 6455 sec 5.6)
+                WSC_OP_CLOSE = 0x8,  ///< connection close (RFC 6455 sec 5.5.1)
+                WSC_OP_PING = 0x9,   ///< ping (RFC 6455 sec 5.5.2)
+                WSC_OP_PONG = 0xA,   ///< pong (RFC 6455 sec 5.5.3)
 );
 
 /** @brief Where a reassembled Text or Binary message is delivered (RFC 6455 sec 5.6). */

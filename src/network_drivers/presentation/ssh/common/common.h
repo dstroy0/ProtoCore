@@ -67,64 +67,37 @@ EMBED_BEGIN_DECLS
 
 /** @brief Protocol opcodes, by the number each RFC assigns it (RFC 4250 sec 4.1.2). */
 EMBED_ENUM_BYTE(SshMsgId,
-    // Transport layer, RFC 4253: generic 1 to 19, negotiation 20 to 29, method specific 30 to 49.
-    SSH_MSG_DISCONNECT = 1,
-    SSH_MSG_IGNORE = 2,
-    SSH_MSG_UNIMPLEMENTED = 3,
-    SSH_MSG_DEBUG = 4,
-    SSH_MSG_SERVICE_REQUEST = 5,
-    SSH_MSG_SERVICE_ACCEPT = 6,
-    SSH_MSG_EXT_INFO = 7, // RFC 8308 extension negotiation
-    SSH_MSG_KEXINIT = 20,
-    SSH_MSG_NEWKEYS = 21,
-    SSH_MSG_KEXDH_INIT = 30,
-    SSH_MSG_KEXDH_REPLY = 31,
+                // Transport layer, RFC 4253: generic 1 to 19, negotiation 20 to 29, method specific 30 to 49.
+                SSH_MSG_DISCONNECT = 1, SSH_MSG_IGNORE = 2, SSH_MSG_UNIMPLEMENTED = 3, SSH_MSG_DEBUG = 4,
+                SSH_MSG_SERVICE_REQUEST = 5, SSH_MSG_SERVICE_ACCEPT = 6,
+                SSH_MSG_EXT_INFO = 7, // RFC 8308 extension negotiation
+                SSH_MSG_KEXINIT = 20, SSH_MSG_NEWKEYS = 21, SSH_MSG_KEXDH_INIT = 30, SSH_MSG_KEXDH_REPLY = 31,
 
-    // User authentication, RFC 4252: generic 50 to 59, method specific 60 to 79.
-    SSH_MSG_USERAUTH_REQUEST = 50,
-    SSH_MSG_USERAUTH_FAILURE = 51,
-    SSH_MSG_USERAUTH_SUCCESS = 52,
-    SSH_MSG_USERAUTH_BANNER = 53, // RFC 4252 sec 5.4: text for the user, any time before success
-    SSH_MSG_USERAUTH_PK_OK = 60,
-    // 60 is method specific: PK_OK for publickey, INFO_REQUEST for keyboard-interactive
-    // (RFC 4256 sec 3.2). The current auth phase decides which handler owns an inbound 60.
-    SSH_MSG_USERAUTH_INFO_REQUEST = 60,
-    SSH_MSG_USERAUTH_INFO_RESPONSE = 61, // RFC 4256 sec 3.4
+                // User authentication, RFC 4252: generic 50 to 59, method specific 60 to 79.
+                SSH_MSG_USERAUTH_REQUEST = 50, SSH_MSG_USERAUTH_FAILURE = 51, SSH_MSG_USERAUTH_SUCCESS = 52,
+                SSH_MSG_USERAUTH_BANNER = 53, // RFC 4252 sec 5.4: text for the user, any time before success
+                SSH_MSG_USERAUTH_PK_OK = 60,
+                // 60 is method specific: PK_OK for publickey, INFO_REQUEST for keyboard-interactive
+                // (RFC 4256 sec 3.2). The current auth phase decides which handler owns an inbound 60.
+                SSH_MSG_USERAUTH_INFO_REQUEST = 60,
+                SSH_MSG_USERAUTH_INFO_RESPONSE = 61, // RFC 4256 sec 3.4
 
-    // Connection protocol, RFC 4254: global 80 to 89, channel 90 to 127.
-    SSH_MSG_GLOBAL_REQUEST = 80,
-    SSH_MSG_REQUEST_SUCCESS = 81,
-    SSH_MSG_REQUEST_FAILURE = 82,
-    SSH_MSG_CHANNEL_OPEN = 90,
-    SSH_MSG_CHANNEL_OPEN_CONFIRMATION = 91,
-    SSH_MSG_CHANNEL_OPEN_FAILURE = 92,
-    SSH_MSG_CHANNEL_WINDOW_ADJUST = 93,
-    SSH_MSG_CHANNEL_DATA = 94,
-    SSH_MSG_CHANNEL_EXTENDED_DATA = 95, // data_type_code + string
-    SSH_MSG_CHANNEL_EOF = 96,
-    SSH_MSG_CHANNEL_CLOSE = 97,
-    SSH_MSG_CHANNEL_REQUEST = 98,
-    SSH_MSG_CHANNEL_SUCCESS = 99,
-    SSH_MSG_CHANNEL_FAILURE = 100,
-);
+                // Connection protocol, RFC 4254: global 80 to 89, channel 90 to 127.
+                SSH_MSG_GLOBAL_REQUEST = 80, SSH_MSG_REQUEST_SUCCESS = 81, SSH_MSG_REQUEST_FAILURE = 82,
+                SSH_MSG_CHANNEL_OPEN = 90, SSH_MSG_CHANNEL_OPEN_CONFIRMATION = 91, SSH_MSG_CHANNEL_OPEN_FAILURE = 92,
+                SSH_MSG_CHANNEL_WINDOW_ADJUST = 93, SSH_MSG_CHANNEL_DATA = 94,
+                SSH_MSG_CHANNEL_EXTENDED_DATA = 95, // data_type_code + string
+                SSH_MSG_CHANNEL_EOF = 96, SSH_MSG_CHANNEL_CLOSE = 97, SSH_MSG_CHANNEL_REQUEST = 98,
+                SSH_MSG_CHANNEL_SUCCESS = 99, SSH_MSG_CHANNEL_FAILURE = 100, );
 
 /** @brief Disconnect reason codes (RFC 4253 sec 11.1, numbered by RFC 4250 sec 4.2.2). */
-EMBED_ENUM_BYTE(SshDisconnectReason,
-    SSH_DISCONNECT_PROTOCOL_ERROR = 2,
-    SSH_DISCONNECT_MAC_ERROR = 5,
-    SSH_DISCONNECT_SERVICE_NOT_AVAILABLE = 7,
-    SSH_DISCONNECT_BY_APPLICATION = 11,
-    SSH_DISCONNECT_TOO_MANY_CONNECTIONS = 12,
-    SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE = 14,
-);
+EMBED_ENUM_BYTE(SshDisconnectReason, SSH_DISCONNECT_PROTOCOL_ERROR = 2, SSH_DISCONNECT_MAC_ERROR = 5,
+                SSH_DISCONNECT_SERVICE_NOT_AVAILABLE = 7, SSH_DISCONNECT_BY_APPLICATION = 11,
+                SSH_DISCONNECT_TOO_MANY_CONNECTIONS = 12, SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE = 14, );
 
 /** @brief Channel open failure reason codes (RFC 4254 sec 5.1). */
-EMBED_ENUM_BYTE(SshOpenFailureReason,
-    SSH_OPEN_ADMINISTRATIVELY_PROHIBITED = 1,
-    SSH_OPEN_CONNECT_FAILED = 2,
-    SSH_OPEN_UNKNOWN_CHANNEL_TYPE = 3,
-    SSH_OPEN_RESOURCE_SHORTAGE = 4,
-);
+EMBED_ENUM_BYTE(SshOpenFailureReason, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED = 1, SSH_OPEN_CONNECT_FAILED = 2,
+                SSH_OPEN_UNKNOWN_CHANNEL_TYPE = 3, SSH_OPEN_RESOURCE_SHORTAGE = 4, );
 
 /**
  * @brief The connection's memory map: every byte it uses, at a named offset from its slot base.
@@ -476,7 +449,7 @@ EMBED_INLINE embed_bool protocore_ssh_read_u32_at(const uint8_t *p, size_t len, 
 // Point *out at the SSH string at *off and store its length; advances *off. Fails closed with *off,
 // *out and *slen as they were.
 EMBED_INLINE embed_bool protocore_ssh_read_string_at(const uint8_t *p, size_t len, size_t *off, const uint8_t **out,
-                                                         uint32_t *slen)
+                                                     uint32_t *slen)
 {
     mmgr_cspan c = {.buf = p, .len = len, .pos = *off, .err = EMBED_FALSE};
     const uint8_t *s = NULL;

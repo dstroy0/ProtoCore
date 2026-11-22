@@ -62,10 +62,10 @@ EMBED_BEGIN_DECLS
 
 /** @brief The legacy analog-PWM ESC protocols (pulse width carries the throttle), for protocore_esc_pwm_ns. */
 EMBED_ENUM_BYTE(protocore_esc_pwm,
-    PROTOCORE_ESC_PWM,        ///< standard servo PWM: 1000-2000 us.
-    PROTOCORE_ESC_ONESHOT125, ///< OneShot125: 125-250 us.
-    PROTOCORE_ESC_ONESHOT42,  ///< OneShot42: 42-84 us.
-    PROTOCORE_ESC_MULTISHOT,  ///< Multishot: 5-25 us.
+                PROTOCORE_ESC_PWM,        ///< standard servo PWM: 1000-2000 us.
+                PROTOCORE_ESC_ONESHOT125, ///< OneShot125: 125-250 us.
+                PROTOCORE_ESC_ONESHOT42,  ///< OneShot42: 42-84 us.
+                PROTOCORE_ESC_MULTISHOT,  ///< Multishot: 5-25 us.
 );
 
 /** @brief What encode takes: value11, telemetry, bidirectional. */

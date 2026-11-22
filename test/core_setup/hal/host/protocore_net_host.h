@@ -2183,6 +2183,6 @@ static inline int protocore_net_host_udp_deliver(uint16_t port, const char *src_
 
 #else
 #include "network_drivers/network/stack/stack_net.h" // the protocore_net_* calls over idemIP
-#endif // PROTOCORE_ENABLE_IDEMIP
+#endif                                               // PROTOCORE_ENABLE_IDEMIP
 
 #endif // PROTOCORE_PROTOCORE_NET_HOST_H

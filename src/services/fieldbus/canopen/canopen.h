@@ -94,18 +94,8 @@ EMBED_BEGIN_DECLS
 #define CANOPEN_SDO_SEG_DATA 7
 
 /** @brief CANopen message classes (the function decoded from the COB-ID). */
-EMBED_ENUM_BYTE(CanopenType,
-    CANOPEN_T_UNKNOWN = 0,
-    CANOPEN_T_NMT,
-    CANOPEN_T_SYNC,
-    CANOPEN_T_EMCY,
-    CANOPEN_T_TIME,
-    CANOPEN_T_TPDO,
-    CANOPEN_T_RPDO,
-    CANOPEN_T_SDO_TX,
-    CANOPEN_T_SDO_RX,
-    CANOPEN_T_HEARTBEAT,
-);
+EMBED_ENUM_BYTE(CanopenType, CANOPEN_T_UNKNOWN = 0, CANOPEN_T_NMT, CANOPEN_T_SYNC, CANOPEN_T_EMCY, CANOPEN_T_TIME,
+                CANOPEN_T_TPDO, CANOPEN_T_RPDO, CANOPEN_T_SDO_TX, CANOPEN_T_SDO_RX, CANOPEN_T_HEARTBEAT, );
 
 /** @brief A classified CANopen frame (the function code + node, from protocore_canopen_parse). */
 typedef struct

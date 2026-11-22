@@ -152,8 +152,8 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
         QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, EMBED_TRUE);
     return quic_crypto_n;
 }
-static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
-                          QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
+static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn, QuicPacketKeys *keys,
+                          const uint8_t *frames, size_t frame_len)
 {
     uint8_t quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, pn, -1);
     uint8_t pn_len = quic_packet_u8;

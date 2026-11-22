@@ -66,8 +66,8 @@
 #include "esp_timer.h"       // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #include "freertos/FreeRTOS.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - only exists once the vendor above resolved to ESP
 #include "freertos/queue.h"    // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "freertos/semphr.h"      // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
-#include "freertos/task.h"        // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "freertos/semphr.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
+#include "freertos/task.h"   // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 // With PROTOCORE_ENABLE_IDEMIP, the stack module of the network layer answers each protocore_net_* call, and
 // lwIP stays out.
 #if !defined(PROTOCORE_ENABLE_IDEMIP) || !PROTOCORE_ENABLE_IDEMIP
@@ -78,7 +78,7 @@
 #include "lwip/udp.h"             // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #else
 #include "network_drivers/network/stack/stack_net.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - the protocore_net_* calls over idemIP
-#endif // PROTOCORE_ENABLE_IDEMIP
+#endif                                               // PROTOCORE_ENABLE_IDEMIP
 
 typedef QueueHandle_t protocore_platform_queue;
 typedef StaticQueue_t protocore_platform_queue_ctrl; ///< a caller-owned queue control block
@@ -94,7 +94,7 @@ typedef struct tcp_pcb protocore_pcb;                  ///< a TCP control block
 typedef struct pbuf protocore_pbuf;                    ///< a received packet buffer chain
 typedef err_t protocore_net_err;                       ///< a network stack result
 typedef struct tcpip_api_call_data protocore_net_call; ///< the marshal record for a stack call
-#endif // PROTOCORE_ENABLE_IDEMIP
+#endif                                                 // PROTOCORE_ENABLE_IDEMIP
 
 #define PROTOCORE_PLATFORM_OK pdTRUE
 #define PROTOCORE_PLATFORM_PASS pdPASS

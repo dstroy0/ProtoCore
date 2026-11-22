@@ -341,14 +341,14 @@ unit-tested on the host.
 that instantiates that one mechanism over its own compile-time-sized storage and
 decides who may reach it. `server/core/worker` is the one module in `src/` that names `LocusCarcerum`.
 
-|                    | plaintext (`plain`)                        | secure (`secure`)                                              |
-| ------------------ | ------------------------------------------ | -------------------------------------------------------------- |
-| holds              | anything whose bytes are not secret        | key material only                                              |
-| hand-out           | uninitialized                              | uninitialized                                                  |
-| reclaim            | release the cell                           | **wipe, then** release the cell                                |
-| who reclaims       | the borrower, one release per cell         | the borrower, one release per cell                             |
-| long-lived storage | the persistent tier                        | `secure.persist_span()`, the persistent tier                   |
-| per-slot size      | `PROTOCORE_PLAINTEXT_ARENA_SIZE`           | `PROTOCORE_SECURE_ARENA_SIZE`, derived from the enabled crypto |
+|                    | plaintext (`plain`)                 | secure (`secure`)                                              |
+| ------------------ | ----------------------------------- | -------------------------------------------------------------- |
+| holds              | anything whose bytes are not secret | key material only                                              |
+| hand-out           | uninitialized                       | uninitialized                                                  |
+| reclaim            | release the cell                    | **wipe, then** release the cell                                |
+| who reclaims       | the borrower, one release per cell  | the borrower, one release per cell                             |
+| long-lived storage | the persistent tier                 | `secure.persist_span()`, the persistent tier                   |
+| per-slot size      | `PROTOCORE_PLAINTEXT_ARENA_SIZE`    | `PROTOCORE_SECURE_ARENA_SIZE`, derived from the enabled crypto |
 
 The pool is chosen by whether the contents are secret and by nothing else. Lifetime is
 not the axis: both pools carry long-lived and ephemeral borrows. A peer's public point,

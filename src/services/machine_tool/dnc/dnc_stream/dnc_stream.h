@@ -29,8 +29,8 @@ EMBED_BEGIN_DECLS
 #include "services/machine_tool/dnc/dnc/dnc.h"
 
 /** @brief Result of a drip-feed. 0 is success; each failure is a distinct code. */
-EMBED_ENUM_BYTE(DncStreamResult,
-    DNC_STREAM_OK = 0,
+EMBED_ENUM_BYTE(
+    DncStreamResult, DNC_STREAM_OK = 0,
     DNC_STREAM_ERR_ARG = -1,    ///< a required argument was null
     DNC_STREAM_ERR_IO = -2,     ///< a send/recv failed, or XOFF never cleared (see PROTOCORE_DNC_XOFF_MAX_POLLS)
     DNC_STREAM_ERR_ENCODE = -3, ///< a source line had no representation in the tape code, or overran a block

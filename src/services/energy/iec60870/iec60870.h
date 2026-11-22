@@ -80,9 +80,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief -104 APCI frame formats. */
 EMBED_ENUM_BYTE(Iec104Format,
-    IEC104_I = 0, ///< information transfer (numbered; carries an ASDU)
-    IEC104_S,     ///< supervisory (acknowledge only)
-    IEC104_U,     ///< unnumbered (STARTDT / STOPDT / TESTFR)
+                IEC104_I = 0, ///< information transfer (numbered; carries an ASDU)
+                IEC104_S,     ///< supervisory (acknowledge only)
+                IEC104_U,     ///< unnumbered (STARTDT / STOPDT / TESTFR)
 );
 
 /** @brief A parsed -104 APCI. */

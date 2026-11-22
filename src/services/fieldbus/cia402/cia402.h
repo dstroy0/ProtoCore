@@ -103,39 +103,32 @@ static inline embed_bool protocore_cia402_internal_limit(uint16_t sw)
     return (sw & CIA402_SW_INTERNAL_LIMIT) != 0;
 }
 
-EMBED_ENUM_BYTE(Cia402Mode,
-    CIA402_MODE_NO_MODE = 0,
-    CIA402_MODE_PROFILE_POSITION = 1,      ///< PP
-    CIA402_MODE_VELOCITY = 2,              ///< VL (frequency-converter CIA402_MODE_VELOCITY)
-    CIA402_MODE_PROFILE_VELOCITY = 3,      ///< PV
-    CIA402_MODE_PROFILE_TORQUE = 4,        ///< TQ
-    CIA402_MODE_HOMING = 6,                ///< HM
-    CIA402_MODE_INTERPOLATED_POSITION = 7, ///< IP
-    CIA402_MODE_CYCLIC_SYNC_POSITION = 8,  ///< CSP
-    CIA402_MODE_CYCLIC_SYNC_VELOCITY = 9,  ///< CSV
-    CIA402_MODE_CYCLIC_SYNC_TORQUE = 10,   ///< CST
+EMBED_ENUM_BYTE(Cia402Mode, CIA402_MODE_NO_MODE = 0,
+                CIA402_MODE_PROFILE_POSITION = 1,      ///< PP
+                CIA402_MODE_VELOCITY = 2,              ///< VL (frequency-converter CIA402_MODE_VELOCITY)
+                CIA402_MODE_PROFILE_VELOCITY = 3,      ///< PV
+                CIA402_MODE_PROFILE_TORQUE = 4,        ///< TQ
+                CIA402_MODE_HOMING = 6,                ///< HM
+                CIA402_MODE_INTERPOLATED_POSITION = 7, ///< IP
+                CIA402_MODE_CYCLIC_SYNC_POSITION = 8,  ///< CSP
+                CIA402_MODE_CYCLIC_SYNC_VELOCITY = 9,  ///< CSV
+                CIA402_MODE_CYCLIC_SYNC_TORQUE = 10,   ///< CST
 );
 
-EMBED_ENUM_BYTE(Cia402State,
-    CIA402_STATE_NOT_READY_TO_SWITCH_ON,
-    CIA402_STATE_SWITCH_ON_DISABLED,
-    CIA402_STATE_READY_TO_SWITCH_ON,
-    CIA402_STATE_SWITCHED_ON,
-    CIA402_STATE_OPERATION_ENABLED,
-    CIA402_STATE_QUICK_STOP_ACTIVE,
-    CIA402_STATE_FAULT_REACTION_ACTIVE,
-    CIA402_STATE_FAULT,
-    CIA402_STATE_UNKNOWN, ///< Statusword matched no defined state
+EMBED_ENUM_BYTE(Cia402State, CIA402_STATE_NOT_READY_TO_SWITCH_ON, CIA402_STATE_SWITCH_ON_DISABLED,
+                CIA402_STATE_READY_TO_SWITCH_ON, CIA402_STATE_SWITCHED_ON, CIA402_STATE_OPERATION_ENABLED,
+                CIA402_STATE_QUICK_STOP_ACTIVE, CIA402_STATE_FAULT_REACTION_ACTIVE, CIA402_STATE_FAULT,
+                CIA402_STATE_UNKNOWN, ///< Statusword matched no defined state
 );
 
 EMBED_ENUM_BYTE(Cia402Command,
-    CIA402_COMMAND_SHUTDOWN,          ///< -> Ready to switch on
-    CIA402_COMMAND_SWITCH_ON,         ///< -> Switched on
-    CIA402_COMMAND_ENABLE_OPERATION,  ///< -> Operation enabled
-    CIA402_COMMAND_DISABLE_VOLTAGE,   ///< -> Switch on disabled
-    CIA402_COMMAND_QUICK_STOP,        ///< -> Quick stop active
-    CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
-    CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
+                CIA402_COMMAND_SHUTDOWN,          ///< -> Ready to switch on
+                CIA402_COMMAND_SWITCH_ON,         ///< -> Switched on
+                CIA402_COMMAND_ENABLE_OPERATION,  ///< -> Operation enabled
+                CIA402_COMMAND_DISABLE_VOLTAGE,   ///< -> Switch on disabled
+                CIA402_COMMAND_QUICK_STOP,        ///< -> Quick stop active
+                CIA402_COMMAND_DISABLE_OPERATION, ///< -> Switched on
+                CIA402_COMMAND_FAULT_RESET,       ///< clear a fault (rising edge of bit 7)
 );
 
 /** @brief What state takes: statusword. */

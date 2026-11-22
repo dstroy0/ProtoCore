@@ -40,10 +40,10 @@ Working memory is therefore not per-feature buffers but two **pools**, both the 
 mechanism (`LocusCarcerum`, `locus_carcerum/locus_carcerum.h`) instantiated twice, with one arena per slot -
 one per worker, plus the ghost, the library's own.
 
-| Pool                                      | Holds                                                    | Reclaim                                                                                                               |
-| ----------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| plaintext (`server/core/worker/worker.h`) | transient bytes that are not secret                      | `protocore_plain_guard()->persistent_buf_release(cell, protocore_plain_owner())`, one for each cell                   |
-| secure (`server/core/worker/worker.h`)    | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                                                             |
+| Pool                                      | Holds                                                    | Reclaim                                                                                             |
+| ----------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| plaintext (`server/core/worker/worker.h`) | transient bytes that are not secret                      | `protocore_plain_guard()->persistent_buf_release(cell, protocore_plain_owner())`, one for each cell |
+| secure (`server/core/worker/worker.h`)    | key material: shared secrets, private scalars, schedules | same, and **the release wipes** before the position moves                                           |
 
 The two differ in exactly one thing: reclaiming the secure pool zeroes the region
 before it becomes available again. A secret cannot outlive its borrow. That makes

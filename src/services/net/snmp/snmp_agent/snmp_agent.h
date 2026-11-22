@@ -46,23 +46,15 @@ EMBED_BEGIN_DECLS
 #include "services/net/snmp/snmp_ber/snmp_ber.h"
 /** @brief The version field of the message wrapper, as it is encoded. */
 EMBED_ENUM_BYTE(SnmpVersion,
-    SNMP_V1 = 0,  ///< version-1(0), RFC 1157 sec 4
-    SNMP_V2C = 1, ///< version(1), RFC 1901 sec 3
-    SNMP_V3 = 3,  ///< msgVersion, RFC 3412 sec 6
+                SNMP_V1 = 0,  ///< version-1(0), RFC 1157 sec 4
+                SNMP_V2C = 1, ///< version(1), RFC 1901 sec 3
+                SNMP_V3 = 3,  ///< msgVersion, RFC 3412 sec 6
 );
 
 /** @brief error-status values (RFC 1157 sec 4.1.1 for 0 through 5, RFC 3416 sec 3 for the rest). */
-EMBED_ENUM_BYTE(SnmpErr,
-    SNMP_ERR_NO_ERROR = 0,
-    SNMP_ERR_TOO_BIG = 1,
-    SNMP_ERR_NO_SUCH_NAME = 2,
-    SNMP_ERR_BAD_VALUE = 3,
-    SNMP_ERR_READ_ONLY = 4,
-    SNMP_ERR_GEN_ERR = 5,
-    SNMP_ERR_NO_ACCESS = 6,
-    SNMP_ERR_WRONG_TYPE = 7,
-    SNMP_ERR_NOT_WRITABLE = 17,
-);
+EMBED_ENUM_BYTE(SnmpErr, SNMP_ERR_NO_ERROR = 0, SNMP_ERR_TOO_BIG = 1, SNMP_ERR_NO_SUCH_NAME = 2, SNMP_ERR_BAD_VALUE = 3,
+                SNMP_ERR_READ_ONLY = 4, SNMP_ERR_GEN_ERR = 5, SNMP_ERR_NO_ACCESS = 6, SNMP_ERR_WRONG_TYPE = 7,
+                SNMP_ERR_NOT_WRITABLE = 17, );
 
 /**
  * @brief The value half of a variable-binding (RFC 3416 sec 3).

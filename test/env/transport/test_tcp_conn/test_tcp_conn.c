@@ -218,7 +218,8 @@ static void test_only_an_active_slot_with_a_pcb_is_reported_active(void)
     EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_FREE);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state,
+               .value = CONN_CLOSING);
     TEST_ASSERT_FALSE(protocore_conn_active(0));
 
     EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);

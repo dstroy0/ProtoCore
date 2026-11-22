@@ -50,14 +50,14 @@ EMBED_BEGIN_DECLS
  * The section states these values "are not normative but often used".
  */
 EMBED_ENUM_BYTE(SyslogSeverity,
-    SYSLOG_EMERG = 0,   ///< Emergency: system is unusable
-    SYSLOG_ALERT = 1,   ///< Alert: action must be taken immediately
-    SYSLOG_CRIT = 2,    ///< Critical: critical conditions
-    SYSLOG_ERR = 3,     ///< Error: error conditions
-    SYSLOG_WARNING = 4, ///< Warning: warning conditions
-    SYSLOG_NOTICE = 5,  ///< Notice: normal but significant condition
-    SYSLOG_INFO = 6,    ///< Informational: informational messages
-    SYSLOG_DEBUG = 7,   ///< Debug: debug-level messages
+                SYSLOG_EMERG = 0,   ///< Emergency: system is unusable
+                SYSLOG_ALERT = 1,   ///< Alert: action must be taken immediately
+                SYSLOG_CRIT = 2,    ///< Critical: critical conditions
+                SYSLOG_ERR = 3,     ///< Error: error conditions
+                SYSLOG_WARNING = 4, ///< Warning: warning conditions
+                SYSLOG_NOTICE = 5,  ///< Notice: normal but significant condition
+                SYSLOG_INFO = 6,    ///< Informational: informational messages
+                SYSLOG_DEBUG = 7,   ///< Debug: debug-level messages
 );
 
 /**
@@ -66,11 +66,11 @@ EMBED_ENUM_BYTE(SyslogSeverity,
  * The section states these values "are not normative but often used".
  */
 EMBED_ENUM_BYTE(SyslogFacility,
-    SYSLOG_FAC_USER = 1,    ///< user-level messages
-    SYSLOG_FAC_DAEMON = 3,  ///< system daemons
-    SYSLOG_FAC_LOCAL0 = 16, ///< local use 0 (local0)
-    SYSLOG_FAC_LOCAL1 = 17, ///< local use 1 (local1)
-    SYSLOG_FAC_LOCAL7 = 23, ///< local use 7 (local7)
+                SYSLOG_FAC_USER = 1,    ///< user-level messages
+                SYSLOG_FAC_DAEMON = 3,  ///< system daemons
+                SYSLOG_FAC_LOCAL0 = 16, ///< local use 0 (local0)
+                SYSLOG_FAC_LOCAL1 = 17, ///< local use 1 (local1)
+                SYSLOG_FAC_LOCAL7 = 23, ///< local use 7 (local7)
 );
 
 /** @brief RFC 5426 sec 3.3: the collector endpoint every datagram is sent to. */

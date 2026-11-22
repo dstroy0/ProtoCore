@@ -104,12 +104,12 @@ EMBED_BEGIN_DECLS
 
 /** @brief Which member of the Metric value oneof carries the value (Sparkplug 3.0.0 sec 6.4.1). */
 EMBED_ENUM_BYTE(SpbMetricKind,
-    SPB_M_INT,    ///< int_value, field 10, uint32
-    SPB_M_LONG,   ///< long_value, field 11, uint64
-    SPB_M_FLOAT,  ///< float_value, field 12
-    SPB_M_DOUBLE, ///< double_value, field 13
-    SPB_M_BOOL,   ///< boolean_value, field 14
-    SPB_M_STRING, ///< string_value, field 15
+                SPB_M_INT,    ///< int_value, field 10, uint32
+                SPB_M_LONG,   ///< long_value, field 11, uint64
+                SPB_M_FLOAT,  ///< float_value, field 12
+                SPB_M_DOUBLE, ///< double_value, field 13
+                SPB_M_BOOL,   ///< boolean_value, field 14
+                SPB_M_STRING, ///< string_value, field 15
 );
 
 /** @brief One Metric to encode (Sparkplug 3.0.0 sec 6.4.6). A null name and a false has_* omit the field. */

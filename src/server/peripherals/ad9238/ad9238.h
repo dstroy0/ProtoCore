@@ -59,46 +59,34 @@ EMBED_BEGIN_DECLS
  * part's own datasheet for which are present and what the fields mean.
  */
 EMBED_ENUM_BYTE(Ad9238Reg,
-    AD9238_REG_CHIP_PORT_CONFIG = 0x000, ///< SDIO active, LSB first, soft reset (mirrored nibbles)
-    AD9238_REG_CHIP_ID = 0x001,          ///< read-only device id
-    AD9238_REG_CHIP_GRADE = 0x002,       ///< read-only speed-grade id
-    AD9238_REG_CHANNEL_INDEX = 0x005,    ///< device indexing, ADC0..ADC3 (0x004 indexes ADC4..ADC7)
-    AD9238_REG_POWER_DOWN = 0x008,       ///< modes: bits 2:0 the internal power-down mode
-    AD9238_REG_TEST_IO = 0x00D,          ///< output test modes: bits 3:0 select the pattern (see Ad9238TestPattern)
-    AD9238_REG_ANALOG_INPUT = 0x00F,     ///< analog input: low-pass corner, disconnect, single-ended
-    AD9238_REG_OFFSET_ADJUST = 0x010,    ///< digital offset trim, twos complement about midscale
-    AD9238_REG_OUTPUT_MODE = 0x014,      ///< output logic type, invert, and bits 1:0 the data format
-    AD9238_REG_OUTPUT_PHASE = 0x016,     ///< clock divider phase: which phase latches the data
-    AD9238_REG_OUTPUT_DELAY = 0x017,     ///< fine delay on the output latch
-    AD9238_REG_VREF = 0x018,             ///< reference adjust: bits 7:6 select VREF, bits 5:0 trim it
-    AD9238_REG_DEVICE_UPDATE = 0x0FF,    ///< transfer: bit0 latches every shadowed write into effect
+                AD9238_REG_CHIP_PORT_CONFIG = 0x000, ///< SDIO active, LSB first, soft reset (mirrored nibbles)
+                AD9238_REG_CHIP_ID = 0x001,          ///< read-only device id
+                AD9238_REG_CHIP_GRADE = 0x002,       ///< read-only speed-grade id
+                AD9238_REG_CHANNEL_INDEX = 0x005,    ///< device indexing, ADC0..ADC3 (0x004 indexes ADC4..ADC7)
+                AD9238_REG_POWER_DOWN = 0x008,       ///< modes: bits 2:0 the internal power-down mode
+                AD9238_REG_TEST_IO = 0x00D, ///< output test modes: bits 3:0 select the pattern (see Ad9238TestPattern)
+                AD9238_REG_ANALOG_INPUT = 0x00F,  ///< analog input: low-pass corner, disconnect, single-ended
+                AD9238_REG_OFFSET_ADJUST = 0x010, ///< digital offset trim, twos complement about midscale
+                AD9238_REG_OUTPUT_MODE = 0x014,   ///< output logic type, invert, and bits 1:0 the data format
+                AD9238_REG_OUTPUT_PHASE = 0x016,  ///< clock divider phase: which phase latches the data
+                AD9238_REG_OUTPUT_DELAY = 0x017,  ///< fine delay on the output latch
+                AD9238_REG_VREF = 0x018,          ///< reference adjust: bits 7:6 select VREF, bits 5:0 trim it
+                AD9238_REG_DEVICE_UPDATE = 0x0FF, ///< transfer: bit0 latches every shadowed write into effect
 );
 
 /** @brief AD9238_REG_TEST_IO[3:0] - the output test pattern (AN-877 Table 8, register 0x00D). */
 EMBED_ENUM_BYTE(Ad9238TestPattern,
-    AD9238_TEST_OFF = 0x00, ///< normal operation
-    AD9238_TEST_MIDSCALE_SHORT = 0x01,
-    AD9238_TEST_POS_FULLSCALE = 0x02,
-    AD9238_TEST_NEG_FULLSCALE = 0x03,
-    AD9238_TEST_CHECKERBOARD = 0x04, ///< alternating 0xAAA/0x555 - the pipeline's self-test pattern
-    AD9238_TEST_PN23 = 0x05,
-    AD9238_TEST_PN9 = 0x06,
-    AD9238_TEST_ONE_ZERO_TOGGLE = 0x07,
-);
+                AD9238_TEST_OFF = 0x00, ///< normal operation
+                AD9238_TEST_MIDSCALE_SHORT = 0x01, AD9238_TEST_POS_FULLSCALE = 0x02, AD9238_TEST_NEG_FULLSCALE = 0x03,
+                AD9238_TEST_CHECKERBOARD = 0x04, ///< alternating 0xAAA/0x555 - the pipeline's self-test pattern
+                AD9238_TEST_PN23 = 0x05, AD9238_TEST_PN9 = 0x06, AD9238_TEST_ONE_ZERO_TOGGLE = 0x07, );
 
 /** @brief AD9238_REG_OUTPUT_MODE[1:0] - the output data format (AN-877 Table 11, register 0x014). */
-EMBED_ENUM_BYTE(Ad9238OutputFormat,
-    AD9238_FORMAT_OFFSET_BINARY = 0x00,
-    AD9238_FORMAT_TWOS_COMPLEMENT = 0x01,
-    AD9238_FORMAT_GRAY_CODE = 0x02,
-);
+EMBED_ENUM_BYTE(Ad9238OutputFormat, AD9238_FORMAT_OFFSET_BINARY = 0x00, AD9238_FORMAT_TWOS_COMPLEMENT = 0x01,
+                AD9238_FORMAT_GRAY_CODE = 0x02, );
 
 /** @brief Which channel a per-channel register write targets (AD9238_REG_CHANNEL_INDEX bits). */
-EMBED_ENUM_BYTE(Ad9238Channel,
-    AD9238_CHAN_A = 0x01,
-    AD9238_CHAN_B = 0x02,
-    AD9238_CHAN_BOTH = 0x03,
-);
+EMBED_ENUM_BYTE(Ad9238Channel, AD9238_CHAN_A = 0x01, AD9238_CHAN_B = 0x02, AD9238_CHAN_BOTH = 0x03, );
 
 /** @brief What build_instruction takes: read, reg_addr, nbytes, out2. */
 typedef struct

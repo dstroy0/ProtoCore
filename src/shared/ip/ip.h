@@ -31,21 +31,21 @@ EMBED_BEGIN_DECLS
 
 /** @brief Address family tag. */
 EMBED_ENUM_BYTE(protocore_ip_family,
-    PROTOCORE_IP_NONE = 0, ///< empty / unparsed
-    PROTOCORE_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
-    PROTOCORE_IP_V6 = 6,   ///< IPv6 (bytes[0..15])
+                PROTOCORE_IP_NONE = 0, ///< empty / unparsed
+                PROTOCORE_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
+                PROTOCORE_IP_V6 = 6,   ///< IPv6 (bytes[0..15])
 );
 static_assert(sizeof(protocore_ip_family) == 1, "protocore_ip_family must stay one byte (EMBED_ENUM_BYTE); "
                                                 "protocore_ip is embedded wherever an address is stored");
 
 /** @brief Address scope, in rough order of reachability (used for allow/deny policy + logging). */
 EMBED_ENUM_BYTE(protocore_ip_scope,
-    PROTOCORE_IP_SCOPE_UNSPECIFIED = 0, ///< 0.0.0.0 / ::
-    PROTOCORE_IP_SCOPE_LOOPBACK,        ///< 127.0.0.0/8 / ::1
-    PROTOCORE_IP_SCOPE_LINK_LOCAL,      ///< 169.254.0.0/16 / fe80::/10
-    PROTOCORE_IP_SCOPE_PRIVATE,         ///< RFC1918 (10/8, 172.16/12, 192.168/16) / ULA fc00::/7
-    PROTOCORE_IP_SCOPE_MULTICAST,       ///< 224.0.0.0/4 / ff00::/8
-    PROTOCORE_IP_SCOPE_GLOBAL,          ///< globally routable unicast
+                PROTOCORE_IP_SCOPE_UNSPECIFIED = 0, ///< 0.0.0.0 / ::
+                PROTOCORE_IP_SCOPE_LOOPBACK,        ///< 127.0.0.0/8 / ::1
+                PROTOCORE_IP_SCOPE_LINK_LOCAL,      ///< 169.254.0.0/16 / fe80::/10
+                PROTOCORE_IP_SCOPE_PRIVATE,         ///< RFC1918 (10/8, 172.16/12, 192.168/16) / ULA fc00::/7
+                PROTOCORE_IP_SCOPE_MULTICAST,       ///< 224.0.0.0/4 / ff00::/8
+                PROTOCORE_IP_SCOPE_GLOBAL,          ///< globally routable unicast
 );
 static_assert(sizeof(protocore_ip_scope) == 1, "protocore_ip_scope must stay one byte (EMBED_ENUM_BYTE)");
 

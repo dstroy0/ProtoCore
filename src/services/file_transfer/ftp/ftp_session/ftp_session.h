@@ -36,9 +36,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief Where a transfer stands. */
 EMBED_ENUM_BYTE(protocore_ftp_state,
-    PROTOCORE_FTP_READY = 0, ///< the server confirmed the completed transfer
-    PROTOCORE_FTP_BUSY,      ///< the sockets have no more to give; ask again on the next tick
-    PROTOCORE_FTP_FAILED,    ///< the sequence broke, or a reply passed its deadline
+                PROTOCORE_FTP_READY = 0, ///< the server confirmed the completed transfer
+                PROTOCORE_FTP_BUSY,      ///< the sockets have no more to give; ask again on the next tick
+                PROTOCORE_FTP_FAILED,    ///< the sequence broke, or a reply passed its deadline
 );
 
 /** @brief Where to connect and who to log in as. */

@@ -14,7 +14,6 @@
 
 #include "config/platform/platform.h" // the target's queues and tasks, under our names
 
-
 // ---------------------------------------------------------------------------
 // Worker identity
 // ---------------------------------------------------------------------------
@@ -182,7 +181,7 @@ struct WorkerStorage
     protocore_platform_queue_ctrl dq_struct[PROTOCORE_WORKER_COUNT]; ///< their descriptors
     uint8_t dq_storage[PROTOCORE_WORKER_COUNT][PROTOCORE_DEFER_QUEUE_DEPTH * sizeof(DeferCmd)]; ///< their backing store
     protocore_worker_pump_fn pump; ///< what each worker runs every iteration
-    embed_atomic_u32 run;        ///< cleared from another task to stop the loops
+    embed_atomic_u32 run;          ///< cleared from another task to stop the loops
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -228,7 +227,8 @@ static void worker_task(void *arg)
 {
     int id = (int)(intptr_t)arg;
     protocore_worker_set_self(id);
-    while (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &WORKER_CTX(protocore_worker_span())->run))
+    while (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                      .word = &WORKER_CTX(protocore_worker_span())->run))
     {
         if (WORKER_CTX(protocore_worker_span())->pump)
         {
@@ -257,7 +257,8 @@ void protocore_workers_start(uint8_t *work)
                                                 WORKER_CTX(work)->dq_storage[i], &WORKER_CTX(work)->dq_struct[i]);
         }
     }
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &WORKER_CTX(work)->run, .value = EMBED_TRUE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &WORKER_CTX(work)->run,
+               .value = EMBED_TRUE);
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         int core = (PROTOCORE_WORKER_CORE + i) % PROTOCORE_PLATFORM_CORES;
@@ -323,7 +324,8 @@ void protocore_workers_stop(uint8_t *work)
     {
         return;
     }
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &WORKER_CTX(work)->run, .value = EMBED_FALSE);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &WORKER_CTX(work)->run,
+               .value = EMBED_FALSE);
     // Tasks self-delete on their next iteration; give them a few ticks to exit
     // before the caller tears down the slots they were servicing.
     protocore_platform_task_delay(3);

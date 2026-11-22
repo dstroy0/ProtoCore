@@ -43,7 +43,8 @@ typedef struct EdgeFetchTransport
 } EdgeFetchTransport;
 
 /** @brief Fetch progress. */
-EMBED_ENUM_BYTE(EdgeFetchStatus,
+EMBED_ENUM_BYTE(
+    EdgeFetchStatus,
     EDGE_FETCH_STATUS_PENDING,  ///< still receiving
     EDGE_FETCH_STATUS_DONE,     ///< a complete response is parsed (status / body_off / body_len valid)
     EDGE_FETCH_STATUS_OVERSIZE, ///< response exceeded the buffer - not cacheable (caller passes through / fails open)

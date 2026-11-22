@@ -62,19 +62,19 @@ EMBED_BEGIN_DECLS
 
 /** @brief The mandatory IEEE 488.2 common commands (`protocore_scpi_common` renders each). */
 EMBED_ENUM_BYTE(ScpiCommon,
-    SCPI_CLS,   ///< "*CLS"  clear status
-    SCPI_ESE,   ///< "*ESE"  set event status enable
-    SCPI_ESE_Q, ///< "*ESE?" query event status enable
-    SCPI_ESR_Q, ///< "*ESR?" query + clear event status register
-    SCPI_IDN_Q, ///< "*IDN?" identification query
-    SCPI_OPC,   ///< "*OPC"  set operation-complete bit when done
-    SCPI_OPC_Q, ///< "*OPC?" query operation complete (returns 1)
-    SCPI_RST,   ///< "*RST"  reset
-    SCPI_SRE,   ///< "*SRE"  set service request enable
-    SCPI_SRE_Q, ///< "*SRE?" query service request enable
-    SCPI_STB_Q, ///< "*STB?" query status byte
-    SCPI_TST_Q, ///< "*TST?" self-test query
-    SCPI_WAI,   ///< "*WAI"  wait to continue
+                SCPI_CLS,   ///< "*CLS"  clear status
+                SCPI_ESE,   ///< "*ESE"  set event status enable
+                SCPI_ESE_Q, ///< "*ESE?" query event status enable
+                SCPI_ESR_Q, ///< "*ESR?" query + clear event status register
+                SCPI_IDN_Q, ///< "*IDN?" identification query
+                SCPI_OPC,   ///< "*OPC"  set operation-complete bit when done
+                SCPI_OPC_Q, ///< "*OPC?" query operation complete (returns 1)
+                SCPI_RST,   ///< "*RST"  reset
+                SCPI_SRE,   ///< "*SRE"  set service request enable
+                SCPI_SRE_Q, ///< "*SRE?" query service request enable
+                SCPI_STB_Q, ///< "*STB?" query status byte
+                SCPI_TST_Q, ///< "*TST?" self-test query
+                SCPI_WAI,   ///< "*WAI"  wait to continue
 );
 
 /** @brief Render an IEEE 488.2 common command mnemonic (a static string, never null). */

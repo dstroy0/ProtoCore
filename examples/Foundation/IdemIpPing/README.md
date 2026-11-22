@@ -26,5 +26,17 @@ shows the state of the link and the frames that the ticks drained, sent and drop
 
 ## Memory
 
-The link has `PROTOCORE_RX_BUFFERS` receive buffers, 32 by default, each one frame of 1536 bytes.
-The count is in `vendor/board_profiles/stack_profile.h`.
+The link has `PROTOCORE_RX_BUFFERS` receive buffers, each one frame of 1536 bytes. The count is 32 by
+default and 8 on the classic ESP32. It is in `vendor/board_profiles/stack_profile.h`.
+
+## Build and run (PlatformIO)
+
+The feature lives in the library, so its flag must reach the whole build:
+
+```bash
+pio ci examples/Foundation/IdemIpPing \
+  --board esp32dev --lib "." \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_IDEMIP=1"
+```
+
+(The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)

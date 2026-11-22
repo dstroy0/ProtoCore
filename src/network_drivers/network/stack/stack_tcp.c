@@ -45,11 +45,11 @@ MemoriaAnularis(s_events, stack_tcp_events);
 
 /** @brief The life of a pool entry. */
 EMBED_ENUM_BYTE(StackTcpSlotState,
-    STACK_TCP_SLOT_UNBOUND = 0, ///< ::StackTcpNs::slot_bind did not run on the entry
-    STACK_TCP_SLOT_FREE,        ///< bound, and no connection holds it
-    STACK_TCP_SLOT_OPENING,     ///< a SYN took it, and the handshake goes on
-    STACK_TCP_SLOT_OPEN,        ///< STACK_TCP_CONNECT went to the owner
-    STACK_TCP_SLOT_DEAD,        ///< the connection ended, and the close mark of the owner frees the entry
+                STACK_TCP_SLOT_UNBOUND = 0, ///< ::StackTcpNs::slot_bind did not run on the entry
+                STACK_TCP_SLOT_FREE,        ///< bound, and no connection holds it
+                STACK_TCP_SLOT_OPENING,     ///< a SYN took it, and the handshake goes on
+                STACK_TCP_SLOT_OPEN,        ///< STACK_TCP_CONNECT went to the owner
+                STACK_TCP_SLOT_DEAD,        ///< the connection ended, and the close mark of the owner frees the entry
 );
 
 /** @brief One row for each TCB. */
@@ -59,11 +59,11 @@ typedef struct
     uint8_t netif;                    ///< the interface of the connection
     uint8_t slot;                     ///< the pool entry of the connection, or PROTOCORE_STACK_TCP_SLOT_NONE
     embed_bool open;                  ///< the TCB is open, and the engine took it
-    embed_bool timing;         ///< an RFC 6298 sample runs, and the ACK of TcpPcbCtl::rtseq ends it
-    uint32_t timed_ms;         ///< the millisecond that the timed segment went out
-    uint32_t peer_window;      ///< SEG.WND of the last segment of the peer, for the RFC 5681 sec 2 test
-    uint32_t persist_interval; ///< the interval to the next zero-window probe, 0 while no probe runs
-    uint32_t linger_deadline;  ///< the millisecond that FIN-WAIT-2 ends at, 0 while no deadline runs
+    embed_bool timing;                ///< an RFC 6298 sample runs, and the ACK of TcpPcbCtl::rtseq ends it
+    uint32_t timed_ms;                ///< the millisecond that the timed segment went out
+    uint32_t peer_window;             ///< SEG.WND of the last segment of the peer, for the RFC 5681 sec 2 test
+    uint32_t persist_interval;        ///< the interval to the next zero-window probe, 0 while no probe runs
+    uint32_t linger_deadline;         ///< the millisecond that FIN-WAIT-2 ends at, 0 while no deadline runs
 } StackTcpRow;
 
 /** @brief One record for each pool entry. */
@@ -424,8 +424,8 @@ static embed_bool engine_dead_drain(StackTcpSlot *slot)
         {
             return EMBED_FALSE;
         }
-        const uint32_t len = engine_head_read(EMBED_CALL(anularis.seg_at, AnularisCfg, .ring = slot->transmit,
-                                                         .index = front));
+        const uint32_t len =
+            engine_head_read(EMBED_CALL(anularis.seg_at, AnularisCfg, .ring = slot->transmit, .index = front));
         EMBED_CALL(anularis.seg_release, AnularisCfg, .ring = slot->transmit);
         if (len == 0u)
         {
@@ -441,7 +441,8 @@ static embed_bool engine_dead_drain(StackTcpSlot *slot)
 static void engine_slot_end(struct StackTcpStorage *context, uint8_t index)
 {
     StackTcpSlot *const slot = &context->slots[index];
-    if ((slot->state == STACK_TCP_SLOT_OPENING && !slot->active) || (slot->state == STACK_TCP_SLOT_OPEN && slot->closed))
+    if ((slot->state == STACK_TCP_SLOT_OPENING && !slot->active) ||
+        (slot->state == STACK_TCP_SLOT_OPEN && slot->closed))
     {
         engine_slot_free(context, index);
         return;
@@ -503,8 +504,7 @@ static void engine_tcb_close(struct StackTcpStorage *context, uint16_t tcb)
 // and the link source of the SYN is its next hop. Without a free entry the TCB closes, and the SYN gets no
 // SYN,ACK.
 // The peer then sends the SYN again.
-static embed_bool engine_open_passive(struct StackTcpStorage *context, const StackTcpSegmentArgs *args,
-                                      uint16_t tcb)
+static embed_bool engine_open_passive(struct StackTcpStorage *context, const StackTcpSegmentArgs *args, uint16_t tcb)
 {
     const uint8_t index = engine_slot_take(context);
     if (index == PROTOCORE_STACK_TCP_SLOT_NONE)
@@ -609,8 +609,8 @@ static void engine_release(StackTcpSlot *slot, uint32_t snd_una, uint32_t iss)
         {
             return;
         }
-        const uint32_t len = engine_head_read(EMBED_CALL(anularis.seg_at, AnularisCfg, .ring = slot->transmit,
-                                                         .index = front));
+        const uint32_t len =
+            engine_head_read(EMBED_CALL(anularis.seg_at, AnularisCfg, .ring = slot->transmit, .index = front));
         // The close mark holds no text, and the free of the entry takes it off the ring.
         if (len == 0u)
         {
@@ -809,13 +809,12 @@ static void engine_tcb_segment(struct StackTcpStorage *context, const StackTcpSe
         engine_text(slot, index, args->frame + text_off, text_len);
         engine_redeliver(context, tcb, args->now_ms);
     }
-    if ((act & IDEMIP_TCP_IN_ACT_CLOSING) != 0u && slot != NULL && slot->state == STACK_TCP_SLOT_OPEN &&
-        !slot->closed)
+    if ((act & IDEMIP_TCP_IN_ACT_CLOSING) != 0u && slot != NULL && slot->state == STACK_TCP_SLOT_OPEN && !slot->closed)
     {
         engine_event_post(STACK_TCP_DISCONNECT, index, 0u);
     }
-    const uint32_t ended = IDEMIP_TCP_IN_ACT_RESET | IDEMIP_TCP_IN_ACT_REFUSED | IDEMIP_TCP_IN_ACT_DELETE |
-                           IDEMIP_TCP_IN_ACT_LISTEN;
+    const uint32_t ended =
+        IDEMIP_TCP_IN_ACT_RESET | IDEMIP_TCP_IN_ACT_REFUSED | IDEMIP_TCP_IN_ACT_DELETE | IDEMIP_TCP_IN_ACT_LISTEN;
     if ((act & ended) != 0u && slot != NULL)
     {
         engine_slot_end(context, index);
@@ -888,8 +887,8 @@ static void engine_fin_send(struct StackTcpStorage *context, StackTcpSlot *slot,
         return;
     }
     tcb_io->vars.snd_nxt++;
-    tcb_io->state = (tcb_io->state == IDEMIP_TCP_STATE_CLOSE_WAIT) ? IDEMIP_TCP_STATE_LAST_ACK
-                                                                   : IDEMIP_TCP_STATE_FIN_WAIT_1;
+    tcb_io->state =
+        (tcb_io->state == IDEMIP_TCP_STATE_CLOSE_WAIT) ? IDEMIP_TCP_STATE_LAST_ACK : IDEMIP_TCP_STATE_FIN_WAIT_1;
     engine_timer_arm(context, now_ms);
     slot->fin_sent = engine_tcb_store(context, slot->tcb);
 }
@@ -898,8 +897,8 @@ static void engine_fin_send(struct StackTcpStorage *context, StackTcpSlot *slot,
 // own segment, one MSS at most. Returns the octets that went out. Each segment advances SND.NXT and starts
 // the retransmission timer, and the TCB goes back to TcpPcb after each one. Where no RFC 6298 sample runs,
 // the first segment starts one.
-static uint32_t engine_text_send(struct StackTcpStorage *context, StackTcpSlot *slot,
-                                 const StackTcpEndpoint *endpoint, uint32_t budget, uint32_t now_ms)
+static uint32_t engine_text_send(struct StackTcpStorage *context, StackTcpSlot *slot, const StackTcpEndpoint *endpoint,
+                                 uint32_t budget, uint32_t now_ms)
 {
     TcpPcbIo *const tcb_io = IDEMIP_TCP_PCB_IO(context->units->tcp_pcb);
     StackTcpRow *const row = &context->rows[slot->tcb];
@@ -1228,8 +1227,9 @@ void protocore_stack_tcp_start(uint8_t *work)
     context->stack = args->stack;
     context->units = protocore_stack_units(args->stack);
     context->window = args->window;
-    context->started = EMBED_CALL(anularis.init, AnularisCfg, .ring = &s_events, .buf = mmgr_pars_storage_stack_tcp_events,
-                                  .capacity = STACK_TCP_EVENT_BYTES, .segment_count = 1u);
+    context->started =
+        EMBED_CALL(anularis.init, AnularisCfg, .ring = &s_events, .buf = mmgr_pars_storage_stack_tcp_events,
+                   .capacity = STACK_TCP_EVENT_BYTES, .segment_count = 1u);
     StackTcpV.sent = 0u;
     StackTcpV.lost_events = 0u;
     StackTcpV.ok = context->started;

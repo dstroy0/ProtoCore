@@ -56,9 +56,9 @@ typedef struct
 
 /** @brief Negative outcomes of a transport call. An HTTP status code is positive. */
 EMBED_ENUM_BYTE(Oauth2Result,
-    PROTOCORE_OAUTH2_ERR_BUILD = -1,     ///< the encoded body did not fit @c request.cap
-    PROTOCORE_OAUTH2_ERR_TRANSPORT = -2, ///< the HTTP client reached no endpoint
-    PROTOCORE_OAUTH2_ERR_RESPONSE = -3,  ///< the body carried no access_token (RFC 6749 sec 5.2)
+                PROTOCORE_OAUTH2_ERR_BUILD = -1,     ///< the encoded body did not fit @c request.cap
+                PROTOCORE_OAUTH2_ERR_TRANSPORT = -2, ///< the HTTP client reached no endpoint
+                PROTOCORE_OAUTH2_ERR_RESPONSE = -3,  ///< the body carried no access_token (RFC 6749 sec 5.2)
 );
 
 /**

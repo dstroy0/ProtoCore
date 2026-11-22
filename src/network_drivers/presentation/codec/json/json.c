@@ -548,9 +548,9 @@ static int hex_val(char c)
 }
 
 EMBED_ENUM_BYTE(JsonEsc,
-    JSON_ESC_LITERAL_C, // *c_out holds one char for the caller's common write path
-    JSON_ESC_EMITTED,   // UTF-8 bytes already written to out; caller advances p and continues
-    JSON_ESC_TRUNCATED  // sequence would overflow out_cap; caller returns
+                JSON_ESC_LITERAL_C, // *c_out holds one char for the caller's common write path
+                JSON_ESC_EMITTED,   // UTF-8 bytes already written to out; caller advances p and continues
+                JSON_ESC_TRUNCATED  // sequence would overflow out_cap; caller returns
 );
 
 // Decode a \uXXXX sequence with p at the 'u'. A high surrogate (0xD800..0xDBFF) followed by a low

@@ -26,11 +26,8 @@ EMBED_BEGIN_DECLS
 #define IDEMIP_ETH_HDR_LEN 14u
 
 /** @brief Type field values. RFC 894 fixes IPv4 at 0x0800; RFC 826 sec "Packet format" ARP at 0x0806. */
-EMBED_ENUM_BYTE(IdemIpEtherType,
-    IDEMIP_ETHERTYPE_IPV4 = 0x0800,
-    IDEMIP_ETHERTYPE_ARP = 0x0806,
-    IDEMIP_ETHERTYPE_IPV6 = 0x86DD,
-);
+EMBED_ENUM_BYTE(IdemIpEtherType, IDEMIP_ETHERTYPE_IPV4 = 0x0800, IDEMIP_ETHERTYPE_ARP = 0x0806,
+                IDEMIP_ETHERTYPE_IPV6 = 0x86DD, );
 
 /**
  * @brief Smallest data field a frame may carry (RFC 894).

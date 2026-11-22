@@ -36,9 +36,9 @@ EMBED_BEGIN_DECLS
 
 /** @brief What the rollback tick should do. */
 EMBED_ENUM_BYTE(protocore_ota_action,
-    PROTOCORE_OTA_WAIT = 0,     ///< still pending, within the window: keep waiting.
-    PROTOCORE_OTA_COMMIT = 1,   ///< self-test passed: mark the image valid.
-    PROTOCORE_OTA_ROLLBACK = 2, ///< self-test failed or window elapsed: roll back + reboot.
+                PROTOCORE_OTA_WAIT = 0,     ///< still pending, within the window: keep waiting.
+                PROTOCORE_OTA_COMMIT = 1,   ///< self-test passed: mark the image valid.
+                PROTOCORE_OTA_ROLLBACK = 2, ///< self-test failed or window elapsed: roll back + reboot.
 );
 
 // ---------------------------------------------------------------------------

@@ -66,10 +66,10 @@ typedef struct QuicTlsConfig
 
 /** @brief Handshake state (a mutually-exclusive internal state, not a wire value). */
 EMBED_ENUM_BYTE(QtlsState,
-    QTLS_START = 0,     ///< awaiting ClientHello
-    QTLS_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
-    QTLS_DONE,          ///< client Finished verified
-    QTLS_FAILED,        ///< a fatal handshake error (see alert)
+                QTLS_START = 0,     ///< awaiting ClientHello
+                QTLS_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
+                QTLS_DONE,          ///< client Finished verified
+                QTLS_FAILED,        ///< a fatal handshake error (see alert)
 );
 
 /** @brief One server handshake's state (fixed storage, no heap). */

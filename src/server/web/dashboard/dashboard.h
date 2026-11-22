@@ -36,16 +36,16 @@ EMBED_BEGIN_DECLS
 
 /** @brief Widget rendering / interaction style. */
 EMBED_ENUM_BYTE(protocore_widget_type,
-    // Display widgets - updated from the SSE value stream.
-    PROTOCORE_WIDGET_VALUE = 0, ///< plain numeric readout
-    PROTOCORE_WIDGET_GAUGE,     ///< radial arc gauge over [min, max]
-    PROTOCORE_WIDGET_BAR,       ///< horizontal bar over [min, max]
-    PROTOCORE_WIDGET_SPARKLINE, ///< recent-history SVG line over [min, max]
-    PROTOCORE_WIDGET_CHART,     ///< dense Canvas line chart over [min, max]
-    // Control widgets - send values back to the device over WebSocket.
-    PROTOCORE_WIDGET_BUTTON, ///< momentary button -> control value 1
-    PROTOCORE_WIDGET_TOGGLE, ///< on/off toggle -> control value 0/1 (reflects SSE state)
-    PROTOCORE_WIDGET_SLIDER  ///< range slider over [min, max] -> control value
+                // Display widgets - updated from the SSE value stream.
+                PROTOCORE_WIDGET_VALUE = 0, ///< plain numeric readout
+                PROTOCORE_WIDGET_GAUGE,     ///< radial arc gauge over [min, max]
+                PROTOCORE_WIDGET_BAR,       ///< horizontal bar over [min, max]
+                PROTOCORE_WIDGET_SPARKLINE, ///< recent-history SVG line over [min, max]
+                PROTOCORE_WIDGET_CHART,     ///< dense Canvas line chart over [min, max]
+                // Control widgets - send values back to the device over WebSocket.
+                PROTOCORE_WIDGET_BUTTON, ///< momentary button -> control value 1
+                PROTOCORE_WIDGET_TOGGLE, ///< on/off toggle -> control value 0/1 (reflects SSE state)
+                PROTOCORE_WIDGET_SLIDER  ///< range slider over [min, max] -> control value
 );
 
 /** @brief Control callback: invoked when a control widget sends a value over WebSocket. */

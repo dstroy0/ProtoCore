@@ -51,10 +51,7 @@ EMBED_BEGIN_DECLS
  * @brief What an access-list entry or a control on forwarding does to a frame.
  *        RFC 1812 sec 5.3.9, sec 5.3.11.
  */
-EMBED_ENUM_BYTE(protocore_fwd_action,
-    PROTOCORE_FWD_DENY = 0,
-    PROTOCORE_FWD_ALLOW = 1,
-);
+EMBED_ENUM_BYTE(protocore_fwd_action, PROTOCORE_FWD_DENY = 0, PROTOCORE_FWD_ALLOW = 1, );
 
 /** @brief Wildcard source interface: an entry carrying it matches a frame from any interface. */
 #define PROTOCORE_FWD_IF_ANY 0xFF
@@ -75,8 +72,8 @@ typedef struct
 #if PROTOCORE_FWD_INSPECT
 /** @brief The verdict an inspection hook returns for a frame. */
 EMBED_ENUM_BYTE(protocore_fwd_verdict,
-    PROTOCORE_FWD_INSPECT_PASS = 0, ///< the frame continues to the route lookup and the fan-out
-    PROTOCORE_FWD_INSPECT_DROP = 1, ///< the frame is dropped and counted as inspect_dropped
+                PROTOCORE_FWD_INSPECT_PASS = 0, ///< the frame continues to the route lookup and the fan-out
+                PROTOCORE_FWD_INSPECT_DROP = 1, ///< the frame is dropped and counted as inspect_dropped
 );
 
 /**

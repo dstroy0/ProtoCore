@@ -98,7 +98,7 @@ const MaxSecurityGuard *protocore_secure_guard(void);
 #if PROTOCORE_ENABLE_IDEMIP
 #include "src/idemip_owners.h" // IDEMIP_OWNERS: the owner of each unit of the stack
 #define PROTOCORE_OWNERS(owner_)                                                                                       \
-    owner_(protocore_owner_plain, "protocore_plain") owner_(protocore_owner_secure, "protocore_secure")             \
+    owner_(protocore_owner_plain, "protocore_plain") owner_(protocore_owner_secure, "protocore_secure")                \
         IDEMIP_OWNERS(owner_)
 #else
 #define PROTOCORE_OWNERS(owner_)                                                                                       \

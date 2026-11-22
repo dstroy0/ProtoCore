@@ -56,20 +56,20 @@ typedef void (*protocore_net_dns_found_fn)(const char *name, const protocore_net
 
 /** @brief IPv4 address category: RFC 6890 sec 2.2.2 registry entries, plus RFC 1112 sec 4. */
 EMBED_ENUM_BYTE(protocore_ip_class,
-    PROTOCORE_IP_UNSPECIFIED = 0, ///< 0.0.0.0/8 "This host on this network" (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_LOOPBACK,        ///< 127.0.0.0/8 Loopback (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_PRIVATE,         ///< 10/8, 172.16/12, 192.168/16 Private-Use (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_LINKLOCAL,       ///< 169.254.0.0/16 Link Local (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_MULTICAST,       ///< 224.0.0.0 to 239.255.255.255 host group (RFC 1112 sec 4)
-    PROTOCORE_IP_BROADCAST,       ///< 255.255.255.255/32 Limited Broadcast (RFC 6890 sec 2.2.2)
-    PROTOCORE_IP_PUBLIC,          ///< globally-routable unicast
+                PROTOCORE_IP_UNSPECIFIED = 0, ///< 0.0.0.0/8 "This host on this network" (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_LOOPBACK,        ///< 127.0.0.0/8 Loopback (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_PRIVATE,         ///< 10/8, 172.16/12, 192.168/16 Private-Use (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_LINKLOCAL,       ///< 169.254.0.0/16 Link Local (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_MULTICAST,       ///< 224.0.0.0 to 239.255.255.255 host group (RFC 1112 sec 4)
+                PROTOCORE_IP_BROADCAST,       ///< 255.255.255.255/32 Limited Broadcast (RFC 6890 sec 2.2.2)
+                PROTOCORE_IP_PUBLIC,          ///< globally-routable unicast
 );
 
 /** @brief Where a resolve stands. */
 EMBED_ENUM_BYTE(protocore_dns_state,
-    PROTOCORE_DNS_READY = 0, ///< u32 holds the address
-    PROTOCORE_DNS_BUSY,      ///< a query is out; ask again on the next tick
-    PROTOCORE_DNS_FAILED,    ///< the query did not leave, or the one in flight passed its deadline
+                PROTOCORE_DNS_READY = 0, ///< u32 holds the address
+                PROTOCORE_DNS_BUSY,      ///< a query is out; ask again on the next tick
+                PROTOCORE_DNS_FAILED,    ///< the query did not leave, or the one in flight passed its deadline
 );
 
 /** @brief The address a classify or a verify judges, as a host-order word. */

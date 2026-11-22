@@ -54,8 +54,8 @@ EMBED_BEGIN_DECLS
 
 /** @brief The operating mode requested by a RUN (0401) command. */
 EMBED_ENUM_BYTE(FinsRunMode,
-    FINS_RUN_MODE_MONITOR = 0x02, ///< MONITOR mode (program runs, online edits allowed)
-    FINS_RUN_MODE_RUN = 0x04,     ///< RUN mode (program runs, no online edits)
+                FINS_RUN_MODE_MONITOR = 0x02, ///< MONITOR mode (program runs, online edits allowed)
+                FINS_RUN_MODE_RUN = 0x04,     ///< RUN mode (program runs, no online edits)
 );
 
 /** @brief The 10-octet FINS routing header. */

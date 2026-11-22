@@ -40,32 +40,24 @@ EMBED_BEGIN_DECLS
 
 /** @brief The identifier octets SNMP puts on the wire. */
 EMBED_ENUM_BYTE(SnmpTag,
-    // ASN.1 simple types, encoded primitive (RFC 3417 sec 8 item 2).
-    SNMP_TAG_BER_INTEGER = 0x02,
-    SNMP_TAG_BER_OCTET_STRING = 0x04,
-    SNMP_TAG_BER_NULL = 0x05,
-    SNMP_TAG_BER_OID = 0x06,
-    SNMP_TAG_BER_SEQUENCE = 0x30,
-    // SMIv2 application-wide types (RFC 2578 sec 7.1.5 through 7.1.10).
-    SNMP_TAG_SNMP_IPADDRESS = 0x40,
-    SNMP_TAG_SNMP_COUNTER32 = 0x41,
-    SNMP_TAG_SNMP_GAUGE32 = 0x42,
-    SNMP_TAG_SNMP_TIMETICKS = 0x43,
-    SNMP_TAG_SNMP_OPAQUE = 0x44,
-    SNMP_TAG_SNMP_COUNTER64 = 0x46,
-    // VarBind CHOICE exception markers (RFC 3416 sec 3; used per sec 4.2.1 and sec 4.2.2).
-    SNMP_TAG_SNMP_NO_SUCH_OBJECT = 0x80,
-    SNMP_TAG_SNMP_NO_SUCH_INSTANCE = 0x81,
-    SNMP_TAG_SNMP_END_OF_MIB_VIEW = 0x82,
-    // PDU tags, context-specific constructed (RFC 3416 sec 3).
-    SNMP_TAG_SNMP_PDU_GET = 0xA0,      ///< GetRequest-PDU ::= [0] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1,  ///< GetNextRequest-PDU ::= [1] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2, ///< Response-PDU ::= [2] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_SET = 0xA3,      ///< SetRequest-PDU ::= [3] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,  ///< GetBulkRequest-PDU ::= [5] IMPLICIT BulkPDU
-    SNMP_TAG_SNMP_PDU_INFORM = 0xA6,   ///< InformRequest-PDU ::= [6] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,   ///< SNMPv2-Trap-PDU ::= [7] IMPLICIT PDU
-    SNMP_TAG_SNMP_PDU_REPORT = 0xA8,   ///< Report-PDU ::= [8] IMPLICIT PDU
+                // ASN.1 simple types, encoded primitive (RFC 3417 sec 8 item 2).
+                SNMP_TAG_BER_INTEGER = 0x02, SNMP_TAG_BER_OCTET_STRING = 0x04, SNMP_TAG_BER_NULL = 0x05,
+                SNMP_TAG_BER_OID = 0x06, SNMP_TAG_BER_SEQUENCE = 0x30,
+                // SMIv2 application-wide types (RFC 2578 sec 7.1.5 through 7.1.10).
+                SNMP_TAG_SNMP_IPADDRESS = 0x40, SNMP_TAG_SNMP_COUNTER32 = 0x41, SNMP_TAG_SNMP_GAUGE32 = 0x42,
+                SNMP_TAG_SNMP_TIMETICKS = 0x43, SNMP_TAG_SNMP_OPAQUE = 0x44, SNMP_TAG_SNMP_COUNTER64 = 0x46,
+                // VarBind CHOICE exception markers (RFC 3416 sec 3; used per sec 4.2.1 and sec 4.2.2).
+                SNMP_TAG_SNMP_NO_SUCH_OBJECT = 0x80, SNMP_TAG_SNMP_NO_SUCH_INSTANCE = 0x81,
+                SNMP_TAG_SNMP_END_OF_MIB_VIEW = 0x82,
+                // PDU tags, context-specific constructed (RFC 3416 sec 3).
+                SNMP_TAG_SNMP_PDU_GET = 0xA0,      ///< GetRequest-PDU ::= [0] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_GETNEXT = 0xA1,  ///< GetNextRequest-PDU ::= [1] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_RESPONSE = 0xA2, ///< Response-PDU ::= [2] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_SET = 0xA3,      ///< SetRequest-PDU ::= [3] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_GETBULK = 0xA5,  ///< GetBulkRequest-PDU ::= [5] IMPLICIT BulkPDU
+                SNMP_TAG_SNMP_PDU_INFORM = 0xA6,   ///< InformRequest-PDU ::= [6] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,   ///< SNMPv2-Trap-PDU ::= [7] IMPLICIT PDU
+                SNMP_TAG_SNMP_PDU_REPORT = 0xA8,   ///< Report-PDU ::= [8] IMPLICIT PDU
 );
 
 /**

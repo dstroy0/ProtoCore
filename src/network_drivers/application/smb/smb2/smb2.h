@@ -157,25 +157,17 @@ frame, the 64-byte sync packet header, and the NEGOTIATE exchange.
 #define PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN 32
 
 /** @brief SMB2 command codes (MS-SMB2 §2.2.1.2). */
-EMBED_ENUM_BYTE(Smb2Command,
-    SMB2_NEGOTIATE = 0x0000,
-    SMB2_SESSION_SETUP = 0x0001,
-    SMB2_LOGOFF = 0x0002,
-    SMB2_TREE_CONNECT = 0x0003,
-    SMB2_TREE_DISCONNECT = 0x0004,
-    SMB2_CREATE = 0x0005,
-    SMB2_CLOSE = 0x0006,
-    SMB2_READ = 0x0008,
-    SMB2_WRITE = 0x0009,
-);
+EMBED_ENUM_BYTE(Smb2Command, SMB2_NEGOTIATE = 0x0000, SMB2_SESSION_SETUP = 0x0001, SMB2_LOGOFF = 0x0002,
+                SMB2_TREE_CONNECT = 0x0003, SMB2_TREE_DISCONNECT = 0x0004, SMB2_CREATE = 0x0005, SMB2_CLOSE = 0x0006,
+                SMB2_READ = 0x0008, SMB2_WRITE = 0x0009, );
 
 /** @brief SMB2 dialect revision numbers (MS-SMB2 §2.2.4). */
 EMBED_ENUM_BYTE(Smb2Dialect,
-    SMB2_DIALECT_0202 = 0x0202, ///< SMB 2.0.2
-    SMB2_DIALECT_0210 = 0x0210, ///< SMB 2.1
-    SMB2_DIALECT_0300 = 0x0300, ///< SMB 3.0
-    SMB2_DIALECT_0302 = 0x0302, ///< SMB 3.0.2
-    SMB2_DIALECT_0311 = 0x0311, ///< SMB 3.1.1
+                SMB2_DIALECT_0202 = 0x0202, ///< SMB 2.0.2
+                SMB2_DIALECT_0210 = 0x0210, ///< SMB 2.1
+                SMB2_DIALECT_0300 = 0x0300, ///< SMB 3.0
+                SMB2_DIALECT_0302 = 0x0302, ///< SMB 3.0.2
+                SMB2_DIALECT_0311 = 0x0311, ///< SMB 3.1.1
 );
 
 /** @brief Parsed SMB2 sync header. */
@@ -275,8 +267,8 @@ typedef struct
 
 /** @brief The per-session message-signing algorithm the client selects from the negotiated dialect. */
 EMBED_ENUM_BYTE(Smb2SignAlgo,
-    SMB2_SIGN_ALGO_HMAC_SHA256 = 0, ///< SMB 2.0.2 / 2.1 (key = the NTLMv2 session key)
-    SMB2_SIGN_ALGO_AES_CMAC = 1,    ///< SMB 3.0 / 3.0.2 / 3.1.1 (key = the SP800-108-derived signing key)
+                SMB2_SIGN_ALGO_HMAC_SHA256 = 0, ///< SMB 2.0.2 / 2.1 (key = the NTLMv2 session key)
+                SMB2_SIGN_ALGO_AES_CMAC = 1,    ///< SMB 3.0 / 3.0.2 / 3.1.1 (key = the SP800-108-derived signing key)
 );
 
 /** @brief AES key length in bytes for an SMB2 cipher id: 16 for the -128 ciphers, 32 for the -256 ciphers,

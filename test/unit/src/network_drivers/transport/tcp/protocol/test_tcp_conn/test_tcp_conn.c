@@ -366,13 +366,15 @@ void test_close_dwells_while_the_peer_still_owes_an_ack(void)
 
     ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
     TEST_ASSERT_NOT_NULL(conn_pool[0].pcb); // the slot is still bound to its connection
 
     // Peer acks the last of it; the sent callback finalizes.
     g_pcb.snd_queuelen = 0;
     lowlevel_sent_cb(&conn_pool[0], &g_pcb, 3);
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 
@@ -383,7 +385,8 @@ void test_close_with_a_drained_queue_releases_immediately(void)
     g_pcb.snd_queuelen = 0;
     ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 // A sent callback while data is still outstanding must not release the slot early - that would
@@ -394,10 +397,12 @@ void test_sent_callback_does_not_release_a_slot_that_is_still_draining(void)
     g_pcb.snd_queuelen = 5;
     ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
 
     lowlevel_sent_cb(&conn_pool[0], &g_pcb, 1); // partial ack, queue not empty
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
 }
 
 // The dwell expiring is the case sec 3.9.1.4 names outright: "It may happen (if the user-level
@@ -416,14 +421,16 @@ void test_dwell_expiry_aborts_the_connection(void)
     advance_to(1000);
     ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
 
     int aborts_before = mock_abort_call_count();
     advance_to(1000 + PROTOCORE_CLOSING_TIMEOUT_MS);
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count()); // CLOSE turned into ABORT
 }
@@ -441,7 +448,8 @@ void test_dwell_is_not_reaped_before_its_deadline(void)
     advance_to(1000 + PROTOCORE_CLOSING_TIMEOUT_MS - 1);
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
 }
 
 // begin_close only acts on a live connection; a slot already freed by an error during the write is
@@ -454,7 +462,8 @@ void test_begin_close_is_a_no_op_off_the_active_state(void)
     ConnPool.set_state(protocore_conn_pool_span());
     ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 
     ConnPoolV.slot = MAX_CONNS;
     ConnPool.begin_close(protocore_conn_pool_span()); // out of range
@@ -481,7 +490,8 @@ void test_data_after_close_resets_the_connection(void)
     g_pcb.snd_queuelen = 4; // hold the slot in the dwell
     ConnPoolV.slot = 0;
     ConnPool.begin_close(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
 
     mock_recved_reset();
     int aborts_before = mock_abort_call_count();
@@ -493,7 +503,8 @@ void test_data_after_close_resets_the_connection(void)
     ConnPoolV.slot = 0;
     ConnPool.available(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_UINT(0, ConnPoolV.n); // never ringed
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 
@@ -508,7 +519,8 @@ void test_a_zero_length_segment_during_the_dwell_does_not_reset(void)
 
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, deliver(0, 0, 0));
     TEST_ASSERT_EQUAL_INT(aborts_before, mock_abort_call_count());
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
 }
 
 // A peer FIN during the dwell means both sides are done. It must not be mistaken for the ordinary
@@ -522,7 +534,8 @@ void test_peer_fin_during_the_dwell_leaves_the_slot_closing(void)
     drain_events((TcpEvt[4]){0}, 4);
 
     TEST_ASSERT_EQUAL(PROTOCORE_NET_OK, lowlevel_recv_cb(&conn_pool[0], &g_pcb, NULL, PROTOCORE_NET_OK));
-    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                          .word = &conn_pool[0].state));
 
     TcpEvt evts[4];
     TEST_ASSERT_EQUAL_INT(0, drain_events(evts, 4));
@@ -545,7 +558,8 @@ void test_remote_fin_reports_a_normal_close(void)
     TEST_ASSERT_EQUAL_INT(1, drain_events(evts, 4));
     TEST_ASSERT_EQUAL(EVT_DISCONNECT, evts[0].type);
     TEST_ASSERT_EQUAL_UINT8(0, evts[0].slot_id);
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 void test_stack_error_reports_an_abort(void)
@@ -556,7 +570,8 @@ void test_stack_error_reports_an_abort(void)
     TcpEvt evts[4];
     TEST_ASSERT_EQUAL_INT(1, drain_events(evts, 4));
     TEST_ASSERT_EQUAL(EVT_ERROR, evts[0].type);
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 
@@ -589,7 +604,8 @@ void test_error_during_the_dwell_posts_no_further_event(void)
     drain_events((TcpEvt[4]){0}, 4);
 
     lowlevel_err_cb(&conn_pool[0], PROTOCORE_NET_ERR_RST);
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 
     TcpEvt evts[4];
     TEST_ASSERT_EQUAL_INT(0, drain_events(evts, 4));
@@ -637,7 +653,8 @@ void test_idle_timeout_aborts_the_connection_and_signals_an_error(void)
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count()); // a reset, per sec 3.10.5
 
@@ -655,7 +672,8 @@ void test_idle_timeout_does_not_fire_before_its_deadline(void)
     advance_to(1000 + ConnPoolV.u32 - 1);
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 // The elapsed comparison is an unsigned subtraction, so it stays correct when the millisecond
@@ -668,7 +686,8 @@ void test_idle_timeout_survives_the_millisecond_counter_wrap(void)
     advance_to(0xFFFFF000u + ConnPoolV.u32); // wraps through zero
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
 }
 
 // Each worker sweeps only the slots it owns, so a slot belonging to another worker is untouched.
@@ -681,7 +700,8 @@ void test_sweep_skips_slots_owned_by_another_worker(void)
     advance_to(ConnPoolV.u32 + 1000);
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 // A response still being paged out is not idle. touch_active restarts the clock so the sweep does
@@ -698,7 +718,8 @@ void test_touch_active_defers_the_sweep_for_a_streaming_response(void)
     advance_to(ConnPoolV.u32 + 10);
     ConnPoolV.life.worker_id = 0;
     ConnPool.check_timeouts(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                         .word = &conn_pool[0].state));
 }
 
 void test_touch_active_is_bounded_and_state_guarded(void)
@@ -744,7 +765,8 @@ void test_a_held_slot_is_not_allocatable_though_it_reads_free(void)
 {
     (void)EMBED_CALL(anularis.loculus_hold, AnularisCfg, .ring = &protocore_conn_slots, .index = 0u,
                      .src = conn_pool[0].rx_buffer, .bytes = RX_BUF_SIZE);
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state)); // free...
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state)); // free...
     ConnPool.alloc_free(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT32(1, ConnPoolV.i32); // ...but not handed out
     EMBED_CALL(anularis.loculus_drop, AnularisCfg, .ring = &protocore_conn_slots, .index = 0u);
@@ -778,7 +800,8 @@ void test_free_bitmap_tracks_every_state_write(void)
     {
         embed_bool free_bit =
             (EMBED_CALL(anularis.loculus_ready, AnularisCfg, .ring = &protocore_conn_slots) >> i) & 1u;
-        embed_bool is_free = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state) == CONN_FREE;
+        embed_bool is_free =
+            EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state) == CONN_FREE;
         TEST_ASSERT_EQUAL(is_free, free_bit);
     }
 }
@@ -853,7 +876,8 @@ void test_init_leaves_every_slot_free_and_indexed(void)
 
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state));
+        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[i].state));
         TEST_ASSERT_NULL(conn_pool[i].pcb);
         TEST_ASSERT_EQUAL_UINT8(i, conn_pool[i].id);
         ConnPoolV.slot = i;
@@ -893,7 +917,8 @@ void test_stop_resets_live_slots_and_leaves_the_pool_free(void)
     TEST_ASSERT_EQUAL_INT(aborts_before + 2, mock_abort_call_count());
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state));
+        TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                           .word = &conn_pool[i].state));
         TEST_ASSERT_NULL(conn_pool[i].pcb);
     }
 }
@@ -965,7 +990,8 @@ void test_close_frees_the_slot_before_handing_the_pcb_to_the_stack(void)
     arm_slot(0);
     ConnPoolV.slot = 0;
     ConnPool.close(protocore_conn_pool_span());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 
@@ -1002,7 +1028,8 @@ void test_abort_slot_resets_the_connection_and_frees_the_slot(void)
     ConnPoolV.slot = 0;
     ConnPool.abort_slot(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count());
-    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[0].state));
+    TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg,
+                                                       .word = &conn_pool[0].state));
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 

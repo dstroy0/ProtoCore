@@ -34,13 +34,7 @@ EMBED_BEGIN_DECLS
 #define OPT_SGA 3
 
 // IAC parser state per connection (a mutually-exclusive state, not a wire value).
-EMBED_ENUM_BYTE(TelnetState,
-    TN_NORMAL,
-    TN_IAC,
-    TN_OPT,
-    TN_SB,
-    TN_SB_IAC
-);
+EMBED_ENUM_BYTE(TelnetState, TN_NORMAL, TN_IAC, TN_OPT, TN_SB, TN_SB_IAC);
 
 typedef struct
 {

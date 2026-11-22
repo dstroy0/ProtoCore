@@ -32,13 +32,12 @@ so nothing here aliases it. How those bytes are
  */
 
 /** @brief Result of an SMB client operation. 0 is success; each failure is a distinct code. */
-EMBED_ENUM_BYTE(SmbResult,
-    SMB_OK = 0,
-    SMB_ERR_ARG = -1,      ///< a required field was null/empty
-    SMB_ERR_IO = -2,       ///< a send/recv failed, timed out, or the peer closed mid-message
-    SMB_ERR_PROTOCOL = -3, ///< a malformed response, or an unexpected NT status
-    SMB_ERR_AUTH = -4,     ///< SESSION_SETUP was rejected (bad user/password/domain)
-    SMB_ERR_OVERFLOW = -5, ///< a message did not fit the work buffer (PROTOCORE_SMB_BUF)
+EMBED_ENUM_BYTE(SmbResult, SMB_OK = 0,
+                SMB_ERR_ARG = -1,      ///< a required field was null/empty
+                SMB_ERR_IO = -2,       ///< a send/recv failed, timed out, or the peer closed mid-message
+                SMB_ERR_PROTOCOL = -3, ///< a malformed response, or an unexpected NT status
+                SMB_ERR_AUTH = -4,     ///< SESSION_SETUP was rejected (bad user/password/domain)
+                SMB_ERR_OVERFLOW = -5, ///< a message did not fit the work buffer (PROTOCORE_SMB_BUF)
 );
 
 /**

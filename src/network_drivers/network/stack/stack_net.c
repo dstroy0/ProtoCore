@@ -24,7 +24,7 @@
 #include "network_drivers/network/stack/stack.h"     // Stack.tick, and the borrow of the stack
 #include "network_drivers/network/stack/stack_tcp.h" // the entries, their events and their rings
 #include "proximus_operor/proximus_operor.h"         // proxim.read
-#include "src/idemip.h" // the units of idemIP that the UDP, ARP and IGMP paths call
+#include "src/idemip.h"                              // the units of idemIP that the UDP, ARP and IGMP paths call
 
 EMBED_BEGIN_DECLS
 
@@ -37,20 +37,21 @@ EMBED_BEGIN_DECLS
 
 static_assert(MMGR_RING_POW2(PROTOCORE_STACK_NET_RX_BYTES),
               "PROTOCORE_STACK_NET_RX_BYTES must be a power of two: a ring index wraps with a mask");
-static_assert(PROTOCORE_STACK_NET_RX_BYTES - 1u <= 0xFFFFu,
-              "the receive window of an entry is PROTOCORE_STACK_NET_RX_BYTES less one, and RFC 9293 holds it in 16 bits");
+static_assert(
+    PROTOCORE_STACK_NET_RX_BYTES - 1u <= 0xFFFFu,
+    "the receive window of an entry is PROTOCORE_STACK_NET_RX_BYTES less one, and RFC 9293 holds it in 16 bits");
 
 /** @brief The two rings of one entry, and what the transport did with them. */
 typedef struct
 {
     uint8_t rx_buffer[PROTOCORE_STACK_NET_RX_BYTES];
     EMBED_ALIGN(4) uint8_t tx_buffer[STACK_NET_TX_BYTES];
-    mmgr_ring rx;          ///< the receive ring: the TCP of the stack writes it, the transport reads it
-    mmgr_ring tx;          ///< the transmit ring: the transport writes it, the TCP of the stack sends it
-    protocore_pcb *pcb;    ///< the control block of the connection, NULL for none
-    uint32_t delivered;    ///< the octets at the front of the receive ring that went to the transport
-    uint32_t released;     ///< the octets that the peer acknowledged, as the last pass saw them
-    embed_bool fin_owed;   ///< the peer sent its FIN, and the receive of a NULL buffer waits on the text
+    mmgr_ring rx;        ///< the receive ring: the TCP of the stack writes it, the transport reads it
+    mmgr_ring tx;        ///< the transmit ring: the transport writes it, the TCP of the stack sends it
+    protocore_pcb *pcb;  ///< the control block of the connection, NULL for none
+    uint32_t delivered;  ///< the octets at the front of the receive ring that went to the transport
+    uint32_t released;   ///< the octets that the peer acknowledged, as the last pass saw them
+    embed_bool fin_owed; ///< the peer sent its FIN, and the receive of a NULL buffer waits on the text
 } StackNetEntry;
 
 /** @brief One packet buffer of the pool, and its octets. */
@@ -69,10 +70,10 @@ typedef struct
     StackNetPbuf pbufs[PROTOCORE_STACK_NET_PBUFS];
     protocore_udp_pcb udp[PROTOCORE_STACK_NET_UDP_PCBS];
     protocore_platform_mutex_ctrl lock_ctrl;
-    protocore_platform_mutex lock;   ///< the lock of the stack, NULL until the first call
-    protocore_platform_task holder;  ///< the task that holds the lock
-    uint32_t depth;                  ///< the takes of the lock by its holder
-    embed_bool started;              ///< the TCP of the stack started, and each entry has its rings
+    protocore_platform_mutex lock;  ///< the lock of the stack, NULL until the first call
+    protocore_platform_task holder; ///< the task that holds the lock
+    uint32_t depth;                 ///< the takes of the lock by its holder
+    embed_bool started;             ///< the TCP of the stack started, and each entry has its rings
 } StackNetCtx;
 
 static StackNetCtx s_net;
@@ -270,8 +271,7 @@ uint16_t protocore_net_pbuf_copy(const protocore_pbuf *p, void *dst, uint16_t le
     // Explicit cast narrows the octets after off, which p->len holds in 16 bits
     const uint16_t left = (uint16_t)(p->len - off);
     const uint16_t count = (len < left) ? len : left;
-    EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)dst, .at = (const uint8_t *)p->payload + off,
-               .size = count);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)dst, .at = (const uint8_t *)p->payload + off, .size = count);
     return count;
 }
 
@@ -431,7 +431,8 @@ protocore_net_err protocore_net_close(protocore_pcb *p)
         const StackTcpCloseArgs args = {.index = p->entry};
         if (!protocore_stack_tcp_close(&args))
         {
-            return PROTOCORE_NET_ERR_MEM; // the transmit ring has no segment for the mark yet; the transport tries again
+            return PROTOCORE_NET_ERR_MEM; // the transmit ring has no segment for the mark yet; the transport tries
+                                          // again
         }
     }
     stack_net_pcb_give(p);
@@ -921,10 +922,10 @@ void protocore_stack_net_udp_input(const uint8_t *frame, uint16_t entry, size_t 
         }
         const size_t data_len = payload_len - IDEMIP_UDP_HDR_LEN;
         // Explicit cast narrows the length, which the pool test below holds at PROTOCORE_STACK_NET_PBUF_BYTES
-        protocore_pbuf *const pbuf = (data_len <= PROTOCORE_STACK_NET_PBUF_BYTES)
-                                         ? protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (uint16_t)data_len,
-                                                                    PROTOCORE_NET_PBUF_RAM)
-                                         : NULL;
+        protocore_pbuf *const pbuf =
+            (data_len <= PROTOCORE_STACK_NET_PBUF_BYTES)
+                ? protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (uint16_t)data_len, PROTOCORE_NET_PBUF_RAM)
+                : NULL;
         if (pbuf == NULL)
         {
             return;
@@ -1039,8 +1040,8 @@ static protocore_net_err stack_net_connect_try(protocore_pcb *pcb, uint32_t now_
     if (protocore_stack_tcp_ends(index, &ends))
     {
         pcb->local_port = ends.local_port;
-        pcb->local_ip = (protocore_net_ip){PROTOCORE_NET_TYPE_V4, {ends.local_ip[0], ends.local_ip[1],
-                                                                   ends.local_ip[2], ends.local_ip[3]}};
+        pcb->local_ip = (protocore_net_ip){PROTOCORE_NET_TYPE_V4,
+                                           {ends.local_ip[0], ends.local_ip[1], ends.local_ip[2], ends.local_ip[3]}};
     }
     return PROTOCORE_NET_OK;
 }
@@ -1116,14 +1117,15 @@ static void stack_net_accept(uint8_t index)
     pcb->state = 4u;
     pcb->local_port = ends.local_port;
     pcb->remote_port = ends.remote_port;
-    pcb->local_ip = (protocore_net_ip){PROTOCORE_NET_TYPE_V4, {ends.local_ip[0], ends.local_ip[1], ends.local_ip[2],
-                                                               ends.local_ip[3]}};
-    pcb->remote_ip = (protocore_net_ip){PROTOCORE_NET_TYPE_V4, {ends.remote_ip[0], ends.remote_ip[1],
-                                                                ends.remote_ip[2], ends.remote_ip[3]}};
+    pcb->local_ip = (protocore_net_ip){PROTOCORE_NET_TYPE_V4,
+                                       {ends.local_ip[0], ends.local_ip[1], ends.local_ip[2], ends.local_ip[3]}};
+    pcb->remote_ip = (protocore_net_ip){PROTOCORE_NET_TYPE_V4,
+                                        {ends.remote_ip[0], ends.remote_ip[1], ends.remote_ip[2], ends.remote_ip[3]}};
     pcb->tos = listener->tos;
     pcb->ttl = listener->ttl;
-    const protocore_net_err result =
-        (listener->on_accept != NULL) ? listener->on_accept(listener->arg, pcb, PROTOCORE_NET_OK) : PROTOCORE_NET_ERR_VAL;
+    const protocore_net_err result = (listener->on_accept != NULL)
+                                         ? listener->on_accept(listener->arg, pcb, PROTOCORE_NET_OK)
+                                         : PROTOCORE_NET_ERR_VAL;
     // ERR_ABRT means the accept aborted the control block itself.
     if (result != PROTOCORE_NET_OK && result != PROTOCORE_NET_ERR_ABRT && pcb->in_use)
     {
@@ -1143,9 +1145,10 @@ static void stack_net_deliver(uint8_t index)
         {
             break;
         }
-        const uint16_t take = (waiting < PROTOCORE_STACK_NET_PBUF_BYTES) ? (uint16_t)waiting
-                                                                         : (uint16_t)PROTOCORE_STACK_NET_PBUF_BYTES;
-        protocore_pbuf *const pbuf = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, take, PROTOCORE_NET_PBUF_RAM);
+        const uint16_t take =
+            (waiting < PROTOCORE_STACK_NET_PBUF_BYTES) ? (uint16_t)waiting : (uint16_t)PROTOCORE_STACK_NET_PBUF_BYTES;
+        protocore_pbuf *const pbuf =
+            protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, take, PROTOCORE_NET_PBUF_RAM);
         if (pbuf == NULL)
         {
             return; // the pool is spent; the next pass tries again
@@ -1160,8 +1163,8 @@ static void stack_net_deliver(uint8_t index)
             return;
         }
     }
-    if (entry->pcb != NULL && entry->fin_owed && entry->delivered ==
-                                                     EMBED_CALL(anularis.available, AnularisCfg, .ring = &entry->rx))
+    if (entry->pcb != NULL && entry->fin_owed &&
+        entry->delivered == EMBED_CALL(anularis.available, AnularisCfg, .ring = &entry->rx))
     {
         entry->fin_owed = EMBED_FALSE;
         protocore_pcb *const pcb = entry->pcb;
@@ -1286,8 +1289,8 @@ int protocore_stack_net_start(void)
     stack_net_lock();
     stack_net_unlock();
     return protocore_platform_task_start(stack_net_task, "protocore_stack", PROTOCORE_STACK_NET_TASK_STACK, NULL,
-                                         PROTOCORE_STACK_NET_TASK_PRIORITY, &task, PROTOCORE_STACK_NET_TASK_CORE) ==
-                   PROTOCORE_PLATFORM_PASS
+                                         PROTOCORE_STACK_NET_TASK_PRIORITY, &task,
+                                         PROTOCORE_STACK_NET_TASK_CORE) == PROTOCORE_PLATFORM_PASS
                ? 1
                : 0;
 }

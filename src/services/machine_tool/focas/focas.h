@@ -61,14 +61,11 @@ EMBED_BEGIN_DECLS
 #define FOCAS_SYSINFO_LEN 18   ///< ODBSYS: addinfo+maxaxis+cnctype+mttype+series+version+axes
 
 /// Frame types (envelope octets 6-7). Cast to/from the wire only at the byte boundary.
-EMBED_ENUM_BYTE(FocasFrameType,
-    FOCAS_FRAME_TYPE_INVALID = 0x0000,
-    FOCAS_FRAME_TYPE_OPEN_REQ = 0x0101,
-    FOCAS_FRAME_TYPE_OPEN_RESP = 0x0102,
-    FOCAS_FRAME_TYPE_CLOSE_REQ = 0x0201,
-    FOCAS_FRAME_TYPE_CLOSE_RESP = 0x0202,
-    FOCAS_FRAME_TYPE_COMMAND_REQ = 0x2101, ///< FTYPE_VAR_REQU
-    FOCAS_FRAME_TYPE_COMMAND_RESP = 0x2102 ///< FTYPE_VAR_RESP
+EMBED_ENUM_BYTE(FocasFrameType, FOCAS_FRAME_TYPE_INVALID = 0x0000, FOCAS_FRAME_TYPE_OPEN_REQ = 0x0101,
+                FOCAS_FRAME_TYPE_OPEN_RESP = 0x0102, FOCAS_FRAME_TYPE_CLOSE_REQ = 0x0201,
+                FOCAS_FRAME_TYPE_CLOSE_RESP = 0x0202,
+                FOCAS_FRAME_TYPE_COMMAND_REQ = 0x2101, ///< FTYPE_VAR_REQU
+                FOCAS_FRAME_TYPE_COMMAND_RESP = 0x2102 ///< FTYPE_VAR_RESP
 );
 
 /// A FOCAS function selector: three big-endian u16 (c1, c2, c3).

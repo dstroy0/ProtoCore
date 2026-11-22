@@ -3779,23 +3779,11 @@
 #define PROTOCORE_PLAINTEXT_WORK_UDPLISTENER 0
 #endif
 
-#if PROTOCORE_ENABLE_TCP
 #define PROTOCORE_PLAINTEXT_WORK_TCPLOWER PROTOCORE_TCP_LOWER_BORROW
-#else
-#define PROTOCORE_PLAINTEXT_WORK_TCPLOWER 0
-#endif
 
-#if PROTOCORE_ENABLE_TCP
 #define PROTOCORE_PLAINTEXT_WORK_CONNPOOL PROTOCORE_CONN_POOL_BORROW
-#else
-#define PROTOCORE_PLAINTEXT_WORK_CONNPOOL 0
-#endif
 
-#if PROTOCORE_ENABLE_TCP
 #define PROTOCORE_PLAINTEXT_WORK_TCPLISTENER PROTOCORE_TCP_LISTENER_BORROW
-#else
-#define PROTOCORE_PLAINTEXT_WORK_TCPLISTENER 0
-#endif
 
 #if PROTOCORE_ENABLE_TCP_CLIENT
 #define PROTOCORE_PLAINTEXT_WORK_TCPCLIENT PROTOCORE_TCP_CLIENT_BORROW
@@ -3864,7 +3852,7 @@ static_assert(PROTOCORE_STACK_TCP_ENTRIES <= IDEMIP_TCP_PCBS,
  */
 #ifndef PROTOCORE_STACK_TCP_BORROW
 #define PROTOCORE_STACK_TCP_BORROW                                                                                     \
-    ((IDEMIP_TCP_PCBS * 32u) + (PROTOCORE_STACK_TCP_ENTRIES * ((2u * sizeof(uint8_t *)) + 24u)) +                   \
+    ((IDEMIP_TCP_PCBS * 32u) + (PROTOCORE_STACK_TCP_ENTRIES * ((2u * sizeof(uint8_t *)) + 24u)) +                      \
      (2u * sizeof(uint8_t *)) + 64u)
 #endif
 /**
@@ -4171,7 +4159,8 @@ static_assert(PROTOCORE_STACK_TCP_ENTRIES <= IDEMIP_TCP_PCBS,
  * part of the listener API.  Feature flags gate the implementation, not the
  * identifier.
  */
-EMBED_ENUM_BYTE(ProtoConn,
+EMBED_ENUM_BYTE(
+    ProtoConn,
     PROTO_NONE = 0,     ///< Unassigned slot.
     PROTO_HTTP = 1,     ///< HTTP/1.1 with optional WS and SSE upgrades.
     PROTO_TELNET = 2,   ///< Telnet (RFC 854).
@@ -4197,12 +4186,12 @@ EMBED_ENUM_BYTE(ProtoConn,
  * application and forwarded to like any other.
  */
 EMBED_ENUM_BYTE(protocore_if_kind,
-    PROTOCORE_IF_ANY = 0,      ///< unspecified kind, and the filter that matches any interface
-    PROTOCORE_IF_WIFI_STA = 1, ///< station interface (joined to an AP / your LAN)
-    PROTOCORE_IF_WIFI_AP = 2,  ///< softAP interface (clients joined to the device)
-    PROTOCORE_IF_ETH = 3,      ///< wired Ethernet PHY
-    PROTOCORE_IF_BUS = 4,      ///< a bus bridged onto the network (uart, spi, can)
-    PROTOCORE_IF_RADIO = 5,    ///< a non-wifi radio
+                PROTOCORE_IF_ANY = 0,      ///< unspecified kind, and the filter that matches any interface
+                PROTOCORE_IF_WIFI_STA = 1, ///< station interface (joined to an AP / your LAN)
+                PROTOCORE_IF_WIFI_AP = 2,  ///< softAP interface (clients joined to the device)
+                PROTOCORE_IF_ETH = 3,      ///< wired Ethernet PHY
+                PROTOCORE_IF_BUS = 4,      ///< a bus bridged onto the network (uart, spi, can)
+                PROTOCORE_IF_RADIO = 5,    ///< a non-wifi radio
 );
 
 // --- feature dependency guards (centralized; see the BUILD-FLAG DEPENDENCY TREE

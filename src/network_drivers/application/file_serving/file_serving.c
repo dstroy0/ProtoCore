@@ -28,11 +28,11 @@
 #include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
 #include "protocore.h"
 #include "server/storage/filesystem/filesystem.h" // protocore_fs_* - the accessor owns the root, the join, and the .. guard
-#include "shared/mime/mime.h"                     // mime_type, PROTOCORE_MIME_*
 #include "shared/http_date/http_date.h"           // HttpDate.format: the IMF-fixdate of a file
+#include "shared/mime/mime.h"                     // mime_type, PROTOCORE_MIME_*
 #include "shared/time_compat/time_compat.h"       // protocore_gmtime_r (portable reentrant UTC)
 #include "verba_scribo/verba_scribo.h"            // verba_scribo frame builder
-#include <time.h> // time_t and struct tm: the dates of a file
+#include <time.h>                                 // time_t and struct tm: the dates of a file
 
 // ---------------------------------------------------------------------------
 // File serving

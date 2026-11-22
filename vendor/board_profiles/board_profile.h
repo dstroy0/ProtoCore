@@ -142,8 +142,8 @@
 #include "esp/h4_defaults.h"
 #else
 // The classic ESP32 profile, and then the universal floor.
-#include "esp/esp32_defaults.h"
 #include "classic_defaults.h"
+#include "esp/esp32_defaults.h"
 #endif
 
 // The SHA and AES HALs drive the unified accelerator by its register window, so a die carries the

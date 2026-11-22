@@ -26,7 +26,7 @@
 // Node identifiers (namespace PROTOCORE_ROBOTICS_NS). Objects end in 0; their variables count up from it.
 // ---------------------------------------------------------------------------
 enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
-                       // wire compares); enum class would force a cast at every use
+                // wire compares); enum class would force a cast at every use
 {
     MOTIONDEVICESYSTEM = 6000,
 
@@ -68,7 +68,7 @@ enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used a
 
 // Axis variable sub-ids (offset from the Axis_k object id).
 enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA sub-ids used as bare uint32_t offsets; enum
-                       // class would force a cast at every use
+                // class would force a cast at every use
 {
     AXVAR_POSITION = 1,
     AXVAR_SPEED = 2,

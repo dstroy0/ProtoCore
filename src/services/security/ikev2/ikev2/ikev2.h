@@ -154,93 +154,77 @@ EMBED_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief Exchange Type (RFC 7296 sec 3.1). */
-EMBED_ENUM_BYTE(IkeExchange,
-    IKE_SA_INIT = 34,
-    IKE_AUTH = 35,
-    IKE_CREATE_CHILD_SA = 36,
-    IKE_INFORMATIONAL = 37,
-);
+EMBED_ENUM_BYTE(IkeExchange, IKE_SA_INIT = 34, IKE_AUTH = 35, IKE_CREATE_CHILD_SA = 36, IKE_INFORMATIONAL = 37, );
 
 /** @brief Next Payload / payload types; zero ends the chain (RFC 7296 sec 3.2). */
-EMBED_ENUM_BYTE(IkePayloadType,
-    IKE_PL_NONE = 0,
-    IKE_PL_SA = 33,      ///< Security Association, SA
-    IKE_PL_KE = 34,      ///< Key Exchange, KE
-    IKE_PL_IDI = 35,     ///< Identification - Initiator, IDi
-    IKE_PL_IDR = 36,     ///< Identification - Responder, IDr
-    IKE_PL_CERT = 37,    ///< Certificate, CERT
-    IKE_PL_CERTREQ = 38, ///< Certificate Request, CERTREQ
-    IKE_PL_AUTH = 39,    ///< Authentication, AUTH
-    IKE_PL_NONCE = 40,   ///< Nonce, Ni or Nr
-    IKE_PL_NOTIFY = 41,  ///< Notify, N
-    IKE_PL_DELETE = 42,  ///< Delete, D
-    IKE_PL_VENDOR = 43,  ///< Vendor ID, V
-    IKE_PL_TSI = 44,     ///< Traffic Selector - Initiator, TSi
-    IKE_PL_TSR = 45,     ///< Traffic Selector - Responder, TSr
-    IKE_PL_SK = 46,      ///< Encrypted and Authenticated, SK
-    IKE_PL_CP = 47,      ///< Configuration, CP
-    IKE_PL_EAP = 48,     ///< Extensible Authentication, EAP
-    IKE_PL_SKF = 53,     ///< Encrypted and Authenticated Fragment, SKF (RFC 7383 sec 2.5)
+EMBED_ENUM_BYTE(IkePayloadType, IKE_PL_NONE = 0,
+                IKE_PL_SA = 33,      ///< Security Association, SA
+                IKE_PL_KE = 34,      ///< Key Exchange, KE
+                IKE_PL_IDI = 35,     ///< Identification - Initiator, IDi
+                IKE_PL_IDR = 36,     ///< Identification - Responder, IDr
+                IKE_PL_CERT = 37,    ///< Certificate, CERT
+                IKE_PL_CERTREQ = 38, ///< Certificate Request, CERTREQ
+                IKE_PL_AUTH = 39,    ///< Authentication, AUTH
+                IKE_PL_NONCE = 40,   ///< Nonce, Ni or Nr
+                IKE_PL_NOTIFY = 41,  ///< Notify, N
+                IKE_PL_DELETE = 42,  ///< Delete, D
+                IKE_PL_VENDOR = 43,  ///< Vendor ID, V
+                IKE_PL_TSI = 44,     ///< Traffic Selector - Initiator, TSi
+                IKE_PL_TSR = 45,     ///< Traffic Selector - Responder, TSr
+                IKE_PL_SK = 46,      ///< Encrypted and Authenticated, SK
+                IKE_PL_CP = 47,      ///< Configuration, CP
+                IKE_PL_EAP = 48,     ///< Extensible Authentication, EAP
+                IKE_PL_SKF = 53,     ///< Encrypted and Authenticated Fragment, SKF (RFC 7383 sec 2.5)
 );
 
 /** @brief Transform Type (RFC 7296 sec 3.3.2). */
 EMBED_ENUM_BYTE(IkeTransformType,
-    IKE_TRANSFORM_ENCR = 1,  ///< Encryption Algorithm
-    IKE_TRANSFORM_PRF = 2,   ///< Pseudorandom Function
-    IKE_TRANSFORM_INTEG = 3, ///< Integrity Algorithm
-    IKE_TRANSFORM_DH = 4,    ///< Diffie-Hellman Group
-    IKE_TRANSFORM_ESN = 5,   ///< Extended Sequence Numbers
+                IKE_TRANSFORM_ENCR = 1,  ///< Encryption Algorithm
+                IKE_TRANSFORM_PRF = 2,   ///< Pseudorandom Function
+                IKE_TRANSFORM_INTEG = 3, ///< Integrity Algorithm
+                IKE_TRANSFORM_DH = 4,    ///< Diffie-Hellman Group
+                IKE_TRANSFORM_ESN = 5,   ///< Extended Sequence Numbers
 );
 
 /** @brief Protocol ID (RFC 7296 sec 3.3.1, sec 3.10, sec 3.11). */
 EMBED_ENUM_BYTE(IkeProtocol,
-    IKE_PROTO_NONE = 0, ///< the notification concerns no existing SA and the SPI field is empty
-    IKE_PROTO_IKE = 1,
-    IKE_PROTO_AH = 2,
-    IKE_PROTO_ESP = 3,
-);
+                IKE_PROTO_NONE = 0, ///< the notification concerns no existing SA and the SPI field is empty
+                IKE_PROTO_IKE = 1, IKE_PROTO_AH = 2, IKE_PROTO_ESP = 3, );
 
 /** @brief ID Type (RFC 7296 sec 3.5). */
 EMBED_ENUM_BYTE(IkeIdType,
-    IKE_ID_RESERVED = 0, ///< reserved; the value an out member holds before a parse succeeds
-    IKE_ID_IPV4_ADDR = 1,
-    IKE_ID_FQDN = 2,
-    IKE_ID_RFC822_ADDR = 3,
-    IKE_ID_IPV6_ADDR = 5,
-    IKE_ID_KEY_ID = 11,
-);
+                IKE_ID_RESERVED = 0, ///< reserved; the value an out member holds before a parse succeeds
+                IKE_ID_IPV4_ADDR = 1, IKE_ID_FQDN = 2, IKE_ID_RFC822_ADDR = 3, IKE_ID_IPV6_ADDR = 5,
+                IKE_ID_KEY_ID = 11, );
 
 /** @brief Auth Method (RFC 7296 sec 3.8). */
 EMBED_ENUM_BYTE(IkeAuthMethod,
-    IKE_AUTH_RESERVED = 0,    ///< reserved; the value an out member holds before a parse succeeds
-    IKE_AUTH_RSA_SIG = 1,     ///< RSA Digital Signature
-    IKE_AUTH_PSK = 2,         ///< Shared Key Message Integrity Code
-    IKE_AUTH_DSS_SIG = 3,     ///< DSS Digital Signature
-    IKE_AUTH_DIGITAL_SIG = 14 ///< Digital Signature (RFC 7427 sec 3)
+                IKE_AUTH_RESERVED = 0,    ///< reserved; the value an out member holds before a parse succeeds
+                IKE_AUTH_RSA_SIG = 1,     ///< RSA Digital Signature
+                IKE_AUTH_PSK = 2,         ///< Shared Key Message Integrity Code
+                IKE_AUTH_DSS_SIG = 3,     ///< DSS Digital Signature
+                IKE_AUTH_DIGITAL_SIG = 14 ///< Digital Signature (RFC 7427 sec 3)
 );
 
 /** @brief TS Type (RFC 7296 sec 3.13.1). */
-EMBED_ENUM_BYTE(IkeTsType,
-    IKE_TS_IPV4_ADDR_RANGE = 7,
-    IKE_TS_IPV6_ADDR_RANGE = 8,
-);
+EMBED_ENUM_BYTE(IkeTsType, IKE_TS_IPV4_ADDR_RANGE = 7, IKE_TS_IPV6_ADDR_RANGE = 8, );
 
 /** @brief CFG Type (RFC 7296 sec 3.15.1). */
 EMBED_ENUM_BYTE(IkeCfgType,
-    IKE_CFG_REQUEST = 1, ///< CFG_REQUEST
-    IKE_CFG_REPLY = 2,   ///< CFG_REPLY
-    IKE_CFG_SET = 3,     ///< CFG_SET
-    IKE_CFG_ACK = 4,     ///< CFG_ACK
+                IKE_CFG_REQUEST = 1, ///< CFG_REQUEST
+                IKE_CFG_REPLY = 2,   ///< CFG_REPLY
+                IKE_CFG_SET = 3,     ///< CFG_SET
+                IKE_CFG_ACK = 4,     ///< CFG_ACK
 );
 
 /** @brief Handshake progress across IKE_SA_INIT and IKE_AUTH (RFC 7296 sec 1.2). */
 EMBED_ENUM_BYTE(IkeState,
-    IKE_ST_INIT = 0,     ///< nothing sent yet
-    IKE_ST_SA_INIT_SENT, ///< IKE_SA_INIT emitted, awaiting the response
-    IKE_ST_SA_INIT_DONE, ///< the peer's IKE_SA_INIT consumed and the SK_* keys derived
-    IKE_ST_AUTH_SENT,    ///< IKE_AUTH request emitted, awaiting the response
-    IKE_ST_ESTABLISHED,  ///< the peer's AUTH verified; the IKE SA is up
-    IKE_ST_FAILED,       ///< a received message was rejected
+                IKE_ST_INIT = 0,     ///< nothing sent yet
+                IKE_ST_SA_INIT_SENT, ///< IKE_SA_INIT emitted, awaiting the response
+                IKE_ST_SA_INIT_DONE, ///< the peer's IKE_SA_INIT consumed and the SK_* keys derived
+                IKE_ST_AUTH_SENT,    ///< IKE_AUTH request emitted, awaiting the response
+                IKE_ST_ESTABLISHED,  ///< the peer's AUTH verified; the IKE SA is up
+                IKE_ST_FAILED,       ///< a received message was rejected
 );
 
 /** @brief The IKE header, decoded or to be encoded (RFC 7296 sec 3.1). */

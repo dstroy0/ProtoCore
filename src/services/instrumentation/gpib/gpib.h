@@ -39,17 +39,17 @@ EMBED_BEGIN_DECLS
 
 /** @brief GPIB terminator appended to data sent to the instrument (`++eos`). */
 EMBED_ENUM_BYTE(GpibEos,
-    GPIB_EOS_CRLF = 0,           ///< GPIB_EOS_CR + GPIB_EOS_LF
-    GPIB_EOS_CR = 1,             ///< GPIB_EOS_CR
-    GPIB_EOS_LF = 2,             ///< GPIB_EOS_LF
-    GPIB_EOS_PROTOCORE_NONE = 3, ///< none (use for binary payloads)
+                GPIB_EOS_CRLF = 0,           ///< GPIB_EOS_CR + GPIB_EOS_LF
+                GPIB_EOS_CR = 1,             ///< GPIB_EOS_CR
+                GPIB_EOS_LF = 2,             ///< GPIB_EOS_LF
+                GPIB_EOS_PROTOCORE_NONE = 3, ///< none (use for binary payloads)
 );
 
 /** @brief Read-termination mode (`++read`). */
 EMBED_ENUM_BYTE(GpibRead,
-    UNTIL_TIMEOUT, ///< `++read` - read until the inter-character timeout only (NOT until EOI)
-    UNTIL_EOI,     ///< `++read eoi` - read until EOI or timeout
-    UNTIL_CHAR,    ///< `++read <char>` - read until the given character or timeout
+                UNTIL_TIMEOUT, ///< `++read` - read until the inter-character timeout only (NOT until EOI)
+                UNTIL_EOI,     ///< `++read eoi` - read until EOI or timeout
+                UNTIL_CHAR,    ///< `++read <char>` - read until the given character or timeout
 );
 
 /**

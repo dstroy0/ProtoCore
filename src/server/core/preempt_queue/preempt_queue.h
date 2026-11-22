@@ -51,12 +51,11 @@ EMBED_BEGIN_DECLS
  *        internal ingest preempts user work.
  */
 EMBED_ENUM_BYTE(protocore_pq_lane,
-    PROTOCORE_PQ_LANE_USER = 0, ///< exposed to the app (no-lane API); lowest priority
-    PROTOCORE_PQ_LANE_DMA,      ///< internal: DMA peripheral transfers (highest)
-    PROTOCORE_PQ_LANE_FORWARD,  ///< internal: interface forwarding
-    PROTOCORE_PQ_LANE_DEVICE,   ///< internal: device access
-    PROTOCORE_PQ_LANE_COUNT
-);
+                PROTOCORE_PQ_LANE_USER = 0, ///< exposed to the app (no-lane API); lowest priority
+                PROTOCORE_PQ_LANE_DMA,      ///< internal: DMA peripheral transfers (highest)
+                PROTOCORE_PQ_LANE_FORWARD,  ///< internal: interface forwarding
+                PROTOCORE_PQ_LANE_DEVICE,   ///< internal: device access
+                PROTOCORE_PQ_LANE_COUNT);
 
 /**
  * @brief Handler a lane's processing task invokes for each dequeued item.

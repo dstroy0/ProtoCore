@@ -26,10 +26,7 @@ EMBED_BEGIN_DECLS
 #define IDEMIP_ARP_PRO_IPV4 IDEMIP_ETHERTYPE_IPV4
 
 /** @brief Opcode (ar$op). RFC 826: ares_op$REQUEST | ares_op$REPLY. */
-EMBED_ENUM_BYTE(IdemIpArpOp,
-    IDEMIP_ARP_OP_REQUEST = 1,
-    IDEMIP_ARP_OP_REPLY = 2,
-);
+EMBED_ENUM_BYTE(IdemIpArpOp, IDEMIP_ARP_OP_REQUEST = 1, IDEMIP_ARP_OP_REPLY = 2, );
 
 /** @brief Length of an IPv4 protocol address (ar$pln), in bytes. */
 #define IDEMIP_ARP_PLN_IPV4 4u

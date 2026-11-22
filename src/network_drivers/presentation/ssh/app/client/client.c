@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SSH
 
-#include "network_drivers/presentation/ssh/app/client/client.h"
 #include "memoria_operor/memoria_operor.h"
+#include "network_drivers/presentation/ssh/app/client/client.h"
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 

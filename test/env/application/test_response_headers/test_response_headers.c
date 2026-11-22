@@ -86,7 +86,8 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state,
+                   .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
