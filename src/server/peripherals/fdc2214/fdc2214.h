@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_FDC2214
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_I2C_DEVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -145,7 +145,7 @@ typedef struct
     Fdc2214BuildConfigArgs build_config_args;
     Fdc2214BeginArgs begin_args;
     Fdc2214ReadCh0Args read_ch0_args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t value;
     uint8_t flags;
     uint64_t hz;
@@ -199,7 +199,7 @@ static const Fdc2214Ns Fdc2214 __attribute__((unused)) = {
  */
 uint8_t *protocore_fdc2214_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FDC2214
 

@@ -99,14 +99,14 @@ size_t protocore_ble_gatt_att_error_rsp(uint8_t *work, uint8_t req_op, uint16_t 
     return 5;
 }
 
-proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_t len, AttPdu *out)
+embed_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_t len, AttPdu *out)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     (void)work;
 
     if (!pdu || !out || len < 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->opcode = pdu[0];
     out->handle = 0;
@@ -120,31 +120,31 @@ proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_
     case ATT_OP_ERROR_RSP:
         if (len < 5)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->req_op = pdu[1];
         out->handle = (uint16_t)(pdu[2] | (pdu[3] << 8));
         out->error = pdu[4];
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ATT_OP_READ_REQ:
         if (len < 3)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->handle = (uint16_t)(pdu[1] | (pdu[2] << 8));
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ATT_OP_READ_RSP:
         if (len > 1)
         {
             out->value = pdu + 1;
             out->value_len = len - 1;
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ATT_OP_WRITE_REQ:
     case ATT_OP_HANDLE_VALUE_NTF:
         if (len < 3)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->handle = (uint16_t)(pdu[1] | (pdu[2] << 8));
         if (len > 3)
@@ -152,11 +152,11 @@ proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_
             out->value = pdu + 3;
             out->value_len = len - 3;
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ATT_OP_WRITE_RSP:
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     default:
-        ok = PROTO_TRUE; // unknown opcode: still report it, no fixed fields
+        ok = EMBED_TRUE; // unknown opcode: still report it, no fixed fields
         break;
     }
     return ok;

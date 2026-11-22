@@ -33,21 +33,21 @@ void protocore_quic_tp_defaults(uint8_t *work, QuicTransportParams *tp)
 }
 
 // Append one parameter: ID (varint) || Length (varint) || raw value bytes.
-static proto_bool put_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val,
+static embed_bool put_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val,
                             size_t val_len)
 {
     size_t quic_varint_n = QuicVarint.encode(work, out + *p, cap - *p, id);
     size_t n = quic_varint_n;
     if (!n)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *p += n;
     quic_varint_n = QuicVarint.encode(work, out + *p, cap - *p, val_len);
     n = quic_varint_n;
     if (!n)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *p += n;
     if (val_len)
@@ -56,23 +56,23 @@ static proto_bool put_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, 
         // size_t wraparound an analyzer flags as a possible destination overflow (cpp:S3519).
         if (val_len > cap - *p)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *p, .src = val, .bytes = val_len);
         *p += val_len;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append a varint-valued parameter (Value is itself a varint).
-static proto_bool put_varint_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, uint64_t value)
+static embed_bool put_varint_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, uint64_t value)
 {
     uint8_t v[8];
     size_t quic_varint_n = QuicVarint.encode(work, v, sizeof(v), value);
     size_t vlen = quic_varint_n;
     if (!vlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return put_param(work, out, cap, p, id, v, vlen);
 }
@@ -80,7 +80,7 @@ static proto_bool put_varint_param(uint8_t *work, uint8_t *out, size_t cap, size
 size_t protocore_quic_tp_encode(uint8_t *work, const QuicTransportParams *tp, uint8_t *out, size_t cap)
 {
     size_t p = 0;
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     if (tp->has_original_dcid)
     {
         // This is the first assignment in the ok-chain (ok is still its line-64 default), so the
@@ -114,36 +114,36 @@ size_t protocore_quic_tp_encode(uint8_t *work, const QuicTransportParams *tp, ui
 }
 
 // Decode the varint that IS the whole value of a varint-valued parameter (must consume exactly len).
-static proto_bool value_varint(uint8_t *work, const uint8_t *val, size_t len, uint64_t *out)
+static embed_bool value_varint(uint8_t *work, const uint8_t *val, size_t len, uint64_t *out)
 {
     size_t consumed = 0;
-    proto_bool quic_varint_ok = QuicVarint.decode(work, val, len, out, &consumed);
+    embed_bool quic_varint_ok = QuicVarint.decode(work, val, len, out, &consumed);
     if (!quic_varint_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return consumed == len;
 }
 
 // Copy a connection-ID value (<= QUIC_MAX_CID_LEN) into a fixed field.
-static proto_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t *dst_len, proto_bool *has)
+static embed_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t *dst_len, embed_bool *has)
 {
     if (len > QUIC_MAX_CID_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst, .src = val, .bytes = len);
     *dst_len = (uint8_t)len;
-    *has = PROTO_TRUE;
-    return PROTO_TRUE;
+    *has = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
 // Apply a connection-ID transport parameter. *handled is set true if id names a CID param (whether or
 // not the copy succeeded); false leaves it for another category. Returns false only on a bad value.
-static proto_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
-                                    proto_bool *handled)
+static embed_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
+                                    embed_bool *handled)
 {
-    *handled = PROTO_TRUE;
+    *handled = EMBED_TRUE;
     switch (id)
     {
     case QUIC_TP_ORIGINAL_DCID:
@@ -153,16 +153,16 @@ static proto_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen
     case QUIC_TP_RETRY_SCID:
         return copy_cid(val, vlen, tp->retry_scid, &tp->retry_scid_len, &tp->has_retry_scid);
     default:
-        *handled = PROTO_FALSE;
-        return PROTO_TRUE;
+        *handled = EMBED_FALSE;
+        return EMBED_TRUE;
     }
 }
 
 // Apply a varint-valued transport parameter with its RFC 9000 range checks. *handled is set as above.
-static proto_bool quic_tp_apply_varint(uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen,
-                                       QuicTransportParams *tp, proto_bool *handled)
+static embed_bool quic_tp_apply_varint(uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen,
+                                       QuicTransportParams *tp, embed_bool *handled)
 {
-    *handled = PROTO_TRUE;
+    *handled = EMBED_TRUE;
     switch (id)
     {
     case QUIC_TP_MAX_IDLE_TIMEOUT:
@@ -191,46 +191,46 @@ static proto_bool quic_tp_apply_varint(uint8_t *work, uint64_t id, const uint8_t
     case QUIC_TP_ACTIVE_CID_LIMIT:
         return value_varint(work, val, vlen, &tp->active_connection_id_limit) && tp->active_connection_id_limit >= 2;
     default:
-        *handled = PROTO_FALSE;
-        return PROTO_TRUE;
+        *handled = EMBED_FALSE;
+        return EMBED_TRUE;
     }
 }
 
 // Dispatch one parsed transport parameter to tp; false on a malformed / out-of-range value. Unknown
 // (GREASE) IDs are silently ignored, matching RFC 9000 §7.4.1.
-static proto_bool quic_tp_apply(uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp)
+static embed_bool quic_tp_apply(uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp)
 {
-    proto_bool handled = PROTO_FALSE;
+    embed_bool handled = EMBED_FALSE;
     if (!quic_tp_apply_cid(id, val, vlen, tp, &handled))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (handled)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (!quic_tp_apply_varint(work, id, val, vlen, tp, &handled))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (handled)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (id == QUIC_TP_DISABLE_ACTIVE_MIGRATION)
     {
         if (vlen != 0)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
-        tp->disable_active_migration = PROTO_TRUE;
+        tp->disable_active_migration = EMBED_TRUE;
     }
-    return PROTO_TRUE; // unknown / GREASE: skip
+    return EMBED_TRUE; // unknown / GREASE: skip
 }
 
-proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicTransportParams *tp)
+embed_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicTransportParams *tp)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     QuicTp.defaults(work, tp);
     uint32_t seen = 0; // dup-guard bitmask over the known IDs (all < 32)
 
@@ -240,21 +240,21 @@ proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len
         uint64_t id = 0;
         uint64_t vlen = 0;
         size_t c = 0;
-        proto_bool quic_varint_ok = QuicVarint.decode(work, buf + off, len - off, &id, &c);
+        embed_bool quic_varint_ok = QuicVarint.decode(work, buf + off, len - off, &id, &c);
         if (!quic_varint_ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off += c;
         quic_varint_ok = QuicVarint.decode(work, buf + off, len - off, &vlen, &c);
         if (!quic_varint_ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off += c;
         if (off + vlen > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         const uint8_t *val = buf + off;
         off += vlen;
@@ -264,7 +264,7 @@ proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len
             uint32_t bit = 1u << id;
             if (seen & bit)
             {
-                ok = PROTO_FALSE; // a known parameter must not appear twice
+                ok = EMBED_FALSE; // a known parameter must not appear twice
                 return ok;
             }
             seen |= bit;
@@ -272,10 +272,10 @@ proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len
 
         if (!quic_tp_apply(work, id, val, vlen, tp))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_HTTP3

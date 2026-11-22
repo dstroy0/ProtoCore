@@ -43,7 +43,7 @@ void tearDown(void)
 }
 
 // Build one instruction word and return it as the 16-bit value the two octets carry, MSB first.
-static uint16_t word_of(proto_bool read, uint16_t addr, uint8_t nbytes)
+static uint16_t word_of(embed_bool read, uint16_t addr, uint8_t nbytes)
 {
     uint8_t w[2] = {0xA5u, 0x5Au};
     Ad9238V.build_instruction_args.read = read;
@@ -66,14 +66,14 @@ static uint16_t word_of(proto_bool read, uint16_t addr, uint8_t nbytes)
 //   A12..A0        -> bits 12:0      -> the address itself
 void test_an877_instruction_phase_bit_field(void)
 {
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, word_of(PROTO_FALSE, 0x0000u, 1u));
-    TEST_ASSERT_EQUAL_HEX16(0x8000u, word_of(PROTO_TRUE, 0x0000u, 1u));
-    TEST_ASSERT_EQUAL_HEX16(0x0001u, word_of(PROTO_FALSE, 0x0001u, 1u));
-    TEST_ASSERT_EQUAL_HEX16(0x80FFu, word_of(PROTO_TRUE, 0x00FFu, 1u));
-    TEST_ASSERT_EQUAL_HEX16(0x2000u, word_of(PROTO_FALSE, 0x0000u, 2u));
-    TEST_ASSERT_EQUAL_HEX16(0x4000u, word_of(PROTO_FALSE, 0x0000u, 3u));
-    TEST_ASSERT_EQUAL_HEX16(0x6000u, word_of(PROTO_FALSE, 0x0000u, 4u));
-    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, word_of(PROTO_TRUE, 0x1FFFu, 4u));
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, word_of(EMBED_FALSE, 0x0000u, 1u));
+    TEST_ASSERT_EQUAL_HEX16(0x8000u, word_of(EMBED_TRUE, 0x0000u, 1u));
+    TEST_ASSERT_EQUAL_HEX16(0x0001u, word_of(EMBED_FALSE, 0x0001u, 1u));
+    TEST_ASSERT_EQUAL_HEX16(0x80FFu, word_of(EMBED_TRUE, 0x00FFu, 1u));
+    TEST_ASSERT_EQUAL_HEX16(0x2000u, word_of(EMBED_FALSE, 0x0000u, 2u));
+    TEST_ASSERT_EQUAL_HEX16(0x4000u, word_of(EMBED_FALSE, 0x0000u, 3u));
+    TEST_ASSERT_EQUAL_HEX16(0x6000u, word_of(EMBED_FALSE, 0x0000u, 4u));
+    TEST_ASSERT_EQUAL_HEX16(0xFFFFu, word_of(EMBED_TRUE, 0x1FFFu, 4u));
 }
 
 // AN-877 WORD LENGTH: "The value represented by W1:W0 + 1 is the number of bytes to transfer", and
@@ -83,7 +83,7 @@ void test_an877_word_length_is_w1w0_plus_one(void)
 {
     for (uint8_t n = 1u; n <= 4u; n++)
     {
-        uint16_t word = word_of(PROTO_FALSE, 0x0123u, n);
+        uint16_t word = word_of(EMBED_FALSE, 0x0123u, n);
         TEST_ASSERT_EQUAL_HEX16((uint16_t)(n - 1u), (uint16_t)((word >> 13) & 0x3u));
         TEST_ASSERT_EQUAL_HEX16(0x0123u, (uint16_t)(word & 0x1FFFu));
     }
@@ -95,19 +95,19 @@ void test_an877_word_length_is_w1w0_plus_one(void)
 void test_an877_address_field_is_thirteen_bits(void)
 {
     uint8_t w[2];
-    Ad9238V.build_instruction_args.read = PROTO_FALSE;
+    Ad9238V.build_instruction_args.read = EMBED_FALSE;
     Ad9238V.build_instruction_args.reg_addr = 0x1FFFu;
     Ad9238V.build_instruction_args.nbytes = 1u;
     Ad9238V.build_instruction_args.out2 = w;
     Ad9238.build_instruction(ad9238_work);
     TEST_ASSERT_TRUE(Ad9238V.ok);
-    Ad9238V.build_instruction_args.read = PROTO_FALSE;
+    Ad9238V.build_instruction_args.read = EMBED_FALSE;
     Ad9238V.build_instruction_args.reg_addr = 0x2000u;
     Ad9238V.build_instruction_args.nbytes = 1u;
     Ad9238V.build_instruction_args.out2 = w;
     Ad9238.build_instruction(ad9238_work);
     TEST_ASSERT_FALSE(Ad9238V.ok);
-    Ad9238V.build_instruction_args.read = PROTO_TRUE;
+    Ad9238V.build_instruction_args.read = EMBED_TRUE;
     Ad9238V.build_instruction_args.reg_addr = 0xFFFFu;
     Ad9238V.build_instruction_args.nbytes = 1u;
     Ad9238V.build_instruction_args.out2 = w;
@@ -133,8 +133,8 @@ void test_an877_read_write_bit_is_the_only_difference(void)
 {
     for (uint16_t addr = 0u; addr <= 0x1FFFu; addr = (uint16_t)(addr + 0x0111u))
     {
-        uint16_t r = word_of(PROTO_TRUE, addr, 1u);
-        uint16_t w = word_of(PROTO_FALSE, addr, 1u);
+        uint16_t r = word_of(EMBED_TRUE, addr, 1u);
+        uint16_t w = word_of(EMBED_FALSE, addr, 1u);
         TEST_ASSERT_EQUAL_HEX16(0x8000u, (uint16_t)(r ^ w));
     }
 }
@@ -236,19 +236,19 @@ void test_an877_output_test_mode_codes(void)
 void test_byte_counts_outside_one_to_four_are_refused(void)
 {
     uint8_t w[2];
-    Ad9238V.build_instruction_args.read = PROTO_FALSE;
+    Ad9238V.build_instruction_args.read = EMBED_FALSE;
     Ad9238V.build_instruction_args.reg_addr = 0x0000u;
     Ad9238V.build_instruction_args.nbytes = 0u;
     Ad9238V.build_instruction_args.out2 = w;
     Ad9238.build_instruction(ad9238_work);
     TEST_ASSERT_FALSE(Ad9238V.ok);
-    Ad9238V.build_instruction_args.read = PROTO_FALSE;
+    Ad9238V.build_instruction_args.read = EMBED_FALSE;
     Ad9238V.build_instruction_args.reg_addr = 0x0000u;
     Ad9238V.build_instruction_args.nbytes = 5u;
     Ad9238V.build_instruction_args.out2 = w;
     Ad9238.build_instruction(ad9238_work);
     TEST_ASSERT_FALSE(Ad9238V.ok);
-    Ad9238V.build_instruction_args.read = PROTO_FALSE;
+    Ad9238V.build_instruction_args.read = EMBED_FALSE;
     Ad9238V.build_instruction_args.reg_addr = 0x0000u;
     Ad9238V.build_instruction_args.nbytes = 255u;
     Ad9238V.build_instruction_args.out2 = w;
@@ -261,7 +261,7 @@ void test_byte_counts_outside_one_to_four_are_refused(void)
 void test_null_and_undersized_buffers_fail_closed(void)
 {
     uint8_t out[3];
-    Ad9238V.build_instruction_args.read = PROTO_FALSE;
+    Ad9238V.build_instruction_args.read = EMBED_FALSE;
     Ad9238V.build_instruction_args.reg_addr = 0x0000u;
     Ad9238V.build_instruction_args.nbytes = 1u;
     Ad9238V.build_instruction_args.out2 = NULL;

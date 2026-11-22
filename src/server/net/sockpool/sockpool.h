@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_SOCKPOOL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -32,7 +32,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief One connection slot. */
 typedef struct
 {
-    proto_bool in_use;
+    embed_bool in_use;
     uint32_t id;        ///< application connection id (e.g. a socket fd / handle).
     uint32_t last_used; ///< tick of the last acquire/touch (for LRU).
 } SockSlot;
@@ -45,12 +45,11 @@ typedef struct
 } SockPool;
 
 /** @brief Acquire outcome (the sole return of protocore_sockpool_acquire). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SockAcq,
     SOCK_ACQ_FREE = 0,     ///< a free slot was used.
     SOCK_ACQ_RECYCLED = 1, ///< the pool was full; the LRU slot was recycled (see evicted_id).
     SOCK_ACQ_FAIL = 2      ///< the pool has zero slots / bad args.
-} SockAcq;
+);
 
 /** @brief What init takes: p, slots, n. */
 typedef struct
@@ -139,7 +138,7 @@ typedef struct
     SockpoolReleaseArgs release_args;
     SockpoolFindArgs find_args;
     SockpoolInUseArgs in_use_args;
-    proto_bool ok;
+    embed_bool ok;
     SockAcq acq;
     size_t n;
 } SockpoolVars;
@@ -180,7 +179,7 @@ static const SockpoolNs Sockpool __attribute__((unused)) = {
     .in_use = protocore_sockpool_in_use,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOCKPOOL
 

@@ -14,11 +14,13 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
+#if PROTOCORE_ENABLE_SSH
+
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/hash/sha512/sha512.h"
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition of SshKexHashCtx - private to this TU. It sits at KEXHASH_OFF_CTX in the
 // caller's borrow, so its size never leaves this file and no consumer can name it.
@@ -28,7 +30,7 @@ PROTOCORE_BEGIN_DECLS
 // context storing them.
 typedef struct
 {
-    proto_bool is512; ///< which hash the last init bound
+    embed_bool is512; ///< which hash the last init bound
 } SshKexHashCtx;
 
 // The caller's borrow, split: the region the bound hash runs in, then the selection. SHA-512 is the
@@ -58,7 +60,7 @@ static_assert(KEXHASH_OFF_CTX % _Alignof(SshKexHashCtx) == 0,
 
 void protocore_ssh_kex_hash_init(uint8_t *work)
 {
-    SshKexHashV.ok = PROTO_FALSE;
+    SshKexHashV.ok = EMBED_FALSE;
     SshKexHashV.len = 0;
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     ctx->is512 = SshKexHashV.init_args.is512;
@@ -72,12 +74,12 @@ void protocore_ssh_kex_hash_init(uint8_t *work)
         Sha256.init(KEXHASH_HASH(work));
         SshKexHashV.len = PROTOCORE_SHA256_DIGEST_LEN;
     }
-    SshKexHashV.ok = PROTO_TRUE;
+    SshKexHashV.ok = EMBED_TRUE;
 }
 
 void protocore_ssh_kex_hash_update(uint8_t *work)
 {
-    SshKexHashV.ok = PROTO_FALSE;
+    SshKexHashV.ok = EMBED_FALSE;
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {
@@ -87,12 +89,12 @@ void protocore_ssh_kex_hash_update(uint8_t *work)
     {
         Sha256.update(KEXHASH_HASH(work), SshKexHashV.update_args.data, SshKexHashV.update_args.len);
     }
-    SshKexHashV.ok = PROTO_TRUE;
+    SshKexHashV.ok = EMBED_TRUE;
 }
 
 void protocore_ssh_kex_hash_final(uint8_t *work)
 {
-    SshKexHashV.ok = PROTO_FALSE;
+    SshKexHashV.ok = EMBED_FALSE;
     if (!SshKexHashV.final_args.out)
     {
         return;
@@ -108,10 +110,12 @@ void protocore_ssh_kex_hash_final(uint8_t *work)
         Sha256.final(KEXHASH_HASH(work), SshKexHashV.final_args.out);
         SshKexHashV.len = PROTOCORE_SHA256_DIGEST_LEN;
     }
-    SshKexHashV.ok = PROTO_TRUE;
+    SshKexHashV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 SshKexHashVars SshKexHashV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH

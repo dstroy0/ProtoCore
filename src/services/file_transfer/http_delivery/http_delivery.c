@@ -13,7 +13,7 @@
 #include "services/file_transfer/http_delivery/http_delivery.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -117,12 +117,12 @@ void protocore_http_delivery_sw_manifest(uint8_t *work)
 __attribute__((weak)) void protocore_http_delivery_serve_sw(uint8_t *work)
 {
     (void)work;
-    HttpDeliveryV.ok = PROTO_FALSE;
+    HttpDeliveryV.ok = EMBED_FALSE;
 }
 
 /** @brief The operands and the outcome. */
 HttpDeliveryVars HttpDeliveryV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_DELIVERY

@@ -91,17 +91,17 @@ static const uint8_t ODCID[8] = {0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8}
 static const uint8_t CLIENT_SCID[4] = {0xc1, 0xc2, 0xc3, 0xc4};
 static const uint8_t SERVER_SCID[4] = {0x51, 0x52, 0x53, 0x54};
 
-static proto_bool g_hs_done;
+static embed_bool g_hs_done;
 static uint8_t g_stream_data[256];
 static size_t g_stream_len;
 static uint64_t g_stream_id;
-static proto_bool g_stream_fin;
+static embed_bool g_stream_fin;
 
 static void on_hs_done(void *, uint8_t *)
 {
-    g_hs_done = PROTO_TRUE;
+    g_hs_done = EMBED_TRUE;
 }
-static void on_stream_data(void *, uint8_t *, uint64_t id, const uint8_t *data, size_t len, proto_bool fin)
+static void on_stream_data(void *, uint8_t *, uint64_t id, const uint8_t *data, size_t len, embed_bool fin)
 {
     g_stream_id = id;
     if (len && g_stream_len + len <= sizeof(g_stream_data))
@@ -121,10 +121,10 @@ static void fill()
         SERVER_RANDOM[i] = (uint8_t)(0xA0 + i);
         CLIENT_PRIV[i] = (uint8_t)(0x01 + i);
     }
-    g_hs_done = PROTO_FALSE;
+    g_hs_done = EMBED_FALSE;
     g_stream_len = 0;
     g_stream_id = 0;
-    g_stream_fin = PROTO_FALSE;
+    g_stream_fin = EMBED_FALSE;
 }
 
 static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], const uint8_t *tp, size_t tp_len)
@@ -210,7 +210,7 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     p += pn_len;
     memcpy(out + p, frames, frame_len);
     size_t quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
+        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, EMBED_TRUE);
     return quic_crypto_n;
 }
 
@@ -225,7 +225,7 @@ static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
     size_t quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
+        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, EMBED_FALSE);
     return quic_crypto_n;
 }
 
@@ -233,7 +233,7 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
                         uint8_t *type_out)
 {
     QuicLongHeader h;
-    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
+    embed_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
     TEST_ASSERT_TRUE(quic_packet_ok);
     *type_out = h.type;
     size_t off = h.hdr_len;
@@ -253,7 +253,7 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
     memcpy(work, dg, *wire_len);
     uint64_t pn = 0;
     size_t quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
+        QuicCrypto.packet_unprotect(quic_crypto_work, work, off, (size_t)length, 0, keys, EMBED_TRUE, plain, &pn);
     return quic_crypto_n;
 }
 
@@ -263,7 +263,7 @@ static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketK
     memcpy(work, dg, len);
     uint64_t pn = 0;
     size_t quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
+        QuicCrypto.packet_unprotect(quic_crypto_work, work, 1 + dcl, len - (1 + dcl), 0, keys, EMBED_FALSE, plain, &pn);
     return quic_crypto_n;
 }
 
@@ -294,7 +294,7 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
     return got;
 }
 
-static proto_bool has_frame(const uint8_t *p, size_t len, uint64_t want)
+static embed_bool has_frame(const uint8_t *p, size_t len, uint64_t want)
 {
     size_t off = 0;
     while (off < len)
@@ -314,10 +314,10 @@ static proto_bool has_frame(const uint8_t *p, size_t len, uint64_t want)
         off += n;
         if (f.type == want)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static void make_cfg(QuicTlsConfig *cfg)
@@ -485,11 +485,11 @@ void test_full_handshake_and_stream()
     QuicConn.send(g_qc_ctx);
     sl = QuicConnV.n;
     TEST_ASSERT_TRUE(sl > 0);
-    proto_bool saw_hs_done = PROTO_FALSE;
+    embed_bool saw_hs_done = EMBED_FALSE;
     size_t off = 0;
     while (off < sl)
     {
-        proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
+        embed_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
         if (quic_packet_ok)
         {
             size_t w = 0;
@@ -503,7 +503,7 @@ void test_full_handshake_and_stream()
             TEST_ASSERT_NOT_EQUAL(SIZE_MAX, p2);
             if (has_frame(plain, p2, QUIC_FT_HANDSHAKE_DONE))
             {
-                saw_hs_done = PROTO_TRUE;
+                saw_hs_done = EMBED_TRUE;
             }
             break;
         }
@@ -512,7 +512,7 @@ void test_full_handshake_and_stream()
 
     uint8_t sfr[64];
     quic_frame_n =
-        QuicFrame.build_stream(quic_frame_work, sfr, sizeof(sfr), 0, 0, (const uint8_t *)"GET", 3, PROTO_TRUE);
+        QuicFrame.build_stream(quic_frame_work, sfr, sizeof(sfr), 0, 0, (const uint8_t *)"GET", 3, EMBED_TRUE);
     size_t sfl = quic_frame_n;
     uint8_t s1[256];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_client_keys, sfr, sfl);
@@ -530,7 +530,7 @@ void test_full_handshake_and_stream()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = (const uint8_t *)"OK";
     QuicConnV.stream_send_args.len = 2;
-    QuicConnV.stream_send_args.fin = PROTO_TRUE;
+    QuicConnV.stream_send_args.fin = EMBED_TRUE;
     QuicConn.stream_send(g_qc_ctx);
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.send_args.out = sdg;
@@ -540,10 +540,10 @@ void test_full_handshake_and_stream()
     TEST_ASSERT_TRUE(sl > 0);
 
     off = 0;
-    proto_bool got_resp = PROTO_FALSE;
+    embed_bool got_resp = EMBED_FALSE;
     while (off < sl)
     {
-        proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
+        embed_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
         if (quic_packet_ok)
         {
             size_t w = 0;
@@ -575,7 +575,7 @@ void test_full_handshake_and_stream()
             {
                 TEST_ASSERT_EQUAL_UINT(2, (size_t)f.stream.length);
                 TEST_ASSERT_EQUAL_UINT8_ARRAY("OK", f.stream.data, 2);
-                got_resp = PROTO_TRUE;
+                got_resp = EMBED_TRUE;
             }
         }
         break;
@@ -594,11 +594,11 @@ void test_full_handshake_and_stream()
     QuicConn.send(g_qc_ctx);
     sl = QuicConnV.n;
     TEST_ASSERT_TRUE(sl > 0);
-    proto_bool resent = PROTO_FALSE;
+    embed_bool resent = EMBED_FALSE;
     off = 0;
     while (off < sl)
     {
-        proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
+        embed_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
         if (quic_packet_ok)
         {
             size_t w = 0;
@@ -628,7 +628,7 @@ void test_full_handshake_and_stream()
             if (f.type >= QUIC_FT_STREAM && f.type <= QUIC_FT_STREAM + 7 && f.stream.id == 0 && f.stream.length == 2 &&
                 memcmp(f.stream.data, "OK", 2) == 0)
             {
-                resent = PROTO_TRUE;
+                resent = EMBED_TRUE;
             }
         }
         break;
@@ -721,7 +721,7 @@ void test_pto_retransmits_flight()
     TEST_ASSERT_TRUE(sh_len > 0);
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_SERVER_HELLO, sh[0]);
 
-    g_qc.space[QUIC_ENC_INITIAL].discarded = PROTO_TRUE;
+    g_qc.space[QUIC_ENC_INITIAL].discarded = EMBED_TRUE;
     g_qc.space[QUIC_ENC_HANDSHAKE].largest_acked = g_qc.space[QUIC_ENC_HANDSHAKE].last_ae_pn;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.timeout_args.now_ms = 1000 + 10 * PROTOCORE_QUIC_PTO_MS;
@@ -882,7 +882,7 @@ void test_connection_close_on_malformed_frame()
     uint8_t ctype = 0;
     size_t cpt = open_long(cdg, cl, &hs_server_keys, plain, &cw, &ctype);
     TEST_ASSERT_NOT_EQUAL(SIZE_MAX, cpt);
-    proto_bool saw = PROTO_FALSE;
+    embed_bool saw = EMBED_FALSE;
     size_t fo = 0;
     while (fo < cpt)
     {
@@ -901,7 +901,7 @@ void test_connection_close_on_malformed_frame()
         fo += n;
         if (f.type == QUIC_FT_CONNECTION_CLOSE)
         {
-            saw = PROTO_TRUE;
+            saw = EMBED_TRUE;
             TEST_ASSERT_EQUAL_UINT64(QUIC_ERR_FRAME_ENCODING, f.close.error_code);
         }
     }
@@ -950,7 +950,7 @@ void test_quic_recv_connection_close()
 
     uint8_t fr[32];
     size_t quic_frame_n =
-        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof(fr), EMBED_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -1159,7 +1159,7 @@ void test_quic_timeout_when_closed()
     QuicCrypto.derive_initial_secrets(quic_crypto_work, tw, ODCID, sizeof(ODCID), &init);
     uint8_t fr[32];
     size_t quic_frame_n =
-        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof(fr), PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof(fr), EMBED_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -1186,7 +1186,7 @@ void test_quic_stream_send_table_full()
         QuicConnV.stream_send_args.stream_id = (uint64_t)(i * 4);
         QuicConnV.stream_send_args.data = (const uint8_t *)"hi";
         QuicConnV.stream_send_args.len = 2;
-        QuicConnV.stream_send_args.fin = PROTO_FALSE;
+        QuicConnV.stream_send_args.fin = EMBED_FALSE;
         QuicConn.stream_send(g_qc_ctx);
         TEST_ASSERT_EQUAL_UINT(2, QuicConnV.n);
     }
@@ -1194,7 +1194,7 @@ void test_quic_stream_send_table_full()
     QuicConnV.stream_send_args.stream_id = 999;
     QuicConnV.stream_send_args.data = (const uint8_t *)"x";
     QuicConnV.stream_send_args.len = 1;
-    QuicConnV.stream_send_args.fin = PROTO_FALSE;
+    QuicConnV.stream_send_args.fin = EMBED_FALSE;
     QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConnV.n);
 }
@@ -1289,7 +1289,7 @@ void test_quic_conn_stream_frames()
         init_conn(&g_qc, &cb);
         uint8_t data[4] = {1, 2, 3, 4};
         uint8_t fr[32];
-        size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 100, data, 4, PROTO_FALSE);
+        size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 100, data, 4, EMBED_FALSE);
         size_t fl = quic_frame_n;
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_len = 0;
@@ -1305,10 +1305,10 @@ void test_quic_conn_stream_frames()
         init_conn(&g_qc, &cb);
         uint8_t d0 = 0;
         uint8_t fr[16];
-        size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, &d0, 0, PROTO_TRUE);
+        size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, &d0, 0, EMBED_TRUE);
         size_t fl = quic_frame_n;
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-        g_stream_fin = PROTO_FALSE;
+        g_stream_fin = EMBED_FALSE;
         QuicConnV.bind.b = g_qc_b;
         QuicConnV.recv_args.datagram = dg;
         QuicConnV.recv_args.len = dl;
@@ -1325,7 +1325,7 @@ void test_quic_conn_stream_frames()
         for (int i = 0; i <= PROTOCORE_QUIC_MAX_STREAMS; i++)
         {
             size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr + fl, sizeof(fr) - fl, (uint64_t)(i * 4),
-                                                         0, &d1, 1, PROTO_FALSE);
+                                                         0, &d1, 1, EMBED_FALSE);
             fl += quic_frame_n;
         }
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
@@ -1619,7 +1619,7 @@ void test_quic_conn_stream_nothing_to_send()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = (const uint8_t *)"OK";
     QuicConnV.stream_send_args.len = 2;
-    QuicConnV.stream_send_args.fin = PROTO_TRUE;
+    QuicConnV.stream_send_args.fin = EMBED_TRUE;
     QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(2, QuicConnV.n);
     QuicConnV.bind.b = g_qc_b;
@@ -1646,7 +1646,7 @@ void test_quic_conn_short_header_tiny_cap()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = (const uint8_t *)"DATA";
     QuicConnV.stream_send_args.len = 4;
-    QuicConnV.stream_send_args.fin = PROTO_FALSE;
+    QuicConnV.stream_send_args.fin = EMBED_FALSE;
     QuicConn.stream_send(g_qc_ctx);
     uint8_t out[8];
     QuicConnV.bind.b = g_qc_b;
@@ -1709,9 +1709,9 @@ void test_quic_conn_null_callbacks()
 
     uint8_t d[3] = {1, 2, 3};
     uint8_t fr[64];
-    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 3, PROTO_FALSE);
+    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 3, EMBED_FALSE);
     size_t fl = quic_frame_n;
-    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr + fl, sizeof(fr) - fl, 0, 3, d, 0, PROTO_TRUE);
+    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr + fl, sizeof(fr) - fl, 0, 3, d, 0, EMBED_TRUE);
     fl += quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
@@ -1743,7 +1743,7 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     uint8_t fr[64], dg[256];
     uint64_t pn = 0;
 
-    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 4, PROTO_FALSE);
+    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 4, EMBED_FALSE);
     size_t fl = quic_frame_n;
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
@@ -1761,10 +1761,10 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     TEST_ASSERT_TRUE(QuicConnV.ok);
     TEST_ASSERT_EQUAL_UINT(4, g_stream_len);
 
-    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 0, PROTO_TRUE);
+    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 0, EMBED_TRUE);
     fl = quic_frame_n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    g_stream_fin = PROTO_FALSE;
+    g_stream_fin = EMBED_FALSE;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;
     QuicConnV.recv_args.len = dl;
@@ -1772,7 +1772,7 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     TEST_ASSERT_TRUE(QuicConnV.ok);
     TEST_ASSERT_FALSE(g_stream_fin);
 
-    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 4, d, 0, PROTO_TRUE);
+    quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 4, d, 0, EMBED_TRUE);
     fl = quic_frame_n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
@@ -1782,7 +1782,7 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     TEST_ASSERT_TRUE(QuicConnV.ok);
     TEST_ASSERT_TRUE(g_stream_fin);
 
-    g_stream_fin = PROTO_FALSE;
+    g_stream_fin = EMBED_FALSE;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.recv_args.datagram = dg;
@@ -1965,9 +1965,9 @@ void test_quic_conn_crypto_after_handshake_done()
     QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConnV.closed);
 
-    g_qc.handshake_done_sent = PROTO_FALSE;
-    g_qc.handshake_done_queued = PROTO_TRUE;
-    g_hs_done = PROTO_FALSE;
+    g_qc.handshake_done_sent = EMBED_FALSE;
+    g_qc.handshake_done_queued = EMBED_TRUE;
+    g_hs_done = EMBED_FALSE;
     off = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off;
     TEST_ASSERT_TRUE(off > 0);
     quic_frame_n = QuicFrame.build_crypto(quic_frame_work, fr, sizeof fr, off, frag, sizeof frag);
@@ -1997,7 +1997,7 @@ void test_quic_conn_close_after_peer_close()
 
     uint8_t fr[32];
     size_t quic_frame_n =
-        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof fr, EMBED_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
@@ -2030,7 +2030,7 @@ void test_quic_conn_close_queued_then_peer_close()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
-    g_qc.address_validated = PROTO_TRUE;
+    g_qc.address_validated = EMBED_TRUE;
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.send_args.out = out;
@@ -2052,7 +2052,7 @@ void test_quic_conn_close_queued_then_peer_close()
 
     uint8_t fr[32];
     size_t quic_frame_n =
-        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof fr, PROTO_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
+        QuicFrame.build_connection_close(quic_frame_work, fr, sizeof fr, EMBED_FALSE, QUIC_ERR_NO_ERROR, 0, NULL, 0);
     size_t fl = quic_frame_n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
@@ -2137,7 +2137,7 @@ void test_quic_conn_highest_sealed_level_fallback()
     init_conn(&g_qc, &cb);
     for (int l = QUIC_ENC_INITIAL; l <= QUIC_ENC_APP; l++)
     {
-        g_qc.space[l].discarded = PROTO_TRUE;
+        g_qc.space[l].discarded = EMBED_TRUE;
     }
 
     QuicConnV.bind.b = g_qc_b;
@@ -2216,7 +2216,7 @@ void test_quic_conn_crypto_flight_fragmented()
     TEST_ASSERT_TRUE(sent_after_first > 0);
     TEST_ASSERT_TRUE(sent_after_first < hs_flight_len);
 
-    g_qc.address_validated = PROTO_TRUE;
+    g_qc.address_validated = EMBED_TRUE;
     size_t total = sent_after_first;
     for (int i = 0; i < 8 && total < hs_flight_len; i++)
     {
@@ -2240,7 +2240,7 @@ void test_quic_conn_stream_tx_partitioning()
 
     uint8_t d[2] = {0x11, 0x22};
     uint8_t fr[64];
-    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 2, PROTO_FALSE);
+    size_t quic_frame_n = QuicFrame.build_stream(quic_frame_work, fr, sizeof fr, 0, 0, d, 2, EMBED_FALSE);
     size_t fl = quic_frame_n;
     uint8_t sdg[256];
     size_t sl = build_short(sdg, sizeof sdg, SERVER_SCID, sizeof(SERVER_SCID), 1, &apc, fr, fl);
@@ -2262,7 +2262,7 @@ void test_quic_conn_stream_tx_partitioning()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = big;
     QuicConnV.stream_send_args.len = sizeof(big);
-    QuicConnV.stream_send_args.fin = PROTO_TRUE;
+    QuicConnV.stream_send_args.fin = EMBED_TRUE;
     QuicConn.stream_send(g_qc_ctx);
     size_t queued = QuicConnV.n;
     TEST_ASSERT_EQUAL_UINT(sizeof(big), queued);
@@ -2298,7 +2298,7 @@ void test_quic_conn_stream_tx_partitioning()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = d;
     QuicConnV.stream_send_args.len = 2;
-    QuicConnV.stream_send_args.fin = PROTO_FALSE;
+    QuicConnV.stream_send_args.fin = EMBED_FALSE;
     QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(2, QuicConnV.n);
     size_t before = st->tx_sent;
@@ -2324,7 +2324,7 @@ void test_quic_conn_stream_fin_only()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = (const uint8_t *)"BODY";
     QuicConnV.stream_send_args.len = 4;
-    QuicConnV.stream_send_args.fin = PROTO_FALSE;
+    QuicConnV.stream_send_args.fin = EMBED_FALSE;
     QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(4, QuicConnV.n);
     QuicConnV.bind.b = g_qc_b;
@@ -2348,7 +2348,7 @@ void test_quic_conn_stream_fin_only()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = (const uint8_t *)"";
     QuicConnV.stream_send_args.len = 0;
-    QuicConnV.stream_send_args.fin = PROTO_TRUE;
+    QuicConnV.stream_send_args.fin = EMBED_TRUE;
     QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConnV.n);
     TEST_ASSERT_TRUE(st->tx_fin);
@@ -2396,7 +2396,7 @@ void test_quic_conn_stream_tx_datagram_full()
         QuicConnV.stream_send_args.stream_id = ids[i];
         QuicConnV.stream_send_args.data = payload;
         QuicConnV.stream_send_args.len = sizeof(payload);
-        QuicConnV.stream_send_args.fin = PROTO_FALSE;
+        QuicConnV.stream_send_args.fin = EMBED_FALSE;
         QuicConn.stream_send(g_qc_ctx);
         TEST_ASSERT_EQUAL_UINT(sizeof(payload), QuicConnV.n);
     }
@@ -2429,7 +2429,7 @@ void test_quic_conn_stream_tx_datagram_full()
     TEST_ASSERT_TRUE(untouched > 0);
     TEST_ASSERT_TRUE(partial > 0);
 
-    g_qc.address_validated = PROTO_TRUE;
+    g_qc.address_validated = EMBED_TRUE;
     for (int round = 0; round < 20; round++)
     {
         QuicConnV.bind.b = g_qc_b;
@@ -2467,7 +2467,7 @@ void test_quic_conn_stream_send_clamped()
     QuicConnV.stream_send_args.stream_id = 0;
     QuicConnV.stream_send_args.data = huge;
     QuicConnV.stream_send_args.len = sizeof(huge);
-    QuicConnV.stream_send_args.fin = PROTO_TRUE;
+    QuicConnV.stream_send_args.fin = EMBED_TRUE;
     QuicConn.stream_send(g_qc_ctx);
     size_t took = QuicConnV.n;
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_QUIC_STREAM_TX, took);
@@ -2497,7 +2497,7 @@ void test_quic_conn_stream_send_sentinel_id()
     QuicConnV.stream_send_args.stream_id = UINT64_MAX;
     QuicConnV.stream_send_args.data = (const uint8_t *)"hi";
     QuicConnV.stream_send_args.len = 2;
-    QuicConnV.stream_send_args.fin = PROTO_TRUE;
+    QuicConnV.stream_send_args.fin = EMBED_TRUE;
     QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(2, QuicConnV.n);
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
@@ -2544,7 +2544,7 @@ void test_quic_conn_pto_backoff_ceiling()
     TEST_ASSERT_EQUAL_UINT8(8, g_qc.pto_count);
 
     g_qc.pto_count = 40;
-    g_qc.pto_armed = PROTO_FALSE;
+    g_qc.pto_armed = EMBED_FALSE;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.timeout_args.now_ms = 0;
     QuicConn.on_timeout(g_qc_ctx);
@@ -2566,8 +2566,8 @@ void test_quic_conn_ack_owed_without_rx()
     QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConnV.n);
 
-    g_qc.space[QUIC_ENC_APP].ack_eliciting_rx = PROTO_TRUE;
-    g_qc.space[QUIC_ENC_APP].have_rx = PROTO_FALSE;
+    g_qc.space[QUIC_ENC_APP].ack_eliciting_rx = EMBED_TRUE;
+    g_qc.space[QUIC_ENC_APP].have_rx = EMBED_FALSE;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.send_args.out = out;
     QuicConnV.send_args.cap = sizeof out;
@@ -2629,7 +2629,7 @@ void test_quic_conn_is_closed_draining_only()
     QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConnV.closed);
 
-    g_qc.draining = PROTO_TRUE;
+    g_qc.draining = EMBED_TRUE;
     TEST_ASSERT_FALSE(g_qc.closed);
     QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConnV.closed);
@@ -2655,7 +2655,7 @@ void test_quic_conn_pto_outstanding_per_space()
     }
 
     init_conn(&g_qc, &cb);
-    g_qc.pto_armed = PROTO_TRUE;
+    g_qc.pto_armed = EMBED_TRUE;
     g_qc.pto_count = 3;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.timeout_args.now_ms = 1000;
@@ -2666,7 +2666,7 @@ void test_quic_conn_pto_outstanding_per_space()
     init_conn(&g_qc, &cb);
     g_qc.space[QUIC_ENC_APP].last_ae_pn = 3;
     g_qc.space[QUIC_ENC_APP].largest_acked = 2;
-    g_qc.space[QUIC_ENC_APP].discarded = PROTO_TRUE;
+    g_qc.space[QUIC_ENC_APP].discarded = EMBED_TRUE;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.timeout_args.now_ms = 1000;
     QuicConn.on_timeout(g_qc_ctx);
@@ -2698,7 +2698,7 @@ void test_quic_conn_pto_disarms_when_all_acked()
     TEST_ASSERT_TRUE(QuicConnV.ok);
     TEST_ASSERT_EQUAL_INT64(0, g_qc.space[QUIC_ENC_APP].largest_acked);
 
-    g_qc.pto_armed = PROTO_TRUE;
+    g_qc.pto_armed = EMBED_TRUE;
     QuicConnV.bind.b = g_qc_b;
     QuicConnV.timeout_args.now_ms = 2000;
     QuicConn.on_timeout(g_qc_ctx);

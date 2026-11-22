@@ -56,9 +56,9 @@ static void ed_sign(uint8_t *w, uint8_t *sig, const uint8_t *msg, size_t mlen, c
     Ed25519.sign(w, seed, msg, mlen, sig);
 }
 
-static proto_bool ed_verify(uint8_t *w, const uint8_t *pub, const uint8_t *msg, size_t mlen, const uint8_t *sig)
+static embed_bool ed_verify(uint8_t *w, const uint8_t *pub, const uint8_t *msg, size_t mlen, const uint8_t *sig)
 {
-    proto_bool ed25519_ok = Ed25519.verify(w, pub, msg, mlen, sig);
+    embed_bool ed25519_ok = Ed25519.verify(w, pub, msg, mlen, sig);
     return ed25519_ok;
 }
 

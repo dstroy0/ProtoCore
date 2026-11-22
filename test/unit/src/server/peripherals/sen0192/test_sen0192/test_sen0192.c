@@ -32,8 +32,8 @@ static Sen0192Motion g_m;
 // publishes presence it has not measured.
 void test_fresh_tracker_is_absent(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
-    proto_bool sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
+    embed_bool sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_FALSE(sen0192_ok);
     uint32_t sen0192_n = Sen0192.motion_events(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_EQUAL_UINT32(0, sen0192_n);
@@ -52,17 +52,17 @@ void test_fresh_tracker_is_absent(void)
 // already present report no edge, so a caller publishes one event per arrival.
 void test_first_active_sample_is_the_only_edge(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
-    proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 1000);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
+    embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 1000);
     TEST_ASSERT_TRUE(sen0192_ok);
     sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_TRUE(sen0192_ok);
     uint32_t sen0192_n = Sen0192.motion_events(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_EQUAL_UINT32(1, sen0192_n);
 
-    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 1100);
+    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 1100);
     TEST_ASSERT_FALSE(sen0192_ok);
-    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 1200);
+    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 1200);
     TEST_ASSERT_FALSE(sen0192_ok);
     sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_TRUE(sen0192_ok);
@@ -74,8 +74,8 @@ void test_first_active_sample_is_the_only_edge(void)
 // is exceeded - at hold + 1, not at hold.
 void test_presence_is_held_then_clears_at_the_window(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
-    proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 1000);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
+    embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 1000);
     TEST_ASSERT_TRUE(sen0192_ok);
 
     sen0192_ok = Sen0192.motion_tick(protocore_sen0192_span(), &g_m, 1000 + HOLD - 1);
@@ -88,14 +88,14 @@ void test_presence_is_held_then_clears_at_the_window(void)
     TEST_ASSERT_FALSE(sen0192_ok);
 
     // an inactive sample ages presence out the same way a bare tick does
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
-    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 1000);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
+    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 1000);
     TEST_ASSERT_TRUE(sen0192_ok);
-    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_FALSE, 1000 + HOLD);
+    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_FALSE, 1000 + HOLD);
     TEST_ASSERT_FALSE(sen0192_ok);
     sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_TRUE(sen0192_ok);
-    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_FALSE, 1000 + HOLD + 1);
+    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_FALSE, 1000 + HOLD + 1);
     TEST_ASSERT_FALSE(sen0192_ok);
     sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_FALSE(sen0192_ok);
@@ -105,12 +105,12 @@ void test_presence_is_held_then_clears_at_the_window(void)
 // and does not raise a second event.
 void test_active_samples_extend_one_span(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
-    proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 0);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
+    embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 0);
     TEST_ASSERT_TRUE(sen0192_ok);
     for (uint32_t t = 1500; t <= 15000; t += 1500)
     {
-        proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, t);
+        embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, t);
         TEST_ASSERT_FALSE(sen0192_ok);
         sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
         TEST_ASSERT_TRUE(sen0192_ok);
@@ -128,11 +128,11 @@ void test_active_samples_extend_one_span(void)
 // rather than samples.
 void test_events_count_arrivals(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
     for (uint32_t k = 0; k < 4; k++)
     {
         const uint32_t base = k * 100000u;
-        proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, base);
+        embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, base);
         TEST_ASSERT_TRUE(sen0192_ok);
         uint32_t sen0192_n = Sen0192.motion_events(protocore_sen0192_span(), &g_m);
         TEST_ASSERT_EQUAL_UINT32(k + 1, sen0192_n);
@@ -146,22 +146,22 @@ void test_events_count_arrivals(void)
 // whenever nothing is moving.
 void test_polarity_selects_the_active_level(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_FALSE);
-    proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 0);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_FALSE);
+    embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 0);
     TEST_ASSERT_FALSE(sen0192_ok); // HIGH is idle here
     sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_FALSE(sen0192_ok);
     uint32_t sen0192_n = Sen0192.motion_events(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_EQUAL_UINT32(0, sen0192_n);
 
-    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_FALSE, 100);
+    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_FALSE, 100);
     TEST_ASSERT_TRUE(sen0192_ok); // LOW is motion
     sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_TRUE(sen0192_ok);
     sen0192_n = Sen0192.motion_events(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_EQUAL_UINT32(1, sen0192_n);
 
-    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 100 + HOLD + 1);
+    sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 100 + HOLD + 1);
     TEST_ASSERT_FALSE(sen0192_ok);
     sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &g_m);
     TEST_ASSERT_FALSE(sen0192_ok);
@@ -172,18 +172,18 @@ void test_polarity_selects_the_active_level(void)
 // sensor has been quiet since the epoch when it has simply never been read.
 void test_active_age(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
     uint32_t sen0192_ms = Sen0192.motion_active_age_ms(protocore_sen0192_span(), &g_m, 500000);
     TEST_ASSERT_EQUAL_UINT32(0, sen0192_ms);
 
-    Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 1000);
+    Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 1000);
     sen0192_ms = Sen0192.motion_active_age_ms(protocore_sen0192_span(), &g_m, 1000);
     TEST_ASSERT_EQUAL_UINT32(0, sen0192_ms);
     sen0192_ms = Sen0192.motion_active_age_ms(protocore_sen0192_span(), &g_m, 1750);
     TEST_ASSERT_EQUAL_UINT32(750, sen0192_ms);
 
     // an inactive sample does not reset it
-    Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_FALSE, 1750);
+    Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_FALSE, 1750);
     sen0192_ms = Sen0192.motion_active_age_ms(protocore_sen0192_span(), &g_m, 1900);
     TEST_ASSERT_EQUAL_UINT32(900, sen0192_ms);
 }
@@ -194,8 +194,8 @@ void test_active_age(void)
 void test_timing_survives_the_millis_rollover(void)
 {
     const uint32_t t0 = 0xFFFFFF00u; // 256 ms of the 32-bit range left
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
-    proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, t0);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
+    embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, t0);
     TEST_ASSERT_TRUE(sen0192_ok);
 
     uint32_t sen0192_ms = Sen0192.motion_active_age_ms(protocore_sen0192_span(), &g_m, t0 + HOLD);
@@ -210,8 +210,8 @@ void test_timing_survives_the_millis_rollover(void)
 // instant clears it.
 void test_zero_hold_clears_on_the_next_tick(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, 0, PROTO_TRUE);
-    proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 1000);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, 0, EMBED_TRUE);
+    embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 1000);
     TEST_ASSERT_TRUE(sen0192_ok);
     sen0192_ok = Sen0192.motion_tick(protocore_sen0192_span(), &g_m, 1000);
     TEST_ASSERT_TRUE(sen0192_ok); // same instant, nothing elapsed
@@ -222,12 +222,12 @@ void test_zero_hold_clears_on_the_next_tick(void)
 // A repeated timestamp is harmless: it neither clears presence nor counts a second arrival.
 void test_repeated_timestamps_are_harmless(void)
 {
-    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, PROTO_TRUE);
-    proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 5000);
+    Sen0192.motion_init(protocore_sen0192_span(), &g_m, HOLD, EMBED_TRUE);
+    embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 5000);
     TEST_ASSERT_TRUE(sen0192_ok);
     for (int i = 0; i < 5; i++)
     {
-        proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, PROTO_TRUE, 5000);
+        embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &g_m, EMBED_TRUE, 5000);
         TEST_ASSERT_FALSE(sen0192_ok);
         sen0192_ok = Sen0192.motion_tick(protocore_sen0192_span(), &g_m, 5000);
         TEST_ASSERT_TRUE(sen0192_ok);

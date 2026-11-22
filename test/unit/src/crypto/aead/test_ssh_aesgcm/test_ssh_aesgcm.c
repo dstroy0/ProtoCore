@@ -27,7 +27,7 @@ void tearDown(void)
 // One scratch context, rebuilt per vector and wiped first so a backend that attaches vendor
 // resources to a context does not leak one per call.
 static uint8_t g_ws[PROTOCORE_AESGCM_BORROW] __attribute__((aligned(8)));
-static proto_bool g_live = PROTO_FALSE;
+static embed_bool g_live = EMBED_FALSE;
 
 static uint8_t *keyed(const uint8_t *key)
 {
@@ -35,7 +35,7 @@ static uint8_t *keyed(const uint8_t *key)
     {
         AesGcm.key_wipe(g_ws);
     }
-    g_live = PROTO_TRUE;
+    g_live = EMBED_TRUE;
     AesGcmV.key_args.key = key;
     AesGcm.key_init(g_ws);
     return g_ws;
@@ -57,7 +57,7 @@ static void gcm_seal(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, 
 }
 
 // One opened record; the outcome is the return, as the flat call's was.
-static proto_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t aadn, const uint8_t *ct,
+static embed_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, size_t aadn, const uint8_t *ct,
                            size_t ctn, const uint8_t *tag, uint8_t *out)
 {
     uint8_t *w = keyed(key);

@@ -55,7 +55,7 @@ void test_init_leaves_every_slot_free(void)
 {
     for (size_t i = 0; i < POOL_N; i++)
     {
-        g_slots[i].in_use = PROTO_TRUE;
+        g_slots[i].in_use = EMBED_TRUE;
         g_slots[i].id = 0xDEADBEEFu;
         g_slots[i].last_used = 99u;
     }

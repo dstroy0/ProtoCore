@@ -40,7 +40,7 @@
 
 #if PROTOCORE_ENABLE_TELEMETRY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief A moving window over the last @c cap samples, in storage the caller provides.
@@ -63,7 +63,7 @@ typedef struct
 {
     float last_value;  ///< the previous sample
     uint32_t last_ms;  ///< the monotonic millisecond count it arrived at
-    proto_bool primed; ///< a first sample has been seen
+    embed_bool primed; ///< a first sample has been seen
 } TelemetryRate;
 
 /** @brief The trapezoidal integral of a rate over time: SenML's Sum (RFC 8428 sec 4.2). */
@@ -72,7 +72,7 @@ typedef struct
     double total;      ///< the accumulated total, in rate units multiplied by seconds
     float last_rate;   ///< the previous rate sample
     uint32_t last_ms;  ///< the monotonic millisecond count it arrived at
-    proto_bool primed; ///< a first rate sample has been seen
+    embed_bool primed; ///< a first rate sample has been seen
 } TelemetryTotalizer;
 
 /** @brief The window a call acts on, the storage an init binds to it, and the sample a push adds. */
@@ -139,7 +139,7 @@ typedef struct
     TelemetryWindowArgs window;       ///< what a window call acts on and reads
     TelemetryRateArgs rate;           ///< what a rate call acts on and reads
     TelemetryTotalizerArgs totalizer; ///< what a totalizer call acts on and reads
-    proto_bool ok;
+    embed_bool ok;
     uint16_t u16;
     float f32;
     double f64;
@@ -204,7 +204,7 @@ static const TelemetryNs Telemetry __attribute__((unused)) = {
     .totalizer_reset = protocore_telemetry_totalizer_init,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TELEMETRY
 

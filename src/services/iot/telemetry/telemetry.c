@@ -19,7 +19,7 @@
 
 #include <math.h> // sqrtf: the standard deviation
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Population variance from the running sums, clamped at 0 where rounding drives the difference
 // below it. The caller checks count first.
@@ -35,7 +35,7 @@ void protocore_telemetry_window_init(uint8_t *work)
 {
     (void)work;
     TelemetryWindow *w = TelemetryV.window.w;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w)
     {
         return;
@@ -46,7 +46,7 @@ void protocore_telemetry_window_init(uint8_t *work)
     w->head = 0;
     w->sum = 0.0;
     w->sum_sq = 0.0;
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // Store the sample at head and move the sums by it, dropping the sample it overwrites once the
@@ -55,7 +55,7 @@ void protocore_telemetry_window_push(uint8_t *work)
 {
     (void)work;
     TelemetryWindow *w = TelemetryV.window.w;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w || !w->buf || w->cap == 0)
     {
         return;
@@ -80,7 +80,7 @@ void protocore_telemetry_window_push(uint8_t *work)
     {
         w->head = 0;
     }
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // The samples the window holds.
@@ -89,13 +89,13 @@ void protocore_telemetry_window_count(uint8_t *work)
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
     TelemetryV.u16 = 0;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w)
     {
         return;
     }
     TelemetryV.u16 = w->count;
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // The sum over the count.
@@ -104,13 +104,13 @@ void protocore_telemetry_window_mean(uint8_t *work)
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
     TelemetryV.f32 = 0.0f;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w || w->count == 0)
     {
         return;
     }
     TelemetryV.f32 = (float)(w->sum / (double)w->count);
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // The mean of the squares less the square of the mean.
@@ -119,13 +119,13 @@ void protocore_telemetry_window_variance(uint8_t *work)
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
     TelemetryV.f32 = 0.0f;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w || w->count == 0)
     {
         return;
     }
     TelemetryV.f32 = (float)window_variance_of(w);
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // The square root of the variance.
@@ -134,13 +134,13 @@ void protocore_telemetry_window_stddev(uint8_t *work)
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
     TelemetryV.f32 = 0.0f;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w || w->count == 0)
     {
         return;
     }
     TelemetryV.f32 = sqrtf((float)window_variance_of(w));
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // The smallest of the samples held.
@@ -149,7 +149,7 @@ void protocore_telemetry_window_min(uint8_t *work)
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
     TelemetryV.f32 = 0.0f;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w || w->count == 0 || !w->buf)
     {
         return;
@@ -163,7 +163,7 @@ void protocore_telemetry_window_min(uint8_t *work)
         }
     }
     TelemetryV.f32 = m;
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // The largest of the samples held.
@@ -172,7 +172,7 @@ void protocore_telemetry_window_max(uint8_t *work)
     (void)work;
     const TelemetryWindow *w = TelemetryV.window.w;
     TelemetryV.f32 = 0.0f;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!w || w->count == 0 || !w->buf)
     {
         return;
@@ -186,7 +186,7 @@ void protocore_telemetry_window_max(uint8_t *work)
         }
     }
     TelemetryV.f32 = m;
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // Drop the prior sample, so the next update primes the tracker.
@@ -194,15 +194,15 @@ void protocore_telemetry_rate_init(uint8_t *work)
 {
     (void)work;
     TelemetryRate *r = TelemetryV.rate.r;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!r)
     {
         return;
     }
     r->last_value = 0.0f;
     r->last_ms = 0;
-    r->primed = PROTO_FALSE;
-    TelemetryV.ok = PROTO_TRUE;
+    r->primed = EMBED_FALSE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // The change in value over the elapsed seconds since the previous sample. The first sample and a
@@ -212,19 +212,19 @@ void protocore_telemetry_rate_update(uint8_t *work)
     (void)work;
     TelemetryRate *r = TelemetryV.rate.r;
     TelemetryV.f32 = 0.0f;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!r)
     {
         return;
     }
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
     float value = TelemetryV.rate.value;
     uint32_t now_ms = TelemetryV.rate.now_ms;
     if (!r->primed)
     {
         r->last_value = value;
         r->last_ms = now_ms;
-        r->primed = PROTO_TRUE;
+        r->primed = EMBED_TRUE;
         return;
     }
     uint32_t dt_ms = (uint32_t)(now_ms - r->last_ms); // wraps correctly
@@ -241,7 +241,7 @@ void protocore_telemetry_totalizer_init(uint8_t *work)
 {
     (void)work;
     TelemetryTotalizer *t = TelemetryV.totalizer.t;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!t)
     {
         return;
@@ -249,8 +249,8 @@ void protocore_telemetry_totalizer_init(uint8_t *work)
     t->total = 0.0;
     t->last_rate = 0.0f;
     t->last_ms = 0;
-    t->primed = PROTO_FALSE;
-    TelemetryV.ok = PROTO_TRUE;
+    t->primed = EMBED_FALSE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // Add the mean of the two rate endpoints multiplied by the elapsed seconds. The first sample only
@@ -260,19 +260,19 @@ void protocore_telemetry_totalizer_add(uint8_t *work)
     (void)work;
     TelemetryTotalizer *t = TelemetryV.totalizer.t;
     TelemetryV.f64 = 0.0;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!t)
     {
         return;
     }
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
     float rate = TelemetryV.totalizer.rate;
     uint32_t now_ms = TelemetryV.totalizer.now_ms;
     if (!t->primed)
     {
         t->last_rate = rate;
         t->last_ms = now_ms;
-        t->primed = PROTO_TRUE;
+        t->primed = EMBED_TRUE;
         TelemetryV.f64 = t->total;
         return;
     }
@@ -290,13 +290,13 @@ void protocore_telemetry_totalizer_total(uint8_t *work)
     (void)work;
     const TelemetryTotalizer *t = TelemetryV.totalizer.t;
     TelemetryV.f64 = 0.0;
-    TelemetryV.ok = PROTO_FALSE;
+    TelemetryV.ok = EMBED_FALSE;
     if (!t)
     {
         return;
     }
     TelemetryV.f64 = t->total;
-    TelemetryV.ok = PROTO_TRUE;
+    TelemetryV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to. A reset zeroes
@@ -305,6 +305,6 @@ void protocore_telemetry_totalizer_total(uint8_t *work)
 /** @brief The operands and the outcome. */
 TelemetryVars TelemetryV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TELEMETRY

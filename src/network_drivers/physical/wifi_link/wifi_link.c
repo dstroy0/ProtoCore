@@ -23,7 +23,7 @@
 #include "embed_atomic.h"                     // embed_atomic_u32: the association, and the dropped frames
 #include "memoria_anularis/memoria_anularis.h" // the SPSC ring, its byte stream and its loculi
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The bytes of the arrival stream: one index for each buffer, and the byte that the ring keeps back. */
 #define WIFI_LINK_ARRIVAL_BYTES (2u * IDEMIP_RX_DESCRIPTORS)
@@ -52,29 +52,31 @@ typedef struct
     uint32_t transmit_next;    ///< the transmit buffer that the next tx_claim gives out
     uint8_t *transmit_claimed; ///< the buffer of the last tx_claim, which tx_commit sends
     uint8_t mac[IDEMIP_MAC_LEN];
-    proto_bool mac_read;
-    proto_bool laid; ///< the ring is laid, and each loculus is ready
+    embed_bool mac_read;
+    embed_bool laid; ///< the ring is laid, and each loculus is ready
 } WifiLinkState;
 
 static WifiLinkState s_link;
 
 // --- the radio task ---------------------------------------------------------
 
-proto_bool protocore_wifi_link_frame_receive(const WifiLinkFrameArgs *args)
+embed_bool protocore_wifi_link_frame_receive(const WifiLinkFrameArgs *args)
 {
     // Explicit cast reads the address as an integer, where the test for word alignment is arithmetic
-    const proto_bool aligned = ((uintptr_t)args->frame & (uintptr_t)(sizeof(embed_word) - 1u)) == 0u;
+    const embed_bool aligned = ((uintptr_t)args->frame & (uintptr_t)(sizeof(embed_word) - 1u)) == 0u;
     if (!s_link.laid || !aligned || args->len == 0u || args->len > IDEMIP_DMA_FRAME_MAX)
     {
-        (void)embed_atomic_u32_fetch_add(&s_link.dropped, 1u);
-        return PROTO_FALSE;
+        (void)EMBED_CALL(embed_atomic_u32_table.fetch_add, EmbedAtomicU32FetchAddCfg, .word = &s_link.dropped,
+                         .value = 1u);
+        return EMBED_FALSE;
     }
     const embed_word ready = EMBED_CALL(anularis.loculus_ready, AnularisCfg, .ring = &s_arrival) & WIFI_LINK_BUFFER_MASK;
     const embed_iword next = EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = ready);
     if (next < 0)
     {
-        (void)embed_atomic_u32_fetch_add(&s_link.dropped, 1u);
-        return PROTO_FALSE;
+        (void)EMBED_CALL(embed_atomic_u32_table.fetch_add, EmbedAtomicU32FetchAddCfg, .word = &s_link.dropped,
+                         .value = 1u);
+        return EMBED_FALSE;
     }
     // Explicit cast takes the loculus index, which the test holds at 0 or above, and the mask below IDEMIP_RX_DESCRIPTORS
     const size_t loculus = (size_t)next;
@@ -82,20 +84,21 @@ proto_bool protocore_wifi_link_frame_receive(const WifiLinkFrameArgs *args)
     if (!EMBED_CALL(anularis.loculus_hold, AnularisCfg, .ring = &s_arrival, .index = loculus, .src = buffer,
                     .bytes = args->len))
     {
-        (void)embed_atomic_u32_fetch_add(&s_link.dropped, 1u);
-        return PROTO_FALSE;
+        (void)EMBED_CALL(embed_atomic_u32_table.fetch_add, EmbedAtomicU32FetchAddCfg, .word = &s_link.dropped,
+                         .value = 1u);
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buffer, .src = args->frame, .bytes = args->len);
     // Explicit cast narrows the index, which the assert above holds below 256
     const uint8_t index = (uint8_t)loculus;
     // The put publishes the index after the copy, and the ring orders it before the read that finds it.
     (void)EMBED_CALL(anularis.put, AnularisCfg, .ring = &s_arrival, .src = &index, .bytes = 1u);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_wifi_link_state_set(const WifiLinkStateArgs *args)
 {
-    embed_atomic_u32_store(&s_link.up, args->up ? 1u : 0u);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &s_link.up, .value = args->up ? 1u : 0u);
 }
 
 // --- the driver, in worker 0 ------------------------------------------------
@@ -106,7 +109,8 @@ static IdemIpPhyLink wifi_link_link(void)
     const IdemIpPhyLink link = {
         .speed = IDEMIP_PHY_SPEED_NONE,
         .full_duplex = EMBED_FALSE,
-        .up = (embed_atomic_u32_load(&s_link.up) != 0u) ? EMBED_TRUE : EMBED_FALSE,
+        .up = (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &s_link.up) != 0u) ? EMBED_TRUE
+                                                                                                           : EMBED_FALSE,
     };
     return link;
 }
@@ -207,7 +211,7 @@ static const IdemIpPhyDriver s_driver = {
 // --- the entries ------------------------------------------------------------
 
 // Lays the ring before the radio starts. The first frame thus finds every loculus ready.
-static proto_bool wifi_link_lay(void)
+static embed_bool wifi_link_lay(void)
 {
     if (!s_link.laid)
     {
@@ -218,7 +222,7 @@ static proto_bool wifi_link_lay(void)
     return s_link.laid;
 }
 
-proto_bool protocore_wifi_link_start(const WifiLinkStartArgs *args)
+embed_bool protocore_wifi_link_start(const WifiLinkStartArgs *args)
 {
     return wifi_link_lay() && protocore_wifi_radio_start(args);
 }
@@ -241,29 +245,29 @@ uint8_t *protocore_wifi_link_tx_base(void)
 
 uint32_t protocore_wifi_link_dropped(void)
 {
-    return embed_atomic_u32_load(&s_link.dropped);
+    return EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &s_link.dropped);
 }
 
 // --- the radio seam: each weak default refuses ------------------------------
 
-EMBED_WEAK proto_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
+EMBED_WEAK embed_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
 {
     (void)args;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-EMBED_WEAK proto_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args)
+EMBED_WEAK embed_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args)
 {
     (void)args;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-EMBED_WEAK proto_bool protocore_wifi_radio_mac_read(uint8_t *mac)
+EMBED_WEAK embed_bool protocore_wifi_radio_mac_read(uint8_t *mac)
 {
     (void)mac;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IDEMIP

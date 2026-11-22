@@ -151,17 +151,17 @@ void test_rfc9113_settings_bounds(void)
     {
         uint16_t id;
         uint32_t val;
-        proto_bool want;
+        embed_bool want;
     } static const CASES[] = {
-        {H2_SETTINGS_ENABLE_PUSH, 0, PROTO_TRUE},
-        {H2_SETTINGS_ENABLE_PUSH, 1, PROTO_TRUE},
-        {H2_SETTINGS_ENABLE_PUSH, 2, PROTO_FALSE},
-        {H2_SETTINGS_INITIAL_WINDOW_SIZE, 0x7FFFFFFFu, PROTO_TRUE},
-        {H2_SETTINGS_INITIAL_WINDOW_SIZE, 0x80000000u, PROTO_FALSE},
-        {H2_SETTINGS_MAX_FRAME_SIZE, 16383u, PROTO_FALSE},
-        {H2_SETTINGS_MAX_FRAME_SIZE, 16384u, PROTO_TRUE},
-        {H2_SETTINGS_MAX_FRAME_SIZE, 16777215u, PROTO_TRUE},
-        {H2_SETTINGS_MAX_FRAME_SIZE, 16777216u, PROTO_FALSE},
+        {H2_SETTINGS_ENABLE_PUSH, 0, EMBED_TRUE},
+        {H2_SETTINGS_ENABLE_PUSH, 1, EMBED_TRUE},
+        {H2_SETTINGS_ENABLE_PUSH, 2, EMBED_FALSE},
+        {H2_SETTINGS_INITIAL_WINDOW_SIZE, 0x7FFFFFFFu, EMBED_TRUE},
+        {H2_SETTINGS_INITIAL_WINDOW_SIZE, 0x80000000u, EMBED_FALSE},
+        {H2_SETTINGS_MAX_FRAME_SIZE, 16383u, EMBED_FALSE},
+        {H2_SETTINGS_MAX_FRAME_SIZE, 16384u, EMBED_TRUE},
+        {H2_SETTINGS_MAX_FRAME_SIZE, 16777215u, EMBED_TRUE},
+        {H2_SETTINGS_MAX_FRAME_SIZE, 16777216u, EMBED_FALSE},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -274,7 +274,7 @@ void test_rfc9113_headers_and_data(void)
 
     size_t n = (H2FrameV.headers_args.buf = g_out, H2FrameV.headers_args.cap = sizeof(g_out),
                 H2FrameV.headers_args.stream_id = 5u, H2FrameV.headers_args.block = BLOCK,
-                H2FrameV.headers_args.block_len = sizeof(BLOCK), H2FrameV.headers_args.end_stream = PROTO_FALSE,
+                H2FrameV.headers_args.block_len = sizeof(BLOCK), H2FrameV.headers_args.end_stream = EMBED_FALSE,
                 H2Frame.build_headers(NULL), H2FrameV.n);
     TEST_ASSERT_EQUAL_UINT(12u, n);
     TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = n, H2Frame.parse_header(NULL),
@@ -287,7 +287,7 @@ void test_rfc9113_headers_and_data(void)
 
     n = (H2FrameV.headers_args.buf = g_out, H2FrameV.headers_args.cap = sizeof(g_out),
          H2FrameV.headers_args.stream_id = 5u, H2FrameV.headers_args.block = BLOCK,
-         H2FrameV.headers_args.block_len = sizeof(BLOCK), H2FrameV.headers_args.end_stream = PROTO_TRUE,
+         H2FrameV.headers_args.block_len = sizeof(BLOCK), H2FrameV.headers_args.end_stream = EMBED_TRUE,
          H2Frame.build_headers(NULL), H2FrameV.n);
     TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = n, H2Frame.parse_header(NULL),
                       *(&h) = H2FrameV.header, H2FrameV.ok));
@@ -295,7 +295,7 @@ void test_rfc9113_headers_and_data(void)
 
     n = (H2FrameV.data_args.buf = g_out, H2FrameV.data_args.cap = sizeof(g_out), H2FrameV.data_args.stream_id = 7u,
          H2FrameV.data_args.data = (const uint8_t *)"hi", H2FrameV.data_args.data_len = 2,
-         H2FrameV.data_args.end_stream = PROTO_TRUE, H2Frame.build_data(NULL), H2FrameV.n);
+         H2FrameV.data_args.end_stream = EMBED_TRUE, H2Frame.build_data(NULL), H2FrameV.n);
     TEST_ASSERT_EQUAL_UINT(11u, n);
     TEST_ASSERT_TRUE((H2FrameV.parse_args.buf = g_out, H2FrameV.parse_args.len = n, H2Frame.parse_header(NULL),
                       *(&h) = H2FrameV.header, H2FrameV.ok));
@@ -306,7 +306,7 @@ void test_rfc9113_headers_and_data(void)
 
     // an empty DATA frame is a header and nothing else
     n = (H2FrameV.data_args.buf = g_out, H2FrameV.data_args.cap = sizeof(g_out), H2FrameV.data_args.stream_id = 7u,
-         H2FrameV.data_args.data = NULL, H2FrameV.data_args.data_len = 0, H2FrameV.data_args.end_stream = PROTO_TRUE,
+         H2FrameV.data_args.data = NULL, H2FrameV.data_args.data_len = 0, H2FrameV.data_args.end_stream = EMBED_TRUE,
          H2Frame.build_data(NULL), H2FrameV.n);
     TEST_ASSERT_EQUAL_UINT(9u, n);
 }
@@ -336,12 +336,12 @@ void test_builders_refuse_a_short_destination(void)
                                 H2FrameV.ping_args.opaque = OPAQUE, H2Frame.build_ping_ack(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_UINT(0u, (H2FrameV.data_args.buf = g_out, H2FrameV.data_args.cap = 10,
                                 H2FrameV.data_args.stream_id = 1, H2FrameV.data_args.data = (const uint8_t *)"xx",
-                                H2FrameV.data_args.data_len = 2, H2FrameV.data_args.end_stream = PROTO_FALSE,
+                                H2FrameV.data_args.data_len = 2, H2FrameV.data_args.end_stream = EMBED_FALSE,
                                 H2Frame.build_data(NULL), H2FrameV.n));
     TEST_ASSERT_EQUAL_UINT(
         0u, (H2FrameV.headers_args.buf = g_out, H2FrameV.headers_args.cap = 10, H2FrameV.headers_args.stream_id = 1,
              H2FrameV.headers_args.block = (const uint8_t *)"xx", H2FrameV.headers_args.block_len = 2,
-             H2FrameV.headers_args.end_stream = PROTO_FALSE, H2Frame.build_headers(NULL), H2FrameV.n));
+             H2FrameV.headers_args.end_stream = EMBED_FALSE, H2Frame.build_headers(NULL), H2FrameV.n));
 }
 
 // RFC 9113 sec 6 assigns each frame type its octet and sec 7 each error condition its 32-bit code.

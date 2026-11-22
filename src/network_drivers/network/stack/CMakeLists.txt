@@ -3,9 +3,8 @@
 
 protocore_add_module(network_drivers/network/stack
   GATE PROTOCORE_ENABLE_IDEMIP
-  SOURCES stack.c
+  SOURCES stack.c stack_tcp.c stack_net.c
   PRIVATE_DEPS
-    network_drivers/transport/tcp/engine
     server/core/worker
     mmgr
     idemip

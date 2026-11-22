@@ -14,7 +14,7 @@
 #include "services/fieldbus/devicenet/devicenet.h"
 #include "shared/can/can.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -37,7 +37,7 @@ void protocore_devicenet_encode_id(uint8_t *work)
 
     if (!id || mac_id > DEVICENET_MAC_MASK)
     {
-        DevicenetV.ok = PROTO_FALSE;
+        DevicenetV.ok = EMBED_FALSE;
         return;
     }
     switch (group)
@@ -45,41 +45,41 @@ void protocore_devicenet_encode_id(uint8_t *work)
     case DEVICENET_GROUP_1:
         if (msg_id > 0x0Fu)
         {
-            DevicenetV.ok = PROTO_FALSE;
+            DevicenetV.ok = EMBED_FALSE;
             return;
         }
         *id = DEVICENET_G1_BASE | ((uint32_t)msg_id << 6) | mac_id;
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     case DEVICENET_GROUP_2:
         if (msg_id > 0x07u)
         {
-            DevicenetV.ok = PROTO_FALSE;
+            DevicenetV.ok = EMBED_FALSE;
             return;
         }
         *id = DEVICENET_G2_BASE | ((uint32_t)mac_id << 3) | msg_id;
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     case DEVICENET_GROUP_3:
         if (msg_id > 0x06u) // msg id 7 puts the identifier at 0x7C0+, which is Group 4's range
         {
-            DevicenetV.ok = PROTO_FALSE;
+            DevicenetV.ok = EMBED_FALSE;
             return;
         }
         *id = DEVICENET_G3_BASE | ((uint32_t)msg_id << 6) | mac_id;
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     case DEVICENET_GROUP_4:
         if (msg_id > 0x2Fu) // Group 4 has no MAC id; message ids 0x00..0x2F
         {
-            DevicenetV.ok = PROTO_FALSE;
+            DevicenetV.ok = EMBED_FALSE;
             return;
         }
         *id = DEVICENET_G4_BASE | msg_id;
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     default:
-        DevicenetV.ok = PROTO_FALSE;
+        DevicenetV.ok = EMBED_FALSE;
         return;
     }
 }
@@ -92,7 +92,7 @@ void protocore_devicenet_decode_id(uint8_t *work)
 
     if (!out)
     {
-        DevicenetV.ok = PROTO_FALSE;
+        DevicenetV.ok = EMBED_FALSE;
         return;
     }
     uint32_t id = can_id & PROTOCORE_CAN_STD_ID_MASK;
@@ -101,7 +101,7 @@ void protocore_devicenet_decode_id(uint8_t *work)
         out->group = DEVICENET_GROUP_1;
         out->msg_id = (uint8_t)((id >> 6) & 0x0Fu);
         out->mac_id = (uint8_t)(id & DEVICENET_MAC_MASK);
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     }
     if (id < DEVICENET_G3_BASE) // Group 2: 10 MAC(6) MsgID(3)
@@ -109,7 +109,7 @@ void protocore_devicenet_decode_id(uint8_t *work)
         out->group = DEVICENET_GROUP_2;
         out->mac_id = (uint8_t)((id >> 3) & DEVICENET_MAC_MASK);
         out->msg_id = (uint8_t)(id & 0x07u);
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     }
     if (id < DEVICENET_G4_BASE) // Group 3: 11 MsgID(3) MAC(6)
@@ -117,7 +117,7 @@ void protocore_devicenet_decode_id(uint8_t *work)
         out->group = DEVICENET_GROUP_3;
         out->msg_id = (uint8_t)((id >> 6) & 0x07u);
         out->mac_id = (uint8_t)(id & DEVICENET_MAC_MASK);
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     }
     if (id <= 0x7EFu) // Group 4: 11111 MsgID(6)
@@ -125,17 +125,17 @@ void protocore_devicenet_decode_id(uint8_t *work)
         out->group = DEVICENET_GROUP_4;
         out->msg_id = (uint8_t)(id & 0x3Fu);
         out->mac_id = 0;
-        DevicenetV.ok = PROTO_TRUE;
+        DevicenetV.ok = EMBED_TRUE;
         return;
     }
-    DevicenetV.ok = PROTO_FALSE; // 0x7F0..0x7FF are invalid identifiers
+    DevicenetV.ok = EMBED_FALSE; // 0x7F0..0x7FF are invalid identifiers
 }
 
 void protocore_devicenet_msg_header(uint8_t *work)
 {
     (void)work;
-    proto_bool frag = DevicenetV.msg_header_args.frag;
-    proto_bool xid = DevicenetV.msg_header_args.xid;
+    embed_bool frag = DevicenetV.msg_header_args.frag;
+    embed_bool xid = DevicenetV.msg_header_args.xid;
     uint8_t mac_id = DevicenetV.msg_header_args.mac_id;
 
     DevicenetV.value =
@@ -162,7 +162,7 @@ void protocore_devicenet_build_explicit(uint8_t *work)
 
     if (!out || body_len > 7 || (body_len && !body)) // 1 header octet + up to 7 body octets
     {
-        DevicenetV.ok = PROTO_FALSE;
+        DevicenetV.ok = EMBED_FALSE;
         return;
     }
     uint32_t id;
@@ -173,16 +173,16 @@ void protocore_devicenet_build_explicit(uint8_t *work)
     protocore_devicenet_encode_id(work);
     if (!DevicenetV.ok)
     {
-        DevicenetV.ok = PROTO_FALSE;
+        DevicenetV.ok = EMBED_FALSE;
         return;
     }
     out->id = id;
-    out->extended = PROTO_FALSE;
-    out->rtr = PROTO_FALSE;
+    out->extended = EMBED_FALSE;
+    out->rtr = EMBED_FALSE;
     out->dlc = (uint8_t)(1 + body_len);
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out->data, .val = 0, .bytes = sizeof(out->data));
-    DevicenetV.msg_header_args.frag = PROTO_FALSE;
-    DevicenetV.msg_header_args.xid = PROTO_FALSE;
+    DevicenetV.msg_header_args.frag = EMBED_FALSE;
+    DevicenetV.msg_header_args.xid = EMBED_FALSE;
     DevicenetV.msg_header_args.mac_id = mac_id;
     protocore_devicenet_msg_header(work);
     out->data[0] = DevicenetV.value; // not fragmented
@@ -190,7 +190,7 @@ void protocore_devicenet_build_explicit(uint8_t *work)
     {
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 1, .src = body, .bytes = body_len);
     }
-    DevicenetV.ok = PROTO_TRUE;
+    DevicenetV.ok = EMBED_TRUE;
 }
 
 void protocore_devicenet_build_fragment(uint8_t *work)
@@ -199,7 +199,7 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     DeviceNetGroup group = DevicenetV.build_fragment_args.group;
     uint8_t msg_id = DevicenetV.build_fragment_args.msg_id;
     uint8_t mac_id = DevicenetV.build_fragment_args.mac_id;
-    proto_bool xid = DevicenetV.build_fragment_args.xid;
+    embed_bool xid = DevicenetV.build_fragment_args.xid;
     uint8_t frag_type = DevicenetV.build_fragment_args.frag_type;
     uint8_t frag_count = DevicenetV.build_fragment_args.frag_count;
     const uint8_t *data = DevicenetV.build_fragment_args.data;
@@ -209,7 +209,7 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     if (!out || data_len > 6 || (data_len && !data) || (frag_type & (uint8_t)~DEVICENET_FRAG_TYPE_MASK) ||
         (frag_count & (uint8_t)~DEVICENET_FRAG_COUNT_MASK))
     {
-        DevicenetV.ok = PROTO_FALSE;
+        DevicenetV.ok = EMBED_FALSE;
         return;
     }
     uint32_t id;
@@ -220,15 +220,15 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     protocore_devicenet_encode_id(work);
     if (!DevicenetV.ok)
     {
-        DevicenetV.ok = PROTO_FALSE;
+        DevicenetV.ok = EMBED_FALSE;
         return;
     }
     out->id = id;
-    out->extended = PROTO_FALSE;
-    out->rtr = PROTO_FALSE;
+    out->extended = EMBED_FALSE;
+    out->rtr = EMBED_FALSE;
     out->dlc = (uint8_t)(2 + data_len);
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out->data, .val = 0, .bytes = sizeof(out->data));
-    DevicenetV.msg_header_args.frag = PROTO_TRUE;
+    DevicenetV.msg_header_args.frag = EMBED_TRUE;
     DevicenetV.msg_header_args.xid = xid;
     DevicenetV.msg_header_args.mac_id = mac_id;
     protocore_devicenet_msg_header(work);
@@ -241,7 +241,7 @@ void protocore_devicenet_build_fragment(uint8_t *work)
     {
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->data + 2, .src = data, .bytes = data_len);
     }
-    DevicenetV.ok = PROTO_TRUE;
+    DevicenetV.ok = EMBED_TRUE;
 }
 
 void protocore_devicenet_frag_reset(uint8_t *work)
@@ -265,15 +265,15 @@ static_assert(PROTOCORE_DEVICENET_MSG_MAX >= 254,
               "body_len at its uint8_t maximum) or frag_append can overflow on the first frame");
 
 // Append @p n octets to the reassembly buffer; false if it would overflow.
-static proto_bool frag_append(DeviceNetFragRx *rx, const uint8_t *p, uint8_t n)
+static embed_bool frag_append(DeviceNetFragRx *rx, const uint8_t *p, uint8_t n)
 {
     if ((uint32_t)rx->len + n > PROTOCORE_DEVICENET_MSG_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = rx->buf + rx->len, .src = p, .bytes = n);
     rx->len = (uint16_t)(rx->len + n);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_devicenet_frag_feed(uint8_t *work)
@@ -315,7 +315,7 @@ void protocore_devicenet_frag_feed(uint8_t *work)
     case DEVICENET_FRAG_FIRST:
         DevicenetV.frag_reset_args.rx = rx;
         protocore_devicenet_frag_reset(work);
-        rx->active = PROTO_TRUE;
+        rx->active = EMBED_TRUE;
         rx->next_count = (uint8_t)((count + 1u) & DEVICENET_FRAG_COUNT_MASK);
         if (data_len && !frag_append(rx, data, data_len))
         {
@@ -357,7 +357,7 @@ void protocore_devicenet_frag_feed(uint8_t *work)
             DevicenetV.frag = DEVICENET_FRAG_ERR;
             return;
         }
-        rx->active = PROTO_FALSE;
+        rx->active = EMBED_FALSE;
         DevicenetV.frag = DEVICENET_FRAG_COMPLETE;
         return;
     default: // DEVICENET_FRAG_ACK is flow control, not data
@@ -369,6 +369,6 @@ void protocore_devicenet_frag_feed(uint8_t *work)
 /** @brief The operands and the outcome. */
 DevicenetVars DevicenetV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEVICENET

@@ -179,7 +179,7 @@ void test_decode_requires_the_magic_octet(void)
         EspnowV.decode_args.payload = &payload;
         EspnowV.decode_args.plen = &plen;
         Espnow.decode(protocore_espnow_span());
-        const proto_bool ok = EspnowV.ok;
+        const embed_bool ok = EspnowV.ok;
         if (v == PROTOCORE_ESPNOW_MAGIC)
         {
             TEST_ASSERT_TRUE(ok);

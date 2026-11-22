@@ -257,7 +257,7 @@ void test_node_registry(void)
     TEST_ASSERT_EQUAL_UINT32(200, storage[1].last_seen);
 
     size_t idx = 99;
-    proto_bool wisun_ok = Wisun.node_find(wisun_work, &fan, &b, &idx);
+    embed_bool wisun_ok = Wisun.node_find(wisun_work, &fan, &b, &idx);
     TEST_ASSERT_TRUE(wisun_ok);
     TEST_ASSERT_EQUAL_size_t(1, idx);
     wisun_ok = Wisun.node_find(wisun_work, &fan, &c, &idx);
@@ -292,7 +292,7 @@ void test_registry_without_storage(void)
     const protocore_ip a = addr("fd00::a");
     int wisun_i32 = Wisun.node_register(wisun_work, &fan, &a, 1);
     TEST_ASSERT_EQUAL_INT(-1, wisun_i32);
-    proto_bool wisun_ok = Wisun.node_find(wisun_work, &fan, &a, NULL);
+    embed_bool wisun_ok = Wisun.node_find(wisun_work, &fan, &a, NULL);
     TEST_ASSERT_FALSE(wisun_ok);
     size_t wisun_n = Wisun.joined_count(wisun_work, &fan);
     TEST_ASSERT_EQUAL_size_t(0, wisun_n);

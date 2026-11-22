@@ -64,7 +64,7 @@
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
@@ -96,34 +96,31 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief WebSocket frame opcodes. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(WsOpcode,
     WS_OP_CONTINUATION = 0x0, ///< Continuation frame (data-message fragment; reassembled into buf).
     WS_OP_TEXT = 0x1,         ///< UTF-8 text payload.
     WS_OP_BINARY = 0x2,       ///< Binary payload.
     WS_OP_CLOSE = 0x8,        ///< Connection close.
     WS_OP_PING = 0x9,         ///< Ping (auto-ponged by the library).
     WS_OP_PONG = 0xA          ///< Pong (echoed ping; ignored by library).
-} WsOpcode;
+);
 
 /** @brief WebSocket close status codes (RFC 6455 §7.4.1). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(WsCloseCode,
     WS_CLOSE_NORMAL = 1000,          ///< Normal closure.
     WS_CLOSE_GOING_AWAY = 1001,      ///< Endpoint going away.
     WS_CLOSE_PROTOCOL = 1002,        ///< Protocol error.
     WS_CLOSE_UNSUPPORTED = 1003,     ///< Received a data type the endpoint cannot accept (RFC 6455).
     WS_CLOSE_INVALID_PAYLOAD = 1007, ///< Text message that is not valid UTF-8 (RFC 6455 8.1).
     WS_CLOSE_TOO_BIG = 1009          ///< Payload too large for WS_FRAME_SIZE.
-} WsCloseCode;
+);
 
 // ---------------------------------------------------------------------------
 // Frame parser states
 // ---------------------------------------------------------------------------
 
 /** @brief States of the WebSocket frame parser. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(WsParseState,
     WS_HEADER1,     ///< Awaiting first header byte (FIN, RSV, opcode).
     WS_HEADER2,     ///< Awaiting second header byte (MASK, 7-bit length).
     WS_LEN16_HI,    ///< Reading extended 16-bit length, high byte.
@@ -137,7 +134,7 @@ typedef enum PROTO_ENUM_PACKED
     WS_FRAME_READY, ///< Complete frame ready for dispatch.
     WS_CLOSED,      ///< Connection closed; slot may be recycled.
     WS_ERROR        ///< Protocol error; close frame has been queued.
-} WsParseState;
+);
 
 // ---------------------------------------------------------------------------
 // Per-connection WebSocket state
@@ -154,12 +151,12 @@ typedef struct
     uint8_t ws_id;     ///< Index into ws_pool[] (set at init).
     uint8_t slot_id;   ///< Owning TCP slot in conn_pool[].
     uint8_t route_id;  ///< The handler set this channel was opened for.
-    proto_bool active; ///< True when this entry is in use.
+    embed_bool active; ///< True when this entry is in use.
 
     WsParseState parse_state; ///< Current frame parser state.
     WsOpcode opcode;          ///< Opcode of the frame being parsed.
-    proto_bool fin;           ///< FIN bit of the frame being parsed.
-    proto_bool masked;        ///< True if client sent a masking key.
+    embed_bool fin;           ///< FIN bit of the frame being parsed.
+    embed_bool masked;        ///< True if client sent a masking key.
 
     uint8_t mask_key[4];            ///< Client masking key.
     uint32_t payload_len;           ///< Expected payload byte count (current frame).
@@ -171,14 +168,14 @@ typedef struct
     // frames (first text/binary with FIN=0, then continuation frames). Control
     // frames may be interleaved and use a separate buffer so they never clobber
     // the partially-assembled data message.
-    proto_bool fragmenting;   ///< True between a non-FIN data frame and its FIN.
+    embed_bool fragmenting;   ///< True between a non-FIN data frame and its FIN.
     WsOpcode msg_opcode;      ///< Opcode of the data message being assembled.
     uint32_t msg_len;         ///< Bytes assembled so far across all fragments.
     uint8_t ctl_buf[125 + 1]; ///< Control-frame payload (ping/pong/close), null-terminated.
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
-    proto_bool pmd;            ///< permessage-deflate negotiated on this connection (RFC 7692).
-    proto_bool msg_compressed; ///< Current data message arrived compressed (RSV1 on its first frame).
+    embed_bool pmd;            ///< permessage-deflate negotiated on this connection (RFC 7692).
+    embed_bool msg_compressed; ///< Current data message arrived compressed (RSV1 on its first frame).
 #endif
 } WsConn;
 
@@ -291,13 +288,13 @@ typedef struct
     uint8_t byte;       ///< one already-plaintext byte for the frame state machine
     uint16_t frag_size; ///< the outbound fragmentation size in payload bytes; 0 = off
 #if PROTOCORE_ENABLE_WS_DEFLATE
-    proto_bool pmd; ///< what an alloc records on the new connection: RFC 7692 permessage-deflate,
+    embed_bool pmd; ///< what an alloc records on the new connection: RFC 7692 permessage-deflate,
                     ///< as the handshake negotiated it. The layer that read the Sec-WebSocket-
                     ///< Extensions header is the only one that knows, so it states it here.
 #endif
     WsRouteArgs route; ///< the handlers one route records
     WsFrameArgs frame; ///< one frame's type, payload and close status
-    proto_bool ok;
+    embed_bool ok;
     uint8_t u8;
     const char *text;
     WsConn *found;
@@ -378,7 +375,7 @@ static const WsNs Ws __attribute__((unused)) = {
 /** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
 uint8_t *protocore_ws_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBSOCKET
 

@@ -44,7 +44,7 @@ static char *extract_quoted_param(char *src, const char *key)
         cellul.find, CatenaFinitaCfg, .src = src,
         .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = src, .cap = 0xFFFF) + 1u, .other = key,
         .other_cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = MULTIPART_KEY_MAX) + 1u,
-        .ci = PROTO_FALSE);
+        .ci = EMBED_FALSE);
     if (!p)
     {
         return NULL;
@@ -57,7 +57,7 @@ static char *extract_quoted_param(char *src, const char *key)
     p++; // skip opening quote
     char *end = (char *)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p,
                                    .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = p, .cap = 0xFFFF) + 1u,
-                                   .other = "\"", .other_cap = sizeof("\""), .ci = PROTO_FALSE);
+                                   .other = "\"", .other_cap = sizeof("\""), .ci = EMBED_FALSE);
     if (!end)
     {
         return NULL;
@@ -71,7 +71,7 @@ static char *extract_quoted_param(char *src, const char *key)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody *mp)
+embed_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody *mp)
 {
     (void)work;
 
@@ -81,15 +81,15 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
     const char *ct = http_parser_text;
     if (!ct)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Extract boundary value (may be quoted or unquoted)
     const char *bsearch = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = ct, .cap = MAX_VAL_LEN,
-                                     .other = "boundary=", .other_cap = sizeof("boundary="), .ci = PROTO_FALSE);
+                                     .other = "boundary=", .other_cap = sizeof("boundary="), .ci = EMBED_FALSE);
     if (!bsearch)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     bsearch += 9;
     if (*bsearch == '"')
@@ -110,7 +110,7 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
 
     if (blen == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Delimiter is "--" + boundary
@@ -136,7 +136,7 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
     char *pos = mem_find(body, (size_t)(end - body), delim, dlen);
     if (!pos)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     pos += dlen;
     if (pos + 2 <= end && pos[0] == '\r' && pos[1] == '\n')
@@ -171,7 +171,7 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
             char *line_end = mem_find(pos, (size_t)(end - pos), "\r\n", 2);
             if (!line_end)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
 
             *line_end = '\0'; // null-terminate header line
@@ -179,7 +179,7 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
             const size_t hlen = (size_t)(line_end - pos);
 
             if (hlen >= 20 && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = pos,
-                                         .other = "Content-Disposition:", .cap = 20, .ci = PROTO_TRUE))
+                                         .other = "Content-Disposition:", .cap = 20, .ci = EMBED_TRUE))
             {
                 char *v = pos + 20;
                 while (*v == ' ')
@@ -193,7 +193,7 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
                 part->name = extract_quoted_param(v, "name=");
             }
             else if (hlen >= 13 && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = pos,
-                                              .other = "Content-Type:", .cap = 13, .ci = PROTO_TRUE))
+                                              .other = "Content-Type:", .cap = 13, .ci = EMBED_TRUE))
             {
                 char *v = pos + 13;
                 while (*v == ' ')
@@ -210,7 +210,7 @@ proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody 
         char *next = mem_find(pos, (size_t)(end - pos), ddelim, ddlen);
         if (!next)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
 
         part->data = pos;
@@ -240,7 +240,7 @@ const char *protocore_multipart_get_field(uint8_t *work, const MultipartBody *mp
                        .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = mp->parts[i].name,
                                          .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = field, .cap = 0xFFFF)) +
                               1u,
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             return mp->parts[i].data;
         }

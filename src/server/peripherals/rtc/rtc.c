@@ -82,14 +82,14 @@ uint8_t *protocore_rtc_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch)
+embed_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch)
 {
     (void)work;
     const uint8_t *r = regs;
 
     if (!r || !epoch)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int sec = bcd2int(r[0] & 0x7F); // mask the DS1307 clock-halt bit
     int min = bcd2int(r[1] & 0x7F);
@@ -99,9 +99,9 @@ proto_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint3
         int h12 = bcd2int(r[2] & 0x1F);
         if (h12 < 1 || h12 > 12)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
-        proto_bool pm = (r[2] & 0x20) != 0;
+        embed_bool pm = (r[2] & 0x20) != 0;
         hour = (h12 % 12) + (pm ? 12 : 0);
     }
     else
@@ -113,7 +113,7 @@ proto_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint3
     int year = 2000 + bcd2int(r[6]);
     if (sec > 59 || min > 59 || hour > 23 || date < 1 || date > 31 || month < 1 || month > 12)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // int64: days*86400 exceeds a 32-bit long (Windows host and ESP32 both) past ~2038.
     int64_t t = (int64_t)days_from_civil(year, month, date) * 86400 + hour * 3600 + min * 60 + sec;
@@ -121,10 +121,10 @@ proto_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint3
     // is always >= 2000, so days_from_civil (and t) is always positive;
     // t > 0xFFFFFFFF (year rollover past 2106) is real and tested below
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *epoch = (uint32_t)t;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_rtc_epoch_to_regs(uint8_t *work, uint32_t epoch, uint8_t *regs)
@@ -177,12 +177,12 @@ static_assert(RTC_OFF_CTX % _Alignof(RtcCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define RTC_CTX(w) ((RtcCtx *)(void *)((w) + RTC_OFF_CTX))
 
-proto_bool protocore_rtc_begin(uint8_t *work)
+embed_bool protocore_rtc_begin(uint8_t *work)
 {
     (void)work;
 
     protocore_i2c_begin();
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 uint32_t protocore_rtc_read_epoch(uint8_t *work)
@@ -193,11 +193,11 @@ uint32_t protocore_rtc_read_epoch(uint8_t *work)
         return 0;
     }
     uint32_t e = 0;
-    proto_bool rtc_ok = Rtc.regs_to_epoch(work, RTC_CTX(work)->frame, &e);
+    embed_bool rtc_ok = Rtc.regs_to_epoch(work, RTC_CTX(work)->frame, &e);
     return rtc_ok ? e : 0;
 }
 
-proto_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch)
+embed_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch)
 {
 
     RTC_CTX(work)->frame[0] = 0x00; // point at register 0, then the seven registers follow it

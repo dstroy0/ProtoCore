@@ -47,7 +47,7 @@
 
 #if PROTOCORE_ENABLE_FOCAS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define FOCAS_TCP_PORT 8193    ///< FOCAS Ethernet listening port
 #define FOCAS_FRAME_HDR_LEN 10 ///< magic(4) + version(2) + type(2) + length(2)
@@ -61,8 +61,7 @@ PROTOCORE_BEGIN_DECLS
 #define FOCAS_SYSINFO_LEN 18   ///< ODBSYS: addinfo+maxaxis+cnctype+mttype+series+version+axes
 
 /// Frame types (envelope octets 6-7). Cast to/from the wire only at the byte boundary.
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(FocasFrameType,
     FOCAS_FRAME_TYPE_INVALID = 0x0000,
     FOCAS_FRAME_TYPE_OPEN_REQ = 0x0101,
     FOCAS_FRAME_TYPE_OPEN_RESP = 0x0102,
@@ -70,7 +69,7 @@ typedef enum PROTO_ENUM_PACKED
     FOCAS_FRAME_TYPE_CLOSE_RESP = 0x0202,
     FOCAS_FRAME_TYPE_COMMAND_REQ = 0x2101, ///< FTYPE_VAR_REQU
     FOCAS_FRAME_TYPE_COMMAND_RESP = 0x2102 ///< FTYPE_VAR_RESP
-} FocasFrameType;
+);
 
 /// A FOCAS function selector: three big-endian u16 (c1, c2, c3).
 typedef struct
@@ -149,7 +148,7 @@ typedef struct
     int32_t data;
     uint8_t base; ///< 2 or 10
     uint8_t exp;  ///< decimal places
-    proto_bool valid;
+    embed_bool valid;
 } FocasValue;
 
 // ---------------------------------------------------------------------------------------------
@@ -193,28 +192,28 @@ size_t protocore_focas_build_read_spindle(uint8_t *buf, size_t cap);
 // ---------------------------------------------------------------------------------------------
 
 /// Validate the 10-octet envelope (magic + version) and expose the payload (into `buf`).
-proto_bool protocore_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out);
+embed_bool protocore_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out);
 
 /// Decode a command-response payload (echoed selector + status + length + data) into `out`.
-proto_bool protocore_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out);
+embed_bool protocore_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out);
 
 /// Convenience: validate a whole command-response frame (type 0x2102) straight into `out`.
-proto_bool protocore_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out);
+embed_bool protocore_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out);
 
 /// SysInfo response data: ODBSYS (addinfo + maxaxis + cnctype + mttype + series + version + axes).
-proto_bool protocore_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out);
+embed_bool protocore_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out);
 
 /// Alarm response data: a single big-endian u32 alarm bitmask.
-proto_bool protocore_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status);
+embed_bool protocore_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status);
 
 /// Decode one FOCAS 8-octet value at `chunk`. Returns true only for a usable value (`out->valid`
 /// is set the same way); false if fewer than 8 octets are available.
-proto_bool protocore_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out);
+embed_bool protocore_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out);
 
 /// The scaled value `data / base^exp` as a float (0 for an invalid value).
 float protocore_focas_value_f(const FocasValue *v);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FOCAS
 

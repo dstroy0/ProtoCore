@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/profibus/profibus.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -146,7 +146,7 @@ static void pb_parse_sd3(uint8_t *work)
 
     if (len < 14)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     ProfibusV.fcs_args.bytes = frame + 1;
@@ -154,7 +154,7 @@ static void pb_parse_sd3(uint8_t *work)
     protocore_profibus_fcs(work);
     if (ProfibusV.value != frame[12] || frame[13] != PB_ED)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     out->sd = PB_SD3;
@@ -163,7 +163,7 @@ static void pb_parse_sd3(uint8_t *work)
     out->fc = frame[3];
     out->data = frame + 4;
     out->data_len = 8;
-    ProfibusV.ok = PROTO_TRUE;
+    ProfibusV.ok = EMBED_TRUE;
 }
 
 // SD1 no-data telegram: SD1 DA SA FC FCS ED (6 octets).
@@ -178,7 +178,7 @@ static void pb_parse_sd1(uint8_t *work)
     protocore_profibus_fcs(work);
     if (ProfibusV.value != frame[4] || frame[5] != PB_ED)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     out->sd = PB_SD1;
@@ -187,7 +187,7 @@ static void pb_parse_sd1(uint8_t *work)
     out->fc = frame[3];
     out->data = NULL;
     out->data_len = 0;
-    ProfibusV.ok = PROTO_TRUE;
+    ProfibusV.ok = EMBED_TRUE;
 }
 
 // SD2 variable-length telegram: SD2 LE LEr SD2 DA SA FC [data] FCS ED.
@@ -199,24 +199,24 @@ static void pb_parse_sd2(uint8_t *work)
 
     if (len < 9)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     uint8_t le = frame[1];
     if (frame[2] != le || frame[3] != PB_SD2)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     if (le < 4) // LE counts DA + SA + FC + the PDU, and the PDU is at least one octet
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     size_t total = 4 + le + 2; // header(4) + le body + FCS + ED
     if (len < total)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     ProfibusV.fcs_args.bytes = frame + 4;
@@ -224,7 +224,7 @@ static void pb_parse_sd2(uint8_t *work)
     protocore_profibus_fcs(work);
     if (ProfibusV.value != frame[4 + le] || frame[4 + le + 1] != PB_ED)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     out->sd = PB_SD2;
@@ -234,7 +234,7 @@ static void pb_parse_sd2(uint8_t *work)
     size_t dl = le - 3;
     out->data = dl ? (frame + 7) : NULL;
     out->data_len = dl;
-    ProfibusV.ok = PROTO_TRUE;
+    ProfibusV.ok = EMBED_TRUE;
 }
 
 void protocore_profibus_parse(uint8_t *work)
@@ -245,7 +245,7 @@ void protocore_profibus_parse(uint8_t *work)
 
     if (!frame || !out || len < 6)
     {
-        ProfibusV.ok = PROTO_FALSE;
+        ProfibusV.ok = EMBED_FALSE;
         return;
     }
     if (frame[0] == PB_SD3)
@@ -263,12 +263,12 @@ void protocore_profibus_parse(uint8_t *work)
         pb_parse_sd2(work);
         return;
     }
-    ProfibusV.ok = PROTO_FALSE;
+    ProfibusV.ok = EMBED_FALSE;
 }
 
 /** @brief The operands and the outcome. */
 ProfibusVars ProfibusV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROFIBUS

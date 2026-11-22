@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file radio_sniff.h
@@ -79,6 +79,6 @@ PROTOCORE_NS RadioSniffNs RadioSniff PROTOCORE_UNUSED = {.global_header = protoc
                                                          .i2f32 = protocore_radio_sniff_i2f32,
                                                          .tap_record = protocore_radio_sniff_tap_record};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_RADIO_SNIFF_H

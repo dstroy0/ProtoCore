@@ -83,7 +83,7 @@ void test_msnlmp_smb2_header_layout(void)
 
     Smb2Header h;
     memset(&h, 0xEE, sizeof(h));
-    proto_bool smb2_ok = Smb2.parse_header(smb2_work, buf, sizeof(buf), &h);
+    embed_bool smb2_ok = Smb2.parse_header(smb2_work, buf, sizeof(buf), &h);
     TEST_ASSERT_TRUE(smb2_ok);
     TEST_ASSERT_EQUAL_INT(SMB2_TREE_CONNECT, h.command);
     TEST_ASSERT_EQUAL_UINT32(0, h.status);
@@ -102,7 +102,7 @@ void test_header_parse_fails_closed(void)
     Smb2Header h;
     size_t smb2_n = Smb2.build_header(smb2_work, buf, sizeof(buf), SMB2_NEGOTIATE, 1, 0, 0, 0);
     TEST_ASSERT_EQUAL_size_t(64, smb2_n);
-    proto_bool smb2_ok = Smb2.parse_header(smb2_work, buf, sizeof(buf), &h);
+    embed_bool smb2_ok = Smb2.parse_header(smb2_work, buf, sizeof(buf), &h);
     TEST_ASSERT_TRUE(smb2_ok);
 
     smb2_ok = Smb2.parse_header(smb2_work, buf, 63, &h);
@@ -258,7 +258,7 @@ void test_negotiate_request_body(void)
 
     // The header in front of it is a NEGOTIATE with no session and no tree, per sec 2.2.1.2.
     Smb2Header h;
-    proto_bool smb2_ok = Smb2.parse_header(smb2_work, buf, n, &h);
+    embed_bool smb2_ok = Smb2.parse_header(smb2_work, buf, n, &h);
     TEST_ASSERT_TRUE(smb2_ok);
     TEST_ASSERT_EQUAL_INT(SMB2_NEGOTIATE, h.command);
     TEST_ASSERT_EQUAL_HEX64(0, h.session_id);
@@ -317,7 +317,7 @@ void test_negotiate_response_parse(void)
 
     Smb2NegotiateResp r;
     memset(&r, 0xEE, sizeof(r));
-    proto_bool smb2_ok = Smb2.parse_negotiate_response(smb2_work, msg, sec_off + sizeof(SEC_BUF), &r);
+    embed_bool smb2_ok = Smb2.parse_negotiate_response(smb2_work, msg, sec_off + sizeof(SEC_BUF), &r);
     TEST_ASSERT_TRUE(smb2_ok);
     TEST_ASSERT_EQUAL_UINT16(SMB2_NEGOTIATE_SIGNING_ENABLED, r.security_mode);
     TEST_ASSERT_EQUAL_UINT16(SMB2_DIALECT_0311, r.dialect);
@@ -378,7 +378,7 @@ void test_signing_round_trip_and_tamper_detection(void)
     Smb2.sign(smb2_work, g_work, KEY, msg, sizeof(msg));
     TEST_ASSERT_TRUE((le32(msg + 16) & SMB2_FLAGS_SIGNED) != 0);
     TEST_ASSERT_TRUE(memcmp(msg + 48, plain + 48, 16) != 0); // a signature was written
-    proto_bool smb2_ok = Smb2.verify(smb2_work, g_work, KEY, msg, sizeof(msg));
+    embed_bool smb2_ok = Smb2.verify(smb2_work, g_work, KEY, msg, sizeof(msg));
     TEST_ASSERT_TRUE(smb2_ok);
 
     // Verification leaves the message as it found it, so a caller can hand it on.
@@ -440,7 +440,7 @@ void test_cmac_signing_is_a_distinct_algorithm(void)
 
     Smb2.sign_cmac(smb2_work, g_work, KEY, msg, sizeof(msg));
     TEST_ASSERT_TRUE((le32(msg + 16) & SMB2_FLAGS_SIGNED) != 0);
-    proto_bool smb2_ok = Smb2.verify_cmac(smb2_work, g_work, KEY, msg, sizeof(msg));
+    embed_bool smb2_ok = Smb2.verify_cmac(smb2_work, g_work, KEY, msg, sizeof(msg));
     TEST_ASSERT_TRUE(smb2_ok);
     smb2_ok = Smb2.verify(smb2_work, g_work, KEY, msg, sizeof(msg));
     TEST_ASSERT_FALSE(smb2_ok);
@@ -609,7 +609,7 @@ void test_key_derivation_separates_its_outputs(void)
 
     uint8_t sign_311[16];
     uint8_t sign_300[16];
-    proto_bool smb2_ok = Smb2.derive_signing_key(smb2_work, SESSION_KEY, SMB2_DIALECT_0311, preauth, sign_311);
+    embed_bool smb2_ok = Smb2.derive_signing_key(smb2_work, SESSION_KEY, SMB2_DIALECT_0311, preauth, sign_311);
     TEST_ASSERT_TRUE(smb2_ok);
     smb2_ok = Smb2.derive_signing_key(smb2_work, SESSION_KEY, SMB2_DIALECT_0300, NULL, sign_300);
     TEST_ASSERT_TRUE(smb2_ok);

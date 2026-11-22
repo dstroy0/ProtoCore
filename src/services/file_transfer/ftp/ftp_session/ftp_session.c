@@ -22,7 +22,7 @@
 #include "services/file_transfer/ftp/ftp/ftp.h"
 #include "shared/log/log.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Owned session state. One transfer at a time; the buffers are too big for the stack. */
 typedef struct
@@ -40,8 +40,7 @@ typedef struct
 } FtpSessionCtx;
 
 /** @brief The reply the sequence is waiting on, and so where the next call resumes. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(FtpStep,
     FTP_STEP_IDLE = 0, ///< nothing in flight
     FTP_STEP_GREETING, ///< the server's 220
     FTP_STEP_USER,     ///< the answer to USER
@@ -52,7 +51,7 @@ typedef enum PROTO_ENUM_PACKED
     FTP_STEP_STOR,     ///< the preliminary 1xx
     FTP_STEP_STREAM,   ///< the payload is going out
     FTP_STEP_DONE,     ///< the completion 226
-} FtpStep;
+);
 // Designated, so a member's position in the struct does not decide what it binds to.
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -105,7 +104,7 @@ static const mmgr_field LOG_CTRL_CONNECT_FAILED[] = {{MMGR_FK_LIT, 0, 24, "ftp: 
 // ---------------------------------------------------------------------------
 
 /** @brief Send one command line on the control connection and arm its reply deadline. */
-static proto_bool ftp_send(uint8_t *work, const char *verb, const char *arg)
+static embed_bool ftp_send(uint8_t *work, const char *verb, const char *arg)
 {
     FtpV.build_command_args.buf = FTP_SESSION_CTX(work)->cmd;
     FtpV.build_command_args.cap = sizeof(FTP_SESSION_CTX(work)->cmd);
@@ -116,7 +115,7 @@ static proto_bool ftp_send(uint8_t *work, const char *verb, const char *arg)
     if (n == 0)
     {
         PROTOCORE_LOGW(LOG_BUILD_FAILED, ((const mmgr_fval[]){MMGR_VSTR(verb)}), 1);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     PROTOCORE_LOGD(LOG_SENT, ((const mmgr_fval[]){MMGR_VSTR(verb)}), 1);
     TcpClientV.cid = FTP_SESSION_CTX(work)->ctrl;
@@ -209,11 +208,11 @@ static protocore_ftp_state ftp_await(uint8_t *work, int *code, size_t *rlen)
 }
 
 /** @brief Connect the data connection the server named. */
-static proto_bool ftp_data_connect(uint8_t *work, const char *host, uint16_t port)
+static embed_bool ftp_data_connect(uint8_t *work, const char *host, uint16_t port)
 {
     if (port == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     TcpClientV.dial.host = host;
     TcpClientV.dial.port = port;
@@ -440,7 +439,7 @@ void protocore_ftp_session_store(uint8_t *work)
             {
                 break;
             }
-            FtpV.ok = PROTO_FALSE;
+            FtpV.ok = EMBED_FALSE;
             if (code == 229)
             {
                 FtpV.parse_epsv_args.buf = FTP_SESSION_CTX(work)->rx;
@@ -475,7 +474,7 @@ void protocore_ftp_session_store(uint8_t *work)
                 FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
-            FtpV.ok = PROTO_FALSE;
+            FtpV.ok = EMBED_FALSE;
             if (st != PROTOCORE_FTP_FAILED && code == 227)
             {
                 FtpV.parse_pasv_args.buf = FTP_SESSION_CTX(work)->rx;
@@ -513,7 +512,7 @@ void protocore_ftp_session_store(uint8_t *work)
             continue;
 
         case FTP_STEP_STREAM: {
-            proto_bool sent = PROTO_TRUE;
+            embed_bool sent = EMBED_TRUE;
             while (FTP_SESSION_CTX(work)->off < total)
             {
                 const size_t want = (total - FTP_SESSION_CTX(work)->off < sizeof(FTP_SESSION_CTX(work)->chunk))
@@ -526,7 +525,7 @@ void protocore_ftp_session_store(uint8_t *work)
                 TcpClient.send(protocore_tcp_client_span());
                 if (got != want || !TcpClientV.ok)
                 {
-                    sent = PROTO_FALSE;
+                    sent = EMBED_FALSE;
                     break;
                 }
                 FTP_SESSION_CTX(work)->off += got;
@@ -576,6 +575,6 @@ void protocore_ftp_session_store(uint8_t *work)
 /** @brief The operands and the outcome. */
 FtpSessionVars FtpSessionV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FTP_SESSION

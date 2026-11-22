@@ -34,9 +34,9 @@ static ScpMode parse_cmd(const char *cmd, char *path, size_t cap)
     return scp_value;
 }
 
-static proto_bool parse_cline(const char *line, uint32_t *mode, uint64_t *size, char *name, size_t cap)
+static embed_bool parse_cline(const char *line, uint32_t *mode, uint64_t *size, char *name, size_t cap)
 {
-    proto_bool scp_ok = Scp.parse_cline(scp_work, line, strlen(line), mode, size, name, cap);
+    embed_bool scp_ok = Scp.parse_cline(scp_work, line, strlen(line), mode, size, name, cap);
     return scp_ok;
 }
 
@@ -116,7 +116,7 @@ void test_control_line_round_trip(void)
         uint32_t mode = 0;
         uint64_t size = 0;
         char name[32];
-        proto_bool scp_ok = Scp.parse_cline(scp_work, out, n, &mode, &size, name, sizeof(name));
+        embed_bool scp_ok = Scp.parse_cline(scp_work, out, n, &mode, &size, name, sizeof(name));
         TEST_ASSERT_TRUE(scp_ok);
         TEST_ASSERT_EQUAL_UINT32(CASES[i].mode, mode);
         TEST_ASSERT_EQUAL_UINT64(CASES[i].size, size);
@@ -166,7 +166,7 @@ void test_truncated_records_are_refused(void)
     TEST_ASSERT_FALSE(parse_cline("C0644 10 \n", &mode, &size, name, sizeof(name)));
     TEST_ASSERT_FALSE(parse_cline("C0644 12x name\n", &mode, &size, name, sizeof(name))); // junk in the size
     TEST_ASSERT_FALSE(parse_cline("C0644  10 n\n", &mode, &size, name, sizeof(name)));    // two separators
-    proto_bool scp_ok = Scp.parse_cline(scp_work, NULL, 12, &mode, &size, name, sizeof(name));
+    embed_bool scp_ok = Scp.parse_cline(scp_work, NULL, 12, &mode, &size, name, sizeof(name));
     TEST_ASSERT_FALSE(scp_ok);
     scp_ok = Scp.parse_cline(scp_work, "C0644 1 x", 0, &mode, &size, name, sizeof(name));
     TEST_ASSERT_FALSE(scp_ok);
@@ -189,7 +189,7 @@ void test_name_ends_at_the_newline_or_the_length(void)
 
     // An embedded NUL terminates the name the same way a newline does.
     static const char REC[] = "C0644 10 abc\0xyz";
-    proto_bool scp_ok = Scp.parse_cline(scp_work, REC, sizeof(REC) - 1, &mode, &size, name, sizeof(name));
+    embed_bool scp_ok = Scp.parse_cline(scp_work, REC, sizeof(REC) - 1, &mode, &size, name, sizeof(name));
     TEST_ASSERT_TRUE(scp_ok);
     TEST_ASSERT_EQUAL_STRING("abc", name);
 }

@@ -13,7 +13,7 @@
 #include "network_drivers/presentation/http/sse/sse.h" // Sse: the stream table and its numbers
 #include "network_drivers/session/sse/sse.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Take a stream for the connection the caller named, then run the route's connect. RFC 4254
 // sec 5.1: a side that opens "allocates a local number for the channel"; a table with no free
@@ -54,6 +54,6 @@ void protocore_session_sse_close(uint8_t *work)
 /** @brief The operands and the outcome. */
 SessionSseVars SessionSseV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSE

@@ -26,7 +26,7 @@ static const uint8_t ISN_SECRET[IDEMIP_TCP_ISN_SECRET_BYTES] = {0x11u, 0x22u, 0x
 #define IP_MASK 0xFFFFFF00u
 
 static uint32_t s_now_ms;
-static proto_bool s_up;
+static embed_bool s_up;
 
 static void put16(uint8_t *at, uint16_t value)
 {
@@ -114,7 +114,7 @@ void setUp(void)
     StackV.addr4_args.index = 0u;
     Stack.set_addr4(protocore_stack_span());
     TEST_ASSERT_TRUE_MESSAGE(StackV.ok, "the interface did not take its address");
-    s_up = PROTO_TRUE;
+    s_up = EMBED_TRUE;
 }
 
 void tearDown(void)

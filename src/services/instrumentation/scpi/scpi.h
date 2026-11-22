@@ -37,7 +37,7 @@
 
 #if PROTOCORE_ENABLE_SCPI
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The default raw-socket ("SCPI-RAW") TCP port instruments listen on. */
 #define PROTOCORE_SCPI_PORT 5025
@@ -61,8 +61,7 @@ PROTOCORE_BEGIN_DECLS
 #define SCPI_STB_OSB 0x80 ///< bit 7: OPERation status summary
 
 /** @brief The mandatory IEEE 488.2 common commands (`protocore_scpi_common` renders each). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(ScpiCommon,
     SCPI_CLS,   ///< "*CLS"  clear status
     SCPI_ESE,   ///< "*ESE"  set event status enable
     SCPI_ESE_Q, ///< "*ESE?" query event status enable
@@ -76,7 +75,7 @@ typedef enum PROTO_ENUM_PACKED
     SCPI_STB_Q, ///< "*STB?" query status byte
     SCPI_TST_Q, ///< "*TST?" self-test query
     SCPI_WAI,   ///< "*WAI"  wait to continue
-} ScpiCommon;
+);
 
 /** @brief Render an IEEE 488.2 common command mnemonic (a static string, never null). */
 const char *protocore_scpi_common(ScpiCommon c);
@@ -104,13 +103,13 @@ size_t protocore_scpi_fmt_real(char *buf, size_t cap, double v);
  *        (no stdlib). Recognizes the special values `9.9E37` (INFinity), `-9.9E37`, `9.91E37` (NaN).
  * @return true on a fully-consumed numeric field; false on malformed input.
  */
-proto_bool protocore_scpi_parse_number(const char *s, size_t len, double *out);
+embed_bool protocore_scpi_parse_number(const char *s, size_t len, double *out);
 
 /**
  * @brief Parse a SCPI boolean response: `1`/`0` or `ON`/`OFF` (case-insensitive).
  * @return true on a recognized boolean; false otherwise.
  */
-proto_bool protocore_scpi_parse_bool(const char *s, size_t len, proto_bool *out);
+embed_bool protocore_scpi_parse_bool(const char *s, size_t len, embed_bool *out);
 
 /**
  * @brief Parse a SCPI string response: strip the surrounding single or double quotes and collapse a
@@ -127,7 +126,7 @@ size_t protocore_scpi_parse_string(const char *s, size_t len, char *out, size_t 
  * @param consumed  receives the total bytes the block occupied (header + data [+ the indefinite NL]).
  * @return true on a complete block; false if truncated or malformed.
  */
-proto_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
+embed_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
                                       size_t *consumed);
 
 // ── IEEE 488.2 / SCPI status model (instrument side) ───────────────────────────────────────────
@@ -169,7 +168,7 @@ void protocore_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg);
  *        `0,"No error"`.
  * @return true if an error was dequeued; false if the queue was empty (out = the no-error entry).
  */
-proto_bool protocore_scpi_pop_error(ScpiStatus *s, ScpiError *out);
+embed_bool protocore_scpi_pop_error(ScpiStatus *s, ScpiError *out);
 
 /** @brief Compute the Status Byte: EAV (queue), ESB (esr & ese), the app summary bits, and MSS. */
 uint8_t protocore_scpi_stb(const ScpiStatus *s);
@@ -192,9 +191,9 @@ const char *protocore_scpi_std_error(int16_t number);
  *
  * @return true if @p input (its header, up to the first space) matches @p pattern.
  */
-proto_bool protocore_scpi_match(const char *input, size_t input_len, const char *pattern);
+embed_bool protocore_scpi_match(const char *input, size_t input_len, const char *pattern);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SCPI
 

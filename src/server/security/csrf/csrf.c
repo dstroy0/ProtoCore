@@ -24,7 +24,7 @@
 #include "server/security/csrf/csrf.h"
 #include "shared/hex/hex.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // nonce-hex "." signature-hex
 static const mmgr_field CSRF_TOKEN[] = {MMGR_STR, {MMGR_FK_LIT, 0, 1, "."}, MMGR_STR, MMGR_END};
@@ -65,7 +65,7 @@ static_assert(CSRF_OFF_CTX % _Alignof(CsrfCtx) == 0,
 // Lowercase hex of @p n bytes at @p in, plus a NUL, into @p out.
 static void hex_of(const uint8_t *in, uint32_t n, char *out)
 {
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     HexV.io.in = in;
     HexV.io.n = n;
     HexV.io.out = out;
@@ -107,24 +107,24 @@ uint8_t *protocore_csrf_span(void)
 
 void protocore_csrf_set_secret(uint8_t *work)
 {
-    CsrfV.ok = PROTO_FALSE;
+    CsrfV.ok = EMBED_FALSE;
     CsrfCtx *c = CSRF_CTX(work);
     const uint8_t *secret = CsrfV.secret_args.secret;
     if (!secret)
     {
         c->secret_len = 0;
-        CsrfV.ok = PROTO_TRUE;
+        CsrfV.ok = EMBED_TRUE;
         return;
     }
     const size_t len = CsrfV.secret_args.len;
     c->secret_len = len > sizeof(c->secret) ? sizeof(c->secret) : len;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->secret, .src = secret, .bytes = c->secret_len);
-    CsrfV.ok = PROTO_TRUE;
+    CsrfV.ok = EMBED_TRUE;
 }
 
 void protocore_csrf_issue(uint8_t *work)
 {
-    CsrfV.ok = PROTO_FALSE;
+    CsrfV.ok = EMBED_FALSE;
     CsrfV.n = 0;
     if (!CsrfV.issue_args.out || CsrfV.issue_args.cap < CSRF_TOKEN_BUF)
     {
@@ -156,8 +156,8 @@ void protocore_csrf_issue(uint8_t *work)
 
 void protocore_csrf_verify(uint8_t *work)
 {
-    CsrfV.ok = PROTO_FALSE;
-    CsrfV.valid = PROTO_FALSE;
+    CsrfV.ok = EMBED_FALSE;
+    CsrfV.valid = EMBED_FALSE;
     const char *token = CsrfV.verify_args.token;
     if (!token)
     {
@@ -171,7 +171,7 @@ void protocore_csrf_verify(uint8_t *work)
 
     const char *dot = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = token,
                                  .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = token, .cap = 0xFFFF) + 1u,
-                                 .other = ".", .other_cap = sizeof("."), .ci = PROTO_FALSE);
+                                 .other = ".", .other_cap = sizeof("."), .ci = EMBED_FALSE);
     if (!dot)
     {
         return;
@@ -203,22 +203,22 @@ void protocore_csrf_verify(uint8_t *work)
     char expect[CSRF_SIG_BYTES * 2 + 1];
     sign_nonce(work, nonce, CSRF_NONCE_BYTES, expect);
     CsrfV.valid = protocore_ct_eq(sig, expect, CSRF_SIG_BYTES * 2);
-    CsrfV.ok = PROTO_TRUE;
+    CsrfV.ok = EMBED_TRUE;
 }
 
 void protocore_csrf_reset(uint8_t *work)
 {
-    CsrfV.ok = PROTO_FALSE;
+    CsrfV.ok = EMBED_FALSE;
     CsrfCtx *c = CSRF_CTX(work);
     EMBED_CALL(memor.set, MemoriaCfg, .dst = c->secret, .val = 0, .bytes = sizeof(c->secret));
     c->secret_len = 0;
     c->counter = 0;
-    CsrfV.ok = PROTO_TRUE;
+    CsrfV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 CsrfVars CsrfV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CSRF

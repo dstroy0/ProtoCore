@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file tls13_rpk.h
@@ -36,7 +36,7 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     size_t (*ed25519_spki)(uint8_t *, uint8_t *, size_t, const uint8_t *);
-    proto_bool (*ed25519_from_spki)(uint8_t *, const uint8_t *, size_t, const uint8_t **);
+    embed_bool (*ed25519_from_spki)(uint8_t *, const uint8_t *, size_t, const uint8_t **);
     size_t (*build_certificate)(uint8_t *, uint8_t *, size_t, const uint8_t *);
 } Tls13RpkNs;
 PROTOCORE_NS_LAYOUT(Tls13RpkNs, ed25519_spki, ed25519_from_spki, build_certificate);
@@ -56,9 +56,9 @@ size_t protocore_tls13_rpk_ed25519_spki(uint8_t *work, uint8_t *out, size_t cap,
  * @param spki Spki
  * @param len Len
  * @param pub Pub
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *spki, size_t len, const uint8_t **pub);
+embed_bool protocore_tls13_rpk_ed25519_from_spki(uint8_t *work, const uint8_t *spki, size_t len, const uint8_t **pub);
 /**
  * @brief Build a Certificate message (RFC 8446 sec 4.4.2) carrying an RFC .
  * @param work PROTOCORE_TLS13_RPK_BORROW bytes the caller took. Not held past the call.
@@ -74,6 +74,6 @@ PROTOCORE_NS Tls13RpkNs Tls13Rpk PROTOCORE_UNUSED = {.ed25519_spki = protocore_t
                                                      .ed25519_from_spki = protocore_tls13_rpk_ed25519_from_spki,
                                                      .build_certificate = protocore_tls13_rpk_build_certificate};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TLS13_RPK_H

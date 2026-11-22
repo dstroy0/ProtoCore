@@ -56,11 +56,10 @@
 
 #if PROTOCORE_ENABLE_NATS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The server-to-client operation a parse decoded (NATS Protocol). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(NatsOp,
     NATS_OP_MSG,     ///< MSG, or HMSG when the header section is set: subject, sid, reply-to, payload
     NATS_OP_INFO,    ///< INFO: the options JSON lands in @c arg
     NATS_OP_PING,    ///< PING
@@ -68,7 +67,7 @@ typedef enum PROTO_ENUM_PACKED
     NATS_OP_OK,      ///< +OK
     NATS_OP_ERR,     ///< -ERR: the error message lands in @c arg
     NATS_OP_UNKNOWN, ///< an operation name this decoder does not carry
-} NatsOp;
+);
 
 /**
  * @brief One decoded protocol message. Every span points into the caller's inbound buffer.
@@ -126,7 +125,7 @@ typedef struct
     const char *queue_group; ///< SUB: the queue group; NULL leaves the optional field off
     const char *sid;         ///< the alphanumeric subscription id the client generates
     uint32_t max_msgs;       ///< UNSUB: messages to deliver before the subscription ends
-    proto_bool with_max;     ///< UNSUB: write max_msgs; false ends the subscription at once
+    embed_bool with_max;     ///< UNSUB: write max_msgs; false ends the subscription at once
 } NatsSubscriptionArgs;
 
 /** @brief The inbound octets a parse reads. */
@@ -182,7 +181,7 @@ typedef struct
     NatsHeadersArgs headers;           ///< the header section an HPUB carries
     NatsSubscriptionArgs subscription; ///< what a SUB opens or an UNSUB ends
     NatsInboundArgs in;                ///< what a parse reads
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     size_t consumed;
     NatsMsg msg;
@@ -230,7 +229,7 @@ static const NatsNs Nats __attribute__((unused)) = {
     .parse = protocore_nats_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NATS
 

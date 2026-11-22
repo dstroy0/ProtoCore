@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_AUTH
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Named, not defined: the request is the parser's and the route is the table's, and this module only
 // reads them. Declaring them here rather than including their headers is what keeps auth.h includable
@@ -88,13 +88,13 @@ typedef struct
     const char *realm; ///< the realm a row is added under
     const char *user;  ///< its username
     const char *pass;  ///< its password
-    proto_bool digest; ///< the row is Digest rather than Basic
+    embed_bool digest; ///< the row is Digest rather than Basic
 } AuthCredArgs;
 
 /** @brief RFC 7616 sec 3.3: the nonce a challenge carries, and where a mint writes one. */
 typedef struct
 {
-    proto_bool stale;  ///< in: the challenge marks a transparent retry; out: the check found one
+    embed_bool stale;  ///< in: the challenge marks a transparent retry; out: the check found one
     const char *nonce; ///< the nonce a verify judges
     char *out;         ///< where a mint writes
     size_t cap;        ///< how much room it has; at least 48
@@ -120,8 +120,8 @@ typedef struct
     uint8_t id;               ///< the credential set a call names
     AuthCredArgs cred;        ///< one credential row
     AuthNonceArgs nonce_args; ///< the nonce a mint writes and a verify judges
-    proto_bool ok;
-    proto_bool expired;
+    embed_bool ok;
+    embed_bool expired;
     uint8_t u8;
 } AuthVars;
 
@@ -176,7 +176,7 @@ static const AuthNs Auth __attribute__((unused)) = {
  */
 uint8_t *protocore_http_auth_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUTH
 

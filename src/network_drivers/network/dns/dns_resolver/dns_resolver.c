@@ -28,7 +28,7 @@
 
 // --- the program's shared state, beside the namespace not on it -------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one owned instance, private to this TU: the pointer to the bytes this module took for
 // itself. A caller that hands in its own borrow never reaches it.
@@ -78,17 +78,17 @@ struct ResolverStorage
     mmgr_span name; ///< where a record's owner name lands while the walk steps over it
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
     protocore_net_ip addr;   ///< the address the stack's callback reported
-    _Atomic proto_bool done; ///< the callback ran
-    _Atomic proto_bool ok;   ///< and it carried an address
+    embed_atomic_u32 done; ///< the callback ran
+    embed_atomic_u32 ok;   ///< and it carried an address
 #else
     mmgr_span tx;     ///< the query message in flight
     mmgr_span server; ///< the nameserver being asked, as text
     uint16_t id;      ///< the ID of the query in flight (RFC 1035 sec 4.1.1)
     uint32_t answer;  ///< host order, 0 until a response parses
-    proto_bool done;  ///< a response parsed
+    embed_bool done;  ///< a response parsed
 #endif
     uint32_t timer;  ///< the millisecond the query in flight left at
-    proto_bool busy; ///< a query is out; a second host waits for it
+    embed_bool busy; ///< a query is out; a second host waits for it
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -147,7 +147,7 @@ static protocore_ip_class ip_class(uint32_t ip)
 }
 
 // Whether that word is a plausible A record for a remote host.
-static proto_bool ip_plausible(uint32_t ip)
+static embed_bool ip_plausible(uint32_t ip)
 {
     switch (ip_class(ip))
     {
@@ -155,9 +155,9 @@ static proto_bool ip_plausible(uint32_t ip)
     case PROTOCORE_IP_BROADCAST:   // 255.255.255.255 - never a host
     case PROTOCORE_IP_LOOPBACK:    // 127.x - a name resolving back to this host
     case PROTOCORE_IP_MULTICAST:   // 224-239 - never an A record host
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     default:
-        return PROTO_TRUE; // private / link-local / public are plausible
+        return EMBED_TRUE; // private / link-local / public are plausible
     }
 }
 
@@ -209,11 +209,11 @@ static size_t question_build(uint8_t *out, size_t cap, uint16_t id, const char *
 
 // Take the name borrow on first use. False when the pool cannot cover it, and every caller fails
 // closed.
-static proto_bool name_bind(uint8_t *work)
+static embed_bool name_bind(uint8_t *work)
 {
     if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->name))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     DNS_RESOLVER_CTX(work)->name =
         EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX),
@@ -223,23 +223,23 @@ static proto_bool name_bind(uint8_t *work)
 
 // Read the first A record out of @p pkt into @p out_ip, host order. Accepts the message only when
 // its ID is @p id, QR is set, and RCODE is 0 (RFC 1035 sec 4.1.1, RFC 5452 sec 9.1).
-static proto_bool answer_read(uint8_t *work, const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip)
+static embed_bool answer_read(uint8_t *work, const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip)
 {
     if (pkt == NULL || out_ip == NULL || len < PROTOCORE_DNS_HDR_LEN || !name_bind(work))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint16_t got_id = (uint16_t)(((uint16_t)pkt[0] << 8) | pkt[1]);
     uint16_t flags = (uint16_t)(((uint16_t)pkt[2] << 8) | pkt[3]);
     if (got_id != id || (flags & PROTOCORE_DNS_FLAG_QR) == 0 || (flags & PROTOCORE_DNS_RCODE_MASK) != 0)
     {
-        return PROTO_FALSE; // not our answer, not an answer, or the server said no
+        return EMBED_FALSE; // not our answer, not an answer, or the server said no
     }
     uint16_t qd = (uint16_t)(((uint16_t)pkt[4] << 8) | pkt[5]); // QDCOUNT
     uint16_t an = (uint16_t)(((uint16_t)pkt[6] << 8) | pkt[7]); // ANCOUNT
     if (an == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Step over the question section: each entry is a QNAME then QTYPE + QCLASS. The name goes into
@@ -253,16 +253,16 @@ static proto_bool answer_read(uint8_t *work, const uint8_t *pkt, size_t len, uin
         DnsWireV.msg.off = off;
         DnsWireV.msg.out = name;
         DnsWireV.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
-        DnsWireV.msg.allow_ptr = PROTO_TRUE;
+        DnsWireV.msg.allow_ptr = EMBED_TRUE;
         DnsWire.decode(work);
         if (!DnsWireV.ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off = DnsWireV.next;
         if (off + 4 > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off += 4;
     }
@@ -276,16 +276,16 @@ static proto_bool answer_read(uint8_t *work, const uint8_t *pkt, size_t len, uin
         DnsWireV.msg.off = off;
         DnsWireV.msg.out = name;
         DnsWireV.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
-        DnsWireV.msg.allow_ptr = PROTO_TRUE;
+        DnsWireV.msg.allow_ptr = EMBED_TRUE;
         DnsWire.decode(work);
         if (!DnsWireV.ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         off = DnsWireV.next;
         if (off + PROTOCORE_DNS_RR_FIXED > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint16_t type = (uint16_t)(((uint16_t)pkt[off] << 8) | pkt[off + 1]);
         uint16_t cls = (uint16_t)(((uint16_t)pkt[off + 2] << 8) | pkt[off + 3]);
@@ -293,17 +293,17 @@ static proto_bool answer_read(uint8_t *work, const uint8_t *pkt, size_t len, uin
         off += PROTOCORE_DNS_RR_FIXED;
         if (off + rdlen > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (type == PROTOCORE_DNS_T_A && cls == PROTOCORE_DNS_C_IN && rdlen == PROTOCORE_DNS_A_RDLEN)
         {
             *out_ip = ((uint32_t)pkt[off] << 24) | ((uint32_t)pkt[off + 1] << 16) | ((uint32_t)pkt[off + 2] << 8) |
                       (uint32_t)pkt[off + 3];
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         off += rdlen;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // ---------------------------------------------------------------------------
@@ -348,9 +348,9 @@ static void dns_found(const char *name, const protocore_net_ip *addr, void *arg)
     if (addr != NULL)
     {
         DNS_RESOLVER_CTX(work)->addr = *addr;
-        DNS_RESOLVER_CTX(work)->ok = PROTO_TRUE;
+        DNS_RESOLVER_CTX(work)->ok = EMBED_TRUE;
     }
-    DNS_RESOLVER_CTX(work)->done = PROTO_TRUE;
+    DNS_RESOLVER_CTX(work)->done = EMBED_TRUE;
 }
 
 // The ask, on the stack's own thread. A name the stack already holds completes inside this call.
@@ -360,12 +360,12 @@ static protocore_net_err dns_ask(protocore_net_call *c)
     protocore_net_err e = protocore_net_dns_resolve(m->host, &DNS_RESOLVER_CTX(m->work)->addr, dns_found, m->work);
     if (e == PROTOCORE_NET_OK) // already held
     {
-        DNS_RESOLVER_CTX(m->work)->ok = PROTO_TRUE;
-        DNS_RESOLVER_CTX(m->work)->done = PROTO_TRUE;
+        DNS_RESOLVER_CTX(m->work)->ok = EMBED_TRUE;
+        DNS_RESOLVER_CTX(m->work)->done = EMBED_TRUE;
     }
     else if (e != PROTOCORE_NET_ERR_INPROGRESS) // hard failure
     {
-        DNS_RESOLVER_CTX(m->work)->done = PROTO_TRUE;
+        DNS_RESOLVER_CTX(m->work)->done = EMBED_TRUE;
     }
     return PROTOCORE_NET_OK;
 }
@@ -393,7 +393,7 @@ void protocore_resolver_resolve(uint8_t *work)
     {
         if (DNS_RESOLVER_CTX(work)->done)
         {
-            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
+            DNS_RESOLVER_CTX(work)->busy = EMBED_FALSE;
             if (!DNS_RESOLVER_CTX(work)->ok)
             {
                 return;
@@ -404,15 +404,15 @@ void protocore_resolver_resolve(uint8_t *work)
         }
         if ((uint32_t)(dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
-            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
+            DNS_RESOLVER_CTX(work)->busy = EMBED_FALSE;
             return;
         }
         ResolverV.state = PROTOCORE_DNS_BUSY;
         return;
     }
 
-    DNS_RESOLVER_CTX(work)->done = PROTO_FALSE;
-    DNS_RESOLVER_CTX(work)->ok = PROTO_FALSE;
+    DNS_RESOLVER_CTX(work)->done = EMBED_FALSE;
+    DNS_RESOLVER_CTX(work)->ok = EMBED_FALSE;
     DnsMarshal m;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &m, .val = 0, .bytes = sizeof(m));
     m.work = work;
@@ -430,7 +430,7 @@ void protocore_resolver_resolve(uint8_t *work)
         ResolverV.state = PROTOCORE_DNS_READY;
         return;
     }
-    DNS_RESOLVER_CTX(work)->busy = PROTO_TRUE;
+    DNS_RESOLVER_CTX(work)->busy = EMBED_TRUE;
     DNS_RESOLVER_CTX(work)->timer = dns_now();
     ResolverV.state = PROTOCORE_DNS_BUSY;
 }
@@ -439,21 +439,21 @@ void protocore_resolver_resolve(uint8_t *work)
 void protocore_resolver_set_server(uint8_t *work)
 {
     (void)work;
-    ResolverV.ok = PROTO_FALSE;
+    ResolverV.ok = EMBED_FALSE;
 }
 
 #else // the portable resolver
 
 // Take the query and nameserver borrows on first use, and seat the configured default in the latter.
-static proto_bool client_bind(uint8_t *work)
+static embed_bool client_bind(uint8_t *work)
 {
     if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->tx))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (!name_bind(work))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     DNS_RESOLVER_CTX(work)->tx =
         EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_DNS_NAME_MAX + 32),
@@ -464,18 +464,18 @@ static proto_bool client_bind(uint8_t *work)
     if (!EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->tx) ||
         !EMBED_CALL(spat.has_storage, SpatiumCfg, .span = DNS_RESOLVER_CTX(work)->server))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t n =
         EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = PROTOCORE_DNS_SERVER, .cap = DNS_RESOLVER_CTX(work)->server.cap);
     if (n >= DNS_RESOLVER_CTX(work)->server.cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(proxim.read, ProximusCfg, .dst = DNS_RESOLVER_CTX(work)->server.buf, .at = PROTOCORE_DNS_SERVER,
                .size = n);
     DNS_RESOLVER_CTX(work)->server.buf[n] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Take a response, on the listener's drain. Always armed: busy is the sending side, so this runs
@@ -491,13 +491,13 @@ static void dns_reply(const uint8_t *data, size_t len, const struct protocore_ud
     if (answer_read(work, data, len, DNS_RESOLVER_CTX(work)->id, &ip))
     {
         DNS_RESOLVER_CTX(work)->answer = ip;
-        DNS_RESOLVER_CTX(work)->done = PROTO_TRUE;
+        DNS_RESOLVER_CTX(work)->done = EMBED_TRUE;
     }
 }
 
 void protocore_resolver_set_server(uint8_t *work)
 {
-    ResolverV.ok = PROTO_FALSE;
+    ResolverV.ok = EMBED_FALSE;
     const char *ip = ResolverV.server.ip;
     if (ip == NULL || !client_bind(work))
     {
@@ -518,7 +518,7 @@ void protocore_resolver_set_server(uint8_t *work)
     }
     EMBED_CALL(proxim.read, ProximusCfg, .dst = DNS_RESOLVER_CTX(work)->server.buf, .at = ip, .size = n);
     DNS_RESOLVER_CTX(work)->server.buf[n] = '\0';
-    ResolverV.ok = PROTO_TRUE;
+    ResolverV.ok = EMBED_TRUE;
 }
 
 void protocore_resolver_resolve(uint8_t *work)
@@ -548,14 +548,14 @@ void protocore_resolver_resolve(uint8_t *work)
     {
         if (DNS_RESOLVER_CTX(work)->done)
         {
-            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
+            DNS_RESOLVER_CTX(work)->busy = EMBED_FALSE;
             ResolverV.u32 = DNS_RESOLVER_CTX(work)->answer;
             ResolverV.state = PROTOCORE_DNS_READY;
             return;
         }
         if ((uint32_t)(dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
-            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
+            DNS_RESOLVER_CTX(work)->busy = EMBED_FALSE;
             return;
         }
         ResolverV.state = PROTOCORE_DNS_BUSY;
@@ -588,7 +588,7 @@ void protocore_resolver_resolve(uint8_t *work)
     // The ID ties the response to this query. It ticks, so two resolves in a row do not share one.
     DNS_RESOLVER_CTX(work)->id = (uint16_t)(dns_now() | 1u);
     DNS_RESOLVER_CTX(work)->answer = 0;
-    DNS_RESOLVER_CTX(work)->done = PROTO_FALSE;
+    DNS_RESOLVER_CTX(work)->done = EMBED_FALSE;
     size_t n = question_build(DNS_RESOLVER_CTX(work)->tx.buf, DNS_RESOLVER_CTX(work)->tx.cap,
                               DNS_RESOLVER_CTX(work)->id, host);
     if (n == 0)
@@ -606,7 +606,7 @@ void protocore_resolver_resolve(uint8_t *work)
     {
         return;
     }
-    DNS_RESOLVER_CTX(work)->busy = PROTO_TRUE;
+    DNS_RESOLVER_CTX(work)->busy = EMBED_TRUE;
     DNS_RESOLVER_CTX(work)->timer = dns_now();
     ResolverV.state = PROTOCORE_DNS_BUSY;
 }
@@ -664,6 +664,6 @@ void protocore_resolver_busy(uint8_t *work)
 /** @brief The operands and the outcome. */
 ResolverVars ResolverV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNS_RESOLVER

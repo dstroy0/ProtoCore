@@ -38,9 +38,9 @@
 #ifndef PROTOCORE_CLOCK_H
 #define PROTOCORE_CLOCK_H
 
-#include "protocore_config.h" // the entry point: PROTOCORE_INLINE, protocore_types.h, and the platform time base
+#include "protocore_config.h" // the entry point: EMBED_INLINE, protocore_types.h, and the platform time base
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief User clock: returns a free-running monotonic tick count. */
 typedef uint32_t (*protocore_clock_fn)(void);
@@ -107,7 +107,7 @@ extern ServerClockNs Clock;
  *
  * Hands the core back for @p ms ticks. A tick is a millisecond, and zero is a bare yield.
  */
-PROTOCORE_INLINE void pcdelay(uint32_t ms)
+EMBED_INLINE void pcdelay(uint32_t ms)
 {
     protocore_platform_task_delay(ms);
 }
@@ -150,7 +150,7 @@ PROTOCORE_INLINE void pcdelay(uint32_t ms)
  * where the wait is part of bringing a device up. On the request path it stalls handle() for its
  * whole duration, which the pump's latency budget then records.
  */
-PROTOCORE_INLINE void protocore_delay_us(uint32_t us)
+EMBED_INLINE void protocore_delay_us(uint32_t us)
 {
     uint32_t start = protocore_platform_micros();
     while (protocore_platform_micros() - start < us)
@@ -178,7 +178,7 @@ typedef struct
 } protocore_latency_stat;
 
 /** @brief Zero a stat (min seeded high so the first sample sets it). */
-PROTOCORE_INLINE void protocore_lat_reset(protocore_latency_stat *s)
+EMBED_INLINE void protocore_lat_reset(protocore_latency_stat *s)
 {
     s->count = 0;
     s->over_budget = 0;
@@ -188,7 +188,7 @@ PROTOCORE_INLINE void protocore_lat_reset(protocore_latency_stat *s)
 }
 
 /** @brief Start of a measured span: capture the current microsecond time. */
-PROTOCORE_INLINE uint32_t protocore_lat_begin(void)
+EMBED_INLINE uint32_t protocore_lat_begin(void)
 {
     Clock.micros(Clock.internal);
     return Clock.us;
@@ -198,7 +198,7 @@ PROTOCORE_INLINE uint32_t protocore_lat_begin(void)
  * @brief End of a span started at @p start_us: record its latency, counting it as
  *        over-budget when @p budget_us is non-zero and exceeded. Wrap-safe.
  */
-PROTOCORE_INLINE void protocore_lat_end(protocore_latency_stat *s, uint32_t start_us, uint32_t budget_us)
+EMBED_INLINE void protocore_lat_end(protocore_latency_stat *s, uint32_t start_us, uint32_t budget_us)
 {
     Clock.micros(Clock.internal);
     uint32_t lat = Clock.us - start_us; // wrap-safe unsigned delta
@@ -219,7 +219,7 @@ PROTOCORE_INLINE void protocore_lat_end(protocore_latency_stat *s, uint32_t star
 }
 
 /** @brief Mean latency (us) over the recorded samples, 0 if none. */
-PROTOCORE_INLINE uint32_t protocore_lat_avg_us(const protocore_latency_stat *s)
+EMBED_INLINE uint32_t protocore_lat_avg_us(const protocore_latency_stat *s)
 {
     return s->count ? (uint32_t)(s->sum_us / s->count) : 0u;
 }
@@ -251,11 +251,11 @@ PROTOCORE_INLINE uint32_t protocore_lat_avg_us(const protocore_latency_stat *s)
  *        frequency, as the platform reports it). @p delta_cycles must come
  *        from a wrap-safe unsigned subtraction of two protocore_cycles() reads.
  */
-PROTOCORE_INLINE uint32_t protocore_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
+EMBED_INLINE uint32_t protocore_cycles_to_ns(uint32_t delta_cycles, uint32_t cpu_mhz)
 {
     return cpu_mhz ? (uint32_t)(((uint64_t)delta_cycles * 1000u) / cpu_mhz) : 0u;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CLOCK_H

@@ -7,7 +7,7 @@
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h" // the complete type a public struct below holds by value
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file quic_tp.h
@@ -56,13 +56,13 @@ extension (RFC 9001 sec 8.2).
 /** @brief The transport parameters we encode / decode, with RFC 9000 sec 18.2 defaults applied. */
 typedef struct
 {
-    proto_bool has_original_dcid;
+    embed_bool has_original_dcid;
     uint8_t original_dcid[QUIC_MAX_CID_LEN];
     uint8_t original_dcid_len;
-    proto_bool has_initial_scid;
+    embed_bool has_initial_scid;
     uint8_t initial_scid[QUIC_MAX_CID_LEN];
     uint8_t initial_scid_len;
-    proto_bool has_retry_scid;
+    embed_bool has_retry_scid;
     uint8_t retry_scid[QUIC_MAX_CID_LEN];
     uint8_t retry_scid_len;
 
@@ -77,7 +77,7 @@ typedef struct
     uint64_t ack_delay_exponent;         ///< default 3
     uint64_t max_ack_delay;              ///< default 25 (ms)
     uint64_t active_connection_id_limit; ///< default 2
-    proto_bool disable_active_migration; ///< default false
+    embed_bool disable_active_migration; ///< default false
 } QuicTransportParams;
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
@@ -85,7 +85,7 @@ typedef struct
 {
     void (*defaults)(uint8_t *, QuicTransportParams *);
     size_t (*encode)(uint8_t *, const QuicTransportParams *, uint8_t *, size_t);
-    proto_bool (*parse)(uint8_t *, const uint8_t *, size_t, QuicTransportParams *);
+    embed_bool (*parse)(uint8_t *, const uint8_t *, size_t, QuicTransportParams *);
 } QuicTpNs;
 PROTOCORE_NS_LAYOUT(QuicTpNs, defaults, encode, parse);
 
@@ -110,14 +110,14 @@ size_t protocore_quic_tp_encode(uint8_t *work, const QuicTransportParams *tp, ui
  * @param buf Buf
  * @param len Len
  * @param tp Tp
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicTransportParams *tp);
+embed_bool protocore_quic_tp_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicTransportParams *tp);
 
 /** @brief Module namespace. */
 PROTOCORE_NS QuicTpNs QuicTp PROTOCORE_UNUSED = {
     .defaults = protocore_quic_tp_defaults, .encode = protocore_quic_tp_encode, .parse = protocore_quic_tp_parse};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_QUIC_TP_H

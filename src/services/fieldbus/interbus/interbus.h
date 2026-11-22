@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_INTERBUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -91,7 +91,7 @@ typedef struct
     InterbusFcsArgs fcs_args;
     InterbusBuildArgs build_args;
     InterbusParseArgs parse_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t value;
     size_t n;
 } InterbusVars;
@@ -123,7 +123,7 @@ static const InterbusNs Interbus __attribute__((unused)) = {
     .parse = protocore_interbus_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_INTERBUS
 

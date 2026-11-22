@@ -29,7 +29,7 @@
 // One published front port -> origin.
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t listener_id;
     char host[PROTOCORE_RELAY_HOST_MAX];
     uint16_t port;
@@ -38,7 +38,7 @@ typedef struct
 // One live relayed connection: an inbound conn slot bridged to an origin protocore_client.
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t conn_slot;
     int origin_cid;
     protocore_relay relay;
@@ -50,7 +50,7 @@ typedef struct
 {
     RelayBind binds[PROTOCORE_RELAY_MAX_PUBLISH];
     RelayBridge bridges[PROTOCORE_RELAY_MAX_CONNS];
-    proto_bool registered;
+    embed_bool registered;
 } RelayListenerCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -133,12 +133,12 @@ static int a_send(void *c, const uint8_t *buf, size_t len)
     // forwards zero bytes and stalls the transfer. room==0 is real backpressure - the pump retries.
     ConnPoolV.slot = br->conn_slot;
     ConnPool.sndbuf(protocore_conn_pool_span());
-    proto_u16 room = ConnPoolV.u16;
+    embed_u16 room = ConnPoolV.u16;
     if (room == 0)
     {
         return 0;
     }
-    proto_u16 n = (len < (size_t)room) ? (proto_u16)len : room;
+    embed_u16 n = (len < (size_t)room) ? (embed_u16)len : room;
     ConnPoolV.slot = br->conn_slot;
     ConnPoolV.io.data = buf;
     ConnPoolV.io.len = n;
@@ -174,9 +174,9 @@ static int b_send(void *c, const uint8_t *buf, size_t len)
 
 // Close the origin (and optionally the inbound) and free the bridge. active=false first so a
 // re-entrant close callback is a no-op.
-static void teardown(RelayBridge *br, proto_bool close_inbound)
+static void teardown(RelayBridge *br, embed_bool close_inbound)
 {
-    br->active = PROTO_FALSE;
+    br->active = EMBED_FALSE;
 #if PROTOCORE_ENABLE_RADIO_POWER
     Radio.busy_release(protocore_radio_power_span()); // this bridge is done relaying
 #endif
@@ -208,7 +208,7 @@ static void service(uint8_t *work, uint8_t slot)
         protocore_relay_status st = RelayV.status;
         if (st == PROTOCORE_RELAY_ERROR || st == PROTOCORE_RELAY_DONE)
         {
-            teardown(br, PROTO_TRUE);
+            teardown(br, EMBED_TRUE);
             return;
         }
         if (br->relay.bytes_a2b + br->relay.bytes_b2a == moved)
@@ -219,12 +219,12 @@ static void service(uint8_t *work, uint8_t slot)
     // origin closed and everything it sent has been forwarded -> nothing more to do
     TcpClientV.cid = br->origin_cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool origin_closed = TcpClientV.ok;
+    const embed_bool origin_closed = TcpClientV.ok;
     TcpClientV.cid = br->origin_cid;
     TcpClient.available(protocore_tcp_client_span());
     if (origin_closed && TcpClientV.n == 0 && br->relay.b2a_off >= br->relay.b2a_len)
     {
-        teardown(br, PROTO_TRUE);
+        teardown(br, EMBED_TRUE);
     }
 }
 
@@ -265,7 +265,7 @@ static void relay_on_accept(uint8_t slot)
         return;
     }
     RelayBridge *br = &RELAY_LISTENER_CTX(work)->bridges[idx];
-    br->active = PROTO_TRUE;
+    br->active = EMBED_TRUE;
     br->conn_slot = slot;
     br->origin_cid = cid;
     protocore_relay_end a = {a_recv, a_send, NULL, br};
@@ -312,7 +312,7 @@ static void relay_on_close(uint8_t slot)
     RelayBridge *br = bridge_by_conn(work, slot);
     if (br)
     {
-        teardown(br, PROTO_FALSE); // the transport already owns the closing inbound slot
+        teardown(br, EMBED_FALSE); // the transport already owns the closing inbound slot
     }
 }
 
@@ -341,17 +341,17 @@ uint8_t *protocore_relay_listener_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, const char *origin_host,
+embed_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, const char *origin_host,
                                             uint16_t origin_port)
 {
     if (!origin_host)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t hl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = origin_host, .cap = PROTOCORE_RELAY_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_RELAY_HOST_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int idx = -1;
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
@@ -364,9 +364,9 @@ proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, 
     }
     if (idx < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    RELAY_LISTENER_CTX(work)->binds[idx].active = PROTO_TRUE;
+    RELAY_LISTENER_CTX(work)->binds[idx].active = EMBED_TRUE;
     RELAY_LISTENER_CTX(work)->binds[idx].listener_id = listener_id;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = RELAY_LISTENER_CTX(work)->binds[idx].host, .src = origin_host,
                .bytes = hl + 1);
@@ -376,22 +376,22 @@ proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, 
         ProtocolsV.proto = PROTO_RELAY;
         ProtocolsV.h = &s_relay_handler;
         Protocols.add(protocore_session_span());
-        RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
+        RELAY_LISTENER_CTX(work)->registered = EMBED_TRUE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_relay_listener_reset(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
-        RELAY_LISTENER_CTX(work)->binds[i].active = PROTO_FALSE;
+        RELAY_LISTENER_CTX(work)->binds[i].active = EMBED_FALSE;
     }
     for (int i = 0; i < PROTOCORE_RELAY_MAX_CONNS; i++)
     {
         if (RELAY_LISTENER_CTX(work)->bridges[i].active)
         {
-            RELAY_LISTENER_CTX(work)->bridges[i].active = PROTO_FALSE;
+            RELAY_LISTENER_CTX(work)->bridges[i].active = EMBED_FALSE;
 #if PROTOCORE_ENABLE_RADIO_POWER
             Radio.busy_release(protocore_radio_power_span()); // balance the hold taken when the bridge was opened
 #endif

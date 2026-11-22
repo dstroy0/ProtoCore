@@ -22,7 +22,7 @@
 #include "spatium/spatium.h"           // mmgr_span: the region a binary build writes into
 #include "verba_scribo/verba_scribo.h" // Sb: the Number rendering, and the resolved-Name concatenation
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // RFC 8428 sec 6 Table 4: the integer map keys the binary representation uses for the labels. Base
 // fields take negative labels, the rest non-negative.
@@ -42,7 +42,7 @@ PROTOCORE_BEGIN_DECLS
 #define SENML_JSON_NUMBER_MAX 32
 
 // True when d is an integer inside the int64 range, so it converts to one losslessly.
-static proto_bool is_integral(double d)
+static embed_bool is_integral(double d)
 {
     return d >= -9.2e18 && d <= 9.2e18 && d == (double)(int64_t)d;
 }
@@ -121,7 +121,7 @@ static size_t record_fields(const SenmlRecord *r)
 void protocore_senml_json_build(uint8_t *work)
 {
     (void)work;
-    SenmlV.ok = PROTO_FALSE;
+    SenmlV.ok = EMBED_FALSE;
     SenmlV.n = 0;
     const SenmlRecord *records = SenmlV.pack.records;
     const size_t count = SenmlV.pack.count;
@@ -214,7 +214,7 @@ void protocore_senml_json_build(uint8_t *work)
         return;
     }
     SenmlV.n = protocore_json_length(&w);
-    SenmlV.ok = PROTO_TRUE;
+    SenmlV.ok = EMBED_TRUE;
 }
 
 // Build ns->pack into ns->binary through its codec: an array of Records, each a map whose keys the
@@ -222,7 +222,7 @@ void protocore_senml_json_build(uint8_t *work)
 void protocore_senml_binary_build(uint8_t *work)
 {
     (void)work;
-    SenmlV.ok = PROTO_FALSE;
+    SenmlV.ok = EMBED_FALSE;
     SenmlV.n = 0;
     const protocore_codec *c = SenmlV.binary.codec;
     const SenmlRecord *records = SenmlV.pack.records;
@@ -290,7 +290,7 @@ void protocore_senml_binary_build(uint8_t *work)
         return;
     }
     SenmlV.n = w.pos;
-    SenmlV.ok = PROTO_TRUE;
+    SenmlV.ok = EMBED_TRUE;
 }
 
 // Resolve ns->pack into ns->resolved (RFC 8428 sec 4.6). A Base Name or Base Time becomes active
@@ -300,7 +300,7 @@ void protocore_senml_binary_build(uint8_t *work)
 void protocore_senml_resolve(uint8_t *work)
 {
     (void)work;
-    SenmlV.ok = PROTO_FALSE;
+    SenmlV.ok = EMBED_FALSE;
     SenmlV.n = 0;
     const SenmlRecord *in = SenmlV.pack.records;
     SenmlResolved *out = SenmlV.resolved.out;
@@ -309,7 +309,7 @@ void protocore_senml_resolve(uint8_t *work)
         return;
     }
     const char *base_name = NULL;
-    proto_bool base_time_set = PROTO_FALSE;
+    embed_bool base_time_set = EMBED_FALSE;
     double base_time = 0.0;
 
     const size_t count = SenmlV.pack.count < SenmlV.resolved.max ? SenmlV.pack.count : SenmlV.resolved.max;
@@ -323,7 +323,7 @@ void protocore_senml_resolve(uint8_t *work)
         if (r->has_base_time)
         {
             base_time = r->base_time;
-            base_time_set = PROTO_TRUE;
+            base_time_set = EMBED_TRUE;
         }
 
         SenmlResolved *o = &out[i];
@@ -349,13 +349,13 @@ void protocore_senml_resolve(uint8_t *work)
         o->boolean_value = r->boolean_value;
     }
     SenmlV.n = count;
-    SenmlV.ok = PROTO_TRUE;
+    SenmlV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SenmlVars SenmlV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SENML

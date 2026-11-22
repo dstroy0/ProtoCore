@@ -28,7 +28,7 @@ typedef struct
 {
     protocore_bignum r1; // R mod p = 2^2048 - p (two's complement of p in 2048 bits)
     protocore_bignum r2; // R^2 mod p = 2^4096 mod p (bn_init() via repeated doubling)
-    proto_bool initialized;
+    embed_bool initialized;
 } Group14Ctx;
 static Group14Ctx s_g14 = {0};
 
@@ -105,7 +105,7 @@ static void bn_init(void)
         }
     }
 
-    s_g14.initialized = PROTO_TRUE;
+    s_g14.initialized = EMBED_TRUE;
 }
 
 // bn_expmod_group14's working set, borrowed whole. Both paths hold the DH private exponent and the

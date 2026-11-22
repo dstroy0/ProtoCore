@@ -49,17 +49,17 @@ static inline int throwaway_nib(char c)
 static inline void throwaway_ed25519_seed(uint8_t out[32])
 {
     const char *pin = getenv("PROTOCORE_TEST_KEY_SEED");
-    proto_bool pinned = PROTO_FALSE;
+    embed_bool pinned = EMBED_FALSE;
     if (pin && strlen(pin) >= 64)
     {
         uint8_t tmp[32]; // parse into a scratch buffer; only commit to out[] once fully valid
-        pinned = PROTO_TRUE;
+        pinned = EMBED_TRUE;
         for (int i = 0; i < 32 && pinned; i++)
         {
             int hi = throwaway_nib(pin[2 * i]), lo = throwaway_nib(pin[2 * i + 1]);
             if (hi < 0 || lo < 0)
             {
-                pinned = PROTO_FALSE; // not valid hex -> fall back to random (out[] never saw pin bytes)
+                pinned = EMBED_FALSE; // not valid hex -> fall back to random (out[] never saw pin bytes)
             }
             else
             {

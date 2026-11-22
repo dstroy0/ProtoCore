@@ -21,7 +21,7 @@
 
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_AUTH_LOCKOUT_BORROW - the bytes the table lives in - is stated in protocore_config.h,
 // which sums it into the secure arena. A caller takes them once for the life of the program and
@@ -68,7 +68,7 @@ typedef struct
 typedef struct
 {
     AuthLockoutArgs args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t ms;
 } AuthLockoutVars;
 
@@ -113,7 +113,7 @@ static const AuthLockoutNs AuthLockout __attribute__((unused)) = {
  */
 uint8_t *protocore_auth_lockout_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUTH_LOCKOUT
 

@@ -255,6 +255,18 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(PROTOCORE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
+# The widths of embedded_types, for each target of the build. ProtoCore, MMgr and idemIP thus read one word
+# and one index. The word is that of the board profile in vendor/board_profiles, and not that of the host.
+set(PROTOCORE_WORD_BITS 32 CACHE STRING "EMBED_WORD_BITS of each target")
+set(PROTOCORE_INDEX_BITS 32 CACHE STRING "EMBED_INDEX_BITS of each target")
+add_compile_definitions(EMBED_WORD_BITS=${PROTOCORE_WORD_BITS} EMBED_INDEX_BITS=${PROTOCORE_INDEX_BITS})
+
+# What the dependencies ask each build to state. The host reads its clock through embed_clock_ns, in
+# nanoseconds. memoriam_praetereo of MMgr drives no engine on the host, and so it takes no recovery, no
+# settle and the library default of channels and keepalive.
+add_compile_definitions(EMBED_CLOCK_SOURCE=EMBED_CLOCK_CALLER EMBED_CLOCK_HZ=1000000000
+                        PRAET_RECOVERY=0 PRAET_CHANNELS=8 PRAET_SETTLE_MICROS=0 PRAET_KEEPALIVE_MICROS=1000)
+
 enable_testing()
 
 # The library's own build description. Until this was here nothing evaluated it: the 401 module

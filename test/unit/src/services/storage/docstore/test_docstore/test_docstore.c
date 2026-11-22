@@ -42,9 +42,9 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
     memcpy(d->buf + off, buf, len);
     return len;
 }
-static proto_bool ram_sync(void *)
+static embed_bool ram_sync(void *)
 {
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static uint8_t g_disk[64 * 1024];
@@ -73,32 +73,32 @@ static void fresh(void)
     TEST_ASSERT_TRUE(protocore_dbm_open(&g_db, &g_wal));
     protocore_docstore_open(&g_ds, &g_db);
 }
-static proto_bool reboot(void)
+static embed_bool reboot(void)
 {
     g_dev = dev_over(&g_d);
     if (!protocore_wal_store_mount(&g_wal, &g_dev))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!protocore_dbm_open(&g_db, &g_wal))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     protocore_docstore_open(&g_ds, &g_db);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool put_doc(const char *id, const char *json)
+static embed_bool put_doc(const char *id, const char *json)
 {
     return protocore_docstore_put(&g_ds, id, (uint16_t)strlen(id), (const uint8_t *)json, (uint32_t)strlen(json));
 }
-static proto_bool get_eq(const char *id, const char *expect)
+static embed_bool get_eq(const char *id, const char *expect)
 {
     uint8_t buf[PROTOCORE_DBM_VAL_MAX + 1];
     long n = protocore_docstore_get(&g_ds, id, (uint16_t)strlen(id), buf, sizeof(buf));
     if (n < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return (size_t)n == strlen(expect) && memcmp(buf, expect, n) == 0;
 }
@@ -108,7 +108,7 @@ typedef struct
     int n;
     char ids[8][16];
 } Collected;
-static proto_bool collect(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len, void *ctx)
+static embed_bool collect(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len, void *ctx)
 {
     (void)json;
     (void)json_len;
@@ -119,18 +119,18 @@ static proto_bool collect(const char *id, uint16_t id_len, const uint8_t *json, 
         c->ids[c->n][id_len] = 0;
         c->n++;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
-static proto_bool has_id(const Collected *c, const char *id)
+static embed_bool has_id(const Collected *c, const char *id)
 {
     for (int i = 0; i < c->n; i++)
     {
         if (strcmp(c->ids[i], id) == 0)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void test_put_get_del(void)
@@ -183,7 +183,7 @@ void test_find_bool(void)
     put_doc("b", "{\"on\":false,\"n\":2}");
     put_doc("c", "{\"on\":true,\"n\":3}");
     Collected c = {0};
-    uint32_t m = protocore_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &c);
+    uint32_t m = protocore_docstore_find_bool(&g_ds, "on", EMBED_TRUE, collect, &c);
     TEST_ASSERT_EQUAL_UINT32(2, m);
     TEST_ASSERT_TRUE(has_id(&c, "a"));
     TEST_ASSERT_TRUE(has_id(&c, "c"));
@@ -212,14 +212,14 @@ typedef struct
 {
     int seen;
 } Once;
-static proto_bool stop_after_one(const char *name, uint16_t nlen, const uint8_t *doc, uint32_t len, void *ctx)
+static embed_bool stop_after_one(const char *name, uint16_t nlen, const uint8_t *doc, uint32_t len, void *ctx)
 {
     (void)name;
     (void)nlen;
     (void)doc;
     (void)len;
     ((Once *)ctx)->seen++;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void test_find_early_stop(void)
@@ -255,7 +255,7 @@ void test_find_field_absent(void)
     TEST_ASSERT_TRUE(has_id(&ci, "a"));
 
     Collected cb = {0};
-    TEST_ASSERT_EQUAL_UINT32(1, protocore_docstore_find_bool(&g_ds, "on", PROTO_TRUE, collect, &cb));
+    TEST_ASSERT_EQUAL_UINT32(1, protocore_docstore_find_bool(&g_ds, "on", EMBED_TRUE, collect, &cb));
     TEST_ASSERT_TRUE(has_id(&cb, "a"));
 }
 

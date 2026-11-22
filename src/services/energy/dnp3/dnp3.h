@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_DNP3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define DNP3_START0 0x05
 #define DNP3_START1 0x64
@@ -77,7 +77,7 @@ typedef struct
  * @return true on a complete, all-CRC-valid frame; false on a bad start word, an invalid
  *         LEN, truncation, a header or block CRC mismatch, or an out_user overflow.
  */
-proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
+embed_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
                                       size_t *out_user_len);
 
 // --- transport function (IEEE 1815 §8.2): reassemble application fragments from link user data ---
@@ -93,13 +93,13 @@ proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame 
 #define DNP3_TR_MAX_APP 249    ///< application octets per segment (250 user - 1 transport header)
 
 /** @brief Compose a transport header octet from the FIR / FIN flags and a 6-bit sequence. */
-uint8_t protocore_dnp3_transport_header(proto_bool fir, proto_bool fin, uint8_t seq);
+uint8_t protocore_dnp3_transport_header(embed_bool fir, embed_bool fin, uint8_t seq);
 
 /**
  * @brief Build one transport segment (transport header + @p app_len application octets) into @p out.
  * @return the segment length (1 + @p app_len), or 0 on a bad argument / overflow / @p app_len > 249.
  */
-size_t protocore_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir, proto_bool fin, uint8_t seq,
+size_t protocore_dnp3_build_transport_segment(uint8_t *out, size_t cap, embed_bool fir, embed_bool fin, uint8_t seq,
                                               const uint8_t *app_data, size_t app_len);
 
 /** @brief Result of feeding a link frame's user data to the transport reassembler. */
@@ -118,8 +118,8 @@ typedef struct
     size_t cap;         ///< its capacity
     size_t len;         ///< application octets accumulated so far
     uint8_t expect_seq; ///< the sequence the next segment must carry
-    proto_bool active;  ///< a fragment is in progress (a FIR was seen)
-    proto_bool done;    ///< the last segment (FIN) was accepted
+    embed_bool active;  ///< a fragment is in progress (a FIR was seen)
+    embed_bool done;    ///< the last segment (FIN) was accepted
 } Dnp3TransportRx;
 
 /** @brief Begin transport reassembly with a caller-owned buffer. */
@@ -178,20 +178,20 @@ int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_
 typedef struct
 {
     uint8_t app_control; ///< raw Application Control octet
-    proto_bool fir;
-    proto_bool fin;
-    proto_bool con;
-    proto_bool uns;
+    embed_bool fir;
+    embed_bool fin;
+    embed_bool con;
+    embed_bool uns;
     uint8_t seq;            ///< 4-bit application sequence
     uint8_t fc;             ///< function code
-    proto_bool is_response; ///< true for RESPONSE / UNSOLICITED_RESPONSE (the two IIN octets are present)
+    embed_bool is_response; ///< true for RESPONSE / UNSOLICITED_RESPONSE (the two IIN octets are present)
     uint16_t iin;           ///< internal indications (IIN1 low octet, IIN2 high octet); 0 for a request
     const uint8_t *objects; ///< pointer into the fragment at the first object header (or nullptr if none)
     size_t obj_len;         ///< object octets remaining after the header
 } Dnp3AppHeader;
 
 /** @brief Compose an Application Control octet from the FIR/FIN/CON/UNS flags and a 4-bit sequence. */
-uint8_t protocore_dnp3_app_control(proto_bool fir, proto_bool fin, proto_bool con, proto_bool uns, uint8_t seq);
+uint8_t protocore_dnp3_app_control(embed_bool fir, embed_bool fin, embed_bool con, embed_bool uns, uint8_t seq);
 
 /**
  * @brief Build an application request fragment: AC + FC + @p obj_len object octets.
@@ -211,7 +211,7 @@ size_t protocore_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_c
  * @brief Decode an application fragment's header (AC + FC, plus IIN for a response) into @p out.
  * @return true iff @p len covers the header (2 octets, or 4 for a response); false otherwise.
  */
-proto_bool protocore_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out);
+embed_bool protocore_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out);
 
 // --- object header (IEEE 1815 §4.3): group + variation + qualifier + range, after the function code ---
 
@@ -238,7 +238,7 @@ typedef struct
     uint8_t qualifier;      ///< the raw qualifier octet
     uint8_t prefix_code;    ///< index-size / prefix code (qualifier bits 6-4)
     uint8_t range_code;     ///< range specifier code (qualifier bits 3-0)
-    proto_bool is_count;    ///< true when the range field is an object count; false for a start/stop range
+    embed_bool is_count;    ///< true when the range field is an object count; false for a start/stop range
     uint32_t start;         ///< range start index (start/stop forms; 0 otherwise)
     uint32_t stop;          ///< range stop index (start/stop forms; 0 otherwise)
     uint32_t count;         ///< object count (count forms, or stop-start+1 for a start/stop range)
@@ -251,7 +251,7 @@ typedef struct
  * @return true iff the header and its range field fit in @p len, and the qualifier is a supported form
  *         (start-stop 0x00/0x01/0x02, no-range 0x06, or count 0x07/0x08/0x09); false otherwise.
  */
-proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out);
+embed_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out);
 
 /**
  * @brief Build an object header addressing a contiguous index range [@p start, @p stop]: group + variation +
@@ -292,7 +292,7 @@ size_t protocore_dnp3_build_object_header_all(uint8_t *buf, size_t cap, uint8_t 
  *        with an object header + index prefix inside a SELECT / OPERATE request.
  * @return DNP3_CROB_LEN (11), or 0 on a null buffer, an @p op_type > 0x0F, a @p tcc > 3, or an overflow.
  */
-size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, proto_bool clear,
+size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, embed_bool clear,
                                  uint8_t count, uint32_t on_time_ms, uint32_t off_time_ms);
 
 // --- Analog Output Block (group 41): the analog counterpart to the CROB - the setpoint object a SELECT /
@@ -316,7 +316,7 @@ size_t protocore_dnp3_build_aob32(uint8_t *buf, size_t cap, int32_t value);
  */
 size_t protocore_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNP3
 

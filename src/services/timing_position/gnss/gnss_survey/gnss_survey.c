@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_NMEA0183
 #include "cellularum_laboro/cellularum_laboro.h"
@@ -84,7 +84,7 @@ void protocore_gnss_survey_add_ecef(GnssSurvey *s, const GnssEcef *e)
 {
     if (!s->has_origin)
     {
-        s->has_origin = PROTO_TRUE;
+        s->has_origin = EMBED_TRUE;
         s->ox = e->x;
         s->oy = e->y;
         s->oz = e->z;
@@ -113,17 +113,17 @@ uint32_t protocore_gnss_survey_count(const GnssSurvey *s)
     return s->count;
 }
 
-proto_bool protocore_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out)
+embed_bool protocore_gnss_survey_mean(const GnssSurvey *s, GnssEcef *out)
 {
     if (s->count == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     double n = (double)s->count;
     out->x = s->ox + s->sdx / n;
     out->y = s->oy + s->sdy / n;
     out->z = s->oz + s->sdz / n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 double protocore_gnss_survey_accuracy_m(const GnssSurvey *s)
@@ -154,7 +154,7 @@ double protocore_gnss_survey_accuracy_m(const GnssSurvey *s)
     return sqrt(vx + vy + vz);
 }
 
-proto_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m)
+embed_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m)
 {
     return s->count >= min_obs && s->count >= 2 && protocore_gnss_survey_accuracy_m(s) <= acc_limit_m;
 }
@@ -166,50 +166,50 @@ proto_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs,
 #if PROTOCORE_ENABLE_NMEA0183
 
 // A GGA lat/lon field is ddmm.mmmm / dddmm.mmmm; split into whole degrees + decimal minutes.
-static proto_bool dm_to_deg(const char *field, uint8_t len, double *out)
+static embed_bool dm_to_deg(const char *field, uint8_t len, double *out)
 {
     if (!field || len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *end = field;
     double dm = EMBED_CALL(cellul.to_double, TransfiguroCfg, .src = field, .end = &end);
     if (end == field)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     double deg = (double)(long)(dm / 100.0); // whole degrees (field is non-negative; sign is N/S,E/W)
     double minutes = dm - deg * 100.0;
     *out = deg + minutes / 60.0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
+embed_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
 {
     if (!m || !out || m->type[0] != 'G' || m->type[1] != 'G' || m->type[2] != 'A')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m->field_count < 10) // need through the altitude field (index 9)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     long quality = 0;
     if (!protocore_nmea0183_field_int(m, 6, &quality) || quality <= 0) // 0 = no fix
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     double lat = 0.0;
     double lon = 0.0;
     if (!dm_to_deg(m->fields[2], m->field_len[2], &lat))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!dm_to_deg(m->fields[4], m->field_len[4], &lon))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (m->field_len[3] == 1 && (m->fields[3][0] == 'S' || m->fields[3][0] == 's'))
     {
@@ -223,7 +223,7 @@ proto_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
     float msl = 0.0f;
     if (!protocore_nmea0183_field_float(m, 9, &msl)) // orthometric (mean-sea-level) altitude
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     float geoid = 0.0f;
     protocore_nmea0183_field_float(m, 11, &geoid); // geoid separation; absent -> 0 (ellipsoidal height = MSL)
@@ -231,22 +231,22 @@ proto_bool protocore_gnss_gga_to_geodetic(const Nmea0183 *m, GnssGeodetic *out)
     out->lat_deg = lat;
     out->lon_deg = lon;
     out->height_m = (double)msl + (double)geoid; // ellipsoidal height above WGS84
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m)
+embed_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m)
 {
     GnssGeodetic g;
     if (!protocore_gnss_gga_to_geodetic(m, &g))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     protocore_gnss_survey_add_geodetic(s, &g);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_NMEA0183
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

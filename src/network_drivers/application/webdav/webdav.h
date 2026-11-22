@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file webdav.h
@@ -49,8 +49,7 @@ and the 207 Multi-Status XML builder.
 #define PROTOCORE_DAV_LOCK_TOKEN_MAX 48
 
 /** @brief WebDAV request methods recognized by the server. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(WebDavMethod,
     DAV_M_OPTIONS,
     DAV_M_GET,
     DAV_M_HEAD,
@@ -64,16 +63,16 @@ typedef enum PROTO_ENUM_PACKED
     DAV_M_LOCK,
     DAV_M_UNLOCK,
     DAV_M_UNSUPPORTED ///< Anything else - answered 405 Method Not Allowed.
-} WebDavMethod;
+);
 
 /** @brief One active lock (RFC 4918 §6.4). */
 typedef struct
 {
     char path[PROTOCORE_DAV_LOCK_PATH_MAX];   ///< the locked resource path (trailing slash normalized off)
     char token[PROTOCORE_DAV_LOCK_TOKEN_MAX]; ///< the lock token (an opaquelocktoken URI)
-    proto_bool exclusive;                     ///< exclusive-write (true) or shared (false)
-    proto_bool depth_infinity; ///< the lock covers the whole subtree (Depth: infinity) vs just the resource
-    proto_bool active;         ///< false = free slot
+    embed_bool exclusive;                     ///< exclusive-write (true) or shared (false)
+    embed_bool depth_infinity; ///< the lock covers the whole subtree (Depth: infinity) vs just the resource
+    embed_bool active;         ///< false = free slot
     uint32_t expiry_s;         ///< monotonic second the lock expires (0 = no timeout); swept by _sweep
 } DavLock;
 
@@ -89,21 +88,21 @@ typedef struct
     WebDavMethod (*method)(uint8_t *, const char *);
     int (*depth)(uint8_t *, const char *, int);
     size_t (*xml_escape)(uint8_t *, char *, size_t, const char *);
-    proto_bool (*dest_path)(uint8_t *, const char *, char *, size_t);
+    embed_bool (*dest_path)(uint8_t *, const char *, char *, size_t);
     size_t (*ms_begin)(uint8_t *, char *, size_t, size_t);
-    size_t (*ms_entry)(uint8_t *, char *, size_t, size_t, const char *, proto_bool, uint32_t, const char *,
+    size_t (*ms_entry)(uint8_t *, char *, size_t, size_t, const char *, embed_bool, uint32_t, const char *,
                        const char *);
     size_t (*ms_end)(uint8_t *, char *, size_t, size_t);
     size_t (*proppatch_ms)(uint8_t *, char *, size_t, const char *, const char *, size_t);
     void (*lock_init)(uint8_t *, DavLockTable *);
-    const DavLock *(*lock_acquire)(uint8_t *, DavLockTable *, const char *, const char *, proto_bool, proto_bool,
+    const DavLock *(*lock_acquire)(uint8_t *, DavLockTable *, const char *, const char *, embed_bool, embed_bool,
                                    uint32_t);
     size_t (*lock_sweep)(uint8_t *, DavLockTable *, uint32_t);
     const DavLock *(*lock_refresh)(uint8_t *, DavLockTable *, const char *, uint32_t);
     const DavLock *(*lock_find)(uint8_t *, const DavLockTable *, const char *);
-    proto_bool (*lock_release)(uint8_t *, DavLockTable *, const char *);
-    proto_bool (*lock_can_write)(uint8_t *, const DavLockTable *, const char *, const char *);
-    proto_bool (*if_token)(uint8_t *, const char *, char *, size_t);
+    embed_bool (*lock_release)(uint8_t *, DavLockTable *, const char *);
+    embed_bool (*lock_can_write)(uint8_t *, const DavLockTable *, const char *, const char *);
+    embed_bool (*if_token)(uint8_t *, const char *, char *, size_t);
 } WebdavNs;
 PROTOCORE_NS_LAYOUT(WebdavNs, method, depth, xml_escape, dest_path, ms_begin, ms_entry, ms_end, proppatch_ms, lock_init,
                     lock_acquire, lock_sweep, lock_refresh, lock_find, lock_release, lock_can_write, if_token);
@@ -138,9 +137,9 @@ size_t protocore_webdav_xml_escape(uint8_t *work, char *dst, size_t cap, const c
  * @param destination Destination
  * @param out Out
  * @param cap Cap
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, char *out, size_t cap);
+embed_bool protocore_webdav_dest_path(uint8_t *work, const char *destination, char *out, size_t cap);
 /**
  * @brief Write the XML prolog and the open <multistatus> element.
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
@@ -164,7 +163,7 @@ size_t protocore_webdav_ms_begin(uint8_t *work, char *buf, size_t cap, size_t le
  * @return The size_t.
  */
 size_t protocore_webdav_ms_entry(uint8_t *work, char *buf, size_t cap, size_t len, const char *href,
-                                 proto_bool is_collection, uint32_t size, const char *rfc1123_mtime,
+                                 embed_bool is_collection, uint32_t size, const char *rfc1123_mtime,
                                  const char *content_type);
 /**
  * @brief Close the <multistatus> element.
@@ -205,7 +204,7 @@ void protocore_webdav_lock_init(uint8_t *work, DavLockTable *t);
  * @return The const DavLock *.
  */
 const DavLock *protocore_webdav_lock_acquire(uint8_t *work, DavLockTable *t, const char *path, const char *token,
-                                             proto_bool exclusive, proto_bool depth_infinity, uint32_t expiry_s);
+                                             embed_bool exclusive, embed_bool depth_infinity, uint32_t expiry_s);
 /**
  * @brief Expire and drop every lock whose timeout has passed (RFC 4918 .
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
@@ -236,18 +235,18 @@ const DavLock *protocore_webdav_lock_find(uint8_t *work, const DavLockTable *t, 
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
  * @param t T
  * @param token Token
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_webdav_lock_release(uint8_t *work, DavLockTable *t, const char *token);
+embed_bool protocore_webdav_lock_release(uint8_t *work, DavLockTable *t, const char *token);
 /**
  * @brief May a write to path proceed given the token the request presented .
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
  * @param t T
  * @param path Path
  * @param presented_token Presented token
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t, const char *path,
+embed_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t, const char *path,
                                            const char *presented_token);
 /**
  * @brief Extract the first lock token from an If header value (RFC 4918 .
@@ -255,9 +254,9 @@ proto_bool protocore_webdav_lock_can_write(uint8_t *work, const DavLockTable *t,
  * @param if_header If header
  * @param out Out
  * @param cap Cap
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char *out, size_t cap);
+embed_bool protocore_webdav_if_token(uint8_t *work, const char *if_header, char *out, size_t cap);
 
 /** @brief Module namespace. */
 PROTOCORE_NS WebdavNs Webdav PROTOCORE_UNUSED = {.method = protocore_webdav_method,
@@ -277,6 +276,6 @@ PROTOCORE_NS WebdavNs Webdav PROTOCORE_UNUSED = {.method = protocore_webdav_meth
                                                  .lock_can_write = protocore_webdav_lock_can_write,
                                                  .if_token = protocore_webdav_if_token};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_WEBDAV_H

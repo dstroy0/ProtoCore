@@ -27,7 +27,7 @@
 
 #include "server/peripherals/smbus/smbus.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Micro-units per unit: every value this returns is scaled by it.
 #define PROTOCORE_PMBUS_MICRO 1000000
@@ -262,7 +262,7 @@ static void pmbus_begin(uint8_t *work)
 {
     (void)work;
 
-    proto_bool smbus_ok = Smbus.begin(protocore_smbus_span());
+    embed_bool smbus_ok = Smbus.begin(protocore_smbus_span());
     Pmbus.ok = smbus_ok;
 }
 
@@ -272,7 +272,7 @@ static void pmbus_set_page(uint8_t *work)
     uint8_t addr = Pmbus.set_page_args.addr;
     uint8_t page = Pmbus.set_page_args.page;
 
-    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_PAGE, page);
+    embed_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_PAGE, page);
     Pmbus.ok = smbus_ok;
 }
 
@@ -282,7 +282,7 @@ static void pmbus_read_vout_mode(uint8_t *work)
     uint8_t addr = Pmbus.read_vout_mode_args.addr;
     uint8_t *out = Pmbus.read_vout_mode_args.out;
 
-    proto_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_VOUT_MODE, out);
+    embed_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_VOUT_MODE, out);
     Pmbus.ok = smbus_ok;
 }
 
@@ -295,14 +295,14 @@ static void pmbus_read_linear11(uint8_t *work)
 
     if (micro == NULL)
     {
-        Pmbus.ok = PROTO_FALSE;
+        Pmbus.ok = EMBED_FALSE;
         return;
     }
     uint16_t w = 0;
-    proto_bool smbus_ok = Smbus.read_word(protocore_smbus_span(), addr, cmd, &w);
+    embed_bool smbus_ok = Smbus.read_word(protocore_smbus_span(), addr, cmd, &w);
     if (!smbus_ok)
     {
-        Pmbus.ok = PROTO_FALSE;
+        Pmbus.ok = EMBED_FALSE;
         return;
     }
     Pmbus.linear11_micro_args.word = w;
@@ -321,14 +321,14 @@ static void pmbus_read_linear16(uint8_t *work)
 
     if (micro == NULL)
     {
-        Pmbus.ok = PROTO_FALSE;
+        Pmbus.ok = EMBED_FALSE;
         return;
     }
     uint16_t w = 0;
-    proto_bool smbus_ok = Smbus.read_word(protocore_smbus_span(), addr, cmd, &w);
+    embed_bool smbus_ok = Smbus.read_word(protocore_smbus_span(), addr, cmd, &w);
     if (!smbus_ok)
     {
-        Pmbus.ok = PROTO_FALSE;
+        Pmbus.ok = EMBED_FALSE;
         return;
     }
     Pmbus.linear16_micro_args.word = w;
@@ -349,7 +349,7 @@ static void pmbus_write_linear16(uint8_t *work)
     Pmbus.linear16_encode_args.micro = micro;
     Pmbus.linear16_encode_args.exponent = exponent;
     pmbus_linear16_encode(work);
-    proto_bool smbus_ok = Smbus.write_word(protocore_smbus_span(), addr, cmd, Pmbus.word);
+    embed_bool smbus_ok = Smbus.write_word(protocore_smbus_span(), addr, cmd, Pmbus.word);
     Pmbus.ok = smbus_ok;
 }
 
@@ -359,7 +359,7 @@ static void pmbus_status_byte(uint8_t *work)
     uint8_t addr = Pmbus.status_byte_args.addr;
     uint8_t *out = Pmbus.status_byte_args.out;
 
-    proto_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_STATUS_BYTE, out);
+    embed_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_STATUS_BYTE, out);
     Pmbus.ok = smbus_ok;
 }
 
@@ -369,7 +369,7 @@ static void pmbus_status_word(uint8_t *work)
     uint8_t addr = Pmbus.status_word_args.addr;
     uint16_t *out = Pmbus.status_word_args.out;
 
-    proto_bool smbus_ok = Smbus.read_word(protocore_smbus_span(), addr, PROTOCORE_PMBUS_STATUS_WORD, out);
+    embed_bool smbus_ok = Smbus.read_word(protocore_smbus_span(), addr, PROTOCORE_PMBUS_STATUS_WORD, out);
     Pmbus.ok = smbus_ok;
 }
 
@@ -378,7 +378,7 @@ static void pmbus_clear_faults(uint8_t *work)
     (void)work;
     uint8_t addr = Pmbus.clear_faults_args.addr;
 
-    proto_bool smbus_ok = Smbus.send_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_CLEAR_FAULTS);
+    embed_bool smbus_ok = Smbus.send_byte(protocore_smbus_span(), addr, PROTOCORE_PMBUS_CLEAR_FAULTS);
     Pmbus.ok = smbus_ok;
 }
 
@@ -391,7 +391,7 @@ static void pmbus_read_mfr_string(uint8_t *work)
     size_t cap = Pmbus.read_mfr_string_args.cap;
     size_t *len = Pmbus.read_mfr_string_args.len;
 
-    proto_bool smbus_ok = Smbus.read_block(protocore_smbus_span(), addr, cmd, out, cap, len);
+    embed_bool smbus_ok = Smbus.read_block(protocore_smbus_span(), addr, cmd, out, cap, len);
     Pmbus.ok = smbus_ok;
 }
 
@@ -417,6 +417,6 @@ PmbusNs Pmbus = {.vout_mode_kind = pmbus_vout_mode_kind,
                  .clear_faults = pmbus_clear_faults,
                  .read_mfr_string = pmbus_read_mfr_string};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PMBUS

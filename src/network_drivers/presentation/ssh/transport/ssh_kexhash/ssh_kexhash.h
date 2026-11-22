@@ -20,7 +20,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Longest exchange hash / session_id the two KEX hashes produce (SHA-512). */
 #define SSH_KEXHASH_MAX_LEN 64
@@ -31,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Which of the two KEX hashes the negotiated method binds a digest to. */
 typedef struct
 {
-    proto_bool is512; ///< true for a -sha512 method, false for a -sha256 one
+    embed_bool is512; ///< true for a -sha512 method, false for a -sha256 one
 } SshKexHashInitArgs;
 
 /** @brief The bytes absorbed. */
@@ -86,7 +86,7 @@ typedef struct
     SshKexHashInitArgs init_args;
     SshKexHashUpdateArgs update_args;
     SshKexHashFinalArgs final_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t len;
 } SshKexHashVars;
 
@@ -117,6 +117,6 @@ static const SshKexHashNs SshKexHash __attribute__((unused)) = {
     .final = protocore_ssh_kex_hash_final,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SSH_KEXHASH_H

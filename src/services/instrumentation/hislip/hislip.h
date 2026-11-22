@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_HISLIP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The IANA-assigned HiSLIP TCP port (both channels connect here). */
 #define PROTOCORE_HISLIP_PORT 4880
@@ -61,8 +61,7 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_HISLIP_DATA_RMT_DELIVERED 0x01 ///< bit 0: message delivered following a Response Message Terminator
 
 /** @brief HiSLIP MessageType codes (IVI-6.1). Codes 0-24 are HiSLIP 1.x; 25-38 were added in 2.0. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(HislipMsg,
     HISLIP_MSG_INITIALIZE = 0,
     HISLIP_MSG_INITIALIZE_RESPONSE = 1,
     HISLIP_MSG_FATAL_ERROR = 2,
@@ -102,7 +101,7 @@ typedef enum PROTO_ENUM_PACKED
     HISLIP_MSG_AUTHENTICATION_START = 36,
     HISLIP_MSG_AUTHENTICATION_EXCHANGE = 37,
     HISLIP_MSG_AUTHENTICATION_RESULT = 38,
-} HislipMsg;
+);
 
 /** @brief A decoded HiSLIP header. */
 typedef struct
@@ -125,7 +124,7 @@ size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, u
  * @return true on a valid `"HS"` prologue with @p len >= 16; false otherwise.
  * @note The message type is copied through even if beyond 38 (forward-compat); the caller decides.
  */
-proto_bool protocore_hislip_parse_header(const uint8_t *buf, size_t len, HislipHeader *out);
+embed_bool protocore_hislip_parse_header(const uint8_t *buf, size_t len, HislipHeader *out);
 
 // ── handshake builders ─────────────────────────────────────────────────────────────────────────
 
@@ -164,7 +163,7 @@ size_t protocore_hislip_build_async_initialize_response(uint8_t *buf, size_t cap
  *        PROTOCORE_HISLIP_DATA_RMT_DELIVERED on a server response after a terminator).
  * @return total bytes written (16 + payload_len), or 0 on overflow / bad input.
  */
-size_t protocore_hislip_build_data(uint8_t *buf, size_t cap, proto_bool is_end, uint8_t control, uint32_t message_id,
+size_t protocore_hislip_build_data(uint8_t *buf, size_t cap, embed_bool is_end, uint8_t control, uint32_t message_id,
                                    const uint8_t *payload, size_t payload_len);
 
 /** @brief The next client MessageID (increments by 2, wraps) - see @ref PROTOCORE_HISLIP_MESSAGE_ID_INIT. */
@@ -185,24 +184,24 @@ typedef struct
  * @brief Parse a full Initialize message (header + payload) from [buf, buf+len).
  * @return true on a complete, well-formed Initialize; false otherwise.
  */
-proto_bool protocore_hislip_parse_initialize(const uint8_t *buf, size_t len, HislipInitialize *out);
+embed_bool protocore_hislip_parse_initialize(const uint8_t *buf, size_t len, HislipInitialize *out);
 
 /** @brief A decoded InitializeResponse message. */
 typedef struct
 {
     uint16_t protocol_version;
     uint16_t session_id;
-    proto_bool overlap;              ///< ControlCode bit 0 (prefer overlapped)
-    proto_bool encryption_mandatory; ///< ControlCode bit 1 (2.0)
+    embed_bool overlap;              ///< ControlCode bit 0 (prefer overlapped)
+    embed_bool encryption_mandatory; ///< ControlCode bit 1 (2.0)
 } HislipInitializeResponse;
 
 /**
  * @brief Parse an InitializeResponse header from [buf, buf+len).
  * @return true on a well-formed InitializeResponse; false otherwise.
  */
-proto_bool protocore_hislip_parse_initialize_response(const uint8_t *buf, size_t len, HislipInitializeResponse *out);
+embed_bool protocore_hislip_parse_initialize_response(const uint8_t *buf, size_t len, HislipInitializeResponse *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HISLIP
 

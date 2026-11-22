@@ -36,7 +36,7 @@
 
 #include "src/ethernet/phy.h" // IdemIpPhyDriver, the table that the stack binds
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief What ::protocore_wifi_link_start takes: the network that the station joins.
@@ -65,31 +65,31 @@ typedef struct
 /**
  * @brief What ::protocore_wifi_link_state_set takes.
  *
- * @var WifiLinkStateArgs::up PROTO_TRUE once the station joins its network, and PROTO_FALSE after it leaves
+ * @var WifiLinkStateArgs::up EMBED_TRUE once the station joins its network, and EMBED_FALSE after it leaves
  */
 typedef struct
 {
-    proto_bool up;
+    embed_bool up;
 } WifiLinkStateArgs;
 
 /**
  * @brief Starts the radio as a station, and joins the network of @p args.
  *
  * @param[in] args The network [BORROWS].
- * @return         PROTO_TRUE where the radio started. The association comes later, through
+ * @return         EMBED_TRUE where the radio started. The association comes later, through
  *                 ::protocore_wifi_link_state_set.
  */
-proto_bool protocore_wifi_link_start(const WifiLinkStartArgs *args);
+embed_bool protocore_wifi_link_start(const WifiLinkStartArgs *args);
 
 /**
  * @brief Puts one received frame into a free buffer of the receive ring. The radio calls it in its own task.
  *
  * @param[in] args The frame [BORROWS]. The call copies it with memor, which needs the frame on a word boundary.
- * @return         PROTO_FALSE where the frame is not on a word boundary, where it is longer than
+ * @return         EMBED_FALSE where the frame is not on a word boundary, where it is longer than
  *                 IDEMIP_DMA_FRAME_MAX, or where no buffer is free. The link then drops the frame and counts it
  *                 in ::protocore_wifi_link_dropped.
  */
-proto_bool protocore_wifi_link_frame_receive(const WifiLinkFrameArgs *args);
+embed_bool protocore_wifi_link_frame_receive(const WifiLinkFrameArgs *args);
 
 /**
  * @brief Records whether the station is in its network. The radio calls it in its own task.
@@ -114,27 +114,27 @@ uint32_t protocore_wifi_link_dropped(void);
  * @brief The radio seam: starts the station and joins the network of @p args. The weak default refuses.
  *
  * @param[in] args The network [BORROWS].
- * @return         PROTO_TRUE where the radio started.
+ * @return         EMBED_TRUE where the radio started.
  */
-proto_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args);
+embed_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args);
 
 /**
  * @brief The radio seam: sends one frame. The radio copies the frame before it returns. The weak default refuses.
  *
  * @param[in] args The frame [BORROWS].
- * @return         PROTO_TRUE where the radio took the frame.
+ * @return         EMBED_TRUE where the radio took the frame.
  */
-proto_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args);
+embed_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args);
 
 /**
  * @brief The radio seam: reads the hardware address of the station. The weak default refuses.
  *
  * @param[out] mac IDEMIP_MAC_LEN octets.
- * @return         PROTO_TRUE where @p mac holds the address.
+ * @return         EMBED_TRUE where @p mac holds the address.
  */
-proto_bool protocore_wifi_radio_mac_read(uint8_t *mac);
+embed_bool protocore_wifi_radio_mac_read(uint8_t *mac);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IDEMIP
 

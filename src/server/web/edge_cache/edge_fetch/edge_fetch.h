@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file edge_fetch.h
@@ -34,22 +34,21 @@ PROTOCORE_BEGIN_DECLS
 typedef struct EdgeFetchTransport
 {
     int (*open)(void *ctx, const char *host, uint16_t port, uint32_t timeout_ms); ///< cid >= 0, or < 0 on failure
-    proto_bool (*connected)(void *ctx, int cid); ///< step the open along; true once it is up
-    proto_bool (*send)(void *ctx, int cid, const void *data, size_t len);
+    embed_bool (*connected)(void *ctx, int cid); ///< step the open along; true once it is up
+    embed_bool (*send)(void *ctx, int cid, const void *data, size_t len);
     size_t (*read)(void *ctx, int cid, uint8_t *buf, size_t cap); ///< 0 = nothing available right now
-    proto_bool (*closed)(void *ctx, int cid);                     ///< true once the origin closed its side
+    embed_bool (*closed)(void *ctx, int cid);                     ///< true once the origin closed its side
     void (*close)(void *ctx, int cid);
     void *ctx;
 } EdgeFetchTransport;
 
 /** @brief Fetch progress. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(EdgeFetchStatus,
     EDGE_FETCH_STATUS_PENDING,  ///< still receiving
     EDGE_FETCH_STATUS_DONE,     ///< a complete response is parsed (status / body_off / body_len valid)
     EDGE_FETCH_STATUS_OVERSIZE, ///< response exceeded the buffer - not cacheable (caller passes through / fails open)
     EDGE_FETCH_STATUS_FAILED,   ///< connect / send / timeout / closed-before-complete
-} EdgeFetchStatus;
+);
 
 /** @brief One in-flight origin fetch (fixed-size, zero-heap). */
 typedef struct
@@ -59,7 +58,7 @@ typedef struct
     uint32_t start_ms;
     uint32_t got;     ///< bytes accumulated
     uint32_t req_len; ///< request bytes parked at the head of buf until the connection is up
-    proto_bool sent;  ///< the request reached the transport, so buf now takes the response
+    embed_bool sent;  ///< the request reached the transport, so buf now takes the response
     int status;       ///< HTTP status (valid when DONE)
     size_t head_len;
     size_t body_off;
@@ -74,7 +73,7 @@ typedef struct
                   uint32_t);
     EdgeFetchStatus (*pump)(uint8_t *, EdgeFetch *, const EdgeFetchTransport *, uint32_t);
     void (*end)(uint8_t *, EdgeFetch *, const EdgeFetchTransport *);
-    proto_bool (*edge_resp_complete)(uint8_t *, const uint8_t *, size_t, proto_bool, size_t *);
+    embed_bool (*edge_resp_complete)(uint8_t *, const uint8_t *, size_t, embed_bool, size_t *);
 } EdgeFetchNs;
 PROTOCORE_NS_LAYOUT(EdgeFetchNs, begin, pump, end, edge_resp_complete);
 
@@ -114,10 +113,10 @@ void protocore_edge_fetcher_end(uint8_t *work, EdgeFetch *f, const EdgeFetchTran
  * @param len Len
  * @param conn_closed Conn closed
  * @param head_len Head len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
-                                                     proto_bool conn_closed, size_t *head_len);
+embed_bool protocore_edge_fetcher_edge_resp_complete(uint8_t *work, const uint8_t *buf, size_t len,
+                                                     embed_bool conn_closed, size_t *head_len);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EdgeFetchNs EdgeFetcher PROTOCORE_UNUSED = {.begin = protocore_edge_fetcher_begin,
@@ -126,6 +125,6 @@ PROTOCORE_NS EdgeFetchNs EdgeFetcher PROTOCORE_UNUSED = {.begin = protocore_edge
                                                          .edge_resp_complete =
                                                              protocore_edge_fetcher_edge_resp_complete};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_EDGE_FETCH_H

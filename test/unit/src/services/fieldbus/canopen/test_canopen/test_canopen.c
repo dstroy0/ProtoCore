@@ -75,8 +75,8 @@ void test_expedited_sdo_upload_of_the_identity_vendor_id(void)
 
     CanFrame resp;
     resp.id = CANOPEN_COB_SDO_TX + 5;
-    resp.extended = PROTO_FALSE;
-    resp.rtr = PROTO_FALSE;
+    resp.extended = EMBED_FALSE;
+    resp.rtr = EMBED_FALSE;
     resp.dlc = 8;
     static const uint8_t RESP[8] = {0x43, 0x18, 0x10, 0x01, 0x9A, 0x02, 0x00, 0x00}; // vendor id 0x0000029A
     memcpy(resp.data, RESP, 8);
@@ -134,8 +134,8 @@ void test_sdo_expedited_download_encodes_the_unused_octet_count(void)
     {
         CanFrame f;
         f.id = CANOPEN_COB_SDO_TX + 1;
-        f.extended = PROTO_FALSE;
-        f.rtr = PROTO_FALSE;
+        f.extended = EMBED_FALSE;
+        f.rtr = EMBED_FALSE;
         f.dlc = 8;
         memset(f.data, 0, 8);
         f.data[0] = (uint8_t)(0x40u | (((uint8_t)(4u - len)) << 2) | 0x03u);
@@ -197,7 +197,7 @@ void test_sdo_abort_carries_the_code_little_endian(void)
     CanopenV.build_sdo_abort_args.index = 0x1018u;
     CanopenV.build_sdo_abort_args.sub = 9;
     CanopenV.build_sdo_abort_args.abort_code = CANOPEN_ABORT_NO_SUBINDEX;
-    CanopenV.build_sdo_abort_args.to_server = PROTO_FALSE;
+    CanopenV.build_sdo_abort_args.to_server = EMBED_FALSE;
     Canopen.build_sdo_abort(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_EQUAL_HEX32(0x583u, f.id);                                           // server -> client
@@ -221,7 +221,7 @@ void test_sdo_abort_carries_the_code_little_endian(void)
     CanopenV.build_sdo_abort_args.index = 0x1018u;
     CanopenV.build_sdo_abort_args.sub = 9;
     CanopenV.build_sdo_abort_args.abort_code = CANOPEN_ABORT_NO_OBJECT;
-    CanopenV.build_sdo_abort_args.to_server = PROTO_TRUE;
+    CanopenV.build_sdo_abort_args.to_server = EMBED_TRUE;
     Canopen.build_sdo_abort(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_EQUAL_HEX32(0x603u, f.id);
@@ -235,8 +235,8 @@ void test_sdo_download_acknowledgement(void)
 {
     CanFrame f;
     f.id = CANOPEN_COB_SDO_TX + 10;
-    f.extended = PROTO_FALSE;
-    f.rtr = PROTO_FALSE;
+    f.extended = EMBED_FALSE;
+    f.rtr = EMBED_FALSE;
     f.dlc = 8;
     static const uint8_t ACK[8] = {0x60, 0x40, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00};
     memcpy(f.data, ACK, 8);
@@ -650,12 +650,12 @@ void test_classifier_rejects_extended_and_unknown(void)
     CanopenV.build_heartbeat_args.state = CANOPEN_STATE_OPERATIONAL;
     Canopen.build_heartbeat(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
-    f.extended = PROTO_TRUE;
+    f.extended = EMBED_TRUE;
     CanopenV.parse_args.f = &f;
     CanopenV.parse_args.out = &m;
     Canopen.parse(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
-    f.extended = PROTO_FALSE;
+    f.extended = EMBED_FALSE;
     CanopenV.parse_args.f = &f;
     CanopenV.parse_args.out = &m;
     Canopen.parse(canopen_work);
@@ -719,10 +719,10 @@ void test_segment_command_octet_layout(void)
 
     CanopenV.build_sdo_download_segment_args.out = &f;
     CanopenV.build_sdo_download_segment_args.node_id = 2;
-    CanopenV.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.toggle = EMBED_FALSE;
     CanopenV.build_sdo_download_segment_args.data = SEVEN;
     CanopenV.build_sdo_download_segment_args.len = 7;
-    CanopenV.build_sdo_download_segment_args.last = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.last = EMBED_FALSE;
     Canopen.build_sdo_download_segment(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[0]);
@@ -730,25 +730,25 @@ void test_segment_command_octet_layout(void)
 
     CanopenV.build_sdo_download_segment_args.out = &f;
     CanopenV.build_sdo_download_segment_args.node_id = 2;
-    CanopenV.build_sdo_download_segment_args.toggle = PROTO_TRUE;
+    CanopenV.build_sdo_download_segment_args.toggle = EMBED_TRUE;
     CanopenV.build_sdo_download_segment_args.data = SEVEN;
     CanopenV.build_sdo_download_segment_args.len = 7;
-    CanopenV.build_sdo_download_segment_args.last = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.last = EMBED_FALSE;
     Canopen.build_sdo_download_segment(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x10u, f.data[0]);
 
     CanopenV.build_sdo_download_segment_args.out = &f;
     CanopenV.build_sdo_download_segment_args.node_id = 2;
-    CanopenV.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.toggle = EMBED_FALSE;
     CanopenV.build_sdo_download_segment_args.data = SEVEN;
     CanopenV.build_sdo_download_segment_args.len = 3;
-    CanopenV.build_sdo_download_segment_args.last = PROTO_TRUE;
+    CanopenV.build_sdo_download_segment_args.last = EMBED_TRUE;
     Canopen.build_sdo_download_segment(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x09u, f.data[0]);
 
-    proto_bool toggle = PROTO_TRUE, last = PROTO_FALSE;
+    embed_bool toggle = EMBED_TRUE, last = EMBED_FALSE;
     uint8_t data[7], len = 0;
     CanopenV.parse_sdo_segment_args.f = &f;
     CanopenV.parse_sdo_segment_args.toggle = &toggle;
@@ -765,7 +765,7 @@ void test_segment_command_octet_layout(void)
     // An upload segment request is command specifier 3, so it is not a segment frame.
     CanopenV.build_sdo_upload_segment_req_args.out = &f;
     CanopenV.build_sdo_upload_segment_req_args.node_id = 2;
-    CanopenV.build_sdo_upload_segment_req_args.toggle = PROTO_TRUE;
+    CanopenV.build_sdo_upload_segment_req_args.toggle = EMBED_TRUE;
     Canopen.build_sdo_upload_segment_req(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x70u, f.data[0]); // (3 << 5) | 0x10
@@ -778,38 +778,38 @@ void test_segment_command_octet_layout(void)
     TEST_ASSERT_FALSE(CanopenV.ok);
     CanopenV.build_sdo_upload_segment_req_args.out = &f;
     CanopenV.build_sdo_upload_segment_req_args.node_id = 2;
-    CanopenV.build_sdo_upload_segment_req_args.toggle = PROTO_FALSE;
+    CanopenV.build_sdo_upload_segment_req_args.toggle = EMBED_FALSE;
     Canopen.build_sdo_upload_segment_req(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x60u, f.data[0]);
 
     CanopenV.build_sdo_download_segment_args.out = &f;
     CanopenV.build_sdo_download_segment_args.node_id = 2;
-    CanopenV.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.toggle = EMBED_FALSE;
     CanopenV.build_sdo_download_segment_args.data = SEVEN;
     CanopenV.build_sdo_download_segment_args.len = 0;
-    CanopenV.build_sdo_download_segment_args.last = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.last = EMBED_FALSE;
     Canopen.build_sdo_download_segment(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
     CanopenV.build_sdo_download_segment_args.out = &f;
     CanopenV.build_sdo_download_segment_args.node_id = 2;
-    CanopenV.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.toggle = EMBED_FALSE;
     CanopenV.build_sdo_download_segment_args.data = SEVEN;
     CanopenV.build_sdo_download_segment_args.len = 8;
-    CanopenV.build_sdo_download_segment_args.last = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.last = EMBED_FALSE;
     Canopen.build_sdo_download_segment(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
     CanopenV.build_sdo_download_segment_args.out = &f;
     CanopenV.build_sdo_download_segment_args.node_id = 2;
-    CanopenV.build_sdo_download_segment_args.toggle = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.toggle = EMBED_FALSE;
     CanopenV.build_sdo_download_segment_args.data = NULL;
     CanopenV.build_sdo_download_segment_args.len = 4;
-    CanopenV.build_sdo_download_segment_args.last = PROTO_FALSE;
+    CanopenV.build_sdo_download_segment_args.last = EMBED_FALSE;
     Canopen.build_sdo_download_segment(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
     CanopenV.build_sdo_upload_segment_req_args.out = &f;
     CanopenV.build_sdo_upload_segment_req_args.node_id = 128;
-    CanopenV.build_sdo_upload_segment_req_args.toggle = PROTO_FALSE;
+    CanopenV.build_sdo_upload_segment_req_args.toggle = EMBED_FALSE;
     Canopen.build_sdo_upload_segment_req(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
 }
@@ -832,22 +832,22 @@ void test_segmented_upload_reassembly(void)
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC;
     CanopenV.sdo_reasm_feed_args.len = 7;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_FALSE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_FALSE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC + 7;
     CanopenV.sdo_reasm_feed_args.len = 7;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_TRUE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_TRUE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC + 14;
     CanopenV.sdo_reasm_feed_args.len = 3;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_FALSE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_TRUE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_FALSE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_TRUE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     TEST_ASSERT_TRUE(r.done);
@@ -858,8 +858,8 @@ void test_segmented_upload_reassembly(void)
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC;
     CanopenV.sdo_reasm_feed_args.len = 1;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_TRUE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_TRUE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
 
@@ -871,15 +871,15 @@ void test_segmented_upload_reassembly(void)
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC;
     CanopenV.sdo_reasm_feed_args.len = 7;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_FALSE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_FALSE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC + 7;
     CanopenV.sdo_reasm_feed_args.len = 7;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_FALSE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_FALSE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
     TEST_ASSERT_EQUAL_size_t(7u, r.len); // the refused segment did not land
@@ -894,15 +894,15 @@ void test_segmented_upload_reassembly(void)
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC;
     CanopenV.sdo_reasm_feed_args.len = 7;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_FALSE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_FALSE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_TRUE(CanopenV.ok);
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC + 7;
     CanopenV.sdo_reasm_feed_args.len = 7;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_TRUE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_TRUE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
     TEST_ASSERT_EQUAL_size_t(7u, r.len);
@@ -914,8 +914,8 @@ void test_segmented_upload_reassembly(void)
     CanopenV.sdo_reasm_feed_args.r = &r;
     CanopenV.sdo_reasm_feed_args.data = SRC;
     CanopenV.sdo_reasm_feed_args.len = 1;
-    CanopenV.sdo_reasm_feed_args.toggle = PROTO_FALSE;
-    CanopenV.sdo_reasm_feed_args.last = PROTO_FALSE;
+    CanopenV.sdo_reasm_feed_args.toggle = EMBED_FALSE;
+    CanopenV.sdo_reasm_feed_args.last = EMBED_FALSE;
     Canopen.sdo_reasm_feed(canopen_work);
     TEST_ASSERT_FALSE(CanopenV.ok);
     CanopenV.sdo_reasm_init_args.r = NULL;

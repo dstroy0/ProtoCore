@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_POWERLINK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -168,7 +168,7 @@ typedef struct
     PowerlinkSoaArgs soa_args;
     PowerlinkAsndArgs asnd_args;
     PowerlinkParseArgs parse_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } PowerlinkVars;
 
@@ -211,7 +211,7 @@ static const PowerlinkNs Powerlink __attribute__((unused)) = {
     .parse = protocore_powerlink_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_POWERLINK
 

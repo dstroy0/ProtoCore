@@ -26,7 +26,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool ok_of(const void *p, size_t n)
+static embed_bool ok_of(const void *p, size_t n)
 {
     Utf8V.args.s = (const uint8_t *)p;
     Utf8V.args.n = n;

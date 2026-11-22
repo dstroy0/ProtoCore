@@ -57,14 +57,14 @@ struct SshAuthStorage
     // authentication has not been accepted within the timeout period." Stamped when the slot is
     // first polled, which is the pass after it was accepted.
     uint32_t started_ms[MAX_SSH_CONNS];
-    proto_bool started[MAX_SSH_CONNS];
+    embed_bool started[MAX_SSH_CONNS];
     // sec 5: the user name and service name a slot's accumulated state belongs to. Both are checked
     // on every request, and the state is flushed when either changes.
     struct
     {
         char user[SSH_AUTH_USER_MAX];
         char service[32];
-        proto_bool known; ///< false until the slot's first USERAUTH_REQUEST names a pair
+        embed_bool known; ///< false until the slot's first USERAUTH_REQUEST names a pair
     } ident[MAX_SSH_CONNS];
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
     // Per-slot keyboard-interactive exchange state: armed by a "keyboard-interactive" USERAUTH_REQUEST
@@ -72,7 +72,7 @@ struct SshAuthStorage
     // the round-trip since the INFO_RESPONSE does not carry it.
     struct
     {
-        proto_bool pending;
+        embed_bool pending;
         char user[SSH_AUTH_USER_MAX];
     } ki[MAX_SSH_CONNS];
 #endif
@@ -115,11 +115,11 @@ uint8_t *protocore_ssh_auth_span(void)
 // Count one failure for slot @p i. At the threshold, emit the sec 4 DISCONNECT into @p out and
 // report that the caller should close. SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE is the reason
 // RFC 4250 sec 4.2.2 assigns to an exhausted authentication.
-static proto_bool auth_failure_over_threshold(uint8_t i, mmgr_span out)
+static embed_bool auth_failure_over_threshold(uint8_t i, mmgr_span out)
 {
     if (i >= MAX_SSH_CONNS || ++SSH_AUTH_CTX(protocore_ssh_auth_span())->failures[i] < SSH_MAX_AUTH_ATTEMPTS)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     static const char desc[] = "too many authentication failures";
     size_t n = 0;
@@ -131,7 +131,7 @@ static proto_bool auth_failure_over_threshold(uint8_t i, mmgr_span out)
         SshNetworkV.msg.len = n;
         SshNetwork.emit(protocore_ssh_network_span());
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Everything one slot accumulated across authentication attempts: the armed keyboard-interactive
@@ -140,7 +140,7 @@ static void auth_flush_state(uint8_t i)
 {
     SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change[i] = PROTOCORE_SSH_PW_CHANGE_NONE;
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-    SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = PROTO_FALSE;
+    SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = EMBED_FALSE;
     mmgr_zero_buf(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user,
                   sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user));
 #endif
@@ -150,14 +150,14 @@ static void auth_flush_state(uint8_t i)
 // belongs to, and flush that state when either changes.
 static void auth_identity_check(uint8_t i, const char *user, const char *service)
 {
-    const proto_bool same =
+    const embed_bool same =
         SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known &&
         EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user,
                    .other = user, .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user),
-                   .ci = PROTO_FALSE) &&
+                   .ci = EMBED_FALSE) &&
         EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service,
                    .other = service, .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service),
-                   .ci = PROTO_FALSE);
+                   .ci = EMBED_FALSE);
     if (same)
     {
         return;
@@ -170,7 +170,7 @@ static void auth_identity_check(uint8_t i, const char *user, const char *service
                .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user));
     EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service,
                .src = service, .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service));
-    SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known = PROTO_TRUE;
+    SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known = EMBED_TRUE;
 }
 
 void protocore_ssh_auth_write_publickey_request(uint8_t *work)
@@ -205,22 +205,22 @@ void protocore_ssh_auth_timed_out(uint8_t *work)
     // when either of them already answered.
     if (i >= MAX_SSH_CONNS || SSH_AUTH_TIMEOUT_MS == 0u)
     {
-        SshAuthV.ok = PROTO_FALSE;
+        SshAuthV.ok = EMBED_FALSE;
         return;
     }
     PhaseMachineV.auth_complete_args.i = i;
     PhaseMachine.auth_complete(work);
     if (PhaseMachineV.ok)
     {
-        SshAuthV.ok = PROTO_FALSE;
+        SshAuthV.ok = EMBED_FALSE;
         return;
     }
     const uint32_t now = Clock.ms;
     if (!SSH_AUTH_CTX(protocore_ssh_auth_span())->started[i])
     {
         SSH_AUTH_CTX(protocore_ssh_auth_span())->started_ms[i] = now;
-        SSH_AUTH_CTX(protocore_ssh_auth_span())->started[i] = PROTO_TRUE;
-        SshAuthV.ok = PROTO_FALSE;
+        SSH_AUTH_CTX(protocore_ssh_auth_span())->started[i] = EMBED_TRUE;
+        SshAuthV.ok = EMBED_FALSE;
         return;
     }
     // Unsigned subtraction, so a wrap of the millisecond counter yields the true elapsed time.
@@ -239,8 +239,8 @@ void protocore_ssh_auth_reset(uint8_t *work)
     }
     auth_flush_state(i); // the cooldown stamp survives: it is server-wide
     SSH_AUTH_CTX(protocore_ssh_auth_span())->failures[i] = 0;
-    SSH_AUTH_CTX(protocore_ssh_auth_span())->started[i] = PROTO_FALSE;
-    SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known = PROTO_FALSE;
+    SSH_AUTH_CTX(protocore_ssh_auth_span())->started[i] = EMBED_FALSE;
+    SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].known = EMBED_FALSE;
     mmgr_zero_buf(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user,
                   sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].user));
     mmgr_zero_buf(SSH_AUTH_CTX(protocore_ssh_auth_span())->ident[i].service,
@@ -279,7 +279,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     // sec 7: the offered algorithm name is checked before the key it came with. "If the server does
     // not support some algorithm, it MUST simply reject the request" - so an unsupported name is a
     // FAILURE, never a PK_OK echoing a name this end cannot then verify a signature under.
-    proto_bool key_ok = ssh_pubkey_algo_supported(req->pk_algo, req->pk_blob, req->pk_blob_len) &&
+    embed_bool key_ok = ssh_pubkey_algo_supported(req->pk_algo, req->pk_blob, req->pk_blob_len) &&
                         ssh_pubkey_blob_valid(req->pk_blob, req->pk_blob_len) &&
                         SSH_AUTH_CTX(protocore_ssh_auth_span())->pk_cb &&
                         SSH_AUTH_CTX(protocore_ssh_auth_span())->pk_cb(req->user, req->pk_blob, req->pk_blob_len);
@@ -287,7 +287,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     {
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
-        SshAuthV.partial = PROTO_FALSE;
+        SshAuthV.partial = EMBED_FALSE;
         protocore_ssh_auth_build_failure(protocore_ssh_auth_span());
         *out_len = SshAuthV.out_args.out_len;
         return SshAuthV.i32;
@@ -308,7 +308,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     {
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
-        SshAuthV.partial = PROTO_FALSE;
+        SshAuthV.partial = EMBED_FALSE;
         protocore_ssh_auth_build_failure(protocore_ssh_auth_span());
         *out_len = SshAuthV.out_args.out_len;
         return SshAuthV.i32;
@@ -321,7 +321,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     {
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
-        SshAuthV.partial = PROTO_FALSE;
+        SshAuthV.partial = EMBED_FALSE;
         protocore_ssh_auth_build_failure(protocore_ssh_auth_span());
         *out_len = SshAuthV.out_args.out_len;
         return SshAuthV.i32; // arena exhausted: fail closed
@@ -331,7 +331,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
         protocore_plain_guard()->persistent_buf_release(signed_data.buf, protocore_plain_owner());
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
-        SshAuthV.partial = PROTO_FALSE;
+        SshAuthV.partial = EMBED_FALSE;
         protocore_ssh_auth_build_failure(protocore_ssh_auth_span());
         *out_len = SshAuthV.out_args.out_len;
         return SshAuthV.i32;
@@ -346,7 +346,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
                .bytes = req->signed_prefix_len);
     sd += req->signed_prefix_len;
 
-    proto_bool sig_ok = ssh_pubkey_verify(i, req->pk_algo, req->pk_blob, req->pk_blob_len, req->signature,
+    embed_bool sig_ok = ssh_pubkey_verify(i, req->pk_algo, req->pk_blob, req->pk_blob_len, req->signature,
                                           req->signature_len, signed_data.buf, sd);
     protocore_plain_guard()->persistent_buf_release(signed_data.buf, protocore_plain_owner());
     if (sig_ok)
@@ -361,7 +361,7 @@ static int protocore_ssh_auth_handle_pubkey(uint8_t i, const SshAuthReq *req, ui
     }
     SshAuthV.out_args.out = out;
     SshAuthV.out_args.cap = cap;
-    SshAuthV.partial = PROTO_FALSE;
+    SshAuthV.partial = EMBED_FALSE;
     protocore_ssh_auth_build_failure(protocore_ssh_auth_span());
     *out_len = SshAuthV.out_args.out_len;
     return SshAuthV.i32;
@@ -398,7 +398,7 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
     // RFC 4252 sec 5: the service to start after auth must be one the server offers, and it sits
     // inside the signed blob, so a service the server never checks is one the signature does not bind.
     if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->service, .other = "ssh-connection",
-                    .cap = sizeof(req->service), .ci = PROTO_FALSE))
+                    .cap = sizeof(req->service), .ci = EMBED_FALSE))
     {
         SshAuthV.i32 = -1;
         return;
@@ -410,7 +410,7 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
     }
 
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "password", .cap = sizeof(req->method),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         // boolean (FALSE = not a password change) || string password [|| string new-password]
         if (off >= len)
@@ -431,10 +431,10 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
             SshAuthV.i32 = -1;
             return;
         }
-        req->is_password = PROTO_TRUE;
+        req->is_password = EMBED_TRUE;
     }
     else if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "publickey",
-                        .cap = sizeof(req->method), .ci = PROTO_FALSE))
+                        .cap = sizeof(req->method), .ci = EMBED_FALSE))
     {
         // boolean has_signature || string algo || string pubkey-blob [|| string signature]
         if (off >= len)
@@ -482,15 +482,15 @@ void protocore_ssh_auth_parse_request(uint8_t *work)
                 return;
             }
         }
-        req->is_pubkey = PROTO_TRUE;
+        req->is_pubkey = EMBED_TRUE;
     }
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
     else if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "keyboard-interactive",
-                        .cap = sizeof(req->method), .ci = PROTO_FALSE))
+                        .cap = sizeof(req->method), .ci = EMBED_FALSE))
     {
         // RFC 4256 §3.1: string(language tag, deprecated) || string(submethods). Both are ignored -
         // this server always drives a single "Password:" prompt.
-        req->is_kbdint = PROTO_TRUE;
+        req->is_kbdint = EMBED_TRUE;
     }
 #endif
     SshAuthV.i32 = 0;
@@ -507,7 +507,7 @@ void protocore_ssh_auth_build_failure(uint8_t *work)
     uint8_t *out = SshAuthV.out_args.out;
     size_t *out_len = &SshAuthV.out_args.out_len;
     const size_t cap = SshAuthV.out_args.cap;
-    const proto_bool partial = SshAuthV.partial;
+    const embed_bool partial = SshAuthV.partial;
     // SSH_MSG_USERAUTH_FAILURE || name-list(authentications) || boolean(partial)
 #if PROTOCORE_SSH_ALLOW_PASSWORD
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
@@ -654,12 +654,12 @@ void protocore_ssh_auth_handle_request(uint8_t *work)
         {
             SshAuthV.out_args.out = out;
             SshAuthV.out_args.cap = cap;
-            SshAuthV.partial = PROTO_FALSE;
+            SshAuthV.partial = EMBED_FALSE;
             protocore_ssh_auth_build_failure(work);
             *out_len = SshAuthV.out_args.out_len;
             return;
         }
-        SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = PROTO_TRUE;
+        SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = EMBED_TRUE;
         size_t ul = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = req.user,
                                .cap = sizeof(SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user) - 1);
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].user, .src = req.user,
@@ -697,20 +697,20 @@ void protocore_ssh_auth_handle_request(uint8_t *work)
         mmgr_zero_buf(req.new_password, sizeof(req.new_password));
         SshAuthV.out_args.out = out;
         SshAuthV.out_args.cap = cap;
-        SshAuthV.partial = PROTO_FALSE;
+        SshAuthV.partial = EMBED_FALSE;
         protocore_ssh_auth_build_failure(work);
         *out_len = SshAuthV.out_args.out_len;
         return;
     }
 
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     if (req.is_password)
     {
         ok = SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_cb != NULL &&
              SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_cb(req.user, req.password);
     }
 #else
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
 #endif
 
     // Wipe both passwords from the stack regardless of the outcome.
@@ -729,7 +729,7 @@ void protocore_ssh_auth_handle_request(uint8_t *work)
     }
     SshAuthV.out_args.out = out;
     SshAuthV.out_args.cap = cap;
-    SshAuthV.partial = PROTO_FALSE;
+    SshAuthV.partial = EMBED_FALSE;
     protocore_ssh_auth_build_failure(work);
     *out_len = SshAuthV.out_args.out_len;
     return;
@@ -739,7 +739,7 @@ void protocore_ssh_auth_pw_change_report(uint8_t *work)
 {
     (void)work;
     const uint8_t slot = SshAuthV.slot;
-    const proto_bool ok = SshAuthV.ok;
+    const embed_bool ok = SshAuthV.ok;
     if (slot >= MAX_SSH_CONNS ||
         SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_change[slot] != PROTOCORE_SSH_PW_CHANGE_BUSY)
     {
@@ -801,7 +801,7 @@ void protocore_ssh_auth_handle_info_response(uint8_t *work)
         SshAuthV.i32 = -1;
         return;
     }
-    SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = PROTO_FALSE; // consume the exchange regardless of outcome
+    SSH_AUTH_CTX(protocore_ssh_auth_span())->ki[i].pending = EMBED_FALSE; // consume the exchange regardless of outcome
 
     // SSH_MSG_USERAUTH_INFO_RESPONSE (RFC 4256 §3.4): byte(61) || uint32 num-responses || string[num].
     // We sent one prompt, so exactly one response is expected.
@@ -821,7 +821,7 @@ void protocore_ssh_auth_handle_info_response(uint8_t *work)
     off += 4;
 
     char resp[SSH_AUTH_PASS_MAX];
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     if (nr == 1 && read_string(payload, len, &off, resp, sizeof(resp)))
     {
         ok = SSH_AUTH_CTX(protocore_ssh_auth_span())->pw_cb &&
@@ -845,7 +845,7 @@ void protocore_ssh_auth_handle_info_response(uint8_t *work)
     }
     SshAuthV.out_args.out = out;
     SshAuthV.out_args.cap = cap;
-    SshAuthV.partial = PROTO_FALSE;
+    SshAuthV.partial = EMBED_FALSE;
     protocore_ssh_auth_build_failure(work);
     *out_len = SshAuthV.out_args.out_len;
     return;
@@ -1091,7 +1091,7 @@ void protocore_ssh_auth_passwd_change_reply(uint8_t *work)
     }
     else if (EMBED_CALL(spat.ok, SpatiumCfg, .span = reply))
     {
-        SshAuthV.partial = PROTO_FALSE;
+        SshAuthV.partial = EMBED_FALSE;
         protocore_ssh_auth_build_failure(work);
         built = SshAuthV.i32;
         n = SshAuthV.out_args.out_len;

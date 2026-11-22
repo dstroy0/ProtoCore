@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_GPIO_MAP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Configured direction of a mapped pin (how the panel renders / drives it).
@@ -36,13 +36,12 @@ PROTOCORE_BEGIN_DECLS
  * silent: the profile numbers a direction 0/1/2/3 as IN/OUT/PULLUP/PULLDOWN, this enum in
  * declaration order.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_gpio_dir,
     PROTOCORE_GPIO_DIR_IN = 0,      ///< read-only input.
     PROTOCORE_GPIO_DIR_IN_PULLUP,   ///< input with internal pull-up.
     PROTOCORE_GPIO_DIR_IN_PULLDOWN, ///< input with internal pull-down.
     PROTOCORE_GPIO_DIR_OUT,         ///< output (drivable from the panel).
-} protocore_gpio_dir;
+);
 
 /** @brief One mapped GPIO pin. */
 typedef struct
@@ -113,7 +112,7 @@ typedef struct
     GpioArgs args;
     GpioParseArgs parse_args;
     GpioOutArgs out_args;
-    proto_bool ok;
+    embed_bool ok;
     const char *text;
     int32_t n;
 } GpioMapVars;
@@ -160,7 +159,7 @@ static const GpioMapNs GpioMap __attribute__((unused)) = {
     .begin = protocore_gpio_map_begin,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIO_MAP
 

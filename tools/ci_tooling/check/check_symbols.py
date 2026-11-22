@@ -233,6 +233,13 @@ def check():
             if not re.fullmatch(r"[A-Z][A-Za-z0-9]*", name):
                 add("enum-name", rel, ln, f"enum type {name} is not StructName PascalCase")
             types_seen.setdefault(name.lower(), rel)
+        # An enum of embedded_types names its type as the first argument of EMBED_ENUM_BYTE.
+        for m in re.finditer(r"\bEMBED_ENUM_BYTE\s*\(\s*(\w+)\s*,", code):
+            name = m.group(1)
+            ln = code[: m.start(1)].count("\n") + 1
+            if not re.fullmatch(r"[A-Z][A-Za-z0-9]*", name):
+                add("enum-name", rel, ln, f"enum type {name} is not StructName PascalCase")
+            types_seen.setdefault(name.lower(), rel)
 
         # 8. collision material: exported function names
         if is_header:

@@ -28,7 +28,7 @@
 #include "protocore_config.h"              // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
 #include "verbum_scrutor/verbum_scrutor.h" // the lane math; the classification below is base64's own
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -423,8 +423,8 @@ void protocore_base64_url_decode(uint8_t *work)
 /** @brief The operands and the outcome. */
 Base64Vars Base64V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BASE64

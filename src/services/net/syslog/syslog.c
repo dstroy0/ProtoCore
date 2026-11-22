@@ -20,7 +20,7 @@
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one message, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the collector address, once
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The originator's compile-time storage: the collector, the stored HEADER, and the line scratch.
@@ -34,7 +34,7 @@ struct SyslogStorage
     char hostname[PROTOCORE_SYSLOG_FIELD_MAX]; ///< HOSTNAME (RFC 5424 sec 6.2.4)
     char app_name[PROTOCORE_SYSLOG_FIELD_MAX]; ///< APP-NAME (RFC 5424 sec 6.2.5)
     SyslogFacility facility;                   ///< the Facility half of PRIVAL (RFC 5424 sec 6.2.1)
-    proto_bool ready;                          ///< the collector address parsed; every send is gated on it
+    embed_bool ready;                          ///< the collector address parsed; every send is gated on it
     char buf[PROTOCORE_SYSLOG_MSG_MAX];        ///< the SYSLOG-MSG a log builds
 };
 
@@ -63,15 +63,15 @@ static void copy_field(char *dst, size_t cap, const char *src)
 
 // Append len bytes at *pos while the line still leaves room for a trailing NUL. False the moment it
 // would not fit, so an over-long line reports 0 rather than a truncated SYSLOG-MSG.
-static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const char *src, size_t len)
+static inline embed_bool line_append(char *out, size_t cap, size_t *pos, const char *src, size_t len)
 {
     if (*pos + len > cap - 1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = src, .bytes = len);
     *pos += len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -165,7 +165,7 @@ void protocore_syslog_format(uint8_t *work)
 // Format one record with the stored HEADER fields and send it as one datagram (RFC 5426 sec 3.1).
 void protocore_syslog_log(uint8_t *work)
 {
-    SyslogV.ok = PROTO_FALSE;
+    SyslogV.ok = EMBED_FALSE;
     SyslogV.n = 0;
     if (!SYSLOG_CTX(work)->ready)
     {
@@ -195,6 +195,6 @@ void protocore_syslog_log(uint8_t *work)
 /** @brief The operands and the outcome. */
 SyslogVars SyslogV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SYSLOG

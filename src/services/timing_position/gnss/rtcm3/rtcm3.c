@@ -17,7 +17,7 @@
 // CRC-24Q (poly 0x1864CFB, init 0). Computed over the preamble + header + payload of a frame.
 // ---------------------------------------------------------------------------------------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 uint32_t protocore_rtcm3_crc24q(const uint8_t *data, size_t len)
 {
@@ -46,7 +46,7 @@ void protocore_rtcm_bw_init(RtcmBitWriter *w, uint8_t *buf, size_t cap)
     w->buf = buf;
     w->cap_bits = cap * 8;
     w->pos = 0;
-    w->ok = PROTO_TRUE;
+    w->ok = EMBED_TRUE;
 }
 
 void protocore_rtcm_bw_u(RtcmBitWriter *w, uint64_t val, uint8_t nbits)
@@ -57,7 +57,7 @@ void protocore_rtcm_bw_u(RtcmBitWriter *w, uint64_t val, uint8_t nbits)
     }
     if (nbits == 0 || nbits > 64 || w->pos + nbits > w->cap_bits)
     {
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     for (int i = (int)nbits - 1; i >= 0; i--)
@@ -172,7 +172,7 @@ size_t protocore_rtcm3_frame_build(uint8_t *out, size_t cap, const uint8_t *payl
 // ---------------------------------------------------------------------------------------------
 
 static size_t build_arp(uint8_t *out, size_t cap, uint16_t msg, uint16_t station_id, int64_t x, int64_t y, int64_t z,
-                        proto_bool with_h, uint16_t h)
+                        embed_bool with_h, uint16_t h)
 {
     uint8_t payload[21];
     EMBED_CALL(memor.set, MemoriaCfg, .dst = payload, .val = 0, .bytes = sizeof payload);
@@ -209,31 +209,31 @@ static size_t build_arp(uint8_t *out, size_t cap, uint16_t msg, uint16_t station
 size_t protocore_rtcm3_build_1005(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm,
                                   int64_t ecef_y_01mm, int64_t ecef_z_01mm)
 {
-    return build_arp(out, cap, 1005, station_id, ecef_x_01mm, ecef_y_01mm, ecef_z_01mm, PROTO_FALSE, 0);
+    return build_arp(out, cap, 1005, station_id, ecef_x_01mm, ecef_y_01mm, ecef_z_01mm, EMBED_FALSE, 0);
 }
 
 size_t protocore_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id, int64_t ecef_x_01mm,
                                   int64_t ecef_y_01mm, int64_t ecef_z_01mm, uint16_t antenna_height_01mm)
 {
-    return build_arp(out, cap, 1006, station_id, ecef_x_01mm, ecef_y_01mm, ecef_z_01mm, PROTO_TRUE,
+    return build_arp(out, cap, 1006, station_id, ecef_x_01mm, ecef_y_01mm, ecef_z_01mm, EMBED_TRUE,
                      antenna_height_01mm);
 }
 
-proto_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out)
+embed_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out)
 {
     if (!payload || !out || payload_len < 19)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t p = 0;
     uint16_t msg = (uint16_t)protocore_rtcm_br_u(payload, &p, 12);
     if (msg != 1005 && msg != 1006)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (msg == 1006 && payload_len < 21)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->station_id = (uint16_t)protocore_rtcm_br_u(payload, &p, 12);
     protocore_rtcm_br_u(payload, &p, 6); // DF021
@@ -250,16 +250,16 @@ proto_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_l
     if (msg == 1006)
     {
         out->antenna_height_01mm = (uint16_t)protocore_rtcm_br_u(payload, &p, 16);
-        out->has_height = PROTO_TRUE;
+        out->has_height = EMBED_TRUE;
     }
     else
     {
         out->antenna_height_01mm = 0;
-        out->has_height = PROTO_FALSE;
+        out->has_height = EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

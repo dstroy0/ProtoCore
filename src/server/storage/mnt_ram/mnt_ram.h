@@ -7,7 +7,7 @@
 #include "protocore_config.h"       // the entry point: protocore_types.h for the widths
 #include "server/storage/mnt/mnt.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file mnt_ram.h
@@ -65,6 +65,6 @@ void protocore_mnt_ram_format(uint8_t *work);
 PROTOCORE_NS MntRamNs MntRam PROTOCORE_UNUSED = {.backend = protocore_mnt_ram_backend,
                                                  .format = protocore_mnt_ram_format};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_MNT_RAM_H

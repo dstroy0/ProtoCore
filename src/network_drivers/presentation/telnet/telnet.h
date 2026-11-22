@@ -28,7 +28,7 @@
 #include "numeros_scribo/numeros_scribo.h"
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_TELNET
 
@@ -151,6 +151,6 @@ uint8_t *protocore_telnet_span(void);
 
 #endif // PROTOCORE_ENABLE_TELNET
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TELNET_H

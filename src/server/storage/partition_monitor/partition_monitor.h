@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -37,7 +37,7 @@ typedef struct
     uint8_t subtype;    ///< esp_partition subtype.
     uint32_t address;   ///< flash offset (bytes).
     uint32_t size;      ///< partition size (bytes).
-    proto_bool running; ///< true for the currently-running app partition.
+    embed_bool running; ///< true for the currently-running app partition.
 } protocore_partition_info;
 
 /** @brief What kind takes: type, subtype. */
@@ -104,7 +104,7 @@ typedef struct
     PartitionMonitorJsonArgs json_args;
     PartitionMonitorCollectArgs collect_args;
     PartitionMonitorBeginArgs begin_args;
-    proto_bool ok;
+    embed_bool ok;
     const char *text;
     int32_t n;
     uint8_t u8;
@@ -140,7 +140,7 @@ static const PartitionMonitorNs PartitionMonitor __attribute__((unused)) = {
     .begin = protocore_partition_monitor_begin,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PARTITION_MONITOR
 

@@ -42,7 +42,7 @@
 
 #if PROTOCORE_ENABLE_AD9238
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -58,8 +58,7 @@ PROTOCORE_BEGIN_DECLS
  * (0x018) and the Transfer Register (0x0FF). A device may not implement all of them - check the
  * part's own datasheet for which are present and what the fields mean.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(Ad9238Reg,
     AD9238_REG_CHIP_PORT_CONFIG = 0x000, ///< SDIO active, LSB first, soft reset (mirrored nibbles)
     AD9238_REG_CHIP_ID = 0x001,          ///< read-only device id
     AD9238_REG_CHIP_GRADE = 0x002,       ///< read-only speed-grade id
@@ -73,11 +72,10 @@ typedef enum PROTO_ENUM_PACKED
     AD9238_REG_OUTPUT_DELAY = 0x017,     ///< fine delay on the output latch
     AD9238_REG_VREF = 0x018,             ///< reference adjust: bits 7:6 select VREF, bits 5:0 trim it
     AD9238_REG_DEVICE_UPDATE = 0x0FF,    ///< transfer: bit0 latches every shadowed write into effect
-} Ad9238Reg;
+);
 
 /** @brief AD9238_REG_TEST_IO[3:0] - the output test pattern (AN-877 Table 8, register 0x00D). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(Ad9238TestPattern,
     AD9238_TEST_OFF = 0x00, ///< normal operation
     AD9238_TEST_MIDSCALE_SHORT = 0x01,
     AD9238_TEST_POS_FULLSCALE = 0x02,
@@ -86,28 +84,26 @@ typedef enum PROTO_ENUM_PACKED
     AD9238_TEST_PN23 = 0x05,
     AD9238_TEST_PN9 = 0x06,
     AD9238_TEST_ONE_ZERO_TOGGLE = 0x07,
-} Ad9238TestPattern;
+);
 
 /** @brief AD9238_REG_OUTPUT_MODE[1:0] - the output data format (AN-877 Table 11, register 0x014). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(Ad9238OutputFormat,
     AD9238_FORMAT_OFFSET_BINARY = 0x00,
     AD9238_FORMAT_TWOS_COMPLEMENT = 0x01,
     AD9238_FORMAT_GRAY_CODE = 0x02,
-} Ad9238OutputFormat;
+);
 
 /** @brief Which channel a per-channel register write targets (AD9238_REG_CHANNEL_INDEX bits). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(Ad9238Channel,
     AD9238_CHAN_A = 0x01,
     AD9238_CHAN_B = 0x02,
     AD9238_CHAN_BOTH = 0x03,
-} Ad9238Channel;
+);
 
 /** @brief What build_instruction takes: read, reg_addr, nbytes, out2. */
 typedef struct
 {
-    proto_bool read;   ///< true for a read transaction, false for a write
+    embed_bool read;   ///< true for a read transaction, false for a write
     uint16_t reg_addr; ///< 13-bit register address (Ad9238Reg or a raw value)
     uint8_t nbytes;    ///< number of data bytes to follow (1-4; encoded as W1:W0 = nbytes-1, so 4 means "streaming" ...
     uint8_t *out2;     ///< receives the 2-byte instruction word
@@ -171,7 +167,7 @@ typedef struct
     Ad9238BuildWriteArgs build_write_args;
     Ad9238BuildReadArgs build_read_args;
     Ad9238BuildTransferArgs build_transfer_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } Ad9238Vars;
 
@@ -205,7 +201,7 @@ static const Ad9238Ns Ad9238 __attribute__((unused)) = {
     .build_transfer = protocore_ad9238_build_transfer,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AD9238
 

@@ -22,7 +22,7 @@
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h" // the RFC 7250 RawPublicKey Certificate
 #include "server/clock/clock.h" // protocore_millis() stamps / checks the HelloRetryRequest cookie freshness
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // TLS alert codes used here (RFC 8446 §6).
 static const uint8_t ALERT_UNEXPECTED_MESSAGE = 10;
@@ -39,7 +39,7 @@ static const uint8_t ALERT_INTERNAL_ERROR = 80;
 static const uint64_t DTLS_HRR_COOKIE_MAX_AGE_MS = 60000;
 
 // The record-layer demux (RFC 9147 §4): a first byte 0b001xxxxx is a DTLSCiphertext unified header.
-static proto_bool is_ciphertext(uint8_t b0)
+static embed_bool is_ciphertext(uint8_t b0)
 {
     return (b0 & 0xE0) == 0x20;
 }
@@ -126,7 +126,7 @@ static void flight_reset(DtlsConn *c)
 // shifts every later message up by one) and buffer the fragment for (re)transmission. @p epoch is 0
 // (DTLSPlaintext) or 2 (DTLSCiphertext). Records are not built here - that happens in flight_transmit,
 // so a retransmission can use fresh record sequence numbers.
-static proto_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg, size_t tls_len)
+static embed_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const uint8_t *tls_msg, size_t tls_len)
 {
     // tls_len < 4 is defensive and unreachable from any input the server accepts - every caller
     // passes a builder's output, and a TLS handshake message is never shorter than its own 4-byte
@@ -134,13 +134,13 @@ static proto_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const u
     // exclusions.
     if (tls_len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // sec 4.3: what one fragment may carry is the path's datagram less the record around it and the
     // fragment's own header. A path too small to carry any body cannot carry a handshake.
     if (c->pmtu <= PROTOCORE_DTLS_REC_OVERHEAD_MAX + PROTOCORE_DTLS_HS_HDR_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint32_t per_frag = (uint32_t)(c->pmtu - PROTOCORE_DTLS_REC_OVERHEAD_MAX - PROTOCORE_DTLS_HS_HDR_LEN);
 
@@ -155,7 +155,7 @@ static proto_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const u
     {
         if (c->flight_count >= PROTOCORE_DTLS_FLIGHT_MSGS)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint32_t take = body_len - off;
         if (take > per_frag)
@@ -168,7 +168,7 @@ static proto_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const u
         const size_t flen = dtls_handshake_n;
         if (!flen)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         c->flight_msgs[c->flight_count].off = c->flight_len;
         c->flight_msgs[c->flight_count].len = (uint16_t)flen;
@@ -177,14 +177,14 @@ static proto_bool flight_add(uint8_t *work, DtlsConn *c, uint16_t epoch, const u
         c->flight_len = (uint16_t)(c->flight_len + flen);
         off += take;
     } while (off < body_len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Protect the buffered flight into @p out with FRESH record sequence numbers (RFC 9147 §5.8: a
 // retransmission MUST use new sequence numbers - reusing one would repeat an AEAD nonce and be dropped
 // by the peer's replay window). Records the record number of each message's transmission for ACK
 // matching. Used for both the initial send and every retransmission.
-static proto_bool flight_transmit(uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
+static embed_bool flight_transmit(uint8_t *work, DtlsConn *c, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     for (uint8_t i = 0; i < c->flight_count; i++)
     {
@@ -210,19 +210,19 @@ static proto_bool flight_transmit(uint8_t *work, DtlsConn *c, uint8_t *out, size
         }
         if (!rn)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         *out_len += rn;
         c->flight_rec[i].epoch = epoch;
         c->flight_rec[i].seq = seq;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Arm the retransmission timer after (re)sending a flight that expects a peer reply (RFC 9147 §5.8).
 static void flight_arm(DtlsConn *c)
 {
-    c->awaiting_reply = PROTO_TRUE;
+    c->awaiting_reply = EMBED_TRUE;
     c->retransmits = 0;
     c->pto_ms = PROTOCORE_DTLS_PTO_INITIAL_MS;
     c->flight_sent_ms = Clock.ms;
@@ -231,7 +231,7 @@ static void flight_arm(DtlsConn *c)
 // Stop the retransmission timer: the expected reply arrived, or the flight was acknowledged.
 static void flight_disarm(DtlsConn *c)
 {
-    c->awaiting_reply = PROTO_FALSE;
+    c->awaiting_reply = EMBED_FALSE;
 }
 
 // Emit a HelloRetryRequest (RFC 9147 §5.1, RFC 8446 §4.1.4) asking the client to retry with an
@@ -280,7 +280,7 @@ static int send_hello_retry(uint8_t *work, DtlsConn *c, const Tls13ClientHello *
     Tls13MsgV.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
     Tls13MsgV.build_hello_retry_request_args.cookie = cookie;
     Tls13MsgV.build_hello_retry_request_args.cookie_len = clen;
-    Tls13MsgV.build_hello_retry_request_args.dtls = /*dtls=*/PROTO_TRUE;
+    Tls13MsgV.build_hello_retry_request_args.dtls = /*dtls=*/EMBED_TRUE;
     Tls13Msg.build_hello_retry_request(work);
     n = Tls13MsgV.n;
     if (!n)
@@ -294,25 +294,25 @@ static int send_hello_retry(uint8_t *work, DtlsConn *c, const Tls13ClientHello *
         return fail(c, ALERT_INTERNAL_ERROR);
     }
     flight_arm(c); // await ClientHello2
-    c->hrr_sent = PROTO_TRUE;
+    c->hrr_sent = EMBED_TRUE;
     return 0;
 }
 
 // After a HelloRetryRequest, the retry ClientHello must echo a valid cookie (proving the client's
 // address) before we spend the handshake's asymmetric crypto (RFC 9147 §5.1). No HRR -> nothing to check.
-static proto_bool protocore_dtls_hrr_cookie_ok(uint8_t *work, const DtlsConn *c, const Tls13ClientHello *ch)
+static embed_bool protocore_dtls_hrr_cookie_ok(uint8_t *work, DtlsConn *c, const Tls13ClientHello *ch)
 {
     if (!c->hrr_sent)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (!ch->cookie)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t payload[1];
     size_t plen = 0;
-    proto_bool dtls_handshake_ok = DtlsHandshake.cookie_verify(
+    embed_bool dtls_handshake_ok = DtlsHandshake.cookie_verify(
         work, c->mac_work, c->cfg.cookie_key, Clock.ms, DTLS_HRR_COOKIE_MAX_AGE_MS, c->peer_addr, c->peer_addr_len,
         ch->cookie, ch->cookie_len, payload, sizeof(payload), &plen);
     return dtls_handshake_ok;
@@ -327,7 +327,7 @@ static void protocore_dtls_negotiate_conn_id(DtlsConn *c, const Tls13ClientHello
     {
         return;
     }
-    c->cid_negotiated = PROTO_TRUE;
+    c->cid_negotiated = EMBED_TRUE;
     c->peer_cid_len = (uint8_t)ch->conn_id_len;
     if (ch->conn_id_len)
     {
@@ -349,7 +349,7 @@ static int handle_client_hello(uint8_t *work, DtlsConn *c, const uint8_t *msg, s
     Tls13MsgV.parse_client_hello_args.msg = msg;
     Tls13MsgV.parse_client_hello_args.len = msg_len;
     Tls13MsgV.parse_client_hello_args.out = &ch;
-    Tls13MsgV.parse_client_hello_args.dtls = /*dtls=*/PROTO_TRUE;
+    Tls13MsgV.parse_client_hello_args.dtls = /*dtls=*/EMBED_TRUE;
     Tls13Msg.parse_client_hello(work);
     if (!Tls13MsgV.ok)
     {
@@ -429,7 +429,7 @@ static int handle_client_hello(uint8_t *work, DtlsConn *c, const uint8_t *msg, s
     Tls13MsgV.build_server_hello_args.share_len = 32;
     Tls13MsgV.build_server_hello_args.group = TLS_GROUP_X25519;
     Tls13MsgV.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
-    Tls13MsgV.build_server_hello_args.dtls = /*dtls=*/PROTO_TRUE;
+    Tls13MsgV.build_server_hello_args.dtls = /*dtls=*/EMBED_TRUE;
     Tls13MsgV.build_server_hello_args.conn_id = c->cid_negotiated ? c->local_cid : NULL;
     Tls13MsgV.build_server_hello_args.conn_id_len = c->cid_negotiated ? c->local_cid_len : 0;
     Tls13Msg.build_server_hello(work);
@@ -452,7 +452,7 @@ static int handle_client_hello(uint8_t *work, DtlsConn *c, const uint8_t *msg, s
     Tls13KsV.bind.s = c->ks_store;
     // This handshake offers TLS_AES_128_GCM_SHA256 only, so the schedule's hash is SHA-256. It is
     // stated rather than assumed because the schedule binds either.
-    Tls13KsV.bind.is384 = PROTO_FALSE;
+    Tls13KsV.bind.is384 = EMBED_FALSE;
     Tls13Ks.early(work);
     Tls13KsV.bind.ks = &c->ks;
     Tls13KsV.step.ecdhe = ecdhe;
@@ -462,12 +462,12 @@ static int handle_client_hello(uint8_t *work, DtlsConn *c, const uint8_t *msg, s
     mmgr_zero_buf(ecdhe, sizeof(ecdhe)); // every epoch-2 and epoch-3 key derives from these 32 bytes
     DtlsRecord.keys_derive(work, &c->ep2_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_SERVER_HS);
     DtlsRecord.keys_derive(work, &c->ep2_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 2, c->ks.s + TLS13_KS_CLIENT_HS);
-    c->ep2_ready = PROTO_TRUE;
+    c->ep2_ready = EMBED_TRUE;
 
     // Raw Public Key negotiation (RFC 7250): if the client offered server_certificate_type = RawPublicKey,
     // answer with that type in EncryptedExtensions and send our Ed25519 SubjectPublicKeyInfo as the
     // Certificate instead of the X.509 chain. Additive - a client that does not ask still gets X.509.
-    proto_bool rpk = PROTO_FALSE;
+    embed_bool rpk = EMBED_FALSE;
 #if PROTOCORE_ENABLE_TLS_RPK
     rpk = ch.offers_rpk_server_cert;
 #endif
@@ -569,7 +569,7 @@ static int handle_client_hello(uint8_t *work, DtlsConn *c, const uint8_t *msg, s
     Tls13Ks.master(work);
     DtlsRecord.keys_derive(work, &c->ep3_srv, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_SERVER_AP);
     DtlsRecord.keys_derive(work, &c->ep3_cli, DTLS_CIPHER_AES_128_GCM_SHA256, 3, c->ks.s + TLS13_KS_CLIENT_AP);
-    c->ep3_ready = PROTO_TRUE;
+    c->ep3_ready = EMBED_TRUE;
 
     if (!flight_transmit(work, c, out, out_cap, out_len)) // protect the whole flight now that ep2 keys exist
     {
@@ -620,7 +620,7 @@ static int dispatch_message(uint8_t *work, DtlsConn *c, const uint8_t *tls_msg, 
     }
     if (c->state == DTLS_CONN_STATE_DONE && tls_msg[0] == TLS_HS_FINISHED)
     {
-        c->hs_ack_sent = PROTO_FALSE; // a retransmitted client Finished (our ACK was lost): re-acknowledge it
+        c->hs_ack_sent = EMBED_FALSE; // a retransmitted client Finished (our ACK was lost): re-acknowledge it
         DtlsHandshake.reasm_init(work, &c->reasm, c->next_recv_msg_seq, c->reasm_buf + 4,
                                  PROTOCORE_DTLS_CONN_REASM_CAP); // accept the next one too
         return 0;
@@ -677,19 +677,19 @@ static void process_ack(uint8_t *work, DtlsConn *c, const uint8_t *body, size_t 
     }
     DtlsRecordNumber acked[16];
     size_t count = 0;
-    proto_bool dtls_handshake_ok = DtlsHandshake.ack_parse(work, body, len, acked, 16, &count);
+    embed_bool dtls_handshake_ok = DtlsHandshake.ack_parse(work, body, len, acked, 16, &count);
     if (!dtls_handshake_ok)
     {
         return;
     }
     for (uint8_t i = 0; i < c->flight_count; i++)
     {
-        proto_bool found = PROTO_FALSE;
+        embed_bool found = EMBED_FALSE;
         for (size_t j = 0; j < count; j++)
         {
             if (acked[j].epoch == c->flight_rec[i].epoch && acked[j].seq == c->flight_rec[i].seq)
             {
-                found = PROTO_TRUE;
+                found = EMBED_TRUE;
                 break;
             }
         }
@@ -702,12 +702,11 @@ static void process_ack(uint8_t *work, DtlsConn *c, const uint8_t *body, size_t 
 }
 
 // One-record outcome for the protocore_dtls_conn_process datagram walk.
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(DtlsRecStep,
     DTLS_REC_STEP_NEXT,  // record consumed; keep walking the datagram
     DTLS_REC_STEP_STOP,  // malformed/short record; stop walking (leave the rest)
     DTLS_REC_STEP_FATAL, // fatal error already recorded via fail(); caller returns -1
-} DtlsRecStep;
+);
 
 // Process one ciphertext (epoch-2) record at dgram[*off], advancing *off past a well-formed record.
 static DtlsRecStep process_ciphertext_record(uint8_t *work, DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off,
@@ -730,7 +729,7 @@ static DtlsRecStep process_ciphertext_record(uint8_t *work, DtlsConn *c, const u
     uint8_t inner[PROTOCORE_DTLS_CONN_REASM_CAP + PROTOCORE_DTLS_TAG_LEN];
     DtlsCiphertext info;
     uint64_t next = c->replay_ep2.seeded ? c->replay_ep2.highest + 1 : 0;
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(work, &c->ep2_cli, next, dgram + *off, rlen, inner, sizeof(inner), &info,
                              c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0);
     if (!dtls_record_ok)
@@ -747,7 +746,7 @@ static DtlsRecStep process_ciphertext_record(uint8_t *work, DtlsConn *c, const u
         return DTLS_REC_STEP_NEXT; // replay: drop, but keep processing the datagram
     }
     DtlsRecord.replay_mark(work, &c->replay_ep2, info.seq);
-    proto_bool is_hs = (info.content_type == PROTOCORE_DTLS_CT_HANDSHAKE);
+    embed_bool is_hs = (info.content_type == PROTOCORE_DTLS_CT_HANDSHAKE);
     if (is_hs)
     {
         c->rx_ep2_seq = info.seq; // the client Finished's record number, for the completion ACK
@@ -808,7 +807,7 @@ static void maybe_send_completion_ack(uint8_t *work, DtlsConn *c, uint8_t *out, 
     if (rec)
     {
         *out_len += rec;
-        c->hs_ack_sent = PROTO_TRUE;
+        c->hs_ack_sent = EMBED_TRUE;
     }
 }
 
@@ -923,7 +922,7 @@ void protocore_dtls_server_on_timeout(uint8_t *work)
     {
         // Peer is gone; abandon the handshake. No alert - there is nobody to receive it.
         c->state = DTLS_CONN_STATE_FAILED;
-        c->awaiting_reply = PROTO_FALSE;
+        c->awaiting_reply = EMBED_FALSE;
         DtlsServerV.n = -1;
         return;
     }
@@ -1000,33 +999,33 @@ void protocore_dtls_server_open_app(uint8_t *work)
     protocore_dtls_server_established(work);
     if (!DtlsServerV.ok)
     {
-        DtlsServerV.ok = PROTO_FALSE;
+        DtlsServerV.ok = EMBED_FALSE;
         return;
     }
     DtlsCiphertext info;
     uint64_t next = c->replay_ep3.seeded ? c->replay_ep3.highest + 1 : 0;
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(work, &c->ep3_cli, next, rec, rec_len, out, out_cap, &info,
                              c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0);
     if (!dtls_record_ok)
     {
-        DtlsServerV.ok = PROTO_FALSE;
+        DtlsServerV.ok = EMBED_FALSE;
         return;
     }
     dtls_record_ok = DtlsRecord.replay_check(work, &c->replay_ep3, info.seq);
     if (!dtls_record_ok)
     {
-        DtlsServerV.ok = PROTO_FALSE; // replay or too old
+        DtlsServerV.ok = EMBED_FALSE; // replay or too old
         return;
     }
     DtlsRecord.replay_mark(work, &c->replay_ep3, info.seq);
     if (info.content_type != PROTOCORE_DTLS_CT_APPLICATION_DATA)
     {
-        DtlsServerV.ok = PROTO_FALSE;
+        DtlsServerV.ok = EMBED_FALSE;
         return;
     }
     *out_len = info.pt_len;
-    DtlsServerV.ok = PROTO_TRUE;
+    DtlsServerV.ok = EMBED_TRUE;
 }
 
 void protocore_dtls_server_seal_app(uint8_t *work)
@@ -1054,6 +1053,6 @@ void protocore_dtls_server_seal_app(uint8_t *work)
 /** @brief The operands and the outcome. */
 DtlsServerVars DtlsServerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DTLS

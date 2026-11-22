@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h" // memor.cmp / memor.cpy / memor.set
 #include "network_drivers/datalink/roaming/roaming.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief A BSSID is six octets, and every compare and copy below moves exactly that. */
 #define PROTOCORE_ROAM_BSSID_LEN 6u
@@ -32,7 +32,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Offset of Channel Number inside a Neighbor Report element body. */
 #define PROTOCORE_ROAM_NR_CHANNEL_OFF 11u
 
-static proto_bool mac_eq(const uint8_t *a, const uint8_t *b)
+static embed_bool mac_eq(const uint8_t *a, const uint8_t *b)
 {
     return EMBED_CALL(memor.cmp, MemoriaCfg, .src = a, .other = b, .bytes = PROTOCORE_ROAM_BSSID_LEN) == 0;
 }
@@ -74,7 +74,7 @@ static void pick(uint8_t *work, int idx, protocore_roam_reason reason)
     (void)work;
     const protocore_roam_neighbor *nb = RoamV.cand.list;
 
-    RoamV.decision.roam = PROTO_TRUE;
+    RoamV.decision.roam = EMBED_TRUE;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = RoamV.decision.target_bssid, .src = nb[idx].bssid,
                .bytes = PROTOCORE_ROAM_BSSID_LEN);
     RoamV.decision.target_channel = nb[idx].channel;
@@ -90,7 +90,7 @@ void protocore_roam_decide(uint8_t *work)
     const protocore_roam_btm *btm = RoamV.rules.request;
     const protocore_roam_policy *policy = RoamV.rules.policy;
 
-    RoamV.decision.roam = PROTO_FALSE;
+    RoamV.decision.roam = EMBED_FALSE;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = RoamV.decision.target_bssid, .val = 0, .bytes = PROTOCORE_ROAM_BSSID_LEN);
     RoamV.decision.target_channel = 0;
     RoamV.decision.reason = PROTOCORE_ROAM_NONE;
@@ -189,7 +189,7 @@ void protocore_roam_parse_btm_request(uint8_t *work)
     const size_t len = RoamV.btm.len;
     protocore_roam_btm *out = &RoamV.hint;
 
-    RoamV.ok = PROTO_FALSE;
+    RoamV.ok = EMBED_FALSE;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     if (!frame || len < PROTOCORE_ROAM_BTM_FIXED_LEN || frame[0] != PROTOCORE_ROAM_WNM_CATEGORY ||
         frame[1] != PROTOCORE_ROAM_BTM_REQ_ACTION)
@@ -197,9 +197,9 @@ void protocore_roam_parse_btm_request(uint8_t *work)
         return;
     }
     const uint8_t mode = frame[3]; // Request Mode
-    out->present = PROTO_TRUE;
+    out->present = EMBED_TRUE;
     out->disassoc_imminent = (mode & PROTOCORE_ROAM_BTM_DISASSOC) != 0;
-    RoamV.ok = PROTO_TRUE;
+    RoamV.ok = EMBED_TRUE;
 
     // Step past the optional fields to the BSS Transition Candidate List Entries.
     size_t off = PROTOCORE_ROAM_BTM_FIXED_LEN;
@@ -221,7 +221,7 @@ void protocore_roam_parse_btm_request(uint8_t *work)
     {
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->preferred_bssid, .src = frame + off + 2,
                    .bytes = PROTOCORE_ROAM_BSSID_LEN);
-        out->has_preferred = PROTO_TRUE;
+        out->has_preferred = EMBED_TRUE;
     }
 }
 
@@ -229,6 +229,6 @@ void protocore_roam_parse_btm_request(uint8_t *work)
 /** @brief The operands and the outcome. */
 RoamVars RoamV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ROAMING

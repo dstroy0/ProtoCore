@@ -9,6 +9,10 @@
  * module below it.
  */
 
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_TCP
+
 #include "lower.h"
 #include "../protocol/protocol.h" // closing_check: the CLOSE_CHECK op finalizes a drained slot
 #include "config/platform/platform.h"
@@ -35,8 +39,8 @@ typedef struct protocore_tcp_call
     uint8_t slot;
     protocore_pcb *pcb;
     const void *data;
-    proto_u16 len;
-    proto_bool flush;         ///< PROTOCORE_OP_SEND: also flush after a successful write (coalesced write+flush)
+    embed_u16 len;
+    embed_bool flush;         ///< PROTOCORE_OP_SEND: also flush after a successful write (coalesced write+flush)
     protocore_net_err result; ///< outcome of the op (PROTOCORE_OP_SEND: whether the write was queued)
 } protocore_tcp_call;
 
@@ -66,7 +70,7 @@ static_assert(TCP_LOWER_OFF_CTX + sizeof(struct TcpLowerStorage) <= PROTOCORE_TC
 
 // True when the caller may run a raw stack op directly instead of marshaling. The stack has two
 // threading models and the answer differs, so branch on which one the framework built:
-static proto_bool on_stack_thread(const uint8_t *work)
+static embed_bool on_stack_thread(const uint8_t *work)
 {
     return TCP_LOWER_CTX(work)->tcpip_task != NULL && protocore_platform_task_self() == TCP_LOWER_CTX(work)->tcpip_task;
 }
@@ -76,21 +80,21 @@ static proto_bool on_stack_thread(const uint8_t *work)
 // been torn down, and writing through a freed block trips the stack's invalid-pcb assert. Re-check
 // here, in the context where teardown also runs. Looking the block up rather than reading the slot
 // is what RAWSEND needs, since it carries no slot.
-static proto_bool pcb_bound(const uint8_t *work)
+static embed_bool pcb_bound(const uint8_t *work)
 {
     const protocore_pcb *pcb = TcpLowerV.pcb;
     if (pcb == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (uint8_t i = 0; i < CONN_POOL_SLOTS; i++)
     {
         if (conn_pool[i].pcb == pcb)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static protocore_net_err protocore_tcp_do(uint8_t *work)
@@ -276,13 +280,13 @@ void protocore_tcp_lower_abort(uint8_t *work)
 // stored and stamped onto every later connection. The candidate arrives in len.
 void protocore_tcp_lower_set_ttl(uint8_t *work)
 {
-    TcpLowerV.ok = PROTO_FALSE;
+    TcpLowerV.ok = EMBED_FALSE;
     if (TcpLowerV.len == 0 || TcpLowerV.len > 0xFFu)
     {
         return;
     }
     TCP_LOWER_CTX(work)->ttl = (uint8_t)TcpLowerV.len;
-    TcpLowerV.ok = PROTO_TRUE;
+    TcpLowerV.ok = EMBED_TRUE;
 }
 
 // Stamp the control block the handle carries with the configured TTL.
@@ -297,3 +301,5 @@ void protocore_tcp_lower_apply_ttl(uint8_t *work)
 
 /** @brief The operands and the outcome. */
 TcpLowerVars TcpLowerV;
+
+#endif // PROTOCORE_ENABLE_TCP

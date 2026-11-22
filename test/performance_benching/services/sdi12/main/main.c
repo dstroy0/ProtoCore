@@ -34,7 +34,7 @@ void dbench_run(void)
         Sdi12V.build_measure_args.buf = buf;
         Sdi12V.build_measure_args.cap = sizeof(buf);
         Sdi12V.build_measure_args.addr = '3';
-        Sdi12V.build_measure_args.with_crc = PROTO_TRUE;
+        Sdi12V.build_measure_args.with_crc = EMBED_TRUE;
         DBENCH_OP("Sdi12.build_measure (CRC)", 200000, (Sdi12.build_measure(sdi12_work), sink += Sdi12V.n));
         char addr;
         uint16_t ready;

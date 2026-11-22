@@ -24,7 +24,7 @@
 #include "crypto/mac/ghash/ghash.h"
 #include "endian/endian.h" // magna_extremitas.rd / magna_extremitas.wr
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition, private to this TU. It sits at GHASH_OFF_CTX in the caller's borrow, so its size
 // never leaves this file and no consumer can name it. The table is what a key_init leaves behind and
@@ -145,30 +145,30 @@ static void gf_mul(uint8_t *work, uint8_t *acc)
 
 void protocore_ghash_key_init(uint8_t *work)
 {
-    GhashV.ok = PROTO_FALSE;
+    GhashV.ok = EMBED_FALSE;
     if (!GhashV.key_args.h)
     {
         return;
     }
     gf_key_init(work);
-    GhashV.ok = PROTO_TRUE;
+    GhashV.ok = EMBED_TRUE;
 }
 
 void protocore_ghash_mul(uint8_t *work)
 {
-    GhashV.ok = PROTO_FALSE;
+    GhashV.ok = EMBED_FALSE;
     if (!GhashV.mul_args.acc)
     {
         return;
     }
     gf_mul(work, GhashV.mul_args.acc);
-    GhashV.ok = PROTO_TRUE;
+    GhashV.ok = EMBED_TRUE;
 }
 
 // acc = (acc XOR block) * H per 16 bytes, a final short block MSB-zero-padded.
 void protocore_ghash_update(uint8_t *work)
 {
-    GhashV.ok = PROTO_FALSE;
+    GhashV.ok = EMBED_FALSE;
     if (!GhashV.update_args.acc)
     {
         return;
@@ -191,12 +191,12 @@ void protocore_ghash_update(uint8_t *work)
         gf_mul(work, acc);
         off += take;
     }
-    GhashV.ok = PROTO_TRUE;
+    GhashV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 GhashVars GhashV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GHASH

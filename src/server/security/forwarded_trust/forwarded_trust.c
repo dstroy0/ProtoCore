@@ -9,7 +9,7 @@
 
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 typedef struct
 {
@@ -47,7 +47,7 @@ static_assert(FORWARDED_TRUST_OFF_CTX % _Alignof(protocore_forwarded_trust_ctx) 
 #define FORWARDED_TRUST_CTX(w) ((protocore_forwarded_trust_ctx *)(void *)((w) + FORWARDED_TRUST_OFF_CTX))
 
 // Read @p text as an address into @p out.
-static proto_bool ip_parse(const char *text, protocore_ip *out)
+static embed_bool ip_parse(const char *text, protocore_ip *out)
 {
     IpV.args.text = text;
     IpV.args.out = out;
@@ -56,7 +56,7 @@ static proto_bool ip_parse(const char *text, protocore_ip *out)
 }
 
 // Whether @p addr falls inside @p net at @p prefix_len bits.
-static proto_bool ip_in_prefix(const protocore_ip *addr, const protocore_ip *net, uint8_t prefix_len)
+static embed_bool ip_in_prefix(const protocore_ip *addr, const protocore_ip *net, uint8_t prefix_len)
 {
     IpV.args.ip = addr;
     IpV.args.b = net;
@@ -66,7 +66,7 @@ static proto_bool ip_in_prefix(const protocore_ip *addr, const protocore_ip *net
 }
 
 // Whether @p ip names nothing: no family, or the all-zero address.
-static proto_bool ip_none(const protocore_ip *ip)
+static embed_bool ip_none(const protocore_ip *ip)
 {
     IpV.args.ip = ip;
     Ip.is_unspecified(protocore_forwarded_trust_span());
@@ -108,7 +108,7 @@ void protocore_forwarded_trust_add(uint8_t *work)
 
     if (!network)
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return;
     }
     int bits = -1; // stays negative for a family we do not recognize
@@ -122,18 +122,18 @@ void protocore_forwarded_trust_add(uint8_t *work)
     }
     if (bits < 0 || prefix_len > (uint8_t)bits)
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return; // reject a malformed family or an over-long prefix
     }
     if (FORWARDED_TRUST_CTX(work)->count >= PROTOCORE_TRUSTED_PROXY_MAX)
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return;
     }
     FORWARDED_TRUST_CTX(work)->rules[FORWARDED_TRUST_CTX(work)->count].network = *network;
     FORWARDED_TRUST_CTX(work)->rules[FORWARDED_TRUST_CTX(work)->count].prefix_len = prefix_len;
     FORWARDED_TRUST_CTX(work)->count++;
-    ForwardedTrustV.ok = PROTO_TRUE;
+    ForwardedTrustV.ok = EMBED_TRUE;
     return;
 }
 
@@ -144,7 +144,7 @@ void protocore_forwarded_trust_add_cidr(uint8_t *work)
 
     if (!cidr)
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return;
     }
 
@@ -162,7 +162,7 @@ void protocore_forwarded_trust_add_cidr(uint8_t *work)
         }
         if (n + 1 >= sizeof(addr))
         {
-            ForwardedTrustV.ok = PROTO_FALSE;
+            ForwardedTrustV.ok = EMBED_FALSE;
             return; // address text too long to be valid
         }
         addr[n++] = *p;
@@ -173,7 +173,7 @@ void protocore_forwarded_trust_add_cidr(uint8_t *work)
     net.family = PROTOCORE_IP_NONE;
     if (!ip_parse(addr, &net))
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return;
     }
 
@@ -186,20 +186,20 @@ void protocore_forwarded_trust_add_cidr(uint8_t *work)
         const char *p = slash + 1;
         if (!*p)
         {
-            ForwardedTrustV.ok = PROTO_FALSE;
+            ForwardedTrustV.ok = EMBED_FALSE;
             return;
         }
         for (; *p; p++)
         {
             if (*p < '0' || *p > '9')
             {
-                ForwardedTrustV.ok = PROTO_FALSE;
+                ForwardedTrustV.ok = EMBED_FALSE;
                 return;
             }
             v = v * 10 + (uint32_t)(*p - '0');
             if (v > width)
             {
-                ForwardedTrustV.ok = PROTO_FALSE;
+                ForwardedTrustV.ok = EMBED_FALSE;
                 return; // out of range for the family
             }
         }
@@ -219,7 +219,7 @@ void protocore_forwarded_trust_contains(uint8_t *work)
 
     if (!peer)
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return;
     }
     for (uint8_t i = 0; i < FORWARDED_TRUST_CTX(work)->count; i++)
@@ -227,11 +227,11 @@ void protocore_forwarded_trust_contains(uint8_t *work)
         if (ip_in_prefix(peer, &FORWARDED_TRUST_CTX(work)->rules[i].network,
                          FORWARDED_TRUST_CTX(work)->rules[i].prefix_len))
         {
-            ForwardedTrustV.ok = PROTO_TRUE;
+            ForwardedTrustV.ok = EMBED_TRUE;
             return;
         }
     }
-    ForwardedTrustV.ok = PROTO_FALSE;
+    ForwardedTrustV.ok = EMBED_FALSE;
     return;
 }
 
@@ -244,7 +244,7 @@ void protocore_forwarded_trust_effective_ip(uint8_t *work)
 
     if (!out)
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return;
     }
     if (peer)
@@ -260,12 +260,12 @@ void protocore_forwarded_trust_effective_ip(uint8_t *work)
     protocore_forwarded_trust_contains(work);
     if (!peer || !ForwardedTrustV.ok)
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return; // peer is not a trusted upstream -> ignore the spoofable header
     }
     if (!fwd_ip_str || !fwd_ip_str[0])
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return; // no forwarded client present
     }
 
@@ -273,18 +273,18 @@ void protocore_forwarded_trust_effective_ip(uint8_t *work)
     fip.family = PROTOCORE_IP_NONE;
     if (!ip_parse(fwd_ip_str, &fip) || ip_none(&fip))
     {
-        ForwardedTrustV.ok = PROTO_FALSE;
+        ForwardedTrustV.ok = EMBED_FALSE;
         return; // malformed / obfuscated / unspecified -> keep the proxy's address
     }
 
     *out = fip;
-    ForwardedTrustV.ok = PROTO_TRUE;
+    ForwardedTrustV.ok = EMBED_TRUE;
     return;
 }
 
 /** @brief The operands and the outcome. */
 ForwardedTrustVars ForwardedTrustV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FORWARDED_TRUST

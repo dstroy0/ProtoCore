@@ -21,7 +21,7 @@
 #include "server/peripherals/fdc2214/fdc2214.h"
 #include "server/peripherals/i2c/i2c.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -145,18 +145,18 @@ static uint8_t dev_addr(uint8_t *work)
     return FDC2214_CTX(work)->addr ? FDC2214_CTX(work)->addr : (uint8_t)PROTOCORE_FDC2214_I2C_ADDR;
 }
 
-static proto_bool read16(uint8_t *work, uint8_t reg, uint16_t *out)
+static embed_bool read16(uint8_t *work, uint8_t reg, uint16_t *out)
 {
     if (!protocore_i2c_write_read(dev_addr(work), &reg, 1, FDC2214_CTX(work)->frame, 2))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out =
         (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = FDC2214_CTX(work)->frame, .width = MMGR_ENDIAN_16);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool write16(uint8_t *work, uint8_t reg, uint16_t val)
+static embed_bool write16(uint8_t *work, uint8_t reg, uint16_t val)
 {
     FDC2214_CTX(work)->frame[0] = reg;
     (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = &FDC2214_CTX(work)->frame[1], .val = val,
@@ -175,12 +175,12 @@ void protocore_fdc2214_begin(uint8_t *work)
     uint16_t id = 0;
     if (!read16(work, FDC2214_REG_DEVICE_ID, &id))
     {
-        Fdc2214V.ok = PROTO_FALSE;
+        Fdc2214V.ok = EMBED_FALSE;
         return;
     }
     if (id != FDC2214_DEVICE_ID && id != 0x3054) // 0x3054 = FDC2114 (12-bit sibling)
     {
-        Fdc2214V.ok = PROTO_FALSE;
+        Fdc2214V.ok = EMBED_FALSE;
         return;
     }
     Fdc2214V.build_config_args.buf = FDC2214_CTX(work)->config;
@@ -195,11 +195,11 @@ void protocore_fdc2214_begin(uint8_t *work)
                      (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = &FDC2214_CTX(work)->config[i + 1],
                                           .width = MMGR_ENDIAN_16)))
         {
-            Fdc2214V.ok = PROTO_FALSE;
+            Fdc2214V.ok = EMBED_FALSE;
             return;
         }
     }
-    Fdc2214V.ok = PROTO_TRUE;
+    Fdc2214V.ok = EMBED_TRUE;
 }
 
 void protocore_fdc2214_read_ch0(uint8_t *work)
@@ -208,26 +208,26 @@ void protocore_fdc2214_read_ch0(uint8_t *work)
 
     if (!out)
     {
-        Fdc2214V.ok = PROTO_FALSE;
+        Fdc2214V.ok = EMBED_FALSE;
         return;
     }
     uint16_t msb = 0;
     uint16_t lsb = 0;
     if (!read16(work, FDC2214_REG_DATA_CH0_MSB, &msb) || !read16(work, FDC2214_REG_DATA_CH0_LSB, &lsb))
     {
-        Fdc2214V.ok = PROTO_FALSE;
+        Fdc2214V.ok = EMBED_FALSE;
         return;
     }
     Fdc2214V.data_args.msb_reg = msb;
     Fdc2214V.data_args.lsb_reg = lsb;
     protocore_fdc2214_data(work);
     *out = Fdc2214V.value;
-    Fdc2214V.ok = PROTO_TRUE;
+    Fdc2214V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Fdc2214Vars Fdc2214V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FDC2214

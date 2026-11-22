@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_DOCSTORE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/storage/dbm/dbm.h"
 
@@ -40,7 +40,7 @@ void protocore_docstore_open(protocore_doc_store *ds, struct protocore_dbm *db);
  * @brief Insert or replace the document @p id with JSON body @p json. Not synced (batched).
  * @return false on the same bounds/full conditions as ::protocore_dbm_put.
  */
-proto_bool protocore_docstore_put(protocore_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json,
+embed_bool protocore_docstore_put(protocore_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json,
                                   uint32_t json_len);
 
 /**
@@ -50,22 +50,22 @@ proto_bool protocore_docstore_put(protocore_doc_store *ds, const char *id, uint1
 long protocore_docstore_get(protocore_doc_store *ds, const char *id, uint16_t id_len, uint8_t *buf, size_t cap);
 
 /** @brief Delete document @p id. @return true if it existed. */
-proto_bool protocore_docstore_del(protocore_doc_store *ds, const char *id, uint16_t id_len);
+embed_bool protocore_docstore_del(protocore_doc_store *ds, const char *id, uint16_t id_len);
 
 /** @brief @return true if document @p id exists. */
-proto_bool protocore_docstore_contains(const protocore_doc_store *ds, const char *id, uint16_t id_len);
+embed_bool protocore_docstore_contains(const protocore_doc_store *ds, const char *id, uint16_t id_len);
 
 /** @brief @return the number of documents. */
 uint32_t protocore_docstore_count(const protocore_doc_store *ds);
 
 /** @brief Make all writes durable (checkpoints the WAL). @return false on I/O failure. */
-proto_bool protocore_docstore_sync(protocore_doc_store *ds);
+embed_bool protocore_docstore_sync(protocore_doc_store *ds);
 
 /**
  * @brief Per-match callback for the find calls: the matching document's id and JSON body (the body points
  * into a temporary buffer valid only for this call). Return false to stop the scan early.
  */
-typedef proto_bool (*protocore_doc_match_cb)(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len,
+typedef embed_bool (*protocore_doc_match_cb)(const char *id, uint16_t id_len, const uint8_t *json, uint32_t json_len,
                                              void *ctx);
 
 /**
@@ -80,10 +80,10 @@ uint32_t protocore_docstore_find_int(protocore_doc_store *ds, const char *field,
                                      void *ctx);
 
 /** @brief Find documents whose top-level boolean field @p field equals @p value. @return the match count. */
-uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field, proto_bool value,
+uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field, embed_bool value,
                                       protocore_doc_match_cb cb, void *ctx);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DOCSTORE
 

@@ -15,7 +15,7 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.eq: the string-field find compare
 #include "network_drivers/presentation/codec/json/json.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
 
@@ -24,7 +24,7 @@ void protocore_docstore_open(protocore_doc_store *ds, struct protocore_dbm *db)
     ds->db = db;
 }
 
-proto_bool protocore_docstore_put(protocore_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json,
+embed_bool protocore_docstore_put(protocore_doc_store *ds, const char *id, uint16_t id_len, const uint8_t *json,
                                   uint32_t json_len)
 {
     return protocore_dbm_put(ds->db, id, id_len, json, json_len);
@@ -35,12 +35,12 @@ long protocore_docstore_get(protocore_doc_store *ds, const char *id, uint16_t id
     return protocore_dbm_get(ds->db, id, id_len, buf, cap);
 }
 
-proto_bool protocore_docstore_del(protocore_doc_store *ds, const char *id, uint16_t id_len)
+embed_bool protocore_docstore_del(protocore_doc_store *ds, const char *id, uint16_t id_len)
 {
     return protocore_dbm_del(ds->db, id, id_len);
 }
 
-proto_bool protocore_docstore_contains(const protocore_doc_store *ds, const char *id, uint16_t id_len)
+embed_bool protocore_docstore_contains(const protocore_doc_store *ds, const char *id, uint16_t id_len)
 {
     return protocore_dbm_contains(ds->db, id, id_len);
 }
@@ -50,17 +50,16 @@ uint32_t protocore_docstore_count(const protocore_doc_store *ds)
     return protocore_dbm_count(ds->db);
 }
 
-proto_bool protocore_docstore_sync(protocore_doc_store *ds)
+embed_bool protocore_docstore_sync(protocore_doc_store *ds)
 {
     return protocore_dbm_sync(ds->db);
 }
 
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(FindKind,
     FIND_STR,
     FIND_INT,
     FIND_BOOL
-} FindKind;
+);
 
 // Per-scan state carried through protocore_dbm_iterate. `doc` reads each document's JSON body (NUL-terminated
 // for the reader); `fieldtmp` extracts a string field for comparison. Both are bounded (no heap).
@@ -71,7 +70,7 @@ typedef struct
     FindKind kind;
     const char *sval;
     long ival;
-    proto_bool bval;
+    embed_bool bval;
     protocore_doc_match_cb user_cb;
     void *user_ctx;
     uint32_t matches;
@@ -79,18 +78,18 @@ typedef struct
     char fieldtmp[PROTOCORE_DOCSTORE_FIELD_MAX + 1];
 } FindCtx;
 
-static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
+static embed_bool find_cb(const char *key, uint16_t key_len, void *vctx)
 {
     FindCtx *f = (FindCtx *)vctx;
     long n = protocore_dbm_get(f->db, key, key_len, f->doc, PROTOCORE_DBM_VAL_MAX);
     if (n < 0)
     {
-        return PROTO_TRUE; // unreadable (shouldn't happen mid-iteration) - skip
+        return EMBED_TRUE; // unreadable (shouldn't happen mid-iteration) - skip
     }
     f->doc[n] = 0; // the JSON reader wants a NUL-terminated body
     const char *json = (const char *)f->doc;
 
-    proto_bool match = PROTO_FALSE;
+    embed_bool match = EMBED_FALSE;
     if (f->kind == FIND_STR)
     {
         JsonV.get_str_args.json = json;
@@ -101,7 +100,7 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
         if (JsonV.ok)
         {
             match = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = f->fieldtmp, .other = f->sval,
-                               .cap = sizeof(f->fieldtmp), .ci = PROTO_FALSE);
+                               .cap = sizeof(f->fieldtmp), .ci = EMBED_FALSE);
         }
     }
     else if (f->kind == FIND_INT)
@@ -118,7 +117,7 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     }
     else
     {
-        proto_bool b = PROTO_FALSE;
+        embed_bool b = EMBED_FALSE;
         JsonV.get_bool_args.json = json;
         JsonV.get_bool_args.key = f->field;
         JsonV.get_bool_args.out = &b;
@@ -134,10 +133,10 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
         f->matches++;
         if (f->user_cb && !f->user_cb(key, key_len, f->doc, (uint32_t)n, f->user_ctx))
         {
-            return PROTO_FALSE; // caller asked to stop
+            return EMBED_FALSE; // caller asked to stop
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static uint32_t run_find(FindCtx *f)
@@ -173,7 +172,7 @@ uint32_t protocore_docstore_find_int(protocore_doc_store *ds, const char *field,
     return run_find(&f);
 }
 
-uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field, proto_bool value,
+uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field, embed_bool value,
                                       protocore_doc_match_cb cb, void *ctx)
 {
     FindCtx f;
@@ -186,6 +185,6 @@ uint32_t protocore_docstore_find_bool(protocore_doc_store *ds, const char *field
     return run_find(&f);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DOCSTORE

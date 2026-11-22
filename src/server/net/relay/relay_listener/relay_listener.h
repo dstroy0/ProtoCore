@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file relay_listener.h
@@ -38,7 +38,7 @@ call, so nothing here aliases it. How those bytes are
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*publish)(uint8_t *, uint8_t, const char *, uint16_t);
+    embed_bool (*publish)(uint8_t *, uint8_t, const char *, uint16_t);
     void (*reset)(uint8_t *);
 } RelayListenerNs;
 PROTOCORE_NS_LAYOUT(RelayListenerNs, publish, reset);
@@ -49,9 +49,9 @@ PROTOCORE_NS_LAYOUT(RelayListenerNs, publish, reset);
  * @param listener_id the id returned by `server.listen(...)`
  * @param origin_host the internal host to forward to (dotted-quad or a name; copied)
  * @param origin_port the internal port
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, const char *origin_host,
+embed_bool protocore_relay_listener_publish(uint8_t *work, uint8_t listener_id, const char *origin_host,
                                             uint16_t origin_port);
 /**
  * @brief Clear all published binds and active bridges (start from empty).
@@ -74,6 +74,6 @@ uint8_t *protocore_relay_listener_span(void);
 PROTOCORE_NS RelayListenerNs RelayListener PROTOCORE_UNUSED = {.publish = protocore_relay_listener_publish,
                                                                .reset = protocore_relay_listener_reset};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_RELAY_LISTENER_H

@@ -7,9 +7,8 @@
  *
  * Separate from common.h because this is all the layers above the transport need. A listener sizes
  * its queue storage on ::TcpEvt, the session layer switches on ::EvtType, and the presentation
- * layer names EVT_CONNECT; none of them touches a connection slot's fields. common.h carries those,
- * and the ring cursors in them are `_Atomic`, which is C11 and not C++ - so a header that reaches
- * the sketches through protocore.h cannot be the one that declares them.
+ * layer names EVT_CONNECT; none of them touches a connection slot's fields. common.h carries those
+ * fields and their atomic words, and the sketches do not need them.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -18,7 +17,7 @@
 #ifndef PROTOCORE_TCP_EVT_H
 #define PROTOCORE_TCP_EVT_H
 
-#include "protocore_config.h" // the entry point: the widths, PROTO_ENUM_PACKED, static_assert
+#include "protocore_config.h" // the entry point: the widths, EMBED_ENUM_BYTE, static_assert
 
 /**
  * @brief Lifecycle state of a connection pool slot.
@@ -40,17 +39,16 @@
  * stack's from that point (RFC 9293 sec 3.6).
  *
  * Here rather than in common.h because the signaling layer reads a slot's state and reaches this
- * layer through protocore.h; the enum is one packed byte and carries no `_Atomic`.
+ * layer through protocore.h. The enum is one packed byte.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(ConnState,
     CONN_FREE,   ///< Slot is available; no control block is attached.
     CONN_ACTIVE, ///< Live connection; the control block is valid.
     CONN_CLOSING ///< Transmit-drain dwell: holding the slot until the peer ACKs what was sent. No
                  ///< FIN has been emitted yet - it goes out as the slot is released.
-} ConnState;
+);
 static_assert(sizeof(ConnState) == 1,
-              "ConnState must stay one byte (PROTO_ENUM_PACKED); TcpConn and conn_pool[] size themselves on it");
+              "ConnState must stay one byte (EMBED_ENUM_BYTE); TcpConn and conn_pool[] size themselves on it");
 
 /**
  * @brief Type of connection event posted to a listener's event queue.
@@ -59,15 +57,14 @@ static_assert(sizeof(ConnState) == 1,
  * because RFC 9293 sec 3.6 MUST-12 requires the layer above to be told whether a connection closed
  * normally or was aborted.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(EvtType,
     EVT_CONNECT,    ///< New connection accepted.
     EVT_DATA,       ///< Data received; bytes are already in the ring buffer.
     EVT_DISCONNECT, ///< Remote peer closed the connection gracefully.
     EVT_ERROR       ///< The stack reported an error (the control block may already be freed).
-} EvtType;
+);
 static_assert(sizeof(EvtType) == 1,
-              "EvtType must stay one byte (PROTO_ENUM_PACKED); every listener's queue storage sizes itself on TcpEvt");
+              "EvtType must stay one byte (EMBED_ENUM_BYTE); every listener's queue storage sizes itself on TcpEvt");
 
 /**
  * @brief Event record posted from the stack callbacks to the session layer.
@@ -88,8 +85,7 @@ typedef struct TcpEvt
 #if PROTOCORE_ENABLE_OBSERVABILITY
 
 /** @brief Why a connection event fired (the reason for a transition or notice). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_conn_reason,
     PROTOCORE_CONN_R_ACCEPT,       ///< New connection accepted (CONN_FREE -> CONN_ACTIVE).
     PROTOCORE_CONN_R_CLOSE_REMOTE, ///< Peer closed gracefully (FIN received).
     PROTOCORE_CONN_R_CLOSE_LOCAL,  ///< Application initiated the close.
@@ -99,8 +95,8 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_CONN_R_DRAINED,      ///< CONN_CLOSING slot finished draining -> closed.
     PROTOCORE_CONN_R_BACKPRESSURE, ///< RX segment refused (ring full); no state change.
     PROTOCORE_CONN_R_DEFER_DROP    ///< Event queue full; an event was dropped (no state change).
-} protocore_conn_reason;
-static_assert(sizeof(protocore_conn_reason) == 1, "protocore_conn_reason must stay one byte (PROTO_ENUM_PACKED)");
+);
+static_assert(sizeof(protocore_conn_reason) == 1, "protocore_conn_reason must stay one byte (EMBED_ENUM_BYTE)");
 
 /** @brief Snapshot of the transport's lifetime counters (plus a live gauge). */
 typedef struct protocore_conn_counters

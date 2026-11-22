@@ -24,7 +24,7 @@
 // has none, so its body compiles everywhere, and a build with AES_BLOCK on and AES_SBOX off asked
 // what PROTOCORE_AES_SBOX was.
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // AES forward S-box (FIPS 197 Figure 7).
 static const uint8_t PROTOCORE_AES_SBOX[256] = {
@@ -44,6 +44,6 @@ static const uint8_t PROTOCORE_AES_SBOX[256] = {
     0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_AES_SBOX_H

@@ -41,7 +41,7 @@ typedef struct
 typedef struct
 {
     Utf8Args args;
-    proto_bool ok;
+    embed_bool ok;
 } Utf8Vars;
 
 /** @brief The operands and the outcome. */

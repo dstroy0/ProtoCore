@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_MPR121
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_MPR121_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -140,7 +140,7 @@ typedef struct
     Mpr121BuildInitArgs build_init_args;
     Mpr121BeginArgs begin_args;
     Mpr121ReadFilteredArgs read_filtered_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t value;
     size_t n;
 } Mpr121Vars;
@@ -201,7 +201,7 @@ static const Mpr121Ns Mpr121 __attribute__((unused)) = {
  */
 uint8_t *protocore_mpr121_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MPR121
 

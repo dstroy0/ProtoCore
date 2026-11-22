@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -47,13 +47,12 @@ PROTOCORE_BEGIN_DECLS
 #define INFLATE_SCRATCH_SIZE 1536
 
 /** @brief inflate_raw() return codes. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(InflateResult,
     INFLATE_OK = 0,             ///< success; *out_len holds the decompressed length
     INFLATE_ERR_MALFORMED = -1, ///< invalid / truncated DEFLATE stream
     INFLATE_ERR_OVERFLOW = -2,  ///< output would exceed dst_cap
     INFLATE_ERR_SCRATCH = -3    ///< scratch_len < INFLATE_SCRATCH_SIZE
-} InflateResult;
+);
 
 /** @brief What raw takes: src, src_len, dst, dst_cap, out_len, ... */
 typedef struct
@@ -95,7 +94,7 @@ typedef struct
 typedef struct
 {
     InflateRawArgs raw_args;
-    proto_bool ok;
+    embed_bool ok;
     InflateResult value;
 } InflateVars;
 
@@ -120,7 +119,7 @@ static const InflateNs Inflate __attribute__((unused)) = {
     .raw = protocore_inflate_raw,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WS_DEFLATE
 

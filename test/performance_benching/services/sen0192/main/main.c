@@ -23,12 +23,12 @@ void dbench_run(void)
         Sen0192.motion_init(protocore_sen0192_span(), &m, 2000, true);
         uint32_t t = 0;
         DBENCH_OP("protocore_sen0192_motion_update", 200000, {
-            proto_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &m, (t & 128) != 0, t);
+            embed_bool sen0192_ok = Sen0192.motion_update(protocore_sen0192_span(), &m, (t & 128) != 0, t);
             sink += sen0192_ok;
             t += 5;
         });
         DBENCH_OP("Sen0192.motion_present", 200000, {
-            proto_bool sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &m);
+            embed_bool sen0192_ok = Sen0192.motion_present(protocore_sen0192_span(), &m);
             sink += sen0192_ok;
         });
         (void)sink;

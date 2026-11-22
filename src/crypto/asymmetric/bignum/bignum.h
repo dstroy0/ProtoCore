@@ -22,7 +22,7 @@
 
 #if PROTOCORE_ENABLE_BIGNUM
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Fixed-width 2048-bit integer
@@ -173,9 +173,9 @@ typedef struct
     BignumIsZeroArgs is_zero_args;
     BignumExpmodArgs expmod_args;
     BignumValidateArgs validate_args;
-    proto_bool ok;
+    embed_bool ok;
     int sign;
-    proto_bool zero;
+    embed_bool zero;
 } BignumVars;
 
 /** @brief The operands and the outcome. */
@@ -217,7 +217,7 @@ static const BignumNs Bignum __attribute__((unused)) = {
     .dh_validate = protocore_bignum_dh_validate,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BIGNUM
 

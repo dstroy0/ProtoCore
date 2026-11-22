@@ -22,7 +22,7 @@
 
 #if PROTOCORE_ENABLE_WIFI_SNIFFER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_WIFI_SNIFFER_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -43,10 +43,10 @@ typedef struct
     uint8_t version;            ///< protocol version (FC bits 0-1).
     uint8_t type;               ///< WIFI_TYPE_*.
     uint8_t subtype;            ///< FC bits 4-7.
-    proto_bool to_ds;           ///< to the distribution system.
-    proto_bool from_ds;         ///< from the distribution system.
-    proto_bool retry;           ///< retransmission.
-    proto_bool protected_frame; ///< the Protected Frame (WEP/WPA) flag.
+    embed_bool to_ds;           ///< to the distribution system.
+    embed_bool from_ds;         ///< from the distribution system.
+    embed_bool retry;           ///< retransmission.
+    embed_bool protected_frame; ///< the Protected Frame (WEP/WPA) flag.
     uint8_t naddr;              ///< number of addresses decoded (1..3).
     uint8_t addr1[6];           ///< receiver / destination (role varies by DS bits).
     uint8_t addr2[6];           ///< transmitter / source (present when naddr >= 2).
@@ -249,7 +249,7 @@ typedef struct
     WifiSnifferSurveyGetArgs survey_get_args;
     WifiSnifferSurveyBestArgs survey_best_args;
     WifiSnifferBeginArgs begin_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     const WifiChannelSurvey *ptr;
     const WifiStats *stats_out;
@@ -337,7 +337,7 @@ static const WifiSnifferNs WifiSniffer __attribute__((unused)) = {
  */
 uint8_t *protocore_wifi_sniffer_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WIFI_SNIFFER
 

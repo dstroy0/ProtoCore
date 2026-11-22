@@ -28,7 +28,7 @@
 #ifndef PROTOCORE_PLATFORM_H
 #define PROTOCORE_PLATFORM_H
 
-// PROTOCORE_INLINE, settled before any body is parsed - the vendor header below defines its seams
+// EMBED_INLINE, settled before any body is parsed - the vendor header below defines its seams
 // with it, so the linkage comes first.
 #include "config/platform/compiler_directives.h"
 // The vendor axis, then the one vendor header that answers the capability questions below.
@@ -62,8 +62,8 @@
 // host toolchain is 64-bit, so inferring would give the host build 8-byte lane math, an 8-byte move
 // ladder and 64-bit index arithmetic - a shape no target executes, measured on a machine that does
 // not ship. A -D override still wins, which is how a 64-bit port or a width experiment is done.
-#ifndef PROTO_WORD_BITS
-#define PROTO_WORD_BITS PROTOCORE_HW_WORD_BITS
+#ifndef EMBED_WORD_BITS
+#define EMBED_WORD_BITS PROTOCORE_HW_WORD_BITS
 #endif
 
 /**
@@ -74,8 +74,8 @@
  * index arithmetic in the two places it has to agree. 32 addresses far more than any pool reserved
  * here; a target whose every buffer is under 64 KB may set 16.
  */
-#ifndef PROTO_INDEX_BITS
-#define PROTO_INDEX_BITS 32
+#ifndef EMBED_INDEX_BITS
+#define EMBED_INDEX_BITS 32
 #endif
 
 /**
@@ -88,7 +88,7 @@
  * setting for a part with no wider register.
  */
 #ifndef PROTO_SWAR_BITS
-#define PROTO_SWAR_BITS PROTO_WORD_BITS
+#define PROTO_SWAR_BITS EMBED_WORD_BITS
 #endif
 
 // The widths are settled above, so the types built from them come next. types.h is the one file in

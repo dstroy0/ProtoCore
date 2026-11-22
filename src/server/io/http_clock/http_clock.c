@@ -20,7 +20,7 @@
 #include "network_drivers/application/ntp_service/ntp_service.h" // NtpService.epoch: the only clock here
 #endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_HTTP_CLOCK_BORROW - the bytes this module runs out of - is stated in protocore_config.h,
 // which sums it into the plaintext arena. One region: the rendered date, held from the render until
@@ -82,6 +82,6 @@ void protocore_http_clock_date(uint8_t *work)
 /** @brief The operands and the outcome. */
 HttpClockVars HttpClockV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CLOCK

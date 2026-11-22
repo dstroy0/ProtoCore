@@ -20,7 +20,7 @@
 #include "numeros_scribo/numeros_scribo.h"
 #include "protocore.h" // on_http: the route table the begin entry installs on
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The type/subtype codes the classifier reads are the partition table's own, mirrored here as
 // plain numbers so this file stays pure and host-testable. No vendor header: the table walk is a
@@ -201,7 +201,7 @@ void protocore_partition_monitor_collect(uint8_t *work)
         d->subtype = tbl[i].subtype;
         d->address = tbl[i].address;
         d->size = tbl[i].size;
-        d->running = tbl[i].running ? PROTO_TRUE : PROTO_FALSE;
+        d->running = tbl[i].running ? EMBED_TRUE : EMBED_FALSE;
     }
     PartitionMonitorV.u8 = n;
 }
@@ -234,6 +234,6 @@ void protocore_partition_monitor_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 PartitionMonitorVars PartitionMonitorV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PARTITION_MONITOR

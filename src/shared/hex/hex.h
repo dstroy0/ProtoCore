@@ -42,7 +42,7 @@ typedef struct
     uint8_t nibble;   ///< the nibble a digit lookup renders
     char ch;          ///< the character a value lookup reads
     uint32_t v;       ///< the value a u32 render writes
-    proto_bool upper; ///< render A-F rather than a-f
+    embed_bool upper; ///< render A-F rather than a-f
 } HexArgs;
 
 /** @brief The buffers a run conversion moves between. */

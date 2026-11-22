@@ -55,42 +55,42 @@ void dbench_run(void)
         // the lower lane settles it. ':' recurs every few bytes, '~' never occurs.
         DBENCH_OP("find 1B hit head", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = ":",
-                                                .other_cap = sizeof(":"), .ci = PROTO_FALSE));
+                                                .other_cap = sizeof(":"), .ci = EMBED_FALSE));
         DBENCH_OP("find 1B miss 32K", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = "~",
-                                                .other_cap = sizeof("~"), .ci = PROTO_FALSE));
+                                                .other_cap = sizeof("~"), .ci = EMBED_FALSE));
 
         // Two and three bytes: one chain of shifted masks decides every start in the word, at a cost
         // per word that does not depend on what the haystack holds. "zqx" never occurs, so the miss
         // times that chain with no candidate ever reaching a verify.
         DBENCH_OP("find 2B hit head", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
-                                                .other = "\r\n", .other_cap = sizeof("\r\n"), .ci = PROTO_FALSE));
+                                                .other = "\r\n", .other_cap = sizeof("\r\n"), .ci = EMBED_FALSE));
         DBENCH_OP("find 2B miss 32K", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = "zq",
-                                                .other_cap = sizeof("zq"), .ci = PROTO_FALSE));
+                                                .other_cap = sizeof("zq"), .ci = EMBED_FALSE));
         DBENCH_OP("find 3B miss 32K", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
-                                                .other = "zqx", .other_cap = sizeof("zqx"), .ci = PROTO_FALSE));
+                                                .other = "zqx", .other_cap = sizeof("zqx"), .ci = EMBED_FALSE));
 
         // Past three: the anchor mask, then a candidate walked out of it per set lane.
         DBENCH_OP("find 13B hit head", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN, .other = MARK,
-                                                .other_cap = sizeof(MARK), .ci = PROTO_FALSE));
+                                                .other_cap = sizeof(MARK), .ci = EMBED_FALSE));
         DBENCH_OP("find 13B miss 32K", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
                                                 .other = "X-Marker-Herz", .other_cap = sizeof("X-Marker-Herz"),
-                                                .ci = PROTO_FALSE));
+                                                .ci = EMBED_FALSE));
 
         // Case folding runs the same walk on a folded syndrome.
         DBENCH_OP("find 13B hit head ci", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
                                                 .other = "x-marker-here", .other_cap = sizeof("x-marker-here"),
-                                                .ci = PROTO_TRUE));
+                                                .ci = EMBED_TRUE));
         DBENCH_OP("find 13B miss 32K ci", 2000,
                   sink += (uintptr_t)EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN,
                                                 .other = "x-marker-herz", .other_cap = sizeof("x-marker-herz"),
-                                                .ci = PROTO_TRUE));
+                                                .ci = EMBED_TRUE));
 
         // What walking the same 32 KB costs with no matching to do, as the floor the scans sit above.
         DBENCH_OP("len 32K", 2000, sink += EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = hay, .cap = HAY_LEN + 1u));

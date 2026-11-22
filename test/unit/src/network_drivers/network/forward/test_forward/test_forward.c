@@ -16,7 +16,7 @@ typedef struct
     uint8_t buf[CAP_FRAMES][CAP_FRAME_MAX];
     uint16_t len[CAP_FRAMES];
     size_t count;
-    proto_bool accept;
+    embed_bool accept;
 } Cap;
 static Cap g_cap[CAP_IFACES];
 
@@ -25,17 +25,17 @@ static void cap_reset(void)
     memset(g_cap, 0, sizeof(g_cap));
     for (size_t i = 0; i < CAP_IFACES; i++)
     {
-        g_cap[i].accept = PROTO_TRUE;
+        g_cap[i].accept = EMBED_TRUE;
     }
 }
 
-static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
+static embed_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
 {
     (void)ctx;
     Cap *c = &g_cap[id];
     if (!c->accept)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (c->count < CAP_FRAMES)
     {
@@ -44,10 +44,10 @@ static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
         c->len[c->count] = k;
         c->count++;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool add_if(uint8_t id)
+static embed_bool add_if(uint8_t id)
 {
     PhysicalV.iface.id = id;
     PhysicalV.iface.kind = PROTOCORE_IF_ANY;
@@ -205,7 +205,7 @@ void test_send_failure_counted()
     ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
     ForwardV.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    g_cap[2].accept = PROTO_FALSE;
+    g_cap[2].accept = EMBED_FALSE;
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "x"));
     TEST_ASSERT_EQUAL_UINT32(1, stats().send_fail);
     TEST_ASSERT_EQUAL_UINT32(0, stats().forwarded);
@@ -519,7 +519,7 @@ void test_acl_add_null_pointer_validation()
     TEST_ASSERT_FALSE(ForwardV.ok);
 }
 
-static proto_bool route_firstbyte(uint8_t src, char c, uint8_t egress, uint16_t cap)
+static embed_bool route_firstbyte(uint8_t src, char c, uint8_t egress, uint16_t cap)
 {
     uint8_t pat[1] = {(uint8_t)c};
     uint8_t msk[1] = {0xFF};
@@ -601,7 +601,7 @@ void test_route_send_failure_counted()
     add_if(1);
     add_if(2);
     TEST_ASSERT_TRUE(route_firstbyte(PROTOCORE_FWD_IF_ANY, 'Z', 2, 0));
-    g_cap[2].accept = PROTO_FALSE;
+    g_cap[2].accept = EMBED_FALSE;
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "Zzz"));
     TEST_ASSERT_EQUAL_UINT32(1, stats().policy_routed);
     TEST_ASSERT_EQUAL_UINT32(1, stats().send_fail);

@@ -46,7 +46,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool req(const char *s, NtripRequest *out)
+static embed_bool req(const char *s, NtripRequest *out)
 {
     return protocore_ntrip_request_parse(s, strlen(s), out);
 }
@@ -360,7 +360,7 @@ static void assert_field(const char *rec, unsigned idx, const char *want)
     TEST_ASSERT_EQUAL_STRING_MESSAGE(want, f, rec);
 }
 
-static proto_bool field_is_one_of(const char *rec, unsigned idx, const char *const *allowed, unsigned count)
+static embed_bool field_is_one_of(const char *rec, unsigned idx, const char *const *allowed, unsigned count)
 {
     char f[64];
     field_at(rec, idx, f, sizeof(f));
@@ -368,10 +368,10 @@ static proto_bool field_is_one_of(const char *rec, unsigned idx, const char *con
     {
         if (strcmp(f, allowed[i]) == 0)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // [N1] Table 1 and [N2] publish the STR record as 19 numbered fields in this order (1-based):
@@ -406,7 +406,7 @@ void test_str_record_field_positions(void)
     m.generator = "ProtoCore";
     m.lat_deg = 44.07;
     m.lon_deg = -121.31;
-    m.nmea_required = PROTO_FALSE;
+    m.nmea_required = EMBED_FALSE;
 
     char rec[256];
     size_t n = protocore_ntrip_build_str_record(rec, sizeof(rec), &m);
@@ -430,7 +430,7 @@ void test_str_record_field_positions(void)
 
     // field 12 nmea: "Caster requires NMEA input (1) or not (0)", so the flag is the digit.
     assert_field(rec, 11, "0");
-    m.nmea_required = PROTO_TRUE;
+    m.nmea_required = EMBED_TRUE;
     TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)protocore_ntrip_build_str_record(rec, sizeof(rec), &m));
     assert_field(rec, 11, "1");
 
@@ -556,7 +556,7 @@ void test_ntrip_sourcetable_frames_its_body(void)
     mounts[1].lat_deg = 52.52;
     mounts[1].lon_deg = 13.40;
     mounts[2].mountpoint = "BASE3";
-    mounts[2].nmea_required = PROTO_TRUE;
+    mounts[2].nmea_required = EMBED_TRUE;
 
     char out[2048];
     char ctype[64];

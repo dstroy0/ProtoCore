@@ -20,12 +20,12 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/core/proto_handler/proto_handler.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // One published mountpoint on a listener.
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t listener_id;
     char name[PROTOCORE_NTRIP_MOUNT_MAX];
     NtripMount cfg;       // source-table description (string fields referenced from the caller)
@@ -35,8 +35,8 @@ typedef struct
 // One rover connection: reading its request, then streaming a mountpoint.
 typedef struct
 {
-    proto_bool active;
-    proto_bool streaming;
+    embed_bool active;
+    embed_bool streaming;
     uint8_t conn_slot;
     int mount_idx; // index into s_ctx.mounts once streaming, else -1
     char req[PROTOCORE_NTRIP_REQ_MAX];
@@ -47,7 +47,7 @@ typedef struct
 {
     CasterMount mounts[PROTOCORE_NTRIP_MAX_MOUNTS];
     CasterRover rovers[PROTOCORE_NTRIP_MAX_ROVERS];
-    proto_bool registered;
+    embed_bool registered;
 } NtripCasterCtx;
 static NtripCasterCtx s_ctx;
 
@@ -94,7 +94,7 @@ static int mount_index(const char *name, int listener_id)
             continue;
         }
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s_ctx.mounts[i].name, .other = name, .cap = nl + 1,
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             return i;
         }
@@ -126,29 +126,29 @@ static void reply_and_close(CasterRover *r, const char *resp, size_t len)
     {
         ConnPoolV.slot = r->conn_slot;
         ConnPoolV.io.data = resp;
-        ConnPoolV.io.len = (proto_u16)len;
+        ConnPoolV.io.len = (embed_u16)len;
         ConnPool.send(protocore_conn_pool_span());
     }
-    r->active = PROTO_FALSE;
+    r->active = EMBED_FALSE;
     ConnPoolV.slot = r->conn_slot;
     ConnPool.close(protocore_conn_pool_span());
 }
 
 // Constant-length credential compare (auth strings are short and app-configured).
-static proto_bool auth_ok(const NtripRequest *req, const char *expect)
+static embed_bool auth_ok(const NtripRequest *req, const char *expect)
 {
     if (!expect)
     {
-        return PROTO_TRUE; // open access
+        return EMBED_TRUE; // open access
     }
     if (!req->auth_b64)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t el = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = expect, .cap = req->auth_b64_len + 1);
     if (el != req->auth_b64_len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return EMBED_CALL(memor.cmp, MemoriaCfg, .src = req->auth_b64, .other = expect, .bytes = el) == 0;
 }
@@ -196,19 +196,19 @@ static void dispatch(CasterRover *r, const NtripRequest *req)
     size_t n = protocore_ntrip_build_stream_response(buf, sizeof(buf), req->version);
     ConnPoolV.slot = r->conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    const proto_bool up = ConnPoolV.ok;
+    const embed_bool up = ConnPoolV.ok;
     ConnPoolV.slot = r->conn_slot;
     ConnPoolV.io.data = buf;
-    ConnPoolV.io.len = (proto_u16)n;
+    ConnPoolV.io.len = (embed_u16)n;
     ConnPool.send(protocore_conn_pool_span());
     if (n == 0 || !up || !ConnPoolV.ok)
     {
-        r->active = PROTO_FALSE;
+        r->active = EMBED_FALSE;
         ConnPoolV.slot = r->conn_slot;
         ConnPool.close(protocore_conn_pool_span());
         return;
     }
-    r->streaming = PROTO_TRUE;
+    r->streaming = EMBED_TRUE;
     r->mount_idx = mi; // corrections for this mount now fan out to this rover
 }
 
@@ -222,8 +222,8 @@ static void caster_on_accept(uint8_t slot)
         return;
     }
     CasterRover *r = &s_ctx.rovers[idx];
-    r->active = PROTO_TRUE;
-    r->streaming = PROTO_FALSE;
+    r->active = EMBED_TRUE;
+    r->streaming = EMBED_FALSE;
     r->conn_slot = slot;
     r->mount_idx = -1;
     r->req_len = 0;
@@ -299,7 +299,7 @@ static void caster_on_close(uint8_t slot)
     CasterRover *r = rover_by_conn(slot);
     if (r)
     {
-        r->active = PROTO_FALSE; // the transport owns the closing slot
+        r->active = EMBED_FALSE; // the transport owns the closing slot
     }
 }
 
@@ -308,16 +308,16 @@ static void caster_on_close(uint8_t slot)
 static const ProtoHandler s_caster_handler = {
     .on_accept = caster_on_accept, .on_data = caster_on_data, .on_close = caster_on_close};
 
-proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64)
+embed_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMount *mount, const char *auth_b64)
 {
     if (!mount || !mount->mountpoint)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t nl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = mount->mountpoint, .cap = PROTOCORE_NTRIP_MOUNT_MAX + 1);
     if (nl == 0 || nl >= PROTOCORE_NTRIP_MOUNT_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int idx = -1;
     for (int i = 0; i < PROTOCORE_NTRIP_MAX_MOUNTS; i++)
@@ -330,10 +330,10 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     }
     if (idx < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     CasterMount *m = &s_ctx.mounts[idx];
-    m->active = PROTO_TRUE;
+    m->active = EMBED_TRUE;
     m->listener_id = listener_id;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = m->name, .src = mount->mountpoint, .bytes = nl + 1);
     m->cfg = *mount;
@@ -344,9 +344,9 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
         ProtocolsV.proto = PROTO_NTRIP_CASTER;
         ProtocolsV.h = &s_caster_handler;
         Protocols.add(protocore_session_span());
-        s_ctx.registered = PROTO_TRUE;
+        s_ctx.registered = EMBED_TRUE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 int protocore_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data, size_t len)
@@ -376,7 +376,7 @@ int protocore_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data
         }
         ConnPoolV.slot = r->conn_slot;
         ConnPoolV.io.data = data;
-        ConnPoolV.io.len = (proto_u16)len;
+        ConnPoolV.io.len = (embed_u16)len;
         ConnPool.send(protocore_conn_pool_span());
         if (ConnPoolV.ok)
         {
@@ -412,14 +412,14 @@ void protocore_ntrip_caster_reset(void)
 {
     for (int i = 0; i < PROTOCORE_NTRIP_MAX_MOUNTS; i++)
     {
-        s_ctx.mounts[i].active = PROTO_FALSE;
+        s_ctx.mounts[i].active = EMBED_FALSE;
     }
     for (int i = 0; i < PROTOCORE_NTRIP_MAX_ROVERS; i++)
     {
-        s_ctx.rovers[i].active = PROTO_FALSE;
+        s_ctx.rovers[i].active = EMBED_FALSE;
     }
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

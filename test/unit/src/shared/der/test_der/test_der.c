@@ -25,7 +25,7 @@ void tearDown(void)
 }
 
 // One read at @p pos over @p buf, so a case reads as one call.
-static proto_bool read_at(const uint8_t *buf, size_t len, size_t pos)
+static embed_bool read_at(const uint8_t *buf, size_t len, size_t pos)
 {
     DerV.read_args.buf = buf;
     DerV.read_args.len = len;
@@ -186,7 +186,7 @@ void test_a_context_tag_is_entered_like_any_constructed_value(void)
 // INTEGER (X.690 sec 8.3)
 // ---------------------------------------------------------------------------
 
-static proto_bool uint_at(const uint8_t *buf, size_t len)
+static embed_bool uint_at(const uint8_t *buf, size_t len)
 {
     DerV.read_args.buf = buf;
     DerV.read_args.len = len;
@@ -344,7 +344,7 @@ void test_a_value_that_is_not_an_oid_does_not_match_one(void)
 // Validity times (RFC 5280 sec 4.1.2.5)
 // ---------------------------------------------------------------------------
 
-static proto_bool time_at(const uint8_t *buf, size_t len)
+static embed_bool time_at(const uint8_t *buf, size_t len)
 {
     DerV.read_args.buf = buf;
     DerV.read_args.len = len;

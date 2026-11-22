@@ -136,7 +136,7 @@ void test_rfc7296_generic_payload_header(void)
     IkeV.out.buf = g_out;
     IkeV.out.cap = sizeof(g_out);
     IkeV.pl.next_payload = IKE_PL_NONCE;
-    IkeV.pl.critical = PROTO_FALSE;
+    IkeV.pl.critical = EMBED_FALSE;
     IkeV.pl.data = BODY;
     IkeV.pl.data_len = sizeof(BODY);
     Ike.payload_build(ikev2_work);
@@ -147,12 +147,12 @@ void test_rfc7296_generic_payload_header(void)
     TEST_ASSERT_EQUAL_HEX8(0x0A, g_out[3]);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BODY, g_out + 4, 6);
 
-    IkeV.pl.critical = PROTO_TRUE;
+    IkeV.pl.critical = EMBED_TRUE;
     Ike.payload_build(ikev2_work);
     TEST_ASSERT_EQUAL_HEX8(0x80, g_out[1]);
 
     // A payload with an empty body is still four octets long.
-    IkeV.pl.critical = PROTO_FALSE;
+    IkeV.pl.critical = EMBED_FALSE;
     IkeV.pl.data = NULL;
     IkeV.pl.data_len = 0;
     Ike.payload_build(ikev2_work);

@@ -9,10 +9,14 @@
  * which is why the queue send is the ordinary variant with timeout=0 rather than the from-ISR form.
  *
  * The producer (recv callback) writes payload bytes into the slot's ring and then advances the
- * head. The consumer (worker) reads at the tail and advances the tail. Both indices are `_Atomic`,
- * reached acquire/release: the producer's buffer writes are published by the release store of the
- * head and observed by the consumer's acquire load. The ring is MMgr's memoria_anularis.
+ * head. The consumer (worker) reads at the tail and advances the tail. The ring is MMgr's
+ * memoria_anularis, and its two indices are atomic words. The release store of the head publishes
+ * the writes of the producer, and the acquire load of the consumer sees them.
  */
+
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_TCP
 
 #include "protocol.h"
 #include "../../net_addr/net_addr.h" // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
@@ -48,7 +52,7 @@ struct ConnPoolStorage
 {
     TcpConn blank;
 #if PROTOCORE_ENABLE_OBSERVABILITY
-    _Atomic uint32_t ctr[9]; ///< one per protocore_conn_reason, indexed by the reason itself
+    embed_atomic_u32 ctr[9]; ///< one per protocore_conn_reason, indexed by the reason itself
 #endif
     uint32_t conn_timeout_ms; ///< the idle deadline the sweep measures against; init loads it
 #if PROTOCORE_ENABLE_OBSERVABILITY
@@ -103,7 +107,7 @@ void protocore_conn_pool_obs_bump(uint8_t *work)
     // DRAINED is gauge-only: the close reason that entered the dwell was already counted.
     if (ConnPoolV.obs.reason != PROTOCORE_CONN_R_DRAINED)
     {
-        atomic_fetch_add_explicit(&CONN_POOL_CTX(work)->ctr[ConnPoolV.obs.reason], 1, memory_order_relaxed);
+        EMBED_CALL(embed_atomic_u32_table.fetch_add, EmbedAtomicU32FetchAddCfg, .word = &CONN_POOL_CTX(work)->ctr[ConnPoolV.obs.reason], .value = 1);
     }
 }
 
@@ -116,22 +120,22 @@ void protocore_conn_pool_on_event(uint8_t *work)
 void protocore_conn_pool_counters_get(uint8_t *work)
 {
     protocore_conn_counters c;
-    c.accepts = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ACCEPT], memory_order_relaxed);
+    c.accepts = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ACCEPT]);
     c.closes_remote =
-        atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_CLOSE_REMOTE], memory_order_relaxed);
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_CLOSE_REMOTE]);
     c.closes_local =
-        atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_CLOSE_LOCAL], memory_order_relaxed);
-    c.closes_error = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ERROR], memory_order_relaxed);
-    c.closes_timeout = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_TIMEOUT], memory_order_relaxed);
-    c.closes_abort = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ABORT], memory_order_relaxed);
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_CLOSE_LOCAL]);
+    c.closes_error = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ERROR]);
+    c.closes_timeout = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_TIMEOUT]);
+    c.closes_abort = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ABORT]);
     c.backpressure =
-        atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_BACKPRESSURE], memory_order_relaxed);
-    c.defer_drops = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_DEFER_DROP], memory_order_relaxed);
+        EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_BACKPRESSURE]);
+    c.defer_drops = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_DEFER_DROP]);
     // Derived from the pool on read, so it cannot drift out of step with the actual slot states.
     c.closing_gauge = 0;
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        if (PROTOCORE_ATOMIC_LOAD(&conn_pool[i].state) == CONN_CLOSING)
+        if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state) == CONN_CLOSING)
         {
             c.closing_gauge++;
         }
@@ -143,7 +147,7 @@ void protocore_conn_pool_counters_reset(uint8_t *work)
 {
     for (int i = 0; i < 9; i++)
     {
-        atomic_store_explicit(&CONN_POOL_CTX(work)->ctr[i], 0, memory_order_relaxed);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &CONN_POOL_CTX(work)->ctr[i], .value = 0);
     }
 }
 
@@ -208,13 +212,13 @@ void protocore_conn_pool_set_state(uint8_t *work)
     // allocator, so they carry state but no bitmask bit.
     if (ConnPoolV.slot >= MAX_CONNS)
     {
-        PROTOCORE_ATOMIC_STORE(&conn_pool[ConnPoolV.slot].state, ConnPoolV.st);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[ConnPoolV.slot].state, .value = ConnPoolV.st);
         return;
     }
 #endif
     if (ConnPoolV.st == CONN_FREE)
     {
-        PROTOCORE_ATOMIC_STORE(&conn_pool[ConnPoolV.slot].state, ConnPoolV.st);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[ConnPoolV.slot].state, .value = ConnPoolV.st);
         EMBED_CALL(anularis.loculus_drop, AnularisCfg, .ring = &protocore_conn_slots, .index = ConnPoolV.slot);
     }
     else
@@ -222,7 +226,7 @@ void protocore_conn_pool_set_state(uint8_t *work)
         // A slot moving between two live states already holds its loculus, and this refusal says so.
         (void)EMBED_CALL(anularis.loculus_hold, AnularisCfg, .ring = &protocore_conn_slots, .index = ConnPoolV.slot,
                          .src = conn_pool[ConnPoolV.slot].rx_buffer, .bytes = RX_BUF_SIZE);
-        PROTOCORE_ATOMIC_STORE(&conn_pool[ConnPoolV.slot].state, ConnPoolV.st);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[ConnPoolV.slot].state, .value = ConnPoolV.st);
     }
 }
 
@@ -274,7 +278,7 @@ void protocore_conn_pool_send(uint8_t *work)
     TcpLowerV.pcb = conn_pool[ConnPoolV.slot].pcb;
     TcpLowerV.data = ConnPoolV.io.data;
     TcpLowerV.len = ConnPoolV.io.len;
-    TcpLowerV.flush = PROTO_FALSE;
+    TcpLowerV.flush = EMBED_FALSE;
     TcpLower.marshal(protocore_tcp_lower_span());
     ConnPoolV.ok = TcpLowerV.result == PROTOCORE_NET_OK;
 }
@@ -290,7 +294,7 @@ void protocore_conn_pool_send_flush(uint8_t *work)
     TcpLowerV.pcb = conn_pool[ConnPoolV.slot].pcb;
     TcpLowerV.data = ConnPoolV.io.data;
     TcpLowerV.len = ConnPoolV.io.len;
-    TcpLowerV.flush = PROTO_TRUE;
+    TcpLowerV.flush = EMBED_TRUE;
     TcpLower.marshal(protocore_tcp_lower_span());
     ConnPoolV.ok = TcpLowerV.result == PROTOCORE_NET_OK;
 }
@@ -304,13 +308,13 @@ void protocore_conn_pool_sndbuf(uint8_t *work)
         ConnPoolV.u16 = 0;
         return;
     }
-    proto_u16 avail = protocore_net_sndbuf(pcb);
+    embed_u16 avail = protocore_net_sndbuf(pcb);
 #if PROTOCORE_ENABLE_TLS
     // A TLS record adds header and tag overhead; report a conservative plaintext budget so a caller
     // that fills it does not overrun the cipher's framing.
     if (conn_pool[ConnPoolV.slot].tls)
     {
-        avail = (avail > 64) ? (proto_u16)(avail - 64) : 0;
+        avail = (avail > 64) ? (embed_u16)(avail - 64) : 0;
     }
 #endif
     ConnPoolV.u16 = avail;
@@ -331,7 +335,7 @@ void protocore_conn_pool_flush(uint8_t *work)
     TcpLowerV.pcb = conn_pool[ConnPoolV.slot].pcb;
     TcpLowerV.data = NULL;
     TcpLowerV.len = 0;
-    TcpLowerV.flush = PROTO_FALSE;
+    TcpLowerV.flush = EMBED_FALSE;
     TcpLower.marshal(protocore_tcp_lower_span());
 }
 
@@ -352,7 +356,7 @@ void protocore_conn_pool_ack_consumed(uint8_t *work)
     TcpConn *c = &conn_pool[ConnPoolV.slot];
     // Only the owning worker calls this and only it drains the ring, so the unacked count is read
     // race-free. Ack nothing for a slot that is not actively receiving.
-    if (PROTOCORE_ATOMIC_LOAD(&c->state) != CONN_ACTIVE || c->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->state) != CONN_ACTIVE || c->pcb == NULL)
     {
         return;
     }
@@ -366,8 +370,8 @@ void protocore_conn_pool_ack_consumed(uint8_t *work)
     TcpLowerV.slot = ConnPoolV.slot;
     TcpLowerV.pcb = c->pcb;
     TcpLowerV.data = NULL;
-    TcpLowerV.len = (proto_u16)consumed;
-    TcpLowerV.flush = PROTO_FALSE;
+    TcpLowerV.len = (embed_u16)consumed;
+    TcpLowerV.flush = EMBED_FALSE;
     TcpLower.marshal(protocore_tcp_lower_span());
 }
 
@@ -378,7 +382,7 @@ void protocore_conn_pool_raw_send(uint8_t *work)
     (void)work;
     if (ConnPoolV.pcb == NULL)
     {
-        ConnPoolV.ok = PROTO_FALSE;
+        ConnPoolV.ok = EMBED_FALSE;
         return;
     }
     TcpLowerV.op = PROTOCORE_OP_RAWSEND;
@@ -386,7 +390,7 @@ void protocore_conn_pool_raw_send(uint8_t *work)
     TcpLowerV.pcb = ConnPoolV.pcb;
     TcpLowerV.data = ConnPoolV.io.data;
     TcpLowerV.len = ConnPoolV.io.len;
-    TcpLowerV.flush = PROTO_FALSE;
+    TcpLowerV.flush = EMBED_FALSE;
     TcpLower.marshal(protocore_tcp_lower_span());
     ConnPoolV.ok = TcpLowerV.result == PROTOCORE_NET_OK;
 }
@@ -408,7 +412,7 @@ void protocore_conn_pool_close(uint8_t *work)
     }
     // The state is read rather than assumed: a worker, a stack callback and the sweep can all reach
     // the same slot, so it may already be in the drain dwell.
-    const ConnState was = PROTOCORE_ATOMIC_LOAD(&c->state);
+    const ConnState was = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->state);
     PROTOCORE_OBS_TRANSITION(ConnPoolV.slot, was, CONN_FREE, PROTOCORE_CONN_R_CLOSE_LOCAL);
     // Detach and free the slot before the close, so a late callback for this block finds a null arg.
     // The close targets the captured block, so nulling the slot first is safe.
@@ -422,7 +426,7 @@ void protocore_conn_pool_close(uint8_t *work)
     TcpLowerV.slot = ConnPoolV.slot;
     TcpLowerV.data = NULL;
     TcpLowerV.len = 0;
-    TcpLowerV.flush = PROTO_FALSE;
+    TcpLowerV.flush = EMBED_FALSE;
     TcpLower.marshal(protocore_tcp_lower_span()); // TLS teardown and FIN, in the stack's context
 }
 
@@ -439,7 +443,7 @@ void protocore_conn_pool_abort_slot(uint8_t *work)
     {
         return;
     }
-    const ConnState was = PROTOCORE_ATOMIC_LOAD(&c->state);
+    const ConnState was = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->state);
     PROTOCORE_OBS_TRANSITION(ConnPoolV.slot, was, CONN_FREE, PROTOCORE_CONN_R_ABORT);
 #if PROTOCORE_ENABLE_TLS
     if (c->tls)
@@ -489,7 +493,7 @@ void protocore_conn_pool_closing_finalize(uint8_t *work)
 // Finalize now if the slot is dwelling and its transmit queue has drained.
 void protocore_conn_pool_closing_check(uint8_t *work)
 {
-    if (ConnPoolV.slot >= MAX_CONNS || PROTOCORE_ATOMIC_LOAD(&conn_pool[ConnPoolV.slot].state) != CONN_CLOSING)
+    if (ConnPoolV.slot >= MAX_CONNS || EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[ConnPoolV.slot].state) != CONN_CLOSING)
     {
         return;
     }
@@ -514,7 +518,7 @@ void protocore_conn_pool_begin_close(uint8_t *work)
         return;
     }
     TcpConn *c = &conn_pool[ConnPoolV.slot];
-    if (PROTOCORE_ATOMIC_LOAD(&c->state) != CONN_ACTIVE) // an error during the write may have freed it
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->state) != CONN_ACTIVE) // an error during the write may have freed it
     {
         return;
     }
@@ -529,7 +533,7 @@ void protocore_conn_pool_begin_close(uint8_t *work)
     TcpLowerV.pcb = pcb;
     TcpLowerV.data = NULL;
     TcpLowerV.len = 0;
-    TcpLowerV.flush = PROTO_FALSE;
+    TcpLowerV.flush = EMBED_FALSE;
     TcpLower.marshal(protocore_tcp_lower_span());
 }
 
@@ -544,7 +548,7 @@ void protocore_conn_pool_enqueue(uint8_t *work)
     TcpListener.enqueue(protocore_tcp_listener_span());
     if (!TcpListenerV.ok)
     {
-        PROTOCORE_OBS_NOTICE(ConnPoolV.slot, PROTOCORE_ATOMIC_LOAD(&conn_pool[ConnPoolV.slot].state),
+        PROTOCORE_OBS_NOTICE(ConnPoolV.slot, EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[ConnPoolV.slot].state),
                              PROTOCORE_CONN_R_DEFER_DROP);
     }
 }
@@ -587,7 +591,7 @@ void protocore_conn_pool_stop(uint8_t *work)
     (void)work;
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        ConnState st = PROTOCORE_ATOMIC_LOAD(&conn_pool[i].state);
+        ConnState st = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state);
         if ((st == CONN_ACTIVE || st == CONN_CLOSING) && conn_pool[i].pcb != NULL)
         {
             protocore_pcb *pcb = conn_pool[i].pcb;
@@ -663,7 +667,7 @@ void protocore_conn_pool_active(uint8_t *work)
 {
     (void)work;
     const TcpConn *c = &conn_pool[ConnPoolV.slot];
-    ConnPoolV.ok = PROTOCORE_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL;
+    ConnPoolV.ok = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->state) == CONN_ACTIVE && c->pcb != NULL;
 }
 
 void protocore_conn_pool_iface(uint8_t *work)
@@ -708,7 +712,7 @@ void protocore_conn_pool_active_count(uint8_t *work)
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        if (PROTOCORE_ATOMIC_LOAD(&conn_pool[i].state) == CONN_ACTIVE)
+        if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn_pool[i].state) == CONN_ACTIVE)
         {
             n++;
         }
@@ -725,7 +729,7 @@ void protocore_conn_pool_remote_ip(uint8_t *work)
         return;
     }
     TcpConn *conn = &conn_pool[ConnPoolV.slot];
-    if (PROTOCORE_ATOMIC_LOAD(&conn->state) == CONN_ACTIVE && conn->pcb != NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) == CONN_ACTIVE && conn->pcb != NULL)
     {
         ConnPoolV.u32 = protocore_net_ip4_u32(protocore_net_ip_as_v4(&conn->pcb->remote_ip));
     }
@@ -740,17 +744,17 @@ void protocore_conn_pool_remote_addr(uint8_t *work)
     }
     if (ConnPoolV.out == NULL || ConnPoolV.slot >= MAX_CONNS)
     {
-        ConnPoolV.ok = PROTO_FALSE;
+        ConnPoolV.ok = EMBED_FALSE;
         return;
     }
     TcpConn *conn = &conn_pool[ConnPoolV.slot];
-    if (PROTOCORE_ATOMIC_LOAD(&conn->state) != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
     {
-        ConnPoolV.ok = PROTO_FALSE;
+        ConnPoolV.ok = EMBED_FALSE;
         return;
     }
     protocore_net_addr_to_ip(&conn->pcb->remote_ip, ConnPoolV.out);
-    ConnPoolV.ok = PROTO_TRUE;
+    ConnPoolV.ok = EMBED_TRUE;
 }
 
 // Restart a slot's idle timer while a response body is still being paged out. Such a slot is
@@ -765,7 +769,7 @@ void protocore_conn_pool_touch_active(uint8_t *work)
         return;
     }
     TcpConn *c = &conn_pool[ConnPoolV.slot];
-    if (PROTOCORE_ATOMIC_LOAD(&c->state) == CONN_ACTIVE)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &c->state) == CONN_ACTIVE)
     {
         c->last_activity_ms = Clock.ms;
     }
@@ -785,7 +789,7 @@ void protocore_conn_pool_check_timeouts(uint8_t *work)
         // A graceful close whose peer never ACKs would dwell forever, so the fixed pool cannot be
         // allowed to leak. The fast path is the sent callback finalizing on ACK; this only catches a
         // black-holed peer.
-        if (PROTOCORE_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
+        if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &slot->state) == CONN_CLOSING)
         {
             if ((now - slot->last_activity_ms) < PROTOCORE_CLOSING_TIMEOUT_MS)
             {
@@ -819,7 +823,7 @@ void protocore_conn_pool_check_timeouts(uint8_t *work)
             continue;
         }
 
-        if (PROTOCORE_ATOMIC_LOAD(&slot->state) != CONN_ACTIVE)
+        if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &slot->state) != CONN_ACTIVE)
         {
             continue;
         }
@@ -867,7 +871,7 @@ protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbu
     // since an ACK is the promise to deliver it (sec 3.10.7). A null segment is the peer's FIN and
     // an empty one carries nothing: neither is a loss, so both only free and leave the dwell to
     // finalize on the next sent or timeout.
-    if (PROTOCORE_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &slot->state) == CONN_CLOSING)
     {
         if (p == NULL || p->tot_len == 0)
         {
@@ -893,7 +897,7 @@ protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbu
         return PROTOCORE_NET_ERR_ABRT;
     }
 
-    if (PROTOCORE_ATOMIC_LOAD(&slot->state) != CONN_ACTIVE)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &slot->state) != CONN_ACTIVE)
     {
         return PROTOCORE_NET_ERR_VAL;
     }
@@ -957,14 +961,14 @@ protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbu
 
 // Refresh the idle timestamp so an active sender is not reaped while its responses are in flight,
 // and - for a slot dwelling in CONN_CLOSING - finalize the close once the peer has ACKed everything.
-protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len)
+protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, embed_u16 len)
 {
     (void)len;
     TcpConn *slot = (TcpConn *)arg;
     if (slot != NULL)
     {
         slot->last_activity_ms = Clock.ms;
-        if (PROTOCORE_ATOMIC_LOAD(&slot->state) == CONN_CLOSING)
+        if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &slot->state) == CONN_CLOSING)
         {
             protocore_conn_closing_check(slot->id, tpcb); // drained? tear down and free the slot
         }
@@ -991,7 +995,7 @@ void lowlevel_err_cb(void *arg, protocore_net_err err)
         return;
     }
 
-    ConnState old = PROTOCORE_ATOMIC_LOAD(&slot->state);
+    ConnState old = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &slot->state);
     protocore_conn_set_state(slot->id, CONN_FREE);
     slot->pcb = NULL;
 
@@ -1014,3 +1018,5 @@ void lowlevel_err_cb(void *arg, protocore_net_err err)
 // them. Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 ConnPoolVars ConnPoolV;
+
+#endif // PROTOCORE_ENABLE_TCP

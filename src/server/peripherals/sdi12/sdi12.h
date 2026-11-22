@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_SDI12
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -80,7 +80,7 @@ typedef struct
     char *buf;
     size_t cap;
     char addr;
-    proto_bool with_crc;
+    embed_bool with_crc;
 } Sdi12BuildMeasureArgs;
 
 /** @brief What build_concurrent takes: buf, cap, addr, with_crc. */
@@ -89,7 +89,7 @@ typedef struct
     char *buf;
     size_t cap;
     char addr;
-    proto_bool with_crc;
+    embed_bool with_crc;
 } Sdi12BuildConcurrentArgs;
 
 /** @brief What build_measure_additional takes: buf, cap, addr, ... */
@@ -99,7 +99,7 @@ typedef struct
     size_t cap;
     char addr;
     uint8_t m_index;
-    proto_bool with_crc;
+    embed_bool with_crc;
 } Sdi12BuildMeasureAdditionalArgs;
 
 /** @brief What build_concurrent_additional takes: buf, cap, addr, ... */
@@ -109,7 +109,7 @@ typedef struct
     size_t cap;
     char addr;
     uint8_t c_index;
-    proto_bool with_crc;
+    embed_bool with_crc;
 } Sdi12BuildConcurrentAdditionalArgs;
 
 /** @brief What build_continuous takes: buf, cap, addr, r_index, ... */
@@ -119,7 +119,7 @@ typedef struct
     size_t cap;
     char addr;
     uint8_t r_index;
-    proto_bool with_crc;
+    embed_bool with_crc;
 } Sdi12BuildContinuousArgs;
 
 /** @brief What build_verify takes: buf, cap, addr. */
@@ -281,7 +281,7 @@ typedef struct
     Sdi12Crc16Args crc16_args;
     Sdi12CrcEncodeArgs crc_encode_args;
     Sdi12CheckCrcArgs check_crc_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint16_t crc;
 } Sdi12Vars;
@@ -358,7 +358,7 @@ static const Sdi12Ns Sdi12 __attribute__((unused)) = {
     .check_crc = protocore_sdi12_check_crc,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SDI12
 

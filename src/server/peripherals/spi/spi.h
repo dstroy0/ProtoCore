@@ -62,18 +62,18 @@
 #define PROTOCORE_SPI_QUADHD_PIN (-1)
 #endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
 
 /** @brief Bring up @p host on the given pins; -1 on quadwp / quadhd leaves the bus single or dual. */
-PROTOCORE_INLINE proto_bool protocore_spi_begin_on(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
+EMBED_INLINE embed_bool protocore_spi_begin_on(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
 {
     return protocore_platform_spi_begin(host, mosi, miso, sclk, quadwp, quadhd) != 0;
 }
 
 /** @brief Bring up the shared SPI bus on the PROTOCORE_SPI_*_PIN pins (-1 = default). */
-PROTOCORE_INLINE proto_bool protocore_spi_begin(void)
+EMBED_INLINE embed_bool protocore_spi_begin(void)
 {
     return protocore_spi_begin_on((uint8_t)PROTOCORE_SPI_HOST, (int)PROTOCORE_SPI_MOSI_PIN, (int)PROTOCORE_SPI_MISO_PIN,
                                   (int)PROTOCORE_SPI_SCLK_PIN, (int)PROTOCORE_SPI_QUADWP_PIN,
@@ -84,14 +84,14 @@ PROTOCORE_INLINE proto_bool protocore_spi_begin(void)
  * @brief Clock @p len bytes on @p host at @p hz, @p bit_order and @p mode, shifting @p tx out and
  *        @p rx in. A null @p rx discards the inbound bits; a null @p tx clocks zeros out.
  */
-PROTOCORE_INLINE proto_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
+EMBED_INLINE embed_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
                                                  const uint8_t *tx, uint8_t *rx, size_t len)
 {
     return protocore_platform_spi_txn(host, hz, bit_order, mode, tx, rx, (uint32_t)len) != 0;
 }
 
 /** @brief Clock @p len bytes on the shared bus at @p hz, @p bit_order and @p mode. */
-PROTOCORE_INLINE proto_bool protocore_spi_txn_at(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
+EMBED_INLINE embed_bool protocore_spi_txn_at(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
                                                  uint8_t *rx, size_t len)
 {
     return protocore_spi_txn_on((uint8_t)PROTOCORE_SPI_HOST, hz, bit_order, mode, tx, rx, len);
@@ -102,19 +102,19 @@ PROTOCORE_INLINE proto_bool protocore_spi_txn_at(uint32_t hz, uint8_t bit_order,
  *
  * A null @p rx discards the inbound bits; a null @p tx clocks zeros out.
  */
-PROTOCORE_INLINE proto_bool protocore_spi_txn(const uint8_t *tx, uint8_t *rx, size_t len)
+EMBED_INLINE embed_bool protocore_spi_txn(const uint8_t *tx, uint8_t *rx, size_t len)
 {
     return protocore_spi_txn_at(PROTOCORE_SPI_HZ, PROTOCORE_SPI_MSBFIRST, (uint8_t)PROTOCORE_SPI_MODE, tx, rx, len);
 }
 
 /** @brief Clock @p len bytes out, discarding what shifts back. */
-PROTOCORE_INLINE proto_bool protocore_spi_write(const uint8_t *tx, size_t len)
+EMBED_INLINE embed_bool protocore_spi_write(const uint8_t *tx, size_t len)
 {
     return protocore_spi_txn(tx, NULL, len);
 }
 
 /** @brief Clock @p len zero bytes out, keeping what shifts back. */
-PROTOCORE_INLINE proto_bool protocore_spi_read(uint8_t *rx, size_t len)
+EMBED_INLINE embed_bool protocore_spi_read(uint8_t *rx, size_t len)
 {
     return protocore_spi_txn(NULL, rx, len);
 }
@@ -125,7 +125,7 @@ PROTOCORE_INLINE proto_bool protocore_spi_read(uint8_t *rx, size_t len)
  *
  * A zero bit count omits that phase. @p lanes is PROTOCORE_SPI_LANES_1, _2 or _4.
  */
-PROTOCORE_INLINE proto_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
+EMBED_INLINE embed_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
                                                      uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
                                                      uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
                                                      size_t len)
@@ -135,7 +135,7 @@ PROTOCORE_INLINE proto_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, 
 }
 
 /** @brief A framed transfer on the shared bus at the configured clock, bit order and mode. */
-PROTOCORE_INLINE proto_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
+EMBED_INLINE embed_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
                                                   uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
                                                   size_t len)
 {
@@ -145,27 +145,27 @@ PROTOCORE_INLINE proto_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits
 }
 
 /** @brief Drive @p pin as an output at the deselected level, which is how a part is left idle. */
-PROTOCORE_INLINE void protocore_spi_cs_idle(uint8_t pin)
+EMBED_INLINE void protocore_spi_cs_idle(uint8_t pin)
 {
     protocore_platform_gpio_mode(pin, PROTOCORE_GPIO_OUT);
     protocore_platform_gpio_write(pin, PROTOCORE_GPIO_HIGH);
 }
 
 /** @brief Pull @p pin low, selecting the part for the transfers that follow. */
-PROTOCORE_INLINE void protocore_spi_cs_select(uint8_t pin)
+EMBED_INLINE void protocore_spi_cs_select(uint8_t pin)
 {
     protocore_platform_gpio_write(pin, PROTOCORE_GPIO_LOW);
 }
 
 /** @brief Let @p pin back high, deselecting the part. */
-PROTOCORE_INLINE void protocore_spi_cs_release(uint8_t pin)
+EMBED_INLINE void protocore_spi_cs_release(uint8_t pin)
 {
     protocore_platform_gpio_write(pin, PROTOCORE_GPIO_HIGH);
 }
 
 #else // no bus seam
 
-PROTOCORE_INLINE proto_bool protocore_spi_begin_on(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
+EMBED_INLINE embed_bool protocore_spi_begin_on(uint8_t host, int mosi, int miso, int sclk, int quadwp, int quadhd)
 {
     (void)host;
     (void)mosi;
@@ -173,15 +173,15 @@ PROTOCORE_INLINE proto_bool protocore_spi_begin_on(uint8_t host, int mosi, int m
     (void)sclk;
     (void)quadwp;
     (void)quadhd;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_begin(void)
+EMBED_INLINE embed_bool protocore_spi_begin(void)
 {
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
+EMBED_INLINE embed_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
                                                  const uint8_t *tx, uint8_t *rx, size_t len)
 {
     (void)host;
@@ -191,31 +191,31 @@ PROTOCORE_INLINE proto_bool protocore_spi_txn_on(uint8_t host, uint32_t hz, uint
     (void)tx;
     (void)rx;
     (void)len;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_txn_at(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
+EMBED_INLINE embed_bool protocore_spi_txn_at(uint32_t hz, uint8_t bit_order, uint8_t mode, const uint8_t *tx,
                                                  uint8_t *rx, size_t len)
 {
     return protocore_spi_txn_on((uint8_t)PROTOCORE_SPI_HOST, hz, bit_order, mode, tx, rx, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_txn(const uint8_t *tx, uint8_t *rx, size_t len)
+EMBED_INLINE embed_bool protocore_spi_txn(const uint8_t *tx, uint8_t *rx, size_t len)
 {
     return protocore_spi_txn_at(PROTOCORE_SPI_HZ, PROTOCORE_SPI_MSBFIRST, (uint8_t)PROTOCORE_SPI_MODE, tx, rx, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_write(const uint8_t *tx, size_t len)
+EMBED_INLINE embed_bool protocore_spi_write(const uint8_t *tx, size_t len)
 {
     return protocore_spi_txn(tx, NULL, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_read(uint8_t *rx, size_t len)
+EMBED_INLINE embed_bool protocore_spi_read(uint8_t *rx, size_t len)
 {
     return protocore_spi_txn(NULL, rx, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
+EMBED_INLINE embed_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, uint8_t bit_order, uint8_t mode,
                                                      uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
                                                      uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
                                                      size_t len)
@@ -233,10 +233,10 @@ PROTOCORE_INLINE proto_bool protocore_spi_txn_ext_on(uint8_t host, uint32_t hz, 
     (void)tx;
     (void)rx;
     (void)len;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
+EMBED_INLINE embed_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits, uint32_t addr, uint8_t addr_bits,
                                                   uint8_t dummy_bits, uint8_t lanes, const uint8_t *tx, uint8_t *rx,
                                                   size_t len)
 {
@@ -249,26 +249,26 @@ PROTOCORE_INLINE proto_bool protocore_spi_txn_ext(uint16_t cmd, uint8_t cmd_bits
     (void)tx;
     (void)rx;
     (void)len;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE void protocore_spi_cs_idle(uint8_t pin)
+EMBED_INLINE void protocore_spi_cs_idle(uint8_t pin)
 {
     (void)pin;
 }
 
-PROTOCORE_INLINE void protocore_spi_cs_select(uint8_t pin)
+EMBED_INLINE void protocore_spi_cs_select(uint8_t pin)
 {
     (void)pin;
 }
 
-PROTOCORE_INLINE void protocore_spi_cs_release(uint8_t pin)
+EMBED_INLINE void protocore_spi_cs_release(uint8_t pin)
 {
     (void)pin;
 }
 
 #endif // PROTOCORE_HAS_BUS
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SPI_H

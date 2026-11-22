@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/directnet/directnet.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static char hex_digit(uint8_t nibble)
 {
@@ -130,19 +130,19 @@ void protocore_directnet_data_parse(uint8_t *work)
 
     if (!frame || len < 3) // STX + ETX + LRC minimum
     {
-        DirectnetV.ok = PROTO_FALSE;
+        DirectnetV.ok = EMBED_FALSE;
         return;
     }
     if (frame[0] != DNET_STX)
     {
-        DirectnetV.ok = PROTO_FALSE;
+        DirectnetV.ok = EMBED_FALSE;
         return;
     }
     // The byte before the LRC must be ETX.
     size_t etx_idx = len - 2;
     if (frame[etx_idx] != DNET_ETX)
     {
-        DirectnetV.ok = PROTO_FALSE;
+        DirectnetV.ok = EMBED_FALSE;
         return;
     }
     DirectnetV.lrc_args.bytes = frame + 1;
@@ -150,7 +150,7 @@ void protocore_directnet_data_parse(uint8_t *work)
     protocore_directnet_lrc(work);
     if (DirectnetV.value != frame[len - 1]) // over data..ETX
     {
-        DirectnetV.ok = PROTO_FALSE;
+        DirectnetV.ok = EMBED_FALSE;
         return;
     }
     if (data)
@@ -161,12 +161,12 @@ void protocore_directnet_data_parse(uint8_t *work)
     {
         *data_len = etx_idx - 1;
     }
-    DirectnetV.ok = PROTO_TRUE;
+    DirectnetV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 DirectnetVars DirectnetV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DIRECTNET

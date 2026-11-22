@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_ADS1115
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_I2C_DEVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -142,7 +142,7 @@ typedef struct
     Ads1115BeginArgs begin_args;
     Ads1115ReadRawArgs read_raw_args;
     Ads1115ReadUvArgs read_uv_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t word;
     int32_t uv;
 } Ads1115Vars;
@@ -191,7 +191,7 @@ static const Ads1115Ns Ads1115 __attribute__((unused)) = {
  */
 uint8_t *protocore_ads1115_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ADS1115
 

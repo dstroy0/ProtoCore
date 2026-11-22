@@ -19,7 +19,7 @@
 // Literals
 // ---------------------------------------------------------------------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // SPIi(8) | SPIr(8) | IP(4 or 16) | Port(2): the largest detection digest input (RFC 7296 sec 2.23).
 #define PROTOCORE_NATD_INPUT_MAX (PROTOCORE_IKE_SPI_LEN + PROTOCORE_IKE_SPI_LEN + 16 + 2)
@@ -95,17 +95,17 @@ static size_t natd_notify_build(uint8_t *work, uint16_t notify_type, const uint8
 }
 
 // The digest matches when nothing on that axis was translated.
-static proto_bool natd_match(uint8_t *work)
+static embed_bool natd_match(uint8_t *work)
 {
     if (!IkeNattV.digest.received)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t expect[PROTOCORE_IKE_NATD_HASH_LEN];
     if (natd_hash(IkeNattV.spi.init_spi, IkeNattV.spi.resp_spi, IkeNattV.addr.ip, IkeNattV.addr.ip_len,
                   IkeNattV.addr.port, expect) == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return EMBED_CALL(memor.cmp, MemoriaCfg, .src = expect, .other = IkeNattV.digest.received,
                       .bytes = PROTOCORE_IKE_NATD_HASH_LEN) == 0;
@@ -177,7 +177,7 @@ void protocore_ike_natt_is_ike(uint8_t *work)
 {
     (void)work;
     const uint8_t *p = IkeNattV.pkt.p;
-    IkeNattV.ok = PROTO_FALSE;
+    IkeNattV.ok = EMBED_FALSE;
     if (!p || IkeNattV.pkt.len < PROTOCORE_NATT_NON_ESP_MARKER_LEN)
     {
         return;
@@ -189,6 +189,6 @@ void protocore_ike_natt_is_ike(uint8_t *work)
 /** @brief The operands and the outcome. */
 IkeNattVars IkeNattV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2

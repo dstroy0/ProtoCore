@@ -26,7 +26,7 @@
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/mpr121/mpr121.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -190,14 +190,14 @@ static uint8_t dev_addr(uint8_t *work)
     return MPR121_CTX(work)->addr ? MPR121_CTX(work)->addr : (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
 }
 
-static proto_bool wr(uint8_t *work, uint8_t reg, uint8_t val)
+static embed_bool wr(uint8_t *work, uint8_t reg, uint8_t val)
 {
     MPR121_CTX(work)->frame[0] = reg;
     MPR121_CTX(work)->frame[1] = val;
     return protocore_i2c_write(dev_addr(work), MPR121_CTX(work)->frame, sizeof(MPR121_CTX(work)->frame));
 }
 
-static proto_bool rd(uint8_t *work, uint8_t reg, uint8_t *out, uint8_t n)
+static embed_bool rd(uint8_t *work, uint8_t reg, uint8_t *out, uint8_t n)
 {
     return protocore_i2c_write_read(dev_addr(work), &reg, 1, out, n);
 }
@@ -217,12 +217,12 @@ void protocore_mpr121_begin(uint8_t *work)
     size_t n = Mpr121V.n;
     if (n == 0)
     {
-        Mpr121V.ok = PROTO_FALSE;
+        Mpr121V.ok = EMBED_FALSE;
         return;
     }
     if (!wr(work, MPR121_CTX(work)->init[0], MPR121_CTX(work)->init[1])) // soft reset first; then let the chip settle
     {
-        Mpr121V.ok = PROTO_FALSE;
+        Mpr121V.ok = EMBED_FALSE;
         return;
     }
     pcdelay(1);
@@ -230,11 +230,11 @@ void protocore_mpr121_begin(uint8_t *work)
     {
         if (!wr(work, MPR121_CTX(work)->init[i], MPR121_CTX(work)->init[i + 1]))
         {
-            Mpr121V.ok = PROTO_FALSE;
+            Mpr121V.ok = EMBED_FALSE;
             return;
         }
     }
-    Mpr121V.ok = PROTO_TRUE;
+    Mpr121V.ok = EMBED_TRUE;
 }
 
 void protocore_mpr121_read_touched(uint8_t *work)
@@ -272,6 +272,6 @@ void protocore_mpr121_read_filtered(uint8_t *work)
 /** @brief The operands and the outcome. */
 Mpr121Vars Mpr121V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MPR121

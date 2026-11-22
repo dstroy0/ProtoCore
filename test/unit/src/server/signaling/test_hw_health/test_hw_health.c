@@ -61,7 +61,7 @@ static void spi_init(HwSpiBackoff *s, uint32_t start, uint32_t lo, uint32_t hi, 
     HwHealth.spi_init(hw_health_work);
 }
 
-static uint32_t spi_result(HwSpiBackoff *s, proto_bool crc_ok)
+static uint32_t spi_result(HwSpiBackoff *s, embed_bool crc_ok)
 {
     HwHealthV.spi.s = s;
     HwHealthV.spi.crc_ok = crc_ok;
@@ -69,7 +69,7 @@ static uint32_t spi_result(HwSpiBackoff *s, proto_bool crc_ok)
     return HwHealthV.hz;
 }
 
-static HwGpioVerdict gpio_short(proto_bool driven_high, proto_bool read_high)
+static HwGpioVerdict gpio_short(embed_bool driven_high, embed_bool read_high)
 {
     HwHealthV.probe.driven_high = driven_high;
     HwHealthV.probe.read_high = read_high;
@@ -168,15 +168,15 @@ void test_spi_halves_only_on_a_full_fail_streak(void)
     HwSpiBackoff s;
     spi_init(&s, 8000000u, 1000000u, 8000000u, 3, 4);
 
-    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_FALSE));
 
     // Two failures then a success: the run is broken, so a third failure does not halve.
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_FALSE));
 }
 
 // ok_trip successes double it: 4 MHz << 1 = 8 MHz on the fourth consecutive good transfer.
@@ -184,12 +184,12 @@ void test_spi_doubles_only_on_a_full_ok_streak(void)
 {
     HwSpiBackoff s;
     spi_init(&s, 8000000u, 1000000u, 8000000u, 1, 4);
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_FALSE));
 
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, EMBED_TRUE));
 }
 
 // The clock never leaves [min_hz, max_hz]: 2 MHz >> 1 = 1 MHz is the floor and a further halving
@@ -199,13 +199,13 @@ void test_spi_clock_stays_between_floor_and_ceiling(void)
     HwSpiBackoff s;
     spi_init(&s, 2000000u, 1000000u, 8000000u, 1, 1);
 
-    TEST_ASSERT_EQUAL_UINT32(1000000u, spi_result(&s, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_UINT32(1000000u, spi_result(&s, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(1000000u, spi_result(&s, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(1000000u, spi_result(&s, EMBED_FALSE));
 
-    TEST_ASSERT_EQUAL_UINT32(2000000u, spi_result(&s, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(2000000u, spi_result(&s, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&s, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&s, EMBED_TRUE));
 }
 
 // init clamps the start clock into the band, and a zero trip count means "trip on the first
@@ -215,16 +215,16 @@ void test_spi_init_clamps_the_start_clock_and_defaults_a_zero_trip(void)
     // fail_trip 2, so one failure reports the clock without changing it.
     HwSpiBackoff below;
     spi_init(&below, 500000u, 1000000u, 8000000u, 2, 2);
-    TEST_ASSERT_EQUAL_UINT32(1000000u, spi_result(&below, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(1000000u, spi_result(&below, EMBED_FALSE));
 
     HwSpiBackoff above;
     spi_init(&above, 20000000u, 1000000u, 8000000u, 2, 2);
-    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&above, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(8000000u, spi_result(&above, EMBED_FALSE));
 
     HwSpiBackoff zero;
     spi_init(&zero, 4000000u, 1000000u, 8000000u, 0, 0);
-    TEST_ASSERT_EQUAL_UINT32(2000000u, spi_result(&zero, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&zero, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(2000000u, spi_result(&zero, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_UINT32(4000000u, spi_result(&zero, EMBED_TRUE));
 }
 
 // Doubling 0xF0000000 in 32 bits gives 0x1E0000000, which truncates to 0xE0000000 - a value BELOW
@@ -234,7 +234,7 @@ void test_spi_doubling_wrap_clamps_to_the_ceiling(void)
 {
     HwSpiBackoff s;
     spi_init(&s, 0xF0000000u, 0xF0000000u, 0xFFFFFFFFu, 1, 1);
-    TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, spi_result(&s, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, spi_result(&s, EMBED_TRUE));
 }
 
 // The pin's readback against what it was driven to: matching is OK, and each mismatch names the rail
@@ -242,10 +242,10 @@ void test_spi_doubling_wrap_clamps_to_the_ceiling(void)
 // a pull to Vcc.
 void test_gpio_readback_mismatch_names_the_rail(void)
 {
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, gpio_short(PROTO_TRUE, PROTO_TRUE));
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, gpio_short(PROTO_FALSE, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_GND, gpio_short(PROTO_TRUE, PROTO_FALSE));
-    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_VCC, gpio_short(PROTO_FALSE, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, gpio_short(EMBED_TRUE, EMBED_TRUE));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_OK, gpio_short(EMBED_FALSE, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_GND, gpio_short(EMBED_TRUE, EMBED_FALSE));
+    TEST_ASSERT_EQUAL_INT(HW_GPIO_SHORT_VCC, gpio_short(EMBED_FALSE, EMBED_TRUE));
 }
 
 // band = expected * tol_pct / 100, and the accepted window is [expected-band, expected+band]
@@ -290,5 +290,5 @@ void test_a_missing_monitor_is_refused(void)
     TEST_ASSERT_EQUAL_INT(HW_RAIL_OK, rail_sample(NULL, 1000));
 
     spi_init(NULL, 8000000u, 1000000u, 8000000u, 1, 1);
-    TEST_ASSERT_EQUAL_UINT32(0u, spi_result(NULL, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT32(0u, spi_result(NULL, EMBED_TRUE));
 }

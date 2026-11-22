@@ -26,11 +26,10 @@
 
 #include "crypto/x509/x509_types/x509_types.h" // X509Cert: what a check is given
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Why a link was refused. A caller that only needs yes or no reads ::X509VerifyNs::ok. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_x509_status,
     PROTOCORE_X509_OK = 0,              ///< the link holds
     PROTOCORE_X509_ERR_ARGS,            ///< a certificate was not supplied
     PROTOCORE_X509_ERR_ISSUER_NAME,     ///< sec 6.1.3 (a)(4): the issuer name is not the subject above it
@@ -43,7 +42,7 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_X509_ERR_KEY_MALFORMED,   ///< the issuer's public key did not decode
     PROTOCORE_X509_ERR_SIG_MALFORMED,   ///< the signature did not decode
     PROTOCORE_X509_ERR_BAD_SIGNATURE,   ///< it decoded, and it does not verify
-} protocore_x509_status;
+);
 
 /** @brief What a signature check is given: the certificate, and the one whose key signed it. */
 typedef struct
@@ -105,7 +104,7 @@ typedef struct
     X509TimeArgs time_args;
     X509IssuerArgs issuer_args;
     X509MessageArgs message_args;
-    proto_bool ok;
+    embed_bool ok;
     protocore_x509_status status;
 } X509VerifyVars;
 
@@ -152,6 +151,6 @@ static const X509VerifyNs X509Verify __attribute__((unused)) = {
  */
 uint8_t *protocore_x509_verify_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_X509_VERIFY_H

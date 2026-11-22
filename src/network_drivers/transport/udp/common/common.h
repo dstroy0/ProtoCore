@@ -35,7 +35,7 @@
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.put / put_be / take_be over a span
 #include "shared/ip/ip.h" // protocore_ip: the address a datagram carries, network order
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Bytes a queued datagram spends on its header, ahead of the payload. */
 #define PROTOCORE_UDP_DGRAM_HDR 21u
@@ -49,7 +49,7 @@ typedef struct
 } protocore_udp_dgram;
 
 /** @brief Write the header of @p d into @p w at its cursor. */
-PROTOCORE_INLINE void protocore_udp_dgram_encode(mmgr_span *w, const protocore_udp_dgram *d)
+EMBED_INLINE void protocore_udp_dgram_encode(mmgr_span *w, const protocore_udp_dgram *d)
 {
     EMBED_CALL(byteio.put, OctetusCfg, .write_span = w, .byte = (uint8_t)d->addr.family);
     EMBED_CALL(byteio.put_be, OctetusCfg, .write_span = w, .value = d->port, .bytes = 2);
@@ -68,7 +68,7 @@ PROTOCORE_INLINE void protocore_udp_dgram_encode(mmgr_span *w, const protocore_u
  * A family byte that is neither 4 nor 6 leaves the address empty, so a caller cannot route on a
  * value the parser did not recognize.
  */
-PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_udp_dgram *d)
+EMBED_INLINE embed_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_udp_dgram *d)
 {
     uint64_t family = 0;
     uint64_t port = 0;
@@ -81,7 +81,7 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_
         !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .out = &hi, .bytes = 8) ||
         !EMBED_CALL(byteio.take_be, OctetusCfg, .read_span = r, .out = &lo, .bytes = 8))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     d->addr.family = PROTOCORE_IP_NONE;
     if (family == (uint64_t)PROTOCORE_IP_V4)
@@ -96,7 +96,7 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_
     (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = d->addr.bytes + 8, .val = lo, .width = MMGR_ENDIAN_64);
     d->port = (uint16_t)port;
     d->len = (uint16_t)len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /**
@@ -106,18 +106,18 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_decode(mmgr_cspan *r, protocore_
  * Peeks the header, consumes it, then reads exactly its payload length, so the tail always lands on
  * the next entry boundary. Reports false when the ring holds no whole entry.
  */
-PROTOCORE_INLINE proto_bool protocore_udp_dgram_take(mmgr_ring *ring, uint8_t *hdr, protocore_udp_dgram *d,
+EMBED_INLINE embed_bool protocore_udp_dgram_take(mmgr_ring *ring, uint8_t *hdr, protocore_udp_dgram *d,
                                                      uint8_t *stage, size_t stage_cap)
 {
     if (EMBED_CALL(anularis.available, AnularisCfg, .ring = ring) < PROTOCORE_UDP_DGRAM_HDR)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(anularis.peek, AnularisCfg, .ring = ring, .dst = hdr, .bytes = PROTOCORE_UDP_DGRAM_HDR, .offset = 0);
     mmgr_cspan r = {.buf = hdr, .len = PROTOCORE_UDP_DGRAM_HDR, .pos = 0, .err = EMBED_FALSE};
     if (!protocore_udp_dgram_decode(&r, d))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (d->len > stage_cap)
     {
@@ -125,17 +125,17 @@ PROTOCORE_INLINE proto_bool protocore_udp_dgram_take(mmgr_ring *ring, uint8_t *h
         // entry boundary. Drop the whole ring rather than read past one.
         EMBED_CALL(anularis.consume, AnularisCfg, .ring = ring,
                    .bytes = EMBED_CALL(anularis.available, AnularisCfg, .ring = ring));
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (EMBED_CALL(anularis.available, AnularisCfg, .ring = ring) < (PROTOCORE_UDP_DGRAM_HDR + (size_t)d->len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(anularis.consume, AnularisCfg, .ring = ring, .bytes = PROTOCORE_UDP_DGRAM_HDR);
     (void)EMBED_CALL(anularis.read, AnularisCfg, .ring = ring, .dst = stage, .bytes = d->len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_UDP_COMMON_H

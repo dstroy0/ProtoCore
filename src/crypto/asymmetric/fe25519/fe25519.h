@@ -37,7 +37,7 @@
 
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // 25519 has no dedicated ECC accelerator on any ESP32 die, so the RSA MODMULT is the field-layer win wherever
 // it exists - track the HAL's PROTOCORE_RSA_MODMUL_HW (S3, P4, ...). Classic ESP32 / native keep the software ladder.
@@ -418,7 +418,7 @@ typedef struct
     Fe25519Pow2523Args pow2523_args;
     Fe25519ParityArgs parity_args;
     Fe25519NeqArgs neq_args;
-    proto_bool ok;
+    embed_bool ok;
     int parity;
     int neq;
 } Fe25519Vars;
@@ -494,7 +494,7 @@ static const Fe25519Ns Fe25519 __attribute__((unused)) = {
 
 #endif // PROTOCORE_FE25519_MPI_HW
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FE25519
 

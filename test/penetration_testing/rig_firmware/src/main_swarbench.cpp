@@ -145,7 +145,7 @@ static void checks()
     {
         for (int j = 0; j < NH; j++)
         {
-            a += str.eq(hdrs[k], hdrs_copy[j], BCAP, PROTO_FALSE) ? 1u : 0u;
+            a += str.eq(hdrs[k], hdrs_copy[j], BCAP, EMBED_FALSE) ? 1u : 0u;
             b += (strcmp(hdrs[k], hdrs_copy[j]) == 0) ? 1u : 0u;
         }
     }
@@ -157,7 +157,7 @@ static void checks()
     {
         for (int j = 0; j < NH; j++)
         {
-            a += str.eq(hdrs[k], probes[j], BCAP, PROTO_TRUE) ? 1u : 0u;
+            a += str.eq(hdrs[k], probes[j], BCAP, EMBED_TRUE) ? 1u : 0u;
             b += (strcasecmp(hdrs[k], probes[j]) == 0) ? 1u : 0u;
         }
     }
@@ -167,16 +167,16 @@ static void checks()
     b = 0;
     for (int k = 0; k < NR; k++)
     {
-        a += str.has(routes[k], BCAP, "/:", sizeof("/:"), PROTO_FALSE) ? 1u : 0u;
+        a += str.has(routes[k], BCAP, "/:", sizeof("/:"), EMBED_FALSE) ? 1u : 0u;
         b += (strstr(routes[k], "/:") != NULL) ? 1u : 0u;
-        const char *f = str.find(routes[k], BCAP, "/:", sizeof("/:"), PROTO_FALSE);
+        const char *f = str.find(routes[k], BCAP, "/:", sizeof("/:"), EMBED_FALSE);
         const char *s = strstr(routes[k], "/:");
         a += (uint32_t)(f == NULL ? 0 : (f - routes[k]) + 1);
         b += (uint32_t)(s == NULL ? 0 : (s - routes[k]) + 1);
     }
     CHECK("has+find vs strstr", a, b);
 
-    a = (uint32_t)(uintptr_t)str.find(longhay, sizeof(longhay), "boundary=", sizeof("boundary="), PROTO_FALSE);
+    a = (uint32_t)(uintptr_t)str.find(longhay, sizeof(longhay), "boundary=", sizeof("boundary="), EMBED_FALSE);
     b = (uint32_t)(uintptr_t)strstr(longhay, "boundary=");
     CHECK("find long vs strstr", a, b);
 
@@ -309,11 +309,11 @@ static void swar_bench_task(void *)
     Serial.println("CB --- short strings (HTTP field names, 4-18 bytes) ---");
     BENCH("scan_nul", 4000, g_sink += (uint32_t)str.len(hdrs[g_i++ % NH], BCAP));
     BENCH("strnlen", 4000, g_sink += (uint32_t)strnlen(hdrs[g_i++ % NH], BCAP));
-    BENCH("eq_str", 4000, g_sink += str.eq(hdrs[g_i % NH], hdrs_copy[g_i++ % NH], BCAP, PROTO_FALSE));
+    BENCH("eq_str", 4000, g_sink += str.eq(hdrs[g_i % NH], hdrs_copy[g_i++ % NH], BCAP, EMBED_FALSE));
     BENCH("strcmp", 4000, g_sink += (strcmp(hdrs[g_i % NH], hdrs_copy[g_i++ % NH]) == 0));
-    BENCH("eq_str_ci", 4000, g_sink += str.eq(hdrs[g_i % NH], probes[g_i++ % NH], BCAP, PROTO_TRUE));
+    BENCH("eq_str_ci", 4000, g_sink += str.eq(hdrs[g_i % NH], probes[g_i++ % NH], BCAP, EMBED_TRUE));
     BENCH("strcasecmp", 4000, g_sink += (strcasecmp(hdrs[g_i % NH], probes[g_i++ % NH]) == 0));
-    BENCH("diff_ci", 4000, g_sink += (uint32_t)str.diff(hdrs[g_i % NH], probes[g_i++ % NH], 8, PROTO_TRUE));
+    BENCH("diff_ci", 4000, g_sink += (uint32_t)str.diff(hdrs[g_i % NH], probes[g_i++ % NH], 8, EMBED_TRUE));
     BENCH("strncasecmp", 4000, g_sink += (strncasecmp(hdrs[g_i % NH], probes[g_i++ % NH], 8) == 0));
     BENCH("copy", 4000, g_sink += (uint32_t)str.copy(dst, hdrs[g_i++ % NH], BCAP));
     BENCH("strncpy", 4000, g_sink += (uint32_t)(uintptr_t)strncpy(dst, hdrs[g_i++ % NH], BCAP));
@@ -323,29 +323,29 @@ static void swar_bench_task(void *)
     BENCH("strnlen long", 400, g_sink += (uint32_t)strnlen(longhay + (g_i++ & 15), 512));
     BENCH("find long", 400,
           g_sink +=
-          (uint32_t)(uintptr_t)str.find(longhay + (g_i++ & 15), 512, "boundary=", sizeof("boundary="), PROTO_FALSE));
+          (uint32_t)(uintptr_t)str.find(longhay + (g_i++ & 15), 512, "boundary=", sizeof("boundary="), EMBED_FALSE));
     BENCH("strstr long", 400, g_sink += (uint32_t)(uintptr_t)strstr(longhay + (g_i++ & 15), "boundary="));
 
     // A one-byte needle is the question scan_nul already answers, asked about a different byte, so
     // these rows are the convergence test: find should cost scan_nul plus one XOR per word. Compare
     // against "scan_nul long" above, not against strstr.
     BENCH("find 1byte long", 400,
-          g_sink += (uint32_t)(uintptr_t)str.find(longhay + (g_i++ & 15), 512, "?", sizeof("?"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(longhay + (g_i++ & 15), 512, "?", sizeof("?"), EMBED_FALSE));
     BENCH("strchr 1byte long", 400, g_sink += (uint32_t)(uintptr_t)strchr(longhay + (g_i++ & 15), '?'));
 
     // 6 bytes: one carrier word plus 2, so the needle is settled by two overlapping whole loads
     // rather than one load and a 2-byte walk. "boundary=" at 9 exceeds 2*PROTOCORE_SWAR_BYTES and does not.
     BENCH("find 6B long", 400,
           g_sink +=
-          (uint32_t)(uintptr_t)str.find(longhay + (g_i++ & 15), 512, "ndary=", sizeof("ndary="), PROTO_FALSE));
+          (uint32_t)(uintptr_t)str.find(longhay + (g_i++ & 15), 512, "ndary=", sizeof("ndary="), EMBED_FALSE));
     BENCH("strstr 6B long", 400, g_sink += (uint32_t)(uintptr_t)strstr(longhay + (g_i++ & 15), "ndary="));
 
     Serial.println("CB --- dense first byte: route path searched for \"/:\" ---");
     BENCH("find /:", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), PROTO_FALSE));
-    BENCH("has /:", 4000, g_sink += str.has(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), EMBED_FALSE));
+    BENCH("has /:", 4000, g_sink += str.has(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), EMBED_FALSE));
     BENCH("strstr /:", 4000, g_sink += (uint32_t)(uintptr_t)strstr(routes[g_i++ % NR], "/:"));
-    BENCH("has GET", 4000, g_sink += str.has(hdrs[g_i++ % NH], BCAP, "GET", sizeof("GET"), PROTO_FALSE));
+    BENCH("has GET", 4000, g_sink += str.has(hdrs[g_i++ % NH], BCAP, "GET", sizeof("GET"), EMBED_FALSE));
     BENCH("strstr GET", 4000, g_sink += (uint32_t)(uintptr_t)strstr(hdrs[g_i++ % NH], "GET"));
 
     // Needle length 1..4 over ONE corpus with ONE first byte, so density is held fixed and the only
@@ -394,17 +394,17 @@ static void swar_bench_task(void *)
     // inside each arm rather than in isolation.
     Serial.println("CB --- case-insensitive find: same dispatch, folded byte test ---");
     BENCH("find    /: (len2)", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), EMBED_FALSE));
     BENCH("find_ci /: (len2)", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), PROTO_TRUE));
+          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), EMBED_TRUE));
     BENCH("find    x (len1)", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "e", sizeof("e"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "e", sizeof("e"), EMBED_FALSE));
     BENCH("find_ci E (len1)", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "E", sizeof("E"), PROTO_TRUE));
+          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "E", sizeof("E"), EMBED_TRUE));
     BENCH("find    Content (len7)", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "Content", sizeof("Content"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "Content", sizeof("Content"), EMBED_FALSE));
     BENCH("find_ci CONTENT (len7)", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "CONTENT", sizeof("CONTENT"), PROTO_TRUE));
+          g_sink += (uint32_t)(uintptr_t)str.find(hdrs[g_i++ % NH], BCAP, "CONTENT", sizeof("CONTENT"), EMBED_TRUE));
 
     // Anchor density 1/A against needle length, everything else held fixed. "Z" is outside the
     // alphabet, so the needle cannot occur and each row is a complete 255-byte scan.
@@ -507,29 +507,29 @@ static void swar_bench_task(void *)
         char _lbl[32];
         const char *_h = dbuf[_d];
         snprintf(_lbl, sizeof(_lbl), "A=%-2u len2", (unsigned)DENS[_d]);
-        BENCH(_lbl, 400, g_sink += (uint32_t)(uintptr_t)str.find(_h, DLEN, "aa", sizeof("aa"), PROTO_FALSE));
+        BENCH(_lbl, 400, g_sink += (uint32_t)(uintptr_t)str.find(_h, DLEN, "aa", sizeof("aa"), EMBED_FALSE));
         snprintf(_lbl, sizeof(_lbl), "A=%-2u len3", (unsigned)DENS[_d]);
-        BENCH(_lbl, 400, g_sink += (uint32_t)(uintptr_t)str.find(_h, DLEN, "aaa", sizeof("aaa"), PROTO_FALSE));
+        BENCH(_lbl, 400, g_sink += (uint32_t)(uintptr_t)str.find(_h, DLEN, "aaa", sizeof("aaa"), EMBED_FALSE));
         snprintf(_lbl, sizeof(_lbl), "A=%-2u len4", (unsigned)DENS[_d]);
-        BENCH(_lbl, 400, g_sink += (uint32_t)(uintptr_t)str.find(_h, DLEN, "aaaa", sizeof("aaaa"), PROTO_FALSE));
+        BENCH(_lbl, 400, g_sink += (uint32_t)(uintptr_t)str.find(_h, DLEN, "aaaa", sizeof("aaaa"), EMBED_FALSE));
         snprintf(_lbl, sizeof(_lbl), "A=%-2u strstr2", (unsigned)DENS[_d]);
         BENCH(_lbl, 400, g_sink += (uint32_t)(uintptr_t)strstr(_h, "aa"));
     }
 
     Serial.println("CB --- needle length ladder, fixed corpus and first byte ---");
     BENCH("len1 /", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/", sizeof("/"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/", sizeof("/"), EMBED_FALSE));
     BENCH("len2 /:", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/:", sizeof("/:"), EMBED_FALSE));
     BENCH("len3 /ap", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/ap", sizeof("/ap"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/ap", sizeof("/ap"), EMBED_FALSE));
     BENCH("len4 /api", 4000,
-          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/api", sizeof("/api"), PROTO_FALSE));
+          g_sink += (uint32_t)(uintptr_t)str.find(routes[g_i++ % NR], BCAP, "/api", sizeof("/api"), EMBED_FALSE));
     BENCH("len3 strstr", 4000, g_sink += (uint32_t)(uintptr_t)strstr(routes[g_i++ % NR], "/ap"));
     BENCH("len4 strstr", 4000, g_sink += (uint32_t)(uintptr_t)strstr(routes[g_i++ % NR], "/api"));
 
     Serial.println("CB --- mismatch at byte 0 (the common dispatch case) ---");
-    BENCH("eq_str_ci miss", 4000, g_sink += str.eq(hdrs[g_i++ % NH], "zzzzzzzz", sizeof("zzzzzzzz"), PROTO_TRUE));
+    BENCH("eq_str_ci miss", 4000, g_sink += str.eq(hdrs[g_i++ % NH], "zzzzzzzz", sizeof("zzzzzzzz"), EMBED_TRUE));
     BENCH("strcasecmp miss", 4000, g_sink += (strcasecmp(hdrs[g_i++ % NH], "zzzzzzzz") == 0));
 
     Serial.printf("CB done (sink=%u, checkfail=%u)\n", (unsigned)g_sink, (unsigned)g_bad);

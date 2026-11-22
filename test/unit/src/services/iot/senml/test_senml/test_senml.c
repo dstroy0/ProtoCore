@@ -128,7 +128,7 @@ void test_integral_numbers_are_written_as_integers(void)
 {
     static const SenmlRecord PACK[2] = {
         {.name = "a", .value_kind = SENML_VALUE_NUMBER, .value = 20.0},
-        {.name = "b", .value_kind = SENML_VALUE_NUMBER, .value = -1, .has_time = PROTO_TRUE, .time = 1276020076.0},
+        {.name = "b", .value_kind = SENML_VALUE_NUMBER, .value = -1, .has_time = EMBED_TRUE, .time = 1276020076.0},
     };
     TEST_ASSERT_TRUE(json_build(PACK, 2, sizeof(g_json)) > 0);
     TEST_ASSERT_EQUAL_STRING("[{\"n\":\"a\",\"v\":20},{\"n\":\"b\",\"v\":-1,\"t\":1276020076}]", g_json);
@@ -140,8 +140,8 @@ void test_the_three_value_fields(void)
 {
     static const SenmlRecord PACK[4] = {
         {.name = "s", .value_kind = SENML_VALUE_STRING, .string_value = "hi"},
-        {.name = "t", .value_kind = SENML_VALUE_BOOLEAN, .boolean_value = PROTO_TRUE},
-        {.name = "f", .value_kind = SENML_VALUE_BOOLEAN, .boolean_value = PROTO_FALSE},
+        {.name = "t", .value_kind = SENML_VALUE_BOOLEAN, .boolean_value = EMBED_TRUE},
+        {.name = "f", .value_kind = SENML_VALUE_BOOLEAN, .boolean_value = EMBED_FALSE},
         {.base_name = "base:", .value_kind = SENML_VALUE_NONE},
     };
     TEST_ASSERT_TRUE(json_build(PACK, 4, sizeof(g_json)) > 0);
@@ -162,13 +162,13 @@ void test_cbor_table_4_integer_map_keys(void)
 {
     static const SenmlRecord PACK[1] = {{
         .base_name = "u:",
-        .has_base_time = PROTO_TRUE,
+        .has_base_time = EMBED_TRUE,
         .base_time = 1.0,
         .name = "n",
         .unit = "V",
         .value_kind = SENML_VALUE_NUMBER,
         .value = 2.0,
-        .has_time = PROTO_TRUE,
+        .has_time = EMBED_TRUE,
         .time = 3.0,
     }};
     // array(1), map(6), then the six label / value pairs in the module's field order.
@@ -189,7 +189,7 @@ void test_cbor_table_4_integer_map_keys(void)
     // String Value 3 and Boolean Value 4, with RFC 8949's true (0xf5) and false (0xf4).
     static const SenmlRecord VALUES[2] = {
         {.name = "s", .value_kind = SENML_VALUE_STRING, .string_value = "hi"},
-        {.name = "b", .value_kind = SENML_VALUE_BOOLEAN, .boolean_value = PROTO_TRUE},
+        {.name = "b", .value_kind = SENML_VALUE_BOOLEAN, .boolean_value = EMBED_TRUE},
     };
     static const uint8_t WANT_VALUES[] = {
         0x82,                  // array of two Records
@@ -232,15 +232,15 @@ void test_resolve_folds_base_name_and_base_time(void)
     static const SenmlRecord PACK[3] = {
         {
             .base_name = "urn:dev:ow:10e2073a0108006:",
-            .has_base_time = PROTO_TRUE,
+            .has_base_time = EMBED_TRUE,
             .base_time = 1276020076.001,
             .name = "voltage",
             .unit = "V",
             .value_kind = SENML_VALUE_NUMBER,
             .value = 120.1,
         },
-        {.name = "current", .value_kind = SENML_VALUE_NUMBER, .value = 1.2, .has_time = PROTO_TRUE, .time = -5},
-        {.name = "current", .value_kind = SENML_VALUE_NUMBER, .value = 1.3, .has_time = PROTO_TRUE, .time = -4},
+        {.name = "current", .value_kind = SENML_VALUE_NUMBER, .value = 1.2, .has_time = EMBED_TRUE, .time = -5},
+        {.name = "current", .value_kind = SENML_VALUE_NUMBER, .value = 1.3, .has_time = EMBED_TRUE, .time = -4},
     };
     TEST_ASSERT_EQUAL_UINT(3u, resolve(PACK, 3));
     TEST_ASSERT_TRUE(SenmlV.ok);
@@ -267,12 +267,12 @@ void test_resolve_overrides_and_absent_time(void)
         {.name = "a", .value_kind = SENML_VALUE_NUMBER, .value = 1},
         {.base_name = "x/", .name = "b", .value_kind = SENML_VALUE_NUMBER, .value = 2},
         {.base_name = "y/",
-         .has_base_time = PROTO_TRUE,
+         .has_base_time = EMBED_TRUE,
          .base_time = 100.0,
          .name = "c",
          .value_kind = SENML_VALUE_NUMBER,
          .value = 3},
-        {.name = "d", .value_kind = SENML_VALUE_NUMBER, .value = 4, .has_time = PROTO_TRUE, .time = 7},
+        {.name = "d", .value_kind = SENML_VALUE_NUMBER, .value = 4, .has_time = EMBED_TRUE, .time = 7},
     };
     TEST_ASSERT_EQUAL_UINT(4u, resolve(PACK, 4));
     TEST_ASSERT_EQUAL_STRING("a", g_resolved[0].name);

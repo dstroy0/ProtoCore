@@ -22,7 +22,7 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a header-name needle
 #include "memoria_operor/memoria_operor.h" // memor.cpy / memor.cmp: the spans a frame is assembled from and matched over
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Octets a lookup reads from its header-name needle. Sec 4.5 leaves every size limit open. */
 #define PROTOCORE_STOMP_HEADER_NAME_MAX 128
@@ -34,7 +34,7 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_STOMP_CONTENT_LENGTH_LEN 14
 
 // Append one octet's sec 4.1 form to buf[pos..cap) and advance pos. False on overflow.
-static proto_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
+static embed_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
 {
     char e0 = '\\';
     char e1;
@@ -55,56 +55,56 @@ static proto_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
     default: // one raw octet
         if (*pos + 1 > cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         buf[(*pos)++] = c;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (*pos + 2 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     buf[(*pos)++] = e0;
     buf[(*pos)++] = e1;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append the sec 4.1 form of a NUL-terminated string. False on overflow.
-static proto_bool emit_escaped_str(char *buf, size_t cap, size_t *pos, const char *s)
+static embed_bool emit_escaped_str(char *buf, size_t cap, size_t *pos, const char *s)
 {
     for (; *s; s++)
     {
         if (!emit_escaped(buf, cap, pos, *s))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Take an unsigned base-10 count from [s, s+len). False on empty, on a non-digit, or when the next
 // digit would carry the accumulator past SIZE_MAX.
-static proto_bool parse_len(const char *s, size_t len, size_t *out)
+static embed_bool parse_len(const char *s, size_t len, size_t *out)
 {
     if (len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t v = 0;
     for (size_t i = 0; i < len; i++)
     {
         if (s[i] < '0' || s[i] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (v > (SIZE_MAX - 9) / 10)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = v * 10 + (size_t)(s[i] - '0');
     }
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Octets of the line starting at start and ending at the LF at index nl, a trailing CR trimmed
@@ -127,7 +127,7 @@ void protocore_stomp_build(uint8_t *work)
     const size_t cap = StompV.buf.cap;
     const StompBuildArgs *a = &StompV.build_args;
 
-    StompV.ok = PROTO_FALSE;
+    StompV.ok = EMBED_FALSE;
     StompV.n = 0;
     if (!out || cap == 0 || !a->command || (a->header_count && (!a->header_names || !a->header_values)))
     {
@@ -196,7 +196,7 @@ void protocore_stomp_build(uint8_t *work)
     }
     out[pos++] = '\0';
     StompV.n = pos;
-    StompV.ok = PROTO_TRUE;
+    StompV.ok = EMBED_TRUE;
 }
 
 // Take one frame from the head of ns->buf.in into *ns->frame (sec 9), reporting the octets it
@@ -208,7 +208,7 @@ void protocore_stomp_parse(uint8_t *work)
     const size_t len = StompV.buf.len;
     StompFrame *f = StompV.frame;
 
-    StompV.ok = PROTO_FALSE;
+    StompV.ok = EMBED_FALSE;
     StompV.consumed = 0;
     if (!buf || !f)
     {
@@ -252,7 +252,7 @@ void protocore_stomp_parse(uint8_t *work)
 
     // *( header EOL ) up to the blank line that ends them.
     size_t content_length = 0;
-    proto_bool have_content_length = PROTO_FALSE;
+    embed_bool have_content_length = EMBED_FALSE;
     while (cur < len)
     {
         nl = cur;
@@ -298,7 +298,7 @@ void protocore_stomp_parse(uint8_t *work)
                 {
                     return;
                 }
-                have_content_length = PROTO_TRUE;
+                have_content_length = EMBED_TRUE;
             }
         }
         cur = nl + 1;
@@ -320,7 +320,7 @@ void protocore_stomp_parse(uint8_t *work)
         f->body = buf + cur;
         f->body_len = content_length;
         StompV.consumed = cur + content_length + 1;
-        StompV.ok = PROTO_TRUE;
+        StompV.ok = EMBED_TRUE;
         return;
     }
     // No content-length: the body runs to the first NULL.
@@ -336,7 +336,7 @@ void protocore_stomp_parse(uint8_t *work)
     f->body = buf + cur;
     f->body_len = b - cur;
     StompV.consumed = b + 1;
-    StompV.ok = PROTO_TRUE;
+    StompV.ok = EMBED_TRUE;
 }
 
 // Find ns->lookup.name among the frame's header entries and report its raw header-value. The walk
@@ -347,7 +347,7 @@ void protocore_stomp_header(uint8_t *work)
     const StompFrame *f = StompV.frame;
     const char *name = StompV.lookup.name;
 
-    StompV.ok = PROTO_FALSE;
+    StompV.ok = EMBED_FALSE;
     StompV.value = NULL;
     StompV.value_len = 0;
     if (!f || !name)
@@ -362,7 +362,7 @@ void protocore_stomp_header(uint8_t *work)
         {
             StompV.value = f->headers[i].value;
             StompV.value_len = f->headers[i].value_len;
-            StompV.ok = PROTO_TRUE;
+            StompV.ok = EMBED_TRUE;
             return;
         }
     }
@@ -378,7 +378,7 @@ void protocore_stomp_unescape(uint8_t *work)
     const char *src = StompV.buf.in;
     const size_t src_len = StompV.buf.len;
 
-    StompV.ok = PROTO_FALSE;
+    StompV.ok = EMBED_FALSE;
     StompV.n = 0;
     if (!dst || !src)
     {
@@ -420,13 +420,13 @@ void protocore_stomp_unescape(uint8_t *work)
         dst[pos++] = c;
     }
     StompV.n = pos;
-    StompV.ok = PROTO_TRUE;
+    StompV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 StompVars StompV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_STOMP

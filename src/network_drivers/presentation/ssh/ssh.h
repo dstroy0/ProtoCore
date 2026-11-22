@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ssh.h
@@ -45,6 +45,6 @@ uint8_t *protocore_ssh_span(void);
 /** @brief Module namespace. */
 PROTOCORE_NS SshNs Ssh PROTOCORE_UNUSED = {.conn_slot = protocore_ssh_conn_slot};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SSH_SSH_H

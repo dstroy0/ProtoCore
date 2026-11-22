@@ -45,11 +45,10 @@
 
 #if PROTOCORE_ENABLE_REDIS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The decoded type, named after the "RESP protocol description" table of first bytes. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(RespType,
     RESP_SIMPLE_STRING,   ///< Simple strings (+); the text in str/str_len
     RESP_SIMPLE_ERROR,    ///< Simple errors (-); the message in str/str_len
     RESP_INTEGER,         ///< Integers (:); the signed 64-bit value in ival
@@ -64,7 +63,7 @@ typedef enum PROTO_ENUM_PACKED
     RESP_MAP,             ///< Maps (%); count = 2 * entries
     RESP_SET,             ///< Sets (~); the element count in count
     RESP_PUSH,            ///< Pushes (>); the element count in count
-} RespType;
+);
 
 /** @brief One decoded value. Every string member points into the parsed octets; nothing is copied. */
 typedef struct
@@ -121,7 +120,7 @@ typedef struct
     RespCommandArgs command; ///< what a client sends
     RespOutArgs out;         ///< where the encoded command lands
     RespWireArgs wire;       ///< what a parse reads
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     RespReply reply;
 } RespVars;
@@ -150,7 +149,7 @@ static const RespNs Resp __attribute__((unused)) = {
     .parse_reply = protocore_resp_parse_reply,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_REDIS
 

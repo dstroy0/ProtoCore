@@ -10,7 +10,7 @@
 
 #include "network_drivers/application/web_assets/web_assets.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---- html ----
 const char PROTOCORE_DASHBOARD_PAGE[] =
@@ -184,6 +184,6 @@ const char PROTOCORE_METRICS_PROM[] =
     "heap block, in bytes.\n# TYPE protocore_max_alloc_heap_bytes gauge\nprotocore_max_alloc_heap_bytes {{max_alloc"
     "_heap}}\n";
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEB_ASSETS

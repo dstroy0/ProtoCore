@@ -53,7 +53,7 @@ void test_msnlmp_ntowfv2_worked_example(void)
     Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
 
     uint8_t owf[16];
-    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
     TEST_ASSERT_TRUE(ntlm_ok);
 
     static const uint8_t WANT[16] = {0x0c, 0x86, 0x8a, 0x40, 0x3b, 0xfd, 0x7a, 0x93,
@@ -83,7 +83,7 @@ void test_msnlmp_ntlmv2_response_and_session_base_key(void)
     uint8_t nt_hash[16];
     uint8_t owf[16];
     Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
-    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
     TEST_ASSERT_TRUE(ntlm_ok);
 
     uint8_t out[128];
@@ -128,7 +128,7 @@ void test_only_the_user_is_uppercased(void)
                                      0xa3, 0x00, 0x1e, 0xf2, 0x2e, 0xf0, 0x2e, 0x3f};
 
     uint8_t owf[16];
-    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, "user", DOMAIN_NAME, owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, "user", DOMAIN_NAME, owf);
     TEST_ASSERT_TRUE(ntlm_ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, owf, sizeof(WANT));
     ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, "USER", DOMAIN_NAME, owf);
@@ -229,7 +229,7 @@ void test_server_challenge_is_bound_into_the_proof(void)
     uint8_t nt_hash[16];
     uint8_t owf[16];
     Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
-    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
     TEST_ASSERT_TRUE(ntlm_ok);
 
     static const uint8_t OTHER_CHALLENGE[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xee};
@@ -297,7 +297,7 @@ void test_mic_flag_changes_the_response_and_fails_closed(void)
     uint8_t nt_hash[16];
     uint8_t owf[16];
     Ntlm.nt_hash(ntlm_work, PASSWORD, nt_hash);
-    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, USER, DOMAIN_NAME, owf);
     TEST_ASSERT_TRUE(ntlm_ok);
 
     uint8_t flagged[64];
@@ -388,7 +388,7 @@ void test_ntowfv2_refuses_an_oversized_name_pair(void)
     long_user[sizeof(long_user) - 1] = '\0';
 
     uint8_t owf[16];
-    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, long_user, DOMAIN_NAME, owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, long_user, DOMAIN_NAME, owf);
     TEST_ASSERT_FALSE(ntlm_ok);
 
     char at_limit[257];

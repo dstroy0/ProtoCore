@@ -13,7 +13,7 @@
 #include "services/energy/sep2/sep2.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static size_t put_i64(char *out, size_t cap, size_t at, int64_t v)
 {
@@ -99,6 +99,6 @@ size_t protocore_sep2_der_control(const char *mrid, uint32_t start, uint32_t dur
     return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = b3);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SEP2

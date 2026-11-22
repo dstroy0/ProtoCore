@@ -15,7 +15,7 @@
 #include "idemIP/checksum.h"
 #include "idemIP/ip/ipv4.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // The common three fields, at the head of every message (RFC 792)
@@ -27,8 +27,7 @@ PROTOCORE_BEGIN_DECLS
 #define IDEMIP_ICMP_HDR_LEN 4u   ///< the part every type shares
 
 /** @brief Message types RFC 792 assigns. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IdemIpIcmpType,
     IDEMIP_ICMP_ECHO_REPLY = 0, ///< "0 for echo reply message"
     IDEMIP_ICMP_DEST_UNREACHABLE = 3,
     IDEMIP_ICMP_SOURCE_QUENCH = 4,
@@ -40,7 +39,7 @@ typedef enum PROTO_ENUM_PACKED
     IDEMIP_ICMP_TIMESTAMP_REPLY = 14,
     IDEMIP_ICMP_INFO_REQUEST = 15,
     IDEMIP_ICMP_INFO_REPLY = 16,
-} IdemIpIcmpType;
+);
 
 // ---------------------------------------------------------------------------
 // Echo or Echo Reply (RFC 792), the type this end answers
@@ -55,31 +54,31 @@ typedef enum PROTO_ENUM_PACKED
 #define IDEMIP_ICMP_CODE_ECHO 0u
 
 /** @brief Type. */
-PROTOCORE_INLINE uint8_t idemip_icmp_type(const uint8_t *m)
+EMBED_INLINE uint8_t idemip_icmp_type(const uint8_t *m)
 {
     return m[IDEMIP_ICMP_OFF_TYPE];
 }
 
 /** @brief Code; its meaning depends on the type. */
-PROTOCORE_INLINE uint8_t idemip_icmp_code(const uint8_t *m)
+EMBED_INLINE uint8_t idemip_icmp_code(const uint8_t *m)
 {
     return m[IDEMIP_ICMP_OFF_CODE];
 }
 
 /** @brief Checksum as carried. */
-PROTOCORE_INLINE uint16_t idemip_icmp_cksum(const uint8_t *m)
+EMBED_INLINE uint16_t idemip_icmp_cksum(const uint8_t *m)
 {
     return idemip_rd16(m + IDEMIP_ICMP_OFF_CKSUM);
 }
 
 /** @brief Identifier (echo and echo reply). */
-PROTOCORE_INLINE uint16_t idemip_icmp_id(const uint8_t *m)
+EMBED_INLINE uint16_t idemip_icmp_id(const uint8_t *m)
 {
     return idemip_rd16(m + IDEMIP_ICMP_OFF_ID);
 }
 
 /** @brief Sequence Number (echo and echo reply). */
-PROTOCORE_INLINE uint16_t idemip_icmp_seq(const uint8_t *m)
+EMBED_INLINE uint16_t idemip_icmp_seq(const uint8_t *m)
 {
     return idemip_rd16(m + IDEMIP_ICMP_OFF_SEQ);
 }
@@ -93,7 +92,7 @@ PROTOCORE_INLINE uint16_t idemip_icmp_seq(const uint8_t *m)
  *
  * No pseudo-header: unlike UDP and TCP, this covers the message alone.
  */
-PROTOCORE_INLINE uint16_t idemip_icmp_cksum_compute(const uint8_t *m, size_t len)
+EMBED_INLINE uint16_t idemip_icmp_cksum_compute(const uint8_t *m, size_t len)
 {
     return idemip_cksum(m, len);
 }
@@ -103,6 +102,6 @@ static_assert(IDEMIP_ICMP_OFF_CKSUM + 2u == IDEMIP_ICMP_HDR_LEN,
 static_assert(IDEMIP_ICMP_OFF_SEQ + 2u == IDEMIP_ICMP_ECHO_HDR_LEN,
               "the RFC 792 echo fields must sum to the echo header length");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_ICMP_H

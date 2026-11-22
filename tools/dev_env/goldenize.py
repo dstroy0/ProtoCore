@@ -152,7 +152,7 @@ def flag_unit_results(entries, notes):
 # a return type -> the namespace member its value lands in
 RESULT = {
     "void": None,
-    "proto_bool": "ok",
+    "embed_bool": "ok",
     "int": "n",
     "size_t": "n",
     "uint32_t": "ms",
@@ -182,7 +182,7 @@ BUILTIN = {
     "int16_t",
     "int32_t",
     "int64_t",
-    "proto_bool",
+    "embed_bool",
     "protocore_span",
     "uintptr_t",
     "intptr_t",
@@ -404,10 +404,10 @@ def module_inlines(header_text):
     cia402.h, which showed up only as a link error from the suite that called them.
     """
     out, mask = [], code_mask(header_text)
-    # PROTOCORE_INLINE is `static inline` behind the always_inline attribute
+    # EMBED_INLINE is `static inline` behind the always_inline attribute
     # (config/platform/compiler_directives.h), and matching only the spelled-out form dropped
     # json.h's protocore_json_ok / _length / _c_str while eight call sites still used them.
-    for m in re.finditer(r"^(?:static\s+inline|PROTOCORE_INLINE)\b", header_text, re.M):
+    for m in re.finditer(r"^(?:static\s+inline|EMBED_INLINE)\b", header_text, re.M):
         if not mask[m.start()]:
             continue
         brace = header_text.find("{", m.end())
@@ -1348,7 +1348,7 @@ def scan_vtable(hpath):
         result = RESULT.get(ret, "value")
         if ret not in RESULT and ret.endswith("*"):
             result = "ptr"
-        rtype = "proto_bool" if result == "ok" else ret
+        rtype = "embed_bool" if result == "ok" else ret
         params = parse_params(m.group("params"))
         entries.append(
             {
@@ -1413,7 +1413,7 @@ def scan(hpath):
             result = "ptr"
         # The member's TYPE is the return type verbatim: mapping size_t onto an int member
         # narrowed a count, and mapping an enum onto uint16_t threw its name away.
-        rtype = "proto_bool" if result == "ok" else ret
+        rtype = "embed_bool" if result == "ok" else ret
         brief, pdoc, rdoc = doc_tags(doc_above(s, m.start()))
         params = parse_params(m.group("params"))
         for p in params:
@@ -1672,7 +1672,7 @@ def gen_header(spec, original):
     for e, an in args_types:
         body.append("    %s %s_args;" % (an, e["entry"]))
     body.append("")
-    body.append("    proto_bool ok;")
+    body.append("    embed_bool ok;")
     for r in results:
         if r != "ok":
             t = next((x.get("result_type", "int") for x in spec["entries"] if x["result"] == r), "int")
@@ -1725,11 +1725,11 @@ def gen_header(spec, original):
         )
         + "\n"
         + "#if %s\n\n" % spec["gate"]
-        + "PROTOCORE_BEGIN_DECLS\n\n"
+        + "EMBED_BEGIN_DECLS\n\n"
         + note
         + "\n".join(lines)
         + "\n".join(body)
-        + "\n\nPROTOCORE_END_DECLS\n\n#endif // %s\n\n#endif // %s\n" % (spec["gate"], guard)
+        + "\n\nEMBED_END_DECLS\n\n#endif // %s\n\n#endif // %s\n" % (spec["gate"], guard)
     )
 
 
@@ -2219,7 +2219,7 @@ def restructure_source(spec):
                 s = s[:ci] + s[s.index("\n", ci) + 1 :]
                 gi = s.find(gate)
             s = s[:gi] + cfg + " // the entry point: the enable gate below, and the widths\n\n" + s[gi:]
-        if "PROTOCORE_BEGIN_DECLS" not in s:
+        if "EMBED_BEGIN_DECLS" not in s:
             gi = s.find(gate)
             eol = s.index("\n", gi) + 1
             # after the gate and the includes that follow it
@@ -2229,7 +2229,7 @@ def restructure_source(spec):
                 if not m2:
                     break
                 k += m2.end()
-            s = s[:k] + "PROTOCORE_BEGIN_DECLS\n\n" + s[k:]
+            s = s[:k] + "EMBED_BEGIN_DECLS\n\n" + s[k:]
 
     # a module that called its own flat names now stages the args and calls the static entry: the
     # borrow is already in hand, so there is no span to fetch.
@@ -2378,7 +2378,7 @@ def restructure_source(spec):
     # http_parser's accessors both went that way. A source with no gate yet takes the end of the
     # file, and the shape pass below wraps it.
     end = gate_endif(s)
-    s = s[:end] + defn + "\n\nPROTOCORE_END_DECLS\n\n" + s[end:]
+    s = s[:end] + defn + "\n\nEMBED_END_DECLS\n\n" + s[end:]
     # the golden file shape is the same pass `shape` runs, so it runs here rather than being a
     # second command a conversion can forget: config alone above the gate, everything else below
     s, how = shape_text(s, p, spec.get("gate"))
@@ -2476,9 +2476,9 @@ def shape_text(s, p, gate=None):
 
     # a header opens DECLS inside the gate, so what it wraps is what the gate compiles
     decls = ""
-    if p.endswith(".h") and "PROTOCORE_BEGIN_DECLS" in moved:
-        moved = moved.replace("PROTOCORE_BEGIN_DECLS", "").strip("\n")
-        decls = "\nPROTOCORE_BEGIN_DECLS\n"
+    if p.endswith(".h") and "EMBED_BEGIN_DECLS" in moved:
+        moved = moved.replace("EMBED_BEGIN_DECLS", "").strip("\n")
+        decls = "\nEMBED_BEGIN_DECLS\n"
 
     tail = order_includes(tail)
 
@@ -3164,7 +3164,7 @@ def insert_align_asserts(src, regions):
 #   - the dispatch table is `PROTOCORE_NS` - static const - and lives in the HEADER, so every
 #     translation unit gets its own copy and gcc devirtualises the call through it.
 #   - `PROTOCORE_NS_LAYOUT` pins every member to its dispatch slot at compile time.
-#   - the @file block sits AFTER PROTOCORE_BEGIN_DECLS, and the .c has no BEGIN_DECLS at all.
+#   - the @file block sits AFTER EMBED_BEGIN_DECLS, and the .c has no BEGIN_DECLS at all.
 #
 # The work-taking shape this tree is in was a lossy encoding of exactly that signature: the args
 # struct IS the parameter list and the Vars result member IS the return type. So the conversion is
@@ -3389,7 +3389,7 @@ def entry_doc(spec, e):
         # operands object - "a call's true/false outcome" - and there is no such member now.
         r = one_line(e.get("returns") or "", 100)
         if not r:
-            r = "PROTO_TRUE on success." if e["ret"] == "proto_bool" else "The %s." % e["ret"]
+            r = "EMBED_TRUE on success." if e["ret"] == "embed_bool" else "The %s." % e["ret"]
         out.append(" * @return %s" % (r[0].upper() + r[1:] if r else r))
     out.append(" */")
     return out
@@ -3521,7 +3521,7 @@ def gen_header_ns(spec, original):
         #     mmgr_spat (*from)(uint8_t *p, size_t cap);
         #     mmgr_fspat (*read)(mmgr_spat s, size_t len);
         #
-        # against the bare `proto_bool (*update)(uint8_t *, const uint8_t *, size_t);` this
+        # against the bare `embed_bool (*update)(uint8_t *, const uint8_t *, size_t);` this
         # used to emit, where the reader has to go and find the prototype to learn what the two
         # pointers are.
         lines.append("    %s (*%s)(%s);" % (e["ret"], e["entry"], sig_params(spec, e, names=True)))
@@ -3592,12 +3592,12 @@ def gen_header_ns(spec, original):
         + "".join("#include %s\n" % h for h in spec.get("moved_includes", []) if h not in spec.get("held_includes", []))
         + "\n"
         + ("#if %s\n\n" % gate if gate else "")
-        + "PROTOCORE_BEGIN_DECLS\n\n"
+        + "EMBED_BEGIN_DECLS\n\n"
         + filedoc
         + note
         + "\n"
         + "\n".join(lines)
-        + "\n\nPROTOCORE_END_DECLS\n\n"
+        + "\n\nEMBED_END_DECLS\n\n"
         + ("#endif // %s\n\n" % gate if gate else "")
         + "#endif // %s\n" % guard
     )
@@ -3890,7 +3890,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
 
         Sha256V.hash_args.data = msg;
         Sha256V.hash_args.len = mlen;
-        Sha256V.hash_args.out = out;          ->   proto_bool sha256_ok =
+        Sha256V.hash_args.out = out;          ->   embed_bool sha256_ok =
         Sha256.hash(ECDSA_HASH(work));                 Sha256.hash(ECDSA_HASH(work), msg, mlen, out);
         if (!Sha256V.ok) { ... }                   if (!sha256_ok) { ... }
 
@@ -4198,8 +4198,8 @@ def remaining_vars_reads(spec, texts=None, roots=("src", "test", "examples", "ve
 def unwork_source(spec, write=True, text=None):
     """Give each entry in the .c its real signature back, and turn the operands into parameters.
 
-    `Sha256V.update_args.data` is the parameter `data`; `Sha256V.ok = PROTO_TRUE;` is
-    `return PROTO_TRUE;`. Where the outcome is written more than once - a default set at the top and
+    `Sha256V.update_args.data` is the parameter `data`; `Sha256V.ok = EMBED_TRUE;` is
+    `return EMBED_TRUE;`. Where the outcome is written more than once - a default set at the top and
     settled later - a local carries it, because folding the first write into a return would leave
     the function early.
     """
@@ -4286,7 +4286,7 @@ def unwork_source(spec, write=True, text=None):
                 # A local named for the outcome, so a bare `return;` still reports it.
                 body = re.sub(r"\b%s\.%s\b" % (re.escape(objv), re.escape(res)), res, body)
                 body = re.sub(r"\breturn\s*;", "return %s;" % res, body)
-                decl = "    %s %s = %s;\n" % (e["ret"], res, "PROTO_FALSE" if e["ret"] == "proto_bool" else "0")
+                decl = "    %s %s = %s;\n" % (e["ret"], res, "EMBED_FALSE" if e["ret"] == "embed_bool" else "0")
                 # The first write is the initialiser, so it does not need to be a statement too.
                 first = re.search(r"[ \t]*\b%s\b\s*=(?!=)\s*([^;]+);[ \t]*\n" % re.escape(res), body)
                 if first and not body[: first.start()].strip():
@@ -4341,8 +4341,8 @@ def unwork_source(spec, write=True, text=None):
     )
 
     # MMgr's .c files carry no BEGIN_DECLS: the header already gave the declarations linkage.
-    s = re.sub(r"^PROTOCORE_BEGIN_DECLS[ \t]*\n+", "", s, flags=re.M)
-    s = re.sub(r"\n*^PROTOCORE_END_DECLS[ \t]*\n", "\n", s, flags=re.M)
+    s = re.sub(r"^EMBED_BEGIN_DECLS[ \t]*\n+", "", s, flags=re.M)
+    s = re.sub(r"\n*^EMBED_END_DECLS[ \t]*\n", "\n", s, flags=re.M)
 
     # The enable gate around the whole translation unit goes, unless it names hardware. CMake
     # already decides whether this file is compiled; gating it as well compiles it to nothing

@@ -19,7 +19,7 @@
 
 #include "crypto/ct_eq/ct_eq.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -27,19 +27,19 @@ PROTOCORE_BEGIN_DECLS
 void protocore_ct_eq_eq(uint8_t *work)
 {
     (void)work;
-    CtEqV.ok = PROTO_FALSE;
-    CtEqV.equal = PROTO_FALSE;
+    CtEqV.ok = EMBED_FALSE;
+    CtEqV.equal = EMBED_FALSE;
     if (!CtEqV.eq_args.a || !CtEqV.eq_args.b)
     {
         return;
     }
     CtEqV.equal = protocore_ct_eq(CtEqV.eq_args.a, CtEqV.eq_args.b, CtEqV.eq_args.n);
-    CtEqV.ok = PROTO_TRUE;
+    CtEqV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 CtEqVars CtEqV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CT_EQ

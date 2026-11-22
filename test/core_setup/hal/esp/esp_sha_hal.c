@@ -31,7 +31,7 @@ static HalShaCtx s_sha = {NULL, portMUX_INITIALIZER_UNLOCKED};
 
 // Is the accelerator already clocked? Reads clock-domain registers only, which are always accessible
 // even when the SHA block itself is unclocked.
-static proto_bool sha_is_up(void)
+static embed_bool sha_is_up(void)
 {
     return (PROTOCORE_HW_RD(PROTOCORE_SHA_CLK_REG) & PROTOCORE_SHA_CLK_BIT) != 0u;
 }

@@ -23,7 +23,7 @@
 // ---------------------------------------------------------------------------
 // Node identifiers (namespace PROTOCORE_UMATI_NS). Objects end in 0; their variables count up from it.
 // ---------------------------------------------------------------------------
-static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
+enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids used as bare uint32_t (arithmetic +
                        // wire compares); enum class would force a cast at every use
 {
     MACHINETOOL = 5000,
@@ -70,7 +70,7 @@ static enum : uint32_t // NOSONAR(cpp:S3642): anonymous table of OPC-UA node ids
 // The ObjectTypes Opc.Ua.MachineTool.NodeSet2.xml publishes for the containers above, at their ids
 // in the MachineTool namespace. ElementMonitoringType is what MonitoringType's <MonitoredElement>
 // placeholder is typed, which is the nearest published base for an axis.
-static enum : uint32_t // NOSONAR(cpp:S3642): as above, node ids used as bare uint32_t
+enum : uint32_t // NOSONAR(cpp:S3642): as above, node ids used as bare uint32_t
 {
     MT_NOTIFICATION_TYPE = 7,
     MT_IDENTIFICATION_TYPE = 11,
@@ -134,7 +134,7 @@ static void set_f64(OpcUaVariant *o, double v)
     o->type = OPCUA_VAR_DOUBLE;
     o->f64 = v;
 }
-static void set_bool(OpcUaVariant *o, proto_bool v)
+static void set_bool(OpcUaVariant *o, embed_bool v)
 {
     o->type = OPCUA_VAR_BOOL;
     o->b = v;
@@ -152,7 +152,7 @@ static int32_t add_ref(const UmatiCtx *c, OpcUaReference *out, int32_t n, uint32
     }
     OpcUaReference *r = &out[n];
     r->ref_type_id = ref_type;
-    r->is_forward = PROTO_TRUE;
+    r->is_forward = EMBED_TRUE;
     r->target_ns = c->ns;
     r->target_id = target_id;
     r->browse_name_ns = c->ns;
@@ -229,7 +229,7 @@ void protocore_umati_bind(uint8_t *work, const UmatiMachineTool *mt)
 
 // OPC UA Part 4 sec 5.11.2: Read is a Server service over the Server's AddressSpace, so this is the
 // server's OpcUaReadHandler contract rather than an entry of this module's own.
-static proto_bool umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+static embed_bool umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
@@ -237,86 +237,86 @@ static proto_bool umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUa
     const UmatiMachineTool *mt = UMATI_CTX(work)->mt;
     if (!mt || ns != UMATI_CTX(work)->ns || attribute != OPCUA_ATTR_VALUE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     switch (id)
     {
     // Identification
     case ID_MANUFACTURER:
         set_str(out, mt->ident.manufacturer);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ID_MODEL:
         set_str(out, mt->ident.model);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ID_SERIAL:
         set_str(out, mt->ident.serial_number);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ID_YEAR:
         set_u32(out, mt->ident.year_of_construction);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ID_SWREV:
         set_str(out, mt->ident.software_revision);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case ID_PRODURI:
         set_str(out, mt->ident.product_instance_uri);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Monitoring / MachineTool
     case MON_OPMODE:
         set_i32(out, (int32_t)mt->operation_mode);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MON_POWERON:
         set_f64(out, mt->power_on_duration_s);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Monitoring / Channel
     case CH_STATE:
         set_i32(out, (int32_t)mt->channel.state);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case CH_FEEDOVR:
         set_f64(out, mt->channel.feed_override);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case CH_RAPIDOVR:
         set_f64(out, mt->channel.rapid_override);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case CH_ACTIVEPROG:
         set_str(out, mt->channel.active_program);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Monitoring / Spindle
     case SP_SPEED:
         set_f64(out, mt->spindle.rotation_speed);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case SP_OVERRIDE:
         set_f64(out, mt->spindle.override_value);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case SP_ROTATING:
         set_bool(out, mt->spindle.is_rotating);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Monitoring / Axes
     case AX_X_POS:
         set_f64(out, mt->axis_x.actual_position);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AX_Y_POS:
         set_f64(out, mt->axis_y.actual_position);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AX_Z_POS:
         set_f64(out, mt->axis_z.actual_position);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Production. ActiveProgram is an Object, so it has no value of its own: the program string is
     // its Name property, which is where ProductionActiveProgramType puts it.
     case PROD_ACTIVEPROG_NAME:
         set_str(out, mt->active_program);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case PROD_PARTCOUNT:
         set_u32(out, mt->produced_part_count);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Notification
     case NOTIF_MESSAGE:
         set_str(out, mt->message_text);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case NOTIF_SEVERITY:
         set_u32(out, mt->message_severity);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     default:
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 }
 

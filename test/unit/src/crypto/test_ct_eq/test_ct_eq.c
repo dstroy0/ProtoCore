@@ -28,7 +28,7 @@ void tearDown(void)
 // The entry reads nothing out of the borrow, but it takes one like every other entry does.
 static uint8_t g_ws[64] __attribute__((aligned(8)));
 
-static proto_bool eq(const void *a, const void *b, size_t n)
+static embed_bool eq(const void *a, const void *b, size_t n)
 {
     CtEqV.eq_args.a = a;
     CtEqV.eq_args.b = b;

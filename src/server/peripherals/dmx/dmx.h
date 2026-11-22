@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_DMX
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -252,7 +252,7 @@ typedef struct
     DmxRdmBuildDiscResponseArgs rdm_build_disc_response_args;
     DmxRdmBuildDeviceInfoArgs rdm_build_device_info_args;
     DmxRdmParseDeviceInfoArgs rdm_parse_device_info_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint8_t u8;
     uint64_t uid;
@@ -307,7 +307,7 @@ static const DmxNs Dmx __attribute__((unused)) = {
     .rdm_parse_device_info = protocore_dmx_rdm_parse_device_info,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DMX
 

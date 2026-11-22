@@ -16,7 +16,7 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 #include "endian/endian.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 uint16_t protocore_c37118_crc(const uint8_t *data, size_t len)
 {
@@ -66,27 +66,27 @@ size_t protocore_c37118_build_command(uint8_t *buf, size_t cap, uint16_t idcode,
                                         2);
 }
 
-proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Frame *out)
+embed_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Frame *out)
 {
     if (!buf || !out || len < C37118_MIN_FRAME)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (buf[0] != C37118_SYNC_LEADER)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint16_t framesize = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 2, .width = MMGR_ENDIAN_16);
     if (framesize < C37118_MIN_FRAME || framesize > len)
     {
-        return PROTO_FALSE; // out of range / not fully buffered
+        return EMBED_FALSE; // out of range / not fully buffered
     }
     uint16_t want = protocore_c37118_crc(buf, (size_t)framesize - 2);
     uint16_t got =
         (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + framesize - 2, .width = MMGR_ENDIAN_16);
     if (want != got)
     {
-        return PROTO_FALSE; // CHK mismatch
+        return EMBED_FALSE; // CHK mismatch
     }
     out->type = (uint8_t)((buf[1] >> C37118_TYPE_SHIFT) & C37118_TYPE_MASK);
     out->version = (uint8_t)(buf[1] & C37118_VERSION_MASK);
@@ -96,27 +96,27 @@ proto_bool protocore_c37118_parse_frame(const uint8_t *buf, size_t len, C37118Fr
     out->fracsec = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 10, .width = MMGR_ENDIAN_32);
     out->data = buf + 14;
     out->data_len = (size_t)framesize - C37118_MIN_FRAME;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd)
+embed_bool protocore_c37118_parse_command(const C37118Frame *f, uint16_t *cmd)
 {
     if (!f || f->type != C37118_TYPE_CMD || f->data_len < 2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (cmd)
     {
         *cmd = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = f->data, .width = MMGR_ENDIAN_16);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out)
+embed_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out)
 {
     if (!f || !out || f->type != C37118_TYPE_DATA || f->data_len < 2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // STAT is the first word of the data payload, big-endian
     uint16_t s = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = f->data, .width = MMGR_ENDIAN_16);
@@ -131,9 +131,9 @@ proto_bool protocore_c37118_decode_stat(const C37118Frame *f, C37118Stat *out)
     out->time_quality = (uint8_t)((s >> 6) & 0x07u);  // bits 8-6
     out->unlocked_time = (uint8_t)((s >> 4) & 0x03u); // bits 5-4
     out->trigger_reason = (uint8_t)(s & 0x0Fu);       // bits 3-0
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_C37118

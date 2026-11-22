@@ -321,39 +321,39 @@ void test_invalid_identifiers_and_fields(void)
 // The explicit-message header octet is FRAG | XID | MAC id, with the MAC clipped to its 6 bits.
 void test_message_header_octet(void)
 {
-    DevicenetV.msg_header_args.frag = PROTO_FALSE;
-    DevicenetV.msg_header_args.xid = PROTO_FALSE;
+    DevicenetV.msg_header_args.frag = EMBED_FALSE;
+    DevicenetV.msg_header_args.xid = EMBED_FALSE;
     DevicenetV.msg_header_args.mac_id = 0;
     Devicenet.msg_header(devicenet_work);
     TEST_ASSERT_EQUAL_HEX8(0x00u, DevicenetV.value);
-    DevicenetV.msg_header_args.frag = PROTO_FALSE;
-    DevicenetV.msg_header_args.xid = PROTO_FALSE;
+    DevicenetV.msg_header_args.frag = EMBED_FALSE;
+    DevicenetV.msg_header_args.xid = EMBED_FALSE;
     DevicenetV.msg_header_args.mac_id = 5;
     Devicenet.msg_header(devicenet_work);
     TEST_ASSERT_EQUAL_HEX8(0x05u, DevicenetV.value);
-    DevicenetV.msg_header_args.frag = PROTO_FALSE;
-    DevicenetV.msg_header_args.xid = PROTO_TRUE;
+    DevicenetV.msg_header_args.frag = EMBED_FALSE;
+    DevicenetV.msg_header_args.xid = EMBED_TRUE;
     DevicenetV.msg_header_args.mac_id = 5;
     Devicenet.msg_header(devicenet_work);
     TEST_ASSERT_EQUAL_HEX8(0x45u, DevicenetV.value);
-    DevicenetV.msg_header_args.frag = PROTO_TRUE;
-    DevicenetV.msg_header_args.xid = PROTO_FALSE;
+    DevicenetV.msg_header_args.frag = EMBED_TRUE;
+    DevicenetV.msg_header_args.xid = EMBED_FALSE;
     DevicenetV.msg_header_args.mac_id = 5;
     Devicenet.msg_header(devicenet_work);
     TEST_ASSERT_EQUAL_HEX8(0x85u, DevicenetV.value);
-    DevicenetV.msg_header_args.frag = PROTO_TRUE;
-    DevicenetV.msg_header_args.xid = PROTO_TRUE;
+    DevicenetV.msg_header_args.frag = EMBED_TRUE;
+    DevicenetV.msg_header_args.xid = EMBED_TRUE;
     DevicenetV.msg_header_args.mac_id = 5;
     Devicenet.msg_header(devicenet_work);
     TEST_ASSERT_EQUAL_HEX8(0xC5u, DevicenetV.value);
-    DevicenetV.msg_header_args.frag = PROTO_FALSE;
-    DevicenetV.msg_header_args.xid = PROTO_FALSE;
+    DevicenetV.msg_header_args.frag = EMBED_FALSE;
+    DevicenetV.msg_header_args.xid = EMBED_FALSE;
     DevicenetV.msg_header_args.mac_id = 63;
     Devicenet.msg_header(devicenet_work);
     TEST_ASSERT_EQUAL_HEX8(0x3Fu, DevicenetV.value);
     // A MAC id wider than six bits cannot reach the flag bits.
-    DevicenetV.msg_header_args.frag = PROTO_FALSE;
-    DevicenetV.msg_header_args.xid = PROTO_FALSE;
+    DevicenetV.msg_header_args.frag = EMBED_FALSE;
+    DevicenetV.msg_header_args.xid = EMBED_FALSE;
     DevicenetV.msg_header_args.mac_id = 0xFF;
     Devicenet.msg_header(devicenet_work);
     TEST_ASSERT_EQUAL_HEX8(0x3Fu, DevicenetV.value);
@@ -476,7 +476,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_TRUE;
+    DevicenetV.build_fragment_args.xid = EMBED_TRUE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
     DevicenetV.build_fragment_args.frag_count = 0;
     DevicenetV.build_fragment_args.data = SIX;
@@ -493,7 +493,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_LAST;
     DevicenetV.build_fragment_args.frag_count = 3;
     DevicenetV.build_fragment_args.data = SIX;
@@ -509,7 +509,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
     DevicenetV.build_fragment_args.frag_count = 0;
     DevicenetV.build_fragment_args.data = SEVEN;
@@ -520,7 +520,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = 0x10u;
     DevicenetV.build_fragment_args.frag_count = 0;
     DevicenetV.build_fragment_args.data = SIX;
@@ -531,7 +531,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
     DevicenetV.build_fragment_args.frag_count = 64;
     DevicenetV.build_fragment_args.data = SIX;
@@ -542,7 +542,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
     DevicenetV.build_fragment_args.frag_count = 0;
     DevicenetV.build_fragment_args.data = NULL;
@@ -553,7 +553,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
     DevicenetV.build_fragment_args.frag_count = 0;
     DevicenetV.build_fragment_args.data = SIX;
@@ -564,7 +564,7 @@ void test_fragment_frame_layout(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 8;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
     DevicenetV.build_fragment_args.frag_count = 0;
     DevicenetV.build_fragment_args.data = SIX;
@@ -632,7 +632,7 @@ void test_fragmented_message_reassembly(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_FIRST;
     DevicenetV.build_fragment_args.frag_count = 0;
     DevicenetV.build_fragment_args.data = SRC;
@@ -651,7 +651,7 @@ void test_fragmented_message_reassembly(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_MIDDLE;
     DevicenetV.build_fragment_args.frag_count = 1;
     DevicenetV.build_fragment_args.data = SRC + 6;
@@ -669,7 +669,7 @@ void test_fragmented_message_reassembly(void)
     DevicenetV.build_fragment_args.group = DEVICENET_GROUP_2;
     DevicenetV.build_fragment_args.msg_id = 4;
     DevicenetV.build_fragment_args.mac_id = 5;
-    DevicenetV.build_fragment_args.xid = PROTO_FALSE;
+    DevicenetV.build_fragment_args.xid = EMBED_FALSE;
     DevicenetV.build_fragment_args.frag_type = DEVICENET_FRAG_LAST;
     DevicenetV.build_fragment_args.frag_count = 2;
     DevicenetV.build_fragment_args.data = SRC + 12;

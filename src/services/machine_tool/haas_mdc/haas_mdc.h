@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_HAAS_MDC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Default Haas MDC TCP port (Setting 143 "Machine Data Collect"). */
 #define PROTOCORE_HAAS_MDC_TCP_PORT 5051
@@ -82,13 +82,13 @@ typedef struct
 /** @brief The decoded Q500 (program + run status + parts) response. */
 typedef struct
 {
-    proto_bool busy;     ///< true when the control returned `STATUS, BUSY` (no program/parts available)
+    embed_bool busy;     ///< true when the control returned `STATUS, BUSY` (no program/parts available)
     const char *program; ///< selected program (`Oxxxxx` or a name); NULL when @ref busy
     size_t program_len;
     const char *status; ///< run-status token (IDLE / FEED HOLD / ALARM / ...); `BUSY` when @ref busy
     size_t status_len;
     uint32_t parts;         ///< parts counter (valid only when @ref parts_valid)
-    proto_bool parts_valid; ///< false when @ref busy or the parts field was absent / non-numeric
+    embed_bool parts_valid; ///< false when @ref busy or the parts field was absent / non-numeric
 } HaasMdcStatus;
 
 /**
@@ -112,25 +112,25 @@ size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var);
  * @return true if a complete `STX ... ETB` frame with at least one field was found; false otherwise
  *         (no frame yet - the caller should accumulate more bytes).
  */
-proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out);
+embed_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out);
 
 /**
  * @brief Random-access a parsed field. @p p / @p l receive a pointer into the original buffer + length.
  * @return true if @p idx < n_fields.
  */
-proto_bool protocore_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l);
+embed_bool protocore_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l);
 
 /**
  * @brief The value of a simple `LABEL, value` response - field[1] (e.g. the serial for Q100, the
  *        version for Q101, the mode token for Q104).
  * @return true if the response has at least two fields.
  */
-proto_bool protocore_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l);
+embed_bool protocore_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l);
 
 /**
  * @brief True if the response is the control's `UNKNOWN` error (an unsupported / lowercase command).
  */
-proto_bool protocore_haas_mdc_is_error(const HaasMdcResp *r);
+embed_bool protocore_haas_mdc_is_error(const HaasMdcResp *r);
 
 /**
  * @brief Decode a Q500 response into @ref HaasMdcStatus, handling both branches: `PROGRAM, Oxxxxx,
@@ -138,7 +138,7 @@ proto_bool protocore_haas_mdc_is_error(const HaasMdcResp *r);
  *        HaasMdcStatus::busy). All string members point into the parsed buffer.
  * @return true if the response is a recognizable Q500 form; false otherwise.
  */
-proto_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
+embed_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out);
 
 /**
  * @brief Decode a Q600 response `MACRO, <var>, <value>`. @p var receives the variable number; @p value
@@ -146,7 +146,7 @@ proto_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *
  *        on the wire; exposed as text so the caller keeps full precision without a float parse).
  * @return true on a well-formed `MACRO, ...` response with a numeric variable field.
  */
-proto_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len);
+embed_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len);
 
 /**
  * @brief Extract an unprompted `DPRNT(...)` line pushed by a running program: a raw ASCII text line
@@ -156,9 +156,9 @@ proto_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, c
  * @return true for a non-empty pushed line; false if @p buf contains an STX (it is a framed Q
  *         response, not DPRNT) or is empty after stripping.
  */
-proto_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);
+embed_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HAAS_MDC
 

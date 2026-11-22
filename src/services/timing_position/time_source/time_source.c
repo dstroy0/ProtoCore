@@ -15,14 +15,14 @@
 
 static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 typedef struct
 {
     const char *name;
     TimeSourceFn fn;
     uint8_t priority;
-    proto_bool used;
+    embed_bool used;
 } Src;
 
 // All time-source state, owned by one instance (internal linkage): the priority-ordered
@@ -34,11 +34,11 @@ typedef struct
 } TimeSourceCtx;
 static TimeSourceCtx s_ts;
 
-proto_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
+embed_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
 {
     if (!fn)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (int i = 0; i < PROTOCORE_TIME_SOURCE_MAX; i++)
     {
@@ -47,11 +47,11 @@ proto_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSou
             s_ts.sources[i].name = name;
             s_ts.sources[i].fn = fn;
             s_ts.sources[i].priority = priority;
-            s_ts.sources[i].used = PROTO_TRUE;
-            return PROTO_TRUE;
+            s_ts.sources[i].used = EMBED_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE; // table full
+    return EMBED_FALSE; // table full
 }
 
 uint32_t protocore_time_now(void)
@@ -110,12 +110,12 @@ void protocore_time_source_reset(void)
 
 #else // PROTOCORE_ENABLE_TIME_SOURCE == 0 -> no-op stubs
 
-proto_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
+embed_bool protocore_time_source_add(const char *name, uint8_t priority, TimeSourceFn fn)
 {
     (void)name;
     (void)priority;
     (void)fn;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 uint32_t protocore_time_now(void)
 {
@@ -129,6 +129,6 @@ void protocore_time_source_reset(void)
 {
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TIME_SOURCE

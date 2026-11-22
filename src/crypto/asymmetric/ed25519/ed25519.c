@@ -145,21 +145,21 @@ static void ed_reduce(uint8_t r[64])
 // True iff the little-endian 32-byte scalar S is canonical (0 <= S < L). RFC 8032 §5.1.7 requires this:
 // S and S+L both satisfy the group equation (L*B is the identity), so without the range check the signature
 // is malleable. Verification operates only on public data, so a plain compare from the top byte down is fine.
-static proto_bool ed_scalar_canonical(const uint8_t s[32])
+static embed_bool ed_scalar_canonical(const uint8_t s[32])
 {
     for (int i = 31; i >= 0; i--)
     {
         uint8_t li = (uint8_t)ED_L[i];
         if (s[i] < li)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         if (s[i] > li)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_FALSE; // S == L is out of range
+    return EMBED_FALSE; // S == L is out of range
 }
 
 #if PROTOCORE_FE25519_MPI_HW
@@ -393,7 +393,7 @@ static void ed_scalarbase_bytes(uint8_t out[32], const uint8_t s[32])
 }
 
 // out = pack(S*B - h*A); false if the public key A does not decode to a curve point.
-static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], const uint8_t h[32], const uint8_t pub[32])
+static embed_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], const uint8_t h[32], const uint8_t pub[32])
 {
     fe p[4];
     fe q[4];
@@ -402,14 +402,14 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
     if (edf_unpackneg(q, pub) != 0) // q = -A
     {
         protocore_fe_hw_disable();
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     edf_scalarmult(p, q, h); // p = h * (-A)
     edf_scalarbase(sb, S);   // sb = S * B
     edf_add(p, sb);          // p = S*B - h*A
     edf_pack(out, p);
     protocore_fe_hw_disable();
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 #endif
 
@@ -607,20 +607,20 @@ static void ed_scalarbase_bytes(uint8_t out[32], const uint8_t s[32])
 }
 
 // out = pack(S*B - h*A); false if the public key A does not decode to a curve point.
-static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], const uint8_t h[32], const uint8_t pub[32])
+static embed_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], const uint8_t h[32], const uint8_t pub[32])
 {
     protocore_gf p[4];
     protocore_gf q[4];
     protocore_gf sb[4];
     if (ed_unpackneg(q, pub) != 0) // q = -A
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     ed_scalarmult(p, q, h); // p = h * (-A)
     ed_scalarbase(sb, S);   // sb = S * B
     ed_add(p, sb);          // p = S*B - h*A
     ed_pack(out, p);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 #endif // !PROTOCORE_FE25519_MPI_HW (SW path)
 
@@ -651,22 +651,22 @@ static void ed_challenge(uint8_t *work, const uint8_t *sig_r, const uint8_t *pub
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_ed25519_pubkey(uint8_t *work, const uint8_t *seed, uint8_t *pub)
+embed_bool protocore_ed25519_pubkey(uint8_t *work, const uint8_t *seed, uint8_t *pub)
 {
     if (!seed || !pub)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     ed_expand_seed(work, seed);
     ed_scalarbase_bytes(pub, ED25519_CTX(work)->d);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ed25519_sign(uint8_t *work, const uint8_t *seed, const uint8_t *msg, size_t msg_len, uint8_t *sig)
+embed_bool protocore_ed25519_sign(uint8_t *work, const uint8_t *seed, const uint8_t *msg, size_t msg_len, uint8_t *sig)
 {
     if (!seed || !sig)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     Ed25519Ctx *ctx = ED25519_CTX(work);
     uint8_t *sha = ED25519_SHA(work);
@@ -706,13 +706,13 @@ proto_bool protocore_ed25519_sign(uint8_t *work, const uint8_t *seed, const uint
         }
     }
     ed_modL(sig + 32, ctx->x); // sig[32..63] = S
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t msg_len,
+embed_bool protocore_ed25519_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t msg_len,
                                     const uint8_t *sig)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     if (!pub || !sig)
     {
         return ok;
@@ -732,7 +732,7 @@ proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t *pub, const uin
     }
     if (ct_verify32(sig, ctx->t) == 0) // R == S*B - h*A ?
     {
-        ok = PROTO_TRUE;
+        ok = EMBED_TRUE;
     }
     return ok;
 }

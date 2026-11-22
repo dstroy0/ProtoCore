@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ntlm.h
@@ -41,7 +41,7 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     void (*nt_hash)(uint8_t *, const char *, uint8_t *);
-    proto_bool (*ntowfv2)(uint8_t *, const uint8_t *, const char *, const char *, uint8_t *);
+    embed_bool (*ntowfv2)(uint8_t *, const uint8_t *, const char *, const char *, uint8_t *);
     size_t (*v2_response)(uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *,
                           const uint8_t *, size_t, uint8_t *, size_t, uint8_t *);
     size_t (*set_mic_flag)(uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
@@ -64,9 +64,9 @@ void protocore_ntlm_nt_hash(uint8_t *work, const char *password, uint8_t *nt_has
  * @param user User
  * @param domain Domain
  * @param owf 16 bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
+embed_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
                                   uint8_t *owf);
 /**
  * @brief Compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the .
@@ -118,6 +118,6 @@ PROTOCORE_NS NtlmNs Ntlm PROTOCORE_UNUSED = {.nt_hash = protocore_ntlm_nt_hash,
                                              .set_mic_flag = protocore_ntlm_set_mic_flag,
                                              .mic = protocore_ntlm_mic};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NTLM_H

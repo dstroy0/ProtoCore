@@ -31,7 +31,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Inbound: the stack's address, and the library address it lands in. */
 typedef struct
@@ -70,7 +70,7 @@ typedef struct
     NetAddrInArgs in;   ///< what a read carries across
     NetAddrOutArgs out; ///< what a write carries across
 
-    proto_bool ok;
+    embed_bool ok;
 
     void (*const to_ip)(uint8_t *work);
     void (*const from_ip)(uint8_t *work);
@@ -83,8 +83,8 @@ extern NetAddrNs NetAddr;
 void protocore_net_addr_to_ip(const protocore_net_ip *a, protocore_ip *out);
 
 /** @brief Write @p a into the stack's own address type; false when it cannot be represented. */
-proto_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *out);
+embed_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NET_ADDR_H

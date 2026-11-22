@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_HKDF_SHA384
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief HKDF-SHA384 output block length (== SHA-384 digest length). */
 #define PROTOCORE_HKDF_SHA384_HASH_LEN 48
@@ -124,7 +124,7 @@ typedef struct
     HkdfSha384ExpandArgs expand_args;
     HkdfSha384ExpandLabelArgs expand_label_args;
     HkdfSha384ExpandLabelCtxArgs expand_label_ctx_args;
-    proto_bool ok;
+    embed_bool ok;
 } HkdfSha384Vars;
 
 /** @brief The operands and the outcome. */
@@ -157,7 +157,7 @@ static const HkdfSha384Ns HkdfSha384 __attribute__((unused)) = {
     .expand_label_ctx = protocore_hkdf_sha384_expand_label_ctx,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HKDF_SHA384
 

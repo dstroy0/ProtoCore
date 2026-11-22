@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file comp.h
@@ -22,12 +22,11 @@ PROTOCORE_BEGIN_DECLS
 // combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @brief Negotiated compression algorithm, held per direction. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SshCompAlg,
     SSH_COMP_NONE = 0,        ///< no compression
     SSH_COMP_ZLIB = 1,        ///< "zlib" (RFC 4253) - starts right after NEWKEYS
     SSH_COMP_ZLIB_DELAYED = 2 ///< "zlib@openssh.com" - starts after SSH_MSG_USERAUTH_SUCCESS
-} SshCompAlg;
+);
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
@@ -36,10 +35,10 @@ typedef struct
     void (*set_s2c)(uint8_t *, uint8_t, SshCompAlg);
     void (*on_newkeys)(uint8_t *, uint8_t);
     void (*on_auth_success)(uint8_t *, uint8_t);
-    proto_bool (*s2c_active)(uint8_t *, uint8_t);
+    embed_bool (*s2c_active)(uint8_t *, uint8_t);
     int (*s2c)(uint8_t *, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
     void (*set_c2s)(uint8_t *, uint8_t, SshCompAlg);
-    proto_bool (*c2s_active)(uint8_t *, uint8_t);
+    embed_bool (*c2s_active)(uint8_t *, uint8_t);
     int (*c2s)(uint8_t *, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
 } CompNs;
 PROTOCORE_NS_LAYOUT(CompNs, reset, set_s2c, on_newkeys, on_auth_success, s2c_active, s2c, set_c2s, c2s_active, c2s);
@@ -73,9 +72,9 @@ void protocore_comp_on_auth_success(uint8_t *work, uint8_t i);
  * @brief True once the s2c stream is active and outbound payloads must be .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_comp_s2c_active(uint8_t *work, uint8_t i);
+embed_bool protocore_comp_s2c_active(uint8_t *work, uint8_t i);
 /**
  * @brief Compress one outbound payload, continuing the session's zlib stream.
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
@@ -100,9 +99,9 @@ void protocore_comp_set_c2s(uint8_t *work, uint8_t i, SshCompAlg alg);
  * @brief True once the c2s stream is active and inbound payloads must be .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
  * @param i I
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_comp_c2s_active(uint8_t *work, uint8_t i);
+embed_bool protocore_comp_c2s_active(uint8_t *work, uint8_t i);
 /**
  * @brief Decompress one inbound payload, continuing the session's .
  * @param work PROTOCORE_COMP_BORROW bytes the caller took. Not held past the call.
@@ -141,6 +140,6 @@ PROTOCORE_NS CompNs Comp PROTOCORE_UNUSED = {.reset = protocore_comp_reset,
                                              .c2s_active = protocore_comp_c2s_active,
                                              .c2s = protocore_comp_c2s};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TRANSPORT_COMP_H

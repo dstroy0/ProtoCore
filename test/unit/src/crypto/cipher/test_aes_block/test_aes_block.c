@@ -142,7 +142,7 @@ void test_null_operands_are_refused(void)
     uint8_t out[16];
     memset(out, 0x5A, sizeof(out));
 
-    proto_bool aes_block_ok = AesBlock.key_expand(g_ws, NULL, 4, rk);
+    embed_bool aes_block_ok = AesBlock.key_expand(g_ws, NULL, 4, rk);
     TEST_ASSERT_FALSE(aes_block_ok);
 
     aes_block_ok = AesBlock.encrypt_block(g_ws, NULL, 10, PT, out);

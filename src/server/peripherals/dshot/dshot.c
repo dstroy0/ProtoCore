@@ -12,10 +12,10 @@
 
 #include "server/peripherals/dshot/dshot.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The DShot CRC: xor of the three 4-bit nibbles of the 12-bit (value<<1 | telemetry) word.
-static uint8_t dshot_crc(uint16_t v12, proto_bool bidirectional)
+static uint8_t dshot_crc(uint16_t v12, embed_bool bidirectional)
 {
     uint8_t crc = (uint8_t)((v12 ^ (v12 >> 4) ^ (v12 >> 8)) & 0x0F);
     if (bidirectional)
@@ -34,8 +34,8 @@ void protocore_dshot_encode(uint8_t *work)
 {
     (void)work;
     uint16_t value11 = DshotV.encode_args.value11;
-    proto_bool telemetry = DshotV.encode_args.telemetry;
-    proto_bool bidirectional = DshotV.encode_args.bidirectional;
+    embed_bool telemetry = DshotV.encode_args.telemetry;
+    embed_bool bidirectional = DshotV.encode_args.bidirectional;
 
     value11 &= 0x07FF; // 11-bit value field
     uint16_t v12 = (uint16_t)((value11 << 1) | (telemetry ? 1 : 0));
@@ -48,14 +48,14 @@ void protocore_dshot_decode(uint8_t *work)
     (void)work;
     uint16_t frame = DshotV.decode_args.frame;
     uint16_t *value11 = DshotV.decode_args.value11;
-    proto_bool *telemetry = DshotV.decode_args.telemetry;
-    proto_bool bidirectional = DshotV.decode_args.bidirectional;
+    embed_bool *telemetry = DshotV.decode_args.telemetry;
+    embed_bool bidirectional = DshotV.decode_args.bidirectional;
 
     uint16_t v12 = (uint16_t)(frame >> 4);
     uint8_t got = (uint8_t)(frame & 0x0F);
     if (got != dshot_crc(v12, bidirectional))
     {
-        DshotV.ok = PROTO_FALSE;
+        DshotV.ok = EMBED_FALSE;
         return;
     }
     if (value11)
@@ -66,14 +66,14 @@ void protocore_dshot_decode(uint8_t *work)
     {
         *telemetry = (v12 & 1) != 0;
     }
-    DshotV.ok = PROTO_TRUE;
+    DshotV.ok = EMBED_TRUE;
 }
 
 void protocore_dshot_bit_ns(uint8_t *work)
 {
     (void)work;
     uint16_t rate_kbit = DshotV.bit_ns_args.rate_kbit;
-    proto_bool bit = DshotV.bit_ns_args.bit;
+    embed_bool bit = DshotV.bit_ns_args.bit;
 
     uint32_t period_ns; // one bit-period, in ns, at rate_kbit kbit/s
     switch (rate_kbit)
@@ -137,6 +137,6 @@ void protocore_dshot_esc_pwm_ns(uint8_t *work)
 /** @brief The operands and the outcome. */
 DshotVars DshotV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DSHOT

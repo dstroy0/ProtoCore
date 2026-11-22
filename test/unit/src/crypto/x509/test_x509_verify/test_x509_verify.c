@@ -33,7 +33,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool load(X509Cert *out, const uint8_t *der, size_t len)
+static embed_bool load(X509Cert *out, const uint8_t *der, size_t len)
 {
     X509V.parse_args.der = der;
     X509V.parse_args.len = len;

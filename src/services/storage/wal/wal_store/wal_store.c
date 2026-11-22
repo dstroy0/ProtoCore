@@ -15,23 +15,23 @@
 
 #include "endian/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // SUPER_USED bytes are CRC-covered; the u32 CRC follows immediately.
 static const size_t SUPER_USED = 28;
 
 // Exact-length device I/O: any short move is a failure.
-static proto_bool dev_read(const WalDev *d, uint64_t off, uint8_t *buf, size_t len)
+static embed_bool dev_read(const WalDev *d, uint64_t off, uint8_t *buf, size_t len)
 {
     return d->read != NULL && d->read(d->ctx, off, buf, len) == len;
 }
-static proto_bool dev_write(const WalDev *d, uint64_t off, const uint8_t *buf, size_t len)
+static embed_bool dev_write(const WalDev *d, uint64_t off, const uint8_t *buf, size_t len)
 {
     return d->write != NULL && d->write(d->ctx, off, buf, len) == len;
 }
 
 // Encode a superblock into a WAL_SUPER_SIZE scratch and write it to copy `ab` (0 or 1).
-static proto_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, uint64_t seq)
+static embed_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, uint64_t seq)
 {
     uint8_t sb[WAL_SUPER_SIZE];
     EMBED_CALL(memor.set, MemoriaCfg, .dst = sb, .val = 0, .bytes = sizeof(sb));
@@ -45,21 +45,21 @@ static proto_bool write_super(WalStore *s, int ab, uint64_t gen, uint64_t head, 
 }
 
 // Read + validate a superblock copy. On a good CRC+magic fills gen/head/seq and returns true.
-static proto_bool read_super(const WalStore *s, int ab, uint64_t *gen, uint64_t *head, uint64_t *seq)
+static embed_bool read_super(const WalStore *s, int ab, uint64_t *gen, uint64_t *head, uint64_t *seq)
 {
     uint8_t sb[WAL_SUPER_SIZE];
     if (!dev_read(&s->dev, (uint64_t)ab * WAL_SUPER_SIZE, sb, sizeof(sb)))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 0, .width = MMGR_ENDIAN_32) != WAL_SUPER_MAGIC)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if ((uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 28, .width = MMGR_ENDIAN_32) !=
         protocore_wal_crc32(sb, SUPER_USED))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *gen = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 4, .width = MMGR_ENDIAN_64);
     *head = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = sb + 12, .width = MMGR_ENDIAN_64);
@@ -67,9 +67,9 @@ static proto_bool read_super(const WalStore *s, int ab, uint64_t *gen, uint64_t 
     // A head past the data region is corruption a matching CRC cannot happen for, but guard anyway.
     if (*head > s->data_cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Replay records appended after the committed head: each is CRC self-validating, so recover them one by
@@ -105,13 +105,13 @@ static void protocore_wal_replay_tail(WalStore *s)
         uint32_t crc = protocore_wal_crc32_update(protocore_wal_crc32_init(), hdr, 16);
         uint64_t pos = s->data_off + off + WAL_RECORD_HEADER;
         uint32_t left = plen;
-        proto_bool read_ok = PROTO_TRUE;
+        embed_bool read_ok = EMBED_TRUE;
         while (left)
         {
             size_t n = left < sizeof(chunk) ? left : sizeof(chunk);
             if (!dev_read(&s->dev, pos, chunk, n))
             {
-                read_ok = PROTO_FALSE;
+                read_ok = EMBED_FALSE;
                 break;
             }
             crc = protocore_wal_crc32_update(crc, chunk, n);
@@ -130,11 +130,11 @@ static void protocore_wal_replay_tail(WalStore *s)
     }
 }
 
-proto_bool protocore_wal_store_format(WalStore *s, const WalDev *dev)
+embed_bool protocore_wal_store_format(WalStore *s, const WalDev *dev)
 {
     if (!dev || dev->size <= WAL_DATA_OFFSET)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     s->dev = *dev;
@@ -150,20 +150,20 @@ proto_bool protocore_wal_store_format(WalStore *s, const WalDev *dev)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = zero, .val = 0, .bytes = sizeof(zero));
     if (!dev_write(&s->dev, (uint64_t)1 * WAL_SUPER_SIZE, zero, sizeof(zero)))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!write_super(s, 0, 1, 0, 0))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return s->dev.sync ? s->dev.sync(s->dev.ctx) : PROTO_TRUE;
+    return s->dev.sync ? s->dev.sync(s->dev.ctx) : EMBED_TRUE;
 }
 
-proto_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev)
+embed_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev)
 {
     if (!dev || dev->size <= WAL_DATA_OFFSET)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = s, .val = 0, .bytes = sizeof(*s));
     s->dev = *dev;
@@ -176,11 +176,11 @@ proto_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev)
     uint64_t genB = 0;
     uint64_t headB = 0;
     uint64_t seqB = 0;
-    proto_bool okA = read_super(s, 0, &genA, &headA, &seqA);
-    proto_bool okB = read_super(s, 1, &genB, &headB, &seqB);
+    embed_bool okA = read_super(s, 0, &genA, &headA, &seqA);
+    embed_bool okB = read_super(s, 1, &genB, &headB, &seqB);
     if (!okA && !okB)
     {
-        return PROTO_FALSE; // unformatted or both torn
+        return EMBED_FALSE; // unformatted or both torn
     }
 
     // Newest valid superblock wins (higher generation).
@@ -202,15 +202,15 @@ proto_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev)
 
     // Recover any records appended after the committed head (each CRC self-validating).
     protocore_wal_replay_tail(s);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len)
+embed_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len)
 {
     uint64_t need = (uint64_t)WAL_RECORD_HEADER + len;
     if (s->head + need > s->data_cap)
     {
-        return PROTO_FALSE; // log full
+        return EMBED_FALSE; // log full
     }
     // Assemble the 20-byte header (magic+seq+len+crc); CRC covers header + payload without buffering both.
     uint8_t hdr[WAL_RECORD_HEADER];
@@ -225,39 +225,39 @@ proto_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint3
     uint64_t at = s->data_off + s->head;
     if (!dev_write(&s->dev, at, hdr, WAL_RECORD_HEADER))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (len && !dev_write(&s->dev, at + WAL_RECORD_HEADER, payload, len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s->head += need;
     s->next_seq++;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_wal_store_checkpoint(WalStore *s)
+embed_bool protocore_wal_store_checkpoint(WalStore *s)
 {
     // Data first: the appended records must be durable before the pointer that commits them advances.
     if (s->dev.sync && !s->dev.sync(s->dev.ctx))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int target = 1 - s->ab;
     uint64_t gen = s->gen + 1;
     if (!write_super(s, target, gen, s->head, s->next_seq))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (s->dev.sync && !s->dev.sync(s->dev.ctx))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The superblock flip is the commit point.
     s->gen = gen;
     s->ab = target;
     s->committed = s->head;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uint8_t *scratch, size_t scratch_len)
@@ -307,15 +307,15 @@ size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uin
     return count;
 }
 
-proto_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len)
+embed_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len)
 {
     if (off + len > s->data_cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return dev_read(&s->dev, s->data_off + off, buf, len);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAL

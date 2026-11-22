@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_SSE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Per-connection SSE state
@@ -49,7 +49,7 @@ typedef struct
 {
     uint8_t protocore_sse_id; ///< Index into protocore_sse_pool[] (set at init).
     uint8_t slot_id;          ///< Owning TCP slot in conn_pool[].
-    proto_bool active;        ///< True when this entry is in use.
+    embed_bool active;        ///< True when this entry is in use.
 
     /** Path this client subscribed to (for protocore_sse_broadcast() matching). */
     char path[MAX_PATH_LEN];
@@ -140,7 +140,7 @@ typedef struct
     SseRouteArgs route;      ///< what one subscribe route records
     SseEventArgs event_args; ///< the fields of one event record
     SseOutArgs out;          ///< where a format writes
-    proto_bool ok;
+    embed_bool ok;
     uint8_t u8;
     int n;
     SseConn *conn;
@@ -195,7 +195,7 @@ static const SseNs Sse __attribute__((unused)) = {
 /** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
 uint8_t *protocore_sse_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSE
 

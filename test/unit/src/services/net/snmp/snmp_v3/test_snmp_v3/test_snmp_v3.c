@@ -19,7 +19,7 @@ static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never re
 
 // USM key localization (RFC 3414 sec 2.6), reached through the crypto namespace. The hash borrows
 // the caller's scratch, so the work region is a member like everything else.
-static proto_bool snmp_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
+static embed_bool snmp_localize_key(uint8_t *work, const char *password, const uint8_t *engine_id, size_t engine_id_len,
                                     uint8_t *out)
 {
     SnmpCryptoV.work = work;
@@ -32,7 +32,7 @@ static proto_bool snmp_localize_key(uint8_t *work, const char *password, const u
 }
 
 // The SNMPv3 / USM message path, reached through its namespace.
-static proto_bool snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len)
+static embed_bool snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len)
 {
     SnmpV3V.engine.engine_id = engine_id;
     SnmpV3V.engine.engine_id_len = engine_id_len;
@@ -40,7 +40,7 @@ static proto_bool snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len)
     return SnmpV3V.ok;
 }
 
-static proto_bool snmp_v3_set_user(const char *user, const char *auth_pass, const char *priv_pass)
+static embed_bool snmp_v3_set_user(const char *user, const char *auth_pass, const char *priv_pass)
 {
     SnmpV3V.user.user = user;
     SnmpV3V.user.auth_pass = auth_pass;
@@ -83,7 +83,7 @@ static void snmp_v3_notify(const char *dst_ip, uint16_t port, uint32_t request_i
     SnmpV3V.notify.vb_count = vb_count;
 }
 
-static proto_bool snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
+static embed_bool snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
                                const SnmpVarbind *vbs, size_t vb_count)
 {
     snmp_v3_notify(dst_ip, port, 0u, trap_oid, trap_oid_len, vbs, vb_count);
@@ -91,7 +91,7 @@ static proto_bool snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t
     return SnmpV3V.ok;
 }
 
-static proto_bool snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
+static embed_bool snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
                                  size_t trap_oid_len, const SnmpVarbind *vbs, size_t vb_count)
 {
     snmp_v3_notify(dst_ip, port, request_id, trap_oid, trap_oid_len, vbs, vb_count);
@@ -178,7 +178,7 @@ static void ber_put_integer(BerEnc *e, long ival)
     SnmpBer.put_integer(snmp_ber_work);
 }
 
-static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
+static embed_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
 {
     SnmpBerV.dec = d;
     SnmpBer.read_header(snmp_ber_work);
@@ -193,7 +193,7 @@ static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
     return SnmpBerV.ok;
 }
 
-static proto_bool ber_read_integer(BerDec *d, long *out)
+static embed_bool ber_read_integer(BerDec *d, long *out)
 {
     SnmpBerV.dec = d;
     SnmpBer.read_integer(snmp_ber_work);
@@ -204,7 +204,7 @@ static proto_bool ber_read_integer(BerDec *d, long *out)
     return SnmpBerV.ok;
 }
 
-static proto_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, size_t *count)
+static embed_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, size_t *count)
 {
     SnmpBerV.dec = d;
     SnmpBerV.read_args.arc_out = arc_out;
@@ -217,7 +217,7 @@ static proto_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, siz
     return SnmpBerV.ok;
 }
 
-static proto_bool ber_skip(BerDec *d, size_t len)
+static embed_bool ber_skip(BerDec *d, size_t len)
 {
     SnmpBerV.dec = d;
     SnmpBerV.read_args.skip = len;
@@ -250,7 +250,7 @@ static void snmp_set_system(const char *descr, const char *contact, const char *
     SnmpAgent.set_system(protocore_snmp_agent_span());
 }
 
-static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
+static embed_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
 {
     SnmpAgentV.object.oid = oid;
     SnmpAgentV.object.oid_len = oid_len;
@@ -260,7 +260,7 @@ static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long iva
     return SnmpAgentV.ok;
 }
 
-static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const char *text, SnmpSetFn setter)
+static embed_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const char *text, SnmpSetFn setter)
 {
     SnmpAgentV.object.oid = oid;
     SnmpAgentV.object.oid_len = oid_len;
@@ -270,7 +270,7 @@ static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const cha
     return SnmpAgentV.ok;
 }
 
-static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
+static embed_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
 {
     SnmpAgentV.object.oid = oid;
     SnmpAgentV.object.oid_len = oid_len;
@@ -281,7 +281,7 @@ static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t 
     return SnmpAgentV.ok;
 }
 
-static proto_bool snmp_listen(uint16_t port)
+static embed_bool snmp_listen(uint16_t port)
 {
     SnmpAgentV.port = port;
     SnmpAgent.listen(protocore_snmp_agent_span());
@@ -299,8 +299,8 @@ static size_t snmp_process(const uint8_t *req, size_t req_len, uint8_t *resp, si
 }
 
 // CFB128-AES-128 over the USM privacy args (RFC 3826 sec 3.1.4).
-static proto_bool snmp_aes_cfb(const uint8_t *key, const uint8_t *iv, const uint8_t *in, uint8_t *out, size_t len,
-                               proto_bool encrypt)
+static embed_bool snmp_aes_cfb(const uint8_t *key, const uint8_t *iv, const uint8_t *in, uint8_t *out, size_t len,
+                               embed_bool encrypt)
 {
     SnmpCryptoV.priv.key = key;
     SnmpCryptoV.priv.iv = iv;
@@ -378,7 +378,7 @@ void test_aes128_fips197_vector()
                                 0xd8, 0xcd, 0xb7, 0x80, 0x70, 0xb4, 0xc5, 0x5a};
     uint8_t zero[16] = {0};
     uint8_t out[16];
-    snmp_aes_cfb(key, pt, zero, out, 16, PROTO_TRUE);
+    snmp_aes_cfb(key, pt, zero, out, 16, EMBED_TRUE);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expect, out, 16);
 }
 
@@ -389,8 +389,8 @@ void test_aes_cfb_roundtrip_partial_block()
     const char *msg = "SNMPv3 scopedPDU spanning more than one AES block plus a tail.";
     size_t n = strlen(msg);
     uint8_t ct[128], pt[128];
-    snmp_aes_cfb(key, iv, (const uint8_t *)msg, ct, n, PROTO_TRUE);
-    snmp_aes_cfb(key, iv, ct, pt, n, PROTO_FALSE);
+    snmp_aes_cfb(key, iv, (const uint8_t *)msg, ct, n, EMBED_TRUE);
+    snmp_aes_cfb(key, iv, ct, pt, n, EMBED_FALSE);
     TEST_ASSERT_EQUAL_MEMORY(msg, pt, n);
     TEST_ASSERT_TRUE(memcmp(msg, ct, n) != 0);
 }
@@ -420,7 +420,7 @@ static void put_be32(uint8_t *p, uint32_t v)
     p[3] = v;
 }
 
-static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool priv, const uint8_t *eid, size_t eid_len,
+static size_t build_get(uint8_t *out, size_t cap, embed_bool auth, embed_bool priv, const uint8_t *eid, size_t eid_len,
                         long boots, long time, const char *user, const uint8_t *authkey, const uint8_t *privkey,
                         long msg_id, long req_id, const uint32_t *oid, size_t oid_len)
 {
@@ -465,7 +465,7 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
         put_be32(iv, (uint32_t)boots);
         put_be32(iv + 4, (uint32_t)time);
         memcpy(iv + 8, salt, 8);
-        snmp_aes_cfb(privkey, iv, scoped, cipher, se.len, PROTO_TRUE);
+        snmp_aes_cfb(privkey, iv, scoped, cipher, se.len, EMBED_TRUE);
         data = cipher;
     }
 
@@ -542,7 +542,7 @@ static size_t build_get(uint8_t *out, size_t cap, proto_bool auth, proto_bool pr
     return e.ok ? e.len : 0;
 }
 
-static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privkey, V3View *v)
+static embed_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privkey, V3View *v)
 {
     memset(v, 0, sizeof(*v));
     BerDec d;
@@ -551,74 +551,74 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     size_t l;
     if (!ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     long version;
     if (!ber_read_integer(&d, &version))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!ber_read_header(&d, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     long msgid, maxsize, secmodel;
     if (!ber_read_integer(&d, &msgid) || !ber_read_integer(&d, &maxsize))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t fl;
     if (!ber_read_header(&d, &tag, &fl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     v->flags = d.buf[d.pos];
     d.pos += fl;
     if (!ber_read_integer(&d, &secmodel))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     size_t seclen;
     if (!ber_read_header(&d, &tag, &seclen) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     BerDec sd;
     ber_dec_init(&sd, d.buf + d.pos, seclen);
     d.pos += seclen;
     if (!ber_read_header(&sd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t eidl;
     if (!ber_read_header(&sd, &tag, &eidl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(v->engine_id, sd.buf + sd.pos, eidl < sizeof(v->engine_id) ? eidl : sizeof(v->engine_id));
     v->engine_id_len = eidl;
     sd.pos += eidl;
     if (!ber_read_integer(&sd, &v->boots) || !ber_read_integer(&sd, &v->time))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t ul;
     if (!ber_read_header(&sd, &tag, &ul) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sd.pos += ul;
     size_t al;
     if (!ber_read_header(&sd, &tag, &al) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sd.pos += al;
     size_t pl;
     if (!ber_read_header(&sd, &tag, &pl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *privparm = sd.buf + sd.pos;
 
@@ -629,13 +629,13 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
         size_t ctl;
         if (!ber_read_header(&d, &tag, &ctl) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint8_t iv[16];
         put_be32(iv, (uint32_t)v->boots);
         put_be32(iv + 4, (uint32_t)v->time);
         memcpy(iv + 8, privparm, 8);
-        snmp_aes_cfb(privkey, iv, d.buf + d.pos, g_dec, ctl, PROTO_FALSE);
+        snmp_aes_cfb(privkey, iv, d.buf + d.pos, g_dec, ctl, EMBED_FALSE);
         scoped = g_dec;
         scoped_len = ctl;
     }
@@ -649,49 +649,49 @@ static proto_bool parse_v3(const uint8_t *buf, size_t len, const uint8_t *privke
     ber_dec_init(&cd, scoped, scoped_len);
     if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     cd.pos += l;
     if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     cd.pos += l;
     if (!ber_read_header(&cd, &v->pdu_tag, &l))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!ber_read_integer(&cd, &v->request_id) || !ber_read_integer(&cd, &v->err_status))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     long erridx;
     if (!ber_read_integer(&cd, &erridx))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (cd.pos < cd.len)
     {
         if (!ber_read_header(&cd, &tag, &l) || tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (!ber_read_oid(&cd, v->oid, SNMP_MAX_OID_LEN, &v->oid_len))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         size_t vl;
         if (!ber_read_header(&cd, &v->val_tag, &vl))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (v->val_tag == (uint8_t)SNMP_TAG_BER_OCTET_STRING)
         {
@@ -709,7 +709,7 @@ static void discover(V3View *v)
     uint8_t req[256], resp[512];
     uint32_t empty_oid[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
     size_t rl =
-        build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, NULL, 0, 0, 0, "", NULL, NULL, 100, 1, empty_oid, 9);
+        build_get(req, sizeof(req), EMBED_FALSE, EMBED_FALSE, NULL, 0, 0, 0, "", NULL, NULL, 100, 1, empty_oid, 9);
     size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(parse_v3(resp, n, NULL, v));
@@ -735,7 +735,7 @@ void test_authnopriv_get()
     snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "myuser", authkey, NULL, 200, 42, OID_SYSDESCR, 9);
     size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -759,7 +759,7 @@ void test_authpriv_get()
     snmp_localize_key(tw, "privpass12", disc.engine_id, disc.engine_id_len, privkey);
 
     uint8_t req[300], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_TRUE, disc.engine_id, disc.engine_id_len, disc.boots,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_TRUE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "myuser", authkey, privkey, 201, 77, OID_SYSDESCR, 9);
     size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -780,7 +780,7 @@ void test_wrong_auth_password_reports_wrong_digest()
     snmp_localize_key(tw, "wrongpass99", disc.engine_id, disc.engine_id_len, badkey);
 
     uint8_t req[300], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "myuser", badkey, NULL, 202, 5, OID_SYSDESCR, 9);
     size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -800,7 +800,7 @@ void test_unknown_user_reports()
     snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time, "nobody", authkey, NULL, 203, 9, OID_SYSDESCR, 9);
     size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -819,7 +819,7 @@ void test_not_in_time_window_reports()
     snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                           disc.time + 100000, "myuser", authkey, NULL, 204, 11, OID_SYSDESCR, 9);
     size_t n = snmp_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -831,7 +831,7 @@ void test_not_in_time_window_reports()
     TEST_ASSERT_EQUAL_UINT8(0x01, v.flags & 0x03);
 }
 
-static proto_bool find_inform_with_reqid(const uint8_t *d, size_t n, uint32_t reqid)
+static embed_bool find_inform_with_reqid(const uint8_t *d, size_t n, uint32_t reqid)
 {
     for (size_t i = 0; i + 2 < n; i++)
     {
@@ -863,10 +863,10 @@ static proto_bool find_inform_with_reqid(const uint8_t *d, size_t n, uint32_t re
         }
         if (v == reqid)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void test_inform_v3_builds_informrequest()
@@ -875,7 +875,7 @@ void test_inform_v3_builds_informrequest()
     protocore_net_host_udp_reset();
 
     const uint32_t reqid = 0x4321;
-    proto_bool ok = snmp_inform_v3("127.0.0.1", 162, reqid, OID_SYSDESCR, 9, NULL, 0);
+    embed_bool ok = snmp_inform_v3("127.0.0.1", 162, reqid, OID_SYSDESCR, 9, NULL, 0);
     TEST_ASSERT_TRUE(ok);
 
     const uint8_t *d = udp_cap();
@@ -899,7 +899,7 @@ void test_v3_message_structure_rejections()
     V3View v;
     discover(&v);
     uint8_t req[300], resp[512];
-    size_t full = build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
+    size_t full = build_get(req, sizeof(req), EMBED_FALSE, EMBED_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
                             "myuser", NULL, NULL, 300, 7, OID_SYSDESCR, 9);
     TEST_ASSERT_TRUE(full > 0);
     TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, full, resp, sizeof(resp)));
@@ -909,7 +909,7 @@ void test_v3_message_structure_rejections()
     }
 
     uint8_t pk[SNMP_USM_KEY_LEN] = {0};
-    size_t pl = build_get(req, sizeof(req), PROTO_FALSE, PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+    size_t pl = build_get(req, sizeof(req), EMBED_FALSE, EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
                           "myuser", NULL, pk, 300, 8, OID_SYSDESCR, 9);
     TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, pl, resp, sizeof(resp)));
 }
@@ -939,11 +939,11 @@ void test_v3_discovery_variants()
     uint8_t privkey[SNMP_USM_KEY_LEN] = {0};
 
     uint8_t req[300], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_TRUE, wrong_eid, sizeof(wrong_eid), v.boots, v.time,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_TRUE, wrong_eid, sizeof(wrong_eid), v.boots, v.time,
                           "myuser", authkey, privkey, 300, 9, OID_SYSDESCR, 9);
     TEST_ASSERT_TRUE(snmp_v3_process(req, rl, resp, sizeof(resp)) > 0);
 
-    rl = build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, wrong_eid, sizeof(wrong_eid), 0, 0, "", NULL, NULL, 300,
+    rl = build_get(req, sizeof(req), EMBED_FALSE, EMBED_FALSE, wrong_eid, sizeof(wrong_eid), 0, 0, "", NULL, NULL, 300,
                    10, OID_SYSDESCR, 9);
     TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, 20));
 }
@@ -958,7 +958,7 @@ void test_v3_priv_not_configured()
     uint8_t privkey[SNMP_USM_KEY_LEN] = {0};
 
     uint8_t req[300], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
                           "myuser", authkey, privkey, 300, 11, OID_SYSDESCR, 9);
     size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -979,12 +979,12 @@ void test_v3_notify_paths()
     TEST_ASSERT_TRUE(udp_cap_len() > 0);
 }
 
-static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, proto_bool auth, const uint8_t *eid, size_t eid_len,
+static size_t build_v3_raw_scoped(uint8_t *out, size_t cap, embed_bool auth, const uint8_t *eid, size_t eid_len,
                                   long boots, long time, const char *user, const uint8_t *authkey, long msg_id,
-                                  const uint8_t *scoped, size_t scoped_len, proto_bool priv, size_t auth_plen,
+                                  const uint8_t *scoped, size_t scoped_len, embed_bool priv, size_t auth_plen,
                                   size_t priv_plen)
 {
-    proto_bool digest = auth && auth_plen == SNMP_V3_AUTH_PARAM_LEN;
+    embed_bool digest = auth && auth_plen == SNMP_V3_AUTH_PARAM_LEN;
     uint8_t salt[SNMP_V3_PRIV_PARAM_LEN] = {0, 0, 0, 0, 0, 0, 0, 7};
     uint8_t secp[128];
     BerEnc se2;
@@ -1060,7 +1060,7 @@ void test_v3_field_tag_corruption(void)
     V3View v;
     discover(&v);
     uint8_t req[300], resp[512];
-    size_t full = build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
+    size_t full = build_get(req, sizeof(req), EMBED_FALSE, EMBED_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
                             "myuser", NULL, NULL, 300, 7, OID_SYSDESCR, 9);
     TEST_ASSERT_TRUE(full > 0);
 
@@ -1138,8 +1138,8 @@ void test_v3_scoped_parse_rejections(void)
     const size_t lens[] = {sizeof(not_seq), sizeof(bad_eid), sizeof(bad_ctx), sizeof(no_pdu), sizeof(empty_pdu)};
     for (size_t i = 0; i < sizeof(scopeds) / sizeof(scopeds[0]); i++)
     {
-        size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                        "myuser", authkey, 400 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
+        size_t rl = build_v3_raw_scoped(req, sizeof(req), EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+                                        "myuser", authkey, 400 + (long)i, scopeds[i], lens[i], EMBED_FALSE,
                                         SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
         TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
@@ -1159,8 +1159,8 @@ void test_v3_discovery_malformed_scoped(void)
     const size_t lens[] = {sizeof(not_seq), sizeof(non_int_rid)};
     for (size_t i = 0; i < 2; i++)
     {
-        size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_FALSE, wrong_eid, sizeof(wrong_eid), v.boots, v.time,
-                                        "", NULL, 410 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
+        size_t rl = build_v3_raw_scoped(req, sizeof(req), EMBED_FALSE, wrong_eid, sizeof(wrong_eid), v.boots, v.time,
+                                        "", NULL, 410 + (long)i, scopeds[i], lens[i], EMBED_FALSE,
                                         SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
 
@@ -1178,8 +1178,8 @@ void test_v3_auth_edge_rejections(void)
 
     const uint8_t any_scoped[] = {0x30, 0x02, 0x04, 0x00};
     size_t rl =
-        build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                            authkey, 420, any_scoped, sizeof(any_scoped), PROTO_FALSE, 16, SNMP_V3_PRIV_PARAM_LEN);
+        build_v3_raw_scoped(req, sizeof(req), EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
+                            authkey, 420, any_scoped, sizeof(any_scoped), EMBED_FALSE, 16, SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -1189,8 +1189,8 @@ void test_v3_auth_edge_rejections(void)
     TEST_ASSERT_EQUAL_UINT32(5u, r.oid[9]);
 
     const uint8_t not_octet[] = {0x02, 0x01, 0x00};
-    rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                             authkey, 421, not_octet, sizeof(not_octet), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN,
+    rl = build_v3_raw_scoped(req, sizeof(req), EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
+                             authkey, 421, not_octet, sizeof(not_octet), EMBED_TRUE, SNMP_V3_AUTH_PARAM_LEN,
                              SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
@@ -1226,12 +1226,12 @@ void test_v3_notify_overflow_guards()
 
 static size_t g_big_len = 0;
 static uint8_t g_big[1600];
-static proto_bool big_getter(SnmpValue *out)
+static embed_bool big_getter(SnmpValue *out)
 {
     out->type = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     out->str = (const char *)g_big;
     out->str_len = g_big_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void test_v3_response_scopedpdu_overflow()
@@ -1246,21 +1246,21 @@ void test_v3_response_scopedpdu_overflow()
     snmp_localize_key(tw, "authpass12", disc.engine_id, disc.engine_id_len, authkey);
 
     uint8_t req[300], resp[2048];
-    proto_bool saw_overflow = PROTO_FALSE, saw_ok = PROTO_FALSE;
+    embed_bool saw_overflow = EMBED_FALSE, saw_ok = EMBED_FALSE;
     for (size_t vlen = 1400; vlen <= 1472; vlen++)
     {
         g_big_len = vlen;
-        size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
+        size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, disc.engine_id, disc.engine_id_len, disc.boots,
                               disc.time, "myuser", authkey, NULL, 500, 88, big_oid, 9);
         TEST_ASSERT_TRUE(rl > 0);
         size_t n = snmp_process(req, rl, resp, sizeof(resp));
         if (n == 0)
         {
-            saw_overflow = PROTO_TRUE;
+            saw_overflow = EMBED_TRUE;
         }
         else
         {
-            saw_ok = PROTO_TRUE;
+            saw_ok = EMBED_TRUE;
         }
     }
     TEST_ASSERT_TRUE(saw_overflow);
@@ -1430,8 +1430,8 @@ void test_v3_scoped_truncated_headers()
     const size_t lens[] = {sizeof(no_len), sizeof(empty_seq), sizeof(eid_only)};
     for (unsigned i = 0; i < 3; i++)
     {
-        size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                        "myuser", authkey, 540 + (long)i, scopeds[i], lens[i], PROTO_FALSE,
+        size_t rl = build_v3_raw_scoped(req, sizeof(req), EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+                                        "myuser", authkey, 540 + (long)i, scopeds[i], lens[i], EMBED_FALSE,
                                         SNMP_V3_AUTH_PARAM_LEN, SNMP_V3_PRIV_PARAM_LEN);
         TEST_ASSERT_TRUE(rl > 0);
         TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
@@ -1448,7 +1448,7 @@ void test_v3_same_length_wrong_engine_id()
     wrong[v.engine_id_len - 1] ^= 0xFF;
 
     uint8_t req[320], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_FALSE, PROTO_FALSE, wrong, v.engine_id_len, 0, 0, "", NULL, NULL, 550,
+    size_t rl = build_get(req, sizeof(req), EMBED_FALSE, EMBED_FALSE, wrong, v.engine_id_len, 0, 0, "", NULL, NULL, 550,
                           1, OID_SYSDESCR, 9);
     size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -1480,7 +1480,7 @@ void test_v3_unknown_user_variants()
     for (unsigned i = 0; i < 3; i++)
     {
         snmp_v3_set_user(cases[i].cfg_user, cases[i].cfg_auth, "");
-        size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
+        size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, v.engine_id, v.engine_id_len, v.boots, v.time,
                               cases[i].req_user, authkey, NULL, 560 + (long)i, 3, OID_SYSDESCR, 9);
         TEST_ASSERT_TRUE(rl > 0);
         size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
@@ -1503,8 +1503,8 @@ void test_v3_oversized_message_is_wrong_digest()
     scoped[0] = 0x30;
     static uint8_t req[SNMP_MSG_BUF_SIZE + 256];
     uint8_t resp[512];
-    size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                    "myuser", authkey, 570, scoped, sizeof(scoped), PROTO_FALSE, SNMP_V3_AUTH_PARAM_LEN,
+    size_t rl = build_v3_raw_scoped(req, sizeof(req), EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+                                    "myuser", authkey, 570, scoped, sizeof(scoped), EMBED_FALSE, SNMP_V3_AUTH_PARAM_LEN,
                                     SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > SNMP_MSG_BUF_SIZE);
     size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
@@ -1523,7 +1523,7 @@ void test_v3_boots_mismatch_not_in_time()
     snmp_localize_key(tw, "authpass12", v.engine_id, v.engine_id_len, authkey);
 
     uint8_t req[320], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, v.engine_id, v.engine_id_len, v.boots + 7, v.time,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, v.engine_id, v.engine_id_len, v.boots + 7, v.time,
                           "myuser", authkey, NULL, 580, 4, OID_SYSDESCR, 9);
     size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -1543,8 +1543,8 @@ void test_v3_privacy_parameter_edges()
     uint8_t req[320], resp[512];
 
     const uint8_t any[] = {0x04, 0x02, 0x00, 0x00};
-    size_t rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
-                                    "myuser", authkey, 590, any, sizeof(any), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN, 4);
+    size_t rl = build_v3_raw_scoped(req, sizeof(req), EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time,
+                                    "myuser", authkey, 590, any, sizeof(any), EMBED_TRUE, SNMP_V3_AUTH_PARAM_LEN, 4);
     TEST_ASSERT_TRUE(rl > 0);
     size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);
@@ -1554,8 +1554,8 @@ void test_v3_privacy_parameter_edges()
     TEST_ASSERT_EQUAL_UINT32(6u, r.oid[9]);
 
     const uint8_t stub[] = {0x04};
-    rl = build_v3_raw_scoped(req, sizeof(req), PROTO_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
-                             authkey, 591, stub, sizeof(stub), PROTO_TRUE, SNMP_V3_AUTH_PARAM_LEN,
+    rl = build_v3_raw_scoped(req, sizeof(req), EMBED_TRUE, v.engine_id, v.engine_id_len, v.boots, v.time, "myuser",
+                             authkey, 591, stub, sizeof(stub), EMBED_TRUE, SNMP_V3_AUTH_PARAM_LEN,
                              SNMP_V3_PRIV_PARAM_LEN);
     TEST_ASSERT_TRUE(rl > 0);
     TEST_ASSERT_EQUAL_UINT(0, snmp_v3_process(req, rl, resp, sizeof(resp)));
@@ -1584,7 +1584,7 @@ void test_v3_init_length_guards_and_null_user()
     uint8_t authkey[SNMP_USM_KEY_LEN];
     snmp_localize_key(tw, "authpass12", after.engine_id, after.engine_id_len, authkey);
     uint8_t req[320], resp[512];
-    size_t rl = build_get(req, sizeof(req), PROTO_TRUE, PROTO_FALSE, after.engine_id, after.engine_id_len, after.boots,
+    size_t rl = build_get(req, sizeof(req), EMBED_TRUE, EMBED_FALSE, after.engine_id, after.engine_id_len, after.boots,
                           after.time, "myuser", authkey, NULL, 600, 5, OID_SYSDESCR, 9);
     size_t n = snmp_v3_process(req, rl, resp, sizeof(resp));
     TEST_ASSERT_TRUE(n > 0);

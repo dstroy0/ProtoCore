@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_SLEEP_SCHED
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Scheduler configuration (all times in ms). */
 typedef struct
@@ -88,7 +88,7 @@ static const SleepSchedNs SleepSched __attribute__((unused)) = {
     .next = protocore_sleep_sched_next,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SLEEP_SCHED
 

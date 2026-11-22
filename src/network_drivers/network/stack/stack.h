@@ -35,7 +35,7 @@
 // of idemIP has names that ProtoCore also has. The source of this module reads the whole of idemIP.
 #include "src/ethernet/phy.h" // IdemIpPhyDriver, and through it the counts of idemip_config.h
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief What ::StackNs::start takes.
@@ -130,7 +130,7 @@ typedef struct
     StackTickArgs tick_args;
     StackTransmitArgs transmit_args;
     uint8_t *transmit_frame;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t frames;
     uint16_t sent;
 } StackVars;
@@ -240,7 +240,7 @@ static const StackNs Stack __attribute__((unused)) = {
 /** @brief The borrow of this module: its context, taken once from the persistent tier. */
 uint8_t *protocore_stack_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IDEMIP
 

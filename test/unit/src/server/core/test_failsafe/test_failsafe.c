@@ -37,7 +37,7 @@ static int add(const char *name, uint32_t deadline_ms, uint32_t now)
     return FailsafeV.i32;
 }
 
-static proto_bool feed(int id, uint32_t now)
+static embed_bool feed(int id, uint32_t now)
 {
     FailsafeV.args.id = id;
     FailsafeV.args.now = now;

@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ble_gatt.h
@@ -73,7 +73,7 @@ typedef struct
     size_t (*att_write_req)(uint8_t *, uint16_t, const uint8_t *, size_t, uint8_t *, size_t);
     size_t (*att_notify)(uint8_t *, uint16_t, const uint8_t *, size_t, uint8_t *, size_t);
     size_t (*att_error_rsp)(uint8_t *, uint8_t, uint16_t, uint8_t, uint8_t *, size_t);
-    proto_bool (*att_parse)(uint8_t *, const uint8_t *, size_t, AttPdu *);
+    embed_bool (*att_parse)(uint8_t *, const uint8_t *, size_t, AttPdu *);
     size_t (*char_json)(uint8_t *, const GattChar *, size_t, char *, size_t);
 } BleGattNs;
 PROTOCORE_NS_LAYOUT(BleGattNs, att_read_req, att_read_rsp, att_write_req, att_notify, att_error_rsp, att_parse,
@@ -140,9 +140,9 @@ size_t protocore_ble_gatt_att_error_rsp(uint8_t *work, uint8_t req_op, uint16_t 
  * @param pdu Pdu
  * @param len Len
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_t len, AttPdu *out);
+embed_bool protocore_ble_gatt_att_parse(uint8_t *work, const uint8_t *pdu, size_t len, AttPdu *out);
 /**
  * @brief Serialize a characteristic table as .
  * @param work PROTOCORE_BLE_GATT_BORROW bytes the caller took. Not held past the call.
@@ -163,6 +163,6 @@ PROTOCORE_NS BleGattNs BleGatt PROTOCORE_UNUSED = {.att_read_req = protocore_ble
                                                    .att_parse = protocore_ble_gatt_att_parse,
                                                    .char_json = protocore_ble_gatt_char_json};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_BLE_GATT_H

@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_PN532
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -112,7 +112,7 @@ typedef struct
     Pn532ParseFrameArgs parse_frame_args;
     Pn532IsAckArgs is_ack_args;
     Pn532BuildAckArgs build_ack_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t len;
     int n;
 } Pn532Vars;
@@ -147,7 +147,7 @@ static const Pn532Ns Pn532 __attribute__((unused)) = {
     .build_ack = protocore_pn532_build_ack,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PN532
 

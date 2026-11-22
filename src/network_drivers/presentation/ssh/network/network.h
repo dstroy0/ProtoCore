@@ -11,7 +11,7 @@
 
 #include "network_drivers/presentation/ssh/common/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 struct ProtoHandler;
 
@@ -23,11 +23,10 @@ struct ProtoHandler;
  * initiating role's is one it dialled. They are separate pools with separate handle spaces, so the
  * handle alone does not say which array it indexes.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SshStreamKind,
     SSH_STREAM_ACCEPTED = 0, ///< inbound: the handle indexes conn_pool[]
     SSH_STREAM_DIALED        ///< outbound: the handle indexes the client transport's own pool
-} SshStreamKind;
+);
 
 /** @brief RFC 4254 sec 5: which pool a handle indexes, and the channel it carries. */
 typedef struct
@@ -103,7 +102,7 @@ typedef struct
     SshNetMsgArgs msg;         ///< the message bytes an emit or a write carries
     SshChanDialArgs dial;      ///< where a bridged channel dials
     SshChanReadArgs read_args; ///< where a channel read writes
-    proto_bool ok;
+    embed_bool ok;
     int i32;
     uint8_t u8;
     size_t n;
@@ -200,6 +199,6 @@ uint8_t *protocore_ssh_network_span(void);
 /** @brief Put the server identification string on the wire, raw, before any binary packet. */
 void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NETWORK_NETWORK_H

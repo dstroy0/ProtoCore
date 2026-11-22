@@ -38,12 +38,12 @@ static void *ring_producer(void *arg)
 void test_spsc_ring_no_race(void)
 {
     rx_reset(&g_slot);
-    g_slot.state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &g_slot.state, .value = CONN_ACTIVE);
 
     pthread_t producer;
     TEST_ASSERT_EQUAL_INT(0, pthread_create(&producer, NULL, ring_producer, NULL));
 
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     int recv = 0;
     while (recv < COUNT)
     {
@@ -52,7 +52,7 @@ void test_spsc_ring_no_race(void)
             uint8_t b = rx_take(&g_slot);
             if (b != (uint8_t)(recv & 0xFF))
             {
-                ok = PROTO_FALSE;
+                ok = EMBED_FALSE;
             }
             ++recv;
         }
@@ -72,16 +72,16 @@ static void *state_flipper(void *arg)
     (void)arg;
     for (int i = 0; i < COUNT; ++i)
     {
-        g_slot.state = CONN_FREE;
-        g_slot.state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &g_slot.state, .value = CONN_FREE);
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &g_slot.state, .value = CONN_ACTIVE);
     }
-    g_slot.state = CONN_FREE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &g_slot.state, .value = CONN_FREE);
     return NULL;
 }
 
 void test_state_handoff_no_race(void)
 {
-    g_slot.state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &g_slot.state, .value = CONN_ACTIVE);
     volatile int observed_free = 0;
 
     pthread_t flipper;
@@ -89,7 +89,7 @@ void test_state_handoff_no_race(void)
 
     for (int i = 0; i < COUNT; ++i)
     {
-        if (g_slot.state == CONN_FREE)
+        if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &g_slot.state) == CONN_FREE)
         {
             observed_free++;
         }
@@ -98,5 +98,5 @@ void test_state_handoff_no_race(void)
     pthread_join(flipper, NULL);
 
     (void)observed_free;
-    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)g_slot.state);
+    TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &g_slot.state));
 }

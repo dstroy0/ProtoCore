@@ -449,7 +449,7 @@ void test_v102_published_command_frames(void)
     static const uint8_t ENG_ON[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x62, 0x00, 0x04, 0x03, 0x02, 0x01};
     Ld2410.cmd_engineering_args.buf = buf;
     Ld2410.cmd_engineering_args.cap = sizeof(buf);
-    Ld2410.cmd_engineering_args.on = PROTO_TRUE;
+    Ld2410.cmd_engineering_args.on = EMBED_TRUE;
     Ld2410.cmd_engineering(protocore_ld2410_span());
     TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ENG_ON, buf, 12u);
@@ -458,7 +458,7 @@ void test_v102_published_command_frames(void)
     static const uint8_t ENG_OFF[12] = {0xFD, 0xFC, 0xFB, 0xFA, 0x02, 0x00, 0x63, 0x00, 0x04, 0x03, 0x02, 0x01};
     Ld2410.cmd_engineering_args.buf = buf;
     Ld2410.cmd_engineering_args.cap = sizeof(buf);
-    Ld2410.cmd_engineering_args.on = PROTO_FALSE;
+    Ld2410.cmd_engineering_args.on = EMBED_FALSE;
     Ld2410.cmd_engineering(protocore_ld2410_span());
     TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ENG_OFF, buf, 12u);
@@ -485,13 +485,13 @@ void test_ld2410b_command_frames_follow_the_same_envelope(void)
                                        0x00, 0x00, 0x00, 0x04, 0x03, 0x02, 0x01};
     Ld2410.cmd_bluetooth_args.buf = buf;
     Ld2410.cmd_bluetooth_args.cap = sizeof(buf);
-    Ld2410.cmd_bluetooth_args.on = PROTO_TRUE;
+    Ld2410.cmd_bluetooth_args.on = EMBED_TRUE;
     Ld2410.cmd_bluetooth(protocore_ld2410_span());
     TEST_ASSERT_EQUAL_size_t(14u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BT_ON, buf, 14u);
     Ld2410.cmd_bluetooth_args.buf = buf;
     Ld2410.cmd_bluetooth_args.cap = sizeof(buf);
-    Ld2410.cmd_bluetooth_args.on = PROTO_FALSE;
+    Ld2410.cmd_bluetooth_args.on = EMBED_FALSE;
     Ld2410.cmd_bluetooth(protocore_ld2410_span());
     TEST_ASSERT_EQUAL_size_t(14u, Ld2410.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BT_OFF, buf, 14u);
@@ -547,7 +547,7 @@ void test_command_encoders_fail_closed(void)
     TEST_ASSERT_EQUAL_size_t(12u, Ld2410.n);
     Ld2410.cmd_engineering_args.buf = buf;
     Ld2410.cmd_engineering_args.cap = 11u;
-    Ld2410.cmd_engineering_args.on = PROTO_TRUE;
+    Ld2410.cmd_engineering_args.on = EMBED_TRUE;
     Ld2410.cmd_engineering(protocore_ld2410_span());
     TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
     Ld2410.cmd_restart_args.buf = buf;
@@ -556,7 +556,7 @@ void test_command_encoders_fail_closed(void)
     TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
     Ld2410.cmd_bluetooth_args.buf = buf;
     Ld2410.cmd_bluetooth_args.cap = 13u;
-    Ld2410.cmd_bluetooth_args.on = PROTO_TRUE;
+    Ld2410.cmd_bluetooth_args.on = EMBED_TRUE;
     Ld2410.cmd_bluetooth(protocore_ld2410_span());
     TEST_ASSERT_EQUAL_size_t(0u, Ld2410.n);
     Ld2410.cmd_get_mac_args.buf = buf;

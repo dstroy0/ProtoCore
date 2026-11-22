@@ -26,18 +26,17 @@ static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint ne
 #include "network_drivers/presentation/http/http3/quic_conn/quic_conn.h"
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // HTTP/3 stream roles (a mutually-exclusive internal role, not a wire value).
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(H3StreamRole,
     H3_ROLE_FREE = 0,
     H3_ROLE_REQUEST,   ///< client-initiated bidirectional request stream
     H3_ROLE_CONTROL,   ///< client control stream (type 0x00)
     H3_ROLE_QPACK_ENC, ///< client QPACK encoder stream (type 0x02)
     H3_ROLE_QPACK_DEC, ///< client QPACK decoder stream (type 0x03)
     H3_ROLE_OTHER_UNI, ///< an unknown unidirectional stream (drained/ignored)
-} H3StreamRole;
+);
 
 // Per-stream state. The bytes it reassembles into are the span at a fixed offset, so only what is
 // not derivable lives here.
@@ -45,14 +44,14 @@ typedef struct
 {
     uint64_t id;          ///< stream id (UINT64_MAX = free)
     H3StreamRole role;    ///< stream role
-    proto_bool type_read; ///< a unidirectional stream's type varint has been consumed
-    proto_bool responded; ///< a response has been sent on this request stream
+    embed_bool type_read; ///< a unidirectional stream's type varint has been consumed
+    embed_bool responded; ///< a response has been sent on this request stream
     uint8_t *buf;         ///< PROTOCORE_H3_STREAM_BUF bytes of the connection's span
     size_t buf_len;
     char *method;            ///< PROTOCORE_H3_METHOD_LEN bytes of the connection's span
     char *path;              ///< PROTOCORE_H3_PATH_LEN bytes of the connection's span
     char *authority;         ///< PROTOCORE_H3_AUTHORITY_LEN bytes of the connection's span
-    proto_bool have_headers; ///< a HEADERS frame has been decoded
+    embed_bool have_headers; ///< a HEADERS frame has been decoded
     size_t body_off;         ///< where the accumulated body begins within buf (after the last HEADERS)
 } H3Stream;
 
@@ -65,8 +64,8 @@ typedef struct
     H3RequestFn on_request;
     void *app;
     H3Settings peer_settings;
-    proto_bool control_opened;     ///< our control + QPACK streams have been opened
-    proto_bool peer_settings_seen; ///< the peer's one SETTINGS frame has arrived (sec 6.2.1)
+    embed_bool control_opened;     ///< our control + QPACK streams have been opened
+    embed_bool peer_settings_seen; ///< the peer's one SETTINGS frame has arrived (sec 6.2.1)
     uint64_t next_uni_id;          ///< next server-initiated unidirectional stream id (3, 7, 11, ...)
     H3Stream streams[PROTOCORE_H3_MAX_STREAMS];
 } H3ConnCtx;
@@ -115,12 +114,12 @@ static_assert(H3_OFF_CTX % _Alignof(H3ConnCtx) == 0,
 
 // The connection's bytes, split by offset over its streams. Idempotent: a connection initialised
 // again keeps the borrow it already holds, because the persistent end is never given back.
-static proto_bool h3_conn_slot_storage(H3ConnCtx *h3)
+static embed_bool h3_conn_slot_storage(H3ConnCtx *h3)
 {
     uint8_t *base = h3->b;
     if (base == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < PROTOCORE_H3_MAX_STREAMS; i++)
     {
@@ -129,10 +128,10 @@ static proto_bool h3_conn_slot_storage(H3ConnCtx *h3)
         h3->streams[i].authority = (char *)(base + H3_OFF_AUTHORITY + i * PROTOCORE_H3_AUTHORITY_LEN);
         h3->streams[i].method = (char *)(base + H3_OFF_METHOD + i * PROTOCORE_H3_METHOD_LEN);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static H3Stream *protocore_h3_stream_get(H3ConnCtx *h3, uint64_t id, proto_bool create)
+static H3Stream *protocore_h3_stream_get(H3ConnCtx *h3, uint64_t id, embed_bool create)
 {
     H3Stream *free_slot = NULL;
     for (size_t i = 0; i < PROTOCORE_H3_MAX_STREAMS; i++)
@@ -184,7 +183,7 @@ typedef struct
 {
     H3Stream *st;
 } ReqEmit;
-static proto_bool req_emit(void *ctx, const char *name, size_t nlen, const char *value, size_t vlen)
+static embed_bool req_emit(void *ctx, const char *name, size_t nlen, const char *value, size_t vlen)
 {
     H3Stream *st = ((ReqEmit *)ctx)->st;
     if (nlen == 7 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = name, .other = ":method", .bytes = 7) == 0)
@@ -199,7 +198,7 @@ static proto_bool req_emit(void *ctx, const char *name, size_t nlen, const char 
     {
         set_field(st->authority, PROTOCORE_H3_AUTHORITY_LEN, value, vlen);
     }
-    return PROTO_TRUE; // ignore regular headers for now (routing is by method + path)
+    return EMBED_TRUE; // ignore regular headers for now (routing is by method + path)
 }
 
 // Close the connection with an RFC 9114 sec 8.1 error code. HTTP/3 errors are the application's,
@@ -227,7 +226,7 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
     while (off < st->buf_len)
     {
         H3FrameHeader fr;
-        proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, st->buf + off, st->buf_len - off, &fr);
+        embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, st->buf + off, st->buf_len - off, &fr);
         if (!h3_frame_ok)
         {
             break;
@@ -255,7 +254,7 @@ static void dispatch_request(H3ConnCtx *h3, H3Stream *st)
         {
             ReqEmit e = {st};
             Qpack.decode(qpack_work, fp, (size_t)fr.length, scratch, PROTOCORE_H3_QPACK_SCRATCH, req_emit, &e);
-            st->have_headers = PROTO_TRUE;
+            st->have_headers = EMBED_TRUE;
         }
         else if (fr.type == H3_DATA)
         {
@@ -297,16 +296,16 @@ static void append(H3Stream *st, const uint8_t *data, size_t len)
 
 // Read the leading stream-type varint of a uni stream and set st->role; consumes it from the buffer.
 // Returns false if more bytes are needed (nothing consumed).
-static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
+static embed_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
 {
     uint64_t type = 0;
     size_t c = 0;
-    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, st->buf, st->buf_len, &type, &c);
+    embed_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, st->buf, st->buf_len, &type, &c);
     if (!quic_varint_ok)
     {
-        return PROTO_FALSE; // need more bytes for the varint
+        return EMBED_FALSE; // need more bytes for the varint
     }
-    st->type_read = PROTO_TRUE;
+    st->type_read = EMBED_TRUE;
     if (type == 0x00)
     {
         // sec 6.2.1: one control stream per peer. A second one claiming the role is fatal.
@@ -315,7 +314,7 @@ static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
             if (&h3->streams[i] != st && h3->streams[i].role == H3_ROLE_CONTROL)
             {
                 h3_fail(h3, H3_STREAM_CREATION_ERROR);
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         st->role = H3_ROLE_CONTROL;
@@ -334,7 +333,7 @@ static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
     }
     EMBED_CALL(memor.move_down, MemoriaCfg, .dst = st->buf, .src = st->buf + c, .bytes = st->buf_len - c);
     st->buf_len -= c;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Parse whatever complete frames the control stream holds (SETTINGS first), consuming them.
@@ -344,7 +343,7 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
     while (off < st->buf_len)
     {
         H3FrameHeader fr;
-        proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, st->buf + off, st->buf_len - off, &fr);
+        embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, st->buf + off, st->buf_len - off, &fr);
         if (!h3_frame_ok)
         {
             break;
@@ -367,9 +366,9 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
                 h3_fail(h3, H3_FRAME_UNEXPECTED);
                 return;
             }
-            h3->peer_settings_seen = PROTO_TRUE;
+            h3->peer_settings_seen = EMBED_TRUE;
             H3Frame.settings_defaults(h3_frame_work, &h3->peer_settings);
-            proto_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, st->buf + off + fr.header_len,
+            embed_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, st->buf + off + fr.header_len,
                                                             (size_t)fr.length, &h3->peer_settings);
             if (!h3_frame_ok)
             {
@@ -383,10 +382,10 @@ static void protocore_h3_consume_control(H3ConnCtx *h3, H3Stream *st)
     st->buf_len -= off;
 }
 
-static void on_stream_data(void *app, uint8_t *, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin)
+static void on_stream_data(void *app, uint8_t *, uint64_t stream_id, const uint8_t *data, size_t len, embed_bool fin)
 {
     H3ConnCtx *h3 = (H3ConnCtx *)app;
-    H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_TRUE);
+    H3Stream *st = protocore_h3_stream_get(h3, stream_id, EMBED_TRUE);
     if (!st)
     {
         return;
@@ -429,7 +428,7 @@ static void on_handshake_done(void *app, uint8_t *qc)
     {
         return;
     }
-    h3->control_opened = PROTO_TRUE;
+    h3->control_opened = EMBED_TRUE;
 
     // Server control stream (id 3): stream type 0x00 + SETTINGS.
     uint8_t buf[64];
@@ -442,7 +441,7 @@ static void on_handshake_done(void *app, uint8_t *qc)
     QuicConnV.stream_send_args.stream_id = 3;
     QuicConnV.stream_send_args.data = buf;
     QuicConnV.stream_send_args.len = p;
-    QuicConnV.stream_send_args.fin = PROTO_FALSE;
+    QuicConnV.stream_send_args.fin = EMBED_FALSE;
     QuicConn.stream_send(qc);
 
     // QPACK encoder (id 7, type 0x02) and decoder (id 11, type 0x03) streams: type byte only.
@@ -452,14 +451,14 @@ static void on_handshake_done(void *app, uint8_t *qc)
     QuicConnV.stream_send_args.stream_id = 7;
     QuicConnV.stream_send_args.data = &t;
     QuicConnV.stream_send_args.len = n;
-    QuicConnV.stream_send_args.fin = PROTO_FALSE;
+    QuicConnV.stream_send_args.fin = EMBED_FALSE;
     QuicConn.stream_send(qc);
     quic_varint_n = QuicVarint.encode(quic_varint_work, &t, 1, 0x03);
     n = quic_varint_n;
     QuicConnV.stream_send_args.stream_id = 11;
     QuicConnV.stream_send_args.data = &t;
     QuicConnV.stream_send_args.len = n;
-    QuicConnV.stream_send_args.fin = PROTO_FALSE;
+    QuicConnV.stream_send_args.fin = EMBED_FALSE;
     QuicConn.stream_send(qc);
     h3->next_uni_id = 15;
 }
@@ -492,13 +491,13 @@ static void h3_conn_open(uint8_t *work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn 
     QuicConn.callbacks(qc);
 }
 
-static proto_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id, int status, const char *content_type,
+static embed_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id, int status, const char *content_type,
                                 const uint8_t *body, size_t body_len)
 {
-    H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_FALSE);
+    H3Stream *st = protocore_h3_stream_get(h3, stream_id, EMBED_FALSE);
     if (st)
     {
-        st->responded = PROTO_TRUE;
+        st->responded = EMBED_TRUE;
     }
 
     // The bytes this response is built out of: the QPACK field section and the frames carrying it.
@@ -551,7 +550,7 @@ static proto_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id
     size_t op = h3_frame_n;
     if (!op)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
         // fits
     }
     if (body_len)
@@ -560,16 +559,16 @@ static proto_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id
         size_t dn = h3_frame_n;
         if (!dn)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         op += dn;
     }
     QuicConnV.stream_send_args.stream_id = stream_id;
     QuicConnV.stream_send_args.data = out;
     QuicConnV.stream_send_args.len = op;
-    QuicConnV.stream_send_args.fin = PROTO_TRUE;
+    QuicConnV.stream_send_args.fin = EMBED_TRUE;
     QuicConn.stream_send(h3->qc);
-    const proto_bool sent = (QuicConnV.n == op);
+    const embed_bool sent = (QuicConnV.n == op);
     return sent;
 }
 
@@ -584,7 +583,7 @@ static H3ConnCtx *h3_bound(uint8_t *work)
 void protocore_h3_conn_init(uint8_t *work)
 {
     H3ConnCtx *h3 = h3_bound(work);
-    H3ConnV.ok = PROTO_FALSE;
+    H3ConnV.ok = EMBED_FALSE;
     if (!h3 || !H3ConnV.bind.qc)
     {
         return;
@@ -597,7 +596,7 @@ void protocore_h3_conn_init(uint8_t *work)
 void protocore_h3_conn_respond(uint8_t *work)
 {
     H3ConnCtx *h3 = h3_bound(work);
-    H3ConnV.ok = PROTO_FALSE;
+    H3ConnV.ok = EMBED_FALSE;
     if (!h3)
     {
         return;
@@ -610,7 +609,7 @@ void protocore_h3_conn_respond(uint8_t *work)
 /** @brief The operands and the outcome. */
 H3ConnVars H3ConnV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

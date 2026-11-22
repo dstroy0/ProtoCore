@@ -24,12 +24,12 @@
 #ifndef PROTOCORE_NVS_H
 #define PROTOCORE_NVS_H
 
-#include "protocore_config.h" // the entry point: proto_bool, size_t, the PROTOCORE_CONFIG_* table sizes
+#include "protocore_config.h" // the entry point: embed_bool, size_t, the PROTOCORE_CONFIG_* table sizes
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief True if @p key exists in @p ns. */
-proto_bool protocore_nvs_has(const char *ns, const char *key);
+embed_bool protocore_nvs_has(const char *ns, const char *key);
 
 /**
  * @brief Copy the bytes stored at @p ns / @p key into @p out.
@@ -38,7 +38,7 @@ proto_bool protocore_nvs_has(const char *ns, const char *key);
 size_t protocore_nvs_get_blob(const char *ns, const char *key, void *out, size_t cap);
 
 /** @brief Store @p len bytes at @p ns / @p key, replacing any current value. */
-proto_bool protocore_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len);
+embed_bool protocore_nvs_put_blob(const char *ns, const char *key, const void *in, size_t len);
 
 /**
  * @brief Copy the string stored at @p ns / @p key into @p out, always null-terminated.
@@ -50,20 +50,20 @@ proto_bool protocore_nvs_put_blob(const char *ns, const char *key, const void *i
 size_t protocore_nvs_get_str(const char *ns, const char *key, char *out, size_t cap);
 
 /** @brief Store the null-terminated @p val at @p ns / @p key. */
-proto_bool protocore_nvs_put_str(const char *ns, const char *key, const char *val);
+embed_bool protocore_nvs_put_str(const char *ns, const char *key, const char *val);
 
 /** @brief Read the 32-bit value at @p ns / @p key, or @p def when the key is absent. */
 uint32_t protocore_nvs_get_u32(const char *ns, const char *key, uint32_t def);
 
 /** @brief Store @p val at @p ns / @p key. */
-proto_bool protocore_nvs_put_u32(const char *ns, const char *key, uint32_t val);
+embed_bool protocore_nvs_put_u32(const char *ns, const char *key, uint32_t val);
 
 /** @brief Drop @p key from @p ns. False if it was not there. */
-proto_bool protocore_nvs_erase(const char *ns, const char *key);
+embed_bool protocore_nvs_erase(const char *ns, const char *key);
 
 /** @brief Drop every key in @p ns. */
-proto_bool protocore_nvs_clear(const char *ns);
+embed_bool protocore_nvs_clear(const char *ns);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NVS_H

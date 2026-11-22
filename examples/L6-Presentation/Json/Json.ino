@@ -80,7 +80,7 @@ void handle_echo(uint8_t slot_id, HttpReq *req)
 {
     char name[32];
     long age = 0;
-    proto_bool admin = false;
+    embed_bool admin = false;
     JsonV.get_str_args.json = (const char *)req->body;
     JsonV.get_str_args.key = "name";
     JsonV.get_str_args.out = name;

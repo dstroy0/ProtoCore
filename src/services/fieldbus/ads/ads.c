@@ -15,7 +15,7 @@
 
 #include "endian/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Write the AMS/TCP header (with the final total length) + the 32-octet AMS header. The payload
 // is appended by the caller; `payload_len` is cbData. Returns ADS_HDR_LEN, or 0 if too small.
@@ -258,24 +258,24 @@ void protocore_ads_parse_ams_header(uint8_t *work)
 
     if (!buf || !out || len < (size_t)ADS_HDR_LEN)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != 0x00 || buf[1] != 0x00) // AMS/TCP reserved
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     // AMS header + payload
     uint32_t frame_len = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + 2, .width = MMGR_ENDIAN_32);
     if (frame_len < (uint32_t)ADS_AMS_HDR_LEN)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     if ((size_t)ADS_AMSTCP_HDR_LEN + frame_len > len)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     const uint8_t *a = buf + ADS_AMSTCP_HDR_LEN;
@@ -292,11 +292,11 @@ void protocore_ads_parse_ams_header(uint8_t *work)
     // cbData must fit inside the frame the AMS/TCP length promised.
     if ((uint32_t)ADS_AMS_HDR_LEN + out->data_len > frame_len)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     out->data = a + ADS_AMS_HDR_LEN;
-    AdsV.ok = PROTO_TRUE;
+    AdsV.ok = EMBED_TRUE;
 }
 
 void protocore_ads_parse_read(uint8_t *work)
@@ -308,18 +308,18 @@ void protocore_ads_parse_read(uint8_t *work)
 
     if (!data || !out || data_len < 8)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     out->result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
     out->len = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_32);
     if (8 + (size_t)out->len > data_len)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     out->data = data + 8;
-    AdsV.ok = PROTO_TRUE;
+    AdsV.ok = EMBED_TRUE;
 }
 
 void protocore_ads_parse_result(uint8_t *work)
@@ -331,11 +331,11 @@ void protocore_ads_parse_result(uint8_t *work)
 
     if (!data || !result || data_len < 4)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     *result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
-    AdsV.ok = PROTO_TRUE;
+    AdsV.ok = EMBED_TRUE;
 }
 
 void protocore_ads_parse_read_state(uint8_t *work)
@@ -347,14 +347,14 @@ void protocore_ads_parse_read_state(uint8_t *work)
 
     if (!data || !out || data_len < 8)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     out->result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
     out->protocore_ads_state =
         (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_16);
     out->device_state = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 6, .width = MMGR_ENDIAN_16);
-    AdsV.ok = PROTO_TRUE;
+    AdsV.ok = EMBED_TRUE;
 }
 
 void protocore_ads_parse_read_device_info(uint8_t *work)
@@ -366,7 +366,7 @@ void protocore_ads_parse_read_device_info(uint8_t *work)
 
     if (!data || !out || data_len < 4 + 4 + ADS_DEVICE_NAME_LEN)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     out->result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
@@ -375,7 +375,7 @@ void protocore_ads_parse_read_device_info(uint8_t *work)
     out->version_build = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 6, .width = MMGR_ENDIAN_16);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->device_name, .src = data + 8, .bytes = ADS_DEVICE_NAME_LEN);
     out->device_name[ADS_DEVICE_NAME_LEN] = '\0'; // the field is not guaranteed NUL-terminated
-    AdsV.ok = PROTO_TRUE;
+    AdsV.ok = EMBED_TRUE;
 }
 
 void protocore_ads_parse_add_notification(uint8_t *work)
@@ -388,12 +388,12 @@ void protocore_ads_parse_add_notification(uint8_t *work)
 
     if (!data || !result || !handle || data_len < 8)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     *result = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data, .width = MMGR_ENDIAN_32);
     *handle = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_32);
-    AdsV.ok = PROTO_TRUE;
+    AdsV.ok = EMBED_TRUE;
 }
 
 void protocore_ads_parse_notification(uint8_t *work)
@@ -407,7 +407,7 @@ void protocore_ads_parse_notification(uint8_t *work)
     // Length(4) + Stamps(4), then per stamp: Timestamp(8) + Samples(4) + samples.
     if (!data || !on_sample || data_len < 8)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     // octets after this field
@@ -415,7 +415,7 @@ void protocore_ads_parse_notification(uint8_t *work)
     uint32_t stamps = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + 4, .width = MMGR_ENDIAN_32);
     if (4 + (size_t)length > data_len)
     {
-        AdsV.ok = PROTO_FALSE;
+        AdsV.ok = EMBED_FALSE;
         return;
     }
     size_t p = 8;
@@ -423,7 +423,7 @@ void protocore_ads_parse_notification(uint8_t *work)
     {
         if (p + 12 > data_len) // timestamp(8) + samples(4)
         {
-            AdsV.ok = PROTO_FALSE;
+            AdsV.ok = EMBED_FALSE;
             return;
         }
         uint64_t timestamp = EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = data + p, .width = MMGR_ENDIAN_64);
@@ -434,7 +434,7 @@ void protocore_ads_parse_notification(uint8_t *work)
         {
             if (p + 8 > data_len) // handle(4) + size(4)
             {
-                AdsV.ok = PROTO_FALSE;
+                AdsV.ok = EMBED_FALSE;
                 return;
             }
             uint32_t handle =
@@ -444,19 +444,19 @@ void protocore_ads_parse_notification(uint8_t *work)
             p += 8;
             if (p + (size_t)size > data_len)
             {
-                AdsV.ok = PROTO_FALSE;
+                AdsV.ok = EMBED_FALSE;
                 return;
             }
             on_sample(handle, data + p, size, timestamp, user);
             p += size;
         }
     }
-    AdsV.ok = PROTO_TRUE;
+    AdsV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 AdsVars AdsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ADS

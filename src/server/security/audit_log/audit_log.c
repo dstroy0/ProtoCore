@@ -27,7 +27,7 @@
 #include "server/clock/clock.h"
 #include "server/core/worker/worker.h" // the chain hash's working set, wiped on release
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // All audit-log state, owned by one instance (internal linkage): the record ring, its
 // head/count/seq cursors, the moving chain anchor, and the sink, grouped so it is one
@@ -98,7 +98,7 @@ static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LE
 static char hex_digit(uint8_t nibble)
 {
     HexV.args.nibble = nibble;
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     Hex.digit(protocore_audit_log_span());
     return HexV.ch;
 }
@@ -318,7 +318,7 @@ void protocore_audit_log_verify(uint8_t *work)
                               .cap = PROTOCORE_SHA256_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        AuditLogV.ok = PROTO_FALSE;
+        AuditLogV.ok = EMBED_FALSE;
         return;
     }
     uint8_t expected[PROTOCORE_AUDIT_HASH_LEN];
@@ -336,13 +336,13 @@ void protocore_audit_log_verify(uint8_t *work)
                 *first_broken_seq = e->seq;
             }
             protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
-            AuditLogV.ok = PROTO_FALSE;
+            AuditLogV.ok = EMBED_FALSE;
             return;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = expected, .src = e->hash, .bytes = PROTOCORE_AUDIT_HASH_LEN);
     }
     protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
-    AuditLogV.ok = PROTO_TRUE;
+    AuditLogV.ok = EMBED_TRUE;
     return;
 }
 
@@ -468,7 +468,7 @@ void protocore_audit_log_dump_json(uint8_t *work)
     uint32_t broken = 0;
     AuditLogV.verify_args.first_broken_seq = &broken;
     protocore_audit_log_verify(work);
-    proto_bool intact = AuditLogV.ok;
+    embed_bool intact = AuditLogV.ok;
 
     int head;
     if (intact)
@@ -554,6 +554,6 @@ void protocore_audit_log_dump_json(uint8_t *work)
 /** @brief The operands and the outcome. */
 AuditLogVars AuditLogV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUDIT_LOG

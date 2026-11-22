@@ -31,7 +31,7 @@
 
 #include "crypto/x509/x509_types/x509_types.h" // X509Cert: what a parse fills in
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The encoding a parse reads. */
 typedef struct
@@ -71,7 +71,7 @@ typedef struct
     X509ParseArgs parse_args;
     X509MatchArgs match_args;
     X509Cert cert;
-    proto_bool ok;
+    embed_bool ok;
 } X509Vars;
 
 /** @brief The operands and the outcome. */
@@ -98,7 +98,7 @@ static const X509Ns X509 __attribute__((unused)) = {
     .name_match = protocore_x509_name_match,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_X509
 

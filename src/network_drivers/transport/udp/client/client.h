@@ -27,7 +27,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The sending side of UDP.
@@ -54,7 +54,7 @@ typedef struct
     uint16_t dst_port;
     const uint8_t *data;
     size_t len;
-    proto_bool ok;
+    embed_bool ok;
 } UdpClientVars;
 
 /** @brief The operands and the outcome. */
@@ -89,6 +89,6 @@ static const UdpClientNs UdpClient __attribute__((unused)) = {
  */
 uint8_t *protocore_udp_client_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_UDP_CLIENT_H

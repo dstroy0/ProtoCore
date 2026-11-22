@@ -17,13 +17,15 @@
 
 #include <FS.h>
 
+#include "proximus_operor/proximus_operor.h" // proxim.read
+
 // The bound filesystem plus the open-handle pool, owned by one instance (internal linkage). The FS
 // ops are fixed-signature vtable entries, so they reach this single owner directly.
 typedef struct
 {
     fs::FS *fs = NULL;
     fs::File file[PROTOCORE_MNT_MAX_OPEN];
-    proto_bool used[PROTOCORE_MNT_MAX_OPEN];
+    embed_bool used[PROTOCORE_MNT_MAX_OPEN];
 } EspMntFsCtx;
 static EspMntFsCtx s_mnt_fs;
 
@@ -39,7 +41,7 @@ static int slot_alloc(void)
     return -1;
 }
 
-static proto_bool slot_ok(int h)
+static embed_bool slot_ok(int h)
 {
     return h >= 0 && h < PROTOCORE_MNT_MAX_OPEN && s_mnt_fs.used[h];
 }
@@ -81,7 +83,7 @@ static int fs_open(const char *path, int mode)
         s_mnt_fs.file[h].close(); // a directory is opened with opendir
         return -1;
     }
-    s_mnt_fs.used[h] = PROTO_TRUE;
+    s_mnt_fs.used[h] = EMBED_TRUE;
     return h;
 }
 
@@ -109,15 +111,15 @@ static void fs_close(int h)
     {
         s_mnt_fs.file[h].close();
         s_mnt_fs.file[h] = fs::File();
-        s_mnt_fs.used[h] = PROTO_FALSE;
+        s_mnt_fs.used[h] = EMBED_FALSE;
     }
 }
 
-static proto_bool fs_seek(int h, uint64_t off)
+static embed_bool fs_seek(int h, uint64_t off)
 {
     if (!slot_ok(h))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return s_mnt_fs.file[h].seek((uint32_t)(off));
 }
@@ -138,45 +140,45 @@ static long fs_size(const char *path)
     return sz;
 }
 
-static proto_bool fs_exists(const char *path)
+static embed_bool fs_exists(const char *path)
 {
     return s_mnt_fs.fs != NULL && s_mnt_fs.fs->exists(path);
 }
 
-static proto_bool fs_remove(const char *path)
+static embed_bool fs_remove(const char *path)
 {
     return s_mnt_fs.fs != NULL && s_mnt_fs.fs->remove(path);
 }
 
-static proto_bool fs_rename(const char *from, const char *to)
+static embed_bool fs_rename(const char *from, const char *to)
 {
     return s_mnt_fs.fs != NULL && s_mnt_fs.fs->rename(from, to);
 }
 
-static proto_bool fs_mkdir(const char *path)
+static embed_bool fs_mkdir(const char *path)
 {
     return s_mnt_fs.fs != NULL && s_mnt_fs.fs->mkdir(path);
 }
 
-static proto_bool fs_rmdir(const char *path)
+static embed_bool fs_rmdir(const char *path)
 {
     return s_mnt_fs.fs != NULL && s_mnt_fs.fs->rmdir(path);
 }
 
-static proto_bool fs_stat(const char *path, protocore_mnt_stat *out)
+static embed_bool fs_stat(const char *path, protocore_mnt_stat *out)
 {
     if (s_mnt_fs.fs == NULL || out == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     fs::File f = s_mnt_fs.fs->open(path, FILE_READ);
     if (!f)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     fill_stat(f, out);
     f.close();
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static int fs_opendir(const char *path)
@@ -199,33 +201,37 @@ static int fs_opendir(const char *path)
         }
         return -1;
     }
-    s_mnt_fs.used[h] = PROTO_TRUE;
+    s_mnt_fs.used[h] = EMBED_TRUE;
     return h;
 }
 
-static proto_bool fs_readdir(int h, protocore_mnt_stat *out, char *name, size_t name_cap)
+static embed_bool fs_readdir(int h, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     if (!slot_ok(h) || out == NULL || name == NULL || name_cap == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     fs::File c = s_mnt_fs.file[h].openNextFile();
     if (!c)
     {
-        return PROTO_FALSE; // end of directory
+        return EMBED_FALSE; // end of directory
     }
     const char *base = base_name(c.name());
-    size_t bl = strnlen(base, name_cap);
+    size_t bl = 0u;
+    while (bl < name_cap && base[bl] != '\0')
+    {
+        bl++;
+    }
     if (bl >= name_cap)
     {
         c.close();
-        return PROTO_FALSE; // the caller's buffer cannot hold this name
+        return EMBED_FALSE; // the caller's buffer cannot hold this name
     }
-    memcpy(name, base, bl);
+    EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)name, .at = (const uint8_t *)base, .size = bl);
     name[bl] = '\0';
     fill_stat(c, out);
     c.close();
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static const protocore_mnt_backend s_fs_backend = {fs_open,  fs_read,   fs_write,   fs_close,  fs_seek,
@@ -237,7 +243,7 @@ const protocore_mnt_backend *protocore_mnt_fs(fs::FS *filesystem)
     s_mnt_fs.fs = filesystem;
     for (int h = 0; h < PROTOCORE_MNT_MAX_OPEN; h++)
     {
-        s_mnt_fs.used[h] = PROTO_FALSE;
+        s_mnt_fs.used[h] = EMBED_FALSE;
     }
     return &s_fs_backend;
 }

@@ -30,7 +30,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Event processing - the stack's callbacks (RFC 9293 sec 3.10.7 SEGMENT ARRIVES)
@@ -40,14 +40,14 @@ PROTOCORE_BEGIN_DECLS
 // is no real stack event to fire them.
 
 protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protocore_pbuf *p, protocore_net_err err);
-protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len);
+protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, embed_u16 len);
 void lowlevel_err_cb(void *arg, protocore_net_err err);
 
 /** @brief RFC 9293 sec 3.9.1 SEND / RECEIVE: the bytes a call moves, and the room they move into. */
 typedef struct
 {
     const void *data; ///< bytes for a send
-    proto_u16 len;    ///< how many
+    embed_u16 len;    ///< how many
     uint8_t *buf;     ///< where a read or a peek lands
     size_t cap;       ///< how much room it has
     size_t off;       ///< a peek's offset from the tail
@@ -57,7 +57,7 @@ typedef struct
 /** @brief What a pool lifecycle call reads: the idle deadline it sweeps against, and whose slots. */
 typedef struct
 {
-    proto_u32 conn_timeout_ms; ///< milliseconds of inactivity before the sweep closes a slot
+    embed_u32 conn_timeout_ms; ///< milliseconds of inactivity before the sweep closes a slot
     int worker_id;             ///< whose slots the sweep reaps
 } ConnLifeArgs;
 
@@ -156,8 +156,8 @@ typedef struct
 #if PROTOCORE_ENABLE_OBSERVABILITY
     ConnObsArgs obs; ///< what an observability call records
 #endif
-    proto_bool ok;
-    proto_u16 u16;
+    embed_bool ok;
+    embed_u16 u16;
     uint32_t u32;
     uint8_t u8;
     int32_t i32;
@@ -324,6 +324,6 @@ static const ConnPoolNs ConnPool __attribute__((unused)) = {
  */
 uint8_t *protocore_conn_pool_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TCP_PROTOCOL_H

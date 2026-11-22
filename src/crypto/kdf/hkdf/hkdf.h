@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file hkdf.h
@@ -43,10 +43,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*extract)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
-    proto_bool (*expand)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
-    proto_bool (*expand_label)(uint8_t *, const uint8_t *, const char *, uint8_t *, size_t, const char *);
-    proto_bool (*expand_label_ctx)(uint8_t *, const uint8_t *, const char *, const uint8_t *, size_t, uint8_t *, size_t,
+    embed_bool (*extract)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
+    embed_bool (*expand)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *, size_t);
+    embed_bool (*expand_label)(uint8_t *, const uint8_t *, const char *, uint8_t *, size_t, const char *);
+    embed_bool (*expand_label_ctx)(uint8_t *, const uint8_t *, const char *, const uint8_t *, size_t, uint8_t *, size_t,
                                    const char *);
 } HkdfNs;
 PROTOCORE_NS_LAYOUT(HkdfNs, extract, expand, expand_label, expand_label_ctx);
@@ -59,9 +59,9 @@ PROTOCORE_NS_LAYOUT(HkdfNs, extract, expand, expand_label, expand_label_ctx);
  * @param ikm input keying material
  * @param ikm_len its length
  * @param prk PROTOCORE_HKDF_HASH_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
+embed_bool protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t salt_len, const uint8_t *ikm,
                                   size_t ikm_len, uint8_t *prk);
 /**
  * @brief OKM = T(1) | T(2) | ..., info taken verbatim (RFC 5869 sec 2.3).
@@ -71,9 +71,9 @@ proto_bool protocore_hkdf_extract(uint8_t *work, const uint8_t *salt, size_t sal
  * @param info_len its length
  * @param out output keying material
  * @param out_len bytes requested; past 255*PROTOCORE_HKDF_HASH_LEN out is zeroed instead
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hkdf_expand(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
+embed_bool protocore_hkdf_expand(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len, uint8_t *out,
                                  size_t out_len);
 /**
  * @brief Expand under an HkdfLabel with an empty context.
@@ -83,9 +83,9 @@ proto_bool protocore_hkdf_expand(uint8_t *work, const uint8_t *prk, const uint8_
  * @param out output keying material
  * @param out_len bytes requested
  * @param label_prefix PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hkdf_expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
+embed_bool protocore_hkdf_expand_label(uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
                                        size_t out_len, const char *label_prefix);
 /**
  * @brief Expand under an HkdfLabel carrying a context, the Derive-Secret form.
@@ -97,9 +97,9 @@ proto_bool protocore_hkdf_expand_label(uint8_t *work, const uint8_t *secret, con
  * @param out output keying material
  * @param out_len bytes requested
  * @param label_prefix PROTOCORE_HKDF_LABEL_PREFIX, or "dtls13" for DTLS 1.3
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t *secret, const char *label,
+embed_bool protocore_hkdf_expand_label_ctx(uint8_t *work, const uint8_t *secret, const char *label,
                                            const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                                            const char *label_prefix);
 
@@ -109,6 +109,6 @@ PROTOCORE_NS HkdfNs Hkdf PROTOCORE_UNUSED = {.extract = protocore_hkdf_extract,
                                              .expand_label = protocore_hkdf_expand_label,
                                              .expand_label_ctx = protocore_hkdf_expand_label_ctx};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HKDF_H

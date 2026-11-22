@@ -25,7 +25,7 @@
 #include "server/clock/clock.h" // protocore_cycles()
                                 // memset
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The capture's compile-time storage: the pre-roll ring, the assembled window, and the
@@ -44,8 +44,8 @@ struct TraceCaptureStorage
     uint32_t trace_id;
     uint32_t trigger_cycles;
     protocore_tc_stats stats;
-    proto_bool capturing;
-    proto_bool configured;
+    embed_bool capturing;
+    embed_bool configured;
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -97,7 +97,7 @@ void protocore_trace_capture_begin(uint8_t *work)
 {
     const protocore_tc_config *cfg = TraceCaptureV.cfg;
 
-    TraceCaptureV.ok = PROTO_FALSE;
+    TraceCaptureV.ok = EMBED_FALSE;
     if (!cfg || !cfg->sink)
     {
         return;
@@ -118,8 +118,8 @@ void protocore_trace_capture_begin(uint8_t *work)
     TRACE_CAPTURE_CTX(work)->ctx = cfg->ctx;
     TRACE_CAPTURE_CTX(work)->pretrigger_samples = cfg->pretrigger_samples;
     TRACE_CAPTURE_CTX(work)->posttrigger_samples = cfg->posttrigger_samples;
-    TRACE_CAPTURE_CTX(work)->configured = PROTO_TRUE;
-    TraceCaptureV.ok = PROTO_TRUE;
+    TRACE_CAPTURE_CTX(work)->configured = EMBED_TRUE;
+    TraceCaptureV.ok = EMBED_TRUE;
 }
 
 void protocore_trace_capture_feed_in(uint8_t *work)
@@ -153,7 +153,7 @@ void protocore_trace_capture_feed_in(uint8_t *work)
                 win.trace_id = TRACE_CAPTURE_CTX(work)->trace_id++;
                 Clock.cycles(Clock.internal);
                 win.assembly_cycles = Clock.cyc - TRACE_CAPTURE_CTX(work)->trigger_cycles; // wrap-safe unsigned delta
-                TRACE_CAPTURE_CTX(work)->capturing = PROTO_FALSE;
+                TRACE_CAPTURE_CTX(work)->capturing = EMBED_FALSE;
                 TRACE_CAPTURE_CTX(work)->stats.windows_completed++;
                 TRACE_CAPTURE_CTX(work)->sink(&win, TRACE_CAPTURE_CTX(work)->ctx);
             }
@@ -164,7 +164,7 @@ void protocore_trace_capture_feed_in(uint8_t *work)
 
 void protocore_trace_capture_trigger(uint8_t *work)
 {
-    TraceCaptureV.ok = PROTO_FALSE;
+    TraceCaptureV.ok = EMBED_FALSE;
     if (!TRACE_CAPTURE_CTX(work)->configured)
     {
         return;
@@ -181,10 +181,10 @@ void protocore_trace_capture_trigger(uint8_t *work)
                 ->pre_ring[(TRACE_CAPTURE_CTX(work)->pre_head + i) % TRACE_CAPTURE_CTX(work)->pretrigger_samples];
     }
     TRACE_CAPTURE_CTX(work)->post_count = 0;
-    TRACE_CAPTURE_CTX(work)->capturing = PROTO_TRUE;
+    TRACE_CAPTURE_CTX(work)->capturing = EMBED_TRUE;
     Clock.cycles(Clock.internal);
     TRACE_CAPTURE_CTX(work)->trigger_cycles = Clock.cyc;
-    TraceCaptureV.ok = PROTO_TRUE;
+    TraceCaptureV.ok = EMBED_TRUE;
 }
 
 void protocore_trace_capture_get_stats(uint8_t *work)
@@ -202,14 +202,14 @@ void protocore_trace_capture_capturing(uint8_t *work)
 
 void protocore_trace_capture_end(uint8_t *work)
 {
-    TRACE_CAPTURE_CTX(work)->configured = PROTO_FALSE;
-    TRACE_CAPTURE_CTX(work)->capturing = PROTO_FALSE;
+    TRACE_CAPTURE_CTX(work)->configured = EMBED_FALSE;
+    TRACE_CAPTURE_CTX(work)->capturing = EMBED_FALSE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 TraceCaptureVars TraceCaptureV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TRACE_CAPTURE

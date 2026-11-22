@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file modbus_master.h
@@ -40,7 +40,7 @@ typedef struct
     int (*parse_response)(uint8_t *, const uint8_t *, size_t, uint16_t *, size_t, uint8_t *);
     size_t (*build_read_bits)(uint8_t *, uint8_t, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
     int (*parse_read_bits_response)(uint8_t *, const uint8_t *, size_t, uint16_t, uint8_t *, size_t, uint8_t *);
-    size_t (*build_write_single_coil)(uint8_t *, uint16_t, uint8_t, uint16_t, proto_bool, uint8_t *, size_t);
+    size_t (*build_write_single_coil)(uint8_t *, uint16_t, uint8_t, uint16_t, embed_bool, uint8_t *, size_t);
     size_t (*build_write_multiple_coils)(uint8_t *, uint16_t, uint8_t, uint16_t, const uint8_t *, uint16_t, uint8_t *,
                                          size_t);
     size_t (*build_write_single)(uint8_t *, uint16_t, uint8_t, uint16_t, uint16_t, uint8_t *, size_t);
@@ -121,7 +121,7 @@ int protocore_modbus_master_parse_read_bits_response(uint8_t *work, const uint8_
  * @return The size_t.
  */
 size_t protocore_modbus_master_build_write_single_coil(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
-                                                       proto_bool on, uint8_t *out, size_t cap);
+                                                       embed_bool on, uint8_t *out, size_t cap);
 /**
  * @brief Build a Write Multiple Coils request ADU (FC 0x0F).
  * @param work PROTOCORE_MODBUS_MASTER_BORROW bytes the caller took. Not held past the call.
@@ -236,6 +236,6 @@ PROTOCORE_NS ModbusMasterNs ModbusMaster PROTOCORE_UNUSED = {
     .build_read_write_multiple = protocore_modbus_master_build_read_write_multiple,
     .parse_mask_write_response = protocore_modbus_master_parse_mask_write_response};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_MODBUS_MASTER_H

@@ -21,7 +21,7 @@
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -34,7 +34,7 @@ typedef const char *(*EdgeHdrLookup)(void *ctx, const char *name);
 
 typedef struct EdgeEntry
 {
-    proto_bool used;
+    embed_bool used;
     char key[PROTOCORE_EDGE_KEY_MAX];               ///< canonical key (collision-safe exact compare)
     uint8_t digest[32];                             ///< sha256.hash(key) - the L2 dbm key
     char vary_names[PROTOCORE_EDGE_VARY_MAX];       ///< the response Vary header value (field-name list), "" if none
@@ -123,7 +123,7 @@ typedef struct
 typedef struct
 {
     const struct protocore_cache_control *cc;
-    proto_bool shared;
+    embed_bool shared;
     int64_t date_epoch;
     int64_t expires_epoch;
 } EdgeCacheFreshnessLifetimeArgs;
@@ -165,7 +165,7 @@ typedef struct
     const char *host;
     const char *path;
     const char *query;
-    proto_bool include_query;
+    embed_bool include_query;
     char *out;
     size_t out_cap;
 } EdgeCacheKeyCanonArgs;
@@ -227,7 +227,7 @@ typedef struct
 {
     EdgeEntry *e;
     const struct protocore_cache_control *cc;
-    proto_bool shared;
+    embed_bool shared;
     int64_t date_epoch;
     int64_t expires_epoch;
     int64_t last_modified_epoch;
@@ -404,7 +404,7 @@ typedef struct
     EdgeCacheIsStoreableArgs is_storeable_args;
     EdgeCacheBuildConditionalArgs build_conditional_args;
     EdgeCacheApply304Args apply_304_args;
-    proto_bool ok;
+    embed_bool ok;
     int64_t epoch;
     long secs;
     size_t n;
@@ -502,7 +502,7 @@ static const EdgeCacheNs EdgeCache __attribute__((unused)) = {
     .apply_304 = protocore_edge_cache_apply_304,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE
 

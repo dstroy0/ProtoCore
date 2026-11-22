@@ -11,7 +11,7 @@
 
 #include "network_drivers/presentation/ssh/common/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 struct ProtoHandler;
 
@@ -103,6 +103,6 @@ static const SshServerNs SshServer __attribute__((unused)) = {
  */
 uint8_t *protocore_ssh_server_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SERVER_SERVER_H

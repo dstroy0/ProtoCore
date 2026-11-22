@@ -39,7 +39,7 @@
 
 #if PROTOCORE_ENABLE_SNMP_V3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Localized-key length: the SHA-256 digest size (RFC 7860 sec 9.3). */
 #define SNMP_USM_KEY_LEN 32
@@ -61,7 +61,7 @@ typedef struct
     const uint8_t *in;  ///< the octets to transform
     uint8_t *out;       ///< where they land; may be @c in
     size_t len;         ///< how many
-    proto_bool encrypt; ///< encrypt, otherwise decrypt with the feedback taken from the ciphertext
+    embed_bool encrypt; ///< encrypt, otherwise decrypt with the feedback taken from the ciphertext
 } SnmpUsmPrivArgs;
 
 /**
@@ -85,7 +85,7 @@ typedef struct
     uint8_t *work;        ///< PROTOCORE_HMAC_SHA256_BORROW octets, aligned for uint32_t, alive across the call
     SnmpUsmKeyArgs key;   ///< what a derivation reads and writes
     SnmpUsmPrivArgs priv; ///< what the privacy transform reads and writes
-    proto_bool ok;
+    embed_bool ok;
 } SnmpCryptoVars;
 
 /** @brief The operands and the outcome. */
@@ -112,7 +112,7 @@ static const SnmpCryptoNs SnmpCrypto __attribute__((unused)) = {
     .aes_cfb128 = protocore_snmp_crypto_aes_cfb128,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP_V3
 

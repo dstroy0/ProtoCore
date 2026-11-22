@@ -27,7 +27,7 @@
 
 #if PROTOCORE_HOST && PROTOCORE_HAS_HW_AES
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Bytes in one AES block. */
 #ifndef PROTOCORE_AES_HW_BLOCK_LEN
@@ -62,7 +62,7 @@ void protocore_aes_hw_setkey(const uint8_t *key, unsigned key_bytes);
  */
 void protocore_aes_hw_block(const uint8_t *in, uint8_t *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST && PROTOCORE_HAS_HW_AES
 

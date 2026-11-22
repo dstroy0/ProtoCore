@@ -19,7 +19,7 @@
 
 #include <time.h>
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- reader (big-endian, bounds-checked) ---------------------------------------------------------
 
@@ -51,7 +51,7 @@ void protocore_sftp_rd_init(uint8_t *work)
     r->p = payload;
     r->len = len;
     r->off = 0;
-    r->ok = PROTO_TRUE;
+    r->ok = EMBED_TRUE;
 }
 
 void protocore_sftp_rd_u8(uint8_t *work)
@@ -61,7 +61,7 @@ void protocore_sftp_rd_u8(uint8_t *work)
 
     if (!r->ok || r->off + 1 > r->len)
     {
-        r->ok = PROTO_FALSE;
+        r->ok = EMBED_FALSE;
         SftpV.value = 0;
         return;
     }
@@ -75,7 +75,7 @@ void protocore_sftp_rd_u32(uint8_t *work)
 
     if (!r->ok || r->off + 4 > r->len)
     {
-        r->ok = PROTO_FALSE;
+        r->ok = EMBED_FALSE;
         SftpV.u32 = 0;
         return;
     }
@@ -92,7 +92,7 @@ void protocore_sftp_rd_u64(uint8_t *work)
 
     if (!r->ok || r->off + 8 > r->len)
     {
-        r->ok = PROTO_FALSE;
+        r->ok = EMBED_FALSE;
         SftpV.u64 = 0;
         return;
     }
@@ -116,8 +116,8 @@ void protocore_sftp_rd_string(uint8_t *work)
     uint32_t n = SftpV.u32;
     if (!r->ok || r->off + n > r->len)
     {
-        r->ok = PROTO_FALSE;
-        SftpV.ok = PROTO_FALSE;
+        r->ok = EMBED_FALSE;
+        SftpV.ok = EMBED_FALSE;
         return;
     }
     if (out)
@@ -129,7 +129,7 @@ void protocore_sftp_rd_string(uint8_t *work)
         *out_len = n;
     }
     r->off += n;
-    SftpV.ok = PROTO_TRUE;
+    SftpV.ok = EMBED_TRUE;
 }
 
 void protocore_sftp_rd_attrs(uint8_t *work)
@@ -215,7 +215,7 @@ void protocore_sftp_wr_u8(uint8_t *work)
 
     if (w->ovf || w->off + 1 > w->cap)
     {
-        w->ovf = PROTO_TRUE;
+        w->ovf = EMBED_TRUE;
         return;
     }
     w->p[w->off++] = v;
@@ -229,7 +229,7 @@ void protocore_sftp_wr_u32(uint8_t *work)
 
     if (w->ovf || w->off + 4 > w->cap)
     {
-        w->ovf = PROTO_TRUE;
+        w->ovf = EMBED_TRUE;
         return;
     }
     w->p[w->off++] = (uint8_t)(v >> 24);
@@ -246,7 +246,7 @@ void protocore_sftp_wr_u64(uint8_t *work)
 
     if (w->ovf || w->off + 8 > w->cap)
     {
-        w->ovf = PROTO_TRUE;
+        w->ovf = EMBED_TRUE;
         return;
     }
     for (int i = 7; i >= 0; i--)
@@ -264,7 +264,7 @@ void protocore_sftp_wr_bytes(uint8_t *work)
 
     if (w->ovf || w->off + n > w->cap)
     {
-        w->ovf = PROTO_TRUE;
+        w->ovf = EMBED_TRUE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->p + w->off, .src = b, .bytes = n);
@@ -570,7 +570,7 @@ void protocore_sftp_build_name1(uint8_t *work)
 void protocore_sftp_format_longname(uint8_t *work)
 {
     (void)work;
-    proto_bool is_dir = SftpV.format_longname_args.is_dir;
+    embed_bool is_dir = SftpV.format_longname_args.is_dir;
     uint32_t perms = SftpV.format_longname_args.perms;
     uint64_t size = SftpV.format_longname_args.size;
     uint32_t mtime = SftpV.format_longname_args.mtime;
@@ -628,6 +628,6 @@ void protocore_sftp_format_longname(uint8_t *work)
 /** @brief The operands and the outcome. */
 SftpVars SftpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_SFTP

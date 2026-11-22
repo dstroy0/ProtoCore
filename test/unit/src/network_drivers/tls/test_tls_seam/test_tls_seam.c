@@ -10,7 +10,7 @@
 // through the transport's context-safe raw write.
 //
 // Why this suite exists at all: every one of these calls was an ungated `static inline` returning
-// PROTO_FALSE / -1 / 0, and each was the ONLY definition of its name. protocore_tls_write returned
+// EMBED_FALSE / -1 / 0, and each was the ONLY definition of its name. protocore_tls_write returned
 // -1 on every build, so TLS data never flowed, and nothing failed - the stubs linked cleanly and no
 // suite reached them. These cases are what makes a stub impossible to reintroduce silently: each
 // one asserts on behavior a stub cannot produce.

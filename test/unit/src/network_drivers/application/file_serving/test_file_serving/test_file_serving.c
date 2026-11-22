@@ -16,12 +16,12 @@
 static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
 static const protocore_mnt_backend *g_fs;
-static proto_bool handler_called = PROTO_FALSE;
+static embed_bool handler_called = EMBED_FALSE;
 
 static void handle_html(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = PROTO_TRUE;
+    handler_called = EMBED_TRUE;
     const protocore_mnt_backend *fs = mock_mnt();
     FileServingV.serve_file_args.slot_id = slot_id;
     FileServingV.serve_file_args.file_sys = fs;
@@ -33,7 +33,7 @@ static void handle_html(uint8_t slot_id, HttpReq *req)
 static void handle_js(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = PROTO_TRUE;
+    handler_called = EMBED_TRUE;
     const protocore_mnt_backend *fs = mock_mnt();
     FileServingV.serve_file_args.slot_id = slot_id;
     FileServingV.serve_file_args.file_sys = fs;
@@ -45,7 +45,7 @@ static void handle_js(uint8_t slot_id, HttpReq *req)
 static void handle_missing(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    handler_called = PROTO_TRUE;
+    handler_called = EMBED_TRUE;
     const protocore_mnt_backend *fs = mock_mnt();
     FileServingV.serve_file_args.slot_id = slot_id;
     FileServingV.serve_file_args.file_sys = fs;
@@ -57,13 +57,13 @@ static void handle_missing(uint8_t slot_id, HttpReq *req)
 void setUp()
 {
     protocore_server_reset();
-    handler_called = PROTO_FALSE;
+    handler_called = EMBED_FALSE;
 
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -151,7 +151,7 @@ void test_file_body_is_sent()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), body));
 }
 
-static proto_bool other_called = PROTO_FALSE;
+static embed_bool other_called = EMBED_FALSE;
 static const char *cur_ctype = NULL;
 static const char *cur_path = NULL;
 
@@ -180,7 +180,7 @@ static void h_big(uint8_t slot_id, HttpReq *req)
 static void h_other(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    other_called = PROTO_TRUE;
+    other_called = EMBED_TRUE;
     send_text(slot_id, 200, "text/plain", "other");
 }
 
@@ -282,7 +282,7 @@ void test_multiple_content_types()
         protocore_server_reset();
         conn_pool[0] = (TcpConn){0};
         conn_pool[0].id = 0;
-        conn_pool[0].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
         HttpConnV.slot = 0;
@@ -305,7 +305,7 @@ static void rearm(uint8_t slot)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    conn_pool[slot].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConnV.slot = slot;
@@ -510,13 +510,13 @@ void stress_serve_file_50_requests()
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
         conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
-        conn_pool[slot].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConnV.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
-        handler_called = PROTO_FALSE;
+        handler_called = EMBED_FALSE;
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
         HttpConnV.slot = slot;
@@ -538,7 +538,7 @@ void stress_alternate_missing_and_found()
         uint8_t slot = (uint8_t)(i % MAX_CONNS);
         conn_pool[slot] = (TcpConn){0};
         conn_pool[slot].id = slot;
-        conn_pool[slot].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConnV.slot = slot;

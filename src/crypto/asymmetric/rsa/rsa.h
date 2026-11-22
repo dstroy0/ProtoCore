@@ -21,11 +21,11 @@
 #ifndef PROTOCORE_RSA_H
 #define PROTOCORE_RSA_H
 
-#include "protocore_config.h" // the entry point: PROTO_ENUM_PACKED, and protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: EMBED_ENUM_BYTE, and protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_RSA
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_RSA_KEY_BYTES - the modulus size, RSA-2048 - is stated in protocore_config.h, which
 // sizes the X.509 verification borrow out of it.
@@ -38,12 +38,11 @@ PROTOCORE_BEGIN_DECLS
  *
  * Only the message hash and its DigestInfo OID differ between the two.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_rsa_hash,
     PROTOCORE_RSA_HASH_SHA256 = 0,    ///< RSASSA-PKCS1-v1.5 with SHA-256
     PROTOCORE_RSA_HASH_SHA512 = 1,    ///< RSASSA-PKCS1-v1.5 with SHA-512
     PROTOCORE_RSA_HASH_PSS_SHA256 = 2 ///< RSASSA-PSS with SHA-256, MGF1-SHA-256 and a 32-octet salt
-} protocore_rsa_hash;
+);
 
 /** @brief Length of the DER DigestInfo wrapper for SHA-256 (RFC 8017 / RFC 5754). */
 #define PROTOCORE_PKCS1_DIGESTINFO_LEN 19
@@ -124,7 +123,7 @@ typedef struct
 {
     RsaVerifyArgs verify_args;
     RsaSignArgs sign_args;
-    proto_bool ok;
+    embed_bool ok;
 } RsaVars;
 
 /** @brief The operands and the outcome. */
@@ -151,7 +150,7 @@ static const RsaNs Rsa __attribute__((unused)) = {
     .sign = protocore_rsa_sign,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RSA
 

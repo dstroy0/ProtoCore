@@ -26,7 +26,7 @@
 #include "shared/utf8/utf8.h"
 #include "spatium/spatium.h" // spat.ok: whether the pool had the bytes
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 #include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
@@ -113,7 +113,7 @@ void protocore_ws_alloc(uint8_t *work)
 #if PROTOCORE_ENABLE_WS_DEFLATE
             ws_pool[i].pmd = WsV.pmd; // what the handshake negotiated, which nothing else can know
 #endif
-            ws_pool[i].active = PROTO_TRUE;
+            ws_pool[i].active = EMBED_TRUE;
             ws_pool[i].parse_state = WS_HEADER1;
             WsV.found = &ws_pool[i];
             return;
@@ -156,8 +156,8 @@ static void ws_reset_perframe(WsConn *ws)
 {
     ws->parse_state = WS_HEADER1;
     ws->opcode = WS_OP_TEXT;
-    ws->fin = PROTO_FALSE;
-    ws->masked = PROTO_FALSE;
+    ws->fin = EMBED_FALSE;
+    ws->masked = EMBED_FALSE;
     ws->payload_len = 0;
     ws->payload_idx = 0;
     ws->len64_count = 0;
@@ -168,7 +168,7 @@ void ws_reset_frame(WsConn *ws)
 {
     ws_reset_perframe(ws);
     // Also clear reassembly state - a full reset between messages.
-    ws->fragmenting = PROTO_FALSE;
+    ws->fragmenting = EMBED_FALSE;
     ws->msg_opcode = WS_OP_TEXT;
     ws->msg_len = 0;
     ws->buf[0] = '\0';
@@ -223,7 +223,7 @@ void protocore_ws_set_frag_size(uint8_t *work)
 
 // Emit one WebSocket frame. b0 is the finished first header byte (FIN | RSV1 | opcode). Server frames
 // are never masked (RFC 6455 sec 5.1). Returns false if a transport send fails.
-static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, uint16_t len)
+static embed_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, uint16_t len)
 {
     uint8_t header[4];
     uint8_t hlen;
@@ -246,7 +246,7 @@ static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, 
     ConnPool.send(protocore_conn_pool_span());
     if (!ConnPoolV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (len > 0 && payload)
     {
@@ -255,10 +255,10 @@ static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, 
         ConnPool.send(protocore_conn_pool_span());
         if (!ConnPoolV.ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_ws_send_frame(uint8_t *work)
@@ -269,7 +269,7 @@ void protocore_ws_send_frame(uint8_t *work)
     uint16_t len = WsV.frame.len;
     const uint8_t slot = ws->slot_id;
 
-    WsV.ok = PROTO_FALSE;
+    WsV.ok = EMBED_FALSE;
     ConnPoolV.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPoolV.ok)
@@ -325,11 +325,11 @@ void protocore_ws_send_frame(uint8_t *work)
     // Fragment only data frames (RFC 6455 §5.4: control frames MUST NOT be fragmented, and are small
     // anyway). frag == 0, a non-data frame, or a message that already fits -> a single FIN frame (the
     // default, unchanged). Server-to-client frames are never masked (§5.1).
-    proto_bool data = (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY);
+    embed_bool data = (opcode == WS_OP_TEXT || opcode == WS_OP_BINARY);
     uint16_t frag = WS_CTX(work)->frag_size;
     if (!data || frag == 0 || len <= frag)
     {
-        proto_bool sent = ws_emit_one(slot, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
+        embed_bool sent = ws_emit_one(slot, (uint8_t)(0x80 | rsv1 | (uint8_t)opcode), payload, len);
 #if PROTOCORE_ENABLE_WS_DEFLATE
         protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
 #endif
@@ -341,11 +341,11 @@ void protocore_ws_send_frame(uint8_t *work)
     // CONTINUATION, and FIN marks the last. The compressed bytes (RFC 7692) are split as-is - the peer
     // concatenates the fragment payloads back into one stream before inflating.
     uint16_t off = 0;
-    proto_bool first = PROTO_TRUE;
+    embed_bool first = EMBED_TRUE;
     while (off < len)
     {
         uint16_t chunk = (uint16_t)(len - off) < frag ? (uint16_t)(len - off) : frag;
-        proto_bool last = (uint16_t)(off + chunk) >= len;
+        embed_bool last = (uint16_t)(off + chunk) >= len;
         uint8_t b0 = (uint8_t)((last ? 0x80 : 0x00) | (first ? (rsv1 | (uint8_t)opcode) : (uint8_t)WS_OP_CONTINUATION));
         if (!ws_emit_one(slot, b0, payload + off, chunk))
         {
@@ -355,12 +355,12 @@ void protocore_ws_send_frame(uint8_t *work)
             return;
         }
         off = (uint16_t)(off + chunk);
-        first = PROTO_FALSE;
+        first = EMBED_FALSE;
     }
 #if PROTOCORE_ENABLE_WS_DEFLATE
     protocore_plain_guard()->persistent_buf_release(cbuf, protocore_plain_owner());
 #endif
-    WsV.ok = PROTO_TRUE;
+    WsV.ok = EMBED_TRUE;
 }
 
 void protocore_ws_close(uint8_t *work)
@@ -389,7 +389,7 @@ void protocore_ws_close(uint8_t *work)
 // ---------------------------------------------------------------------------
 
 // RFC 6455 §5.5: opcodes 0x8 (close), 0x9 (ping), 0xA (pong) are control frames.
-static inline proto_bool ws_is_control(WsOpcode op)
+static inline embed_bool ws_is_control(WsOpcode op)
 {
     return ((uint8_t)op & 0x08) != 0;
 }
@@ -507,7 +507,7 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
             }
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ws->buf, .src = out, .bytes = dlen);
             ws->msg_len = dlen;
-            ws->msg_compressed = PROTO_FALSE;
+            ws->msg_compressed = EMBED_FALSE;
             protocore_plain_guard()->persistent_buf_release(tbl, protocore_plain_owner());
             protocore_plain_guard()->persistent_buf_release(out, protocore_plain_owner());
             protocore_plain_guard()->persistent_buf_release(in, protocore_plain_owner());
@@ -532,13 +532,13 @@ static void ws_finish_frame(uint8_t *work, WsConn *ws)
         ws->opcode = ws->msg_opcode;   // report the original TEXT/BINARY opcode
         ws->payload_len = ws->msg_len; // app reads payload_len / payload_idx
         ws->payload_idx = ws->msg_len;
-        ws->fragmenting = PROTO_FALSE;
+        ws->fragmenting = EMBED_FALSE;
         ws->parse_state = WS_FRAME_READY;
     }
     else
     {
         // More fragments to come; keep buf and msg_len, read the next frame.
-        ws->fragmenting = PROTO_TRUE;
+        ws->fragmenting = EMBED_TRUE;
         ws_reset_perframe(ws);
     }
 }
@@ -655,7 +655,7 @@ void protocore_ws_feed_byte(uint8_t *work)
             // as the per-message compression flag set above (pmd + new data frame).
 #if PROTOCORE_ENABLE_WS_DEFLATE
             {
-                proto_bool new_data = !ws_is_control(ws->opcode) && ws->opcode != WS_OP_CONTINUATION;
+                embed_bool new_data = !ws_is_control(ws->opcode) && ws->opcode != WS_OP_CONTINUATION;
                 if ((rsv & 0x30) || ((rsv & 0x40) && !(ws->pmd && new_data)))
                 {
                     WsV.conn = ws;
@@ -846,6 +846,6 @@ uint8_t *protocore_ws_span(void)
 /** @brief The operands and the outcome. */
 WsVars WsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBSOCKET

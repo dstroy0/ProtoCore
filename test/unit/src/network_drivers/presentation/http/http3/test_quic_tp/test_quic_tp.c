@@ -56,7 +56,7 @@ void test_rfc9000_18_2_defaults(void)
 
     // An empty parameter string leaves every default in place: nothing present, nothing overridden.
     QuicTransportParams parsed;
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, NULL, 0, &parsed);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, NULL, 0, &parsed);
     TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(65527u, parsed.max_udp_payload_size);
     TEST_ASSERT_EQUAL_UINT64(3u, parsed.ack_delay_exponent);
@@ -95,7 +95,7 @@ void test_hand_built_wire_string(void)
     static const uint8_t SCID[4] = {0xde, 0xad, 0xbe, 0xef};
 
     QuicTransportParams tp;
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, WIRE, sizeof(WIRE), &tp);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, WIRE, sizeof(WIRE), &tp);
     TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(10000u, tp.max_idle_timeout);
     TEST_ASSERT_EQUAL_UINT64(1472u, tp.max_udp_payload_size);
@@ -119,20 +119,20 @@ void test_encode_parse_round_trip(void)
 {
     QuicTransportParams out;
     QuicTp.defaults(quic_tp_work, &out);
-    out.has_original_dcid = PROTO_TRUE;
+    out.has_original_dcid = EMBED_TRUE;
     out.original_dcid_len = 8;
     for (uint8_t i = 0; i < 8; i++)
     {
         out.original_dcid[i] = (uint8_t)(0x10 + i);
     }
-    out.has_initial_scid = PROTO_TRUE;
+    out.has_initial_scid = EMBED_TRUE;
     // sec 17.2: "In QUIC version 1, this value MUST NOT exceed 20 bytes."
     out.initial_scid_len = QUIC_MAX_CID_LEN;
     for (uint8_t i = 0; i < QUIC_MAX_CID_LEN; i++)
     {
         out.initial_scid[i] = (uint8_t)(0xA0 + i);
     }
-    out.has_retry_scid = PROTO_TRUE;
+    out.has_retry_scid = EMBED_TRUE;
     out.retry_scid_len = 1;
     out.retry_scid[0] = 0x5a;
 
@@ -145,7 +145,7 @@ void test_encode_parse_round_trip(void)
     out.initial_max_streams_bidi = 100;
     out.initial_max_streams_uni = 3;
     out.active_connection_id_limit = 8;
-    out.disable_active_migration = PROTO_TRUE;
+    out.disable_active_migration = EMBED_TRUE;
 
     uint8_t wire[512];
     size_t quic_tp_n = QuicTp.encode(quic_tp_work, &out, wire, sizeof(wire));
@@ -153,7 +153,7 @@ void test_encode_parse_round_trip(void)
     TEST_ASSERT_TRUE(n > 0);
 
     QuicTransportParams in;
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, n, &in);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, n, &in);
     TEST_ASSERT_TRUE(quic_tp_ok);
 
     TEST_ASSERT_TRUE(in.has_original_dcid);
@@ -185,7 +185,7 @@ void test_migration_flag_is_absent_when_clear(void)
 {
     QuicTransportParams out;
     QuicTp.defaults(quic_tp_work, &out);
-    out.disable_active_migration = PROTO_FALSE;
+    out.disable_active_migration = EMBED_FALSE;
 
     uint8_t wire[256];
     size_t quic_tp_n = QuicTp.encode(quic_tp_work, &out, wire, sizeof(wire));
@@ -193,7 +193,7 @@ void test_migration_flag_is_absent_when_clear(void)
     TEST_ASSERT_TRUE(n > 0);
 
     QuicTransportParams in;
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, n, &in);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, n, &in);
     TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_FALSE(in.disable_active_migration);
 }
@@ -211,7 +211,7 @@ void test_reserved_ids_are_ignored(void)
         0x0e, 0x01, 0x02,             // active_connection_id_limit = 2
     };
     QuicTransportParams tp;
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, WIRE, sizeof(WIRE), &tp);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, WIRE, sizeof(WIRE), &tp);
     TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(10u, tp.max_ack_delay);
     TEST_ASSERT_EQUAL_UINT64(2u, tp.active_connection_id_limit);
@@ -225,7 +225,7 @@ void test_out_of_range_values_are_rejected(void)
     // "Values above 20 are invalid" (ack_delay_exponent).
     static const uint8_t EXP20[] = {0x0a, 0x01, 0x14};
     static const uint8_t EXP21[] = {0x0a, 0x01, 0x15};
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, EXP20, sizeof(EXP20), &tp);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, EXP20, sizeof(EXP20), &tp);
     TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT64(20u, tp.ack_delay_exponent);
     quic_tp_ok = QuicTp.parse(quic_tp_work, EXP21, sizeof(EXP21), &tp);
@@ -280,7 +280,7 @@ void test_oversized_connection_id_is_rejected(void)
     wire[0] = QUIC_TP_INITIAL_SCID;
     wire[1] = QUIC_MAX_CID_LEN; // varint(20), one byte
     memset(wire + 2, 0x11, QUIC_MAX_CID_LEN);
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, 2 + QUIC_MAX_CID_LEN, &tp);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, wire, 2 + QUIC_MAX_CID_LEN, &tp);
     TEST_ASSERT_TRUE(quic_tp_ok);
     TEST_ASSERT_EQUAL_UINT8(QUIC_MAX_CID_LEN, tp.initial_scid_len);
 
@@ -312,7 +312,7 @@ void test_duplicate_parameter_is_rejected(void)
         0x0f, 0x01, 0xbb, // and again
     };
     QuicTransportParams tp;
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, DUP, sizeof(DUP), &tp);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, DUP, sizeof(DUP), &tp);
     TEST_ASSERT_FALSE(quic_tp_ok);
     quic_tp_ok = QuicTp.parse(quic_tp_work, DUP_CID, sizeof(DUP_CID), &tp);
     TEST_ASSERT_FALSE(quic_tp_ok);
@@ -326,7 +326,7 @@ void test_malformed_encoding_is_rejected(void)
 
     // Length says 4, only 2 octets follow.
     static const uint8_t OVERRUN[] = {0x04, 0x04, 0x00, 0x00};
-    proto_bool quic_tp_ok = QuicTp.parse(quic_tp_work, OVERRUN, sizeof(OVERRUN), &tp);
+    embed_bool quic_tp_ok = QuicTp.parse(quic_tp_work, OVERRUN, sizeof(OVERRUN), &tp);
     TEST_ASSERT_FALSE(quic_tp_ok);
 
     // An ID with no Length after it.
@@ -351,7 +351,7 @@ void test_encode_refuses_a_short_buffer(void)
 {
     QuicTransportParams tp;
     QuicTp.defaults(quic_tp_work, &tp);
-    tp.has_original_dcid = PROTO_TRUE;
+    tp.has_original_dcid = EMBED_TRUE;
     tp.original_dcid_len = QUIC_MAX_CID_LEN;
     memset(tp.original_dcid, 0x22, QUIC_MAX_CID_LEN);
 

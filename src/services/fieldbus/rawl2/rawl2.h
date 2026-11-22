@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_RAWL2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -47,7 +47,7 @@ typedef struct
 {
     const uint8_t *dst;
     const uint8_t *src;
-    proto_bool vlan;
+    embed_bool vlan;
     uint8_t pcp;
     uint16_t vid;
     uint16_t ethertype;
@@ -73,7 +73,7 @@ typedef struct
     const uint8_t *dst;
     const uint8_t *src;
     uint8_t pcp;    ///< priority code point (0..7)
-    proto_bool dei; ///< drop-eligible indicator
+    embed_bool dei; ///< drop-eligible indicator
     uint16_t vid;   ///< VLAN id (0..4095)
     uint16_t ethertype;
     const uint8_t *payload;
@@ -135,7 +135,7 @@ typedef struct
     Rawl2BuildVlanArgs build_vlan_args;
     Rawl2ParseArgs parse_args;
     Rawl2FcsArgs fcs_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint32_t u32;
 } Rawl2Vars;
@@ -170,7 +170,7 @@ static const Rawl2Ns Rawl2 __attribute__((unused)) = {
     .fcs = protocore_rawl2_fcs,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RAWL2
 

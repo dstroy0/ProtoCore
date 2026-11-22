@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_ESPNOW
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_ESPNOW_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -167,7 +167,7 @@ typedef struct
     EspnowAddPeerArgs add_peer_args;
     EspnowSendArgs send_args;
     EspnowBroadcastArgs broadcast_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } EspnowVars;
 
@@ -236,7 +236,7 @@ extern const uint8_t PROTOCORE_ESPNOW_BROADCAST[6];
  */
 uint8_t *protocore_espnow_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ESPNOW
 

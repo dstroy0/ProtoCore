@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_BASE64
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -96,7 +96,7 @@ typedef struct
     Base64DecodeArgs decode_args;
     Base64UrlEncodeArgs url_encode_args;
     Base64UrlDecodeArgs url_decode_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } Base64Vars;
 
@@ -130,7 +130,7 @@ static const Base64Ns Base64 __attribute__((unused)) = {
     .url_decode = protocore_base64_url_decode,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BASE64
 

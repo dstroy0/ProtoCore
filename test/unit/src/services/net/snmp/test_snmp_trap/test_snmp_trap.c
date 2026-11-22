@@ -49,13 +49,13 @@ static void dec_open(const uint8_t *buf, size_t len)
     SnmpBer.dec_init(snmp_ber_work);
 }
 
-static proto_bool read_header(void)
+static embed_bool read_header(void)
 {
     SnmpBer.read_header(snmp_ber_work);
     return SnmpBerV.ok;
 }
 
-static proto_bool read_integer(void)
+static embed_bool read_integer(void)
 {
     SnmpBer.read_integer(snmp_ber_work);
     return SnmpBerV.ok;

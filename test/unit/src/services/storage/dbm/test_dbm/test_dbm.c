@@ -22,8 +22,8 @@ typedef struct
     uint64_t size;
 } RamDisk;
 
-static proto_bool g_fail_read = PROTO_FALSE;
-static proto_bool g_fail_sync = PROTO_FALSE;
+static embed_bool g_fail_read = EMBED_FALSE;
+static embed_bool g_fail_sync = EMBED_FALSE;
 
 static size_t ram_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
@@ -49,7 +49,7 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
     memcpy(d->buf + off, buf, len);
     return len;
 }
-static proto_bool ram_sync(void *)
+static embed_bool ram_sync(void *)
 {
     return !g_fail_sync;
 }
@@ -84,28 +84,28 @@ static void fresh(void)
     fresh_sized(sizeof(g_disk));
 }
 
-static proto_bool reboot(void)
+static embed_bool reboot(void)
 {
     g_dev = dev_over(&g_d);
     if (!protocore_wal_store_mount(&g_wal, &g_dev))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return protocore_dbm_open(&g_db, &g_wal);
 }
 
-static proto_bool put_s(const char *k, const char *v)
+static embed_bool put_s(const char *k, const char *v)
 {
     return protocore_dbm_put(&g_db, k, (uint16_t)strlen(k), (const uint8_t *)v, (uint32_t)strlen(v));
 }
 
-static proto_bool get_eq(const char *k, const char *expect)
+static embed_bool get_eq(const char *k, const char *expect)
 {
     uint8_t buf[PROTOCORE_DBM_VAL_MAX];
     long n = protocore_dbm_get(&g_db, k, (uint16_t)strlen(k), buf, sizeof(buf));
     if (n < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return (size_t)n == strlen(expect) && memcmp(buf, expect, n) == 0;
 }
@@ -344,9 +344,9 @@ void test_compact_source_read_failure(void)
     put_s("a", "one-updated");
     WalStore *dst = fresh_dest(sizeof(g_disk2));
 
-    g_fail_read = PROTO_TRUE;
+    g_fail_read = EMBED_TRUE;
     TEST_ASSERT_FALSE(protocore_dbm_compact(&g_db, dst));
-    g_fail_read = PROTO_FALSE;
+    g_fail_read = EMBED_FALSE;
 
     TEST_ASSERT_EQUAL_UINT32(2, protocore_dbm_count(&g_db));
     TEST_ASSERT_TRUE(get_eq("a", "one-updated"));
@@ -361,9 +361,9 @@ void test_compact_checkpoint_failure(void)
     put_s("y", "20");
     WalStore *dst = fresh_dest(sizeof(g_disk2));
 
-    g_fail_sync = PROTO_TRUE;
+    g_fail_sync = EMBED_TRUE;
     TEST_ASSERT_FALSE(protocore_dbm_compact(&g_db, dst));
-    g_fail_sync = PROTO_FALSE;
+    g_fail_sync = EMBED_FALSE;
 
     TEST_ASSERT_EQUAL_UINT32(2, protocore_dbm_count(&g_db));
     TEST_ASSERT_TRUE(get_eq("x", "10"));
@@ -376,7 +376,7 @@ void test_compact_checkpoint_failure(void)
 }
 
 static const size_t DBM_RECORD_HDR = 1 + 2 + 4;
-static proto_bool raw_append(uint8_t op, uint16_t key_len_field, uint32_t val_len_field, const void *tail,
+static embed_bool raw_append(uint8_t op, uint16_t key_len_field, uint32_t val_len_field, const void *tail,
                              size_t tail_len)
 {
     uint8_t rec[DBM_RECORD_HDR + PROTOCORE_DBM_KEY_MAX + PROTOCORE_DBM_VAL_MAX];
@@ -555,9 +555,9 @@ void test_get_fails_when_the_value_cannot_be_read_back(void)
     fresh();
     TEST_ASSERT_TRUE(put_s("v", "payload"));
     uint8_t out[16];
-    g_fail_read = PROTO_TRUE;
+    g_fail_read = EMBED_TRUE;
     TEST_ASSERT_EQUAL_INT(-1, protocore_dbm_get(&g_db, "v", 1, out, sizeof(out)));
-    g_fail_read = PROTO_FALSE;
+    g_fail_read = EMBED_FALSE;
     TEST_ASSERT_TRUE(get_eq("v", "payload"));
 }
 
@@ -566,7 +566,7 @@ typedef struct
     int seen;
     int stop_after;
 } IterCtx;
-static proto_bool iter_cb(const char *key, uint16_t key_len, void *ctx)
+static embed_bool iter_cb(const char *key, uint16_t key_len, void *ctx)
 {
     (void)key;
     (void)key_len;

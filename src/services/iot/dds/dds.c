@@ -18,7 +18,7 @@
 
 #include "memoria_operor/memoria_operor.h" // memor.cpy: the guidPrefix and the Submessage contents
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // SubmessageHeader: submessageId 1 + flags 1 + octetsToNextHeader 2 (sec 9.4.5.1).
 #define RTPS_SUBMESSAGE_HEADER_LEN 4
@@ -93,7 +93,7 @@ void protocore_rtps_parse(uint8_t *work)
     const uint8_t *msg = RtpsV.msg.msg;
     const size_t len = RtpsV.msg.len;
 
-    RtpsV.ok = PROTO_FALSE;
+    RtpsV.ok = EMBED_FALSE;
     // sec 8.3.6.3: a Header is invalid with fewer octets than the PSM's 20, with a protocol that is
     // not PROTOCOL_RTPS, or with a major version above the one this implementation supports. The
     // minor version is not one of the three, so every minor parses.
@@ -149,13 +149,13 @@ void protocore_rtps_parse(uint8_t *work)
     {
         return;
     }
-    RtpsV.ok = PROTO_TRUE;
+    RtpsV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 RtpsVars RtpsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DDS

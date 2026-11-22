@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_DF1
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -42,11 +42,10 @@ PROTOCORE_BEGIN_DECLS
 #define DF1_ETX 0x03
 
 /** @brief Which error check the frame carries. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(Df1Check,
     DF1_CHECK_BCC, ///< 1-octet block check character
     DF1_CHECK_CRC  ///< 2-octet CRC-16
-} Df1Check;
+);
 
 /** @brief What bcc takes: data, len. */
 typedef struct
@@ -118,7 +117,7 @@ typedef struct
     Df1CrcArgs crc_args;
     Df1BuildFrameArgs build_frame_args;
     Df1ParseFrameArgs parse_frame_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     uint16_t u16;
     size_t n;
@@ -154,7 +153,7 @@ static const Df1Ns Df1 __attribute__((unused)) = {
     .parse_frame = protocore_df1_parse_frame,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DF1
 

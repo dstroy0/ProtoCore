@@ -40,12 +40,12 @@
 #ifndef PROTOCORE_H
 #define PROTOCORE_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for PROTOCORE_BEGIN_DECLS, before anything uses it
+#include "protocore_config.h" // the entry point: protocore_types.h for EMBED_BEGIN_DECLS, before anything uses it
 
 // The whole library is C and every sketch that includes this header is compiled as C++, so the
 // declarations below carry C linkage from here rather than from each header. System and vendor
 // headers state their own; an extern "C" already inside one nests harmlessly.
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Runtime-tunable server parameters.
@@ -57,7 +57,7 @@ PROTOCORE_BEGIN_DECLS
 typedef struct WebServerConfig
 {
     /** Milliseconds of inactivity before a connection is force-closed. */
-    proto_u32 conn_timeout_ms;
+    embed_u32 conn_timeout_ms;
 } WebServerConfig;
 
 // Ordered by layer, so a header only needs what is above it. A gate is the feature's own
@@ -519,14 +519,14 @@ typedef size_t (*ChunkSource)(uint8_t *buf, size_t cap, void *ctx);
  * @return true if a middleware returned MW_HALT (a response was sent and
  *         dispatch must stop); false to continue to route matching.
  */
-proto_bool run_middleware(uint8_t slot_id, HttpReq *req);
+embed_bool run_middleware(uint8_t slot_id, HttpReq *req);
 
 /**
  * @brief Built-in fixed-window rate-limit check (see enable_rate_limit()).
  * @return true if the request was rejected with 429 (response sent, dispatch
  *         must stop); false when rate limiting is disabled or within budget.
  */
-proto_bool rate_limit_check(uint8_t slot_id);
+embed_bool rate_limit_check(uint8_t slot_id);
 
 /**
  * @brief Evaluate whether a route pattern matches a request path.
@@ -564,7 +564,7 @@ void note_response(uint8_t slot_id, int code, int body_len);
  * @param pre_flushed the caller already emitted the final bytes with Tcp.conn->send_flush()
  *        (write+tcp_output coalesced into one marshal), so skip the redundant flush here.
  */
-void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed);
+void protocore_resp_end(uint8_t slot_id, int code, int body_len, embed_bool keep, embed_bool pre_flushed);
 
 /**
  * @brief Resolve the Connection response header and report keep-alive intent.
@@ -573,7 +573,7 @@ void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep
  * or "Connection: close\r\n" and, via @p keep_out, whether the slot is kept
  * alive. Always reports close when keep-alive is compiled out.
  */
-const char *protocore_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out);
+const char *protocore_resp_conn_hdr(uint8_t slot_id, embed_bool *keep_out);
 
 /**
  * @brief Append the shared response trailer (CORS block, custom headers, the
@@ -698,7 +698,7 @@ int32_t begin_http(uint16_t port, const WebServerConfig *cfg);
  *
  * @return true on success; false if the cert/key/pool setup failed.
  */
-proto_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
+embed_bool tls_cert(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
 
 /**
  * @brief Register a TLS (HTTPS) HTTP listener on @p port (typically 443).
@@ -736,7 +736,7 @@ int32_t begin_tls(uint16_t port, const uint8_t *cert, size_t cert_len, const uin
  *
  * Profile: TLS_AES_128_GCM_SHA256 + X25519 + Ed25519 (a client offering none of these is refused).
  */
-proto_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
+embed_bool protocore_h3_cert(const uint8_t *cert_der, size_t cert_len, const uint8_t ed25519_seed[32], uint16_t port);
 
 #endif // PROTOCORE_ENABLE_HTTP3
 
@@ -851,7 +851,7 @@ void set_ap_ip(uint32_t ap_ip);
  * @param digest   When true, use Digest authentication instead of Basic.
  */
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
-                  const char *pass, proto_bool digest);
+                  const char *pass, embed_bool digest);
 #endif // PROTOCORE_ENABLE_AUTH
 
 // serve_file / serve_static: file_serving.h
@@ -1007,7 +1007,7 @@ void set_cache_control(const char *value);
  *
  * @return true if the directive was built and applied.
  */
-proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
+embed_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s);
 #endif
 
 /**
@@ -1061,7 +1061,7 @@ void service_once(int worker_id);
  *
  * @return false if the slot is invalid or the worker's defer queue is full.
  */
-proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg);
+embed_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg);
 
 /**
  * @brief Send an HTTP response with a body and close the connection.
@@ -1351,14 +1351,14 @@ void fill_route_base(HttpRoute *r, const char *path);
 /** @brief True if the request in slot @p slot_id used the HEAD method (send headers, no body). */
 
 /** @brief Whole-path regex match (anchored both ends; bounded by RE_MAX_STEPS, fails closed). */
-proto_bool regex_match(const char *pattern, const char *path);
+embed_bool regex_match(const char *pattern, const char *path);
 
 // An outbound transfer owns its slot: the poll skips the rest of the pipeline until the body is
 // out. Each kind is owned by the file that runs it, so neither continuation struct is declared
 // anywhere - the poll asks each owner whether it holds the slot rather than reading its state.
 
 /** @brief True while a chunked response is paging out on @p slot (owner: server/response.cpp). */
-proto_bool protocore_resp_holds_slot(uint8_t slot);
+embed_bool protocore_resp_holds_slot(uint8_t slot);
 
 /** @brief Drop this file's per-run configuration and any in-flight chunked send. See
  *         protocore_server_reset(), which is what callers use. */
@@ -1385,7 +1385,7 @@ void protocore_server_reset(void);
 // The header blocks every response carries, owned by server/response.cpp.
 
 /** @brief True after a non-empty set_cors(). */
-proto_bool protocore_resp_cors_enabled(void);
+embed_bool protocore_resp_cors_enabled(void);
 /** @brief The pre-built CORS header block, or "" when CORS is off. */
 const char *protocore_resp_cors_header(void);
 /** @brief The pre-built Cache-Control line, or "" when unset. */
@@ -1397,7 +1397,7 @@ char *protocore_resp_extra_hdr(uint8_t slot);
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 /** @brief Perform the RFC 6455 101 handshake and hand the slot to the WS frame parser. */
-proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
+embed_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
 
 /** @brief Reject an unsupported Sec-WebSocket-Version with a 426 (RFC 6455 4.2.1) and close. */
 void ws_send_version_required(uint8_t slot_id);
@@ -1405,9 +1405,9 @@ void ws_send_version_required(uint8_t slot_id);
 
 #if PROTOCORE_ENABLE_SSE
 /** @brief Send the SSE 200 headers and promote the slot to server-sent-events mode. */
-proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
+embed_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id);
 #endif
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif

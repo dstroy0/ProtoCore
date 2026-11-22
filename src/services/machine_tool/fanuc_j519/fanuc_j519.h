@@ -64,7 +64,7 @@
 
 #if PROTOCORE_ENABLE_FANUC_J519
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Default Stream Motion UDP port on the robot controller. */
 #define PROTOCORE_J519_UDP_PORT 60015
@@ -91,24 +91,21 @@ enum : size_t // NOSONAR(cpp:S3642): anonymous table of exact wire lengths compa
  * @brief The packet-type word (header octets 0..3). The numeric space is shared between directions -
  *        0 and 3 each mean one thing from the PC and another from the robot.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(J519Type,
     J519_START_OR_STATUS = 0, ///< PC -> robot Start; robot -> PC Robot Status.
     J519_MOTION = 1,          ///< PC -> robot Motion Command.
     J519_STOP = 2,            ///< PC -> robot Stop.
     J519_REQUEST_OR_ACK = 3,  ///< PC -> robot Request; robot -> PC Ack.
-} J519Type;
+);
 
 /** @brief Motion Command `data_style` - how the 9 setpoints are interpreted. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(J519DataStyle,
     J519_STYLE_CARTESIAN = 0, ///< setpoints are a Cartesian pose.
     J519_STYLE_JOINT = 1,     ///< setpoints are joint angles.
-} J519DataStyle;
+);
 
 /** @brief FANUC I/O port class, for the read-/write-IO selectors carried alongside a Motion Command. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(J519IoType,
     J519_IO_NONE = 0, ///< no I/O access requested.
     J519_IO_DI = 1,   ///< digital in.
     J519_IO_DO = 2,   ///< digital out.
@@ -124,15 +121,14 @@ typedef enum PROTO_ENUM_PACKED
     J519_IO_WSO = 27, ///< weld stick out.
     J519_IO_F = 35,   ///< flag.
     J519_IO_M = 36,   ///< marker.
-} J519IoType;
+);
 
 /** @brief Request / Ack `threshold_type` - which motion-limit table is being asked for. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(J519ThresholdType,
     J519_THR_VELOCITY = 0,     ///< deg/s.
     J519_THR_ACCELERATION = 1, ///< deg/s^2.
     J519_THR_JERK = 2,         ///< deg/s^3.
-} J519ThresholdType;
+);
 
 /** @brief Robot Status `status` bit masks. */
 enum : uint8_t // NOSONAR(cpp:S3642): anonymous bitmask constants OR'd/AND'd against a status octet; enum class forbids
@@ -207,7 +203,7 @@ typedef struct
  *
  * @return false if @p len is under 8 octets.
  */
-proto_bool protocore_j519_peek(const uint8_t *buf, size_t len, uint32_t *type, uint32_t *version_no);
+embed_bool protocore_j519_peek(const uint8_t *buf, size_t len, uint32_t *type, uint32_t *version_no);
 
 // --- PC -> robot: build ---------------------------------------------------------------------------
 
@@ -227,10 +223,10 @@ size_t protocore_j519_build_request(uint8_t *buf, size_t cap, const J519Request 
 
 /** @brief Parse a Motion Command. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_MOTION and the type
  * is 1. */
-proto_bool protocore_j519_parse_motion(const uint8_t *buf, size_t len, J519MotionCommand *out);
+embed_bool protocore_j519_parse_motion(const uint8_t *buf, size_t len, J519MotionCommand *out);
 
 /** @brief Parse a Request. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_REQUEST and the type is 3. */
-proto_bool protocore_j519_parse_request(const uint8_t *buf, size_t len, J519Request *out);
+embed_bool protocore_j519_parse_request(const uint8_t *buf, size_t len, J519Request *out);
 
 // --- robot -> PC: build (robot simulator) ---------------------------------------------------------
 
@@ -244,12 +240,12 @@ size_t protocore_j519_build_ack(uint8_t *buf, size_t cap, const J519Ack *ack);
 
 /** @brief Parse a Robot Status. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_STATUS and the type is
  * 0. */
-proto_bool protocore_j519_parse_status(const uint8_t *buf, size_t len, J519RobotStatus *out);
+embed_bool protocore_j519_parse_status(const uint8_t *buf, size_t len, J519RobotStatus *out);
 
 /** @brief Parse an Ack. @return false unless @p len is exactly @ref PROTOCORE_J519_LEN_ACK and the type is 3. */
-proto_bool protocore_j519_parse_ack(const uint8_t *buf, size_t len, J519Ack *out);
+embed_bool protocore_j519_parse_ack(const uint8_t *buf, size_t len, J519Ack *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FANUC_J519
 

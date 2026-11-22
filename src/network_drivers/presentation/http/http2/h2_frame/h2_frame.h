@@ -21,7 +21,7 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The client connection preface that opens every HTTP/2 connection (RFC 9113 sec 3.4). */
 #define H2_PREFACE "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
@@ -179,7 +179,7 @@ typedef struct
     uint32_t stream_id;    ///< the stream it opens
     const uint8_t *block;  ///< the HPACK block
     size_t block_len;      ///< how many bytes
-    proto_bool end_stream; ///< whether it closes the stream
+    embed_bool end_stream; ///< whether it closes the stream
 } H2FrameHeadersArgs;
 
 /** @brief RFC 9113 sec 6.1: the payload a DATA frame carries. */
@@ -190,7 +190,7 @@ typedef struct
     uint32_t stream_id;    ///< the stream it belongs to
     const uint8_t *data;   ///< the payload
     size_t data_len;       ///< how many bytes
-    proto_bool end_stream; ///< whether it closes the stream
+    embed_bool end_stream; ///< whether it closes the stream
 } H2FrameDataArgs;
 
 /**
@@ -242,7 +242,7 @@ typedef struct
     H2FramePingArgs ping_args;                    ///< the members ::H2FrameNs::build_ping_ack takes
     H2FrameHeadersArgs headers_args;              ///< the members ::H2FrameNs::build_headers takes
     H2FrameDataArgs data_args;                    ///< the members ::H2FrameNs::build_data takes
-    proto_bool ok;                                ///< whether a parse read a well-formed frame
+    embed_bool ok;                                ///< whether a parse read a well-formed frame
     size_t n;                                     ///< bytes a build wrote, or 0 on overflow
     H2FrameHeader header;                         ///< the header a parse read
 } H2FrameVars;
@@ -301,7 +301,7 @@ static const H2FrameNs H2Frame __attribute__((unused)) = {
     .build_data = protocore_h2_frame_build_data,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2
 

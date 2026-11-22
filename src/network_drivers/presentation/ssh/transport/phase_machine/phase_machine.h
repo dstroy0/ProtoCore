@@ -22,15 +22,14 @@
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
 /** @brief SSH connection lifecycle phase. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SshPhase,
     SSH_PHASE_IDENT,   ///< Awaiting the peer identification string.
     SSH_PHASE_KEXINIT, ///< Awaiting the peer KEXINIT.
     SSH_PHASE_DH_INIT, ///< Awaiting SSH_MSG_KEXDH_INIT.
@@ -38,7 +37,7 @@ typedef enum PROTO_ENUM_PACKED
     SSH_PHASE_SERVICE, ///< Awaiting SERVICE_REQUEST ("ssh-userauth").
     SSH_PHASE_AUTH,    ///< User authentication in progress (RFC 4252).
     SSH_PHASE_OPEN     ///< Authenticated; connection/channel protocol active.
-} SshPhase;
+);
 
 /** @brief What get takes: i. */
 typedef struct
@@ -240,7 +239,7 @@ typedef struct
     PhaseMachineAuthCompleteArgs auth_complete_args;
     PhaseMachineAdmitsRekeyArgs admits_rekey_args;
     PhaseMachineIsOpenArgs is_open_args;
-    proto_bool ok;
+    embed_bool ok;
     SshPhase value;
 } PhaseMachineVars;
 
@@ -322,7 +321,7 @@ static const PhaseMachineNs PhaseMachine __attribute__((unused)) = {
     .is_open = protocore_phase_machine_is_open,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
 

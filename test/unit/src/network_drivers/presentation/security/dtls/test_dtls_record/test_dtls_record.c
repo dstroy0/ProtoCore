@@ -170,7 +170,7 @@ void test_rfc9147_4_2_3_sequence_number_encryption(void)
 
     uint8_t pt[64];
     DtlsCiphertext info;
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(dtls_record_work, &g_keys, SEQ, g_out, n, pt, sizeof(pt), &info, NULL, 0);
     TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT64(SEQ, info.seq);
@@ -208,7 +208,7 @@ void test_rfc9147_4_2_2_sequence_reconstruction(void)
         size_t n = dtls_record_n;
         TEST_ASSERT_TRUE(n > 0);
         // The receiver expects the next record after the previous one.
-        proto_bool dtls_record_ok =
+        embed_bool dtls_record_ok =
             DtlsRecord.unprotect(dtls_record_work, &g_keys, SEQS[i], g_out, n, pt, sizeof(pt), &info, NULL, 0);
         TEST_ASSERT_TRUE(dtls_record_ok);
         TEST_ASSERT_EQUAL_UINT64(SEQS[i], info.seq);
@@ -219,7 +219,7 @@ void test_rfc9147_4_2_2_sequence_reconstruction(void)
         DtlsRecord.protect(dtls_record_work, &g_keys, 0x10000 - 100, PROTOCORE_DTLS_CT_APPLICATION_DATA, MSG,
                            sizeof(MSG), g_out, sizeof(g_out), NULL, 0);
     size_t n = dtls_record_n;
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(dtls_record_work, &g_keys, 0x10000, g_out, n, pt, sizeof(pt), &info, NULL, 0);
     TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT64(0x10000ull - 100, info.seq);
@@ -237,7 +237,7 @@ void test_a_wrong_sequence_number_fails_deprotection(void)
     TEST_ASSERT_TRUE(n > 0);
 
     // An expectation a whole 16-bit window away resolves to a different full number and fails.
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(dtls_record_work, &g_keys, 0x30000, g_out, n, pt, sizeof(pt), &info, NULL, 0);
     TEST_ASSERT_FALSE(dtls_record_ok);
     // The right expectation still opens it.
@@ -258,7 +258,7 @@ void test_epoch_bits_select_the_keys(void)
     DtlsRecordKeys other;
     memset(&other, 0, sizeof(other));
     DtlsRecord.keys_derive(dtls_record_work, &other, DTLS_CIPHER_AES_128_GCM_SHA256, 2, SECRET); // low bits 10, not 11
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(dtls_record_work, &other, 7, g_out, n, pt, sizeof(pt), &info, NULL, 0);
     TEST_ASSERT_FALSE(dtls_record_ok);
 
@@ -294,7 +294,7 @@ void test_rfc9146_connection_id(void)
     TEST_ASSERT_EQUAL_HEX8(0x10, g_out[0] & 0x10); // C set
     TEST_ASSERT_EQUAL_UINT8_ARRAY(CID, g_out + 1, sizeof(CID));
 
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(dtls_record_work, &g_keys, 5, g_out, n, pt, sizeof(pt), &info, CID, sizeof(CID));
     TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(MSG), info.pt_len);
@@ -342,7 +342,7 @@ void test_inner_content_type_and_padding(void)
             DtlsRecord.protect(dtls_record_work, &g_keys, i, TYPES[i], MSG, sizeof(MSG), g_out, sizeof(g_out), NULL, 0);
         size_t n = dtls_record_n;
         TEST_ASSERT_TRUE(n > 0);
-        proto_bool dtls_record_ok =
+        embed_bool dtls_record_ok =
             DtlsRecord.unprotect(dtls_record_work, &g_keys, i, g_out, n, pt, sizeof(pt), &info, NULL, 0);
         TEST_ASSERT_TRUE(dtls_record_ok);
         TEST_ASSERT_EQUAL_HEX8(TYPES[i], info.content_type);
@@ -356,7 +356,7 @@ void test_inner_content_type_and_padding(void)
         DtlsRecord.protect(dtls_record_work, &g_keys, 9, 0x00, INNER, sizeof(INNER), g_out, sizeof(g_out), NULL, 0);
     size_t n = dtls_record_n;
     TEST_ASSERT_TRUE(n > 0);
-    proto_bool dtls_record_ok =
+    embed_bool dtls_record_ok =
         DtlsRecord.unprotect(dtls_record_work, &g_keys, 9, g_out, n, pt, sizeof(pt), &info, NULL, 0);
     TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);
@@ -390,9 +390,9 @@ void test_rfc9147_4_5_2_invalid_records(void)
     {
         memcpy(rec, g_out, n);
         rec[0] = (uint8_t)((rec[0] & 0x1F) | (uint8_t)(top << 5));
-        proto_bool dtls_record_ok =
+        embed_bool dtls_record_ok =
             DtlsRecord.unprotect(dtls_record_work, &g_keys, 11, rec, n, pt, sizeof(pt), &info, NULL, 0);
-        proto_bool ok = dtls_record_ok;
+        embed_bool ok = dtls_record_ok;
         if (top == 1)
         {
             TEST_ASSERT_TRUE(ok); // 001 is the only accepted pattern
@@ -409,7 +409,7 @@ void test_rfc9147_4_5_2_invalid_records(void)
     {
         memcpy(rec, g_out, n);
         rec[i] ^= 0x01;
-        proto_bool dtls_record_ok =
+        embed_bool dtls_record_ok =
             DtlsRecord.unprotect(dtls_record_work, &g_keys, 11, rec, n, pt, sizeof(pt), &info, NULL, 0);
         TEST_ASSERT_FALSE_MESSAGE(dtls_record_ok, "a flipped bit must not deprotect");
     }
@@ -418,13 +418,13 @@ void test_rfc9147_4_5_2_invalid_records(void)
     // shorter records": every truncation of this record is short of its own declared length.
     for (size_t take = 0; take < n; take++)
     {
-        proto_bool dtls_record_ok =
+        embed_bool dtls_record_ok =
             DtlsRecord.unprotect(dtls_record_work, &g_keys, 11, g_out, take, pt, sizeof(pt), &info, NULL, 0);
         TEST_ASSERT_FALSE(dtls_record_ok);
     }
 
     // A destination too small for the recovered plaintext, and one too small for the record.
-    proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &g_keys, 11, g_out, n, pt, 4, &info, NULL, 0);
+    embed_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &g_keys, 11, g_out, n, pt, 4, &info, NULL, 0);
     TEST_ASSERT_FALSE(dtls_record_ok);
     dtls_record_n = DtlsRecord.protect(dtls_record_work, &g_keys, 11, PROTOCORE_DTLS_CT_APPLICATION_DATA, MSG,
                                        sizeof(MSG), g_out, n - 1, NULL, 0);
@@ -442,7 +442,7 @@ void test_rfc9147_4_5_1_replay_window(void)
 
     // "The received record counter for an epoch MUST be initialized to zero when that epoch is first
     // used": before any record, every sequence number is new, including zero.
-    proto_bool dtls_record_ok = DtlsRecord.replay_check(dtls_record_work, &w, 0);
+    embed_bool dtls_record_ok = DtlsRecord.replay_check(dtls_record_work, &w, 0);
     TEST_ASSERT_TRUE(dtls_record_ok);
     dtls_record_ok = DtlsRecord.replay_check(dtls_record_work, &w, 1000);
     TEST_ASSERT_TRUE(dtls_record_ok);
@@ -517,7 +517,7 @@ void test_round_trip_over_lengths(void)
                                                   src, len, g_out, sizeof(g_out), NULL, 0);
         size_t n = dtls_record_n;
         TEST_ASSERT_TRUE(n > 0);
-        proto_bool dtls_record_ok =
+        embed_bool dtls_record_ok =
             DtlsRecord.unprotect(dtls_record_work, &g_keys, len, g_out, n, pt, sizeof(pt), &info, NULL, 0);
         TEST_ASSERT_TRUE(dtls_record_ok);
         TEST_ASSERT_EQUAL_UINT(len, info.pt_len);

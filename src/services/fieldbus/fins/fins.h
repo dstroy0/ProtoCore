@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_FINS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -53,11 +53,10 @@ PROTOCORE_BEGIN_DECLS
 #define FINS_SRC_STOP 0x02
 
 /** @brief The operating mode requested by a RUN (0401) command. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(FinsRunMode,
     FINS_RUN_MODE_MONITOR = 0x02, ///< MONITOR mode (program runs, online edits allowed)
     FINS_RUN_MODE_RUN = 0x04,     ///< RUN mode (program runs, no online edits)
-} FinsRunMode;
+);
 
 /** @brief The 10-octet FINS routing header. */
 typedef struct
@@ -214,7 +213,7 @@ typedef struct
     FinsBuildStopArgs build_stop_args;
     FinsParseCommandArgs parse_command_args;
     FinsParseResponseArgs parse_response_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } FinsVars;
 
@@ -257,7 +256,7 @@ static const FinsNs Fins __attribute__((unused)) = {
     .parse_response = protocore_fins_parse_response,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FINS
 

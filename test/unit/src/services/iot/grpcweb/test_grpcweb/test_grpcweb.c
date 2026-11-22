@@ -30,7 +30,7 @@ void tearDown(void)
 
 static uint8_t g_buf[1024];
 
-static size_t frame_message(const uint8_t *body, size_t len, proto_bool compressed)
+static size_t frame_message(const uint8_t *body, size_t len, embed_bool compressed)
 {
     GrpcWebV.out.buf = g_buf;
     GrpcWebV.out.cap = sizeof(g_buf);
@@ -51,7 +51,7 @@ static size_t frame_trailers(int32_t status, const char *message)
     return GrpcWebV.n;
 }
 
-static proto_bool parse(const uint8_t *data, size_t len)
+static embed_bool parse(const uint8_t *data, size_t len)
 {
     GrpcWebV.in.data = data;
     GrpcWebV.in.len = len;
@@ -69,7 +69,7 @@ void test_message_length_is_four_octets_big_endian(void)
         body[i] = (uint8_t)i;
     }
     TEST_ASSERT_EQUAL_UINT(5u, (unsigned)PROTOCORE_GRPCWEB_PREFIX_LEN);
-    TEST_ASSERT_EQUAL_UINT(5u + 258u, frame_message(body, sizeof(body), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(5u + 258u, frame_message(body, sizeof(body), EMBED_FALSE));
     TEST_ASSERT_TRUE(GrpcWebV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[0]); // Compressed-Flag 0
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[1]);
@@ -92,13 +92,13 @@ void test_compressed_flag_is_bit_zero_of_the_frame_byte(void)
     static const uint8_t BODY[3] = {0x0a, 0x0b, 0x0c};
     TEST_ASSERT_EQUAL_HEX8(0x01, PROTOCORE_GRPCWEB_COMPRESSED);
 
-    TEST_ASSERT_EQUAL_UINT(8u, frame_message(BODY, sizeof(BODY), PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(8u, frame_message(BODY, sizeof(BODY), EMBED_FALSE));
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[0]);
     TEST_ASSERT_TRUE(parse(g_buf, 8));
     TEST_ASSERT_FALSE(GrpcWebV.parsed.compressed);
     TEST_ASSERT_FALSE(GrpcWebV.parsed.trailers);
 
-    TEST_ASSERT_EQUAL_UINT(8u, frame_message(BODY, sizeof(BODY), PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT(8u, frame_message(BODY, sizeof(BODY), EMBED_TRUE));
     TEST_ASSERT_EQUAL_HEX8(0x01, g_buf[0]);
     TEST_ASSERT_TRUE(parse(g_buf, 8));
     TEST_ASSERT_TRUE(GrpcWebV.parsed.compressed);
@@ -242,7 +242,7 @@ void test_a_key_inside_a_value_is_not_a_field_name(void)
 // A Message of zero octets is a legal frame: the bare 5-octet prefix with Message-Length 0.
 void test_empty_message_is_a_bare_prefix(void)
 {
-    TEST_ASSERT_EQUAL_UINT(5u, frame_message(NULL, 0, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(5u, frame_message(NULL, 0, EMBED_FALSE));
     TEST_ASSERT_TRUE(GrpcWebV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[4]);
@@ -256,7 +256,7 @@ void test_empty_message_is_a_bare_prefix(void)
 void test_parse_waits_for_the_whole_message(void)
 {
     static const uint8_t BODY[4] = {1, 2, 3, 4};
-    const size_t total = frame_message(BODY, sizeof(BODY), PROTO_FALSE);
+    const size_t total = frame_message(BODY, sizeof(BODY), EMBED_FALSE);
     TEST_ASSERT_EQUAL_UINT(9u, total);
     for (size_t have = 0; have < total; have++)
     {
@@ -276,9 +276,9 @@ void test_a_stream_walks_frame_by_frame(void)
     uint8_t stream[64];
     size_t n = 0;
 
-    n += frame_message(A, sizeof(A), PROTO_FALSE);
+    n += frame_message(A, sizeof(A), EMBED_FALSE);
     memcpy(stream, g_buf, n);
-    size_t part = frame_message(B, sizeof(B), PROTO_TRUE);
+    size_t part = frame_message(B, sizeof(B), EMBED_TRUE);
     memcpy(stream + n, g_buf, part);
     n += part;
     part = frame_trailers(0, NULL);
@@ -330,7 +330,7 @@ void test_builders_refuse_a_short_buffer(void)
     GrpcWebV.out.cap = 8; // one short of the prefix plus four octets
     GrpcWebV.msg.body = BODY;
     GrpcWebV.msg.body_len = sizeof(BODY);
-    GrpcWebV.msg.compressed = PROTO_FALSE;
+    GrpcWebV.msg.compressed = EMBED_FALSE;
     GrpcWeb.frame_message(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWebV.ok);
     TEST_ASSERT_EQUAL_UINT(0u, GrpcWebV.n);

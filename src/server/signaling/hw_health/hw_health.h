@@ -28,31 +28,28 @@
 
 #if PROTOCORE_ENABLE_HW_HEALTH
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Rail sample verdict (the sole return of protocore_hwhealth_rail_sample). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(HwRailVerdict,
     HW_RAIL_OK = 0,      ///< at or above the warn threshold.
     HW_RAIL_SAG = 1,     ///< below warn, at or above crit.
     HW_RAIL_BROWNOUT = 2 ///< below the crit threshold.
-} HwRailVerdict;
+);
 
 /** @brief GPIO short-circuit verdict (the sole return of protocore_hwhealth_gpio_short). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(HwGpioVerdict,
     HW_GPIO_OK = 0,        ///< readback matches the driven level.
     HW_GPIO_SHORT_GND = 1, ///< drove high, read low: shorted to ground.
     HW_GPIO_SHORT_VCC = 2  ///< drove low, read high: shorted to Vcc.
-} HwGpioVerdict;
+);
 
 /** @brief Capacitor-leakage verdict (the sole return of protocore_hwhealth_cap_leak). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(HwCapVerdict,
     HW_CAP_OK = 0,      ///< decay time within tolerance of expected.
     HW_CAP_LEAK = 1,    ///< decays too fast: leaky capacitor.
     HW_CAP_HIGH_ESR = 2 ///< decays too slow: high-ESR / open charge path.
-} HwCapVerdict;
+);
 
 /** @brief Rolling monitor for one power rail (in millivolts). */
 typedef struct
@@ -97,14 +94,14 @@ typedef struct
     uint32_t max_hz;    ///< its ceiling
     uint16_t fail_trip; ///< consecutive failures before it halves
     uint16_t ok_trip;   ///< consecutive successes before it doubles
-    proto_bool crc_ok;  ///< the transfer just completed checked out
+    embed_bool crc_ok;  ///< the transfer just completed checked out
 } HwSpiArgs;
 
 /** @brief A pin driven against what it read back, and a discharge against what was expected. */
 typedef struct
 {
-    proto_bool driven_high; ///< the level the pin was driven to
-    proto_bool read_high;   ///< the level it read back
+    embed_bool driven_high; ///< the level the pin was driven to
+    embed_bool read_high;   ///< the level it read back
     uint32_t measured_ms;   ///< the discharge just timed
     uint32_t expected_ms;   ///< what it should have been
     uint8_t tol_pct;        ///< the tolerance band around that, as a percentage
@@ -194,7 +191,7 @@ static const HwHealthNs HwHealth __attribute__((unused)) = {
     .cap_leak = protocore_hw_health_cap_leak,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH
 

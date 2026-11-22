@@ -14,7 +14,7 @@
 
 #include "idemIP/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Field offsets (RFC 791 sec 3.1, Figure 4)
@@ -88,49 +88,49 @@ PROTOCORE_BEGIN_DECLS
 // into an Ethernet frame, so neither is aligned for a 32-bit read in the frame it arrived in.
 
 /** @brief Version, the high nibble of the first octet. */
-PROTOCORE_INLINE uint8_t idemip_ip4_version(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_ip4_version(const uint8_t *h)
 {
     return (uint8_t)((h[IDEMIP_IP4_OFF_VER_IHL] >> IDEMIP_IP4_VER_SHIFT) & IDEMIP_IP4_VER_MASK);
 }
 
 /** @brief IHL in 32-bit words, the low nibble of the first octet. */
-PROTOCORE_INLINE uint8_t idemip_ip4_ihl(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_ip4_ihl(const uint8_t *h)
 {
     return (uint8_t)(h[IDEMIP_IP4_OFF_VER_IHL] & IDEMIP_IP4_IHL_MASK);
 }
 
 /** @brief Total Length: the whole datagram, header included. */
-PROTOCORE_INLINE uint16_t idemip_ip4_total_len(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_ip4_total_len(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_IP4_OFF_TOTAL_LEN);
 }
 
 /** @brief The three flags and the fragment offset, as one field. */
-PROTOCORE_INLINE uint16_t idemip_ip4_flags_frag(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_ip4_flags_frag(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_IP4_OFF_FLAGS_FRAG);
 }
 
 /** @brief Fragment offset in bytes: the field counts units of eight octets. */
-PROTOCORE_INLINE uint32_t idemip_ip4_frag_offset_bytes(const uint8_t *h)
+EMBED_INLINE uint32_t idemip_ip4_frag_offset_bytes(const uint8_t *h)
 {
     return (uint32_t)(idemip_ip4_flags_frag(h) & IDEMIP_IP4_FRAG_OFF_MASK) * IDEMIP_IP4_FRAG_UNIT;
 }
 
 /** @brief Protocol carried in the data field. */
-PROTOCORE_INLINE uint8_t idemip_ip4_proto(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_ip4_proto(const uint8_t *h)
 {
     return h[IDEMIP_IP4_OFF_PROTO];
 }
 
 /** @brief Source address. */
-PROTOCORE_INLINE uint32_t idemip_ip4_src(const uint8_t *h)
+EMBED_INLINE uint32_t idemip_ip4_src(const uint8_t *h)
 {
     return idemip_rd32(h + IDEMIP_IP4_OFF_SRC);
 }
 
 /** @brief Destination address. */
-PROTOCORE_INLINE uint32_t idemip_ip4_dst(const uint8_t *h)
+EMBED_INLINE uint32_t idemip_ip4_dst(const uint8_t *h)
 {
     return idemip_rd32(h + IDEMIP_IP4_OFF_DST);
 }
@@ -140,6 +140,6 @@ static_assert(IDEMIP_IP4_OFF_OPTIONS == IDEMIP_IPV4_HDR_LEN,
 static_assert(IDEMIP_IP4_HDR_BYTES(IDEMIP_IP4_IHL_MIN) == IDEMIP_IPV4_HDR_LEN,
               "the minimum IHL of 5 words is the option-free header (RFC 791 sec 3.1)");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_IPV4_H

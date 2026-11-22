@@ -36,7 +36,7 @@
 
 #if PROTOCORE_HOST
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Slots the window holds. A power of two: the index is a mask, never a modulo. */
 #ifndef PROTOCORE_HW_REG_HOST_SLOTS
@@ -75,7 +75,7 @@ void protocore_hw_reg_host_reset(void);
  * @param bits  16, 32 or 64; anything else is ignored and the current setting stands.
  * @param be    nonzero for big-endian units.
  */
-void protocore_hw_reg_host_bus(unsigned bits, proto_bool be);
+void protocore_hw_reg_host_bus(unsigned bits, embed_bool be);
 
 // The host forms of the accessors every register driver reaches a peripheral with. Stated here first
 // so the vendor headers, which guard their own definitions, take these on a host build.
@@ -86,7 +86,7 @@ void protocore_hw_reg_host_bus(unsigned bits, proto_bool be);
 #define PROTOCORE_HW_WR(a, v) protocore_hw_reg_host_write((uintptr_t)(a), (uint32_t)(v))
 #endif
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST
 

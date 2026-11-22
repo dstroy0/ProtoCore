@@ -35,7 +35,7 @@
 #include "services/security/ikev2/ikev2/ikev2.h" // the complete type a public struct below holds by value
 #include "services/system/esp/esp/esp.h"         // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -51,12 +51,11 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_IPSEC_SAD_MAX 8
 
 /** @brief SPD policy action (RFC 4301 §4.4.1). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IpsecAction,
     IPSEC_ACTION_DISCARD = 0, ///< drop the packet
     IPSEC_ACTION_BYPASS = 1,  ///< forward without IPsec
     IPSEC_ACTION_PROTECT = 2, ///< apply ESP with the bound SA
-} IpsecAction;
+);
 
 /**
  * @brief A traffic selector as an SPD range (value type, addresses inline big-endian).
@@ -114,8 +113,8 @@ typedef struct
     uint8_t salt[PROTOCORE_ESP_SALT_LEN];  ///< AES-GCM salt (the key's tail)
     uint32_t seq;                          ///< outbound: last sequence number issued (0 = none yet)
     EspReplay replay;                      ///< inbound: anti-replay window
-    proto_bool inbound;                    ///< true = receive SA, false = send SA
-    proto_bool valid;                      ///< false = free slot
+    embed_bool inbound;                    ///< true = receive SA, false = send SA
+    embed_bool valid;                      ///< false = free slot
 } IpsecSaEntry;
 
 /** @brief The active Security Association Database, keyed by SPI. */
@@ -177,7 +176,7 @@ typedef struct
     uint8_t addr_len;
     const uint8_t *key;  ///< PROTOCORE_ESP_KEY_LEN bytes.
     const uint8_t *salt; ///< PROTOCORE_ESP_SALT_LEN bytes.
-    proto_bool inbound;
+    embed_bool inbound;
 } IpsecDbProtocoreIpsecSadAddArgs;
 
 /** @brief What protocore_ipsec_sad_find takes: sad, spi. */
@@ -251,7 +250,7 @@ typedef struct
     IpsecDbProtocoreIpsecSadFindArgs protocore_ipsec_sad_find_args;
     IpsecDbProtocoreIpsecSadRemoveArgs protocore_ipsec_sad_remove_args;
     IpsecDbProtocoreIpsecSadNextSeqArgs protocore_ipsec_sad_next_seq_args;
-    proto_bool ok;
+    embed_bool ok;
     const IpsecPolicy *ptr;
     IpsecSaEntry *sa;
 } IpsecDbVars;
@@ -304,7 +303,7 @@ static const IpsecDbNs IpsecDb __attribute__((unused)) = {
     .protocore_ipsec_sad_next_seq = protocore_ipsec_db_protocore_ipsec_sad_next_seq,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2
 

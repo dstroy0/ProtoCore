@@ -50,7 +50,7 @@
 
 #if PROTOCORE_ENABLE_HMMD
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_HMMD_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -268,7 +268,7 @@ typedef struct
     HmmdAckMatchesArgs ack_matches_args;
     HmmdBeginArgs begin_args;
 
-    proto_bool ok;
+    embed_bool ok;
     uint16_t cm;
     size_t n;
     const HmmdReport *report;
@@ -306,7 +306,7 @@ extern HmmdNs Hmmd;
  */
 uint8_t *protocore_hmmd_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HMMD
 

@@ -71,8 +71,8 @@ int main(int argc, char **argv)
     cfg.server_random = srand;
     cfg.cookie_key = cookie_key;
     DtlsConn conn;
-    proto_bool inited =
-        PROTO_FALSE; // the HRR cookie binds the peer address, so init once the first datagram reveals it
+    embed_bool inited =
+        EMBED_FALSE; // the HRR cookie binds the peer address, so init once the first datagram reveals it
 
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     int one = 1;
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
             DtlsServerV.init_args.peer_addr = paddr;
             DtlsServerV.init_args.peer_addr_len = sizeof paddr;
             DtlsServer.init(dtls_server_work);
-            inited = PROTO_TRUE;
+            inited = EMBED_TRUE;
         }
         DtlsServerV.established_args.c = &conn;
         DtlsServer.established(dtls_server_work);

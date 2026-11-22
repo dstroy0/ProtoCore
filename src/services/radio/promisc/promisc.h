@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file promisc.h
@@ -36,23 +36,22 @@ PROTOCORE_BEGIN_DECLS
  */
 
 /** @brief 802.11 frame type (frame-control bits 2-3). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(WifiFrameType,
     WIFI_FT_MGMT = 0,
     WIFI_FT_CTRL = 1,
     WIFI_FT_DATA = 2,
     WIFI_FT_EXT = 3,
-} WifiFrameType;
+);
 
 /** @brief Decoded 802.11 MAC header. src / dst / bssid point into the frame (6 bytes) or null. */
 typedef struct
 {
     WifiFrameType type; ///< WifiFrameType
     uint8_t subtype;    ///< 0..15
-    proto_bool to_ds;
-    proto_bool from_ds;
-    proto_bool protected_frame; ///< the Protected-Frame (WEP/CCMP) bit
-    proto_bool is_qos;          ///< QoS data subtype (adds 2 header bytes)
+    embed_bool to_ds;
+    embed_bool from_ds;
+    embed_bool protected_frame; ///< the Protected-Frame (WEP/CCMP) bit
+    embed_bool is_qos;          ///< QoS data subtype (adds 2 header bytes)
     uint16_t seq;               ///< 12-bit sequence number
     uint16_t hdr_len;           ///< MAC header length (bytes)
     const uint8_t *dst;         ///< destination (receiver) MAC, per the to/from-DS layout
@@ -72,8 +71,8 @@ typedef void (*protocore_promisc_sink_fn)(const uint8_t *frame, uint16_t len, in
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*wifi_frame_parse)(uint8_t *, const uint8_t *, uint16_t, WifiFrameInfo *);
-    proto_bool (*begin)(uint8_t *, uint8_t, protocore_promisc_sink_fn);
+    embed_bool (*wifi_frame_parse)(uint8_t *, const uint8_t *, uint16_t, WifiFrameInfo *);
+    embed_bool (*begin)(uint8_t *, uint8_t, protocore_promisc_sink_fn);
     void (*set_channel)(uint8_t *, uint8_t);
     void (*end)(uint8_t *);
 } PromiscNs;
@@ -85,17 +84,17 @@ PROTOCORE_NS_LAYOUT(PromiscNs, wifi_frame_parse, begin, set_channel, end);
  * @param frame Frame
  * @param len Len
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
+embed_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
 /**
  * @brief Start promiscuous capture on channel; every frame is delivered to .
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.
  * @param channel Channel
  * @param sink Sink
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink);
+embed_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink);
 /**
  * @brief Retune the capture to a different channel (1..14).
  * @param work PROTOCORE_PROMISC_BORROW bytes the caller took. Not held past the call.
@@ -133,6 +132,6 @@ PROTOCORE_NS PromiscNs Promisc PROTOCORE_UNUSED = {.wifi_frame_parse = protocore
                                                    .set_channel = protocore_promisc_set_channel,
                                                    .end = protocore_promisc_end};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_PROMISC_H

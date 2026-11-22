@@ -38,7 +38,7 @@
 
 #if PROTOCORE_ENABLE_DDS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief DDSI-RTPS sec 9.4.5.1 SubmessageKind: the submessageId octet of a SubmessageHeader. */
 #define RTPS_SM_PAD 0x01
@@ -131,7 +131,7 @@ typedef struct
     RtpsOutArgs out;        ///< where a build lands
     RtpsMessageArgs msg;    ///< what a parse walks
     RtpsSinkArgs sink;      ///< where a parse reports
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } RtpsVars;
 
@@ -165,7 +165,7 @@ static const RtpsNs Rtps __attribute__((unused)) = {
 /** @brief The protocol version a built Header stamps, major then minor (sec 8.3.3.1). */
 extern const uint8_t RTPS_VERSION[2];
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DDS
 

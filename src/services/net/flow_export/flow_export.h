@@ -42,7 +42,7 @@
 
 #if PROTOCORE_ENABLE_FLOW_EXPORT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define FLOW_V5_HEADER_SIZE 24 ///< octets in the vendor Version 5 packet header
 #define FLOW_V5_RECORD_SIZE 48 ///< octets in one vendor Version 5 flow record
@@ -165,7 +165,7 @@ typedef struct
     FlowMessageArgs message; ///< the Message Header fields a begin writes
     FlowTemplateArgs tmpl;   ///< the Field Specifiers a Template Record lists
     FlowDataArgs data;       ///< one encoded Data Record
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } FlowExportVars;
 
@@ -225,7 +225,7 @@ static const FlowExportNs FlowExport __attribute__((unused)) = {
  */
 uint8_t *protocore_flow_export_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FLOW_EXPORT
 

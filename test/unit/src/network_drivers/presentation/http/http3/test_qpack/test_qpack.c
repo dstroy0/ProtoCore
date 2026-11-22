@@ -46,35 +46,35 @@ static char g_scratch[256];
 static Sink g_sink;
 
 // Copy each emitted field into its own slot, NUL-terminated, so a case can compare it as a string.
-static proto_bool collect(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len)
+static embed_bool collect(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len)
 {
     Sink *s = (Sink *)ctx;
     if (s->n >= SINK_MAX || name_len >= FIELD_MAX || value_len >= FIELD_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(s->f[s->n].name, name, name_len);
     s->f[s->n].name[name_len] = '\0';
     memcpy(s->f[s->n].value, value, value_len);
     s->f[s->n].value[value_len] = '\0';
     s->n++;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool refuse(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len)
+static embed_bool refuse(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len)
 {
     (void)ctx;
     (void)name;
     (void)name_len;
     (void)value;
     (void)value_len;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-static proto_bool decode(const uint8_t *block, size_t len)
+static embed_bool decode(const uint8_t *block, size_t len)
 {
     g_sink.n = 0;
-    proto_bool qpack_ok = Qpack.decode(qpack_work, block, len, g_scratch, sizeof(g_scratch), collect, &g_sink);
+    embed_bool qpack_ok = Qpack.decode(qpack_work, block, len, g_scratch, sizeof(g_scratch), collect, &g_sink);
     return qpack_ok;
 }
 
@@ -302,7 +302,7 @@ void test_scratch_bound_is_respected(void)
     static const uint8_t B1[15] = {0x00, 0x00, 0x51, 0x0b, '/', 'i', 'n', 'd', 'e', 'x', '.', 'h', 't', 'm', 'l'};
     char tiny[4];
     g_sink.n = 0;
-    proto_bool qpack_ok = Qpack.decode(qpack_work, B1, sizeof(B1), tiny, sizeof(tiny), collect, &g_sink);
+    embed_bool qpack_ok = Qpack.decode(qpack_work, B1, sizeof(B1), tiny, sizeof(tiny), collect, &g_sink);
     TEST_ASSERT_FALSE(qpack_ok);
 }
 
@@ -311,7 +311,7 @@ void test_scratch_bound_is_respected(void)
 void test_emit_refusal_aborts_the_decode(void)
 {
     static const uint8_t B1[15] = {0x00, 0x00, 0x51, 0x0b, '/', 'i', 'n', 'd', 'e', 'x', '.', 'h', 't', 'm', 'l'};
-    proto_bool qpack_ok = Qpack.decode(qpack_work, B1, sizeof(B1), g_scratch, sizeof(g_scratch), refuse, NULL);
+    embed_bool qpack_ok = Qpack.decode(qpack_work, B1, sizeof(B1), g_scratch, sizeof(g_scratch), refuse, NULL);
     TEST_ASSERT_FALSE(qpack_ok);
 }
 

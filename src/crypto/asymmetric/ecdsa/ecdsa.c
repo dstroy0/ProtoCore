@@ -130,7 +130,7 @@ static void fp_zero(uint32_t r[8])
         r[i] = 0;
     }
 }
-static proto_bool fp_is_zero(const uint32_t a[8])
+static embed_bool fp_is_zero(const uint32_t a[8])
 {
     uint32_t x = 0;
     for (int i = 0; i < 8; i++)
@@ -246,7 +246,7 @@ static void ecdsa_hw_off()
 // operand anywhere in this file. A full 8-limb "acc == m" coincidence at any bit-serial reduction
 // step, or even a partial (single-limb) coincidence while the loop is still scanning, was never
 // observed across this suite's 590M+ calls to this function. Not exercised by any host-reachable input.
-static proto_bool reduce_low8_ge(const uint32_t acc[8], const uint32_t m[8])
+static embed_bool reduce_low8_ge(const uint32_t acc[8], const uint32_t m[8])
 {
     for (int k = 7; k >= 0; k--)
     {
@@ -255,7 +255,7 @@ static proto_bool reduce_low8_ge(const uint32_t acc[8], const uint32_t m[8])
             return acc[k] > m[k];
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 // Reduce a 512-bit product mod m (bit-serial, MSB to LSB). Correct but slow; the native path is test-only.
 static void reduce_mod(uint32_t r[8], const uint32_t prod[16], const uint32_t m[8])
@@ -275,7 +275,7 @@ static void reduce_mod(uint32_t r[8], const uint32_t prod[16], const uint32_t m[
             carry = nc;
         }
         acc[0] |= (prod[bit >> 5] >> (bit & 31)) & 1u;
-        proto_bool ge = acc[8] != 0;
+        embed_bool ge = acc[8] != 0;
         if (!ge)
         {
             ge = reduce_low8_ge(acc, m);
@@ -407,7 +407,7 @@ static const Pt P256_G = {
     {0x37bf51f5u, 0xcbb64068u, 0x6b315eceu, 0x2bce3357u, 0x7c0f9e16u, 0x8ee7eb4au, 0xfe1a7f9bu, 0x4fe342e2u},
     {1u, 0, 0, 0, 0, 0, 0, 0}};
 
-static proto_bool pt_is_infinity(const Pt *p)
+static embed_bool pt_is_infinity(const Pt *p)
 {
     return fp_is_zero(p->Z);
 }
@@ -595,11 +595,11 @@ static void pt_scalarmul(Pt *r, const uint32_t k[8], const Pt *p)
 }
 
 // Check (x, y) is on y^2 = x^3 - 3x + b (mod p) and both coordinates are in range. Requires ecdsa_hw_on().
-static proto_bool on_curve(const uint32_t x[8], const uint32_t y[8])
+static embed_bool on_curve(const uint32_t x[8], const uint32_t y[8])
 {
     if (fp_cmp(x, P256_P) >= 0 || fp_cmp(y, P256_P) >= 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t lhs[8];
     uint32_t rhs[8];
@@ -646,11 +646,11 @@ static void protocore_hmac_cat(uint8_t *work, uint8_t out[32], const uint8_t key
 // output to one specific rare value short of an infeasible (2^32+ evaluation) brute-force search. None
 // of these guards tripped once across this suite's full run (hundreds of scalar multiplies over dozens
 // of distinct keys/messages), so the retry path in ecdsa_sign_core is dead for the same reason.
-static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const uint32_t e[8], uint8_t sig[64])
+static embed_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const uint32_t e[8], uint8_t sig[64])
 {
     if (fp_is_zero(k) || fp_cmp(k, P256_N) >= 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     Pt R;
     pt_scalarmul(&R, k, &P256_G);
@@ -659,7 +659,7 @@ static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const
     // the identity if n divides k, which is impossible for k in [1, n-1].
     if (pt_is_infinity(&R))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t rx[8];
     uint32_t ry[8];
@@ -668,7 +668,7 @@ static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const
     fp_reduce_once(r, rx, P256_N); // r = Rx mod n (Rx < p < 2n -> one subtract)
     if (fp_is_zero(r))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t kinv[8];
     uint32_t s[8];
@@ -678,15 +678,15 @@ static proto_bool ecdsa_try_sign(const uint32_t k[8], const uint32_t d[8], const
     fp_mul(s, kinv, s, &FN); // k^-1 (e + r*d)
     if (fp_is_zero(s))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     store_be(sig, r);
     store_be(sig + 32, s);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ECDSA core: sign hash h1 (32) with scalar d, deterministic k per RFC 6979. Requires ecdsa_hw_on().
-static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t h1[32], const uint32_t d[8])
+static embed_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t h1[32], const uint32_t d[8])
 {
     uint32_t e[8];
     uint32_t etmp[8];
@@ -716,7 +716,7 @@ static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t 
         load_be(k, V); // bits2int(T)
         if (ecdsa_try_sign(k, d, e, sig))
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         uint8_t buf[33]; // retry: K = HMAC_K(V || 0x00); V = HMAC_K(V)
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = V, .bytes = 32);
@@ -724,29 +724,29 @@ static proto_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t 
         HmacSha256.mac(ECDSA_HMAC(work), K, 32, buf, 33, K);
         protocore_hmac_cat(work, V, K, V, 32, -1, NULL, NULL);
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub)
+embed_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub)
 {
     if (!pub || !priv)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint32_t d[8];
     load_be(d, priv);
     if (fp_is_zero(d) || fp_cmp(d, P256_N) >= 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     ecdsa_hw_on();
     Pt Q;
     pt_scalarmul(&Q, d, &P256_G);
-    proto_bool ok = !pt_is_infinity(&Q);
+    embed_bool ok = !pt_is_infinity(&Q);
     // d is already range-checked to [1, n-1] above, and P-256 has cofactor 1 (group order exactly n), so
     // d*G can only be the identity if n divides d - impossible here; ok is therefore always true.
     if (ok)
@@ -762,39 +762,39 @@ proto_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *p
     return ok;
 }
 
-proto_bool protocore_ecdsa_sign(uint8_t *work, const uint8_t *msg, size_t mlen, const uint8_t *priv, uint8_t *sig)
+embed_bool protocore_ecdsa_sign(uint8_t *work, const uint8_t *msg, size_t mlen, const uint8_t *priv, uint8_t *sig)
 {
     if (!sig || !priv)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint32_t d[8];
     load_be(d, priv);
     if (fp_is_zero(d) || fp_cmp(d, P256_N) >= 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
     ecdsa_hash_msg(work, msg, mlen, h1);
 
     ecdsa_hw_on();
-    proto_bool ok = ecdsa_sign_core(work, sig, h1, d);
+    embed_bool ok = ecdsa_sign_core(work, sig, h1, d);
     ecdsa_hw_off();
     return ok;
 }
 
-proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
+embed_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
                                   const uint8_t *sig)
 {
     if (!pub || !sig)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     if (pub[0] != 0x04)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t qx[8];
     uint32_t qy[8];
@@ -807,7 +807,7 @@ proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8
     load_be(s, sig + 32);
     if (fp_is_zero(r) || fp_cmp(r, P256_N) >= 0 || fp_is_zero(s) || fp_cmp(s, P256_N) >= 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint8_t h1[PROTOCORE_SHA256_DIGEST_LEN];
@@ -818,7 +818,7 @@ proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8
     fp_reduce_once(e, etmp, P256_N);
 
     ecdsa_hw_on();
-    proto_bool ok = on_curve(qx, qy);
+    embed_bool ok = on_curve(qx, qy);
     if (ok)
     {
         uint32_t w[8];
@@ -838,7 +838,7 @@ proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8
         pt_add(&R, &Rg, &Rq);
         if (pt_is_infinity(&R))
         {
-            ok = PROTO_FALSE;
+            ok = EMBED_FALSE;
         }
         else
         {
@@ -854,16 +854,16 @@ proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8
     return ok;
 }
 
-proto_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x)
+embed_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x)
 {
     if (!shared_x || !peer_pub || !priv)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     if (peer_pub[0] != 0x04)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t qx[8];
     uint32_t qy[8];
@@ -873,11 +873,11 @@ proto_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const ui
     load_be(d, priv);
     if (fp_is_zero(d) || fp_cmp(d, P256_N) >= 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     ecdsa_hw_on();
-    proto_bool ok = on_curve(qx, qy); // rejects off-curve / out-of-range peer points
+    embed_bool ok = on_curve(qx, qy); // rejects off-curve / out-of-range peer points
     if (ok)
     {
         Pt Q;
@@ -889,7 +889,7 @@ proto_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const ui
         // be the identity if n divides d - impossible here.
         if (pt_is_infinity(&R))
         {
-            ok = PROTO_FALSE;
+            ok = EMBED_FALSE;
         }
         else
         {

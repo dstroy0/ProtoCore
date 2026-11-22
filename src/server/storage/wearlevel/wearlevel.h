@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_WEARLEVEL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The slot table a call reads, and the slot it names. */
 typedef struct
@@ -88,7 +88,7 @@ static const WearlevelNs Wearlevel __attribute__((unused)) = {
     .imbalance = protocore_wearlevel_imbalance,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEARLEVEL
 

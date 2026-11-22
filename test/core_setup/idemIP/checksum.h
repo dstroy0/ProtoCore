@@ -17,7 +17,7 @@
 
 #include "idemIP/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Accumulate @p len bytes at @p p into a running 1's complement sum.
@@ -35,7 +35,7 @@ PROTOCORE_BEGIN_DECLS
  *
  * @param sum running sum from a previous call, or 0 to begin.
  */
-PROTOCORE_INLINE uint32_t idemip_cksum_accum(uint32_t sum, const uint8_t *p, size_t len)
+EMBED_INLINE uint32_t idemip_cksum_accum(uint32_t sum, const uint8_t *p, size_t len)
 {
     size_t i = 0;
     while (i + 1u < len)
@@ -56,7 +56,7 @@ PROTOCORE_INLINE uint32_t idemip_cksum_accum(uint32_t sum, const uint8_t *p, siz
  * RFC 1071 sec 1: the end-around carry is applied until none remains, then the sum is complemented.
  * Two folds are enough - the first can produce at most one new carry.
  */
-PROTOCORE_INLINE uint16_t idemip_cksum_final(uint32_t sum)
+EMBED_INLINE uint16_t idemip_cksum_final(uint32_t sum)
 {
     sum = (sum & 0xFFFFu) + (sum >> 16);
     sum = (sum & 0xFFFFu) + (sum >> 16);
@@ -64,7 +64,7 @@ PROTOCORE_INLINE uint16_t idemip_cksum_final(uint32_t sum)
 }
 
 /** @brief The checksum over one span. */
-PROTOCORE_INLINE uint16_t idemip_cksum(const uint8_t *p, size_t len)
+EMBED_INLINE uint16_t idemip_cksum(const uint8_t *p, size_t len)
 {
     return idemip_cksum_final(idemip_cksum_accum(0u, p, len));
 }
@@ -76,11 +76,11 @@ PROTOCORE_INLINE uint16_t idemip_cksum(const uint8_t *p, size_t len)
  * complement is zero. A verifier therefore runs the same sum and tests for zero rather than
  * clearing the field and recomputing.
  */
-PROTOCORE_INLINE proto_bool idemip_cksum_valid(const uint8_t *p, size_t len)
+EMBED_INLINE embed_bool idemip_cksum_valid(const uint8_t *p, size_t len)
 {
     return idemip_cksum(p, len) == 0u;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_CHECKSUM_H

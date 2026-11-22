@@ -38,7 +38,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Accept callback from the lower-level module - single handler for all listener ports.
@@ -54,7 +54,7 @@ typedef struct
 {
     uint16_t port;   ///< the port it binds, or the one a lookup names
     ProtoConn proto; ///< the application protocol its connections take
-    proto_bool tls;  ///< connections accepted here begin a handshake
+    embed_bool tls;  ///< connections accepted here begin a handshake
     uint8_t dscp;    ///< the code point a port marks with
 } TcpBindArgs;
 
@@ -121,7 +121,7 @@ typedef struct
     TcpBindArgs bind; ///< what a passive OPEN binds (RFC 9293 sec 3.9.1.1)
     TcpGateArgs gate; ///< what an accept-time gate judges
     TcpQueueArgs q;   ///< where an event goes
-    proto_bool ok;
+    embed_bool ok;
     int32_t i32;
     protocore_platform_queue queue;
 #if PROTOCORE_WORKER_COUNT > 1
@@ -220,6 +220,6 @@ static const TcpListenerNs TcpListener __attribute__((unused)) = {
  */
 uint8_t *protocore_tcp_listener_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif

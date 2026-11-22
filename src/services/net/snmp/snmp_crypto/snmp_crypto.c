@@ -18,7 +18,7 @@
 #include "crypto/hash/sha256/sha256.h"
 #include "locus_carcerum/locus_carcerum.h" // mmgr_zero_buf: the wipe the compiler cannot drop
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The scan for the password's end stops here, so a password that carries no terminator cannot be
 // read past. The derivation repeats whatever it finds, so a shorter password is not rejected.
@@ -46,7 +46,7 @@ void protocore_snmp_crypto_localize_key(uint8_t *work)
         {
             EMBED_CALL(memor.set, MemoriaCfg, .dst = key_out, .val = 0, .bytes = SNMP_USM_KEY_LEN);
         }
-        SnmpCryptoV.ok = PROTO_FALSE;
+        SnmpCryptoV.ok = EMBED_FALSE;
         return;
     }
 
@@ -78,7 +78,7 @@ void protocore_snmp_crypto_localize_key(uint8_t *work)
 
     mmgr_zero_buf(ku, sizeof(ku));
     mmgr_zero_buf(block, sizeof(block));
-    SnmpCryptoV.ok = PROTO_TRUE;
+    SnmpCryptoV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,10 +181,10 @@ void protocore_snmp_crypto_aes_cfb128(uint8_t *work)
     const uint8_t *in = SnmpCryptoV.priv.in;
     uint8_t *out = SnmpCryptoV.priv.out;
     const size_t len = SnmpCryptoV.priv.len;
-    const proto_bool encrypt = SnmpCryptoV.priv.encrypt;
+    const embed_bool encrypt = SnmpCryptoV.priv.encrypt;
     if (SnmpCryptoV.priv.key == NULL || SnmpCryptoV.priv.iv == NULL || in == NULL || out == NULL)
     {
-        SnmpCryptoV.ok = PROTO_FALSE;
+        SnmpCryptoV.ok = EMBED_FALSE;
         return;
     }
 
@@ -231,13 +231,13 @@ void protocore_snmp_crypto_aes_cfb128(uint8_t *work)
     mmgr_zero_buf(rk, sizeof(rk));
     mmgr_zero_buf(ks, sizeof(ks));
     mmgr_zero_buf(fb, sizeof(fb));
-    SnmpCryptoV.ok = PROTO_TRUE;
+    SnmpCryptoV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SnmpCryptoVars SnmpCryptoV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP_V3

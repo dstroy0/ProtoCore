@@ -7,7 +7,7 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // the complete type a public struct below holds by value
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file multipart.h
@@ -72,7 +72,7 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*parse)(uint8_t *, HttpReq *, MultipartBody *);
+    embed_bool (*parse)(uint8_t *, HttpReq *, MultipartBody *);
     const char *(*get_field)(uint8_t *, const MultipartBody *, const char *);
 } MultipartNs;
 PROTOCORE_NS_LAYOUT(MultipartNs, parse, get_field);
@@ -82,9 +82,9 @@ PROTOCORE_NS_LAYOUT(MultipartNs, parse, get_field);
  * @param work PROTOCORE_MULTIPART_BORROW bytes the caller took. Not held past the call.
  * @param req Req
  * @param mp Mp
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody *mp);
+embed_bool protocore_multipart_parse(uint8_t *work, HttpReq *req, MultipartBody *mp);
 /**
  * @brief The data pointer of the first part whose name matches field, or.
  * @param work PROTOCORE_MULTIPART_BORROW bytes the caller took. Not held past the call.
@@ -98,6 +98,6 @@ const char *protocore_multipart_get_field(uint8_t *work, const MultipartBody *mp
 PROTOCORE_NS MultipartNs Multipart PROTOCORE_UNUSED = {.parse = protocore_multipart_parse,
                                                        .get_field = protocore_multipart_get_field};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_MULTIPART_H

@@ -15,7 +15,7 @@
 #include "idemIP/checksum.h"
 #include "idemIP/ip/ipv4.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Field offsets (RFC 9293 sec 3.1, Figure 1)
@@ -94,55 +94,55 @@ PROTOCORE_BEGIN_DECLS
 // datagram that itself starts 14 into a frame - so 32-bit fields land on a two-byte boundary.
 
 /** @brief Source Port. */
-PROTOCORE_INLINE uint16_t idemip_tcp_src_port(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_tcp_src_port(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_TCP_OFF_SRC_PORT);
 }
 
 /** @brief Destination Port. */
-PROTOCORE_INLINE uint16_t idemip_tcp_dst_port(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_tcp_dst_port(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_TCP_OFF_DST_PORT);
 }
 
 /** @brief Sequence Number. */
-PROTOCORE_INLINE uint32_t idemip_tcp_seq(const uint8_t *h)
+EMBED_INLINE uint32_t idemip_tcp_seq(const uint8_t *h)
 {
     return idemip_rd32(h + IDEMIP_TCP_OFF_SEQ);
 }
 
 /** @brief Acknowledgment Number; significant only when ACK is set. */
-PROTOCORE_INLINE uint32_t idemip_tcp_ack(const uint8_t *h)
+EMBED_INLINE uint32_t idemip_tcp_ack(const uint8_t *h)
 {
     return idemip_rd32(h + IDEMIP_TCP_OFF_ACK);
 }
 
 /** @brief Data Offset, in 32-bit words. */
-PROTOCORE_INLINE uint8_t idemip_tcp_doff(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_tcp_doff(const uint8_t *h)
 {
     return (uint8_t)((idemip_rd16(h + IDEMIP_TCP_OFF_OFFS_FLAGS) >> IDEMIP_TCP_DOFF_SHIFT) & IDEMIP_TCP_DOFF_MASK);
 }
 
 /** @brief The eight control bits, as the low octet of the offset/flags word. */
-PROTOCORE_INLINE uint8_t idemip_tcp_flags(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_tcp_flags(const uint8_t *h)
 {
     return (uint8_t)(idemip_rd16(h + IDEMIP_TCP_OFF_OFFS_FLAGS) & 0xFFu);
 }
 
 /** @brief Window: octets this sender is willing to accept. */
-PROTOCORE_INLINE uint16_t idemip_tcp_window(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_tcp_window(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_TCP_OFF_WINDOW);
 }
 
 /** @brief Checksum as carried. */
-PROTOCORE_INLINE uint16_t idemip_tcp_cksum(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_tcp_cksum(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_TCP_OFF_CKSUM);
 }
 
 /** @brief Urgent Pointer; significant only when URG is set. */
-PROTOCORE_INLINE uint16_t idemip_tcp_urgent(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_tcp_urgent(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_TCP_OFF_URGENT);
 }
@@ -153,7 +153,7 @@ PROTOCORE_INLINE uint16_t idemip_tcp_urgent(const uint8_t *h)
  * The same shape as UDP's: the two addresses, a zero octet, the protocol, and the length of the
  * TCP segment - header and data, which is not a field of the header and so is passed in.
  */
-PROTOCORE_INLINE uint32_t idemip_tcp_pseudo_accum(uint32_t sum, uint32_t src, uint32_t dst, uint16_t seg_len)
+EMBED_INLINE uint32_t idemip_tcp_pseudo_accum(uint32_t sum, uint32_t src, uint32_t dst, uint16_t seg_len)
 {
     sum += (src >> 16) & 0xFFFFu;
     sum += src & 0xFFFFu;
@@ -170,7 +170,7 @@ PROTOCORE_INLINE uint32_t idemip_tcp_pseudo_accum(uint32_t sum, uint32_t src, ui
  * The caller zeroes the checksum field first. Unlike UDP there is no "no checksum" encoding: a
  * result of zero is written as zero.
  */
-PROTOCORE_INLINE uint16_t idemip_tcp_cksum_compute(const uint8_t *h, size_t len, uint32_t src, uint32_t dst)
+EMBED_INLINE uint16_t idemip_tcp_cksum_compute(const uint8_t *h, size_t len, uint32_t src, uint32_t dst)
 {
     uint32_t sum = idemip_tcp_pseudo_accum(0u, src, dst, (uint16_t)len);
     return idemip_cksum_final(idemip_cksum_accum(sum, h, len));
@@ -181,6 +181,6 @@ static_assert(IDEMIP_TCP_OFF_OPTIONS == IDEMIP_TCP_HDR_LEN,
 static_assert(IDEMIP_TCP_HDR_BYTES(IDEMIP_TCP_DOFF_MIN) == IDEMIP_TCP_HDR_LEN,
               "the minimum Data Offset of 5 words is the option-free header (RFC 9293 sec 3.1)");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_TCP_H

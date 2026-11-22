@@ -12,7 +12,7 @@
 
 #include "server/peripherals/ad9238/ad9238.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -22,21 +22,21 @@ PROTOCORE_BEGIN_DECLS
 void protocore_ad9238_build_instruction(uint8_t *work)
 {
     (void)work;
-    proto_bool read = Ad9238V.build_instruction_args.read;
+    embed_bool read = Ad9238V.build_instruction_args.read;
     uint16_t reg_addr = Ad9238V.build_instruction_args.reg_addr;
     uint8_t nbytes = Ad9238V.build_instruction_args.nbytes;
     uint8_t *out2 = Ad9238V.build_instruction_args.out2;
 
     if (!out2 || nbytes == 0 || nbytes > 4 || reg_addr > 0x1FFF)
     {
-        Ad9238V.ok = PROTO_FALSE;
+        Ad9238V.ok = EMBED_FALSE;
         return;
     }
     uint16_t w1w0 = (uint16_t)(nbytes - 1) & 0x3;
     uint16_t word = (uint16_t)((read ? 0x8000u : 0x0000u) | (w1w0 << 13) | (reg_addr & 0x1FFFu));
     out2[0] = (uint8_t)(word >> 8);
     out2[1] = (uint8_t)(word & 0xFF);
-    Ad9238V.ok = PROTO_TRUE;
+    Ad9238V.ok = EMBED_TRUE;
 }
 
 void protocore_ad9238_build_write(uint8_t *work)
@@ -53,7 +53,7 @@ void protocore_ad9238_build_write(uint8_t *work)
         return;
     }
     uint8_t hdr[2];
-    Ad9238V.build_instruction_args.read = PROTO_FALSE;
+    Ad9238V.build_instruction_args.read = EMBED_FALSE;
     Ad9238V.build_instruction_args.reg_addr = reg_addr;
     Ad9238V.build_instruction_args.nbytes = 1;
     Ad9238V.build_instruction_args.out2 = hdr;
@@ -82,7 +82,7 @@ void protocore_ad9238_build_read(uint8_t *work)
         return;
     }
     uint8_t hdr[2];
-    Ad9238V.build_instruction_args.read = PROTO_TRUE;
+    Ad9238V.build_instruction_args.read = EMBED_TRUE;
     Ad9238V.build_instruction_args.reg_addr = reg_addr;
     Ad9238V.build_instruction_args.nbytes = 1;
     Ad9238V.build_instruction_args.out2 = hdr;
@@ -113,6 +113,6 @@ void protocore_ad9238_build_transfer(uint8_t *work)
 /** @brief The operands and the outcome. */
 Ad9238Vars Ad9238V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AD9238

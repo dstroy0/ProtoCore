@@ -47,7 +47,7 @@ void protocore_ntlm_nt_hash(uint8_t *work, const char *password, uint8_t *nt_has
     protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
 }
 
-proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
+embed_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
                                   uint8_t *owf)
 {
     (void)work;
@@ -63,7 +63,7 @@ proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const c
         }
         if (n + 2 > sizeof(buf))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         buf[n++] = (uint8_t)up;
         buf[n++] = 0;
@@ -72,7 +72,7 @@ proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const c
     {
         if (n + 2 > sizeof(buf))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         buf[n++] = (uint8_t)*p;
         buf[n++] = 0;
@@ -83,7 +83,7 @@ proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const c
         .cap = PROTOCORE_MD_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     MdV.hmac_args.key = nt_hash;
     MdV.hmac_args.key_len = 16;
@@ -92,7 +92,7 @@ proto_bool protocore_ntlm_ntowfv2(uint8_t *work, const uint8_t *nt_hash, const c
     MdV.hmac_args.out = owf;
     Md.hmac_md5(w.buf);
     protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // HMAC-MD5 over a two-part message (the key here is always the 16-byte NTOWFv2, < 64 bytes,
@@ -216,7 +216,7 @@ size_t protocore_ntlm_set_mic_flag(uint8_t *work, const uint8_t *target_info, si
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = target_info, .bytes = ti_len);
     size_t p = 0;
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     size_t eol = ti_len; // offset of the MsvAvEOL header, if any
     while (p + 4 <= ti_len)
     {
@@ -230,7 +230,7 @@ size_t protocore_ntlm_set_mic_flag(uint8_t *work, const uint8_t *target_info, si
         if (id == 6 && len == 4 && p + 8 <= ti_len)
         {
             out[p + 4] |= 0x02; // MsvAvFlags: set "MIC provided" in the low byte of the LE value
-            found = PROTO_TRUE;
+            found = EMBED_TRUE;
         }
         if (p + 4 + len < p + 4) // overflow guard
         {

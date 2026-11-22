@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_CANOPEN
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -94,8 +94,7 @@ PROTOCORE_BEGIN_DECLS
 #define CANOPEN_SDO_SEG_DATA 7
 
 /** @brief CANopen message classes (the function decoded from the COB-ID). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(CanopenType,
     CANOPEN_T_UNKNOWN = 0,
     CANOPEN_T_NMT,
     CANOPEN_T_SYNC,
@@ -106,7 +105,7 @@ typedef enum PROTO_ENUM_PACKED
     CANOPEN_T_SDO_TX,
     CANOPEN_T_SDO_RX,
     CANOPEN_T_HEARTBEAT,
-} CanopenType;
+);
 
 /** @brief A classified CANopen frame (the function code + node, from protocore_canopen_parse). */
 typedef struct
@@ -121,10 +120,10 @@ typedef struct
 {
     uint16_t index;       ///< object index echoed by the server
     uint8_t sub;          ///< sub-index echoed by the server
-    proto_bool is_abort;  ///< true => the server aborted the transfer
+    embed_bool is_abort;  ///< true => the server aborted the transfer
     uint32_t abort_code;  ///< valid when is_abort
-    proto_bool is_upload; ///< true => upload (read) response; false => download (write) ack
-    proto_bool expedited; ///< true => the payload is inline in data[0..len-1]
+    embed_bool is_upload; ///< true => upload (read) response; false => download (write) ack
+    embed_bool expedited; ///< true => the payload is inline in data[0..len-1]
     uint8_t data[4];      ///< expedited upload payload
     uint8_t len;          ///< expedited payload length 0..4
 } CanopenSdoResponse;
@@ -143,8 +142,8 @@ typedef struct
     uint8_t *buf;             ///< caller-provided accumulation buffer
     size_t cap;               ///< its capacity
     size_t len;               ///< octets accumulated so far
-    proto_bool expect_toggle; ///< the toggle the next segment must carry (starts false)
-    proto_bool done;          ///< set once the last segment is accepted
+    embed_bool expect_toggle; ///< the toggle the next segment must carry (starts false)
+    embed_bool done;          ///< set once the last segment is accepted
 } CanopenSdoReasm;
 
 #include "shared/can/can.h" // CanFrame: the type a parameter points at
@@ -237,7 +236,7 @@ typedef struct
     uint16_t index;
     uint8_t sub;
     uint32_t abort_code;
-    proto_bool to_server;
+    embed_bool to_server;
 } CanopenBuildSdoAbortArgs;
 
 /** @brief What parse takes: f, out. */
@@ -294,10 +293,10 @@ typedef struct
 {
     CanFrame *out;
     uint8_t node_id;
-    proto_bool toggle; ///< the toggle bit for this segment (0 for the first, then alternating)
+    embed_bool toggle; ///< the toggle bit for this segment (0 for the first, then alternating)
     const uint8_t *data;
     uint8_t len;
-    proto_bool last; ///< true on the final segment
+    embed_bool last; ///< true on the final segment
 } CanopenBuildSdoDownloadSegmentArgs;
 
 /** @brief What build_sdo_upload_segment_req takes: out, node_id, ... */
@@ -305,17 +304,17 @@ typedef struct
 {
     CanFrame *out;
     uint8_t node_id;
-    proto_bool toggle;
+    embed_bool toggle;
 } CanopenBuildSdoUploadSegmentReqArgs;
 
 /** @brief What parse_sdo_segment takes: f, toggle, data, len, last. */
 typedef struct
 {
     const CanFrame *f;
-    proto_bool *toggle;
+    embed_bool *toggle;
     uint8_t *data;
     uint8_t *len;
-    proto_bool *last;
+    embed_bool *last;
 } CanopenParseSdoSegmentArgs;
 
 /** @brief What sdo_reasm_init takes: r, buf, cap. */
@@ -332,8 +331,8 @@ typedef struct
     CanopenSdoReasm *r;
     const uint8_t *data;
     uint8_t len;
-    proto_bool toggle;
-    proto_bool last;
+    embed_bool toggle;
+    embed_bool last;
 } CanopenSdoReasmFeedArgs;
 
 /**
@@ -419,7 +418,7 @@ typedef struct
     CanopenParseSdoSegmentArgs parse_sdo_segment_args;
     CanopenSdoReasmInitArgs sdo_reasm_init_args;
     CanopenSdoReasmFeedArgs sdo_reasm_feed_args;
-    proto_bool ok;
+    embed_bool ok;
 } CanopenVars;
 
 /** @brief The operands and the outcome. */
@@ -503,7 +502,7 @@ static const CanopenNs Canopen __attribute__((unused)) = {
     .sdo_reasm_feed = protocore_canopen_sdo_reasm_feed,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CANOPEN
 

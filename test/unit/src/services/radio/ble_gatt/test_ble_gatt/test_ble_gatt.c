@@ -124,7 +124,7 @@ void test_build_parse_round_trip(void)
 
     size_t ble_gatt_n = BleGatt.att_write_req(ble_gatt_work, 0x0031, VAL, sizeof(VAL), pdu, sizeof(pdu));
     size_t n = ble_gatt_n;
-    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, pdu, n, &p);
+    embed_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, pdu, n, &p);
     TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_WRITE_REQ, p.opcode);
     TEST_ASSERT_EQUAL_HEX16(0x0031, p.handle);
@@ -168,7 +168,7 @@ void test_parse_refuses_a_truncated_pdu(void)
 {
     AttPdu p;
     static const uint8_t WRITE_NO_HANDLE[] = {ATT_OP_WRITE_REQ, 0x31};
-    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, WRITE_NO_HANDLE, sizeof(WRITE_NO_HANDLE), &p);
+    embed_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, WRITE_NO_HANDLE, sizeof(WRITE_NO_HANDLE), &p);
     TEST_ASSERT_FALSE(ble_gatt_ok);
 
     static const uint8_t READ_NO_HANDLE[] = {ATT_OP_READ_REQ, 0x25};
@@ -198,7 +198,7 @@ void test_parse_value_absent_and_unknown_opcode(void)
 {
     AttPdu p;
     static const uint8_t WRITE_RSP[] = {ATT_OP_WRITE_RSP};
-    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, WRITE_RSP, sizeof(WRITE_RSP), &p);
+    embed_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, WRITE_RSP, sizeof(WRITE_RSP), &p);
     TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_HEX8(ATT_OP_WRITE_RSP, p.opcode);
     TEST_ASSERT_NULL(p.value);
@@ -229,7 +229,7 @@ void test_parsed_value_points_into_the_input(void)
 {
     AttPdu p;
     static const uint8_t PDU[] = {ATT_OP_HANDLE_VALUE_NTF, 0x25, 0x00, 0xAA, 0xBB, 0xCC};
-    proto_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, PDU, sizeof(PDU), &p);
+    embed_bool ble_gatt_ok = BleGatt.att_parse(ble_gatt_work, PDU, sizeof(PDU), &p);
     TEST_ASSERT_TRUE(ble_gatt_ok);
     TEST_ASSERT_EQUAL_PTR(PDU + 3, p.value);
     TEST_ASSERT_EQUAL_size_t(3, p.value_len);

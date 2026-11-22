@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ecdsa.h
@@ -76,10 +76,10 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*pubkey)(uint8_t *, const uint8_t *, uint8_t *);
-    proto_bool (*sign)(uint8_t *, const uint8_t *, size_t, const uint8_t *, uint8_t *);
-    proto_bool (*verify)(uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *);
-    proto_bool (*ecdh)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
+    embed_bool (*pubkey)(uint8_t *, const uint8_t *, uint8_t *);
+    embed_bool (*sign)(uint8_t *, const uint8_t *, size_t, const uint8_t *, uint8_t *);
+    embed_bool (*verify)(uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *);
+    embed_bool (*ecdh)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
 } EcdsaNs;
 PROTOCORE_NS_LAYOUT(EcdsaNs, pubkey, sign, verify, ecdh);
 
@@ -88,9 +88,9 @@ PROTOCORE_NS_LAYOUT(EcdsaNs, pubkey, sign, verify, ecdh);
  * @param work PROTOCORE_ECDSA_BORROW bytes the caller took. Not held past the call.
  * @param priv PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d, 1 <= d < n
  * @param pub PROTOCORE_ECDSA_P256_PUB_LEN bytes: 0x04 || X || Y
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub);
+embed_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub);
 /**
  * @brief Hash the message with SHA-256 and write the raw r || s.
  * @param work PROTOCORE_ECDSA_BORROW bytes the caller took. Not held past the call.
@@ -98,9 +98,9 @@ proto_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *p
  * @param mlen its length
  * @param priv PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d
  * @param sig PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ecdsa_sign(uint8_t *work, const uint8_t *msg, size_t mlen, const uint8_t *priv, uint8_t *sig);
+embed_bool protocore_ecdsa_sign(uint8_t *work, const uint8_t *msg, size_t mlen, const uint8_t *priv, uint8_t *sig);
 /**
  * @brief Hash the message with SHA-256 and check r || s against the point.
  * @param work PROTOCORE_ECDSA_BORROW bytes the caller took. Not held past the call.
@@ -108,9 +108,9 @@ proto_bool protocore_ecdsa_sign(uint8_t *work, const uint8_t *msg, size_t mlen, 
  * @param msg the signed message
  * @param mlen its length
  * @param sig PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
+embed_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t mlen,
                                   const uint8_t *sig);
 /**
  * @brief Write the X coordinate of d * Q_peer.
@@ -118,9 +118,9 @@ proto_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8
  * @param peer_pub PROTOCORE_ECDSA_P256_PUB_LEN uncompressed peer point 0x04 || X || Y
  * @param priv PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d, 1 <= d < n
  * @param shared_x PROTOCORE_ECDSA_P256_COORD_LEN big-endian X coordinate of d * Q_peer
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x);
+embed_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EcdsaNs Ecdsa PROTOCORE_UNUSED = {.pubkey = protocore_ecdsa_pubkey,
@@ -128,6 +128,6 @@ PROTOCORE_NS EcdsaNs Ecdsa PROTOCORE_UNUSED = {.pubkey = protocore_ecdsa_pubkey,
                                                .verify = protocore_ecdsa_verify,
                                                .ecdh = protocore_ecdsa_ecdh};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ECDSA_H

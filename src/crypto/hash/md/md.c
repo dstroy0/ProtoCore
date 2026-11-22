@@ -14,7 +14,7 @@
 #include "endian/endian.h"
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition of MdCtx - private to this TU. It sits at MD_OFF_CTX in the caller's borrow, so
 // its size never leaves this file and no consumer can name it.
@@ -284,7 +284,7 @@ static void md_begin(uint8_t *work, md_compress_fn compress)
         md4_state_init(MD_STATE(work));
         MD_STATE(work)->md4 = 1;
     }
-    MdV.ok = PROTO_TRUE;
+    MdV.ok = EMBED_TRUE;
 }
 
 void protocore_md_md5_init(uint8_t *work)
@@ -306,11 +306,11 @@ void protocore_md_final(uint8_t *work)
 {
     if (!MdV.final_args.out)
     {
-        MdV.ok = PROTO_FALSE;
+        MdV.ok = EMBED_FALSE;
         return;
     }
     md_finish(MD_STATE(work), MdV.final_args.out, md_bound(work));
-    MdV.ok = PROTO_TRUE;
+    MdV.ok = EMBED_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
@@ -318,7 +318,7 @@ static void md_one(uint8_t *work, md_compress_fn compress)
 {
     if (!MdV.final_args.out)
     {
-        MdV.ok = PROTO_FALSE;
+        MdV.ok = EMBED_FALSE;
         return;
     }
     md_begin(work, compress);
@@ -340,7 +340,7 @@ void protocore_md_md4(uint8_t *work)
 
 void protocore_md_hmac_md5(uint8_t *work)
 {
-    MdV.ok = PROTO_FALSE;
+    MdV.ok = EMBED_FALSE;
     if (!MdV.hmac_args.out)
     {
         return;
@@ -387,12 +387,12 @@ void protocore_md_hmac_md5(uint8_t *work)
     md_absorb(c, inner, PROTOCORE_MD_DIGEST_LEN, protocore_md5_compress);
     md_finish(c, MdV.hmac_args.out, protocore_md5_compress);
 
-    MdV.ok = PROTO_TRUE;
+    MdV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 MdVars MdV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MD

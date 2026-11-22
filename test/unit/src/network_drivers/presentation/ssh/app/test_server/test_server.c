@@ -17,9 +17,9 @@
 static uint8_t ssh_app_server_work[16]; // the borrow an entry takes; SshAppServer never reads it
 
 // The file-transfer request classifier, reached through the app-server namespace.
-static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel, const uint8_t *rtype,
+static embed_bool classify_file_transfer_request(uint8_t slot, uint32_t channel, const uint8_t *rtype,
                                                  uint32_t rtype_len, const uint8_t *payload, size_t len, size_t *off,
-                                                 proto_bool *accept)
+                                                 embed_bool *accept)
 {
     SshAppServerV.slot = slot;
     SshAppServerV.channel = channel;
@@ -28,7 +28,7 @@ static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel,
     SshAppServerV.req.payload = payload;
     SshAppServerV.req.len = len;
     SshAppServerV.req.off = off ? *off : 0u;
-    SshAppServerV.accept = accept ? *accept : PROTO_FALSE;
+    SshAppServerV.accept = accept ? *accept : EMBED_FALSE;
     SshAppServer.classify(ssh_app_server_work);
     if (off)
     {
@@ -97,8 +97,8 @@ static uint32_t open_session_channel(void)
     const int cid = chan_alloc(0);
     TEST_ASSERT_GREATER_OR_EQUAL_INT(0, cid);
     SshChannel *c = &ssh_chan[0][cid];
-    c->open = PROTO_TRUE;
-    c->pending = PROTO_FALSE;
+    c->open = EMBED_TRUE;
+    c->pending = EMBED_FALSE;
     c->type = SSH_CHAN_SESSION;
     c->service = SSH_CHAN_SERVICE_NONE;
     c->local_id = (uint32_t)cid;
@@ -146,12 +146,12 @@ static size_t put_str(uint8_t *p, size_t off, const char *s, uint32_t n)
 
 // The classifier is handed the request name and an offset at the request-specific argument, which
 // is where the connection layer leaves it after reading name and want_reply.
-static proto_bool classify(const char *rtype, uint32_t rtype_len, const char *arg, uint32_t arg_len, uint32_t channel)
+static embed_bool classify(const char *rtype, uint32_t rtype_len, const char *arg, uint32_t arg_len, uint32_t channel)
 {
     uint8_t payload[128];
     const size_t n = put_str(payload, 0, arg, arg_len);
     size_t off = 0;
-    proto_bool accept = PROTO_FALSE;
+    embed_bool accept = EMBED_FALSE;
     classify_file_transfer_request(0, channel, (const uint8_t *)rtype, rtype_len, payload, n, &off, &accept);
     return accept;
 }
@@ -199,7 +199,7 @@ static void test_sec6_5_subsystem_without_its_argument_is_not_accepted(void)
     const uint32_t ch = open_session_channel();
     uint8_t payload[4] = {0, 0, 0, 8}; // claims eight bytes that are not there
     size_t off = 0;
-    proto_bool accept = PROTO_FALSE;
+    embed_bool accept = EMBED_FALSE;
     classify_file_transfer_request(0, ch, (const uint8_t *)"subsystem", 9, payload, sizeof(payload), &off, &accept);
     TEST_ASSERT_FALSE(accept);
     TEST_ASSERT_EQUAL_INT(0, s_sftp_opens);
@@ -277,7 +277,7 @@ static void test_other_request_names_bind_no_service(void)
 static void test_unknown_channel_binds_nothing(void)
 {
     const uint32_t ch = open_session_channel();
-    ssh_chan[0][ch].open = PROTO_FALSE; // closed under it
+    ssh_chan[0][ch].open = EMBED_FALSE; // closed under it
 #if PROTOCORE_ENABLE_SSH_SFTP
     (void)classify("subsystem", 9, "sftp", 4, ch);
     TEST_ASSERT_EQUAL(SSH_CHAN_SERVICE_NONE, ssh_chan[0][ch].service);

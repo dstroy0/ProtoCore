@@ -30,21 +30,21 @@ typedef struct
     uint8_t saw_id[FRAMES];
     void *saw_ctx[FRAMES];
     size_t count;
-    proto_bool accept;
+    embed_bool accept;
 } Cap;
 
 static Cap g_cap[IFACES];
 
-static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
+static embed_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
 {
     if (id >= IFACES)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     Cap *c = &g_cap[id];
     if (!c->accept)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (c->count < FRAMES)
     {
@@ -55,10 +55,10 @@ static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
         c->saw_ctx[c->count] = ctx;
         c->count++;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool add(uint8_t id, protocore_if_kind kind, protocore_if_send_fn fn, void *ctx)
+static embed_bool add(uint8_t id, protocore_if_kind kind, protocore_if_send_fn fn, void *ctx)
 {
     PhysicalV.iface.id = id;
     PhysicalV.iface.kind = kind;
@@ -74,7 +74,7 @@ static uint8_t count(void)
     return PhysicalV.u8;
 }
 
-static proto_bool present(uint8_t id)
+static embed_bool present(uint8_t id)
 {
     PhysicalV.iface.id = id;
     Physical.iface_present(protocore_physical_span());
@@ -95,7 +95,7 @@ static int16_t at(uint8_t i)
     return PhysicalV.i16;
 }
 
-static proto_bool send(uint8_t id, const char *text, uint16_t n)
+static embed_bool send(uint8_t id, const char *text, uint16_t n)
 {
     PhysicalV.iface.id = id;
     PhysicalV.iface.data = (const uint8_t *)text;
@@ -109,7 +109,7 @@ void setUp(void)
     memset(g_cap, 0, sizeof(g_cap));
     for (size_t i = 0; i < IFACES; i++)
     {
-        g_cap[i].accept = PROTO_TRUE;
+        g_cap[i].accept = EMBED_TRUE;
     }
     Physical.iface_reset(protocore_physical_span());
 }
@@ -218,7 +218,7 @@ void test_send_to_an_unregistered_id_fails(void)
 void test_send_reports_a_refusing_interface(void)
 {
     TEST_ASSERT_TRUE(add(1, PROTOCORE_IF_ETH, cap_send, NULL));
-    g_cap[1].accept = PROTO_FALSE;
+    g_cap[1].accept = EMBED_FALSE;
     TEST_ASSERT_FALSE(send(1, "x", 1));
 }
 

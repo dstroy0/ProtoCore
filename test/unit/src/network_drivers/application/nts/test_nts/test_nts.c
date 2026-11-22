@@ -59,7 +59,7 @@ void test_ke_length_counts_body_only_ef_counts_whole_field(void)
     uint8_t rec[16];
     uint8_t ef[16];
 
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = VALUE;
     NtsV.ke_record_args.body_len = 2;
@@ -91,7 +91,7 @@ void test_ke_record_field_layout(void)
 {
     static const uint8_t NTPV4[2] = {0x00, 0x00};
     uint8_t out[8];
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = NTPV4;
     NtsV.ke_record_args.body_len = 2;
@@ -112,7 +112,7 @@ void test_ke_record_field_layout(void)
 void test_ke_record_critical_bit_is_separable_from_the_type(void)
 {
     uint8_t out[8];
-    NtsV.ke_record_args.critical = PROTO_FALSE;
+    NtsV.ke_record_args.critical = EMBED_FALSE;
     NtsV.ke_record_args.type = NTS_KE_AEAD_ALGORITHM;
     NtsV.ke_record_args.body = NULL;
     NtsV.ke_record_args.body_len = 0;
@@ -132,7 +132,7 @@ void test_ke_record_critical_bit_is_separable_from_the_type(void)
 void test_ke_record_type_is_fifteen_bits(void)
 {
     uint8_t out[8];
-    NtsV.ke_record_args.critical = PROTO_FALSE;
+    NtsV.ke_record_args.critical = EMBED_FALSE;
     NtsV.ke_record_args.type = 0x7FFF;
     NtsV.ke_record_args.body = NULL;
     NtsV.ke_record_args.body_len = 0;
@@ -143,7 +143,7 @@ void test_ke_record_type_is_fifteen_bits(void)
     TEST_ASSERT_EQUAL_INT(0, rec_critical(out));
     TEST_ASSERT_EQUAL_UINT16(0x7FFF, rec_type(out));
 
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = 0x7FFF;
     NtsV.ke_record_args.body = NULL;
     NtsV.ke_record_args.body_len = 0;
@@ -183,11 +183,11 @@ typedef struct
 {
     int count;
     uint16_t type[8];
-    proto_bool critical[8];
+    embed_bool critical[8];
     size_t body_len[8];
 } Records;
 
-static void collect(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
+static void collect(embed_bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
 {
     (void)body;
     Records *r = (Records *)arg;
@@ -427,7 +427,7 @@ void test_ke_record_fails_closed(void)
 {
     static const uint8_t BODY[2] = {0, 0};
     uint8_t out[8];
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = BODY;
     NtsV.ke_record_args.body_len = 2;
@@ -435,7 +435,7 @@ void test_ke_record_fails_closed(void)
     NtsV.ke_record_args.cap = sizeof(out);
     Nts.ke_record(nts_work);
     TEST_ASSERT_EQUAL_size_t(0, NtsV.n);
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = NULL;
     NtsV.ke_record_args.body_len = 2;
@@ -443,7 +443,7 @@ void test_ke_record_fails_closed(void)
     NtsV.ke_record_args.cap = sizeof(out);
     Nts.ke_record(nts_work);
     TEST_ASSERT_EQUAL_size_t(0, NtsV.n);
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = BODY;
     NtsV.ke_record_args.body_len = 2;
@@ -451,7 +451,7 @@ void test_ke_record_fails_closed(void)
     NtsV.ke_record_args.cap = 5;
     Nts.ke_record(nts_work);
     TEST_ASSERT_EQUAL_size_t(0, NtsV.n);
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = BODY;
     NtsV.ke_record_args.body_len = 2;
@@ -460,7 +460,7 @@ void test_ke_record_fails_closed(void)
     Nts.ke_record(nts_work);
     TEST_ASSERT_EQUAL_size_t(6, NtsV.n);
 
-    NtsV.ke_record_args.critical = PROTO_TRUE;
+    NtsV.ke_record_args.critical = EMBED_TRUE;
     NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
     NtsV.ke_record_args.body = BODY;
     NtsV.ke_record_args.body_len = 0x10000;

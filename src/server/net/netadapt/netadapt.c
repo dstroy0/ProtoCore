@@ -12,7 +12,7 @@
 
 #include "server/net/netadapt/netadapt.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -57,20 +57,20 @@ void protocore_netadapt_dhcp_fallback(uint8_t *work)
 
     if (elapsed_ms >= timeout_ms)
     {
-        NetadaptV.ok = PROTO_TRUE;
+        NetadaptV.ok = EMBED_TRUE;
         return;
     }
     if (max_attempts > 0 && attempts >= max_attempts)
     {
-        NetadaptV.ok = PROTO_TRUE;
+        NetadaptV.ok = EMBED_TRUE;
         return;
     }
-    NetadaptV.ok = PROTO_FALSE;
+    NetadaptV.ok = EMBED_FALSE;
 }
 
 /** @brief The operands and the outcome. */
 NetadaptVars NetadaptV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NETADAPT

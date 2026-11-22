@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_NMEA0183
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief A parsed NMEA 0183 sentence. Field pointers reference the caller's buffer. */
 typedef struct Nmea0183
@@ -52,13 +52,13 @@ size_t protocore_nmea0183_build(char *buf, size_t cap, const char *body);
  * splits the comma-separated fields. Fills @p out (field 0 is the address; talker / type are
  * derived from it). Returns false on a bad frame or checksum.
  */
-proto_bool protocore_nmea0183_parse(const char *s, size_t len, Nmea0183 *out);
+embed_bool protocore_nmea0183_parse(const char *s, size_t len, Nmea0183 *out);
 
 /** @brief Decode field @p idx as a float (false if absent / empty / non-numeric). */
-proto_bool protocore_nmea0183_field_float(const Nmea0183 *m, uint8_t idx, float *out);
+embed_bool protocore_nmea0183_field_float(const Nmea0183 *m, uint8_t idx, float *out);
 
 /** @brief Decode field @p idx as a long integer (false if absent / empty / non-numeric). */
-proto_bool protocore_nmea0183_field_int(const Nmea0183 *m, uint8_t idx, long *out);
+embed_bool protocore_nmea0183_field_int(const Nmea0183 *m, uint8_t idx, long *out);
 
 // -- typed decoders for the two common GPS position sentences --
 //
@@ -82,7 +82,7 @@ typedef struct
 /** @brief Decoded RMC (recommended minimum: position + velocity + date). */
 typedef struct
 {
-    proto_bool valid;     ///< true when the status field is 'A' (data valid), false for 'V' (warning)
+    embed_bool valid;     ///< true when the status field is 'A' (data valid), false for 'V' (warning)
     uint8_t hour, minute; ///< UTC time
     float second;
     uint8_t day, month, year; ///< UTC date (year is the 2-digit field value, 0..99)
@@ -96,13 +96,13 @@ typedef struct
  * @brief Decode a parsed GGA sentence into @p out. @return true iff @p m is a GGA sentence with enough
  *        fields; false (and @p out untouched) otherwise. Empty optional fields read back as 0.
  */
-proto_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *out);
+embed_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *out);
 
 /**
  * @brief Decode a parsed RMC sentence into @p out. @return true iff @p m is an RMC sentence with enough
  *        fields; false otherwise. @c valid reflects the A/V status field (a 'V' sentence still decodes).
  */
-proto_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *out);
+embed_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *out);
 
 /** @brief One satellite record from a GSV sentence. */
 typedef struct
@@ -111,7 +111,7 @@ typedef struct
     int16_t elev_deg;     ///< elevation (degrees, 0..90)
     int16_t azim_deg;     ///< azimuth (degrees true, 0..359)
     uint8_t snr_db;       ///< signal-to-noise ratio (dB-Hz), valid only when @ref snr_valid
-    proto_bool snr_valid; ///< false when the SNR field is blank (the satellite is not being tracked)
+    embed_bool snr_valid; ///< false when the SNR field is blank (the satellite is not being tracked)
 } protocore_nmea_gsv_sat;
 
 /** @brief Decoded GSV (satellites in view). One sentence carries up to four satellite records; a full sky
@@ -129,7 +129,7 @@ typedef struct
  * @brief Decode a parsed GSV sentence into @p out. @return true iff @p m is a GSV sentence with at least
  *        the 3-field header; the per-satellite records present in this sentence are filled (0..4).
  */
-proto_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *out);
+embed_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *out);
 
 /** @brief Decoded ZDA (UTC time + calendar date + local zone offset). Unlike RMC this carries the full
  *  4-digit year, so it is the sentence to read for wall-clock time sync. */
@@ -147,7 +147,7 @@ typedef struct
  * @brief Decode a parsed ZDA sentence into @p out. @return true iff @p m is a ZDA sentence with at least
  *        the time / day / month / year fields; false otherwise. The zone offset reads back 0 when absent.
  */
-proto_bool protocore_nmea0183_parse_zda(const Nmea0183 *m, protocore_nmea_zda *out);
+embed_bool protocore_nmea0183_parse_zda(const Nmea0183 *m, protocore_nmea_zda *out);
 
 /** @brief Decoded VTG (course over ground + ground speed). The course-over-ground vector complements the
  *  RMC/GGA position - it is the sentence to read for heading and speed. */
@@ -164,7 +164,7 @@ typedef struct
  * @brief Decode a parsed VTG sentence into @p out. @return true iff @p m is a VTG sentence with at least the
  *        course / speed fields (through the km/h unit); false otherwise. The mode reads back '\0' when absent.
  */
-proto_bool protocore_nmea0183_parse_vtg(const Nmea0183 *m, protocore_nmea_vtg *out);
+embed_bool protocore_nmea0183_parse_vtg(const Nmea0183 *m, protocore_nmea_vtg *out);
 
 /** @brief Decoded GSA (GPS DOP + the satellites active in the fix). Where GSV lists satellites in view and
  *  GGA gives the fix quality, GSA gives the 2D/3D fix mode, which satellites were used, and all three DOPs. */
@@ -183,7 +183,7 @@ typedef struct
  * @brief Decode a parsed GSA sentence into @p out. @return true iff @p m is a GSA sentence with the full
  *        field set (through VDOP); false otherwise. Empty PRN slots are skipped (not counted).
  */
-proto_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *out);
+embed_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *out);
 
 /** @brief Decoded MWV (wind speed + angle): the standard wind-instrument sentence. */
 typedef struct
@@ -192,21 +192,21 @@ typedef struct
     char reference;       ///< 'R' relative (apparent) or 'T' true, or '\0' if the field is absent
     float wind_speed;     ///< wind speed, in the units given by @ref speed_units
     char speed_units;     ///< 'K' km/h, 'M' m/s, 'N' knots, or '\0' if absent
-    proto_bool valid;     ///< status field: true for 'A' (valid), false for 'V'
+    embed_bool valid;     ///< status field: true for 'A' (valid), false for 'V'
 } protocore_nmea_mwv;
 
 /**
  * @brief Decode a parsed MWV sentence into @p out. @return true iff @p m is an MWV sentence with the angle /
  *        reference / speed / units / status fields; false otherwise.
  */
-proto_bool protocore_nmea0183_parse_mwv(const Nmea0183 *m, protocore_nmea_mwv *out);
+embed_bool protocore_nmea0183_parse_mwv(const Nmea0183 *m, protocore_nmea_mwv *out);
 
 /** @brief Decoded DPT (depth of water): depth relative to the transducer plus the transducer offset. */
 typedef struct
 {
     float depth_m;        ///< water depth relative to the transducer (meters)
     float offset_m;       ///< transducer offset (meters): + = transducer to waterline, - = transducer to keel
-    proto_bool has_range; ///< true when the optional maximum-range-scale field is present
+    embed_bool has_range; ///< true when the optional maximum-range-scale field is present
     float range_m;        ///< maximum range scale in use (meters), valid only when @ref has_range
 } protocore_nmea_dpt;
 
@@ -214,7 +214,7 @@ typedef struct
  * @brief Decode a parsed DPT sentence into @p out. @return true iff @p m is a DPT sentence with the depth
  *        and offset fields; false otherwise. The optional range scale sets @ref protocore_nmea_dpt::has_range.
  */
-proto_bool protocore_nmea0183_parse_dpt(const Nmea0183 *m, protocore_nmea_dpt *out);
+embed_bool protocore_nmea0183_parse_dpt(const Nmea0183 *m, protocore_nmea_dpt *out);
 
 /** @brief Decoded HDG (magnetic heading + deviation + variation): the compass sentence. The deviation and
  *  variation are signed with East positive / West negative, so true heading = heading + deviation + variation. */
@@ -229,7 +229,7 @@ typedef struct
  * @brief Decode a parsed HDG sentence into @p out. @return true iff @p m is an HDG sentence with the heading
  *        / deviation / variation fields; false otherwise. The E/W direction fields are folded into the sign.
  */
-proto_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *out);
+embed_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *out);
 
 /** @brief Decoded GLL (geographic position - latitude / longitude): position + UTC time + validity. Where
  *  GGA carries the full fix quality and RMC adds velocity, GLL is the minimal position report. */
@@ -239,7 +239,7 @@ typedef struct
     double lon_deg;       ///< longitude in signed decimal degrees (+ E, - W); 0 if absent
     uint8_t hour, minute; ///< UTC time of the position
     float second;
-    proto_bool valid; ///< true when the status field is 'A' (data valid), false for 'V' (warning)
+    embed_bool valid; ///< true when the status field is 'A' (data valid), false for 'V' (warning)
     char mode;        ///< FAA mode indicator (NMEA 2.3+), or '\0' if the field is absent
 } protocore_nmea_gll;
 
@@ -248,7 +248,7 @@ typedef struct
  *        status field; false otherwise. @c valid reflects the A/V status (a 'V' sentence still decodes);
  *        the FAA mode indicator is set only when the (optional, NMEA 2.3+) field is present.
  */
-proto_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *out);
+embed_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *out);
 
 /** @brief Decoded VHW (water speed + heading): the vessel's heading and its speed through the water. Where VTG
  *  reports GPS course + speed over ground, VHW reports the heading the vessel points and its speed relative to
@@ -265,7 +265,7 @@ typedef struct
  * @brief Decode a parsed VHW sentence into @p out. @return true iff @p m is a VHW sentence with at least the
  *        heading / speed fields (through the km/h value); false otherwise. Empty optional fields read back 0.
  */
-proto_bool protocore_nmea0183_parse_vhw(const Nmea0183 *m, protocore_nmea_vhw *out);
+embed_bool protocore_nmea0183_parse_vhw(const Nmea0183 *m, protocore_nmea_vhw *out);
 
 /** @brief Decoded VLW (distance traveled through the water): the cumulative and trip water-distance log from a
  *  paddlewheel / pitot log - the marine odometer, the through-water companion to VHW's speed. */
@@ -279,9 +279,9 @@ typedef struct
  * @brief Decode a parsed VLW sentence into @p out. @return true iff @p m is a VLW sentence with at least the
  *        total + trip water-distance fields; false otherwise. Empty optional fields read back 0.
  */
-proto_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *out);
+embed_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NMEA0183
 

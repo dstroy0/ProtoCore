@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_SERCOS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -50,7 +50,7 @@ typedef struct
 /** @brief What idn takes: is_product, param_set, data_block. */
 typedef struct
 {
-    proto_bool is_product; ///< true = a P-parameter (product-specific), false = an S-parameter (standard)
+    embed_bool is_product; ///< true = a P-parameter (product-specific), false = an S-parameter (standard)
     uint8_t param_set;     ///< the parameter set 0..7
     uint16_t data_block;   ///< the data block number 0..4095
 } SercosIdnArgs;
@@ -59,7 +59,7 @@ typedef struct
 typedef struct
 {
     uint16_t idn;
-    proto_bool *is_product;
+    embed_bool *is_product;
     uint8_t *param_set;
     uint16_t *data_block;
 } SercosIdnParseArgs;
@@ -118,7 +118,7 @@ typedef struct
     SercosIdnParseArgs idn_parse_args;
     SercosBuildArgs build_args;
     SercosParseArgs parse_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t value;
     size_t n;
 } SercosVars;
@@ -153,7 +153,7 @@ static const SercosNs Sercos __attribute__((unused)) = {
     .parse = protocore_sercos_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SERCOS
 

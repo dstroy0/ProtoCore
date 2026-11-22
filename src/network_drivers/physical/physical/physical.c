@@ -52,7 +52,7 @@ typedef struct
     void *ctx;                 ///< what that callback is handed back
     uint8_t id;                ///< the id a caller names it by
     protocore_if_kind kind;    ///< what it is (RFC 894 wired, RFC 1042 IEEE 802 wireless, a bus, a radio)
-    proto_bool used;           ///< the row holds an interface
+    embed_bool used;           ///< the row holds an interface
 } IfaceRow;
 
 /**
@@ -229,7 +229,7 @@ static IfaceRow *row_of(uint8_t *work)
 
 void protocore_physical_iface_add(uint8_t *work)
 {
-    PhysicalV.ok = PROTO_FALSE;
+    PhysicalV.ok = EMBED_FALSE;
     if (PhysicalV.iface.send == NULL || row_of(work) != NULL)
     {
         return;
@@ -244,8 +244,8 @@ void protocore_physical_iface_add(uint8_t *work)
         PHYSICAL_CTX(work)->row[i].ctx = PhysicalV.iface.ctx;
         PHYSICAL_CTX(work)->row[i].id = PhysicalV.iface.id;
         PHYSICAL_CTX(work)->row[i].kind = PhysicalV.iface.kind;
-        PHYSICAL_CTX(work)->row[i].used = PROTO_TRUE;
-        PhysicalV.ok = PROTO_TRUE;
+        PHYSICAL_CTX(work)->row[i].used = EMBED_TRUE;
+        PhysicalV.ok = EMBED_TRUE;
         return;
     }
 }
@@ -255,7 +255,7 @@ void protocore_physical_iface_reset(uint8_t *work)
     // The used flag is the row: add writes every other field before setting it.
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
-        PHYSICAL_CTX(work)->row[i].used = PROTO_FALSE;
+        PHYSICAL_CTX(work)->row[i].used = EMBED_FALSE;
     }
 }
 
@@ -301,7 +301,7 @@ void protocore_physical_iface_send(uint8_t *work)
 {
     IfaceRow *r = row_of(work);
 
-    PhysicalV.ok = PROTO_FALSE;
+    PhysicalV.ok = EMBED_FALSE;
     if (r == NULL)
     {
         return;

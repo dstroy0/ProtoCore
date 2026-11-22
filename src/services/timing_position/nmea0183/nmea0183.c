@@ -13,7 +13,7 @@
 
 #include "cellularum_laboro/cellularum_laboro.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 uint8_t protocore_nmea0183_checksum(const char *s, size_t len)
 {
@@ -74,22 +74,22 @@ size_t protocore_nmea0183_build(char *buf, size_t cap, const char *body)
     return p;
 }
 
-proto_bool protocore_nmea0183_parse(const char *s, size_t len, Nmea0183 *out)
+embed_bool protocore_nmea0183_parse(const char *s, size_t len, Nmea0183 *out)
 {
     if (!s || !out || len < 4 || (s[0] != '$' && s[0] != '!'))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Find the '*' that introduces the checksum, stopping at any CR/LF.
     size_t star = 0;
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     for (size_t i = 1; i < len; i++)
     {
         if (s[i] == '*')
         {
             star = i;
-            found = PROTO_TRUE;
+            found = EMBED_TRUE;
             break;
         }
         if (s[i] == '\r' || s[i] == '\n')
@@ -99,19 +99,19 @@ proto_bool protocore_nmea0183_parse(const char *s, size_t len, Nmea0183 *out)
     }
     if (!found || star + 2 >= len) // need two checksum hex digits after '*'
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     int hi = hex_val(s[star + 1]);
     int lo = hex_val(s[star + 2]);
     if (hi < 0 || lo < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t expect = (uint8_t)((hi << 4) | lo);
     if (protocore_nmea0183_checksum(s + 1, star - 1) != expect)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Split the payload s[1..star-1] on commas (field 0 is the address).
@@ -156,40 +156,40 @@ proto_bool protocore_nmea0183_parse(const char *s, size_t len, Nmea0183 *out)
             out->type[i] = a[2 + i];
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_field_float(const Nmea0183 *m, uint8_t idx, float *out)
+embed_bool protocore_nmea0183_field_float(const Nmea0183 *m, uint8_t idx, float *out)
 {
     if (!m || !out || idx >= m->field_count || m->field_len[idx] == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *end = m->fields[idx];
     // The field is delimited by a ',' or '*' in the source, so cellul.to_float stops at the field end.
     float v = EMBED_CALL(cellul.to_float, TransfiguroCfg, .src = m->fields[idx], .end = &end);
     if (end == m->fields[idx])
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_field_int(const Nmea0183 *m, uint8_t idx, long *out)
+embed_bool protocore_nmea0183_field_int(const Nmea0183 *m, uint8_t idx, long *out)
 {
     if (!m || !out || idx >= m->field_count || m->field_len[idx] == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *end = m->fields[idx];
     long v = EMBED_CALL(cellul.to_long, TransfiguroCfg, .src = m->fields[idx], .end = &end);
     if (end == m->fields[idx])
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ddmm.mmmm + a hemisphere char -> signed decimal degrees (float precision on the raw field).
@@ -238,14 +238,14 @@ static void nmea_date(const Nmea0183 *m, uint8_t idx, uint8_t *d, uint8_t *mo, u
     *y = (uint8_t)((f[4] - '0') * 10 + (f[5] - '0'));
 }
 
-proto_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *out)
+embed_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "GGA", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 10) // need through altitude (field 9)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
@@ -270,17 +270,17 @@ proto_bool protocore_nmea0183_parse_gga(const Nmea0183 *m, protocore_nmea_gga *o
     }
     protocore_nmea0183_field_float(m, 8, &out->hdop);  // stays 0 if empty (out was zeroed)
     protocore_nmea0183_field_float(m, 9, &out->alt_m); // altitude MSL, field 10 is the 'M' unit
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *out)
+embed_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "RMC", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 10) // need through date (field 9)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
@@ -297,17 +297,17 @@ proto_bool protocore_nmea0183_parse_rmc(const Nmea0183 *m, protocore_nmea_rmc *o
     protocore_nmea0183_field_float(m, 7, &out->speed_knots);
     protocore_nmea0183_field_float(m, 8, &out->course_deg);
     nmea_date(m, 9, &out->day, &out->month, &out->year);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *out)
+embed_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "GSV", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 4) // header: totalMsgs, msgNum, satsInView
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     long v = 0;
@@ -354,17 +354,17 @@ proto_bool protocore_nmea0183_parse_gsv(const Nmea0183 *m, protocore_nmea_gsv *o
             s->snr_db = (uint8_t)v;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_zda(const Nmea0183 *m, protocore_nmea_zda *out)
+embed_bool protocore_nmea0183_parse_zda(const Nmea0183 *m, protocore_nmea_zda *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "ZDA", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 5) // need through year (field 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     nmea_time(m, 1, &out->hour, &out->minute, &out->second);
@@ -390,17 +390,17 @@ proto_bool protocore_nmea0183_parse_zda(const Nmea0183 *m, protocore_nmea_zda *o
     {
         out->zone_minutes = (uint8_t)v;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_vtg(const Nmea0183 *m, protocore_nmea_vtg *out)
+embed_bool protocore_nmea0183_parse_vtg(const Nmea0183 *m, protocore_nmea_vtg *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "VTG", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 9) // need through the km/h unit (field 8)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     protocore_nmea0183_field_float(m, 1, &out->course_true_deg); // stays 0 if empty (out was zeroed)
@@ -412,17 +412,17 @@ proto_bool protocore_nmea0183_parse_vtg(const Nmea0183 *m, protocore_nmea_vtg *o
     {
         out->mode = m->fields[9][0];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *out)
+embed_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "GSA", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 18) // need through VDOP (field 17)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     if (m->field_len[1] >= 1)
@@ -447,17 +447,17 @@ proto_bool protocore_nmea0183_parse_gsa(const Nmea0183 *m, protocore_nmea_gsa *o
     protocore_nmea0183_field_float(m, 15, &out->pdop);
     protocore_nmea0183_field_float(m, 16, &out->hdop);
     protocore_nmea0183_field_float(m, 17, &out->vdop);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_mwv(const Nmea0183 *m, protocore_nmea_mwv *out)
+embed_bool protocore_nmea0183_parse_mwv(const Nmea0183 *m, protocore_nmea_mwv *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "MWV", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 6) // need through status (field 5)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     protocore_nmea0183_field_float(m, 1, &out->wind_angle_deg); // stays 0 if empty (out was zeroed)
@@ -471,33 +471,33 @@ proto_bool protocore_nmea0183_parse_mwv(const Nmea0183 *m, protocore_nmea_mwv *o
         out->speed_units = m->fields[4][0];
     }
     out->valid = (m->field_len[5] >= 1 && (m->fields[5][0] == 'A' || m->fields[5][0] == 'a'));
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_dpt(const Nmea0183 *m, protocore_nmea_dpt *out)
+embed_bool protocore_nmea0183_parse_dpt(const Nmea0183 *m, protocore_nmea_dpt *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "DPT", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 3) // need depth (field 1) + offset (field 2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     protocore_nmea0183_field_float(m, 1, &out->depth_m); // stays 0 if empty (out was zeroed)
     protocore_nmea0183_field_float(m, 2, &out->offset_m);
     out->has_range = protocore_nmea0183_field_float(m, 3, &out->range_m); // the range scale is optional
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *out)
+embed_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "HDG", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 6) // heading + dev + dir + var + dir
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     protocore_nmea0183_field_float(m, 1, &out->heading_deg);
@@ -511,17 +511,17 @@ proto_bool protocore_nmea0183_parse_hdg(const Nmea0183 *m, protocore_nmea_hdg *o
     {
         out->variation_deg = (m->field_len[5] >= 1 && (m->fields[5][0] == 'W' || m->fields[5][0] == 'w')) ? -var : var;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *out)
+embed_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "GLL", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 7) // need through status (field 6)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     float lat = 0.0f, lon = 0.0f;
@@ -540,41 +540,41 @@ proto_bool protocore_nmea0183_parse_gll(const Nmea0183 *m, protocore_nmea_gll *o
     {
         out->mode = m->fields[7][0];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_vhw(const Nmea0183 *m, protocore_nmea_vhw *out)
+embed_bool protocore_nmea0183_parse_vhw(const Nmea0183 *m, protocore_nmea_vhw *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "VHW", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 8) // need through speed km/h (field 7)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     protocore_nmea0183_field_float(m, 1, &out->heading_true_deg); // heading true; stays 0 if empty (out was zeroed)
     protocore_nmea0183_field_float(m, 3, &out->heading_mag_deg);  // heading magnetic
     protocore_nmea0183_field_float(m, 5, &out->speed_knots);      // speed through water, knots
     protocore_nmea0183_field_float(m, 7, &out->speed_kmh);        // speed through water, km/h
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *out)
+embed_bool protocore_nmea0183_parse_vlw(const Nmea0183 *m, protocore_nmea_vlw *out)
 {
     if (!m || !out ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = m->type, .other = "VLW", .cap = sizeof(m->type),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         m->field_count < 4) // need through the trip distance (field 3)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     protocore_nmea0183_field_float(m, 1, &out->total_water_nm); // total cumulative; stays 0 if empty (out was zeroed)
     protocore_nmea0183_field_float(m, 3, &out->trip_water_nm);  // since the last reset
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NMEA0183

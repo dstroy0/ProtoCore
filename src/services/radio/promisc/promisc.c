@@ -37,13 +37,13 @@ uint8_t *protocore_promisc_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *frame, uint16_t len, WifiFrameInfo *out)
+embed_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *frame, uint16_t len, WifiFrameInfo *out)
 {
     (void)work;
 
     if (!frame || !out || len < 10) // FC(2) + Duration(2) + Addr1(6) - the shortest control frame
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
 
@@ -60,18 +60,18 @@ proto_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *fram
         // Control frames carry only Addr1 (the receiver); the rest vary by subtype.
         out->dst = frame + 4;
         out->hdr_len = 10;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 
     // Management / data / extension frames carry the full 3-address header + sequence control.
     if (len < 24)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->seq = (uint16_t)(((uint16_t)frame[22] | ((uint16_t)frame[23] << 8)) >> 4);
     out->is_qos = (out->type == WIFI_FT_DATA) && (out->subtype & 0x08) != 0;
 
-    const proto_bool has_addr4 = out->to_ds && out->from_ds; // WDS
+    const embed_bool has_addr4 = out->to_ds && out->from_ds; // WDS
     uint16_t hlen = 24;
     if (has_addr4)
     {
@@ -87,7 +87,7 @@ proto_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *fram
     }
     if (len < hlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->hdr_len = hlen;
 
@@ -120,7 +120,7 @@ proto_bool protocore_promisc_wifi_frame_parse(uint8_t *work, const uint8_t *fram
         out->src = frame + 24;
         out->bssid = NULL;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // libpcap framing (Pcap.global_header / Pcap.record_header) is in shared/pcap/pcap.h - shared with
@@ -153,11 +153,11 @@ static_assert(PROMISC_OFF_CTX % _Alignof(PromiscCtx) == 0,
 // The region, at its offset in the caller's borrow.
 #define PROMISC_CTX(w) ((PromiscCtx *)(void *)((w) + PROMISC_OFF_CTX))
 
-proto_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink)
+embed_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink)
 {
     if (!sink)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     PROMISC_CTX(work)->sink = sink;
     // protocore_promisc_sink_fn and protocore_phy_frame_fn are the same neutral shape, so the sink goes
@@ -165,9 +165,9 @@ proto_bool protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_pro
     if (!protocore_phy_monitor_begin(channel, sink))
     {
         PROMISC_CTX(work)->sink = NULL;
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_promisc_set_channel(uint8_t *work, uint8_t channel)

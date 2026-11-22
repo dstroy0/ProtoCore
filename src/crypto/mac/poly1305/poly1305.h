@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file poly1305.h
@@ -36,7 +36,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*mac)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
+    embed_bool (*mac)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
 } Poly1305Ns;
 PROTOCORE_NS_LAYOUT(Poly1305Ns, mac);
 
@@ -47,13 +47,13 @@ PROTOCORE_NS_LAYOUT(Poly1305Ns, mac);
  * @param msg the message
  * @param len its length
  * @param out PROTOCORE_POLY1305_TAG_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out);
+embed_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Poly1305Ns Poly1305 PROTOCORE_UNUSED = {.mac = protocore_poly1305_mac};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_POLY1305_H

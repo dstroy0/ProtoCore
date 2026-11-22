@@ -30,7 +30,7 @@ static char g_out[512];
 static char g_last_path[128];
 
 // Read the named Int argument out of the values in scope (spec sec 6.4.1).
-static proto_bool arg_int(const struct protocore_gql_args *args, const char *name, long long *out)
+static embed_bool arg_int(const struct protocore_gql_args *args, const char *name, long long *out)
 {
     GraphQLV.argument.values = args;
     GraphQLV.argument.name = name;
@@ -40,7 +40,7 @@ static proto_bool arg_int(const struct protocore_gql_args *args, const char *nam
 }
 
 // ResolveFieldValue (spec sec 6.4.2) for the Examples this suite executes.
-static proto_bool resolver(const char *path, const struct protocore_gql_args *args, protocore_gql_value *out)
+static embed_bool resolver(const char *path, const struct protocore_gql_args *args, protocore_gql_value *out)
 {
     size_t n = strlen(path);
     if (n < sizeof(g_last_path))
@@ -52,11 +52,11 @@ static proto_bool resolver(const char *path, const struct protocore_gql_args *ar
         long long id = 0;
         if (!arg_int(args, "id", &id) || id != 4)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->type = PROTOCORE_GQL_STR;
         out->s = "Mark Zuckerberg";
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "user.id") == 0)
     {
@@ -64,7 +64,7 @@ static proto_bool resolver(const char *path, const struct protocore_gql_args *ar
         (void)arg_int(args, "id", &id);
         out->type = PROTOCORE_GQL_INT;
         out->i = id;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     // Example No. 10: `profilePic(size: 100)` under `user(id: 4)`, so both are in scope here.
     if (strcmp(path, "user.profilePic") == 0)
@@ -73,11 +73,11 @@ static proto_bool resolver(const char *path, const struct protocore_gql_args *ar
         (void)arg_int(args, "id", &id);
         if (!arg_int(args, "size", &size))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->type = PROTOCORE_GQL_INT;
         out->i = id * 1000 + size;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     // Example No. 12 and No. 13: the same two arguments in either syntactic order.
     if (strcmp(path, "picture") == 0)
@@ -85,88 +85,88 @@ static proto_bool resolver(const char *path, const struct protocore_gql_args *ar
         long long w = 0, h = 0;
         if (!arg_int(args, "width", &w) || !arg_int(args, "height", &h))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out->type = PROTOCORE_GQL_INT;
         out->i = w * 10000 + h;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     // Example No. 7: a flat selection set of scalar leaves.
     if (strcmp(path, "id") == 0)
     {
         out->type = PROTOCORE_GQL_INT;
         out->i = 4;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "firstName") == 0)
     {
         out->type = PROTOCORE_GQL_STR;
         out->s = "Mark";
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "lastName") == 0)
     {
         out->type = PROTOCORE_GQL_STR;
         out->s = "Zuckerberg";
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     // Example No. 8: nesting down to scalars.
     if (strcmp(path, "me.birthday.month") == 0)
     {
         out->type = PROTOCORE_GQL_INT;
         out->i = 5;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "me.birthday.day") == 0)
     {
         out->type = PROTOCORE_GQL_INT;
         out->i = 14;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "me.name") == 0)
     {
         out->type = PROTOCORE_GQL_STR;
         out->s = "Mark";
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     // The sec 3.5 scalar kinds, one leaf each.
     if (strcmp(path, "anInt") == 0)
     {
         out->type = PROTOCORE_GQL_INT;
         out->i = -9007199254740993LL;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "aFloat") == 0)
     {
         out->type = PROTOCORE_GQL_FLOAT;
         out->f = 1.5;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "aTrue") == 0)
     {
         out->type = PROTOCORE_GQL_BOOL;
-        out->b = PROTO_TRUE;
-        return PROTO_TRUE;
+        out->b = EMBED_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "aFalse") == 0)
     {
         out->type = PROTOCORE_GQL_BOOL;
-        out->b = PROTO_FALSE;
-        return PROTO_TRUE;
+        out->b = EMBED_FALSE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "aString") == 0)
     {
         out->type = PROTOCORE_GQL_STR;
         out->s = "he said \"hi\"\tand\\left\n";
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (strcmp(path, "aNull") == 0)
     {
         out->type = PROTOCORE_GQL_NULL;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     // Every other path fails to resolve, so the field completes as null.
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Execute @p doc and return the serialized response map.
@@ -257,18 +257,18 @@ void test_arguments_are_unordered(void)
 // What the probing resolver read out of the argument scope.
 static struct
 {
-    proto_bool int_ok;
+    embed_bool int_ok;
     long long i;
-    proto_bool str_ok;
+    embed_bool str_ok;
     const char *s;
-    proto_bool bool_ok;
-    proto_bool b;
-    proto_bool wrong_case_ok;
-    proto_bool wrong_type_ok;
-    proto_bool missing_ok;
+    embed_bool bool_ok;
+    embed_bool b;
+    embed_bool wrong_case_ok;
+    embed_bool wrong_type_ok;
+    embed_bool missing_ok;
 } g_probe;
 
-static proto_bool probe_resolver(const char *path, const struct protocore_gql_args *args, protocore_gql_value *out)
+static embed_bool probe_resolver(const char *path, const struct protocore_gql_args *args, protocore_gql_value *out)
 {
     (void)path;
     GraphQLV.argument.values = args;
@@ -303,7 +303,7 @@ static proto_bool probe_resolver(const char *path, const struct protocore_gql_ar
     g_probe.missing_ok = GraphQLV.ok;
 
     out->type = PROTOCORE_GQL_NULL;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // sec 2.6 Arguments reach the resolver through the sec 6.4.1 coerced values, read by name and by the

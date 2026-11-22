@@ -43,21 +43,20 @@
 
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The preempting lanes, ordered by role. The USER lane is exposed to the
  *        application; the internal lanes run at a higher priority (DMA highest) so
  *        internal ingest preempts user work.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_pq_lane,
     PROTOCORE_PQ_LANE_USER = 0, ///< exposed to the app (no-lane API); lowest priority
     PROTOCORE_PQ_LANE_DMA,      ///< internal: DMA peripheral transfers (highest)
     PROTOCORE_PQ_LANE_FORWARD,  ///< internal: interface forwarding
     PROTOCORE_PQ_LANE_DEVICE,   ///< internal: device access
     PROTOCORE_PQ_LANE_COUNT
-} protocore_pq_lane;
+);
 
 /**
  * @brief Handler a lane's processing task invokes for each dequeued item.
@@ -115,7 +114,7 @@ typedef struct
     protocore_pq_lane lane;
     const protocore_pq_config *cfg;
     PqPostArgs post_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint8_t u8;
 } PreemptQueueVars;
@@ -179,7 +178,7 @@ uint8_t *protocore_preempt_queue_span(void);
 // --- User-lane API (drives PROTOCORE_PQ_LANE_USER) --------------------------------------------
 
 /** @brief Start the USER lane. */
-PROTOCORE_INLINE proto_bool protocore_pq_start(const protocore_pq_config *cfg)
+EMBED_INLINE embed_bool protocore_pq_start(const protocore_pq_config *cfg)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueueV.cfg = cfg;
@@ -187,7 +186,7 @@ PROTOCORE_INLINE proto_bool protocore_pq_start(const protocore_pq_config *cfg)
     return PreemptQueueV.ok;
 }
 /** @brief Post to the back of the USER lane. */
-PROTOCORE_INLINE proto_bool protocore_pq_post(const void *item, uint32_t timeout_ticks)
+EMBED_INLINE embed_bool protocore_pq_post(const void *item, uint32_t timeout_ticks)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueueV.post_args.item = item;
@@ -196,7 +195,7 @@ PROTOCORE_INLINE proto_bool protocore_pq_post(const void *item, uint32_t timeout
     return PreemptQueueV.ok;
 }
 /** @brief Post to the front of the USER lane (urgent). */
-PROTOCORE_INLINE proto_bool protocore_pq_post_urgent(const void *item, uint32_t timeout_ticks)
+EMBED_INLINE embed_bool protocore_pq_post_urgent(const void *item, uint32_t timeout_ticks)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueueV.post_args.item = item;
@@ -205,7 +204,7 @@ PROTOCORE_INLINE proto_bool protocore_pq_post_urgent(const void *item, uint32_t 
     return PreemptQueueV.ok;
 }
 /** @brief Post to the USER lane from an ISR. */
-PROTOCORE_INLINE proto_bool protocore_pq_post_from_isr(const void *item)
+EMBED_INLINE embed_bool protocore_pq_post_from_isr(const void *item)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueueV.post_args.item = item;
@@ -213,33 +212,33 @@ PROTOCORE_INLINE proto_bool protocore_pq_post_from_isr(const void *item)
     return PreemptQueueV.ok;
 }
 /** @brief Drain the USER lane (host / inline drive). */
-PROTOCORE_INLINE void protocore_pq_drain(void)
+EMBED_INLINE void protocore_pq_drain(void)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.drain(protocore_preempt_queue_span());
 }
 /** @brief Stop the USER lane's task. */
-PROTOCORE_INLINE void protocore_pq_stop(void)
+EMBED_INLINE void protocore_pq_stop(void)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.stop(protocore_preempt_queue_span());
 }
 /** @brief True while the USER lane's task is running. */
-PROTOCORE_INLINE proto_bool protocore_pq_running(void)
+EMBED_INLINE embed_bool protocore_pq_running(void)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.running(protocore_preempt_queue_span());
     return PreemptQueueV.ok;
 }
 /** @brief Peak items ever queued on the USER lane. */
-PROTOCORE_INLINE size_t protocore_pq_high_water(void)
+EMBED_INLINE size_t protocore_pq_high_water(void)
 {
     PreemptQueueV.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.high_water(protocore_preempt_queue_span());
     return PreemptQueueV.n;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PREEMPT_QUEUE
 

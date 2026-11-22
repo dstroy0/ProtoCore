@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/enip/enip.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // EtherNet/IP fields are little-endian.
 static size_t put16(uint8_t *p, uint16_t v)
@@ -97,7 +97,7 @@ void protocore_enip_parse(uint8_t *work)
 
     if (!buf || !out || len < EIP_HEADER_SIZE)
     {
-        EnipV.ok = PROTO_FALSE;
+        EnipV.ok = EMBED_FALSE;
         return;
     }
     out->command = get16(buf);
@@ -108,7 +108,7 @@ void protocore_enip_parse(uint8_t *work)
     out->options = get32(buf + 20);
     if ((size_t)EIP_HEADER_SIZE + out->length > len) // declared data not fully buffered
     {
-        EnipV.ok = PROTO_FALSE;
+        EnipV.ok = EMBED_FALSE;
         return;
     }
     if (data)
@@ -119,7 +119,7 @@ void protocore_enip_parse(uint8_t *work)
     {
         *data_len = out->length;
     }
-    EnipV.ok = PROTO_TRUE;
+    EnipV.ok = EMBED_TRUE;
 }
 
 void protocore_enip_build_register_session(uint8_t *work)
@@ -263,7 +263,7 @@ void protocore_enip_parse_list_identity(uint8_t *work)
 
     if (!data || !out || data_len < 2) // item count
     {
-        EnipV.ok = PROTO_FALSE;
+        EnipV.ok = EMBED_FALSE;
         return;
     }
     uint16_t item_count = get16(data);
@@ -272,7 +272,7 @@ void protocore_enip_parse_list_identity(uint8_t *work)
     {
         if (pos + 4 > data_len)
         {
-            EnipV.ok = PROTO_FALSE;
+            EnipV.ok = EMBED_FALSE;
             return;
         }
         uint16_t type = get16(data + pos);
@@ -280,7 +280,7 @@ void protocore_enip_parse_list_identity(uint8_t *work)
         pos += 4;
         if (pos + ilen > data_len)
         {
-            EnipV.ok = PROTO_FALSE;
+            EnipV.ok = EMBED_FALSE;
             return;
         }
         if (type == EIP_CPF_LIST_IDENTITY)
@@ -289,13 +289,13 @@ void protocore_enip_parse_list_identity(uint8_t *work)
             if (ilen <
                 33) // proto(2) + sockaddr(16) + vendor/type/code(6) + rev(2) + status(2) + serial(4) + namelen(1)
             {
-                EnipV.ok = PROTO_FALSE;
+                EnipV.ok = EMBED_FALSE;
                 return;
             }
             uint8_t name_len = it[32];
             if ((size_t)ilen < (size_t)34 + name_len) // + the name + the trailing state octet
             {
-                EnipV.ok = PROTO_FALSE;
+                EnipV.ok = EMBED_FALSE;
                 return;
             }
             out->protocol_version = get16(it);
@@ -310,12 +310,12 @@ void protocore_enip_parse_list_identity(uint8_t *work)
             out->product_name_len = name_len;
             out->product_name = (const char *)(it + 33);
             out->state = it[33 + name_len];
-            EnipV.ok = PROTO_TRUE;
+            EnipV.ok = EMBED_TRUE;
             return;
         }
         pos += ilen;
     }
-    EnipV.ok = PROTO_FALSE; // no List Identity item
+    EnipV.ok = EMBED_FALSE; // no List Identity item
 }
 
 void protocore_enip_parse_send_rr_data(uint8_t *work)
@@ -328,7 +328,7 @@ void protocore_enip_parse_send_rr_data(uint8_t *work)
 
     if (!data || data_len < 8) // interface handle(4) + timeout(2) + item count(2)
     {
-        EnipV.ok = PROTO_FALSE;
+        EnipV.ok = EMBED_FALSE;
         return;
     }
     size_t pos = 6; // skip interface handle + timeout
@@ -338,7 +338,7 @@ void protocore_enip_parse_send_rr_data(uint8_t *work)
     {
         if (pos + 4 > data_len)
         {
-            EnipV.ok = PROTO_FALSE;
+            EnipV.ok = EMBED_FALSE;
             return;
         }
         uint16_t type = get16(data + pos);
@@ -346,7 +346,7 @@ void protocore_enip_parse_send_rr_data(uint8_t *work)
         pos += 4;
         if (pos + ilen > data_len)
         {
-            EnipV.ok = PROTO_FALSE;
+            EnipV.ok = EMBED_FALSE;
             return;
         }
         if (type == EIP_CPF_UNCONNECTED_DATA)
@@ -359,17 +359,17 @@ void protocore_enip_parse_send_rr_data(uint8_t *work)
             {
                 *cip_len = ilen;
             }
-            EnipV.ok = PROTO_TRUE;
+            EnipV.ok = EMBED_TRUE;
             return;
         }
         pos += ilen;
     }
-    EnipV.ok = PROTO_FALSE; // no unconnected data item
+    EnipV.ok = EMBED_FALSE; // no unconnected data item
 }
 
 /** @brief The operands and the outcome. */
 EnipVars EnipV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ENIP

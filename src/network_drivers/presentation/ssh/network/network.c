@@ -39,7 +39,7 @@ struct SshNetworkStorage
     // and the accessor it belongs to are this layer's alone.
     int chan_cid[MAX_SSH_CONNS][PROTOCORE_SSH_MAX_CHANNELS];
     // Whether the one-time seeding of the two maps above has run.
-    proto_bool init_done;
+    embed_bool init_done;
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -80,11 +80,11 @@ uint8_t *protocore_ssh_network_span(void)
 // place instead of at each write site.
 
 /** @brief True while slot @p i's stream can still carry bytes. */
-static proto_bool stream_live(uint8_t i)
+static embed_bool stream_live(uint8_t i)
 {
     if (i >= MAX_SSH_CONNS || SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i] == 0xFF)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t h = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
 #if PROTOCORE_ENABLE_TCP_CLIENT
@@ -92,7 +92,7 @@ static proto_bool stream_live(uint8_t i)
     {
         TcpClientV.cid = (int)h;
         TcpClient.connected(protocore_tcp_client_span());
-        const proto_bool up = TcpClientV.ok;
+        const embed_bool up = TcpClientV.ok;
         TcpClient.is_closed(protocore_tcp_client_span());
         return up && !TcpClientV.ok;
     }
@@ -103,11 +103,11 @@ static proto_bool stream_live(uint8_t i)
 }
 
 /** @brief Put @p len bytes of framed packet on slot @p i's stream. */
-static proto_bool stream_write(uint8_t i, const uint8_t *buf, size_t len)
+static embed_bool stream_write(uint8_t i, const uint8_t *buf, size_t len)
 {
     if (!stream_live(i))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t h = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
 #if PROTOCORE_ENABLE_TCP_CLIENT
@@ -122,10 +122,10 @@ static proto_bool stream_write(uint8_t i, const uint8_t *buf, size_t len)
 #endif
     ConnPoolV.slot = h;
     ConnPoolV.io.data = buf;
-    ConnPoolV.io.len = (proto_u16)len;
+    ConnPoolV.io.len = (embed_u16)len;
     ConnPool.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void ensure_init(void)
@@ -142,7 +142,7 @@ static void ensure_init(void)
             SSH_NETWORK_CTX(protocore_ssh_network_span())->chan_cid[j][k] = -1;
         }
     }
-    SSH_NETWORK_CTX(protocore_ssh_network_span())->init_done = PROTO_TRUE;
+    SSH_NETWORK_CTX(protocore_ssh_network_span())->init_done = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,7 +207,7 @@ void protocore_ssh_network_tx_drain(uint8_t *work)
     if (n > 0)
     {
         ConnPoolV.io.data = pkt->tx_wire + pkt->tx_off;
-        ConnPoolV.io.len = (proto_u16)n;
+        ConnPoolV.io.len = (embed_u16)n;
         ConnPool.send(protocore_conn_pool_span());
         if (ConnPoolV.ok)
         {
@@ -217,7 +217,7 @@ void protocore_ssh_network_tx_drain(uint8_t *work)
     }
     if (pkt->tx_off >= pkt->tx_len)
     {
-        pkt->tx_ready = PROTO_FALSE; // the buffer stays borrowed for the next packet
+        pkt->tx_ready = EMBED_FALSE; // the buffer stays borrowed for the next packet
     }
 }
 
@@ -395,7 +395,7 @@ void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
     if (SshTransportV.i32 == 0 && ConnPoolV.ok)
     {
         ConnPoolV.io.data = ident;
-        ConnPoolV.io.len = (proto_u16)ilen;
+        ConnPoolV.io.len = (embed_u16)ilen;
         ConnPool.send(protocore_conn_pool_span());
         ConnPool.flush(protocore_conn_pool_span());
     }
@@ -479,7 +479,7 @@ void protocore_ssh_network_chan_by_cid(uint8_t *work)
     ensure_init();
     if (cid < 0)
     {
-        SshNetworkV.ok = PROTO_FALSE;
+        SshNetworkV.ok = EMBED_FALSE;
         return;
     }
     for (uint8_t j = 0; j < MAX_SSH_CONNS; j++)
@@ -490,12 +490,12 @@ void protocore_ssh_network_chan_by_cid(uint8_t *work)
             {
                 *ssh_slot = j;
                 *channel = k;
-                SshNetworkV.ok = PROTO_TRUE;
+                SshNetworkV.ok = EMBED_TRUE;
                 return;
             }
         }
     }
-    SshNetworkV.ok = PROTO_FALSE;
+    SshNetworkV.ok = EMBED_FALSE;
     return;
 }
 
@@ -549,12 +549,12 @@ void protocore_ssh_network_chan_drained(uint8_t *work)
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL || *slot < 0)
     {
-        SshNetworkV.ok = PROTO_TRUE;
+        SshNetworkV.ok = EMBED_TRUE;
         return;
     }
     TcpClientV.cid = *slot;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool gone = TcpClientV.ok;
+    const embed_bool gone = TcpClientV.ok;
     TcpClient.available(protocore_tcp_client_span());
     SshNetworkV.ok = gone && TcpClientV.n == 0;
 }

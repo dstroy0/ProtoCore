@@ -23,7 +23,7 @@
 
 #include "endian/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define FLOW_V5_VERSION 5 ///< vendor NetFlow Version 5 packet Version field
 
@@ -50,7 +50,7 @@ struct FlowExportStorage
     size_t set_start; ///< offset of the open Set header, 0 when none is open
     uint16_t count;   ///< RFC 3954 sec 5.1 Count: Template plus Data Records in this packet
     uint8_t version;  ///< RFC 3954 sec 5.1 / RFC 7011 sec 3.1 Version: 9 or 10
-    proto_bool error; ///< sticky overflow flag: every put is a no-op once it is set
+    embed_bool error; ///< sticky overflow flag: every put is a no-op once it is set
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -102,7 +102,7 @@ static void put_u16(uint8_t *work, uint16_t v)
     }
     if (m->pos + 2 > m->cap)
     {
-        m->error = PROTO_TRUE;
+        m->error = EMBED_TRUE;
         return;
     }
     m->pos += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = m->buf + m->pos, .val = v, .width = MMGR_ENDIAN_16);
@@ -118,7 +118,7 @@ static void put_u32(uint8_t *work, uint32_t v)
     }
     if (m->pos + 4 > m->cap)
     {
-        m->error = PROTO_TRUE;
+        m->error = EMBED_TRUE;
         return;
     }
     m->pos += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = m->buf + m->pos, .val = v, .width = MMGR_ENDIAN_32);
@@ -134,7 +134,7 @@ static void put_span(uint8_t *work, const uint8_t *p, size_t n)
     }
     if (m->pos + n > m->cap)
     {
-        m->error = PROTO_TRUE;
+        m->error = EMBED_TRUE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = m->buf + m->pos, .src = p, .bytes = n);
@@ -151,7 +151,7 @@ static void put_zero(uint8_t *work, size_t n)
     }
     if (m->pos + n > m->cap)
     {
-        m->error = PROTO_TRUE;
+        m->error = EMBED_TRUE;
         return;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = m->buf + m->pos, .val = 0, .bytes = n);
@@ -173,7 +173,7 @@ static void patch_u16(uint8_t *work, size_t off, uint16_t v)
 void protocore_flow_export_v5_header(uint8_t *work)
 {
     (void)work;
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     FlowExportV.n = 0;
     uint8_t *buf = FlowExportV.out.buf;
     const FlowV5Header *h = FlowExportV.v5.header;
@@ -193,13 +193,13 @@ void protocore_flow_export_v5_header(uint8_t *work)
     p += EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = buf + p, .val = h->sampling_interval,
                     .width = MMGR_ENDIAN_16);
     FlowExportV.n = p; // 24
-    FlowExportV.ok = PROTO_TRUE;
+    FlowExportV.ok = EMBED_TRUE;
 }
 
 void protocore_flow_export_v5_record(uint8_t *work)
 {
     (void)work;
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     FlowExportV.n = 0;
     uint8_t *buf = FlowExportV.out.buf;
     const FlowV5Record *r = FlowExportV.v5.record;
@@ -230,7 +230,7 @@ void protocore_flow_export_v5_record(uint8_t *work)
     buf[p++] = 0; // pad2, two octets
     buf[p++] = 0;
     FlowExportV.n = p; // 48
-    FlowExportV.ok = PROTO_TRUE;
+    FlowExportV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,7 +241,7 @@ void protocore_flow_export_v5_record(uint8_t *work)
 // Length stays zero until message_finish.
 void protocore_flow_export_ipfix_begin(uint8_t *work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     FlowExportV.n = 0;
     if (!FlowExportV.out.buf)
     {
@@ -254,7 +254,7 @@ void protocore_flow_export_ipfix_begin(uint8_t *work)
     m->set_start = 0;
     m->count = 0;
     m->version = FLOW_IPFIX_VERSION;
-    m->error = PROTO_FALSE;
+    m->error = EMBED_FALSE;
     put_u16(work, FLOW_IPFIX_VERSION);
     put_u16(work, 0);
     put_u32(work, FlowExportV.message.export_time);
@@ -267,7 +267,7 @@ void protocore_flow_export_ipfix_begin(uint8_t *work)
 // Count stays zero until message_finish.
 void protocore_flow_export_v9_begin(uint8_t *work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     FlowExportV.n = 0;
     if (!FlowExportV.out.buf)
     {
@@ -280,7 +280,7 @@ void protocore_flow_export_v9_begin(uint8_t *work)
     m->set_start = 0;
     m->count = 0;
     m->version = FLOW_V9_VERSION;
-    m->error = PROTO_FALSE;
+    m->error = EMBED_FALSE;
     put_u16(work, FLOW_V9_VERSION);
     put_u16(work, 0);
     put_u32(work, FlowExportV.message.sys_uptime);
@@ -294,7 +294,7 @@ void protocore_flow_export_v9_begin(uint8_t *work)
 // Field Specifier per field. RFC 3954 sec 5.1 counts a Template Record toward Count.
 void protocore_flow_export_template_set(uint8_t *work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     const FlowFieldSpecifier *fields = FlowExportV.tmpl.fields;
     const size_t field_count = FlowExportV.tmpl.field_count;
@@ -328,7 +328,7 @@ void protocore_flow_export_template_set(uint8_t *work)
 // RFC 3954 sec 5.2 reserves FlowSet IDs 0 through 255.
 void protocore_flow_export_data_set_begin(uint8_t *work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (FlowExportV.template_id < FLOW_TEMPLATE_ID_MIN)
     {
@@ -348,7 +348,7 @@ void protocore_flow_export_data_set_begin(uint8_t *work)
 // Template order; this copies them in and counts the record.
 void protocore_flow_export_data_record(uint8_t *work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (!m->set_start || !FlowExportV.data.record || FlowExportV.data.len == 0)
     {
@@ -367,7 +367,7 @@ void protocore_flow_export_data_record(uint8_t *work)
 // the Length is the Set Header plus all records plus the optional padding.
 void protocore_flow_export_data_set_end(uint8_t *work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (!m->set_start)
     {
@@ -392,7 +392,7 @@ void protocore_flow_export_data_set_end(uint8_t *work)
 // rather than reporting a truncated length.
 void protocore_flow_export_message_finish(uint8_t *work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExportV.ok = EMBED_FALSE;
     FlowExportV.n = 0;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->set_start)
@@ -416,13 +416,13 @@ void protocore_flow_export_message_finish(uint8_t *work)
         patch_u16(work, 2, (uint16_t)m->pos);
     }
     FlowExportV.n = m->pos;
-    FlowExportV.ok = PROTO_TRUE;
+    FlowExportV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 FlowExportVars FlowExportV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FLOW_EXPORT

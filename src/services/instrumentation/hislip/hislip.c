@@ -16,7 +16,7 @@
 
 #include "endian/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, uint8_t control, uint32_t parameter,
                                      uint64_t payload_len)
@@ -34,17 +34,17 @@ size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, u
     return PROTOCORE_HISLIP_HEADER_LEN;
 }
 
-proto_bool protocore_hislip_parse_header(const uint8_t *buf, size_t len, HislipHeader *out)
+embed_bool protocore_hislip_parse_header(const uint8_t *buf, size_t len, HislipHeader *out)
 {
     if (!buf || !out || len < PROTOCORE_HISLIP_HEADER_LEN || buf[0] != 'H' || buf[1] != 'S')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->type = (HislipMsg)(buf[2]);
     out->control = buf[3];
     out->parameter = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 4, .width = MMGR_ENDIAN_32);
     out->payload_len = EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf + 8, .width = MMGR_ENDIAN_64);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Build a header + optional payload into buf; returns total or 0 on overflow / bad input.
@@ -95,7 +95,7 @@ size_t protocore_hislip_build_async_initialize_response(uint8_t *buf, size_t cap
     return protocore_hislip_build_header(buf, cap, HISLIP_MSG_ASYNC_INITIALIZE_RESPONSE, control, server_vendor_id, 0);
 }
 
-size_t protocore_hislip_build_data(uint8_t *buf, size_t cap, proto_bool is_end, uint8_t control, uint32_t message_id,
+size_t protocore_hislip_build_data(uint8_t *buf, size_t cap, embed_bool is_end, uint8_t control, uint32_t message_id,
                                    const uint8_t *payload, size_t payload_len)
 {
     HislipMsg type = is_end ? HISLIP_MSG_DATA_END : HISLIP_MSG_DATA;
@@ -107,38 +107,38 @@ uint32_t protocore_hislip_next_message_id(uint32_t id)
     return id + 2; // unsigned 32-bit wrap is well-defined
 }
 
-proto_bool protocore_hislip_parse_initialize(const uint8_t *buf, size_t len, HislipInitialize *out)
+embed_bool protocore_hislip_parse_initialize(const uint8_t *buf, size_t len, HislipInitialize *out)
 {
     HislipHeader h;
     if (!out || !protocore_hislip_parse_header(buf, len, &h) || h.type != HISLIP_MSG_INITIALIZE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h.payload_len > (uint64_t)(len - PROTOCORE_HISLIP_HEADER_LEN)) // the sub-address must be fully present
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->protocol_version = (uint16_t)(h.parameter >> 16);
     out->vendor_id = (uint16_t)(h.parameter & 0xFFFF);
     out->sub_address = (const char *)(buf + PROTOCORE_HISLIP_HEADER_LEN);
     out->sub_address_len = (size_t)h.payload_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_hislip_parse_initialize_response(const uint8_t *buf, size_t len, HislipInitializeResponse *out)
+embed_bool protocore_hislip_parse_initialize_response(const uint8_t *buf, size_t len, HislipInitializeResponse *out)
 {
     HislipHeader h;
     if (!out || !protocore_hislip_parse_header(buf, len, &h) || h.type != HISLIP_MSG_INITIALIZE_RESPONSE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->protocol_version = (uint16_t)(h.parameter >> 16);
     out->session_id = (uint16_t)(h.parameter & 0xFFFF);
     out->overlap = (h.control & PROTOCORE_HISLIP_INITRESP_OVERLAP) != 0;
     out->encryption_mandatory = (h.control & PROTOCORE_HISLIP_INITRESP_ENC_MANDATORY) != 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HISLIP

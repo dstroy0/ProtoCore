@@ -17,7 +17,7 @@
 // its own subtree - 1202 signals under .devices with the ASC objects, 1203 DMS likewise. The arc values
 // below follow the published NTCIP object trees.
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- NTCIP 1202 Actuated Signal Controller ---
 // asc(1206.4.2.1) phase(1) ...
@@ -57,6 +57,6 @@ size_t protocore_ntcip_oid(const uint32_t *root, size_t root_len, uint32_t index
     return root_len + 1;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTCIP

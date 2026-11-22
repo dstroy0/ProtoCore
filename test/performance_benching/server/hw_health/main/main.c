@@ -70,12 +70,12 @@ void dbench_run(void)
 
         // Hysteretic SPI-clock backoff: feed a failing CRC result through the state machine.
         HwHealthV.spi.s = &spi;
-        HwHealthV.spi.crc_ok = PROTO_FALSE;
+        HwHealthV.spi.crc_ok = EMBED_FALSE;
         DBENCH_OP("HwHealth.spi_result", 200000, HwHealth.spi_result(hw_health_work); sink += HwHealthV.hz);
 
         // GPIO short-circuit test: drove high, read low -> shorted to ground.
-        HwHealthV.probe.driven_high = PROTO_TRUE;
-        HwHealthV.probe.read_high = PROTO_FALSE;
+        HwHealthV.probe.driven_high = EMBED_TRUE;
+        HwHealthV.probe.read_high = EMBED_FALSE;
         DBENCH_OP("HwHealth.gpio_short", 200000, HwHealth.gpio_short(hw_health_work);
                   sink += (uint32_t)HwHealthV.gpio_verdict);
 

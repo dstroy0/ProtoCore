@@ -53,7 +53,7 @@ uint8_t *protocore_provisioning_service_span(void)
     return s_own.span;
 }
 
-proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap)
+embed_bool protocore_prov_form_field(uint8_t *work, const char *body, const char *key, char *out, size_t cap)
 {
     if (out && cap)
     {
@@ -61,7 +61,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
     }
     if (!body || !key || !out || cap == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     size_t blen = 0;
@@ -76,7 +76,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
     {
         // Match the key only as a whole field name: at the start or after '&'.
         if ((p == body || p[-1] == '&') &&
-            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = key, .cap = klen, .ci = PROTO_FALSE) &&
+            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = key, .cap = klen, .ci = EMBED_FALSE) &&
             p[klen] == '=')
         {
             val = p + klen + 1;
@@ -85,7 +85,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
     }
     if (!val)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     size_t o = 0;
@@ -124,7 +124,7 @@ proto_bool protocore_prov_form_field(uint8_t *work, const char *body, const char
         }
     }
     out[o] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +234,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     UdpListener.reply(protocore_udp_listener_span());
 }
 
-proto_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
+embed_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char *psk, size_t psk_cap)
 {
     (void)work;
 
@@ -249,14 +249,14 @@ proto_bool protocore_prov_load(uint8_t *work, char *ssid, size_t ssid_cap, char 
     if (!ssid || ssid_cap == 0 ||
         protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, ssid, ssid_cap) == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (psk && psk_cap)
     {
         (void)protocore_nvs_get_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_PSK, psk,
                                     psk_cap); // an open AP has none
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_prov_clear(uint8_t *work)
@@ -280,8 +280,8 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 
     char ssid[33];
     char psk[64];
-    proto_bool prov_ok = Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_SSID, ssid, sizeof(ssid));
-    proto_bool have_ssid = prov_ok && ssid[0] != '\0';
+    embed_bool prov_ok = Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_SSID, ssid, sizeof(ssid));
+    embed_bool have_ssid = prov_ok && ssid[0] != '\0';
     Prov.form_field(work, (const char *)req->body, PROTOCORE_PROV_KEY_PSK, psk, sizeof(psk));
     if (!have_ssid)
     {

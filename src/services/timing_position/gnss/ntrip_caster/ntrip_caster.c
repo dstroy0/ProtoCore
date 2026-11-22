@@ -14,7 +14,7 @@
 #include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static char lower(char c)
 {
@@ -22,18 +22,18 @@ static char lower(char c)
 }
 
 // Case-insensitive: does the line at [s,end) begin with prefix?
-static proto_bool ci_prefix(const char *s, const char *end, const char *prefix)
+static embed_bool ci_prefix(const char *s, const char *end, const char *prefix)
 {
     while (*prefix)
     {
         if (s >= end || lower(*s) != lower(*prefix))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         s++;
         prefix++;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Skip spaces / tabs.
@@ -72,22 +72,22 @@ static void fmt_deg2(char *out, size_t cap, double v)
 
 // Find the request header block terminator (CRLFCRLF, or bare LFLF fallback). On success sets *hend
 // just past the blank line and returns true; returns false if the block is incomplete (need more bytes).
-static proto_bool find_header_end(const char *buf, size_t len, size_t *hend)
+static embed_bool find_header_end(const char *buf, size_t len, size_t *hend)
 {
     for (size_t i = 0; i < len; i++)
     {
         if (i + 3 < len && buf[i] == '\r' && buf[i + 1] == '\n' && buf[i + 2] == '\r' && buf[i + 3] == '\n')
         {
             *hend = i + 4;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         if (i + 1 < len && buf[i] == '\n' && buf[i + 1] == '\n')
         {
             *hend = i + 2;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Scan the header lines in [buf,end) for Ntrip-Version and Authorization: Basic, filling out.
@@ -136,7 +136,7 @@ static void scan_headers(const char *buf, const char *end, NtripRequest *out)
     }
 }
 
-proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out)
+embed_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out)
 {
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = sizeof(*out));
     out->version = NTRIP_V1;
@@ -145,9 +145,9 @@ proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripReque
     size_t hend = 0;
     if (!find_header_end(buf, len, &hend))
     {
-        return PROTO_FALSE; // need more bytes
+        return EMBED_FALSE; // need more bytes
     }
-    out->complete = PROTO_TRUE;
+    out->complete = EMBED_TRUE;
 
     const char *end = buf + hend;
 
@@ -155,10 +155,10 @@ proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripReque
     const char *p = buf;
     if (!ci_prefix(p, end, "GET "))
     {
-        out->is_get = PROTO_FALSE; // malformed / unsupported method
-        return PROTO_TRUE;
+        out->is_get = EMBED_FALSE; // malformed / unsupported method
+        return EMBED_TRUE;
     }
-    out->is_get = PROTO_TRUE;
+    out->is_get = EMBED_TRUE;
     p = skip_ws(p + 4, end);
     const char *target = p;
     // Same invariant as scan_headers: end[-1] is the '\n' that closed the header block, so the target
@@ -171,7 +171,7 @@ proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripReque
 
     if (tlen == 0 || (tlen == 1 && target[0] == '/'))
     {
-        out->want_sourcetable = PROTO_TRUE; // "GET /" -> list the source table
+        out->want_sourcetable = EMBED_TRUE; // "GET /" -> list the source table
     }
     else
     {
@@ -192,7 +192,7 @@ proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripReque
 
     // Scan the header lines for Ntrip-Version and Authorization.
     scan_headers(buf, end, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_ntrip_build_stream_response(char *out, size_t cap, NtripVersion version)
@@ -386,6 +386,6 @@ size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion ver
     return pos;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER

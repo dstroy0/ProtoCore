@@ -21,31 +21,31 @@ static const uint8_t ISN_SECRET[IDEMIP_TCP_ISN_SECRET_BYTES] = {0x55u, 0x66u};
 static uint8_t s_sent[IDEMIP_DMA_FRAME_MAX];
 static size_t s_sent_len;
 static int s_sends;
-static proto_bool s_stack_up;
+static embed_bool s_stack_up;
 
-proto_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args)
+embed_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args)
 {
     memcpy(s_sent, args->frame, args->len);
     s_sent_len = args->len;
     s_sends++;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_wifi_radio_mac_read(uint8_t *mac)
+embed_bool protocore_wifi_radio_mac_read(uint8_t *mac)
 {
     memcpy(mac, MAC_OWN, IDEMIP_MAC_LEN);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
+embed_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
 {
-    return (args->ssid != NULL) ? PROTO_TRUE : PROTO_FALSE;
+    return (args->ssid != NULL) ? EMBED_TRUE : EMBED_FALSE;
 }
 
 // A frame on a word boundary, as the link requires, with its first octet stamped.
 static EMBED_ALIGN(8) uint8_t s_frame[IDEMIP_DMA_FRAME_MAX + 8u];
 
-static proto_bool feed(uint8_t stamp, size_t len)
+static embed_bool feed(uint8_t stamp, size_t len)
 {
     memset(s_frame, 0, len);
     s_frame[0] = stamp;
@@ -135,10 +135,10 @@ void test_a_frame_off_a_word_boundary_is_dropped_and_counted(void)
 void test_the_link_reports_the_association(void)
 {
     const IdemIpPhyDriver *const driver = protocore_wifi_link_driver();
-    const WifiLinkStateArgs up = {.up = PROTO_TRUE};
+    const WifiLinkStateArgs up = {.up = EMBED_TRUE};
     protocore_wifi_link_state_set(&up);
     TEST_ASSERT_TRUE(driver->link().up);
-    const WifiLinkStateArgs down = {.up = PROTO_FALSE};
+    const WifiLinkStateArgs down = {.up = EMBED_FALSE};
     protocore_wifi_link_state_set(&down);
     TEST_ASSERT_FALSE(driver->link().up);
     TEST_ASSERT_EQUAL_MEMORY(MAC_OWN, driver->mac(), IDEMIP_MAC_LEN);
@@ -167,7 +167,7 @@ void test_an_arp_request_from_the_radio_gets_a_reply_through_the_radio(void)
         StackV.addr4_args.index = 0u;
         Stack.set_addr4(protocore_stack_span());
         TEST_ASSERT_TRUE(StackV.ok);
-        s_stack_up = PROTO_TRUE;
+        s_stack_up = EMBED_TRUE;
     }
     static const uint8_t broadcast[IDEMIP_MAC_LEN] = {0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu};
     memset(s_frame, 0, 60u);

@@ -158,11 +158,11 @@ static uint16_t answer_count(const protocore_net_host_dgram *d)
 }
 
 // Decode answer @p want of the captured response; false when there is no such record.
-static proto_bool answer_at(const protocore_net_host_dgram *d, int want, Rec *r)
+static embed_bool answer_at(const protocore_net_host_dgram *d, int want, Rec *r)
 {
     if (want >= (int)answer_count(d))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t off = 12;
     for (int i = 0;; i++)
@@ -176,7 +176,7 @@ static proto_bool answer_at(const protocore_net_host_dgram *d, int want, Rec *r)
         r->rdata = &d->data[off + 10];
         if (i == want)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         off += (size_t)10 + r->rdlen;
     }

@@ -14,48 +14,48 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/machine_tool/dnc/dnc_stream/dnc_stream.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Drain any reverse-channel bytes into the flow state (non-blocking); false on a recv error.
-static proto_bool flow_drain(DncFlow *flow, DncRecvFn recv, void *ctx)
+static embed_bool flow_drain(DncFlow *flow, DncRecvFn recv, void *ctx)
 {
     uint8_t tmp[16];
     int r = recv(ctx, tmp, sizeof(tmp));
     if (r < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (int i = 0; i < r; i++)
     {
         protocore_dnc_flow_feed(flow, tmp[i]);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Send @p n bytes, first honoring XOFF: update flow, and while paused poll recv for the XON.
-static proto_bool emit(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx, const uint8_t *data, size_t n)
+static embed_bool emit(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx, const uint8_t *data, size_t n)
 {
     if (!flow_drain(flow, recv, ctx))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t polls = 0;
     while (!protocore_dnc_flow_can_send(flow))
     {
         if (++polls > PROTOCORE_DNC_XOFF_MAX_POLLS)
         {
-            return PROTO_FALSE; // XOFF never cleared
+            return EMBED_FALSE; // XOFF never cleared
         }
         if (!flow_drain(flow, recv, ctx))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     return send(ctx, data, n) == (int)n;
 }
 
 // Emit @p count NUL runout (leader/trailer) bytes in chunks, honoring flow control.
-static proto_bool emit_runout(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx, uint16_t count)
+static embed_bool emit_runout(DncFlow *flow, DncSendFn send, DncRecvFn recv, void *ctx, uint16_t count)
 {
     uint8_t zeros[32];
     EMBED_CALL(memor.set, MemoriaCfg, .dst = zeros, .val = 0, .bytes = sizeof(zeros));
@@ -64,11 +64,11 @@ static proto_bool emit_runout(DncFlow *flow, DncSendFn send, DncRecvFn recv, voi
         uint16_t chunk = count < sizeof(zeros) ? count : (uint16_t)sizeof(zeros);
         if (!emit(flow, send, recv, ctx, zeros, chunk))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         count -= chunk;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_len, DncSendFn send, DncRecvFn recv,
@@ -145,6 +145,6 @@ DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_l
     return DNC_STREAM_OK;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNC

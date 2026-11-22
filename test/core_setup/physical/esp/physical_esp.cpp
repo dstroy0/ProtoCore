@@ -15,7 +15,7 @@
  *
  * C++, because WiFi and ETH are Arduino objects whose methods cannot be named from C
  * (docs/SYMBOLS.md section 4). physical.h declares everything this file defines between
- * PROTOCORE_BEGIN_DECLS and PROTOCORE_END_DECLS, so the names it exports are C names.
+ * EMBED_BEGIN_DECLS and EMBED_END_DECLS, so the names it exports are C names.
  */
 
 #include "network_drivers/physical/physical/physical.h"
@@ -34,18 +34,18 @@
 #include "lwip/ip6_addr.h"
 #endif
 
-proto_bool init_wifi_physical(const char *ssid, const char *password)
+embed_bool init_wifi_physical(const char *ssid, const char *password)
 {
     WiFi.begin(ssid, password);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool wifi_ready()
+embed_bool wifi_ready()
 {
     return WiFi.isConnected();
 }
 
-proto_bool init_wifi_radio_physical(uint8_t channel)
+embed_bool init_wifi_radio_physical(uint8_t channel)
 {
     // Radio up but not associated: ESP-NOW and promiscuous capture want the PHY without an IP link.
     WiFi.mode(WIFI_STA);
@@ -54,17 +54,17 @@ proto_bool init_wifi_radio_physical(uint8_t channel)
     {
         esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool init_wifi_ap_physical(const char *ssid, const char *password)
+embed_bool init_wifi_ap_physical(const char *ssid, const char *password)
 {
     WiFi.mode(WIFI_AP_STA); // coexist so a station link can run alongside the softAP
     return WiFi.softAP(ssid, password);
 }
 
 #if PROTOCORE_ENABLE_ETHERNET
-proto_bool init_eth_physical(void)
+embed_bool init_eth_physical(void)
 {
 #if defined(PROTOCORE_ETH_W5500) && PROTOCORE_ETH_W5500 && ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
     // W5500 SPI Ethernet (arduino-esp32 3.x ETH SPI API): the HSPI host (SPI3) clocks the W5500 on the
@@ -78,39 +78,39 @@ proto_bool init_eth_physical(void)
     return ETH.begin();
 #endif
 }
-proto_bool eth_ready(void)
+embed_bool eth_ready(void)
 {
     return ETH.linkUp() && (uint32_t)ETH.localIP() != 0;
 }
 #else
-proto_bool init_eth_physical(void)
+embed_bool init_eth_physical(void)
 {
-    return PROTO_FALSE; // Ethernet not enabled (PROTOCORE_ENABLE_ETHERNET)
+    return EMBED_FALSE; // Ethernet not enabled (PROTOCORE_ENABLE_ETHERNET)
 }
-proto_bool eth_ready(void)
+embed_bool eth_ready(void)
 {
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 #endif
 
 #if PROTOCORE_ENABLE_IPV6
 
-proto_bool init_ipv6_physical(void)
+embed_bool init_ipv6_physical(void)
 {
     // The WiFi wrapper's enable call was renamed in Arduino-ESP32 3.0; the address readout
     // below goes straight to lwIP, which is stable across both cores.
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
-    return WiFi.enableIPv6(PROTO_TRUE);
+    return WiFi.enableIPv6(EMBED_TRUE);
 #else
     return WiFi.enableIpV6();
 #endif
 }
 
-proto_bool net_global_ipv6(protocore_ip *out)
+embed_bool net_global_ipv6(protocore_ip *out)
 {
     if (!out || !netif_default)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (int8_t i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++)
     {
@@ -125,28 +125,28 @@ proto_bool net_global_ipv6(protocore_ip *out)
         }
         out->family = PROTOCORE_IP_V6;
         memcpy(out->bytes, a6->addr, 16); // lwIP holds the 16 bytes in network order
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-proto_bool protocore_ipv6_ready(void)
+embed_bool protocore_ipv6_ready(void)
 {
     protocore_ip tmp;
     return net_global_ipv6(&tmp);
 }
 #else
-proto_bool init_ipv6_physical(void)
+embed_bool init_ipv6_physical(void)
 {
-    return PROTO_FALSE; // IPv6 not enabled (PROTOCORE_ENABLE_IPV6)
+    return EMBED_FALSE; // IPv6 not enabled (PROTOCORE_ENABLE_IPV6)
 }
-proto_bool net_global_ipv6(protocore_ip *)
+embed_bool net_global_ipv6(protocore_ip *)
 {
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
-proto_bool protocore_ipv6_ready(void)
+embed_bool protocore_ipv6_ready(void)
 {
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 #endif
 
@@ -178,26 +178,26 @@ int8_t protocore_net_rssi(void)
     return WiFi.isConnected() ? (int8_t)WiFi.RSSI() : 0;
 }
 
-proto_bool protocore_net_mac(uint8_t out[6])
+embed_bool protocore_net_mac(uint8_t out[6])
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     WiFi.macAddress(out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_net_egress_mac(uint8_t out[6])
+embed_bool protocore_net_egress_mac(uint8_t out[6])
 {
     // The egress interface's own link-layer address, straight off the live default netif - the Ethernet PHY's
     // MAC on a wired link, the WiFi STA MAC on a wireless one. Independent of which driver started.
     if (!out || !netif_default || netif_default->hwaddr_len < 6)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(out, netif_default->hwaddr, 6);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_net_ssid(char *out, size_t cap)
@@ -269,7 +269,7 @@ static void phy_monitor_trampoline(void *buf, wifi_promiscuous_pkt_type_t)
     s_phy_monitor.sink(pkt->payload, (uint16_t)(len - 4), (int8_t)pkt->rx_ctrl.rssi, (uint8_t)pkt->rx_ctrl.channel);
 }
 
-proto_bool protocore_phy_ps_set(protocore_phy_ps mode)
+embed_bool protocore_phy_ps_set(protocore_phy_ps mode)
 {
     return esp_wifi_set_ps(to_esp_ps(mode)) == ESP_OK;
 }
@@ -292,23 +292,23 @@ protocore_phy_ps protocore_phy_ps_get(void)
     return PROTOCORE_PHY_PS_NONE;
 }
 
-proto_bool protocore_phy_tx_power_set(int8_t dbm)
+embed_bool protocore_phy_tx_power_set(int8_t dbm)
 {
     // The vendor API takes quarter-dBm; that unit is vendor detail, so it converts here.
     return esp_wifi_set_max_tx_power((int8_t)(dbm * 4)) == ESP_OK;
 }
 
-proto_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb)
+embed_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb)
 {
     if (!cb)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s_phy_monitor.sink = cb;
-    esp_wifi_set_promiscuous(PROTO_TRUE);
+    esp_wifi_set_promiscuous(EMBED_TRUE);
     esp_wifi_set_promiscuous_rx_cb(&phy_monitor_trampoline);
     esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_phy_monitor_set_channel(uint8_t channel)
@@ -318,7 +318,7 @@ void protocore_phy_monitor_set_channel(uint8_t channel)
 
 void protocore_phy_monitor_end(void)
 {
-    esp_wifi_set_promiscuous(PROTO_FALSE);
+    esp_wifi_set_promiscuous(EMBED_FALSE);
     s_phy_monitor.sink = NULL;
 }
 

@@ -11,7 +11,7 @@
 
 #include "network_drivers/presentation/ssh/common/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // RFC 4254 sec 5.2 - the window pair
@@ -130,12 +130,11 @@ int32_t protocore_ssh_sig_build_close(uint32_t peer_id, uint8_t *out, size_t cap
 // ---------------------------------------------------------------------------
 
 /** @brief Channel type (RFC 4254). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SshChanType,
     SSH_CHAN_SESSION = 0,        ///< "session" - shell / exec / data
     SSH_CHAN_DIRECT_TCPIP = 1,   ///< "direct-tcpip" - client-initiated TCP forward (ssh -L)
     SSH_CHAN_FORWARDED_TCPIP = 2 ///< "forwarded-tcpip" - server-initiated TCP forward (ssh -R)
-} SshChanType;
+);
 
 /**
  * @brief What a session channel's sec 6 request bound to it, if anything.
@@ -144,33 +143,32 @@ typedef enum PROTO_ENUM_PACKED
  * a sec 6.5 "subsystem" or `exec` request arriving later on a channel already open as "session".
  * The type says how the channel was opened; this says what its data means.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SshChanService,
     SSH_CHAN_SERVICE_NONE = 0, ///< shell / exec output, handed to the channel-data callback
     SSH_CHAN_SERVICE_SFTP = 1, ///< subsystem "sftp" (PROTOCORE_ENABLE_SSH_SFTP)
     SSH_CHAN_SERVICE_SCP = 2   ///< exec "scp ..." (PROTOCORE_ENABLE_SSH_SCP)
-} SshChanService;
+);
 
 /** @brief Per-connection channel state. */
 typedef struct
 {
-    proto_bool open;        ///< True once the channel is confirmed open both ways.
-    proto_bool pending;     ///< True for a server-initiated channel we opened, awaiting the client's confirmation.
+    embed_bool open;        ///< True once the channel is confirmed open both ways.
+    embed_bool pending;     ///< True for a server-initiated channel we opened, awaiting the client's confirmation.
     SshChanType type;       ///< session, direct-tcpip, or forwarded-tcpip.
     SshChanService service; ///< What a sec 6 request bound over a session channel, if anything.
     uint32_t local_id;      ///< Our channel id (== slot index).
     uint32_t peer_id;       ///< Client's channel id.
     SshFlow flow;           ///< RFC 4254 sec 5.2 window pair (owner: ssh_flow_control.*).
-    proto_bool eof_sent;    ///< We sent CHANNEL_EOF (RFC 4254 sec 5.3).
-    proto_bool relay_eof;   ///< The peer sent CHANNEL_EOF.
+    embed_bool eof_sent;    ///< We sent CHANNEL_EOF (RFC 4254 sec 5.3).
+    embed_bool relay_eof;   ///< The peer sent CHANNEL_EOF.
     // sec 5.3: "The channel is considered closed for a party when it has both sent and received
     // SSH_MSG_CHANNEL_CLOSE, and the party may then reuse the channel number." One latch each, so
     // the number is not handed out again while the peer's CLOSE is still in flight.
-    proto_bool close_sent;     ///< We sent CHANNEL_CLOSE.
-    proto_bool close_received; ///< The peer sent CHANNEL_CLOSE.
+    embed_bool close_sent;     ///< We sent CHANNEL_CLOSE.
+    embed_bool close_received; ///< The peer sent CHANNEL_CLOSE.
     // sec 6.2: a terminal allocated for this session, and the dimensions sec 6.7 updates. The
     // dimensions are "only informational", so they are carried, not acted on, by this layer.
-    proto_bool pty;       ///< A "pty-req" was accepted on this channel.
+    embed_bool pty;       ///< A "pty-req" was accepted on this channel.
     uint32_t width_chars; ///< terminal width, characters
     uint32_t height_rows; ///< terminal height, rows
     uint32_t width_px;    ///< terminal width, pixels
@@ -230,7 +228,7 @@ typedef int (*SshRemoteForwardCancelCb)(uint8_t slot, const char *bind_addr, siz
  *        CHANNEL_OPEN_FAILURE (the owner tears the bridge down). @p channel is the
  *        local id returned by protocore_ssh_channel_open_forwarded().
  */
-typedef void (*SshForwardConfirmCb)(uint8_t slot, uint32_t channel, proto_bool ok);
+typedef void (*SshForwardConfirmCb)(uint8_t slot, uint32_t channel, embed_bool ok);
 /** @brief Install the forwarded-tcpip open-confirmation callback (opt-in, ssh -R). */
 
 /** @brief A `subsystem "sftp"` request was accepted on @p channel; the binding starts an SFTP session. */
@@ -376,7 +374,7 @@ typedef struct
  */
 
 /** @brief An accepted "pty-req" on channel @p channel. Return false to refuse the terminal. */
-typedef proto_bool (*SshPtyReqCb)(uint8_t i, uint32_t channel, const SshPtyRequest *pty);
+typedef embed_bool (*SshPtyReqCb)(uint8_t i, uint32_t channel, const SshPtyRequest *pty);
 
 /** @brief A "window-change" (sec 6.7) on a channel that already has a terminal. */
 typedef void (*SshWindowChangeCb)(uint8_t i, uint32_t channel, uint32_t width_chars, uint32_t height_rows,
@@ -523,7 +521,7 @@ typedef void (*SshWindowChangeCb)(uint8_t i, uint32_t channel, uint32_t width_ch
  * forward is permitted (an open proxy for authenticated users) - install one to
  * the reachable host:port set.
  */
-typedef proto_bool (*SshForwardPolicyCb)(const char *host, uint16_t port);
+typedef embed_bool (*SshForwardPolicyCb)(const char *host, uint16_t port);
 
 #if PROTOCORE_SSH_PORT_FORWARD
 
@@ -584,7 +582,7 @@ typedef struct
     size_t cap;              ///< how much room it has
     uint32_t exit_status;    ///< sec 6.10 exit-status
     const char *signal_name; ///< sec 6.10 exit-signal
-    proto_bool core_dumped;  ///< whether it dumped core
+    embed_bool core_dumped;  ///< whether it dumped core
     const char *err_msg;     ///< the message that accompanies it
     const uint8_t *rtype;    ///< sec 5.4 request type
     uint32_t rtype_len;      ///< its length
@@ -645,7 +643,7 @@ typedef struct
     SshPtyArgs pty;
     SshFwdArgs fwd;
     uint8_t msg_type;
-    proto_bool ok;
+    embed_bool ok;
     int i32;
     uint32_t u32;
     SshChannel *found;
@@ -867,6 +865,6 @@ static const SshConnectionNs SshConnection __attribute__((unused)) = {
  */
 uint8_t *protocore_ssh_connection_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CONNECTION_CONNECTION_H

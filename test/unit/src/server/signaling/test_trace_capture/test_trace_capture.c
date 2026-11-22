@@ -42,7 +42,7 @@ static void on_window(const protocore_tc_window *w, void *ctx)
     g_windows++;
 }
 
-static proto_bool begin(uint16_t pre, uint16_t post, void *ctx)
+static embed_bool begin(uint16_t pre, uint16_t post, void *ctx)
 {
     static protocore_tc_config cfg;
     cfg.pretrigger_samples = pre;
@@ -62,13 +62,13 @@ static uint16_t feed(const uint16_t *s, uint16_t n)
     return TraceCaptureV.accepted;
 }
 
-static proto_bool trigger(void)
+static embed_bool trigger(void)
 {
     TraceCapture.trigger(protocore_trace_capture_span());
     return TraceCaptureV.ok;
 }
 
-static proto_bool capturing(void)
+static embed_bool capturing(void)
 {
     TraceCapture.capturing(protocore_trace_capture_span());
     return TraceCaptureV.ok;

@@ -103,7 +103,7 @@ void test_response_token_is_found_after_negstate_and_supportedmech(void)
 
     const uint8_t *tok = NULL;
     size_t tok_len = 0;
-    proto_bool spnego_ok = Spnego.parse_response(spnego_work, BLOB, sizeof(BLOB), &tok, &tok_len);
+    embed_bool spnego_ok = Spnego.parse_response(spnego_work, BLOB, sizeof(BLOB), &tok, &tok_len);
     TEST_ASSERT_TRUE(spnego_ok);
     TEST_ASSERT_EQUAL_size_t(sizeof(NTLM), tok_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(NTLM, tok, sizeof(NTLM));
@@ -128,7 +128,7 @@ void test_wrap_then_parse_round_trip(void)
 
         const uint8_t *tok = NULL;
         size_t tok_len = 0;
-        proto_bool spnego_ok = Spnego.parse_response(spnego_work, wrapped, n, &tok, &tok_len);
+        embed_bool spnego_ok = Spnego.parse_response(spnego_work, wrapped, n, &tok, &tok_len);
         TEST_ASSERT_TRUE(spnego_ok);
         TEST_ASSERT_EQUAL_size_t(len, tok_len);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(ntlm, tok, len);
@@ -180,7 +180,7 @@ void test_parse_response_fails_closed(void)
 
     // Wrong outer tag: an InitialContextToken where a NegTokenResp belongs.
     static const uint8_t WRONG_OUTER[12] = {0x60, 0x0a, 0x30, 0x08, 0xa2, 0x06, 0x04, 0x04, 1, 2, 3, 4};
-    proto_bool spnego_ok = Spnego.parse_response(spnego_work, WRONG_OUTER, sizeof(WRONG_OUTER), &tok, &tok_len);
+    embed_bool spnego_ok = Spnego.parse_response(spnego_work, WRONG_OUTER, sizeof(WRONG_OUTER), &tok, &tok_len);
     TEST_ASSERT_FALSE(spnego_ok);
 
     // NegTokenResp whose content is not a SEQUENCE.

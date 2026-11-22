@@ -12,7 +12,7 @@
 
 #include "services/fieldbus/iolink/iolink.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -25,7 +25,7 @@ void protocore_iolink_checksum6(uint8_t *work);
 void protocore_iolink_mc(uint8_t *work)
 {
     (void)work;
-    proto_bool read = IolinkV.mc_args.read;
+    embed_bool read = IolinkV.mc_args.read;
     uint8_t channel = IolinkV.mc_args.channel;
     uint8_t address = IolinkV.mc_args.address;
 
@@ -68,8 +68,8 @@ void protocore_iolink_ckt(uint8_t *work)
 void protocore_iolink_cks(uint8_t *work)
 {
     (void)work;
-    proto_bool event = IolinkV.cks_args.event;
-    proto_bool pd_invalid = IolinkV.cks_args.pd_invalid;
+    embed_bool event = IolinkV.cks_args.event;
+    embed_bool pd_invalid = IolinkV.cks_args.pd_invalid;
     uint8_t checksum6 = IolinkV.cks_args.checksum6;
 
     IolinkV.value = (uint8_t)((event ? IOL_CKS_EVENT : 0u) | (pd_invalid ? IOL_CKS_PD_INVALID : 0u) |
@@ -133,7 +133,7 @@ void protocore_iolink_verify(uint8_t *work)
 
     if (!msg || check_idx >= len)
     {
-        IolinkV.ok = PROTO_FALSE;
+        IolinkV.ok = EMBED_FALSE;
         return;
     }
     uint8_t x = IOL_CHECKSUM_SEED;
@@ -147,6 +147,6 @@ void protocore_iolink_verify(uint8_t *work)
 /** @brief The operands and the outcome. */
 IolinkVars IolinkV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IOLINK

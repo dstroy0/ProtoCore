@@ -44,7 +44,7 @@ static_assert(SHA1_OFF_PAD + 128u <= PROTOCORE_SHA1_BORROW,
 static void sha1_block(uint32_t h[5], const uint8_t block[64])
 {
     protocore_sha_hw_acquire();
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_1, h, 5u, (const uint32_t *)(const void *)block, 16u, PROTO_FALSE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_1, h, 5u, (const uint32_t *)(const void *)block, 16u, EMBED_FALSE);
     protocore_sha_hw_release();
 }
 
@@ -171,14 +171,14 @@ static void sha1_run(uint8_t *work, const uint8_t *data, size_t len, uint8_t dig
     }
 }
 
-proto_bool protocore_sha1_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
+embed_bool protocore_sha1_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sha1_run(work, data, len, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_SHA1

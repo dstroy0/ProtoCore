@@ -23,7 +23,7 @@
 #include "crypto/mac/hmac_sha384/hmac_sha384.h"
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The caller's borrow, split: the HMAC's own, the T(i) block, then the HkdfLabel.
 #define HKDF_SHA384_OFF_HMAC 0u
@@ -45,7 +45,7 @@ static_assert(HKDF_SHA384_OFF_INFO + HKDF_SHA384_INFO_CAP <= PROTOCORE_HKDF_SHA3
 // RFC 5869 sec 2.3 HKDF-Expand. The TLS 1.3 secrets are one hash block each, but the general N-block
 // loop is written out so a caller asking for more than 48 bytes stays correct.
 // T(i) = HMAC(PRK, T(i-1) || info || i), i counts from 1.
-static proto_bool hkdf_sha384_derive(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len,
+static embed_bool hkdf_sha384_derive(uint8_t *work, const uint8_t *prk, const uint8_t *info, size_t info_len,
                                      uint8_t *out, size_t out_len)
 {
     // RFC 5869 sec 2.3 bounds L at 255*HashLen because the block counter is a single octet. Past
@@ -54,7 +54,7 @@ static proto_bool hkdf_sha384_derive(uint8_t *work, const uint8_t *prk, const ui
     if (out_len > (size_t)255 * PROTOCORE_HKDF_SHA384_HASH_LEN)
     {
         EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = out_len);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t *t = HKDF_SHA384_T(work);
     size_t t_len = 0; // 0 for T(0) (empty), PROTOCORE_HKDF_SHA384_HASH_LEN afterwards
@@ -78,11 +78,11 @@ static proto_bool hkdf_sha384_derive(uint8_t *work, const uint8_t *prk, const ui
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + done, .src = t, .bytes = take);
         done += take;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Compose the HkdfLabel in the borrow's info region and expand under it.
-static proto_bool hkdf_sha384_label_derive(uint8_t *work, const uint8_t *secret, const char *label,
+static embed_bool hkdf_sha384_label_derive(uint8_t *work, const uint8_t *secret, const char *label,
                                            const uint8_t *context, size_t context_len, uint8_t *out, size_t out_len,
                                            const char *label_prefix)
 {
@@ -122,12 +122,12 @@ static proto_bool hkdf_sha384_label_derive(uint8_t *work, const uint8_t *secret,
 // shorter ones, which is exactly HMAC's own key handling, so the salt goes in as-is.
 void protocore_hkdf_sha384_extract(uint8_t *work)
 {
-    HkdfSha384V.ok = PROTO_FALSE;
+    HkdfSha384V.ok = EMBED_FALSE;
     if (!HkdfSha384V.extract_args.prk)
     {
         return;
     }
-    proto_bool hmac_sha384_ok =
+    embed_bool hmac_sha384_ok =
         HmacSha384.mac(HKDF_SHA384_HMAC(work), HkdfSha384V.extract_args.salt, HkdfSha384V.extract_args.salt_len,
                        HkdfSha384V.extract_args.ikm, HkdfSha384V.extract_args.ikm_len, HkdfSha384V.extract_args.prk);
     HkdfSha384V.ok = hmac_sha384_ok;
@@ -135,7 +135,7 @@ void protocore_hkdf_sha384_extract(uint8_t *work)
 
 void protocore_hkdf_sha384_expand(uint8_t *work)
 {
-    HkdfSha384V.ok = PROTO_FALSE;
+    HkdfSha384V.ok = EMBED_FALSE;
     if (!HkdfSha384V.expand_args.prk || !HkdfSha384V.expand_args.out)
     {
         return;
@@ -147,7 +147,7 @@ void protocore_hkdf_sha384_expand(uint8_t *work)
 
 void protocore_hkdf_sha384_expand_label(uint8_t *work)
 {
-    HkdfSha384V.ok = PROTO_FALSE;
+    HkdfSha384V.ok = EMBED_FALSE;
     if (!HkdfSha384V.expand_label_args.secret || !HkdfSha384V.expand_label_args.label ||
         !HkdfSha384V.expand_label_args.label_prefix || !HkdfSha384V.expand_label_args.out)
     {
@@ -161,7 +161,7 @@ void protocore_hkdf_sha384_expand_label(uint8_t *work)
 
 void protocore_hkdf_sha384_expand_label_ctx(uint8_t *work)
 {
-    HkdfSha384V.ok = PROTO_FALSE;
+    HkdfSha384V.ok = EMBED_FALSE;
     if (!HkdfSha384V.expand_label_ctx_args.secret || !HkdfSha384V.expand_label_ctx_args.label ||
         !HkdfSha384V.expand_label_ctx_args.label_prefix || !HkdfSha384V.expand_label_ctx_args.out)
     {
@@ -177,6 +177,6 @@ void protocore_hkdf_sha384_expand_label_ctx(uint8_t *work)
 /** @brief The operands and the outcome. */
 HkdfSha384Vars HkdfSha384V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HKDF_SHA384

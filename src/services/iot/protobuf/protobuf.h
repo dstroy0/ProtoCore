@@ -53,7 +53,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_PROTOBUF
 
@@ -95,7 +95,7 @@ typedef struct
     uint32_t u32;        ///< I32 bits: a fixed32 payload, or the bits a decode converts
     float f32;           ///< float payload, encoded as I32
     double f64;          ///< double payload, encoded as I64
-    proto_bool flag;     ///< bool payload, encoded as the VARINT 0 or 1
+    embed_bool flag;     ///< bool payload, encoded as the VARINT 0 or 1
     const uint8_t *data; ///< LEN payload octets
     size_t len;          ///< how many of them there are
     const char *text;    ///< NUL-terminated LEN payload, bounded by the row's capacity
@@ -167,7 +167,7 @@ typedef struct
     ProtobufTagArgs tag;       ///< what a tag says
     ProtobufValueArgs value;   ///< what a payload carries
     ProtobufSourceArgs source; ///< what a decode walks
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint64_t u64;
     int64_t i64;
@@ -271,6 +271,6 @@ uint8_t *protocore_protobuf_span(void);
 
 #endif // PROTOCORE_ENABLE_PROTOBUF
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_PROTOBUF_H

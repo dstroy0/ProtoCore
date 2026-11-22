@@ -29,7 +29,7 @@ static void put_byte(mmgr_bitor *w, uint8_t b)
 {
     if (w->cnt >= w->cap)
     {
-        w->overflow = PROTO_TRUE;
+        w->overflow = EMBED_TRUE;
         return;
     }
     w->out[w->cnt++] = b;
@@ -91,7 +91,7 @@ void protocore_zlib_init(uint8_t *work, SshDeflate *z, uint8_t *win, uint16_t *h
     z->d_code = d_code;
     z->d_len = d_len;
     z->hist = 0;
-    z->header_sent = PROTO_FALSE;
+    z->header_sent = EMBED_FALSE;
     Rfc1951V.build_fixed_args.ll_code = z->ll_code;
     Rfc1951V.build_fixed_args.ll_len = z->ll_len;
     Rfc1951V.build_fixed_args.d_code = z->d_code;
@@ -137,7 +137,7 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
     w.cnt = 0;
     w.acc = 0;
     w.nbits = 0;
-    w.overflow = PROTO_FALSE;
+    w.overflow = EMBED_FALSE;
 
     // RFC 1950 zlib header, once at stream start: CMF=0x78 (deflate, 32 KB window), FLG=0x9C
     // (default level, FCHECK making 0x789C divisible by 31). Byte-aligned, before any deflate bits.
@@ -145,7 +145,7 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
     {
         put_byte(&w, 0x78);
         put_byte(&w, 0x9C);
-        z->header_sent = PROTO_TRUE;
+        z->header_sent = EMBED_TRUE;
     }
 
     // One fixed-Huffman block, not final: BFINAL=0 (1 bit), BTYPE=01 (2 bits, value 1).

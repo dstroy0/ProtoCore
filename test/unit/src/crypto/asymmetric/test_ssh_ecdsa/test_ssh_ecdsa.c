@@ -22,27 +22,27 @@ static uint8_t g_work[PROTOCORE_ECDSA_BORROW] __attribute__((aligned(8)));
 
 // The namespace, called the way the vectors below read: operands in, one call, answer out. The work
 // pointer stays a parameter on sign and verify because the cases pass it explicitly.
-static proto_bool ec_pubkey(uint8_t *pub, const uint8_t *priv)
+static embed_bool ec_pubkey(uint8_t *pub, const uint8_t *priv)
 {
-    proto_bool ecdsa_ok = Ecdsa.pubkey(g_work, priv, pub);
+    embed_bool ecdsa_ok = Ecdsa.pubkey(g_work, priv, pub);
     return ecdsa_ok;
 }
 
-static proto_bool ec_sign(uint8_t *sig, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *priv)
+static embed_bool ec_sign(uint8_t *sig, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *priv)
 {
-    proto_bool ecdsa_ok = Ecdsa.sign(w, msg, mlen, priv, sig);
+    embed_bool ecdsa_ok = Ecdsa.sign(w, msg, mlen, priv, sig);
     return ecdsa_ok;
 }
 
-static proto_bool ec_verify(const uint8_t *pub, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *sig)
+static embed_bool ec_verify(const uint8_t *pub, uint8_t *w, const uint8_t *msg, size_t mlen, const uint8_t *sig)
 {
-    proto_bool ecdsa_ok = Ecdsa.verify(w, pub, msg, mlen, sig);
+    embed_bool ecdsa_ok = Ecdsa.verify(w, pub, msg, mlen, sig);
     return ecdsa_ok;
 }
 
-static proto_bool ec_ecdh(uint8_t *shared_x, const uint8_t *peer_pub, const uint8_t *priv)
+static embed_bool ec_ecdh(uint8_t *shared_x, const uint8_t *peer_pub, const uint8_t *priv)
 {
-    proto_bool ecdsa_ok = Ecdsa.ecdh(g_work, peer_pub, priv, shared_x);
+    embed_bool ecdsa_ok = Ecdsa.ecdh(g_work, peer_pub, priv, shared_x);
     return ecdsa_ok;
 }
 

@@ -247,7 +247,7 @@ static void tls_data(uint8_t slot)
         http_h2_checked[slot] = 1;
         const char *alpn = protocore_tls_alpn(slot);
         if (alpn &&
-            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alpn, .other = "h2", .cap = sizeof("h2"), .ci = PROTO_FALSE))
+            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alpn, .other = "h2", .cap = sizeof("h2"), .ci = EMBED_FALSE))
         {
             http_h2[slot] = 1;
             http_resp_sink[slot] = protocore_h2_server_respond; // route responses through the h2 framer
@@ -374,7 +374,7 @@ void protocore_http_conn_proto_handler(uint8_t *work)
 void protocore_http_conn_has_token(uint8_t *work)
 {
     (void)work;
-    HttpConnV.ok = PROTO_FALSE;
+    HttpConnV.ok = EMBED_FALSE;
     if (HttpConnV.hdr_args.hdr == NULL)
     {
         return;
@@ -402,9 +402,9 @@ void protocore_http_conn_has_token(uint8_t *work)
         // measure against: the trimmed length is the bound, and the length test above it is what
         // stops a longer token matching on its prefix.
         if (len == tlen && EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = start, .other = token, .cap = tlen,
-                                      .ci = PROTO_TRUE) == tlen)
+                                      .ci = EMBED_TRUE) == tlen)
         {
-            HttpConnV.ok = PROTO_TRUE;
+            HttpConnV.ok = EMBED_TRUE;
             return;
         }
         if (*p == ',')
@@ -418,7 +418,7 @@ void protocore_http_conn_has_token(uint8_t *work)
 #if PROTOCORE_ENABLE_KEEPALIVE
 void protocore_http_conn_keepalive_eval(uint8_t *work)
 {
-    HttpConnV.ok = PROTO_FALSE;
+    HttpConnV.ok = EMBED_FALSE;
     HttpReq *req = &http_pool[HttpConnV.slot];
     // Only a cleanly-parsed request has a known message boundary; errors close.
     if (req->parse_state != PARSE_COMPLETE)
@@ -428,7 +428,7 @@ void protocore_http_conn_keepalive_eval(uint8_t *work)
 
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Connection");
     HttpConnV.hdr_args.hdr = http_parser_text;
-    proto_bool keep;
+    embed_bool keep;
     if (req->version == HTTP_11)
     {
         HttpConnV.hdr_args.token = "close";
@@ -441,7 +441,7 @@ void protocore_http_conn_keepalive_eval(uint8_t *work)
         protocore_http_conn_has_token(work);
         keep = HttpConnV.ok; // 1.0/unknown default: close
     }
-    HttpConnV.ok = PROTO_FALSE;
+    HttpConnV.ok = EMBED_FALSE;
     if (!keep)
     {
         return;
@@ -453,7 +453,7 @@ void protocore_http_conn_keepalive_eval(uint8_t *work)
     {
         return;
     }
-    HttpConnV.ok = PROTO_TRUE;
+    HttpConnV.ok = EMBED_TRUE;
 }
 #endif // PROTOCORE_ENABLE_KEEPALIVE
 

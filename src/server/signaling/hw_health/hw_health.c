@@ -13,7 +13,7 @@
 #include "server/signaling/hw_health/hw_health.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 void protocore_hw_health_rail_init(uint8_t *work)
 {
@@ -204,6 +204,6 @@ void protocore_hw_health_cap_leak(uint8_t *work)
 /** @brief The operands and the outcome. */
 HwHealthVars HwHealthV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH

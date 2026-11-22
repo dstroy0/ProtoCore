@@ -18,7 +18,7 @@
 
 #include "crypto/hash/sha256/sha256.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static char lc(char c)
 {
@@ -26,12 +26,12 @@ static char lc(char c)
 }
 
 // Read a run of decimal digits at *pp into @p out; advance *pp. False if no digit is present.
-static proto_bool rd_uint(const char **pp, int *out)
+static embed_bool rd_uint(const char **pp, int *out)
 {
     const char *p = *pp;
     if (*p < '0' || *p > '9')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int v = 0;
     while (*p >= '0' && *p <= '9')
@@ -41,11 +41,11 @@ static proto_bool rd_uint(const char **pp, int *out)
     }
     *pp = p;
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Read a 3-letter month abbreviation at *pp -> 1..12; advance past it. False if unrecognized.
-static proto_bool rd_month(const char **pp, int *out)
+static embed_bool rd_month(const char **pp, int *out)
 {
     static const char MONTHS[] = "janfebmaraprmayjunjulaugsepoctnovdec";
     const char *p = *pp;
@@ -58,32 +58,32 @@ static proto_bool rd_month(const char **pp, int *out)
         {
             *pp = p + 3;
             *out = m + 1;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Read "hh:mm:ss" at *pp; advance past it.
-static proto_bool rd_time(const char **pp, int *hh, int *mm, int *ss)
+static embed_bool rd_time(const char **pp, int *hh, int *mm, int *ss)
 {
     const char *p = *pp;
     if (!rd_uint(&p, hh) || *p != ':')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p++;
     if (!rd_uint(&p, mm) || *p != ':')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p++;
     if (!rd_uint(&p, ss))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *pp = p;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Days since 1970-01-01 for a proleptic-Gregorian y-m-d (Howard Hinnant's civil algorithm).
@@ -101,26 +101,26 @@ static int64_t days_from_civil(int y, int m, int d)
 }
 
 // Append @p s to out[*pos..cap), optionally lowercased. False (and no write) on overflow.
-static proto_bool k_append(char *out, size_t *pos, size_t cap, const char *s, proto_bool lower)
+static embed_bool k_append(char *out, size_t *pos, size_t cap, const char *s, embed_bool lower)
 {
     size_t p = *pos;
     for (const char *q = s; *q; q++)
     {
         if (p + 1 >= cap) // leave room for the terminating NUL
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out[p++] = lower ? lc(*q) : *q;
     }
     *pos = p;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // If the header line [p, lend) is "<name>: <value>" (case-insensitive name), copy the OWS-trimmed value
 // into out[0..out_cap) and return true. Non-match returns false with no write; a value that will not fit
 // sets *overflow (the caller must then fail the whole lookup - a validator is never truncated).
-static proto_bool header_line_value(const char *p, const char *lend, const char *name, size_t namelen, char *out,
-                                    size_t out_cap, proto_bool *overflow)
+static embed_bool header_line_value(const char *p, const char *lend, const char *name, size_t namelen, char *out,
+                                    size_t out_cap, embed_bool *overflow)
 {
     const char *colon = p;
     while (colon < lend && *colon != ':')
@@ -129,13 +129,13 @@ static proto_bool header_line_value(const char *p, const char *lend, const char 
     }
     if (colon >= lend || (size_t)(colon - p) != namelen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < namelen; i++)
     {
         if (lc(p[i]) != lc(name[i]))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     const char *v = colon + 1;
@@ -151,15 +151,15 @@ static proto_bool header_line_value(const char *p, const char *lend, const char 
     size_t vl = (size_t)(ve - v);
     if (vl >= out_cap)
     {
-        *overflow = PROTO_TRUE;
-        return PROTO_FALSE; // never truncate a validator
+        *overflow = EMBED_TRUE;
+        return EMBED_FALSE; // never truncate a validator
     }
     for (size_t i = 0; i < vl; i++)
     {
         out[i] = v[i];
     }
     out[vl] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The entries this file calls before reaching their definitions.
@@ -192,7 +192,7 @@ void protocore_edge_cache_header_value(uint8_t *work)
 
     if (!hdrs || !name || !out || out_cap == 0)
     {
-        EdgeCacheV.ok = PROTO_FALSE;
+        EdgeCacheV.ok = EMBED_FALSE;
         return;
     }
     out[0] = '\0';
@@ -228,24 +228,24 @@ void protocore_edge_cache_header_value(uint8_t *work)
         {
             lend--;
         }
-        proto_bool overflow = PROTO_FALSE;
+        embed_bool overflow = EMBED_FALSE;
         if (header_line_value(p, lend, name, namelen, out, out_cap, &overflow))
         {
-            EdgeCacheV.ok = PROTO_TRUE;
+            EdgeCacheV.ok = EMBED_TRUE;
             return;
         }
         if (overflow)
         {
-            EdgeCacheV.ok = PROTO_FALSE;
+            EdgeCacheV.ok = EMBED_FALSE;
             return;
         }
         p = (le < end) ? le + 1 : end;
     }
-    EdgeCacheV.ok = PROTO_FALSE;
+    EdgeCacheV.ok = EMBED_FALSE;
 }
 
 // IMF-fixdate "Sun, 06 Nov 1994 08:49:37 GMT" or RFC 850 "Sunday, 06-Nov-94 08:49:37 GMT" (from past ',').
-static proto_bool parse_date_after_comma(const char *p, int *mday, int *mon, int *year, int *hh, int *mm, int *ss)
+static embed_bool parse_date_after_comma(const char *p, int *mday, int *mon, int *year, int *hh, int *mm, int *ss)
 {
     while (*p == ' ')
     {
@@ -253,20 +253,20 @@ static proto_bool parse_date_after_comma(const char *p, int *mday, int *mon, int
     }
     if (!rd_uint(&p, mday))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool rfc850 = (*p == '-');
+    embed_bool rfc850 = (*p == '-');
     if (*p == '-' || *p == ' ')
     {
         p++;
     }
     else
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!rd_month(&p, mon))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (*p == '-')
     {
@@ -281,7 +281,7 @@ static proto_bool parse_date_after_comma(const char *p, int *mday, int *mon, int
     }
     if (!rd_uint(&p, year))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (rfc850 && *year < 100) // 2-digit year window (RFC 6265-style)
     {
@@ -295,7 +295,7 @@ static proto_bool parse_date_after_comma(const char *p, int *mday, int *mon, int
 }
 
 // asctime "Sun Nov  6 08:49:37 1994".
-static proto_bool parse_date_asctime(const char *p, int *mday, int *mon, int *year, int *hh, int *mm, int *ss)
+static embed_bool parse_date_asctime(const char *p, int *mday, int *mon, int *year, int *hh, int *mm, int *ss)
 {
     while (*p && *p != ' ')
     {
@@ -307,7 +307,7 @@ static proto_bool parse_date_asctime(const char *p, int *mday, int *mon, int *ye
     }
     if (!rd_month(&p, mon))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     while (*p == ' ')
     {
@@ -315,7 +315,7 @@ static proto_bool parse_date_asctime(const char *p, int *mday, int *mon, int *ye
     }
     if (!rd_uint(&p, mday))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     while (*p == ' ')
     {
@@ -323,7 +323,7 @@ static proto_bool parse_date_asctime(const char *p, int *mday, int *mon, int *ye
     }
     if (!rd_time(&p, hh, mm, ss))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     while (*p == ' ')
     {
@@ -364,8 +364,8 @@ void protocore_edge_cache_parse_http_date(uint8_t *work)
     int mm = 0;
     int ss = 0;
     const char *comma = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = buf, .cap = len + 1u, .other = ",",
-                                   .other_cap = sizeof(","), .ci = PROTO_FALSE);
-    proto_bool ok = comma ? parse_date_after_comma(comma + 1, &mday, &mon, &year, &hh, &mm, &ss)
+                                   .other_cap = sizeof(","), .ci = EMBED_FALSE);
+    embed_bool ok = comma ? parse_date_after_comma(comma + 1, &mday, &mon, &year, &hh, &mm, &ss)
                           : parse_date_asctime(buf, &mday, &mon, &year, &hh, &mm, &ss);
     if (!ok)
     {
@@ -391,7 +391,7 @@ void protocore_edge_cache_freshness_lifetime(uint8_t *work)
 {
     (void)work;
     const protocore_cache_control *cc = EdgeCacheV.freshness_lifetime_args.cc;
-    proto_bool shared = EdgeCacheV.freshness_lifetime_args.shared;
+    embed_bool shared = EdgeCacheV.freshness_lifetime_args.shared;
     int64_t date_epoch = EdgeCacheV.freshness_lifetime_args.date_epoch;
     int64_t expires_epoch = EdgeCacheV.freshness_lifetime_args.expires_epoch;
 
@@ -473,7 +473,7 @@ void protocore_edge_cache_key_canon(uint8_t *work)
     const char *host = EdgeCacheV.key_canon_args.host;
     const char *path = EdgeCacheV.key_canon_args.path;
     const char *query = EdgeCacheV.key_canon_args.query;
-    proto_bool include_query = EdgeCacheV.key_canon_args.include_query;
+    embed_bool include_query = EdgeCacheV.key_canon_args.include_query;
     char *out = EdgeCacheV.key_canon_args.out;
     size_t out_cap = EdgeCacheV.key_canon_args.out_cap;
 
@@ -483,23 +483,23 @@ void protocore_edge_cache_key_canon(uint8_t *work)
         return;
     }
     size_t pos = 0;
-    if (!k_append(out, &pos, out_cap, method, PROTO_FALSE))
+    if (!k_append(out, &pos, out_cap, method, EMBED_FALSE))
     {
         EdgeCacheV.n = 0;
         return;
     }
-    if (!k_append(out, &pos, out_cap, "\n", PROTO_FALSE) || !k_append(out, &pos, out_cap, host, PROTO_TRUE))
+    if (!k_append(out, &pos, out_cap, "\n", EMBED_FALSE) || !k_append(out, &pos, out_cap, host, EMBED_TRUE))
     {
         EdgeCacheV.n = 0;
         return;
     }
-    if (!k_append(out, &pos, out_cap, "\n", PROTO_FALSE) || !k_append(out, &pos, out_cap, path, PROTO_FALSE))
+    if (!k_append(out, &pos, out_cap, "\n", EMBED_FALSE) || !k_append(out, &pos, out_cap, path, EMBED_FALSE))
     {
         EdgeCacheV.n = 0;
         return;
     }
     if (include_query && query && query[0] &&
-        (!k_append(out, &pos, out_cap, "\n", PROTO_FALSE) || !k_append(out, &pos, out_cap, query, PROTO_FALSE)))
+        (!k_append(out, &pos, out_cap, "\n", EMBED_FALSE) || !k_append(out, &pos, out_cap, query, EMBED_FALSE)))
     {
         EdgeCacheV.n = 0;
         return;
@@ -524,7 +524,7 @@ void protocore_edge_cache_key_digest(uint8_t *work)
 // "name\x1e value" record to out, closed by \x1f when the request carried the field and by \x1d when
 // it did not, so distinct names cannot alias and a present-but-empty value does not serialize like an
 // absent one. Returns false on "Vary: *" (uncacheable) or on overflow.
-static proto_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx, char *out, size_t *pos,
+static embed_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx, char *out, size_t *pos,
                                 size_t out_cap)
 {
     const char *p = *pp;
@@ -534,7 +534,7 @@ static proto_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx
     {
         if (*p == '*') // Vary: * -> uncacheable
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (nl + 1 < sizeof(name))
         {
@@ -546,18 +546,18 @@ static proto_bool vary_emit_one(const char **pp, EdgeHdrLookup lookup, void *ctx
     *pp = p;
     if (nl == 0)
     {
-        return PROTO_TRUE; // nothing to emit; caller advances
+        return EMBED_TRUE; // nothing to emit; caller advances
     }
     const char *val = lookup ? lookup(ctx, name) : NULL;
-    if (!k_append(out, pos, out_cap, name, PROTO_FALSE) || !k_append(out, pos, out_cap, "\x1e", PROTO_FALSE))
+    if (!k_append(out, pos, out_cap, name, EMBED_FALSE) || !k_append(out, pos, out_cap, "\x1e", EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    if (val && !k_append(out, pos, out_cap, val, PROTO_FALSE))
+    if (val && !k_append(out, pos, out_cap, val, EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return k_append(out, pos, out_cap, val ? "\x1f" : "\x1d", PROTO_FALSE);
+    return k_append(out, pos, out_cap, val ? "\x1f" : "\x1d", EMBED_FALSE);
 }
 
 void protocore_edge_cache_vary_serialize(uint8_t *work)
@@ -571,13 +571,13 @@ void protocore_edge_cache_vary_serialize(uint8_t *work)
 
     if (!out || out_cap == 0)
     {
-        EdgeCacheV.ok = PROTO_FALSE;
+        EdgeCacheV.ok = EMBED_FALSE;
         return;
     }
     out[0] = '\0';
     if (!vary_header)
     {
-        EdgeCacheV.ok = PROTO_TRUE;
+        EdgeCacheV.ok = EMBED_TRUE;
         return; // no Vary -> empty key
     }
     size_t pos = 0;
@@ -594,12 +594,12 @@ void protocore_edge_cache_vary_serialize(uint8_t *work)
         }
         if (!vary_emit_one(&p, lookup, ctx, out, &pos, out_cap))
         {
-            EdgeCacheV.ok = PROTO_FALSE;
+            EdgeCacheV.ok = EMBED_FALSE;
             return;
         }
     }
     out[pos] = '\0';
-    EdgeCacheV.ok = PROTO_TRUE;
+    EdgeCacheV.ok = EMBED_TRUE;
 }
 
 // --- L1 store ------------------------------------------------------------------------------------
@@ -646,7 +646,7 @@ static void lru_push_front(EdgeCacheStore *s, uint16_t i)
 static void store_free(EdgeCacheStore *s, uint16_t i)
 {
     lru_unlink(s, i);
-    s->entries[i].used = PROTO_FALSE;
+    s->entries[i].used = EMBED_FALSE;
 }
 
 // The path portion of a canonical key "METHOD\nhost\npath[\nquery]" (after the 2nd '\n'), or nullptr.
@@ -667,20 +667,20 @@ static const char *key_path(const char *key)
     return NULL;
 }
 
-static proto_bool vary_is_star(const char *vary_header)
+static embed_bool vary_is_star(const char *vary_header)
 {
     if (!vary_header)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (const char *p = vary_header; *p; p++)
     {
         if (*p == '*')
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void protocore_edge_cache_store_init(uint8_t *work)
@@ -740,7 +740,7 @@ void protocore_edge_cache_store_alloc(uint8_t *work)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = e, .val = 0, .bytes = sizeof(*e));
     e->lru.prev = PROTOCORE_EDGE_LRU_NONE;
     e->lru.next = PROTOCORE_EDGE_LRU_NONE;
-    e->used = PROTO_TRUE;
+    e->used = EMBED_TRUE;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = e->key, .src = canon, .bytes = klen);
     e->key[klen] = '\0';
     EdgeCacheV.key_digest_args.digest_work = s->digest_work;
@@ -779,9 +779,9 @@ void protocore_edge_cache_store_lookup(uint8_t *work)
         EdgeEntry *e = &s->entries[i];
         if (e->used &&
             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = canon, .other = e->key, .cap = sizeof(e->key),
-                       .ci = PROTO_FALSE) &&
+                       .ci = EMBED_FALSE) &&
             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = vk, .other = e->vary_vals, .cap = sizeof(e->vary_vals),
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             lru_unlink(s, i);
             lru_push_front(s, i);
@@ -806,7 +806,7 @@ void protocore_edge_cache_store_find(uint8_t *work)
     {
         EdgeEntry *e = &s->entries[i];
         if (!e->used || !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = canon, .other = e->key, .cap = sizeof(e->key),
-                                    .ci = PROTO_FALSE))
+                                    .ci = EMBED_FALSE))
         {
             continue;
         }
@@ -823,7 +823,7 @@ void protocore_edge_cache_store_find(uint8_t *work)
             continue;
         }
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = cur, .other = e->vary_vals, .cap = sizeof(cur),
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             lru_unlink(s, i);
             lru_push_front(s, i);
@@ -840,7 +840,7 @@ void protocore_edge_cache_entry_set_freshness(uint8_t *work)
     (void)work;
     EdgeEntry *e = EdgeCacheV.entry_set_freshness_args.e;
     const protocore_cache_control *cc = EdgeCacheV.entry_set_freshness_args.cc;
-    proto_bool shared = EdgeCacheV.entry_set_freshness_args.shared;
+    embed_bool shared = EdgeCacheV.entry_set_freshness_args.shared;
     int64_t date_epoch = EdgeCacheV.entry_set_freshness_args.date_epoch;
     int64_t expires_epoch = EdgeCacheV.entry_set_freshness_args.expires_epoch;
     int64_t last_modified_epoch = EdgeCacheV.entry_set_freshness_args.last_modified_epoch;
@@ -928,11 +928,11 @@ void protocore_edge_cache_store_sweep(uint8_t *work)
         // the short-circuit is kept by testing the captured values rather than the calls.
         EdgeCacheV.entry_has_validator_args.e = e;
         protocore_edge_cache_entry_has_validator(work);
-        const proto_bool has_validator = EdgeCacheV.ok;
+        const embed_bool has_validator = EdgeCacheV.ok;
         EdgeCacheV.entry_fresh_args.e = e;
         EdgeCacheV.entry_fresh_args.now_ms = now_ms;
         protocore_edge_cache_entry_fresh(work);
-        const proto_bool fresh = EdgeCacheV.ok;
+        const embed_bool fresh = EdgeCacheV.ok;
         if (!has_validator && !fresh)
         {
             store_free(s, i);
@@ -953,7 +953,7 @@ void protocore_edge_cache_store_purge(uint8_t *work)
     for (uint16_t i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
         if (s->entries[i].used && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = canon, .other = s->entries[i].key,
-                                             .cap = sizeof(s->entries[i].key), .ci = PROTO_FALSE))
+                                             .cap = sizeof(s->entries[i].key), .ci = EMBED_FALSE))
         {
             store_free(s, i);
             s->stats.purges++;
@@ -979,7 +979,7 @@ void protocore_edge_cache_store_purge_prefix(uint8_t *work)
         }
         const char *path = key_path(s->entries[i].key);
         if (path &&
-            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = prefix, .cap = plen, .ci = PROTO_FALSE))
+            EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = prefix, .cap = plen, .ci = EMBED_FALSE))
         {
             store_free(s, i);
             s->stats.purges++;
@@ -1015,41 +1015,41 @@ void protocore_edge_cache_is_storeable(uint8_t *work)
     size_t body_len = EdgeCacheV.is_storeable_args.body_len;
 
     if (!method ||
-        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = method, .other = "GET", .cap = sizeof("GET"), .ci = PROTO_FALSE))
+        !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = method, .other = "GET", .cap = sizeof("GET"), .ci = EMBED_FALSE))
     {
-        EdgeCacheV.ok = PROTO_FALSE;
+        EdgeCacheV.ok = EMBED_FALSE;
         return;
     }
     if (status != 200)
     {
-        EdgeCacheV.ok = PROTO_FALSE;
+        EdgeCacheV.ok = EMBED_FALSE;
         return; // v1: only 200 (other cacheable-by-default statuses are a follow-up)
     }
     if (cc && (cc->no_store || cc->cc_private))
     {
-        EdgeCacheV.ok = PROTO_FALSE;
+        EdgeCacheV.ok = EMBED_FALSE;
         return;
     }
     if (vary_is_star(vary_header))
     {
-        EdgeCacheV.ok = PROTO_FALSE;
+        EdgeCacheV.ok = EMBED_FALSE;
         return;
     }
     if (body_len > PROTOCORE_EDGE_BODY_MAX)
     {
-        EdgeCacheV.ok = PROTO_FALSE;
+        EdgeCacheV.ok = EMBED_FALSE;
         return;
     }
-    EdgeCacheV.ok = PROTO_TRUE;
+    EdgeCacheV.ok = EMBED_TRUE;
 }
 
 // --- conditional revalidation --------------------------------------------------------------------
 
 // Append "<name>: <value>\r\n" to out[*pos..cap). False (and no write) on overflow.
-static proto_bool hdr_line(char *out, size_t *pos, size_t cap, const char *name, const char *value)
+static embed_bool hdr_line(char *out, size_t *pos, size_t cap, const char *name, const char *value)
 {
-    return k_append(out, pos, cap, name, PROTO_FALSE) && k_append(out, pos, cap, ": ", PROTO_FALSE) &&
-           k_append(out, pos, cap, value, PROTO_FALSE) && k_append(out, pos, cap, "\r\n", PROTO_FALSE);
+    return k_append(out, pos, cap, name, EMBED_FALSE) && k_append(out, pos, cap, ": ", EMBED_FALSE) &&
+           k_append(out, pos, cap, value, EMBED_FALSE) && k_append(out, pos, cap, "\r\n", EMBED_FALSE);
 }
 
 void protocore_edge_cache_build_conditional(uint8_t *work)
@@ -1150,7 +1150,7 @@ void protocore_edge_cache_apply_304(uint8_t *work)
         // Clamp every digit so the accumulator stays at or below INT32_MAX and the next multiply-add
         // stays inside int64_t however many digits the origin sent.
         int64_t a = 0;
-        proto_bool any = PROTO_FALSE;
+        embed_bool any = EMBED_FALSE;
         for (const char *p = v; *p >= '0' && *p <= '9'; p++)
         {
             a = a * 10 + (*p - '0');
@@ -1158,7 +1158,7 @@ void protocore_edge_cache_apply_304(uint8_t *work)
             {
                 a = INT32_MAX;
             }
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
         if (any)
         {
@@ -1211,7 +1211,7 @@ void protocore_edge_cache_apply_304(uint8_t *work)
 
     EdgeCacheV.entry_set_freshness_args.e = e;
     EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCacheV.entry_set_freshness_args.shared = EMBED_TRUE;
     EdgeCacheV.entry_set_freshness_args.date_epoch = date;
     EdgeCacheV.entry_set_freshness_args.expires_epoch = expires;
     EdgeCacheV.entry_set_freshness_args.last_modified_epoch = last_mod;
@@ -1224,6 +1224,6 @@ void protocore_edge_cache_apply_304(uint8_t *work)
 /** @brief The operands and the outcome. */
 EdgeCacheVars EdgeCacheV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_CACHE

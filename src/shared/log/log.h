@@ -30,7 +30,7 @@
 #include "numeros_scribo/numeros_scribo.h"
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Receives an emitted line, already formatted. @p level is a PROTOCORE_LOG_LEVEL_* value. */
 typedef void (*protocore_log_sink_fn)(uint8_t level, const char *line);
@@ -151,6 +151,6 @@ uint8_t *protocore_log_span(void);
 #define PROTOCORE_LOGE(spec, v, nv) PROTOCORE_LOG_DISCARD((spec), (v), (nv))
 #endif
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_LOG_H

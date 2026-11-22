@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_SHA3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /// Sponge rates (block size in octets = 1600/8 - 2*capacity/8) for the modes we use.
 #define KECCAK_RATE_SHA3_256 136
@@ -122,7 +122,7 @@ typedef struct
     Sha3DigestArgs digest_args;
     Sha3XofArgs xof_args;
     Sha3Shake128AbsorbArgs shake128_absorb_args;
-    proto_bool ok;
+    embed_bool ok;
 } Sha3Vars;
 
 /** @brief The operands and the outcome. */
@@ -164,7 +164,7 @@ static const Sha3Ns Sha3 __attribute__((unused)) = {
     .shake128_absorb = protocore_sha3_shake128_absorb,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SHA3
 

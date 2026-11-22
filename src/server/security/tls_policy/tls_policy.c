@@ -15,7 +15,7 @@
 
 #include "server/security/tls_policy/tls_policy.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -23,7 +23,7 @@ PROTOCORE_BEGIN_DECLS
 void protocore_tls_policy_negotiate(uint8_t *work)
 {
     (void)work;
-    TlsPolicyV.ok = PROTO_FALSE;
+    TlsPolicyV.ok = EMBED_FALSE;
     TlsPolicyV.version = 0;
     const uint16_t client_max = TlsPolicyV.negotiate_args.client_max;
     const uint16_t server_min = TlsPolicyV.negotiate_args.server_min;
@@ -37,7 +37,7 @@ void protocore_tls_policy_negotiate(uint8_t *work)
         return; // the client cannot go as high as we require
     }
     TlsPolicyV.version = client_max < server_max ? client_max : server_max;
-    TlsPolicyV.ok = PROTO_TRUE;
+    TlsPolicyV.ok = EMBED_TRUE;
 }
 
 void protocore_tls_policy_name(uint8_t *work)
@@ -55,14 +55,14 @@ void protocore_tls_policy_name(uint8_t *work)
         TlsPolicyV.text = "unknown";
         break;
     }
-    TlsPolicyV.ok = PROTO_TRUE;
+    TlsPolicyV.ok = EMBED_TRUE;
 }
 
 // Server preference: walk the pinned list in order, take the first the client also offered.
 void protocore_tls_policy_select(uint8_t *work)
 {
     (void)work;
-    TlsPolicyV.ok = PROTO_FALSE;
+    TlsPolicyV.ok = EMBED_FALSE;
     TlsPolicyV.suite = 0;
     const uint16_t *client_offered = TlsPolicyV.select_args.client_offered;
     const uint16_t *server_pinned = TlsPolicyV.select_args.server_pinned;
@@ -77,7 +77,7 @@ void protocore_tls_policy_select(uint8_t *work)
             if (server_pinned[i] == client_offered[j])
             {
                 TlsPolicyV.suite = server_pinned[i];
-                TlsPolicyV.ok = PROTO_TRUE;
+                TlsPolicyV.ok = EMBED_TRUE;
                 return;
             }
         }
@@ -100,18 +100,18 @@ void protocore_tls_policy_is_aead(uint8_t *work)
     case 0xC030: // ECDHE_RSA_AES_256_GCM_SHA384
     case 0xCCA8: // ECDHE_RSA_CHACHA20_POLY1305
     case 0xCCA9: // ECDHE_ECDSA_CHACHA20_POLY1305
-        TlsPolicyV.aead = PROTO_TRUE;
+        TlsPolicyV.aead = EMBED_TRUE;
         break;
     default:
-        TlsPolicyV.aead = PROTO_FALSE;
+        TlsPolicyV.aead = EMBED_FALSE;
         break;
     }
-    TlsPolicyV.ok = PROTO_TRUE;
+    TlsPolicyV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 TlsPolicyVars TlsPolicyV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TLS_POLICY

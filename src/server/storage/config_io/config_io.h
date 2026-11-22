@@ -23,18 +23,17 @@
 
 #if PROTOCORE_ENABLE_CONFIG_IO
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
 /** @brief Type of a config field (selects the typed get/set used). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_cfg_type,
     PROTOCORE_CFG_STR = 0, ///< null-terminated string.
     PROTOCORE_CFG_U32 = 1, ///< unsigned 32-bit integer (serialized as decimal).
-} protocore_cfg_type;
+);
 
 /** @brief One field in an export/restore schema. */
 typedef struct
@@ -92,7 +91,7 @@ typedef struct
 {
     ConfigIoExportArgs export_args;
     ConfigIoImportArgs import_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
 } ConfigIoVars;
 
@@ -120,7 +119,7 @@ static const ConfigIoNs ConfigIo __attribute__((unused)) = {
     .import_lines = protocore_config_io_import,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CONFIG_IO
 

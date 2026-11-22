@@ -31,7 +31,7 @@ static uint8_t http_date_work[16];      // the borrow an entry takes; HttpDate n
 #include "server/clock/clock.h"                          // Clock.millis: how the epoch advances between syncs
 #include "shared/ip/ip.h"                                // Ip.parse: a server given as a literal address
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
 // a cold-booted RTC sits near the Unix epoch.
@@ -90,11 +90,11 @@ uint8_t *protocore_ntp_service_span(void)
 // Take the request borrow on first use and hold it for the life of the program. The cookie it
 // carries is what authenticates the reply, so the bytes come from the secure pool, whose release
 // wipes. False when the pool cannot cover it, and begin() fails closed on that.
-static proto_bool ntp_mem_bind(uint8_t *work)
+static embed_bool ntp_mem_bind(uint8_t *work)
 {
     if (EMBED_CALL(spat.has_storage, SpatiumCfg, .span = NTP_SERVICE_CTX(work)->req))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     NTP_SERVICE_CTX(work)->req =
         EMBED_CALL(spat.from, SpatiumCfg, .buf = (uint8_t *)protocore_secure_persist(PROTOCORE_NTP_PACKET_LEN),
@@ -177,7 +177,7 @@ void protocore_ntp_service_begin(uint8_t *work)
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     if (!ntp_mem_bind(work))
     {
-        NtpServiceV.ok = PROTO_FALSE; // no storage
+        NtpServiceV.ok = EMBED_FALSE; // no storage
         return;
     }
     IpV.args.text = host;
@@ -185,7 +185,7 @@ void protocore_ntp_service_begin(uint8_t *work)
     Ip.parse(work);
     if (!IpV.ok)
     {
-        NtpServiceV.ok = PROTO_FALSE; // a name, and this client has no resolver of its own
+        NtpServiceV.ok = EMBED_FALSE; // a name, and this client has no resolver of its own
         return;
     }
     // Bind every time rather than remembering: the listener rebinds a port it already holds, and a
@@ -198,7 +198,7 @@ void protocore_ntp_service_begin(uint8_t *work)
     UdpListener.listen(protocore_udp_listener_span());
     if (!UdpListenerV.ok)
     {
-        NtpServiceV.ok = PROTO_FALSE;
+        NtpServiceV.ok = EMBED_FALSE;
         return;
     }
     // The transmit stamp doubles as the cookie the reply has to echo. Ticks, not a clock: this runs
@@ -259,7 +259,7 @@ void protocore_ntp_service_time_source(uint8_t *work)
 /** @brief The operands and the outcome. */
 NtpServiceVars NtpServiceV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif
 

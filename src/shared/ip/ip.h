@@ -25,31 +25,29 @@
 #ifndef PROTOCORE_IP_H
 #define PROTOCORE_IP_H
 
-#include "protocore_config.h" // the entry point; it sets the widths and reaches protocore_types.h for proto_bool
+#include "protocore_config.h" // the entry point; it sets the widths and reaches protocore_types.h for embed_bool
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Address family tag. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_ip_family,
     PROTOCORE_IP_NONE = 0, ///< empty / unparsed
     PROTOCORE_IP_V4 = 4,   ///< IPv4 (bytes[0..3])
     PROTOCORE_IP_V6 = 6,   ///< IPv6 (bytes[0..15])
-} protocore_ip_family;
-static_assert(sizeof(protocore_ip_family) == 1, "protocore_ip_family must stay one byte (PROTO_ENUM_PACKED); "
+);
+static_assert(sizeof(protocore_ip_family) == 1, "protocore_ip_family must stay one byte (EMBED_ENUM_BYTE); "
                                                 "protocore_ip is embedded wherever an address is stored");
 
 /** @brief Address scope, in rough order of reachability (used for allow/deny policy + logging). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_ip_scope,
     PROTOCORE_IP_SCOPE_UNSPECIFIED = 0, ///< 0.0.0.0 / ::
     PROTOCORE_IP_SCOPE_LOOPBACK,        ///< 127.0.0.0/8 / ::1
     PROTOCORE_IP_SCOPE_LINK_LOCAL,      ///< 169.254.0.0/16 / fe80::/10
     PROTOCORE_IP_SCOPE_PRIVATE,         ///< RFC1918 (10/8, 172.16/12, 192.168/16) / ULA fc00::/7
     PROTOCORE_IP_SCOPE_MULTICAST,       ///< 224.0.0.0/4 / ff00::/8
     PROTOCORE_IP_SCOPE_GLOBAL,          ///< globally routable unicast
-} protocore_ip_scope;
-static_assert(sizeof(protocore_ip_scope) == 1, "protocore_ip_scope must stay one byte (PROTO_ENUM_PACKED)");
+);
+static_assert(sizeof(protocore_ip_scope) == 1, "protocore_ip_scope must stay one byte (EMBED_ENUM_BYTE)");
 
 /** @brief A v4 or v6 address in network (big-endian) byte order. */
 typedef struct protocore_ip
@@ -77,7 +75,7 @@ typedef struct protocore_ip
 /** @brief True if @p a and @p b are the same family and address. */
 
 /** @brief True if @p ip is an IPv4-mapped IPv6 address (::ffff:a.b.c.d, RFC 4291 §2.5.5.2). */
-proto_bool protocore_ip_is_v4_mapped(const protocore_ip *ip);
+embed_bool protocore_ip_is_v4_mapped(const protocore_ip *ip);
 
 /**
  * @brief Build a v4 ::protocore_ip from four octets (a.b.c.d).
@@ -135,7 +133,7 @@ typedef struct
 typedef struct
 {
     IpArgs args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     protocore_ip_scope scope;
 } IpVars;
@@ -176,6 +174,6 @@ static const IpNs Ip __attribute__((unused)) = {
     .prefix_match = protocore_ip_prefix_match,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IP_H

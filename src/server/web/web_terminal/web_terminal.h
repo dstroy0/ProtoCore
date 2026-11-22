@@ -41,7 +41,7 @@
 
 #if PROTOCORE_ENABLE_WEB_TERMINAL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_WEB_TERMINAL_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums it
 // into its arena. A caller takes them once and passes the pointer to every call. How they are
@@ -85,7 +85,7 @@ typedef struct
     WebTerminalOnCommandArgs on_command_args;
     WebTerminalPrintArgs print_args;
     WebTerminalPrintlnArgs println_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t value;
 } WebTerminalVars;
 
@@ -133,7 +133,7 @@ static const WebTerminalNs WebTerminal __attribute__((unused)) = {
  */
 uint8_t *protocore_web_terminal_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEB_TERMINAL
 

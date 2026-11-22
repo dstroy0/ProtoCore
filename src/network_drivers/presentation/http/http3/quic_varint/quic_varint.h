@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file quic_varint.h
@@ -39,7 +39,7 @@ typedef struct
 {
     size_t (*len)(uint8_t *, uint64_t);
     size_t (*encode)(uint8_t *, uint8_t *, size_t, uint64_t);
-    proto_bool (*decode)(uint8_t *, const uint8_t *, size_t, uint64_t *, size_t *);
+    embed_bool (*decode)(uint8_t *, const uint8_t *, size_t, uint64_t *, size_t *);
 } QuicVarintNs;
 PROTOCORE_NS_LAYOUT(QuicVarintNs, len, encode, decode);
 
@@ -66,15 +66,15 @@ size_t protocore_quic_varint_encode(uint8_t *work, uint8_t *out, size_t cap, uin
  * @param len Len
  * @param value Value
  * @param consumed Consumed
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_quic_varint_decode(uint8_t *work, const uint8_t *in, size_t len, uint64_t *value,
+embed_bool protocore_quic_varint_decode(uint8_t *work, const uint8_t *in, size_t len, uint64_t *value,
                                         size_t *consumed);
 
 /** @brief Module namespace. */
 PROTOCORE_NS QuicVarintNs QuicVarint PROTOCORE_UNUSED = {
     .len = protocore_quic_varint_len, .encode = protocore_quic_varint_encode, .decode = protocore_quic_varint_decode};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_QUIC_VARINT_H

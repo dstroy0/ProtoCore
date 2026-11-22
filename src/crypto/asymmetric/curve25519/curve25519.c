@@ -38,7 +38,7 @@
 #include "crypto/asymmetric/fe25519/fe25519.h"
 #include "memoria_operor/memoria_operor.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition, both arms, private to this TU. It sits at CURVE25519_OFF_CTX in the caller's
 // borrow, so its size never leaves this file and no consumer can name it.
@@ -562,7 +562,7 @@ static void x25519_mult(uint8_t *work, uint8_t out[32], const uint8_t scalar[32]
 
 void protocore_curve25519_x25519(uint8_t *work)
 {
-    Curve25519V.ok = PROTO_FALSE;
+    Curve25519V.ok = EMBED_FALSE;
     if (!Curve25519V.x25519_args.out || !Curve25519V.x25519_args.scalar || !Curve25519V.x25519_args.point)
     {
         return;
@@ -586,7 +586,7 @@ void protocore_curve25519_x25519(uint8_t *work)
 // zero (RFC 7748 §5).
 void protocore_curve25519_x25519_base(uint8_t *work)
 {
-    Curve25519V.ok = PROTO_FALSE;
+    Curve25519V.ok = EMBED_FALSE;
     if (!Curve25519V.x25519_base_args.out || !Curve25519V.x25519_base_args.scalar)
     {
         return;
@@ -595,12 +595,12 @@ void protocore_curve25519_x25519_base(uint8_t *work)
     EMBED_CALL(memor.set, MemoriaCfg, .dst = ctx->base, .bytes = 32, .val = 0);
     ctx->base[0] = 9;
     x25519_mult(work, Curve25519V.x25519_base_args.out, Curve25519V.x25519_base_args.scalar, ctx->base);
-    Curve25519V.ok = PROTO_TRUE;
+    Curve25519V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Curve25519Vars Curve25519V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CURVE25519

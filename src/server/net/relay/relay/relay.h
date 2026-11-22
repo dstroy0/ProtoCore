@@ -31,19 +31,18 @@
 
 #if PROTOCORE_ENABLE_RELAY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
 /** @brief protocore_relay_step() outcome. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_relay_status,
     PROTOCORE_RELAY_ERROR = -1,  ///< a send/recv seam reported an error; the caller should close both sides
     PROTOCORE_RELAY_RUNNING = 0, ///< still relaying (keep stepping)
     PROTOCORE_RELAY_DONE = 1,    ///< both directions finished (EOF + drained); the caller closes both sides
-} protocore_relay_status;
+);
 
 /**
  * @brief Read up to @p cap bytes from the peer into @p buf.
@@ -82,12 +81,12 @@ typedef struct
     uint16_t a2b_off; ///< how many of those already sent
     uint16_t b2a_len;
     uint16_t b2a_off;
-    proto_bool a_eof;       ///< the recv side of a has hit EOF
-    proto_bool b_eof;       ///< the recv side of b has hit EOF
-    proto_bool a2b_done;    ///< the a->b direction has finished (EOF + drained)
-    proto_bool b2a_done;    ///< the b->a direction has finished (EOF + drained)
-    proto_bool a_shut_sent; ///< the shutdown seam of a has been called
-    proto_bool b_shut_sent; ///< the shutdown seam of b has been called
+    embed_bool a_eof;       ///< the recv side of a has hit EOF
+    embed_bool b_eof;       ///< the recv side of b has hit EOF
+    embed_bool a2b_done;    ///< the a->b direction has finished (EOF + drained)
+    embed_bool b2a_done;    ///< the b->a direction has finished (EOF + drained)
+    embed_bool a_shut_sent; ///< the shutdown seam of a has been called
+    embed_bool b_shut_sent; ///< the shutdown seam of b has been called
     uint32_t bytes_a2b;     ///< bytes relayed a->b (observability)
     uint32_t bytes_b2a;     ///< bytes relayed b->a (observability)
 } protocore_relay;
@@ -110,7 +109,7 @@ typedef struct
 typedef struct
 {
     protocore_relay *r;
-    proto_bool origin; ///< false for the client (inbound) side, true for the origin (outbound) side
+    embed_bool origin; ///< false for the client (inbound) side, true for the origin (outbound) side
 } RelayNoteEofArgs;
 
 /**
@@ -143,7 +142,7 @@ typedef struct
     RelayInitArgs init_args;
     RelayStepArgs step_args;
     RelayNoteEofArgs note_eof_args;
-    proto_bool ok;
+    embed_bool ok;
     protocore_relay_status status;
 } RelayVars;
 
@@ -174,7 +173,7 @@ static const RelayNs Relay __attribute__((unused)) = {
     .note_eof = protocore_relay_note_eof,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RELAY
 

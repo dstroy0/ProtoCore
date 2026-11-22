@@ -42,7 +42,7 @@
 
 #if PROTOCORE_ENABLE_MQTT_SN
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -106,11 +106,11 @@ PROTOCORE_BEGIN_DECLS
 /** @brief MQTT-SN v1.2 sec 5.3.4: the six fields the Flags octet packs. */
 typedef struct
 {
-    proto_bool dup;           ///< DUP: the message is a retransmission
+    embed_bool dup;           ///< DUP: the message is a retransmission
     uint8_t qos;              ///< QoS: 0, 1, 2, or 3 for QoS level -1 (sec 6.8)
-    proto_bool retain;        ///< Retain
-    proto_bool will;          ///< Will: the client asks for Will prompting (CONNECT, sec 5.4.4)
-    proto_bool clean_session; ///< CleanSession (sec 6.3)
+    embed_bool retain;        ///< Retain
+    embed_bool will;          ///< Will: the client asks for Will prompting (CONNECT, sec 5.4.4)
+    embed_bool clean_session; ///< CleanSession (sec 6.3)
     uint8_t topic_id_type;    ///< TopicIdType: MQTTSN_TOPIC_NORMAL, _PREDEFINED or _SHORT
     uint8_t octet;            ///< the packed Flags octet a compose writes and a parse reports
 } MqttsnFlagsArgs;
@@ -128,7 +128,7 @@ typedef struct
 {
     const char *client_id;    ///< ClientId, 1 to 23 characters (sec 5.3.1)
     uint16_t duration;        ///< Duration in seconds (sec 5.3.3)
-    proto_bool with_duration; ///< a DISCONNECT carries the sleep Duration (sec 5.4.21, sec 6.14)
+    embed_bool with_duration; ///< a DISCONNECT carries the sleep Duration (sec 5.4.21, sec 6.14)
     uint16_t msg_id;          ///< MsgId, matching a message to its acknowledgment (sec 5.3.7)
     uint8_t radius;           ///< Radius; 0x00 broadcasts to all nodes (sec 5.3.9)
     uint8_t return_code;      ///< ReturnCode (sec 5.3.10)
@@ -233,7 +233,7 @@ typedef struct
     MqttsnDataArgs data;     ///< the Data a PUBLISH carries
     MqttsnHeaderArgs header; ///< the Length and MsgType header a parse read
     MqttsnBufArgs buf;       ///< the octets a call moves
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } MqttsnVars;
 
@@ -309,7 +309,7 @@ static const MqttsnNs Mqttsn __attribute__((unused)) = {
     .parse_register = protocore_mqttsn_parse_register,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MQTT_SN
 

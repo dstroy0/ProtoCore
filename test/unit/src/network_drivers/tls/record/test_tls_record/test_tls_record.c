@@ -110,7 +110,7 @@ static size_t protect(uint8_t type, const uint8_t *pt, size_t pt_len, size_t cap
     return TlsRecordV.n;
 }
 
-static proto_bool unprotect(const uint8_t *rec, size_t rec_len, uint8_t *out, size_t cap, TlsCiphertext *info)
+static embed_bool unprotect(const uint8_t *rec, size_t rec_len, uint8_t *out, size_t cap, TlsCiphertext *info)
 {
     TlsRecordV.key.keys = &g_keys;
     TlsRecordV.sealed.rec = rec;

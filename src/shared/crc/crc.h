@@ -43,8 +43,8 @@ typedef struct
     uint8_t width;     ///< register width in bits, 8..32.
     uint32_t poly;     ///< generator polynomial, normal form (implicit top bit dropped).
     uint32_t init;     ///< initial register value.
-    proto_bool refin;  ///< reflect each input octet before feeding it in.
-    proto_bool refout; ///< reflect the final register before the XOR.
+    embed_bool refin;  ///< reflect each input octet before feeding it in.
+    embed_bool refout; ///< reflect the final register before the XOR.
     uint32_t xorout;   ///< XORed into the final register.
 } protocore_crc_params;
 

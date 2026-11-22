@@ -15,12 +15,12 @@
 #include "verba_scribo/verba_scribo.h" // verba_scribo frame builder
 
 // Emit one CoAP option (RFC 7252 sec 3.1): the (delta,length) nibble header + extended bytes + value.
-static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delta, const uint8_t *val, uint16_t vlen)
+static embed_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delta, const uint8_t *val, uint16_t vlen)
 {
     size_t start = *o;
     if (start + 1 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t dn;
     uint8_t ln;
@@ -66,7 +66,7 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
     }
     if (start + 1 + dexn + lexn + vlen > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[(*o)++] = (uint8_t)((dn << 4) | ln);
     for (int i = 0; i < dexn; i++)
@@ -81,7 +81,7 @@ static proto_bool emit_option(uint8_t *out, size_t *o, size_t cap, uint16_t delt
     {
         out[(*o)++] = val[i];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The entries this file calls before reaching their definitions.
@@ -182,10 +182,10 @@ int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_
         return -1;
     }
     size_t idx = 0;
-    proto_bool wisun_ok = Wisun.node_find(work, fan, addr, &idx);
+    embed_bool wisun_ok = Wisun.node_find(work, fan, addr, &idx);
     if (wisun_ok)
     {
-        fan->nodes[idx].joined = PROTO_TRUE;
+        fan->nodes[idx].joined = EMBED_TRUE;
         fan->nodes[idx].last_seen = now;
         return (int)idx;
     }
@@ -194,16 +194,16 @@ int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_
         return -1;
     }
     fan->nodes[fan->count].addr = *addr;
-    fan->nodes[fan->count].joined = PROTO_TRUE;
+    fan->nodes[fan->count].joined = EMBED_TRUE;
     fan->nodes[fan->count].last_seen = now;
     return (int)fan->count++;
 }
 
-proto_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx)
+embed_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const protocore_ip *addr, size_t *idx)
 {
     if (!fan || !fan->nodes || !addr)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < fan->count; i++)
     {
@@ -216,10 +216,10 @@ proto_bool protocore_wisun_node_find(uint8_t *work, const WisunFan *fan, const p
             {
                 *idx = i;
             }
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 size_t protocore_wisun_joined_count(uint8_t *work, const WisunFan *fan)

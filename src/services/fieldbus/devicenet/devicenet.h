@@ -37,7 +37,7 @@
 
 #if PROTOCORE_ENABLE_DEVICENET
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -69,13 +69,12 @@ PROTOCORE_BEGIN_DECLS
 #define DEVICENET_FRAG_COUNT_MASK 0x3Fu
 
 /** @brief DeviceNet message groups. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(DeviceNetGroup,
     DEVICENET_GROUP_1 = 1,
     DEVICENET_GROUP_2 = 2,
     DEVICENET_GROUP_3 = 3,
     DEVICENET_GROUP_4 = 4,
-} DeviceNetGroup;
+);
 
 /** @brief A decoded DeviceNet identifier. */
 typedef struct
@@ -86,19 +85,18 @@ typedef struct
 } DeviceNetId;
 
 /** @brief Result of feeding a frame to the fragmentation reassembler. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(DeviceNetFragResult,
     DEVICENET_FRAG_IGNORED = 0,
     DEVICENET_FRAG_STARTED,
     DEVICENET_FRAG_PROGRESS,
     DEVICENET_FRAG_COMPLETE,
     DEVICENET_FRAG_ERR,
-} DeviceNetFragResult;
+);
 
 /** @brief Fragmented-message reassembly context. */
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t next_count;                       ///< next expected modulo-64 fragment count
     uint16_t len;                             ///< octets stored so far
     uint8_t buf[PROTOCORE_DEVICENET_MSG_MAX]; ///< reassembled body (excludes the fragmentation octets)
@@ -125,8 +123,8 @@ typedef struct
 /** @brief What msg_header takes: frag, xid, mac_id. */
 typedef struct
 {
-    proto_bool frag;
-    proto_bool xid;
+    embed_bool frag;
+    embed_bool xid;
     uint8_t mac_id;
 } DevicenetMsgHeaderArgs;
 
@@ -155,7 +153,7 @@ typedef struct
     DeviceNetGroup group;
     uint8_t msg_id;
     uint8_t mac_id;
-    proto_bool xid;
+    embed_bool xid;
     uint8_t frag_type;
     uint8_t frag_count;
     const uint8_t *data;
@@ -224,7 +222,7 @@ typedef struct
     DevicenetBuildFragmentArgs build_fragment_args;
     DevicenetFragResetArgs frag_reset_args;
     DevicenetFragFeedArgs frag_feed_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     DeviceNetFragResult frag;
 } DevicenetVars;
@@ -271,7 +269,7 @@ static const DevicenetNs Devicenet __attribute__((unused)) = {
     .frag_feed = protocore_devicenet_frag_feed,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEVICENET
 

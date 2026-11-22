@@ -34,7 +34,7 @@
 // callback that fills it, so one serves every slot.
 typedef struct
 {
-    proto_bool registered;
+    embed_bool registered;
     // The root this server works through, bound once in begin(). A handle, not a path: this file
     // cannot name where storage begins.
     int root;
@@ -121,7 +121,7 @@ static void close_file(ScpConn *c)
 static void protocore_scp_end(ScpConn *c)
 {
     close_file(c);
-    c->active = PROTO_FALSE;
+    c->active = EMBED_FALSE;
     SshConnectionV.chan.slot = c->slot;
     SshConnectionV.chan.channel = c->channel;
     SshConnection.channel_send_close(protocore_ssh_connection_span());
@@ -135,10 +135,10 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
     }
     ScpConn *c = &scp_conns[slot];
     close_file(c);
-    c->active = PROTO_TRUE;
+    c->active = EMBED_TRUE;
     c->slot = slot;
     c->channel = channel;
-    c->err = PROTO_FALSE;
+    c->err = EMBED_FALSE;
     c->cl_len = 0;
 
     // Parsed straight into the field that keeps it. Parsing into scratch and copying would move a
@@ -186,7 +186,7 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
     {
         if (c->st == WAIT_CLINE)
         {
-            proto_bool complete = PROTO_FALSE;
+            embed_bool complete = EMBED_FALSE;
             while (len > 0)
             {
                 char ch = (char)data[0];
@@ -194,7 +194,7 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
                 len--;
                 if (ch == '\n')
                 {
-                    complete = PROTO_TRUE;
+                    complete = EMBED_TRUE;
                     break;
                 }
                 if (c->cl_len < sizeof(c->cl) - 1)
@@ -210,7 +210,7 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
 
             uint32_t mode = 0;
             uint64_t size = 0;
-            proto_bool scp_ok = Scp.parse_cline(protocore_ssh_scp_span(), c->cl, c->cl_len, &mode, &size,
+            embed_bool scp_ok = Scp.parse_cline(protocore_ssh_scp_span(), c->cl, c->cl_len, &mode, &size,
                                                 SSH_SCP_CTX(work)->leaf, sizeof(SSH_SCP_CTX(work)->leaf));
             if (!scp_ok)
             {
@@ -248,7 +248,7 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
             Fs.write(protocore_filesystem_span());
             if (Fs.i32 != (int)take)
             {
-                c->err = PROTO_TRUE;
+                c->err = EMBED_TRUE;
             }
             data += take;
             len -= take;
@@ -311,7 +311,7 @@ void protocore_ssh_scp_begin(uint8_t *work)
 
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
-        scp_conns[i].active = PROTO_FALSE;
+        scp_conns[i].active = EMBED_FALSE;
         // BSS zeroes this table, and 0 is a valid handle, so the free marker is set rather than
         // assumed - closing handle 0 here would take a file another server had open.
         scp_conns[i].fh = -1;
@@ -322,7 +322,7 @@ void protocore_ssh_scp_begin(uint8_t *work)
         SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
         SshConnectionV.scp_data_cb = protocore_scp_on_data;
         SshConnection.set_scp_data_cb(protocore_ssh_connection_span());
-        SSH_SCP_CTX(work)->registered = PROTO_TRUE;
+        SSH_SCP_CTX(work)->registered = EMBED_TRUE;
     }
 }
 

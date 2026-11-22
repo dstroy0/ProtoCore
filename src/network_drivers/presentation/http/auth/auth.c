@@ -30,13 +30,13 @@
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_ENABLE_AUTH
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Extract the value of @p key from a Digest auth header into @p out.
 // Handles both quoted ("value") and token (value) forms. The match must sit on
 // a field boundary (start, or after ' '/',') and be immediately followed by '='
 // so "nc" does not match inside "cnonce", etc.
-static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key, char *out, size_t out_size)
+static embed_bool digest_field(const char *hdr, size_t hdr_cap, const char *key, char *out, size_t out_size)
 {
     // Every step is measured against `end` rather than against the capacity: a remaining length
     // computed as cap-minus-offset underflows the moment a cursor passes the end, and an unsigned
@@ -48,17 +48,17 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
     while (p < end)
     {
         p = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p, .cap = (size_t)(end - p), .other = key,
-                       .other_cap = klen + 1u, .ci = PROTO_FALSE);
+                       .other_cap = klen + 1u, .ci = EMBED_FALSE);
         if (p == NULL)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         const char *after = p + klen;
         if (after >= end)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
-        proto_bool left_ok = (p == hdr) || p[-1] == ' ' || p[-1] == ',';
+        embed_bool left_ok = (p == hdr) || p[-1] == ' ' || p[-1] == ',';
         if (!left_ok || *after != '=')
         {
             p = after;
@@ -67,7 +67,7 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
         after++;
         if (after >= end)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         const char *vs;
         const char *ve;
@@ -76,13 +76,13 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
             vs = after + 1;
             if (vs >= end)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             ve = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = vs, .cap = (size_t)(end - vs), .other = "\"",
-                            .other_cap = 2u, .ci = PROTO_FALSE);
+                            .other_cap = 2u, .ci = EMBED_FALSE);
             if (!ve)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
         else
@@ -101,9 +101,9 @@ static proto_bool digest_field(const char *hdr, size_t hdr_cap, const char *key,
         }
         EMBED_CALL(proxim.read, ProximusCfg, .dst = out, .at = vs, .size = vlen);
         out[vlen] = '\0';
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // One credential set: what a challenge announces and what a submitted credential is checked
@@ -114,7 +114,7 @@ typedef struct
     char realm[MAX_AUTH_LEN];
     char user[MAX_AUTH_LEN];
     char pass[MAX_AUTH_LEN];
-    proto_bool digest;
+    embed_bool digest;
 } AuthCred;
 
 // The module's storage: the keying secret and every credential set. It is borrowed from the
@@ -150,7 +150,7 @@ static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[
     HexV.io.in = d;
     HexV.io.n = PROTOCORE_SHA256_DIGEST_LEN;
     HexV.io.out = out;
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     Hex.encode(protocore_http_auth_span());
 }
 
@@ -242,7 +242,7 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     HexV.io.in = d;
     HexV.io.n = 16;
     HexV.io.out = mac_hex;
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     Hex.encode(protocore_http_auth_span()); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
@@ -256,7 +256,7 @@ void protocore_auth_mint_nonce(uint8_t *work)
     HexV.io.in = (const uint8_t *)&issue;
     HexV.io.n = 4;
     HexV.io.out = issue_hex;
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     Hex.encode(work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
     digest_nonce_mac(work, AUTH_TABLE(work)->digest_secret, issue, mac_hex);
@@ -273,8 +273,8 @@ void protocore_auth_mint_nonce(uint8_t *work)
 void protocore_auth_verify_nonce(uint8_t *work)
 {
     const char *nonce = AuthV.nonce_args.nonce;
-    AuthV.expired = PROTO_FALSE;
-    AuthV.ok = PROTO_FALSE;
+    AuthV.expired = EMBED_FALSE;
+    AuthV.ok = EMBED_FALSE;
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
     if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = nonce, .cap = 42) != 8 + 1 + 32 || nonce[8] != '.')
     {
@@ -306,13 +306,13 @@ void protocore_auth_verify_nonce(uint8_t *work)
     }
     uint32_t age = Clock.ms - issue; // unsigned: tolerant of the 32-bit millis wrap
     AuthV.expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
-    AuthV.ok = PROTO_TRUE;
+    AuthV.ok = EMBED_TRUE;
 }
 
 void protocore_auth_challenge(uint8_t *work)
 {
     const uint8_t slot_id = AuthV.slot;
-    const proto_bool stale = AuthV.nonce_args.stale;
+    const embed_bool stale = AuthV.nonce_args.stale;
     const AuthCred *c = cred_at(work, AuthV.id);
     if (c == NULL)
     {
@@ -377,7 +377,7 @@ void protocore_auth_challenge(uint8_t *work)
         }
     }
 
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     static const char body[] = "Unauthorized";
@@ -410,32 +410,32 @@ void protocore_auth_challenge(uint8_t *work)
     {
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPoolV.io.len = (embed_u16)hlen;
         ConnPool.send(protocore_conn_pool_span());
         ConnPoolV.io.data = body;
-        ConnPoolV.io.len = (proto_u16)(sizeof(body) - 1);
+        ConnPoolV.io.len = (embed_u16)(sizeof(body) - 1);
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPoolV.io.len = (embed_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
 
-    protocore_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/EMBED_TRUE);
 }
 
-static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
+static embed_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
 {
     (void)slot_id;
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Authorization");
     const char *auth_hdr = http_parser_text;
     if (!auth_hdr || !EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = auth_hdr, .other = "Basic ",
-                                 .cap = sizeof("Basic "), .ci = PROTO_FALSE))
+                                 .cap = sizeof("Basic "), .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
@@ -448,14 +448,14 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     size_t n = Base64V.n;
     if (n == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     decoded[n] = '\0';
 
     const char *colon = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = decoded, .bytes = n, .val = ':');
     if (!colon)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     size_t ulen = (size_t)(colon - (const char *)decoded);
@@ -465,9 +465,9 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     // Length-bounded, constant-time compare of BOTH fields (never strcmp): an embedded NUL in the decoded
     // credential must not truncate the submitted password ("pass\0junk" must not equal "pass"), and the
     // byte compare must run to completion so it does not leak how many leading bytes matched.
-    proto_bool user_ok = (ulen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->user, .cap = MAX_AUTH_LEN)) &&
+    embed_bool user_ok = (ulen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->user, .cap = MAX_AUTH_LEN)) &&
                          protocore_ct_eq(decoded, c->user, ulen);
-    proto_bool pass_ok = (plen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->pass, .cap = MAX_AUTH_LEN)) &&
+    embed_bool pass_ok = (plen == EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c->pass, .cap = MAX_AUTH_LEN)) &&
                          protocore_ct_eq(pass, c->pass, plen);
     return user_ok && pass_ok;
 }
@@ -475,16 +475,16 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
 // Validate an Authorization: Digest header (RFC 7616, SHA-256, qop=auth).
 // HA1 = SHA256(user:realm:pass), HA2 = SHA256(method:uri),
 // response = SHA256(HA1:nonce:nc:cnonce:qop:HA2).
-static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, const AuthCred *c, proto_bool *stale)
+static embed_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, const AuthCred *c, embed_bool *stale)
 {
     (void)slot_id;
     // Use the full-length Authorization capture (the scratch header value is
     // capped at MAX_VAL_LEN, far shorter than a Digest header).
     const char *hdr = req->authorization;
     if (!EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = hdr, .other = "Digest ", .cap = sizeof("Digest "),
-                    .ci = PROTO_FALSE))
+                    .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *d = hdr + 7;
     const size_t dcap = PROTOCORE_AUTH_HDR_CAP - 7u;
@@ -503,28 +503,28 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
         !digest_field(d, dcap, "cnonce", cnonce, sizeof(cnonce)) ||
         !digest_field(d, dcap, "response", response, sizeof(response)))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Identity + challenge binding must match before any hashing.
     if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = username, .other = c->user, .cap = sizeof(username),
-                    .ci = PROTO_FALSE))
+                    .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The nonce must be one this server minted (authentic MAC). A stale (expired)
     // nonce is still authentic - we finish the credential check below and let the
     // caller reissue with stale=true rather than rejecting outright (RFC 7616 3.3).
     AuthV.nonce_args.nonce = nonce;
     protocore_auth_verify_nonce(work);
-    const proto_bool nonce_expired = AuthV.expired;
+    const embed_bool nonce_expired = AuthV.expired;
     if (!AuthV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = qop, .other = "auth", .cap = sizeof("auth"), .ci = PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = qop, .other = "auth", .cap = sizeof("auth"), .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // RFC 7616 3.4: the resource named by the "uri" parameter MUST be the same as the
@@ -555,9 +555,9 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
             target[0] = '\0';
         }
     }
-    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = uri, .other = target, .cap = sizeof(uri), .ci = PROTO_FALSE))
+    if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = uri, .other = target, .cap = sizeof(uri), .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     char tmp[3 * MAX_AUTH_LEN + 4];
@@ -615,18 +615,18 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     sha256_hex(work, (const uint8_t *)tmp3, (size_t)n, expected);
 
     if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = expected, .other = response, .cap = sizeof(expected),
-                    .ci = PROTO_TRUE))
+                    .ci = EMBED_TRUE))
     {
-        return PROTO_FALSE; // wrong credentials - leave *stale untouched (no transparent retry)
+        return EMBED_FALSE; // wrong credentials - leave *stale untouched (no transparent retry)
     }
     if (nonce_expired)
     {
         // Correct credentials but an aged nonce: signal a transparent retry so the
         // client recomputes against a fresh challenge without re-prompting the user.
-        *stale = PROTO_TRUE;
-        return PROTO_FALSE;
+        *stale = EMBED_TRUE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The scheme belongs to the credential, so the caller states which credential set applies and
@@ -636,7 +636,7 @@ void protocore_auth_check(uint8_t *work)
     const AuthCred *c = cred_at(work, AuthV.id);
     if (c == NULL)
     {
-        AuthV.ok = PROTO_FALSE;
+        AuthV.ok = EMBED_FALSE;
         return;
     }
     if (c->digest)
@@ -659,6 +659,6 @@ void protocore_auth_reset(uint8_t *work)
 /** @brief The operands and the outcome. */
 AuthVars AuthV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUTH

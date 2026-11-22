@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file rtc.h
@@ -33,11 +33,11 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*regs_to_epoch)(uint8_t *, const uint8_t *, uint32_t *);
+    embed_bool (*regs_to_epoch)(uint8_t *, const uint8_t *, uint32_t *);
     void (*epoch_to_regs)(uint8_t *, uint32_t, uint8_t *);
-    proto_bool (*begin)(uint8_t *);
+    embed_bool (*begin)(uint8_t *);
     uint32_t (*read_epoch)(uint8_t *);
-    proto_bool (*set_epoch)(uint8_t *, uint32_t);
+    embed_bool (*set_epoch)(uint8_t *, uint32_t);
 } RtcNs;
 PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_epoch);
 
@@ -46,9 +46,9 @@ PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @param regs the 7 register bytes as read from register 0 RTC_REG_COUNT bytes
  * @param epoch out: seconds since 1970-01-01 UTC
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch);
+embed_bool protocore_rtc_regs_to_epoch(uint8_t *work, const uint8_t *regs, uint32_t *epoch);
 /**
  * @brief Convert a Unix timestamp to the 7 RTC time registers (BCD, .
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
@@ -59,9 +59,9 @@ void protocore_rtc_epoch_to_regs(uint8_t *work, uint32_t epoch, uint8_t *regs);
 /**
  * @brief Initialize the I2C bus for the RTC. true; with no bus seam it is a .
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_rtc_begin(uint8_t *work);
+embed_bool protocore_rtc_begin(uint8_t *work);
 /**
  * @brief Read the current time from the RTC over I2C.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
@@ -72,9 +72,9 @@ uint32_t protocore_rtc_read_epoch(uint8_t *work);
  * @brief Set the RTC to epoch over I2C. true if the write succeeded.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @param epoch Epoch
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch);
+embed_bool protocore_rtc_set_epoch(uint8_t *work, uint32_t epoch);
 /**
  * @brief The RTC as a ::TimeSourceFn: protocore_rtc_read_epoch() over this module's own borrow.
  * @return the RTC's Unix time, or 0 when it cannot be read.
@@ -99,6 +99,6 @@ PROTOCORE_NS RtcNs Rtc PROTOCORE_UNUSED = {.regs_to_epoch = protocore_rtc_regs_t
                                            .read_epoch = protocore_rtc_read_epoch,
                                            .set_epoch = protocore_rtc_set_epoch};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_RTC_H

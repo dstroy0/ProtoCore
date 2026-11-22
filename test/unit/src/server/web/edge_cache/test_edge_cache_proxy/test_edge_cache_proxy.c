@@ -45,11 +45,11 @@ void test_reset_zeroes_every_counter(void)
 // stored as an empty route that would match every path.
 void test_a_map_needs_both_a_prefix_and_an_origin(void)
 {
-    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), NULL, "http://origin.local");
+    embed_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), NULL, "http://origin.local");
     TEST_ASSERT_FALSE(edge_proxy_ok);
-    proto_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", NULL);
+    embed_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", NULL);
     TEST_ASSERT_FALSE(edge_proxy_ok2);
-    proto_bool edge_proxy_ok3 = EdgeProxy.map(protocore_edge_cache_proxy_span(), NULL, NULL);
+    embed_bool edge_proxy_ok3 = EdgeProxy.map(protocore_edge_cache_proxy_span(), NULL, NULL);
     TEST_ASSERT_FALSE(edge_proxy_ok3);
 }
 
@@ -57,7 +57,7 @@ void test_a_map_needs_both_a_prefix_and_an_origin(void)
 // "/cdn/" -> "http://origin.local".
 void test_a_plain_http_origin_maps(void)
 {
-    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "http://origin.local");
+    embed_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "http://origin.local");
     TEST_ASSERT_TRUE(edge_proxy_ok);
 }
 
@@ -68,15 +68,15 @@ void test_the_map_table_is_bounded(void)
     static const char *const prefix[PROTOCORE_EDGE_MAP_MAX] = {"/a/", "/b/", "/c/", "/d/"};
     for (uint32_t i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
-        proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), prefix[i], "http://origin.local");
+        embed_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), prefix[i], "http://origin.local");
         TEST_ASSERT_TRUE(edge_proxy_ok);
     }
-    proto_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/e/", "http://origin.local");
+    embed_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/e/", "http://origin.local");
     TEST_ASSERT_FALSE(edge_proxy_ok2);
 
     // and a reset frees the table again
     EdgeProxy.reset(protocore_edge_cache_proxy_span());
-    proto_bool edge_proxy_ok3 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/e/", "http://origin.local");
+    embed_bool edge_proxy_ok3 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/e/", "http://origin.local");
     TEST_ASSERT_TRUE(edge_proxy_ok3);
 }
 
@@ -90,7 +90,7 @@ void test_an_overlong_prefix_is_refused(void)
         huge[i] = 'x';
     }
     huge[sizeof(huge) - 1u] = '\0';
-    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), huge, "http://origin.local");
+    embed_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), huge, "http://origin.local");
     TEST_ASSERT_FALSE(edge_proxy_ok);
 }
 
@@ -98,16 +98,16 @@ void test_an_overlong_prefix_is_refused(void)
 // dial.
 void test_a_malformed_origin_is_refused(void)
 {
-    proto_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "not-a-url");
+    embed_bool edge_proxy_ok = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "not-a-url");
     TEST_ASSERT_FALSE(edge_proxy_ok);
-    proto_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "");
+    embed_bool edge_proxy_ok2 = EdgeProxy.map(protocore_edge_cache_proxy_span(), "/cdn/", "");
     TEST_ASSERT_FALSE(edge_proxy_ok2);
 }
 
 // Purging an empty store reports nothing purged rather than claiming a hit, and the counter agrees.
 void test_purging_an_empty_store_purges_nothing(void)
 {
-    proto_bool edge_proxy_ok = EdgeProxy.purge(protocore_edge_cache_proxy_span(), "/nothing/here");
+    embed_bool edge_proxy_ok = EdgeProxy.purge(protocore_edge_cache_proxy_span(), "/nothing/here");
     TEST_ASSERT_FALSE(edge_proxy_ok);
     uint32_t edge_proxy_n = EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span(), "/nothing/");
     TEST_ASSERT_EQUAL_UINT32(0, edge_proxy_n);
@@ -119,7 +119,7 @@ void test_purging_an_empty_store_purges_nothing(void)
 // A null key is refused rather than dereferenced.
 void test_purge_refuses_a_null_key(void)
 {
-    proto_bool edge_proxy_ok = EdgeProxy.purge(protocore_edge_cache_proxy_span(), NULL);
+    embed_bool edge_proxy_ok = EdgeProxy.purge(protocore_edge_cache_proxy_span(), NULL);
     TEST_ASSERT_FALSE(edge_proxy_ok);
     uint32_t edge_proxy_n = EdgeProxy.purge_prefix(protocore_edge_cache_proxy_span(), NULL);
     TEST_ASSERT_EQUAL_UINT32(0, edge_proxy_n);

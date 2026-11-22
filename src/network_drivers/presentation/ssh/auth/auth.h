@@ -17,7 +17,7 @@
 #include "network_drivers/presentation/ssh/common/common.h"
 #include "spatium/spatium.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Parsed SSH_MSG_USERAUTH_REQUEST. */
 typedef struct
@@ -27,13 +27,13 @@ typedef struct
     char method[24];                      ///< Method name ("none", "password", "publickey", "keyboard-interactive").
     char password[SSH_AUTH_PASS_MAX];     ///< Password (method == "password"); the old one on a change.
     char new_password[SSH_AUTH_PASS_MAX]; ///< New password when is_pw_change (RFC 4252 sec 8).
-    proto_bool is_password;               ///< True if a password method-request was parsed.
-    proto_bool is_pw_change;              ///< True if the request set the change-password flag.
-    proto_bool is_kbdint;                 ///< True if a keyboard-interactive method-request was parsed (RFC 4256).
+    embed_bool is_password;               ///< True if a password method-request was parsed.
+    embed_bool is_pw_change;              ///< True if the request set the change-password flag.
+    embed_bool is_kbdint;                 ///< True if a keyboard-interactive method-request was parsed (RFC 4256).
 
     // publickey method (RFC 4252 §7)
-    proto_bool is_pubkey;            ///< True if a publickey method-request was parsed.
-    proto_bool has_signature;        ///< True if the request carried a signature.
+    embed_bool is_pubkey;            ///< True if a publickey method-request was parsed.
+    embed_bool has_signature;        ///< True if the request carried a signature.
     char pk_algo[SSH_AUTH_ALGO_MAX]; ///< Public-key algorithm name.
     const uint8_t *pk_blob;          ///< Public-key blob (points into the payload).
     uint32_t pk_blob_len;            ///< Length of pk_blob.
@@ -47,7 +47,7 @@ typedef struct
  * @brief Application callback that validates a username/password pair.
  * @return true to accept the credentials.
  */
-typedef proto_bool (*SshPasswordCb)(const char *user, const char *password);
+typedef embed_bool (*SshPasswordCb)(const char *user, const char *password);
 
 /** @brief Install the password-verification callback (nullptr → all fail). */
 
@@ -144,7 +144,7 @@ SshPwChange protocore_ssh_auth_pw_change_take(uint8_t i);
  *        for @p user. @p blob is the "ssh-rsa" public-key blob.
  * @return true if the key may authenticate this user.
  */
-typedef proto_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
+typedef embed_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
 
 /** @brief Install the publickey-authorization callback (nullptr → all fail). */
 
@@ -258,12 +258,12 @@ typedef struct
     uint8_t slot;             ///< the SSH slot a call acts on
     uint8_t msg_type;         ///< the message a dispatch routes
     SshAuthReq *req;          ///< where a parse lands the request (sec 5)
-    proto_bool partial;       ///< the failure is a partial success (sec 5.1)
+    embed_bool partial;       ///< the failure is a partial success (sec 5.1)
     SshAuthMsgArgs msg;       ///< sec 5 the message body a dispatch is given
     SshAuthOutArgs out_args;  ///< where a reply is written
     SshUserauthArgs userauth; ///< sec 5 / sec 7 the fields one request names
     SshAuthCbs cbs;           ///< what an attempt is checked against
-    proto_bool ok;
+    embed_bool ok;
     int i32;
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 #endif
@@ -347,6 +347,6 @@ static const SshAuthNs SshAuth __attribute__((unused)) = {
  */
 uint8_t *protocore_ssh_auth_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_AUTH_AUTH_H

@@ -32,7 +32,7 @@
 #include "server/core/preempt_queue/preempt_queue.h" // carried below as Session.workers->queue
 #endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Worker identity
@@ -49,7 +49,7 @@ int protocore_worker_count(void);
  * multi-worker lookup is paid only where there is more than one worker to tell apart.
  */
 #if PROTOCORE_WORKER_COUNT == 1
-PROTOCORE_INLINE int protocore_worker_self(void)
+EMBED_INLINE int protocore_worker_self(void)
 {
     return 0;
 }
@@ -189,10 +189,10 @@ typedef struct
     int worker_id;                 ///< the worker every call names
     protocore_worker_pump_fn pump; ///< what a started worker runs each time it wakes
     WorkerDeferArgs defer_args;    ///< the call handed to a worker to run in its own context
-    proto_bool ok;
+    embed_bool ok;
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
     // The lane the workers jump. They run without it; it only changes what runs first.
-    PreemptQueueNs *queue;
+    const PreemptQueueNs *queue;
 #endif
 } WorkersVars;
 
@@ -247,6 +247,6 @@ static const WorkerNs Workers __attribute__((unused)) = {
  */
 uint8_t *protocore_worker_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_WORKER_H

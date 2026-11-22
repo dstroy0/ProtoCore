@@ -34,7 +34,7 @@
 
 #if PROTOCORE_ENABLE_WS_CLIENT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -51,15 +51,14 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief The 4-bit opcode a frame carries (RFC 6455 sec 5.2); sec 5.6 data, sec 5.5 control. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(WsClientOpcode,
     WSC_OP_CONT = 0x0,   ///< continuation frame (RFC 6455 sec 5.4)
     WSC_OP_TEXT = 0x1,   ///< text frame, UTF-8 Application data (RFC 6455 sec 5.6)
     WSC_OP_BINARY = 0x2, ///< binary frame (RFC 6455 sec 5.6)
     WSC_OP_CLOSE = 0x8,  ///< connection close (RFC 6455 sec 5.5.1)
     WSC_OP_PING = 0x9,   ///< ping (RFC 6455 sec 5.5.2)
     WSC_OP_PONG = 0xA,   ///< pong (RFC 6455 sec 5.5.3)
-} WsClientOpcode;
+);
 
 /** @brief Where a reassembled Text or Binary message is delivered (RFC 6455 sec 5.6). */
 typedef void (*WsClientMessageCb)(uint8_t opcode, const uint8_t *payload, size_t len);
@@ -74,7 +73,7 @@ typedef struct
 {
     const char *host;          ///< /host/, the Host field's value (RFC 6455 sec 4.1, RFC 9110 sec 7.2)
     uint16_t port;             ///< /port/, the port dialed (RFC 6455 sec 3)
-    proto_bool secure;         ///< /secure/, the connection runs over TLS (RFC 6455 sec 3)
+    embed_bool secure;         ///< /secure/, the connection runs over TLS (RFC 6455 sec 3)
     const char *resource_name; ///< /resource name/, the request-line's target (RFC 6455 sec 3, RFC 9112 sec 3)
     const char *key;           ///< |Sec-WebSocket-Key|, base64 of 16 random octets (RFC 6455 sec 11.3.1)
     const char *subprotocol;   ///< |Sec-WebSocket-Protocol| offered; null or empty omits it (RFC 6455 sec 11.3.4)
@@ -86,7 +85,7 @@ typedef struct
 typedef struct
 {
     uint8_t opcode;             ///< the 4-bit opcode (RFC 6455 sec 5.2)
-    proto_bool fin;             ///< FIN, the final fragment of a message (RFC 6455 sec 5.2, sec 5.4)
+    embed_bool fin;             ///< FIN, the final fragment of a message (RFC 6455 sec 5.2, sec 5.4)
     const uint8_t *payload;     ///< the Payload data a build masks into the frame
     size_t payload_len;         ///< its octet count; a parse reports the Payload data length it found
     size_t payload_off;         ///< where a parse found Payload data inside the frame
@@ -161,7 +160,7 @@ typedef struct
     WsFrameArgs frame;         ///< the base framing protocol's fields
     WsBufArgs buf;             ///< the octets a codec call moves
     WsMessageArgs msg;         ///< the Application data a Data frame carries
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } WsClientVars;
 
@@ -232,7 +231,7 @@ static const WsClientNs WsClient __attribute__((unused)) = {
 uint8_t *protocore_ws_client_span(void);
 #endif // PROTOCORE_HAS_NET_STACK
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WS_CLIENT
 

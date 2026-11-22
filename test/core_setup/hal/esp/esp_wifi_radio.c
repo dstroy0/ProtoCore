@@ -50,12 +50,12 @@ static void esp_wifi_radio_event(void *handler_arg, esp_event_base_t base, int32
     }
     else if (id == WIFI_EVENT_STA_CONNECTED)
     {
-        const WifiLinkStateArgs state = {.up = PROTO_TRUE};
+        const WifiLinkStateArgs state = {.up = EMBED_TRUE};
         protocore_wifi_link_state_set(&state);
     }
     else if (id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        const WifiLinkStateArgs state = {.up = PROTO_FALSE};
+        const WifiLinkStateArgs state = {.up = EMBED_FALSE};
         protocore_wifi_link_state_set(&state);
         (void)esp_wifi_connect();
     }
@@ -63,23 +63,23 @@ static void esp_wifi_radio_event(void *handler_arg, esp_event_base_t base, int32
 
 // Copies the string at text into the field at field, of capacity octets. The string has no alignment
 // that an MMgr copy needs. The copy thus moves one octet at a time. False where the string does not fit.
-static proto_bool esp_wifi_radio_text(uint8_t *field, size_t capacity, const char *text)
+static embed_bool esp_wifi_radio_text(uint8_t *field, size_t capacity, const char *text)
 {
     size_t at = 0u;
     while (text[at] != '\0')
     {
         if (at == capacity)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         // Explicit cast reads the character as the octet that the field holds
         field[at] = (uint8_t)text[at];
         at++;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
+embed_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
 {
     esp_err_t status = nvs_flash_init();
     if (status == ESP_ERR_NVS_NO_FREE_PAGES || status == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -89,19 +89,19 @@ proto_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
     }
     if (status != ESP_OK)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The loop exists already where the core of Arduino made it.
     status = esp_event_loop_create_default();
     if (status != ESP_OK && status != ESP_ERR_INVALID_STATE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     wifi_config_t config = {0};
     if (!esp_wifi_radio_text(config.sta.ssid, sizeof config.sta.ssid, args->ssid) ||
         !esp_wifi_radio_text(config.sta.password, sizeof config.sta.password, args->password))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
     return esp_wifi_init(&init) == ESP_OK &&
@@ -110,14 +110,14 @@ proto_bool protocore_wifi_radio_start(const WifiLinkStartArgs *args)
            esp_wifi_start() == ESP_OK;
 }
 
-proto_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args)
+embed_bool protocore_wifi_radio_frame_send(const WifiLinkFrameArgs *args)
 {
     // Explicit casts give the driver the pointer it takes without const, and the length that the link
     // holds at IDEMIP_DMA_FRAME_MAX. The driver copies the frame and writes nothing into it.
     return esp_wifi_internal_tx(WIFI_IF_STA, (void *)(uintptr_t)args->frame, (uint16_t)args->len) == ESP_OK;
 }
 
-proto_bool protocore_wifi_radio_mac_read(uint8_t *mac)
+embed_bool protocore_wifi_radio_mac_read(uint8_t *mac)
 {
     return esp_wifi_get_mac(WIFI_IF_STA, mac) == ESP_OK;
 }

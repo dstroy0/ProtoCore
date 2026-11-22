@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file enocean.h
@@ -50,8 +50,7 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_ERP_RORG_UTE 0xD4 ///< Universal Teach-in
 
 /** @brief ESP3 packet types (the common ones). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_esp3_type,
     ESP3_RADIO_ERP1 = 0x01,
     ESP3_RESPONSE = 0x02,
     ESP3_RADIO_SUB_TEL = 0x03,
@@ -60,7 +59,7 @@ typedef enum PROTO_ENUM_PACKED
     ESP3_SMART_ACK = 0x06,
     ESP3_REMOTE_MAN = 0x07,
     ESP3_RADIO_ERP2 = 0x0A,
-} protocore_esp3_type;
+);
 
 /** @brief A parsed ESP3 telegram (pointers alias the caller's buffer). */
 typedef struct
@@ -89,7 +88,7 @@ typedef struct
     int (*esp3_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_esp3_packet *);
     uint16_t (*esp3_build)(uint8_t *, protocore_esp3_type, const uint8_t *, uint16_t, const uint8_t *, uint8_t,
                            uint8_t *, uint16_t);
-    proto_bool (*erp1_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_erp1 *);
+    embed_bool (*erp1_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_erp1 *);
     uint16_t (*erp1_build)(uint8_t *, uint8_t *, uint16_t, uint8_t, const uint8_t *, uint8_t, uint32_t, uint8_t);
 } EnoceanNs;
 PROTOCORE_NS_LAYOUT(EnoceanNs, esp3_crc8, esp3_parse, esp3_build, erp1_parse, erp1_build);
@@ -131,9 +130,9 @@ uint16_t protocore_enocean_esp3_build(uint8_t *work, protocore_esp3_type type, c
  * @param data Data
  * @param len Len
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out);
+embed_bool protocore_enocean_erp1_parse(uint8_t *work, const uint8_t *data, uint16_t len, protocore_erp1 *out);
 /**
  * @brief Assemble an ERP1 radio telegram (the inverse of .
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
@@ -156,6 +155,6 @@ PROTOCORE_NS EnoceanNs Enocean PROTOCORE_UNUSED = {.esp3_crc8 = protocore_enocea
                                                    .erp1_parse = protocore_enocean_erp1_parse,
                                                    .erp1_build = protocore_enocean_erp1_build};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENOCEAN_H

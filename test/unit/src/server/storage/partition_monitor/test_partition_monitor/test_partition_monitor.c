@@ -28,7 +28,7 @@ void tearDown(void)
 }
 
 static protocore_partition_info part(const char *label, uint8_t type, uint8_t subtype, uint32_t addr, uint32_t size,
-                                     proto_bool running)
+                                     embed_bool running)
 {
     protocore_partition_info p;
     memset(&p, 0, sizeof(p));
@@ -143,8 +143,8 @@ void test_a_non_app_type_is_classified_as_data(void)
 void test_report_is_an_rfc8259_document(void)
 {
     protocore_partition_info parts[2];
-    parts[0] = part("app0", 0x00, 0x10, 0x10000u, 0x140000u, PROTO_TRUE);
-    parts[1] = part("storage", 0x01, 0x83, 0x290000u, 0x170000u, PROTO_FALSE);
+    parts[0] = part("app0", 0x00, 0x10, 0x10000u, 0x140000u, EMBED_TRUE);
+    parts[1] = part("storage", 0x01, 0x83, 0x290000u, 0x170000u, EMBED_FALSE);
 
     char out[512];
     PartitionMonitorV.json_args.parts = parts;
@@ -168,7 +168,7 @@ void test_report_is_an_rfc8259_document(void)
 void test_an_empty_table_is_still_an_array(void)
 {
     protocore_partition_info parts[1];
-    parts[0] = part("x", 0x00, 0x00, 0u, 0u, PROTO_FALSE);
+    parts[0] = part("x", 0x00, 0x00, 0u, 0u, EMBED_FALSE);
 
     char out[64];
     PartitionMonitorV.json_args.parts = parts;
@@ -186,7 +186,7 @@ void test_an_empty_table_is_still_an_array(void)
 void test_numbers_span_the_whole_32_bit_range(void)
 {
     protocore_partition_info parts[1];
-    parts[0] = part("nvs", 0x01, 0x02, 0u, 4294967295u, PROTO_FALSE);
+    parts[0] = part("nvs", 0x01, 0x02, 0u, 4294967295u, EMBED_FALSE);
 
     char out[256];
     PartitionMonitorV.json_args.parts = parts;
@@ -207,7 +207,7 @@ void test_numbers_span_the_whole_32_bit_range(void)
 void test_a_label_is_escaped_per_rfc8259_section_7(void)
 {
     protocore_partition_info parts[1];
-    parts[0] = part("a\"b\\c", 0x01, 0x02, 0u, 0u, PROTO_FALSE);
+    parts[0] = part("a\"b\\c", 0x01, 0x02, 0u, 0u, EMBED_FALSE);
 
     char out[256];
     PartitionMonitorV.json_args.parts = parts;
@@ -224,8 +224,8 @@ void test_a_label_is_escaped_per_rfc8259_section_7(void)
 void test_a_short_buffer_fails_closed(void)
 {
     protocore_partition_info parts[2];
-    parts[0] = part("app0", 0x00, 0x10, 0x10000u, 0x140000u, PROTO_TRUE);
-    parts[1] = part("storage", 0x01, 0x83, 0x290000u, 0x170000u, PROTO_FALSE);
+    parts[0] = part("app0", 0x00, 0x10, 0x10000u, 0x140000u, EMBED_TRUE);
+    parts[1] = part("storage", 0x01, 0x83, 0x290000u, 0x170000u, EMBED_FALSE);
 
     char full[512];
     PartitionMonitorV.json_args.parts = parts;
@@ -260,7 +260,7 @@ void test_a_short_buffer_fails_closed(void)
 void test_missing_arguments_are_refused(void)
 {
     protocore_partition_info parts[1];
-    parts[0] = part("nvs", 0x01, 0x02, 0u, 0u, PROTO_FALSE);
+    parts[0] = part("nvs", 0x01, 0x02, 0u, 0u, EMBED_FALSE);
 
     char out[128];
     PartitionMonitorV.json_args.parts = parts;

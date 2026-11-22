@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_HAPPY_EYEBALLS_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -86,7 +86,7 @@ typedef struct
     HappyEyeballsPrefArgs pref_args;
     HappyEyeballsOrderArgs order_args;
     HappyEyeballsAttemptDueArgs attempt_due_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
 } HappyEyeballsVars;
 
@@ -128,7 +128,7 @@ static const HappyEyeballsNs HappyEyeballs __attribute__((unused)) = {
  */
 uint8_t *protocore_happy_eyeballs_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HAPPY_EYEBALLS
 

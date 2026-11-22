@@ -94,7 +94,7 @@ static void unhex_exponent(const char *h, uint8_t out[4])
     memcpy(out + (4u - n), raw, n);
 }
 
-static proto_bool verify_row(const KatRsaVerify *v, protocore_rsa_hash alg, const uint8_t *msg, size_t msg_len)
+static embed_bool verify_row(const KatRsaVerify *v, protocore_rsa_hash alg, const uint8_t *msg, size_t msg_len)
 {
     uint8_t n[PROTOCORE_RSA_KEY_BYTES];
     uint8_t e[4];
@@ -124,7 +124,7 @@ static void run_verify(const KatRsaVerify *rows, size_t count, protocore_rsa_has
         const KatRsaVerify *v = &rows[i];
         uint8_t msg[MAXMSG];
         size_t msg_len = unhex(v->msg, msg);
-        const proto_bool got = verify_row(v, alg, msg, msg_len);
+        const embed_bool got = verify_row(v, alg, msg, msg_len);
         if (v->valid)
         {
             TEST_ASSERT_TRUE_MESSAGE(got, v->sig);

@@ -36,7 +36,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // root, dir, name. A whole path is these three pieces, so it is ONE build: a caller that assembled
 // dir+name itself and handed the result over would frame the same bytes twice, into two buffers,
@@ -102,7 +102,7 @@ static const mmgr_field FILESYSTEM_ROOT[] = {MMGR_STR, MMGR_END};
 // C only, with protocore_fs_resolve below: the join's values are an array compound literal, which C++
 // has no form of, and no C++ file calls either.
 #ifndef __cplusplus
-PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
+EMBED_INLINE size_t protocore_fs_join(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     if (dir[0] == '/')
     {
@@ -121,19 +121,19 @@ PROTOCORE_INLINE size_t protocore_fs_join(const char *root, const char *dir, con
 /** @brief True if @p s contains a `..` traversal.
  *
  * ".." is two bytes at one offset, not a pattern to search for: compare the pair and advance. */
-PROTOCORE_INLINE proto_bool protocore_fs_has_dotdot(const char *s)
+EMBED_INLINE embed_bool protocore_fs_has_dotdot(const char *s)
 {
     for (const char *p = s; p[0] != '\0' && p[1] != '\0'; p++)
     {
         if (p[0] == '.' && p[1] == '.')
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE int protocore_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
+EMBED_INLINE int protocore_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     // Both request-supplied pieces are checked; the root is ours.
     if (protocore_fs_has_dotdot(dir) || protocore_fs_has_dotdot(name))
@@ -256,7 +256,7 @@ typedef struct
     FsIoArgs io;
     const char *mount;
 
-    proto_bool ok;
+    embed_bool ok;
     int i32;
     long len;
     uint32_t bits;
@@ -300,6 +300,6 @@ extern FilesystemNs Fs;
  */
 uint8_t *protocore_filesystem_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_FILESYSTEM_H

@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_NTS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -56,13 +56,13 @@ PROTOCORE_BEGIN_DECLS
 #define NTS_EF_AUTH_AND_ENCRYPTED 0x0404
 
 /** @brief One record surfaced by protocore_nts_ke_parse. */
-typedef void (*protocore_nts_ke_cb)(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len,
+typedef void (*protocore_nts_ke_cb)(embed_bool critical, uint16_t type, const uint8_t *body, size_t body_len,
                                     void *arg);
 
 /** @brief What ke_record takes: critical, type, body, body_len, out, ... */
 typedef struct
 {
-    proto_bool critical;
+    embed_bool critical;
     uint16_t type;
     const uint8_t *body;
     size_t body_len;
@@ -159,7 +159,7 @@ typedef struct
     NtsEfArgs ef_args;
     NtsEfUniqueIdArgs ef_unique_id_args;
     NtsEfCookieArgs ef_cookie_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } NtsVars;
 
@@ -199,7 +199,7 @@ static const NtsNs Nts __attribute__((unused)) = {
     .ef_cookie = protocore_nts_ef_cookie,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTS
 

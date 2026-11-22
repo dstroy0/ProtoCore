@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file ed25519.h
@@ -41,9 +41,9 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*pubkey)(uint8_t *, const uint8_t *, uint8_t *);
-    proto_bool (*sign)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
-    proto_bool (*verify)(uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *);
+    embed_bool (*pubkey)(uint8_t *, const uint8_t *, uint8_t *);
+    embed_bool (*sign)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
+    embed_bool (*verify)(uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *);
 } Ed25519Ns;
 PROTOCORE_NS_LAYOUT(Ed25519Ns, pubkey, sign, verify);
 
@@ -52,9 +52,9 @@ PROTOCORE_NS_LAYOUT(Ed25519Ns, pubkey, sign, verify);
  * @param work PROTOCORE_ED25519_BORROW bytes the caller took. Not held past the call.
  * @param seed PROTOCORE_ED25519_SEED_LEN bytes
  * @param pub PROTOCORE_ED25519_PUBKEY_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ed25519_pubkey(uint8_t *work, const uint8_t *seed, uint8_t *pub);
+embed_bool protocore_ed25519_pubkey(uint8_t *work, const uint8_t *seed, uint8_t *pub);
 /**
  * @brief Sign deterministically (RFC 8032 §5.1.6), writing R || S.
  * @param work PROTOCORE_ED25519_BORROW bytes the caller took. Not held past the call.
@@ -62,9 +62,9 @@ proto_bool protocore_ed25519_pubkey(uint8_t *work, const uint8_t *seed, uint8_t 
  * @param msg the message
  * @param msg_len its length
  * @param sig PROTOCORE_ED25519_SIG_LEN bytes, R || S
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ed25519_sign(uint8_t *work, const uint8_t *seed, const uint8_t *msg, size_t msg_len, uint8_t *sig);
+embed_bool protocore_ed25519_sign(uint8_t *work, const uint8_t *seed, const uint8_t *msg, size_t msg_len, uint8_t *sig);
 /**
  * @brief Check a signature (RFC 8032 §5.1.7); the answer is Ed25519Ns::ok.
  * @param work PROTOCORE_ED25519_BORROW bytes the caller took. Not held past the call.
@@ -72,15 +72,15 @@ proto_bool protocore_ed25519_sign(uint8_t *work, const uint8_t *seed, const uint
  * @param msg the message
  * @param msg_len its length
  * @param sig PROTOCORE_ED25519_SIG_LEN bytes, R || S
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_ed25519_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t msg_len,
+embed_bool protocore_ed25519_verify(uint8_t *work, const uint8_t *pub, const uint8_t *msg, size_t msg_len,
                                     const uint8_t *sig);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Ed25519Ns Ed25519 PROTOCORE_UNUSED = {
     .pubkey = protocore_ed25519_pubkey, .sign = protocore_ed25519_sign, .verify = protocore_ed25519_verify};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ED25519_H

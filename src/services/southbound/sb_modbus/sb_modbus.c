@@ -14,7 +14,7 @@ static uint8_t modbus_master_work[16]; // the borrow an entry takes; ModbusMaste
 
 #include "services/fieldbus/modbus/modbus_master/modbus_master.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Read a contiguous span of `n` registers (1..125) at `first` in one Modbus request; write the parsed
 // values to `out` as int32. Shared by the single-point and block reads. Returns the register count
@@ -195,7 +195,7 @@ void protocore_sb_modbus_driver(uint8_t *work)
     }
     // Holding registers are read/write; input registers are read-only (a Modbus input register cannot be
     // written), so an input-register driver leaves write / write_block unbound (framework: SB_ERR_UNSUPPORTED).
-    proto_bool writable = (c->fc == MODBUS_FC_READ_HOLDING_REGS);
+    embed_bool writable = (c->fc == MODBUS_FC_READ_HOLDING_REGS);
     drv_out->name = SbModbusV.name;
     drv_out->read = &sb_modbus_read;
     drv_out->write = writable ? &sb_modbus_write : NULL;
@@ -209,6 +209,6 @@ void protocore_sb_modbus_driver(uint8_t *work)
 /** @brief The operands and the outcome. */
 SbModbusVars SbModbusV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER

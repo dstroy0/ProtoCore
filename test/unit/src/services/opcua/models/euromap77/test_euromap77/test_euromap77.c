@@ -90,7 +90,7 @@ static void bind_machine(void)
     g_imm.info.software_revision = "SW2";
     g_imm.info.device_revision = "DR3";
     g_imm.info.manufacturer_uri = "http://acme.example/";
-    g_imm.status.is_present = PROTO_TRUE;
+    g_imm.status.is_present = EMBED_TRUE;
     g_imm.status.machine_mode = EM_MODE_AUTOMATIC;
     g_imm.active_job.job_name = "JOB-7";
     g_imm.active_job.job_description = "front bezel";
@@ -151,7 +151,7 @@ static uint32_t node_at(const char *a, const char *b)
     return id;
 }
 
-static proto_bool read_value(uint32_t id, OpcUaVariant *out)
+static embed_bool read_value(uint32_t id, OpcUaVariant *out)
 {
     memset(out, 0, sizeof(*out));
     return em77_read(Euromap77V.ns, id, OPCUA_ATTR_VALUE, out);

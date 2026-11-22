@@ -244,7 +244,7 @@ void test_ack_roundtrip(void)
 
     DtlsRecordNumber back[4];
     size_t count = 0;
-    proto_bool dtls_handshake_ok = DtlsHandshake.ack_parse(dtls_handshake_work, out, n, back, 4, &count);
+    embed_bool dtls_handshake_ok = DtlsHandshake.ack_parse(dtls_handshake_work, out, n, back, 4, &count);
     TEST_ASSERT_TRUE(dtls_handshake_ok);
     TEST_ASSERT_EQUAL_size_t(3, count);
     for (unsigned i = 0; i < 3; i++)
@@ -267,7 +267,7 @@ void test_ack_parse_rejects(void)
     size_t count = 0;
     uint8_t buf[64];
 
-    proto_bool dtls_handshake_ok = DtlsHandshake.ack_parse(dtls_handshake_work, buf, 1, out, 4, &count);
+    embed_bool dtls_handshake_ok = DtlsHandshake.ack_parse(dtls_handshake_work, buf, 1, out, 4, &count);
     TEST_ASSERT_FALSE(dtls_handshake_ok);
 
     buf[0] = 0x00;
@@ -320,7 +320,7 @@ void test_cookie_verify_accept_and_payload(void)
     uint8_t payload[64];
     size_t plen = 0;
 
-    proto_bool dtls_handshake_ok =
+    embed_bool dtls_handshake_ok =
         DtlsHandshake.cookie_verify(dtls_handshake_work, tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR),
                                     COOKIE_WIRE, sizeof(COOKIE_WIRE), payload, sizeof(payload), &plen);
     TEST_ASSERT_TRUE(dtls_handshake_ok);
@@ -334,7 +334,7 @@ void test_cookie_verify_rejects(void)
     size_t plen = 0;
 
     uint8_t other_addr[4] = {0xC0, 0xA8, 0x01, 0x33};
-    proto_bool dtls_handshake_ok =
+    embed_bool dtls_handshake_ok =
         DtlsHandshake.cookie_verify(dtls_handshake_work, tw, COOKIE_KEY, 0, 0, other_addr, sizeof(other_addr),
                                     COOKIE_WIRE, sizeof(COOKIE_WIRE), payload, sizeof(payload), &plen);
     TEST_ASSERT_FALSE(dtls_handshake_ok);
@@ -366,7 +366,7 @@ void test_cookie_freshness(void)
     uint8_t out[16];
     size_t plen = 0;
 
-    proto_bool dtls_handshake_ok =
+    embed_bool dtls_handshake_ok =
         DtlsHandshake.cookie_verify(dtls_handshake_work, tw, COOKIE_KEY, 1005, 10, COOKIE_ADDR, sizeof(COOKIE_ADDR),
                                     cookie, n, out, sizeof(out), &plen);
     TEST_ASSERT_TRUE(dtls_handshake_ok);
@@ -476,7 +476,7 @@ void test_cookie_empty_payload_roundtrip(void)
     uint8_t payload[4];
     memset(payload, 0xEE, sizeof(payload));
     size_t plen = 123;
-    proto_bool dtls_handshake_ok =
+    embed_bool dtls_handshake_ok =
         DtlsHandshake.cookie_verify(dtls_handshake_work, tw, COOKIE_KEY, 4242, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR),
                                     cookie, n, payload, sizeof(payload), &plen);
     TEST_ASSERT_TRUE(dtls_handshake_ok);
@@ -492,7 +492,7 @@ void test_cookie_verify_structural_rejects(void)
 
     memcpy(bad, COOKIE_WIRE, sizeof(bad));
     bad[0] = 2;
-    proto_bool dtls_handshake_ok =
+    embed_bool dtls_handshake_ok =
         DtlsHandshake.cookie_verify(dtls_handshake_work, tw, COOKIE_KEY, 0, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), bad,
                                     sizeof(bad), payload, sizeof(payload), &plen);
     TEST_ASSERT_FALSE(dtls_handshake_ok);

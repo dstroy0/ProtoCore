@@ -243,7 +243,7 @@ void test_erp1_field_layout(void)
     // RPS (0xF6, rocker switches) carries one payload octet.
     static const uint8_t RPS[7] = {0xF6, 0x50, 0x00, 0x29, 0x26, 0x8C, 0x30};
     protocore_erp1 e;
-    proto_bool enocean_ok = Enocean.erp1_parse(enocean_work, RPS, sizeof(RPS), &e);
+    embed_bool enocean_ok = Enocean.erp1_parse(enocean_work, RPS, sizeof(RPS), &e);
     TEST_ASSERT_TRUE(enocean_ok);
     TEST_ASSERT_EQUAL_HEX8(PROTOCORE_ERP_RORG_RPS, e.rorg);
     TEST_ASSERT_EQUAL_UINT8(1, e.payload_len);
@@ -289,7 +289,7 @@ void test_erp1_round_trip(void)
             TEST_ASSERT_EQUAL_UINT16((uint16_t)(1 + plen + 5), n);
 
             protocore_erp1 e;
-            proto_bool enocean_ok = Enocean.erp1_parse(enocean_work, out, n, &e);
+            embed_bool enocean_ok = Enocean.erp1_parse(enocean_work, out, n, &e);
             TEST_ASSERT_TRUE(enocean_ok);
             TEST_ASSERT_EQUAL_HEX8(RORGS[i], e.rorg);
             TEST_ASSERT_EQUAL_UINT8(plen, e.payload_len);
@@ -309,7 +309,7 @@ void test_erp1_fails_closed(void)
 {
     static const uint8_t FIVE[5] = {0xF6, 0x00, 0x29, 0x26, 0x8C};
     protocore_erp1 e;
-    proto_bool enocean_ok = Enocean.erp1_parse(enocean_work, FIVE, sizeof(FIVE), &e);
+    embed_bool enocean_ok = Enocean.erp1_parse(enocean_work, FIVE, sizeof(FIVE), &e);
     TEST_ASSERT_FALSE(enocean_ok);
     enocean_ok = Enocean.erp1_parse(enocean_work, NULL, 6, &e);
     TEST_ASSERT_FALSE(enocean_ok);
@@ -348,7 +348,7 @@ void test_erp1_inside_an_esp3_packet(void)
     TEST_ASSERT_EQUAL_HEX8(ESP3_RADIO_ERP1, p.type);
 
     protocore_erp1 e;
-    proto_bool enocean_ok = Enocean.erp1_parse(enocean_work, p.data, p.data_len, &e);
+    embed_bool enocean_ok = Enocean.erp1_parse(enocean_work, p.data, p.data_len, &e);
     TEST_ASSERT_TRUE(enocean_ok);
     TEST_ASSERT_EQUAL_HEX8(PROTOCORE_ERP_RORG_RPS, e.rorg);
     TEST_ASSERT_EQUAL_HEX8(0x50, e.payload[0]);

@@ -245,67 +245,67 @@ static void tag_encrypt(CcmWork *w, const uint8_t *nonce, size_t nonce_len, uint
     }
 }
 
-static proto_bool aesccm_seal_record(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+static embed_bool aesccm_seal_record(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                      size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
                                      size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
     // Reject a nonce outside 7..13: the formatting blocks carry L = 15 - nonce_len as the length field.
     if (nonce_len < 7 || nonce_len > 13)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     CcmWork *w = AESCCM_CTX(work);
     ccm_key_init(w, key, key_len);
     cbc_mac(w, nonce, nonce_len, aad, aad_len, pt, pt_len); // MAC -> w->X
     ctr_crypt(w, nonce, nonce_len, 1, pt, pt_len, ct_out);  // payload from A1
     tag_encrypt(w, nonce, nonce_len, tag_out);              // MAC protected by A0
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool aesccm_open_record(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+static embed_bool aesccm_open_record(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                      size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
                                      size_t ct_len, const uint8_t *tag, uint8_t *out)
 {
     // Reject a nonce outside 7..13: the formatting blocks carry L = 15 - nonce_len as the length field.
     if (nonce_len < 7 || nonce_len > 13)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     CcmWork *w = AESCCM_CTX(work);
     ccm_key_init(w, key, key_len);
     ctr_crypt(w, nonce, nonce_len, 1, ct, ct_len, out);      // recover plaintext into out
     cbc_mac(w, nonce, nonce_len, aad, aad_len, out, ct_len); // MAC over the recovered plaintext -> w->X
     tag_encrypt(w, nonce, nonce_len, w->blk);                // computed tag into w->blk (free after cbc_mac)
-    proto_bool ok = protocore_ct_eq(w->blk, tag, PROTOCORE_AESCCM_TAG_LEN);
+    embed_bool ok = protocore_ct_eq(w->blk, tag, PROTOCORE_AESCCM_TAG_LEN);
     if (!ok)
     {
         EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0,
                    .bytes = ct_len); // fail closed: no unauthenticated plaintext escapes
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_aes_ccm_seal(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+embed_bool protocore_aes_ccm_seal(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *pt,
                                   size_t pt_len, uint8_t *ct_out, uint8_t *tag_out)
 {
     if (!key || !nonce || !ct_out || !tag_out || (key_len != 16 && key_len != 32))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return aesccm_seal_record(work, key, key_len, nonce, nonce_len, aad, aad_len, pt, pt_len, ct_out, tag_out);
 }
 
-proto_bool protocore_aes_ccm_open(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
+embed_bool protocore_aes_ccm_open(uint8_t *work, const uint8_t *key, size_t key_len, const uint8_t *nonce,
                                   size_t nonce_len, const uint8_t *aad, size_t aad_len, const uint8_t *ct,
                                   size_t ct_len, const uint8_t *tag, uint8_t *out)
 {
     if (!key || !nonce || !ct || !out || !tag || (key_len != 16 && key_len != 32))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return aesccm_open_record(work, key, key_len, nonce, nonce_len, aad, aad_len, ct, ct_len, tag, out);
 }

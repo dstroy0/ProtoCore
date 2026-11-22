@@ -52,7 +52,7 @@ static void reader_open(uint8_t slot, const uint8_t *buf, size_t len, size_t pos
     Protobuf.reader_open(protocore_protobuf_span());
 }
 
-static proto_bool read_record(uint8_t slot)
+static embed_bool read_record(uint8_t slot)
 {
     ProtobufV.slot = slot;
     Protobuf.read_record(protocore_protobuf_span());
@@ -298,9 +298,9 @@ void test_fixed_width_and_bool_payloads(void)
 {
     writer_open(0, g_buf, sizeof(g_buf));
     ProtobufV.tag.field_number = 1;
-    ProtobufV.value.flag = PROTO_TRUE;
+    ProtobufV.value.flag = EMBED_TRUE;
     Protobuf.write_bool(protocore_protobuf_span());
-    ProtobufV.value.flag = PROTO_FALSE;
+    ProtobufV.value.flag = EMBED_FALSE;
     Protobuf.write_bool(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(4u, writer_finish(0));
     static const uint8_t BOOLS[4] = {0x08, 0x01, 0x08, 0x00};
@@ -522,7 +522,7 @@ void test_a_message_walks_record_by_record(void)
     ProtobufV.value.text = "testing";
     Protobuf.write_string(protocore_protobuf_span());
     ProtobufV.tag.field_number = 3;
-    ProtobufV.value.flag = PROTO_TRUE;
+    ProtobufV.value.flag = EMBED_TRUE;
     Protobuf.write_bool(protocore_protobuf_span());
     const size_t total = writer_finish(0);
     TEST_ASSERT_EQUAL_UINT(3u + 9u + 2u, total);

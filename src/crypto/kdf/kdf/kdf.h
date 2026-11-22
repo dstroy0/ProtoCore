@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file kdf.h
@@ -31,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*ctr_hmac_sha256)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *, size_t);
+    embed_bool (*ctr_hmac_sha256)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *, size_t);
 } KdfNs;
 PROTOCORE_NS_LAYOUT(KdfNs, ctr_hmac_sha256);
 
@@ -44,14 +44,14 @@ PROTOCORE_NS_LAYOUT(KdfNs, ctr_hmac_sha256);
  * @param fixed_len its length in bytes
  * @param out receives out_len derived bytes
  * @param out_len number of output bytes, >= 1; the caller encodes L = out_len * 8 into fixed
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
+embed_bool protocore_kdf_ctr_hmac_sha256(uint8_t *work, const uint8_t *ki, size_t ki_len, const uint8_t *fixed,
                                          size_t fixed_len, uint8_t *out, size_t out_len);
 
 /** @brief Module namespace. */
 PROTOCORE_NS KdfNs Kdf PROTOCORE_UNUSED = {.ctr_hmac_sha256 = protocore_kdf_ctr_hmac_sha256};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_KDF_H

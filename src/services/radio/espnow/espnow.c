@@ -14,7 +14,7 @@
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "services/radio/espnow/espnow.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_VENDOR_WIFI
 #include <esp_idf_version.h> // ESP_IDF_VERSION / ESP_IDF_VERSION_VAL for the recv-cb ABI guard
@@ -88,13 +88,13 @@ void protocore_espnow_decode(uint8_t *work)
 
     if (!buf || len < PROTOCORE_ESPNOW_HDR || buf[0] != PROTOCORE_ESPNOW_MAGIC)
     {
-        EspnowV.ok = PROTO_FALSE;
+        EspnowV.ok = EMBED_FALSE;
         return;
     }
     size_t declared = buf[2];
     if (declared + PROTOCORE_ESPNOW_HDR != len) // length must match exactly (no trailing/short)
     {
-        EspnowV.ok = PROTO_FALSE;
+        EspnowV.ok = EMBED_FALSE;
         return;
     }
     if (type)
@@ -109,7 +109,7 @@ void protocore_espnow_decode(uint8_t *work)
     {
         *plen = declared;
     }
-    EspnowV.ok = PROTO_TRUE;
+    EspnowV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +118,7 @@ void protocore_espnow_decode(uint8_t *work)
 typedef struct
 {
     uint8_t mac[6];
-    proto_bool used;
+    embed_bool used;
 } Peer;
 
 // All ESP-NOW runtime state, owned by one instance (internal linkage): the peer registry
@@ -168,7 +168,7 @@ void protocore_espnow_peers_reset(uint8_t *work)
 {
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
-        ESPNOW_CTX(work)->peers[i].used = PROTO_FALSE;
+        ESPNOW_CTX(work)->peers[i].used = EMBED_FALSE;
     }
 }
 
@@ -178,12 +178,12 @@ void protocore_espnow_peer_add(uint8_t *work)
 
     if (!mac)
     {
-        EspnowV.ok = PROTO_FALSE;
+        EspnowV.ok = EMBED_FALSE;
         return;
     }
     if (peer_find(ESPNOW_CTX(work), mac) >= 0)
     {
-        EspnowV.ok = PROTO_TRUE; // idempotent
+        EspnowV.ok = EMBED_TRUE; // idempotent
         return;
     }
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
@@ -191,12 +191,12 @@ void protocore_espnow_peer_add(uint8_t *work)
         if (!ESPNOW_CTX(work)->peers[i].used)
         {
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ESPNOW_CTX(work)->peers[i].mac, .src = mac, .bytes = 6);
-            ESPNOW_CTX(work)->peers[i].used = PROTO_TRUE;
-            EspnowV.ok = PROTO_TRUE;
+            ESPNOW_CTX(work)->peers[i].used = EMBED_TRUE;
+            EspnowV.ok = EMBED_TRUE;
             return;
         }
     }
-    EspnowV.ok = PROTO_FALSE; // table full
+    EspnowV.ok = EMBED_FALSE; // table full
 }
 
 void protocore_espnow_peer_has(uint8_t *work)
@@ -213,11 +213,11 @@ void protocore_espnow_peer_remove(uint8_t *work)
     int i = mac ? peer_find(ESPNOW_CTX(work), mac) : -1;
     if (i < 0)
     {
-        EspnowV.ok = PROTO_FALSE;
+        EspnowV.ok = EMBED_FALSE;
         return;
     }
-    ESPNOW_CTX(work)->peers[i].used = PROTO_FALSE;
-    EspnowV.ok = PROTO_TRUE;
+    ESPNOW_CTX(work)->peers[i].used = EMBED_FALSE;
+    EspnowV.ok = EMBED_TRUE;
 }
 
 void protocore_espnow_peer_count(uint8_t *work)
@@ -271,16 +271,16 @@ static void on_recv(const uint8_t *mac, const uint8_t *data, int len)
     }
 }
 
-static proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
+static embed_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
 {
     esp_now_peer_info_t p;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &p, .val = 0, .bytes = sizeof(p));
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = p.peer_addr, .src = mac, .bytes = 6);
     p.channel = channel;
-    p.encrypt = PROTO_FALSE;
+    p.encrypt = EMBED_FALSE;
     if (esp_now_is_peer_exist(mac))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     return esp_now_add_peer(&p) == ESP_OK;
 }
@@ -294,7 +294,7 @@ void protocore_espnow_begin(uint8_t *work)
     ESPNOW_CTX(work)->recv = cb;
     if (esp_now_init() != ESP_OK)
     {
-        EspnowV.ok = PROTO_FALSE;
+        EspnowV.ok = EMBED_FALSE;
         return;
     }
     esp_now_register_recv_cb(on_recv);
@@ -310,7 +310,7 @@ void protocore_espnow_add_peer(uint8_t *work)
     protocore_espnow_peer_add(work);
     if (!EspnowV.ok)
     {
-        EspnowV.ok = PROTO_FALSE;
+        EspnowV.ok = EMBED_FALSE;
         return;
     }
     EspnowV.ok = radio_add_peer(mac, ESPNOW_CTX(work)->channel);
@@ -333,7 +333,7 @@ void protocore_espnow_send(uint8_t *work)
     size_t n = EspnowV.n;
     if (n == 0)
     {
-        EspnowV.ok = PROTO_FALSE;
+        EspnowV.ok = EMBED_FALSE;
         return;
     }
     EspnowV.ok = esp_now_send(mac, frame, n) == ESP_OK;
@@ -362,7 +362,7 @@ void protocore_espnow_begin(uint8_t *work)
 
     (void)channel;
     (void)cb;
-    EspnowV.ok = PROTO_FALSE;
+    EspnowV.ok = EMBED_FALSE;
 }
 void protocore_espnow_add_peer(uint8_t *work)
 {
@@ -383,7 +383,7 @@ void protocore_espnow_send(uint8_t *work)
     (void)type;
     (void)payload;
     (void)len;
-    EspnowV.ok = PROTO_FALSE;
+    EspnowV.ok = EMBED_FALSE;
 }
 void protocore_espnow_broadcast(uint8_t *work)
 {
@@ -395,7 +395,7 @@ void protocore_espnow_broadcast(uint8_t *work)
     (void)type;
     (void)payload;
     (void)len;
-    EspnowV.ok = PROTO_FALSE;
+    EspnowV.ok = EMBED_FALSE;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_WIFI
@@ -403,6 +403,6 @@ void protocore_espnow_broadcast(uint8_t *work)
 /** @brief The operands and the outcome. */
 EspnowVars EspnowV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ESPNOW

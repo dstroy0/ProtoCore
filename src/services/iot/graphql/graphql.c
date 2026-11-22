@@ -26,7 +26,7 @@
 #include "memoria_operor/memoria_operor.h"       // memor.cpy: the spans a name and a decoded String move with
 #include "verba_scribo/verba_scribo.h"           // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The argument values in scope at a field (spec sec 6.4.1): indices into the document's argument
 // pool, in the order the path collected them.
@@ -68,7 +68,7 @@ typedef struct
     char *o;
     size_t cap;
     size_t n;
-    proto_bool ovf;
+    embed_bool ovf;
 } GqlWriter;
 
 // The parsed ExecutableDocument (spec sec 2.2): the field and argument pools its selection sets are
@@ -153,13 +153,13 @@ static char peek(GqlLexer *lx)
 }
 
 // NameStart (spec sec 2.1.9): a Latin ASCII letter or '_'.
-static proto_bool is_name_start(char c)
+static embed_bool is_name_start(char c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
 }
 
 // NameContinue (spec sec 2.1.9): a NameStart or an ASCII Digit.
-static proto_bool is_name_continue(char c)
+static embed_bool is_name_continue(char c)
 {
     return is_name_start(c) || (c >= '0' && c <= '9');
 }
@@ -199,12 +199,12 @@ static int new_field(uint8_t *work)
 // argument position - an EnumValue (sec 2.9.6) such as `{ f(a: LONGENUMVALUE) }`, straight from
 // untrusted document text - write past the end of it. Names still cannot exceed
 // PROTOCORE_GQL_NAME_MAX; whichever limit is tighter wins.
-static proto_bool parse_name(uint8_t *work, GqlLexer *lx, char *out, size_t cap)
+static embed_bool parse_name(uint8_t *work, GqlLexer *lx, char *out, size_t cap)
 {
     skip_ignored(lx);
     if (lx->p >= lx->e || !is_name_start(*lx->p))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const size_t limit = cap < (size_t)PROTOCORE_GQL_NAME_MAX ? cap : (size_t)PROTOCORE_GQL_NAME_MAX;
     size_t i = 0;
@@ -216,12 +216,12 @@ static proto_bool parse_name(uint8_t *work, GqlLexer *lx, char *out, size_t cap)
         if (i + 1 >= limit)
         {
             GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_LIMIT;
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out[i++] = *lx->p++;
     }
     out[i] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Copy a decoded String (spec sec 2.9.4) into the document's string pool; NULL when it is full.
@@ -241,7 +241,7 @@ static const char *intern(uint8_t *work, const char *s, int len)
 }
 
 // Read one Value (spec sec 2.9): StringValue, IntValue, FloatValue, BooleanValue or NullValue.
-static proto_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *v)
+static embed_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *v)
 {
     char c = peek(lx);
     if (c == '"')
@@ -292,50 +292,50 @@ static proto_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *
             if (n >= (int)sizeof(tmp) - 1)
             {
                 GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_LIMIT;
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             tmp[n++] = ch;
         }
         if (lx->p >= lx->e)
         {
             GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         lx->p++; // closing quote
         const char *s = intern(work, tmp, n);
         if (!s)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v->type = PROTOCORE_GQL_STR;
         v->s = s;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (c == '-' || (c >= '0' && c <= '9'))
     {
         // IntValue (sec 2.9.1) and FloatValue (sec 2.9.2), parsed by hand: IntegerPart, optional
         // FractionalPart, optional ExponentPart. An IntegerPart alone builds an int64; either of the
         // other two parts makes it a Float.
-        proto_bool neg = PROTO_FALSE;
+        embed_bool neg = EMBED_FALSE;
         if (*lx->p == '-')
         {
-            neg = PROTO_TRUE;
+            neg = EMBED_TRUE;
             lx->p++;
         }
-        proto_bool any = PROTO_FALSE;
-        proto_bool is_float = PROTO_FALSE;
+        embed_bool any = EMBED_FALSE;
+        embed_bool is_float = EMBED_FALSE;
         unsigned long long ipart = 0; // accumulate unsigned: signed overflow on a huge literal is UB
         double fval = 0.0;
         while (lx->p < lx->e && *lx->p >= '0' && *lx->p <= '9')
         {
             ipart = ipart * 10ULL + (unsigned)(*lx->p - '0');
             lx->p++;
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
         fval = (double)ipart;
         if (lx->p < lx->e && *lx->p == '.')
         {
-            is_float = PROTO_TRUE;
+            is_float = EMBED_TRUE;
             lx->p++;
             double scale = 1.0;
             while (lx->p < lx->e && *lx->p >= '0' && *lx->p <= '9')
@@ -343,14 +343,14 @@ static proto_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *
                 scale *= 10.0;
                 fval += (double)(*lx->p - '0') / scale;
                 lx->p++;
-                any = PROTO_TRUE;
+                any = EMBED_TRUE;
             }
         }
         if (lx->p < lx->e && (*lx->p == 'e' || *lx->p == 'E'))
         {
-            is_float = PROTO_TRUE;
+            is_float = EMBED_TRUE;
             lx->p++;
-            proto_bool eneg = PROTO_FALSE;
+            embed_bool eneg = EMBED_FALSE;
             if (lx->p < lx->e && (*lx->p == '+' || *lx->p == '-'))
             {
                 eneg = (*lx->p++ == '-');
@@ -372,7 +372,7 @@ static proto_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *
         if (!any)
         {
             GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (is_float)
         {
@@ -386,35 +386,35 @@ static proto_bool parse_value(uint8_t *work, GqlLexer *lx, protocore_gql_value *
             // accumulating), so -ipart would be a modular unsigned negation, not arithmetic negation.
             v->i = neg ? -(long long)ipart : (long long)ipart;
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     // BooleanValue (sec 2.9.3) and NullValue (sec 2.9.5): the keywords true, false and null.
     char kw[8];
     if (parse_name(work, lx, kw, sizeof(kw)))
     {
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "true", .cap = sizeof("true"),
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             v->type = PROTOCORE_GQL_BOOL;
-            v->b = PROTO_TRUE;
-            return PROTO_TRUE;
+            v->b = EMBED_TRUE;
+            return EMBED_TRUE;
         }
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "false", .cap = sizeof("false"),
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             v->type = PROTOCORE_GQL_BOOL;
-            v->b = PROTO_FALSE;
-            return PROTO_TRUE;
+            v->b = EMBED_FALSE;
+            return EMBED_TRUE;
         }
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "null", .cap = sizeof("null"),
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             v->type = PROTOCORE_GQL_NULL;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
     GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static int parse_selection_set(uint8_t *work, GqlLexer *lx, int depth);
@@ -527,7 +527,7 @@ static int parse_selection_set(uint8_t *work, GqlLexer *lx, int depth)
 
 // Read the Document (spec sec 2.2): one OperationDefinition, either the sec 2.3 query shorthand
 // `{...}` or `query Name? {...}`. A mutation or subscription keyword raises a request error.
-static proto_bool parse_document(uint8_t *work, GqlLexer *lx)
+static embed_bool parse_document(uint8_t *work, GqlLexer *lx)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     char c = peek(lx);
@@ -536,10 +536,10 @@ static proto_bool parse_document(uint8_t *work, GqlLexer *lx)
         char kw[PROTOCORE_GQL_NAME_MAX];
         if (!parse_name(work, lx, kw, sizeof(kw)) ||
             !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = kw, .other = "query", .cap = sizeof("query"),
-                        .ci = PROTO_FALSE))
+                        .ci = EMBED_FALSE))
         {
             doc->err = PROTOCORE_GQL_ERR_PARSE; // only the query OperationType
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (peek(lx) != '{') // the operation Name is optional (sec 2.3)
         {
@@ -547,21 +547,21 @@ static proto_bool parse_document(uint8_t *work, GqlLexer *lx)
             if (!parse_name(work, lx, opname, sizeof(opname)))
             {
                 flag_request_error(work);
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
     }
     doc->root = parse_selection_set(work, lx, 1);
     if (doc->err != PROTOCORE_GQL_OK)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (peek(lx) != '\0') // a second definition, or trailing junk
     {
         doc->err = PROTOCORE_GQL_ERR_PARSE;
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---- response serializer (spec sec 7.2.1) ---------------------------------
@@ -574,7 +574,7 @@ static void w_raw(GqlWriter *w, const char *s, size_t len)
     }
     if (w->n + len > w->cap)
     {
-        w->ovf = PROTO_TRUE;
+        w->ovf = EMBED_TRUE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->o + w->n, .src = s, .bytes = len);
@@ -694,7 +694,7 @@ static void execute_field(uint8_t *work, GqlWriter *w, int idx, int path_len)
     {
         if (plen + 1 >= PROTOCORE_GQL_PATH_MAX)
         {
-            w->ovf = PROTO_TRUE;
+            w->ovf = EMBED_TRUE;
             return;
         }
         ex->path[plen++] = '.';
@@ -702,7 +702,7 @@ static void execute_field(uint8_t *work, GqlWriter *w, int idx, int path_len)
     int nl = (int)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = field->name, .cap = sizeof(field->name));
     if (plen + nl >= PROTOCORE_GQL_PATH_MAX)
     {
-        w->ovf = PROTO_TRUE;
+        w->ovf = EMBED_TRUE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ex->path + plen, .src = field->name, .bytes = (size_t)nl);
@@ -755,14 +755,14 @@ static void execute_field(uint8_t *work, GqlWriter *w, int idx, int path_len)
 static void execute_selection_set(uint8_t *work, GqlWriter *w, int first, int path_len)
 {
     w_raw(w, "{", 1);
-    proto_bool leading = PROTO_TRUE;
+    embed_bool leading = EMBED_TRUE;
     for (int c = first; c >= 0; c = GRAPHQL_CTX(work)->doc.fields[c].next_sib)
     {
         if (!leading)
         {
             w_raw(w, ",", 1);
         }
-        leading = PROTO_FALSE;
+        leading = EMBED_FALSE;
         execute_field(work, w, c, path_len);
     }
     w_raw(w, "}", 1);
@@ -783,7 +783,7 @@ static const GqlArgument *arg_lookup(uint8_t *work)
     {
         const GqlArgument *a = &GRAPHQL_CTX(work)->doc.args[view->idx[k]];
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = a->name, .other = GraphQLV.argument.name,
-                       .cap = sizeof(a->name), .ci = PROTO_FALSE))
+                       .cap = sizeof(a->name), .ci = EMBED_FALSE))
         {
             return a;
         }
@@ -816,11 +816,11 @@ void protocore_graph_ql_arg_int(uint8_t *work)
 {
     const GqlArgument *a = arg_lookup(work);
     GraphQLV.i64 = 0;
-    GraphQLV.ok = PROTO_FALSE;
+    GraphQLV.ok = EMBED_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_INT)
     {
         GraphQLV.i64 = a->val.i;
-        GraphQLV.ok = PROTO_TRUE;
+        GraphQLV.ok = EMBED_TRUE;
     }
 }
 
@@ -829,11 +829,11 @@ void protocore_graph_ql_arg_str(uint8_t *work)
 {
     const GqlArgument *a = arg_lookup(work);
     GraphQLV.text = NULL;
-    GraphQLV.ok = PROTO_FALSE;
+    GraphQLV.ok = EMBED_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_STR)
     {
         GraphQLV.text = a->val.s;
-        GraphQLV.ok = PROTO_TRUE;
+        GraphQLV.ok = EMBED_TRUE;
     }
 }
 
@@ -841,12 +841,12 @@ void protocore_graph_ql_arg_str(uint8_t *work)
 void protocore_graph_ql_arg_bool(uint8_t *work)
 {
     const GqlArgument *a = arg_lookup(work);
-    GraphQLV.b = PROTO_FALSE;
-    GraphQLV.ok = PROTO_FALSE;
+    GraphQLV.b = EMBED_FALSE;
+    GraphQLV.ok = EMBED_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_BOOL)
     {
         GraphQLV.b = a->val.b;
-        GraphQLV.ok = PROTO_TRUE;
+        GraphQLV.ok = EMBED_TRUE;
     }
 }
 
@@ -871,7 +871,7 @@ void protocore_graph_ql_execute(uint8_t *work)
     char *out = GraphQLV.response.out;
     const size_t cap = GraphQLV.response.cap;
     GraphQLV.n = 0;
-    GraphQLV.ok = PROTO_FALSE;
+    GraphQLV.ok = EMBED_FALSE;
 
     if (!query || !out || cap == 0)
     {
@@ -887,7 +887,7 @@ void protocore_graph_ql_execute(uint8_t *work)
         // errors list and no data entry (spec sec 7.1, sec 7.1.2). Every error is a map with a
         // message entry (sec 7.1.2 "Error result format").
         const char *msg = (doc->err == PROTOCORE_GQL_ERR_LIMIT) ? "query exceeds a configured limit" : "syntax error";
-        GqlWriter w = {out, cap, 0, PROTO_FALSE};
+        GqlWriter w = {out, cap, 0, EMBED_FALSE};
         w_str(&w, "{\"errors\":[{\"message\":");
         w_json_str(&w, msg);
         w_str(&w, "}]}");
@@ -902,7 +902,7 @@ void protocore_graph_ql_execute(uint8_t *work)
         return;
     }
 
-    GqlWriter w = {out, cap, 0, PROTO_FALSE};
+    GqlWriter w = {out, cap, 0, EMBED_FALSE};
     w_str(&w, "{\"data\":");
     execute_selection_set(work, &w, doc->root, 0);
     w_str(&w, "}");
@@ -910,20 +910,20 @@ void protocore_graph_ql_execute(uint8_t *work)
     {
         // A resolver reads its arguments through this same handle, so ok carries the last accessor's
         // verdict by the time the walk ends. The execute states its own here.
-        GraphQLV.ok = PROTO_FALSE;
+        GraphQLV.ok = EMBED_FALSE;
         GraphQLV.result = PROTOCORE_GQL_ERR_OVERFLOW;
         return;
     }
     out[w.n] = '\0';
     GraphQLV.n = w.n;
     GraphQLV.result = PROTOCORE_GQL_OK;
-    GraphQLV.ok = PROTO_TRUE;
+    GraphQLV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 GraphQLVars GraphQLV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GRAPHQL

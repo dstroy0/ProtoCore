@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_PROFIBUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -139,7 +139,7 @@ typedef struct
     ProfibusBuildSd2Args build_sd2_args;
     ProfibusBuildSd3Args build_sd3_args;
     ProfibusParseArgs parse_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     size_t n;
 } ProfibusVars;
@@ -177,7 +177,7 @@ static const ProfibusNs Profibus __attribute__((unused)) = {
     .parse = protocore_profibus_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROFIBUS
 

@@ -22,7 +22,7 @@
 
 #include "numeros_scribo/numeros_scribo.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The wire name for a direction, so the serializer names one without going through the handle it is
 // itself being called on.
@@ -115,12 +115,12 @@ void protocore_gpio_map_json(uint8_t *work)
 
 // Read the decimal integer that follows "name=" in a form-encoded body. Returns
 // false if the field is absent or has no digits.
-static proto_bool form_field_uint(const char *body, size_t len, const char *name, unsigned *out)
+static embed_bool form_field_uint(const char *body, size_t len, const char *name, unsigned *out)
 {
     size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = len + 1);
     for (size_t i = 0; i + nlen + 1 <= len; i++)
     {
-        proto_bool at_field = (i == 0) || body[i - 1] == '&';
+        embed_bool at_field = (i == 0) || body[i - 1] == '&';
         if (!at_field || EMBED_CALL(memor.cmp, MemoriaCfg, .src = body + i, .other = name, .bytes = nlen) != 0 ||
             body[i + nlen] != '=')
         {
@@ -129,7 +129,7 @@ static proto_bool form_field_uint(const char *body, size_t len, const char *name
         size_t j = i + nlen + 1;
         if (j >= len || body[j] < '0' || body[j] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         unsigned v = 0;
         for (; j < len && body[j] >= '0' && body[j] <= '9'; j++)
@@ -139,14 +139,14 @@ static proto_bool form_field_uint(const char *body, size_t len, const char *name
             const unsigned uint_max = (unsigned)-1;
             if (v > (uint_max - d) / 10u)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             v = v * 10u + d;
         }
         *out = v;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void protocore_gpio_map_parse_set(uint8_t *work)
@@ -159,26 +159,26 @@ void protocore_gpio_map_parse_set(uint8_t *work)
 
     if (!body || !pin || !level)
     {
-        GpioMapV.ok = PROTO_FALSE;
+        GpioMapV.ok = EMBED_FALSE;
         return;
     }
     unsigned p;
     unsigned l;
     if (!form_field_uint(body, len, "pin", &p) || !form_field_uint(body, len, "level", &l))
     {
-        GpioMapV.ok = PROTO_FALSE;
+        GpioMapV.ok = EMBED_FALSE;
         return;
     }
     // The field is a uint8_t, so a larger value has no pin to name. Narrowing it would deliver a
     // different pin, one the table may well declare an output.
     if (p > 0xFFu)
     {
-        GpioMapV.ok = PROTO_FALSE;
+        GpioMapV.ok = EMBED_FALSE;
         return;
     }
     *pin = (uint8_t)p;
     *level = l ? 1 : 0;
-    GpioMapV.ok = PROTO_TRUE;
+    GpioMapV.ok = EMBED_TRUE;
 }
 
 void protocore_gpio_map_is_output(uint8_t *work)
@@ -190,18 +190,18 @@ void protocore_gpio_map_is_output(uint8_t *work)
 
     if (!pins)
     {
-        GpioMapV.ok = PROTO_FALSE;
+        GpioMapV.ok = EMBED_FALSE;
         return;
     }
     for (uint8_t i = 0; i < count; i++)
     {
         if (pins[i].pin == pin && pins[i].dir == PROTOCORE_GPIO_DIR_OUT)
         {
-            GpioMapV.ok = PROTO_TRUE;
+            GpioMapV.ok = EMBED_TRUE;
             return;
         }
     }
-    GpioMapV.ok = PROTO_FALSE;
+    GpioMapV.ok = EMBED_FALSE;
 }
 
 #if PROTOCORE_HAS_GPIO
@@ -311,6 +311,6 @@ __attribute__((weak)) void protocore_gpio_map_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 GpioMapVars GpioMapV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GPIO_MAP

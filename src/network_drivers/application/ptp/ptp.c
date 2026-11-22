@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "network_drivers/application/ptp/ptp.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // -- big-endian field helpers --
 
@@ -160,7 +160,7 @@ void protocore_ptp_parse_header(uint8_t *work)
 
     if (!s || !h || len < PROTOCORE_PTP_HEADER_LEN)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     h->message_type = (uint8_t)(s[0] & 0x0F);
@@ -175,7 +175,7 @@ void protocore_ptp_parse_header(uint8_t *work)
     h->sequence_id = get_u16(s + 30);
     h->control = s[32];
     h->log_interval = (int8_t)s[33];
-    PtpV.ok = PROTO_TRUE;
+    PtpV.ok = EMBED_TRUE;
 }
 
 // -- messages --
@@ -426,7 +426,7 @@ void protocore_ptp_parse_timestamp_msg(uint8_t *work)
 
     if (!ts)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     PtpV.parse_header_args.s = s;
@@ -435,24 +435,24 @@ void protocore_ptp_parse_timestamp_msg(uint8_t *work)
     protocore_ptp_parse_header(work);
     if (!PtpV.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     if (len < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_SYNC && h->message_type != PROTOCORE_PTP_DELAY_REQ &&
         h->message_type != PROTOCORE_PTP_FOLLOW_UP)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     PtpV.ts_read_args.p = s + PROTOCORE_PTP_HEADER_LEN;
     PtpV.ts_read_args.ts = ts;
     protocore_ptp_ts_read(work);
-    PtpV.ok = PROTO_TRUE;
+    PtpV.ok = EMBED_TRUE;
 }
 
 void protocore_ptp_parse_delay_resp(uint8_t *work)
@@ -464,7 +464,7 @@ void protocore_ptp_parse_delay_resp(uint8_t *work)
 
     if (!out)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     PtpV.parse_header_args.s = s;
@@ -473,17 +473,17 @@ void protocore_ptp_parse_delay_resp(uint8_t *work)
     protocore_ptp_parse_header(work);
     if (!PtpV.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_DELAY_RESP)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     if (len < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN + 10)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     const uint8_t *p = s + PROTOCORE_PTP_HEADER_LEN;
@@ -494,7 +494,7 @@ void protocore_ptp_parse_delay_resp(uint8_t *work)
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->req_clock_id, .src = p, .bytes = 8);
     p += 8;
     out->req_port = get_u16(p);
-    PtpV.ok = PROTO_TRUE;
+    PtpV.ok = EMBED_TRUE;
 }
 
 void protocore_ptp_parse_pdelay_req(uint8_t *work)
@@ -506,7 +506,7 @@ void protocore_ptp_parse_pdelay_req(uint8_t *work)
 
     if (!ts)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     PtpV.parse_header_args.s = s;
@@ -515,33 +515,33 @@ void protocore_ptp_parse_pdelay_req(uint8_t *work)
     protocore_ptp_parse_header(work);
     if (!PtpV.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_PDELAY_REQ)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     // header, originTimestamp, and the reserved field that follows it: the whole fixed message.
     if (len < PROTOCORE_PTP_PDELAY_REQ_LEN)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     PtpV.ts_read_args.p = s + PROTOCORE_PTP_HEADER_LEN;
     PtpV.ts_read_args.ts = ts;
     protocore_ptp_ts_read(work);
-    PtpV.ok = PROTO_TRUE;
+    PtpV.ok = EMBED_TRUE;
 }
 
 // Pdelay_Resp and its Follow_Up share the body layout; only the messageType differs.
-static proto_bool parse_pdelay_resp_msg(uint8_t *work, const uint8_t *s, size_t len, protocore_ptp_header *h,
+static embed_bool parse_pdelay_resp_msg(uint8_t *work, const uint8_t *s, size_t len, protocore_ptp_header *h,
                                         protocore_ptp_pdelay_resp *out, uint8_t mtype)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     PtpV.parse_header_args.s = s;
     PtpV.parse_header_args.len = len;
@@ -549,15 +549,15 @@ static proto_bool parse_pdelay_resp_msg(uint8_t *work, const uint8_t *s, size_t 
     Ptp.parse_header(work);
     if (!PtpV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h->message_type != mtype)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (len < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN + 10)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *p = s + PROTOCORE_PTP_HEADER_LEN;
     PtpV.ts_read_args.p = p;
@@ -567,7 +567,7 @@ static proto_bool parse_pdelay_resp_msg(uint8_t *work, const uint8_t *s, size_t 
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->req_clock_id, .src = p, .bytes = 8);
     p += 8;
     out->req_port = get_u16(p);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_ptp_parse_pdelay_resp(uint8_t *work)
@@ -601,7 +601,7 @@ void protocore_ptp_parse_announce(uint8_t *work)
 
     if (!out)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     PtpV.parse_header_args.s = s;
@@ -610,18 +610,18 @@ void protocore_ptp_parse_announce(uint8_t *work)
     protocore_ptp_parse_header(work);
     if (!PtpV.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_ANNOUNCE)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     if (len <
         PROTOCORE_PTP_HEADER_LEN + 30) // originTimestamp(10)+utc(2)+rsv(1)+p1(1)+quality(4)+p2(1)+id(8)+steps(2)+src(1)
     {
-        PtpV.ok = PROTO_FALSE;
+        PtpV.ok = EMBED_FALSE;
         return;
     }
     const uint8_t *p = s + PROTOCORE_PTP_HEADER_LEN;
@@ -643,7 +643,7 @@ void protocore_ptp_parse_announce(uint8_t *work)
     out->steps_removed = get_u16(p);
     p += 2;
     out->time_source = *p;
-    PtpV.ok = PROTO_TRUE;
+    PtpV.ok = EMBED_TRUE;
 }
 
 // -- slave clock math --
@@ -682,6 +682,6 @@ void protocore_ptp_compute_link_delay(uint8_t *work)
 /** @brief The operands and the outcome. */
 PtpVars PtpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PTP

@@ -23,13 +23,13 @@
 
 #if PROTOCORE_ENABLE_ATC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One ATC field-I/O point. */
 typedef struct
 {
     const char *name;     ///< the FIO point name (borrowed), e.g. "det.1", "phase.2.green".
-    proto_bool is_output; ///< true = an output (a driver the controller sets), false = an input (a sensor).
+    embed_bool is_output; ///< true = an output (a driver the controller sets), false = an input (a sensor).
     uint8_t value;        ///< the current 8-bit value (a bit is 0/1; a byte is 0..255).
 } AtcPoint;
 
@@ -50,12 +50,12 @@ size_t protocore_atc_snapshot_json(const AtcFieldIo *io, char *out, size_t cap);
  * @brief Drive an output point by name from an ATC command.
  * @return true if the named point exists and is an output (its value is set); false otherwise.
  */
-proto_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value);
+embed_bool protocore_atc_set_output(AtcFieldIo *io, const char *name, uint8_t value);
 
 /** @brief Read a point's value by name; @p found (may be null) reports whether it existed. */
-uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, proto_bool *found);
+uint8_t protocore_atc_get(const AtcFieldIo *io, const char *name, embed_bool *found);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ATC
 

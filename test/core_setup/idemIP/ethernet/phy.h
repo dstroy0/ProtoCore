@@ -15,23 +15,22 @@
 
 #include "idemIP/ethernet/mii.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Negotiated line rate, in megabits per second. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IdemIpPhySpeed,
     IDEMIP_PHY_SPEED_NONE = 0, ///< no link
     IDEMIP_PHY_SPEED_10 = 10,
     IDEMIP_PHY_SPEED_100 = 100,
     IDEMIP_PHY_SPEED_1000 = 1000,
-} IdemIpPhySpeed;
+);
 
 /** @brief What the link reports about itself. */
 typedef struct
 {
     IdemIpPhySpeed speed;   ///< negotiated rate; NONE while the link is down.
-    proto_bool full_duplex; ///< true when the link negotiated full duplex.
-    proto_bool up;          ///< true once the link is usable.
+    embed_bool full_duplex; ///< true when the link negotiated full duplex.
+    embed_bool up;          ///< true once the link is usable.
 } IdemIpPhyLink;
 
 /**
@@ -50,24 +49,24 @@ typedef struct
 typedef struct
 {
     IdemIpPhyLink (*link)(void);
-    proto_bool (*send)(const uint8_t *frame, size_t len);
+    embed_bool (*send)(const uint8_t *frame, size_t len);
     size_t (*recv)(uint8_t *out, size_t cap);
     const uint8_t *(*mac)(void);
     // Clause 22 management: the driver owns the MDC/MDIO timing, this layer owns what the registers
     // mean (mii.h). Both address fields are 5 bits on the wire, so both are bounded here.
-    proto_bool (*mdio_read)(uint8_t phy_addr, uint8_t reg, uint16_t *out);
-    proto_bool (*mdio_write)(uint8_t phy_addr, uint8_t reg, uint16_t val);
+    embed_bool (*mdio_read)(uint8_t phy_addr, uint8_t reg, uint16_t *out);
+    embed_bool (*mdio_write)(uint8_t phy_addr, uint8_t reg, uint16_t val);
 } IdemIpPhyDriver;
 
 /**
  * @brief Bind the link driver. One interface for now; a second would take an index.
  * @return false when @p drv is null or incomplete.
  */
-proto_bool idemip_phy_bind(const IdemIpPhyDriver *drv);
+embed_bool idemip_phy_bind(const IdemIpPhyDriver *drv);
 
 /** @brief The bound driver, or null when none is bound. */
 const IdemIpPhyDriver *idemip_phy_driver(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_PHY_H

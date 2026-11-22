@@ -10,6 +10,10 @@
  * this file compiles and runs the same way on both.
  */
 
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_UDP
+
 #include "network_drivers/transport/udp/server/server.h"
 #include "network_drivers/transport/udp/common/common.h" // the wire layout the receive ring carries
 #include "proximus_operor/proximus_operor.h"
@@ -20,7 +24,7 @@
 #include "network_drivers/transport/diffserv/diffserv.h" // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr/net_addr.h" // NetAddr: the stack's address as a protocore_ip
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // One bound port
@@ -30,8 +34,8 @@ PROTOCORE_BEGIN_DECLS
  * @brief State for one bound UDP port.
  *
  * One ring, on the receive side: its producer is the stack's trampoline and its consumer is poll().
- * The index pair is single-producer / single-consumer, so both are `_Atomic` and reached only
- * through PROTOCORE_ATOMIC_LOAD / PROTOCORE_ATOMIC_STORE. A send carries the caller's buffer to the wire
+ * The index pair is single-producer / single-consumer, so both are atomic words of embedded_types, reached
+ * only through EMBED_CALL of embed_atomic_u32_table. A send carries the caller's buffer to the wire
  * inside one marshaled call, so nothing queues on the way out.
  */
 typedef struct
@@ -40,7 +44,7 @@ typedef struct
     protocore_udp_handler handler; ///< Called once per received datagram by poll().
     void *ctx;                     ///< Opaque context handed back to the handler.
     protocore_ip group;            ///< Multicast group this slot joined; meaningful only when mcast is set.
-    proto_bool mcast;              ///< The slot joined a group and must leave it on teardown.
+    embed_bool mcast;              ///< The slot joined a group and must leave it on teardown.
 
     uint8_t rx[PROTOCORE_UDP_RX_RING];
     mmgr_ring ring; ///< Over rx. Producer: the stack's trampoline. Consumer: poll().
@@ -67,8 +71,8 @@ struct UdpListenerStorage
     uint8_t rx_whdr[PROTOCORE_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's producer.
     uint8_t rx_rhdr[PROTOCORE_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's consumer.
     char group_text[PROTOCORE_IP_STR_MAX];       ///< Where joined_group() formats the group it reports.
-    _Atomic uint32_t bound;                      ///< Bit i set = bind[i] is bound; one ctz instead of a scan.
-    proto_bool polling;                          ///< Set for the duration of poll(); a reentrant call returns.
+    embed_atomic_u32 bound;                      ///< Bit i set = bind[i] is bound; one ctz instead of a scan.
+    embed_bool polling;                          ///< Set for the duration of poll(); a reentrant call returns.
     UdpBind *slot;                               ///< The slot the private steps below act on.
 };
 
@@ -92,11 +96,11 @@ typedef struct protocore_udp_peer
 } protocore_udp_peer;
 
 /** @brief True when @p a is an IPv4 multicast group (224.0.0.0/4), the only kind IGMP joins. */
-static proto_bool addr_is_group(const protocore_ip *a)
+static embed_bool addr_is_group(const protocore_ip *a)
 {
     if (a->family != PROTOCORE_IP_V4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     IpV.args.ip = a;
     Ip.classify(protocore_udp_listener_span());
@@ -127,9 +131,9 @@ static uint32_t bind_all(void)
 }
 
 /** @brief True when slot @p idx is bound. */
-static proto_bool bind_used(uint8_t *work, size_t idx)
+static embed_bool bind_used(uint8_t *work, size_t idx)
 {
-    return (PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_bit(idx)) != 0u;
+    return (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) & bind_bit(idx)) != 0u;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -155,7 +159,7 @@ uint8_t *protocore_udp_listener_span(void)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the bound slot for ns->port, or NULL. */
 static void find_bind(uint8_t *work)
 {
-    uint32_t m = PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
+    uint32_t m = EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) & bind_all();
     while (m != 0u)
     {
         const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = m);
@@ -172,7 +176,7 @@ static void find_bind(uint8_t *work)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the first free slot, or NULL when the pool is full. */
 static void free_bind(uint8_t *work)
 {
-    const uint32_t free_slots = ~PROTOCORE_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & bind_all();
+    const uint32_t free_slots = ~EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &UDP_LISTENER_CTX(work)->bound) & bind_all();
     const int32_t i = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = free_slots);
     UDP_LISTENER_CTX(work)->slot = NULL;
     if (i >= 0)
@@ -189,8 +193,8 @@ static void bind_clear(uint8_t *work)
     UDP_LISTENER_CTX(work)->slot->handler = NULL;
     UDP_LISTENER_CTX(work)->slot->ctx = NULL;
     UDP_LISTENER_CTX(work)->slot->group = empty;
-    UDP_LISTENER_CTX(work)->slot->mcast = PROTO_FALSE;
-    atomic_fetch_and_explicit(&UDP_LISTENER_CTX(work)->bound, ~bind_bit(bind_idx(work)), memory_order_release);
+    UDP_LISTENER_CTX(work)->slot->mcast = EMBED_FALSE;
+    EMBED_CALL(embed_atomic_u32_table.fetch_and, EmbedAtomicU32FetchAndCfg, .word = &UDP_LISTENER_CTX(work)->bound, .value = ~bind_bit(bind_idx(work)));
 }
 
 // ---------------------------------------------------------------------------
@@ -198,13 +202,12 @@ static void bind_clear(uint8_t *work)
 // ---------------------------------------------------------------------------
 
 /** @brief Ops that must run in the stack's thread, reached through protocore_net_call_marshal. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_udp_op,
     UDP_OP_BIND,        ///< new + bind + arm recv on a slot
     UDP_OP_BIND_MCAST,  ///< as BIND, plus SO_REUSEADDR + IGMP join
     UDP_OP_LEAVE_MCAST, ///< IGMP leave + remove
     UDP_OP_UNBIND       ///< remove
-} protocore_udp_op;
+);
 
 typedef struct
 {
@@ -213,7 +216,7 @@ typedef struct
     UdpBind *b;
     uint16_t port;
     protocore_ip group;
-    proto_bool result;
+    embed_bool result;
 } protocore_udp_call;
 
 // Stamp a control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
@@ -232,18 +235,18 @@ static void apply_dscp(protocore_udp_pcb *pcb)
 }
 
 // Allocate, copy, send, free. Runs in the stack's thread only.
-static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
+static embed_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
                             size_t len)
 {
     protocore_net_ip dst;
     if (!protocore_net_addr_from_ip(a, &dst))
     {
-        return PROTO_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
+        return EMBED_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
     }
-    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (proto_u16)len, PROTOCORE_NET_PBUF_RAM);
+    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (embed_u16)len, PROTOCORE_NET_PBUF_RAM);
     if (p == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)p->payload, .at = data, .size = len);
     protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
@@ -259,7 +262,7 @@ static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint1
  * first and each segment follows it, all against a local head that is published once.
  */
 static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p, const protocore_net_ip *addr,
-                           proto_u16 port)
+                           embed_u16 port)
 {
     (void)pcb;
     UdpBind *b = (UdpBind *)arg;
@@ -272,10 +275,10 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
         protocore_net_pbuf_free(p);
         return;
     }
-    proto_u16 n = p->tot_len;
+    embed_u16 n = p->tot_len;
     if (n > PROTOCORE_UDP_RX_BUF_SIZE)
     {
-        n = (proto_u16)PROTOCORE_UDP_RX_BUF_SIZE; // a longer datagram is truncated to the staged length
+        n = (embed_u16)PROTOCORE_UDP_RX_BUF_SIZE; // a longer datagram is truncated to the staged length
     }
     protocore_udp_dgram d = {{PROTOCORE_IP_NONE, {0}}, 0, 0};
     protocore_net_addr_to_ip(addr, &d.addr);
@@ -316,7 +319,7 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
 static protocore_net_err udp_do(protocore_net_call *c)
 {
     protocore_udp_call *k = (protocore_udp_call *)c;
-    k->result = PROTO_FALSE;
+    k->result = EMBED_FALSE;
     switch (k->op)
     {
     case UDP_OP_BIND: {
@@ -328,7 +331,7 @@ static protocore_net_err udp_do(protocore_net_call *c)
                 k->b->pcb = pcb;
                 apply_dscp(pcb);
                 protocore_net_udp_recv(pcb, udp_trampoline, k->b);
-                k->result = PROTO_TRUE;
+                k->result = EMBED_TRUE;
             }
             else
             {
@@ -357,10 +360,10 @@ static protocore_net_err udp_do(protocore_net_call *c)
             {
                 k->b->pcb = pcb;
                 k->b->group = k->group;
-                k->b->mcast = PROTO_TRUE;
+                k->b->mcast = EMBED_TRUE;
                 apply_dscp(pcb);
                 protocore_net_udp_recv(pcb, udp_trampoline, k->b);
-                k->result = PROTO_TRUE;
+                k->result = EMBED_TRUE;
             }
             else
             {
@@ -382,7 +385,7 @@ static protocore_net_err udp_do(protocore_net_call *c)
             protocore_net_udp_remove(k->b->pcb);
         }
         k->b->pcb = NULL;
-        k->result = PROTO_TRUE;
+        k->result = EMBED_TRUE;
 #endif
         break;
     }
@@ -392,16 +395,16 @@ static protocore_net_err udp_do(protocore_net_call *c)
             protocore_net_udp_remove(k->b->pcb);
         }
         k->b->pcb = NULL;
-        k->result = PROTO_TRUE;
+        k->result = EMBED_TRUE;
         break;
     }
     return PROTOCORE_NET_OK;
 }
 
 // Run one marshaled op on UDP_LISTENER_CTX(work)->slot and report what it set.
-static proto_bool marshal_op(uint8_t *work, protocore_udp_op op, uint16_t port, const protocore_ip *group)
+static embed_bool marshal_op(uint8_t *work, protocore_udp_op op, uint16_t port, const protocore_ip *group)
 {
-    protocore_udp_call k = {{0}, UDP_OP_BIND, NULL, 0, {PROTOCORE_IP_NONE, {0}}, PROTO_FALSE};
+    protocore_udp_call k = {{0}, UDP_OP_BIND, NULL, 0, {PROTOCORE_IP_NONE, {0}}, EMBED_FALSE};
     k.op = op;
     k.b = UDP_LISTENER_CTX(work)->slot;
     k.port = port;
@@ -434,7 +437,7 @@ typedef struct
     const uint8_t *data;
     size_t len;
     uint16_t port;
-    proto_bool ok;
+    embed_bool ok;
 } protocore_udp_send_call;
 
 // The send, on the stack's thread, from the slot's bound control block so the peer sees the port it
@@ -452,17 +455,17 @@ static protocore_net_err send_do(protocore_net_call *c)
 }
 
 // Send one datagram out of UDP_LISTENER_CTX(work)->slot to @p a, from where the caller's bytes already are.
-static proto_bool send_now(uint8_t *work, const protocore_ip *a, uint16_t port)
+static embed_bool send_now(uint8_t *work, const protocore_ip *a, uint16_t port)
 {
     if (UDP_LISTENER_CTX(work)->slot == NULL || a == NULL || UdpListenerV.send_args.data == NULL ||
         UdpListenerV.send_args.len == 0 || UdpListenerV.send_args.len > PROTOCORE_UDP_RX_BUF_SIZE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
     protocore_udp_send_call k = {
         {0},        UDP_LISTENER_CTX(work)->slot, a, UdpListenerV.send_args.data, UdpListenerV.send_args.len, port,
-        PROTO_FALSE};
+        EMBED_FALSE};
     (void)protocore_net_call_marshal(send_do, &k.base);
     return k.ok;
 }
@@ -480,13 +483,13 @@ void protocore_udp_listener_listen(uint8_t *work)
     {
         UDP_LISTENER_CTX(work)->slot->handler = UdpListenerV.bind.handler;
         UDP_LISTENER_CTX(work)->slot->ctx = UdpListenerV.bind.handler_ctx;
-        UdpListenerV.ok = PROTO_TRUE;
+        UdpListenerV.ok = EMBED_TRUE;
         return;
     }
     free_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL)
     {
-        UdpListenerV.ok = PROTO_FALSE; // pool exhausted
+        UdpListenerV.ok = EMBED_FALSE; // pool exhausted
         return;
     }
     bind_clear(work);
@@ -499,17 +502,17 @@ void protocore_udp_listener_listen(uint8_t *work)
     if (!marshal_op(work, UDP_OP_BIND, UdpListenerV.port, NULL))
     {
         UDP_LISTENER_CTX(work)->slot->handler = NULL;
-        UdpListenerV.ok = PROTO_FALSE;
+        UdpListenerV.ok = EMBED_FALSE;
         return;
     }
-    atomic_fetch_or_explicit(&UDP_LISTENER_CTX(work)->bound, bind_bit(bind_idx(work)), memory_order_release);
-    UdpListenerV.ok = PROTO_TRUE;
+    EMBED_CALL(embed_atomic_u32_table.fetch_or, EmbedAtomicU32FetchOrCfg, .word = &UDP_LISTENER_CTX(work)->bound, .value = bind_bit(bind_idx(work)));
+    UdpListenerV.ok = EMBED_TRUE;
 }
 
 void protocore_udp_listener_listen_multicast(uint8_t *work)
 {
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
-    UdpListenerV.ok = PROTO_FALSE;
+    UdpListenerV.ok = EMBED_FALSE;
     IpV.args.text = UdpListenerV.bind.group_ip;
     IpV.args.out = &group;
     Ip.parse(work);
@@ -537,8 +540,8 @@ void protocore_udp_listener_listen_multicast(uint8_t *work)
         UDP_LISTENER_CTX(work)->slot->handler = NULL;
         return;
     }
-    atomic_fetch_or_explicit(&UDP_LISTENER_CTX(work)->bound, bind_bit(bind_idx(work)), memory_order_release);
-    UdpListenerV.ok = PROTO_TRUE;
+    EMBED_CALL(embed_atomic_u32_table.fetch_or, EmbedAtomicU32FetchOrCfg, .word = &UDP_LISTENER_CTX(work)->bound, .value = bind_bit(bind_idx(work)));
+    UdpListenerV.ok = EMBED_TRUE;
 }
 
 void protocore_udp_listener_leave_multicast(uint8_t *work)
@@ -546,12 +549,12 @@ void protocore_udp_listener_leave_multicast(uint8_t *work)
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)
     {
-        UdpListenerV.ok = PROTO_FALSE;
+        UdpListenerV.ok = EMBED_FALSE;
         return;
     }
     unbind_port(work);
     bind_clear(work);
-    UdpListenerV.ok = PROTO_TRUE;
+    UdpListenerV.ok = EMBED_TRUE;
 }
 
 void protocore_udp_listener_poll(uint8_t *work)
@@ -560,7 +563,7 @@ void protocore_udp_listener_poll(uint8_t *work)
     {
         return; // a handler called back into poll(); the stage is already in use
     }
-    UDP_LISTENER_CTX(work)->polling = PROTO_TRUE;
+    UDP_LISTENER_CTX(work)->polling = EMBED_TRUE;
     for (int i = 0; i < PROTOCORE_MAX_UDP_LISTENERS; i++)
     {
         UdpBind *b = &UDP_LISTENER_CTX(work)->bind[i];
@@ -578,14 +581,14 @@ void protocore_udp_listener_poll(uint8_t *work)
             }
         }
     }
-    UDP_LISTENER_CTX(work)->polling = PROTO_FALSE;
+    UDP_LISTENER_CTX(work)->polling = EMBED_FALSE;
 }
 
 void protocore_udp_listener_reply(uint8_t *work)
 {
     if (UdpListenerV.peer_args.peer == NULL)
     {
-        UdpListenerV.ok = PROTO_FALSE;
+        UdpListenerV.ok = EMBED_FALSE;
         return;
     }
     UDP_LISTENER_CTX(work)->slot = UdpListenerV.peer_args.peer->bind;
@@ -595,7 +598,7 @@ void protocore_udp_listener_reply(uint8_t *work)
 void protocore_udp_listener_peer_addr(uint8_t *work)
 {
     (void)work;
-    UdpListenerV.ok = PROTO_FALSE;
+    UdpListenerV.ok = EMBED_FALSE;
     if (UdpListenerV.peer_args.peer == NULL || UdpListenerV.peer_args.ip_out == NULL ||
         UdpListenerV.peer_args.ip_cap < 8u)
     {
@@ -613,7 +616,7 @@ void protocore_udp_listener_peer_addr(uint8_t *work)
     {
         *UdpListenerV.peer_args.port_out = UdpListenerV.peer_args.peer->port;
     }
-    UdpListenerV.ok = PROTO_TRUE;
+    UdpListenerV.ok = EMBED_TRUE;
 }
 
 void protocore_udp_listener_sendto(uint8_t *work)
@@ -622,7 +625,7 @@ void protocore_udp_listener_sendto(uint8_t *work)
     if (UDP_LISTENER_CTX(work)->slot == NULL || UdpListenerV.send_args.dst == NULL ||
         UdpListenerV.send_args.dst->family == PROTOCORE_IP_NONE)
     {
-        UdpListenerV.ok = PROTO_FALSE;
+        UdpListenerV.ok = EMBED_FALSE;
         return;
     }
     UdpListenerV.ok = send_now(work, UdpListenerV.send_args.dst, UdpListenerV.send_args.dst_port);
@@ -634,12 +637,12 @@ void protocore_udp_listener_close(uint8_t *work)
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL)
     {
-        UdpListenerV.ok = PROTO_FALSE;
+        UdpListenerV.ok = EMBED_FALSE;
         return;
     }
     unbind_port(work);
     bind_clear(work);
-    UdpListenerV.ok = PROTO_TRUE;
+    UdpListenerV.ok = EMBED_TRUE;
 }
 
 // The group ns->port joined, formatted, or NULL when the port is unbound or joined none.
@@ -666,4 +669,6 @@ void protocore_udp_listener_joined_group(uint8_t *work)
 /** @brief The operands and the outcome. */
 UdpListenerVars UdpListenerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
+
+#endif // PROTOCORE_ENABLE_UDP

@@ -87,7 +87,7 @@ void test_8021q_tag_layout(void)
     Rawl2V.build_vlan_args.dst = DST;
     Rawl2V.build_vlan_args.src = SRC;
     Rawl2V.build_vlan_args.pcp = 6;
-    Rawl2V.build_vlan_args.dei = PROTO_TRUE;
+    Rawl2V.build_vlan_args.dei = EMBED_TRUE;
     Rawl2V.build_vlan_args.vid = 0x0ABC;
     Rawl2V.build_vlan_args.ethertype = ETHERTYPE_PROFINET;
     Rawl2V.build_vlan_args.payload = PAYLOAD;
@@ -131,7 +131,7 @@ void test_vlan_tci_field_widths(void)
         Rawl2V.build_vlan_args.dst = DST;
         Rawl2V.build_vlan_args.src = SRC;
         Rawl2V.build_vlan_args.pcp = pcp;
-        Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2V.build_vlan_args.dei = EMBED_FALSE;
         Rawl2V.build_vlan_args.vid = 0x0FFF;
         Rawl2V.build_vlan_args.ethertype = ETHERTYPE_IPV4;
         Rawl2V.build_vlan_args.payload = NULL;
@@ -155,7 +155,7 @@ void test_vlan_tci_field_widths(void)
         Rawl2V.build_vlan_args.dst = DST;
         Rawl2V.build_vlan_args.src = SRC;
         Rawl2V.build_vlan_args.pcp = 0;
-        Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2V.build_vlan_args.dei = EMBED_FALSE;
         Rawl2V.build_vlan_args.vid = VIDS[i];
         Rawl2V.build_vlan_args.ethertype = ETHERTYPE_IPV4;
         Rawl2V.build_vlan_args.payload = NULL;
@@ -177,7 +177,7 @@ void test_vlan_tci_field_widths(void)
     Rawl2V.build_vlan_args.dst = DST;
     Rawl2V.build_vlan_args.src = SRC;
     Rawl2V.build_vlan_args.pcp = 0;
-    Rawl2V.build_vlan_args.dei = PROTO_TRUE;
+    Rawl2V.build_vlan_args.dei = EMBED_TRUE;
     Rawl2V.build_vlan_args.vid = 0;
     Rawl2V.build_vlan_args.ethertype = ETHERTYPE_IPV4;
     Rawl2V.build_vlan_args.payload = NULL;
@@ -214,7 +214,7 @@ void test_tagged_and_untagged_stay_distinct(void)
         Rawl2V.build_vlan_args.dst = DST;
         Rawl2V.build_vlan_args.src = SRC;
         Rawl2V.build_vlan_args.pcp = 5;
-        Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2V.build_vlan_args.dei = EMBED_FALSE;
         Rawl2V.build_vlan_args.vid = 42;
         Rawl2V.build_vlan_args.ethertype = TYPES[i];
         Rawl2V.build_vlan_args.payload = PAYLOAD;
@@ -305,7 +305,7 @@ void test_parse_refuses_a_short_frame(void)
     Rawl2V.build_vlan_args.dst = DST;
     Rawl2V.build_vlan_args.src = SRC;
     Rawl2V.build_vlan_args.pcp = 0;
-    Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+    Rawl2V.build_vlan_args.dei = EMBED_FALSE;
     Rawl2V.build_vlan_args.vid = 1;
     Rawl2V.build_vlan_args.ethertype = ETHERTYPE_IPV4;
     Rawl2V.build_vlan_args.payload = NULL;
@@ -365,7 +365,7 @@ void test_build_refuses_bad_arguments(void)
         Rawl2V.build_vlan_args.dst = DST;
         Rawl2V.build_vlan_args.src = SRC;
         Rawl2V.build_vlan_args.pcp = 0;
-        Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2V.build_vlan_args.dei = EMBED_FALSE;
         Rawl2V.build_vlan_args.vid = 1;
         Rawl2V.build_vlan_args.ethertype = ETHERTYPE_IPV4;
         Rawl2V.build_vlan_args.payload = PAYLOAD;
@@ -415,7 +415,7 @@ void test_build_refuses_bad_arguments(void)
     Rawl2V.build_vlan_args.dst = NULL;
     Rawl2V.build_vlan_args.src = SRC;
     Rawl2V.build_vlan_args.pcp = 0;
-    Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+    Rawl2V.build_vlan_args.dei = EMBED_FALSE;
     Rawl2V.build_vlan_args.vid = 1;
     Rawl2V.build_vlan_args.ethertype = ETHERTYPE_IPV4;
     Rawl2V.build_vlan_args.payload = NULL;
@@ -427,7 +427,7 @@ void test_build_refuses_bad_arguments(void)
     Rawl2V.build_vlan_args.dst = DST;
     Rawl2V.build_vlan_args.src = SRC;
     Rawl2V.build_vlan_args.pcp = 0;
-    Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+    Rawl2V.build_vlan_args.dei = EMBED_FALSE;
     Rawl2V.build_vlan_args.vid = 1;
     Rawl2V.build_vlan_args.ethertype = ETHERTYPE_IPV4;
     Rawl2V.build_vlan_args.payload = NULL;
@@ -475,7 +475,7 @@ void test_payload_round_trip(void)
         Rawl2V.build_vlan_args.dst = DST;
         Rawl2V.build_vlan_args.src = SRC;
         Rawl2V.build_vlan_args.pcp = 3;
-        Rawl2V.build_vlan_args.dei = PROTO_FALSE;
+        Rawl2V.build_vlan_args.dei = EMBED_FALSE;
         Rawl2V.build_vlan_args.vid = 7;
         Rawl2V.build_vlan_args.ethertype = ETHERTYPE_GOOSE;
         Rawl2V.build_vlan_args.payload = len ? payload : NULL;

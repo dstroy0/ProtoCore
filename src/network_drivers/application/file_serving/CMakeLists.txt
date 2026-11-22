@@ -17,6 +17,7 @@ protocore_add_module(network_drivers/application/file_serving
     network_drivers/transport/tcp
     network_drivers/transport/tcp/protocol
     server/storage/filesystem
+    shared/http_date
     shared/mime
     shared/time_compat
 )

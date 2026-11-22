@@ -45,7 +45,7 @@
 
 #if PROTOCORE_ENABLE_STATSD
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The four metric types of github.com/statsd/statsd `docs/metric_types.md`.
@@ -53,13 +53,12 @@ PROTOCORE_BEGIN_DECLS
  * The value is the selector a call sets, not the token the line carries: a timing selects with 'm'
  * and writes `ms`.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(StatsdType,
     STATSD_COUNTER = 'c', ///< Counting: `gorets:1|c`
     STATSD_GAUGE = 'g',   ///< Gauges: `gaugor:333|g`, or a signed value to adjust
     STATSD_TIMING = 'm',  ///< Timing: written as `ms`, `glork:320|ms`
     STATSD_SET = 's',     ///< Sets: `uniques:765|s`
-} StatsdType;
+);
 
 /** @brief The StatsD daemon every datagram is sent to. */
 typedef struct
@@ -134,7 +133,7 @@ typedef struct
     StatsdMetricArgs metric; ///< what one line names
     StatsdValueArgs value;   ///< what one line carries
     StatsdLineArgs line;     ///< where the formatted line lands
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } StatsdVars;
 
@@ -188,7 +187,7 @@ static const StatsdNs Statsd __attribute__((unused)) = {
  */
 uint8_t *protocore_statsd_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_STATSD
 

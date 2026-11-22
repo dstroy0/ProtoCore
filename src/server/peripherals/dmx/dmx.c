@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "server/peripherals/dmx/dmx.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -164,30 +164,30 @@ void protocore_dmx_rdm_parse(uint8_t *work)
 
     if (!buf || !out || len < RDM_OVERHEAD)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != RDM_SC || buf[1] != RDM_SUB_SC)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     uint8_t ml = buf[2];
     if (ml < 24)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     uint8_t pdl = buf[23];
     if (ml != (uint8_t)(24 + pdl))
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return; // message length must match the declared PDL
     }
     size_t total = (size_t)ml + 2;
     if (len < total)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     uint16_t cs = (uint16_t)((buf[ml] << 8) | buf[ml + 1]);
@@ -196,7 +196,7 @@ void protocore_dmx_rdm_parse(uint8_t *work)
     protocore_dmx_rdm_checksum(work);
     if (cs != DmxV.checksum)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
 
@@ -214,7 +214,7 @@ void protocore_dmx_rdm_parse(uint8_t *work)
     {
         *consumed = total;
     }
-    DmxV.ok = PROTO_TRUE;
+    DmxV.ok = EMBED_TRUE;
 }
 
 void protocore_dmx_rdm_decode_disc_response(uint8_t *work)
@@ -226,7 +226,7 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *work)
 
     if (!buf || !uid)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     // Skip the optional preamble (up to 7 octets of 0xFE), then require the 0xAA separator.
@@ -237,13 +237,13 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *work)
     }
     if (p >= len || buf[p] != 0xAA)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     p++;
     if (len - p < 16) // 12 encoded UID octets + 4 encoded checksum octets
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     const uint8_t *euid = buf + p;
@@ -257,7 +257,7 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *work)
     uint8_t csum_lo = (uint8_t)(euid[14] & euid[15]);
     if ((uint16_t)(((uint16_t)csum_hi << 8) | csum_lo) != sum)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     // Recover the 6 UID octets (MSB first); each is the AND of its 0xAA / 0x55 encoded copies.
@@ -267,7 +267,7 @@ void protocore_dmx_rdm_decode_disc_response(uint8_t *work)
         u = (u << 8) | (uint8_t)(euid[i * 2] & euid[i * 2 + 1]);
     }
     *uid = u;
-    DmxV.ok = PROTO_TRUE;
+    DmxV.ok = EMBED_TRUE;
 }
 
 void protocore_dmx_rdm_build_disc_response(uint8_t *work)
@@ -358,7 +358,7 @@ void protocore_dmx_rdm_parse_device_info(uint8_t *work)
 
     if (!pdata || !out || pdl < PROTOCORE_RDM_DEVICE_INFO_PDL)
     {
-        DmxV.ok = PROTO_FALSE;
+        DmxV.ok = EMBED_FALSE;
         return;
     }
     out->proto_major = pdata[0];
@@ -373,12 +373,12 @@ void protocore_dmx_rdm_parse_device_info(uint8_t *work)
     out->dmx_start_address = (uint16_t)((pdata[14] << 8) | pdata[15]);
     out->sub_device_count = (uint16_t)((pdata[16] << 8) | pdata[17]);
     out->sensor_count = pdata[18];
-    DmxV.ok = PROTO_TRUE;
+    DmxV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 DmxVars DmxV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DMX

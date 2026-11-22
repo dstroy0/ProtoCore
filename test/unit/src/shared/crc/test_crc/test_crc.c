@@ -187,12 +187,12 @@ void test_width_is_respected(void)
 // A width outside the supported 8..32 range is clamped: below 8 behaves as 8, above 32 as 32.
 void test_out_of_range_width_is_clamped(void)
 {
-    const protocore_crc_params lo4 = {4, 0x07u, 0x00u, PROTO_FALSE, PROTO_FALSE, 0x00u};
-    const protocore_crc_params lo8 = {8, 0x07u, 0x00u, PROTO_FALSE, PROTO_FALSE, 0x00u};
+    const protocore_crc_params lo4 = {4, 0x07u, 0x00u, EMBED_FALSE, EMBED_FALSE, 0x00u};
+    const protocore_crc_params lo8 = {8, 0x07u, 0x00u, EMBED_FALSE, EMBED_FALSE, 0x00u};
     TEST_ASSERT_EQUAL_HEX32(check_of(&lo8), check_of(&lo4));
 
-    const protocore_crc_params hi40 = {40, 0x04C11DB7u, 0xFFFFFFFFu, PROTO_TRUE, PROTO_TRUE, 0xFFFFFFFFu};
-    const protocore_crc_params hi32 = {32, 0x04C11DB7u, 0xFFFFFFFFu, PROTO_TRUE, PROTO_TRUE, 0xFFFFFFFFu};
+    const protocore_crc_params hi40 = {40, 0x04C11DB7u, 0xFFFFFFFFu, EMBED_TRUE, EMBED_TRUE, 0xFFFFFFFFu};
+    const protocore_crc_params hi32 = {32, 0x04C11DB7u, 0xFFFFFFFFu, EMBED_TRUE, EMBED_TRUE, 0xFFFFFFFFu};
     TEST_ASSERT_EQUAL_HEX32(check_of(&hi32), check_of(&hi40));
 }
 

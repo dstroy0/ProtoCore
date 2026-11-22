@@ -39,7 +39,7 @@ static protocore_ip parsed(const char *text)
     return ip;
 }
 
-static proto_bool same(const protocore_ip *a, const protocore_ip *b)
+static embed_bool same(const protocore_ip *a, const protocore_ip *b)
 {
     IpV.args.ip = a;
     IpV.args.b = b;

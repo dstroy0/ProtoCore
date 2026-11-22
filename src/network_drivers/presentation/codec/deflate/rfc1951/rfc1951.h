@@ -22,7 +22,7 @@
 
 #include "bitorum_introitus_exitus/bitorum_introitus_exitus.h" // mmgr_bitor - what the emitters write through
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -138,7 +138,7 @@ static const Rfc1951Ns Rfc1951 __attribute__((unused)) = {
     .emit_match = protocore_rfc1951_emit_match,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEFLATE_RFC1951
 

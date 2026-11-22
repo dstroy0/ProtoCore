@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_COTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -57,7 +57,7 @@ typedef struct
     uint8_t code;        ///< TPDU type (high nibble): COTP_DT / COTP_CR / ...
     uint16_t dst_ref;    ///< CR / CC destination reference
     uint16_t src_ref;    ///< CR / CC source reference
-    proto_bool eot;      ///< DT end-of-TSDU flag
+    embed_bool eot;      ///< DT end-of-TSDU flag
     const uint8_t *data; ///< DT user data (points INTO the source buffer)
     size_t data_len;
 } CotpHeader;
@@ -88,7 +88,7 @@ typedef struct
     size_t cap;
     const uint8_t *data;
     size_t data_len;
-    proto_bool eot;
+    embed_bool eot;
 } CotpBuildDtArgs;
 
 /** @brief What build_cr takes: buf, cap, src_ref, tpdu_size_code, ... */
@@ -163,7 +163,7 @@ typedef struct
     CotpBuildCrArgs build_cr_args;
     CotpBuildCcArgs build_cc_args;
     CotpParseArgs parse_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } CotpVars;
 
@@ -203,7 +203,7 @@ static const CotpNs Cotp __attribute__((unused)) = {
     .parse = protocore_cotp_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_COTP
 

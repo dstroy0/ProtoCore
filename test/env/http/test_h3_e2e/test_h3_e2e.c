@@ -47,14 +47,14 @@ typedef struct
     char *s;
 } H3StatusCtx;
 
-static proto_bool h3_take_status(void *c, const char *nm, size_t nl, const char *v, size_t vl)
+static embed_bool h3_take_status(void *c, const char *nm, size_t nl, const char *v, size_t vl)
 {
     if (nl == 7 && memcmp(nm, ":status", 7) == 0)
     {
         memcpy(((H3StatusCtx *)c)->s, v, vl);
         ((H3StatusCtx *)c)->s[vl] = 0;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static const uint8_t CERT[48] = {0x30, 0x2e, 0x02, 0x01, 0x02};
@@ -98,7 +98,7 @@ static void wr_pn(uint8_t *o, uint64_t pn, uint8_t pn_len)
     }
 }
 static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *dcid, uint8_t dcl, const uint8_t *scid,
-                         uint8_t scl, uint64_t pn, const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
+                         uint8_t scl, uint64_t pn, QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
     uint8_t quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, pn, -1);
     uint8_t pn_len = quic_packet_u8;
@@ -117,11 +117,11 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     p += pn_len;
     memcpy(out + p, frames, frame_len);
     size_t quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
+        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, EMBED_TRUE);
     return quic_crypto_n;
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
-                          const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
+                          QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
     uint8_t quic_packet_u8 = QuicPacket.pn_length(quic_packet_work, pn, -1);
     uint8_t pn_len = quic_packet_u8;
@@ -131,14 +131,14 @@ static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
     size_t quic_crypto_n =
-        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
+        QuicCrypto.packet_protect(quic_crypto_work, out, cap, pn_off, pn_len, pn, frame_len, keys, EMBED_FALSE);
     return quic_crypto_n;
 }
-static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
+static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
 {
     QuicLongHeader h;
-    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
+    embed_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
     TEST_ASSERT_TRUE(quic_packet_ok);
     *type = h.type;
     size_t off = h.hdr_len;
@@ -158,16 +158,16 @@ static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *key
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
     size_t quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
+        QuicCrypto.packet_unprotect(quic_crypto_work, work, off, (size_t)length, 0, keys, EMBED_TRUE, plain, &pn);
     return quic_crypto_n;
 }
-static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, const QuicPacketKeys *keys, uint8_t *plain)
+static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
     size_t quic_crypto_n =
-        QuicCrypto.packet_unprotect(quic_crypto_work, work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
+        QuicCrypto.packet_unprotect(quic_crypto_work, work, 1 + dcl, len - (1 + dcl), 0, keys, EMBED_FALSE, plain, &pn);
     return quic_crypto_n;
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
@@ -414,7 +414,7 @@ void test_http3_get_end_to_end()
     size_t h3_frame_n = H3Frame.build_headers(h3_frame_work, h3req, sizeof(h3req), block, bp);
     size_t h3l = h3_frame_n;
     uint8_t sfr[300];
-    quic_frame_n = QuicFrame.build_stream(quic_frame_work, sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
+    quic_frame_n = QuicFrame.build_stream(quic_frame_work, sfr, sizeof(sfr), 0, 0, h3req, h3l, EMBED_TRUE);
     size_t sfrl = quic_frame_n;
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
@@ -426,7 +426,7 @@ void test_http3_get_end_to_end()
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
     TEST_ASSERT_EQUAL_STRING("/hello", g_path);
 
-    proto_bool got = PROTO_FALSE;
+    embed_bool got = EMBED_FALSE;
     QuicConnV.bind.b = qc_b;
     // Drain: send is called until it reports nothing left, so the call is the condition.
     for (;;)
@@ -442,7 +442,7 @@ void test_http3_get_end_to_end()
         size_t off = 0;
         while (off < sl)
         {
-            proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
+            embed_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, sdg[off]);
             if (quic_packet_ok)
             {
                 size_t w = 0;
@@ -478,11 +478,11 @@ void test_http3_get_end_to_end()
                     const uint8_t *sp = f.stream.data;
                     size_t so = 0, sn = (size_t)f.stream.length;
                     char status[8] = {0};
-                    proto_bool data_ok = PROTO_FALSE;
+                    embed_bool data_ok = EMBED_FALSE;
                     while (so < sn)
                     {
                         H3FrameHeader hf;
-                        proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, sp + so, sn - so, &hf);
+                        embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, sp + so, sn - so, &hf);
                         if (!h3_frame_ok)
                         {
                             break;
@@ -498,14 +498,14 @@ void test_http3_get_end_to_end()
                         {
                             if (hf.length == 8 && memcmp(hp, "hello h3", 8) == 0)
                             {
-                                data_ok = PROTO_TRUE;
+                                data_ok = EMBED_TRUE;
                             }
                         }
                         so += hf.header_len + (size_t)hf.length;
                     }
                     if (strcmp(status, "200") == 0 && data_ok)
                     {
-                        got = PROTO_TRUE;
+                        got = EMBED_TRUE;
                     }
                 }
             }

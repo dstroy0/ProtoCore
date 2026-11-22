@@ -14,7 +14,7 @@
 #include "crypto/hash/sha1/sha1.h"
 #include "server/core/worker/worker.h" // protocore_secure_guard: the cellblock the digest borrow comes from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // RFC 4122 DNS namespace UUID (6ba7b810-9dad-11d1-80b4-00c04fd430c8).
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
@@ -24,7 +24,7 @@ static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd
 static char hex_digit(uint8_t *work, uint8_t nibble)
 {
     HexV.args.nibble = nibble;
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     Hex.digit(work);
     return HexV.ch;
 }
@@ -93,6 +93,6 @@ void protocore_device_id_uuid(uint8_t *work)
 /** @brief The operands and the outcome. */
 DeviceIdVars DeviceIdV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID

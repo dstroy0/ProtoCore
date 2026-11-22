@@ -14,7 +14,7 @@
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The guardrails' compile-time storage: the breach callback, for the length of a build. */
 struct GuardrailsStorage
@@ -173,6 +173,6 @@ void protocore_guardrails_check(uint8_t *work)
 /** @brief The operands and the outcome. */
 GuardrailsVars GuardrailsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS

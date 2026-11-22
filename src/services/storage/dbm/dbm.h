@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_DBM
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/storage/wal/wal_store/wal_store.h"
 
@@ -58,14 +58,14 @@ typedef struct protocore_dbm
  * @brief Bind @p db to a mounted @p wal and rebuild the index by replaying the log.
  * @return false if the log holds more distinct live keys than ::PROTOCORE_DBM_SLOTS (index would overflow).
  */
-proto_bool protocore_dbm_open(struct protocore_dbm *db, WalStore *wal);
+embed_bool protocore_dbm_open(struct protocore_dbm *db, WalStore *wal);
 
 /**
  * @brief Insert or overwrite @p key -> @p val. Appends a WAL record and updates the index (not synced).
  * @return false if @p key_len > ::PROTOCORE_DBM_KEY_MAX, @p val_len > ::PROTOCORE_DBM_VAL_MAX, the index is full
  * (a new key with no free slot), or the WAL is full.
  */
-proto_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t key_len, const uint8_t *val,
+embed_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t key_len, const uint8_t *val,
                              uint32_t val_len);
 
 /**
@@ -78,20 +78,20 @@ long protocore_dbm_get(struct protocore_dbm *db, const char *key, uint16_t key_l
  * @brief Delete @p key (appends a tombstone record and drops it from the index).
  * @return true if the key existed (and the tombstone was appended); false if absent or the WAL is full.
  */
-proto_bool protocore_dbm_del(struct protocore_dbm *db, const char *key, uint16_t key_len);
+embed_bool protocore_dbm_del(struct protocore_dbm *db, const char *key, uint16_t key_len);
 
 /** @brief @return true if @p key is live. */
-proto_bool protocore_dbm_contains(const struct protocore_dbm *db, const char *key, uint16_t key_len);
+embed_bool protocore_dbm_contains(const struct protocore_dbm *db, const char *key, uint16_t key_len);
 
 /** @brief @return the number of live keys. */
 uint32_t protocore_dbm_count(const struct protocore_dbm *db);
 
 /** @brief Make all writes since the last sync durable (checkpoints the WAL). @return false on I/O failure. */
-proto_bool protocore_dbm_sync(struct protocore_dbm *db);
+embed_bool protocore_dbm_sync(struct protocore_dbm *db);
 
 /** @brief Per-key callback for ::protocore_dbm_iterate; return false to stop early. The key bytes are not
  * NUL-terminated. Do not put/delete during iteration (it mutates the index). */
-typedef proto_bool (*protocore_dbm_iter_cb)(const char *key, uint16_t key_len, void *ctx);
+typedef embed_bool (*protocore_dbm_iter_cb)(const char *key, uint16_t key_len, void *ctx);
 
 /** @brief Visit every live key (unordered). @return the number of keys visited. */
 uint32_t protocore_dbm_iterate(const struct protocore_dbm *db, protocore_dbm_iter_cb cb, void *ctx);
@@ -115,9 +115,9 @@ uint64_t protocore_dbm_live_bytes(const struct protocore_dbm *db);
  * caller can retry or keep using the old store.
  * @return true when every live key was copied, the destination checkpointed, and the index rebuilt.
  */
-proto_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst);
+embed_bool protocore_dbm_compact(struct protocore_dbm *db, WalStore *dst);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DBM
 

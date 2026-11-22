@@ -11,7 +11,7 @@
 
 #include "idemIP/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief An Ethernet address: 48 bits (RFC 894 "48-bit addresses"). */
 #define IDEMIP_MAC_LEN 6u
@@ -26,12 +26,11 @@ PROTOCORE_BEGIN_DECLS
 #define IDEMIP_ETH_HDR_LEN 14u
 
 /** @brief Type field values. RFC 894 fixes IPv4 at 0x0800; RFC 826 sec "Packet format" ARP at 0x0806. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IdemIpEtherType,
     IDEMIP_ETHERTYPE_IPV4 = 0x0800,
     IDEMIP_ETHERTYPE_ARP = 0x0806,
     IDEMIP_ETHERTYPE_IPV6 = 0x86DD,
-} IdemIpEtherType;
+);
 
 /**
  * @brief Smallest data field a frame may carry (RFC 894).
@@ -60,6 +59,6 @@ typedef enum PROTO_ENUM_PACKED
 static_assert(IDEMIP_ETH_MAX_PAYLOAD >= IDEMIP_IPV4_MIN_MTU,
               "an Ethernet frame carries at least the IPv4 minimum reassembly buffer (RFC 1122 sec 3.3.3)");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_ETHERNET_H

@@ -14,7 +14,7 @@
 #include "services/transportation/utmc/utmc.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static size_t put_u(char *out, size_t cap, size_t at, uint32_t v)
 {
@@ -91,6 +91,6 @@ size_t protocore_utmc_parse_request(const char *xml, size_t len, char *out, size
     return 0;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UTMC

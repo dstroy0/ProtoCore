@@ -97,22 +97,22 @@ static void cmd(const nrf_bus *b, uint8_t c)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_config *cfg)
+embed_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_config *cfg)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     (void)work;
 
     if (!bus || !bus->spi || !bus->ce || !cfg || !cfg->address)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    bus->ce(PROTO_FALSE, bus->ctx);
+    bus->ce(EMBED_FALSE, bus->ctx);
 
     reg_write(bus, REG_CONFIG, CFG_EN_CRC | CFG_CRCO); // power down, 16-bit CRC
     reg_write(bus, REG_RF_CH, cfg->channel);
     if (reg_read(bus, REG_RF_CH) != cfg->channel)
     {
-        ok = PROTO_FALSE; // written value did not read back -> no chip on the bus
+        ok = EMBED_FALSE; // written value did not read back -> no chip on the bus
         return ok;
     }
 
@@ -140,18 +140,18 @@ proto_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_con
 
     reg_write(bus, REG_CONFIG,
               CFG_EN_CRC | CFG_CRCO | CFG_PWR_UP); // power up (standby)
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len)
+embed_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len)
 {
     (void)work;
 
     if (!bus || !data || len == 0 || len > PROTOCORE_NRF24_PAYLOAD)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    bus->ce(PROTO_FALSE, bus->ctx);
+    bus->ce(EMBED_FALSE, bus->ctx);
     reg_write(bus, REG_CONFIG,
               CFG_EN_CRC | CFG_CRCO | CFG_PWR_UP); // PRIM_RX = 0 -> PTX
 
@@ -164,24 +164,24 @@ proto_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t
     }
     bus->spi(tx, rx, (uint8_t)(PROTOCORE_NRF24_PAYLOAD + 1), bus->ctx);
 
-    bus->ce(PROTO_TRUE, bus->ctx); // key the transmit
-    return PROTO_TRUE;
+    bus->ce(EMBED_TRUE, bus->ctx); // key the transmit
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_nrf24_tx_done(uint8_t *work, const nrf_bus *bus)
+embed_bool protocore_nrf24_tx_done(uint8_t *work, const nrf_bus *bus)
 {
     (void)work;
 
     if (!bus)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (status(bus) & ST_TX_DS)
     {
         reg_write(bus, REG_STATUS, ST_TX_DS); // write-1-to-clear
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void protocore_nrf24_set_rx(uint8_t *work, const nrf_bus *bus)
@@ -194,7 +194,7 @@ void protocore_nrf24_set_rx(uint8_t *work, const nrf_bus *bus)
     }
     reg_write(bus, REG_CONFIG,
               CFG_EN_CRC | CFG_CRCO | CFG_PWR_UP | CFG_PRIM_RX); // PRX
-    bus->ce(PROTO_TRUE, bus->ctx);
+    bus->ce(EMBED_TRUE, bus->ctx);
 }
 
 int protocore_nrf24_recv(uint8_t *work, const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe)

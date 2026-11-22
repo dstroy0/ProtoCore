@@ -141,7 +141,8 @@
 #elif defined(CONFIG_IDF_TARGET_ESP32H4)
 #include "esp/h4_defaults.h"
 #else
-// Classic ESP32 (no dedicated profile) lands on the universal floor.
+// The classic ESP32 profile, and then the universal floor.
+#include "esp/esp32_defaults.h"
 #include "classic_defaults.h"
 #endif
 

@@ -112,7 +112,7 @@ void test_begin_registers_the_channel_callbacks_once(void)
 void test_a_slot_past_the_table_is_not_touched(void)
 {
     SshScp.begin(protocore_ssh_scp_span());
-    scp_conns[0].active = PROTO_FALSE;
+    scp_conns[0].active = EMBED_FALSE;
     protocore_scp_on_open((uint8_t)MAX_SSH_CONNS, 1, "scp -t /", 8);
     protocore_scp_on_data((uint8_t)MAX_SSH_CONNS, 1, (const uint8_t *)"C0644 1 a\n", 10);
     TEST_ASSERT_FALSE(scp_conns[0].active);
@@ -125,12 +125,12 @@ void test_data_outside_an_open_transfer_is_dropped(void)
     uint8_t *work = protocore_ssh_scp_span();
     SshScp.begin(work);
 
-    scp_conns[0].active = PROTO_FALSE;
+    scp_conns[0].active = EMBED_FALSE;
     scp_conns[0].cl_len = 0;
     protocore_scp_on_data(0, 7, (const uint8_t *)"C0644 1 a\n", 10);
     TEST_ASSERT_EQUAL_UINT(0, scp_conns[0].cl_len);
 
-    scp_conns[0].active = PROTO_TRUE;
+    scp_conns[0].active = EMBED_TRUE;
     scp_conns[0].channel = 7;
     scp_conns[0].st = WAIT_CLINE;
     protocore_scp_on_data(0, 9, (const uint8_t *)"C0644 1 a\n", 10);
@@ -144,7 +144,7 @@ void test_a_partial_control_line_is_held(void)
     uint8_t *work = protocore_ssh_scp_span();
     SshScp.begin(work);
 
-    scp_conns[0].active = PROTO_TRUE;
+    scp_conns[0].active = EMBED_TRUE;
     scp_conns[0].channel = 4;
     scp_conns[0].slot = 0;
     scp_conns[0].st = WAIT_CLINE;

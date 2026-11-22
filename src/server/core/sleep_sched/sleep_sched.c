@@ -12,7 +12,7 @@
 
 #include "server/core/sleep_sched/sleep_sched.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 void protocore_sleep_sched_next(uint8_t *work)
 {
@@ -65,6 +65,6 @@ void protocore_sleep_sched_next(uint8_t *work)
 /** @brief The operands and the outcome. */
 SleepSchedVars SleepSchedV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SLEEP_SCHED

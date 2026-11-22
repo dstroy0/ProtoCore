@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file esp.h
@@ -60,7 +60,7 @@ typedef struct
 {
     uint32_t highest;    ///< highest accepted sequence number so far
     uint64_t bitmap;     ///< bit i set = (highest - i) already accepted (bit 0 = highest itself)
-    proto_bool seen_any; ///< false until the first packet is accepted
+    embed_bool seen_any; ///< false until the first packet is accepted
 } EspReplay;
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
@@ -68,10 +68,10 @@ typedef struct
 {
     size_t (*gcm_encapsulate)(uint8_t *, uint32_t, uint32_t, const uint8_t *, const uint8_t *, const uint8_t *, uint8_t,
                               const uint8_t *, size_t, uint8_t *, size_t);
-    proto_bool (*gcm_decapsulate)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *, size_t, uint32_t *,
+    embed_bool (*gcm_decapsulate)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *, size_t, uint32_t *,
                                   uint32_t *, uint8_t *, const uint8_t **, size_t *);
     void (*replay_init)(uint8_t *, EspReplay *);
-    proto_bool (*replay_check)(uint8_t *, EspReplay *, uint32_t);
+    embed_bool (*replay_check)(uint8_t *, EspReplay *, uint32_t);
 } EspNs;
 PROTOCORE_NS_LAYOUT(EspNs, gcm_encapsulate, gcm_decapsulate, replay_init, replay_check);
 
@@ -105,9 +105,9 @@ size_t protocore_esp_gcm_encapsulate(uint8_t *work, uint32_t spi, uint32_t seq, 
  * @param next_header_out Next header out
  * @param payload_out Payload out
  * @param payload_len_out Payload len out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, const uint8_t *salt, uint8_t *packet,
+embed_bool protocore_esp_gcm_decapsulate(uint8_t *work, const uint8_t *key, const uint8_t *salt, uint8_t *packet,
                                          size_t len, uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
                                          const uint8_t **payload_out, size_t *payload_len_out);
 /**
@@ -121,9 +121,9 @@ void protocore_esp_replay_init(uint8_t *work, EspReplay *r);
  * @param work PROTOCORE_ESP_BORROW bytes the caller took. Not held past the call.
  * @param r R
  * @param seq Seq
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_esp_replay_check(uint8_t *work, EspReplay *r, uint32_t seq);
+embed_bool protocore_esp_replay_check(uint8_t *work, EspReplay *r, uint32_t seq);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EspNs Esp PROTOCORE_UNUSED = {.gcm_encapsulate = protocore_esp_gcm_encapsulate,
@@ -131,6 +131,6 @@ PROTOCORE_NS EspNs Esp PROTOCORE_UNUSED = {.gcm_encapsulate = protocore_esp_gcm_
                                            .replay_init = protocore_esp_replay_init,
                                            .replay_check = protocore_esp_replay_check};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ESP_H

@@ -7,7 +7,7 @@
 #include "network_drivers/application/smb/smb2/smb2.h" // the complete type a public struct below holds by value
 #include "protocore_config.h"                          // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file smb_client.h
@@ -32,15 +32,14 @@ so nothing here aliases it. How those bytes are
  */
 
 /** @brief Result of an SMB client operation. 0 is success; each failure is a distinct code. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SmbResult,
     SMB_OK = 0,
     SMB_ERR_ARG = -1,      ///< a required field was null/empty
     SMB_ERR_IO = -2,       ///< a send/recv failed, timed out, or the peer closed mid-message
     SMB_ERR_PROTOCOL = -3, ///< a malformed response, or an unexpected NT status
     SMB_ERR_AUTH = -4,     ///< SESSION_SETUP was rejected (bad user/password/domain)
     SMB_ERR_OVERFLOW = -5, ///< a message did not fit the work buffer (PROTOCORE_SMB_BUF)
-} SmbResult;
+);
 
 /**
  * @brief Transport seam: the engine moves raw bytes only through these, so it runs against a real
@@ -63,7 +62,7 @@ typedef struct
     const char *path;        ///< file name relative to the share root (e.g. `PROGRAMS\A.NC`)
     uint32_t desired_access; ///< SMB2_FILE_GENERIC_READ and/or _WRITE
     uint32_t disposition;    ///< SMB2_FILE_OPEN / _OPEN_IF / _OVERWRITE_IF / _CREATE
-    proto_bool encrypt;      ///< request SMB 3.x transport encryption from the session on (client-forced, like
+    embed_bool encrypt;      ///< request SMB 3.x transport encryption from the session on (client-forced, like
                              ///< smbclient -e): needed to reach a share whose server requires encryption, which
                              ///< rejects the unencrypted TREE_CONNECT before it can advertise the share flag.
     uint16_t cipher_pref;    ///< preferred Smb2Cipher to negotiate (moved to the front of the offer); 0 = default
@@ -78,10 +77,10 @@ typedef struct
     uint8_t file_id[16];
     uint64_t file_size;        ///< EndofFile from CREATE (the current size)
     uint64_t next_message_id;  ///< the MessageId for the next request on this handle
-    proto_bool signing_active; ///< the session negotiated SMB signing (server set SigningRequired, not guest/null)
+    embed_bool signing_active; ///< the session negotiated SMB signing (server set SigningRequired, not guest/null)
     Smb2SignAlgo signing_algo; ///< HMAC-SHA256 (SMB 2.x) or AES-CMAC (SMB 3.x), from the negotiated dialect
     uint8_t signing_key[16];   ///< the session signing key when @ref signing_active (2.x: NTLMv2 key; 3.x: KDF-derived)
-    proto_bool encrypt_active; ///< SMB 3.x transport encryption is in force (server session or share required it)
+    embed_bool encrypt_active; ///< SMB 3.x transport encryption is in force (server session or share required it)
     uint16_t enc_cipher;       ///< negotiated Smb2Cipher id (selects the key + nonce length) when @ref encrypt_active
     uint8_t enc_c2s[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN]; ///< client->server cipher key (encrypts requests)
     uint8_t enc_s2c[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN]; ///< server->client cipher key (decrypts responses)
@@ -176,6 +175,6 @@ PROTOCORE_NS SmbClientNs SmbClient PROTOCORE_UNUSED = {.smb_open = protocore_smb
                                                        .smb_read = protocore_smb_client_smb_read,
                                                        .smb_write = protocore_smb_client_smb_write};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SMB_CLIENT_H

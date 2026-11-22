@@ -47,52 +47,52 @@ uint8_t *protocore_sen0192_span(void)
     return s_own.span;
 }
 
-void protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
+void protocore_sen0192_motion_init(uint8_t *work, Sen0192Motion *m, uint32_t hold_ms, embed_bool active_high)
 {
     (void)work;
 
-    m->present = PROTO_FALSE;
-    m->seeded = PROTO_FALSE;
+    m->present = EMBED_FALSE;
+    m->seeded = EMBED_FALSE;
     m->active_high = active_high;
     m->hold_ms = hold_ms;
     m->last_active_ms = 0;
     m->motion_events = 0;
 }
 
-proto_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, proto_bool level_high, uint32_t now_ms)
+embed_bool protocore_sen0192_motion_update(uint8_t *work, Sen0192Motion *m, embed_bool level_high, uint32_t now_ms)
 {
-    proto_bool ok = PROTO_FALSE;
-    proto_bool active = (level_high == m->active_high);
+    embed_bool ok = EMBED_FALSE;
+    embed_bool active = (level_high == m->active_high);
     if (active)
     {
         m->last_active_ms = now_ms;
-        m->seeded = PROTO_TRUE;
+        m->seeded = EMBED_TRUE;
         if (!m->present)
         {
-            m->present = PROTO_TRUE;
+            m->present = EMBED_TRUE;
             m->motion_events++;
-            ok = PROTO_TRUE; // clear -> present edge
+            ok = EMBED_TRUE; // clear -> present edge
             return ok;
         }
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool sen0192_ok = Sen0192.motion_tick(work, m, now_ms); // inactive sample: presence may age out
-    sen0192_ok = PROTO_FALSE;
+    embed_bool sen0192_ok = Sen0192.motion_tick(work, m, now_ms); // inactive sample: presence may age out
+    sen0192_ok = EMBED_FALSE;
     return ok;
 }
 
-proto_bool protocore_sen0192_motion_tick(uint8_t *work, Sen0192Motion *m, uint32_t now_ms)
+embed_bool protocore_sen0192_motion_tick(uint8_t *work, Sen0192Motion *m, uint32_t now_ms)
 {
     (void)work;
 
     if (m->present && m->seeded && (uint32_t)(now_ms - m->last_active_ms) > m->hold_ms)
     {
-        m->present = PROTO_FALSE;
+        m->present = EMBED_FALSE;
     }
     return m->present;
 }
 
-proto_bool protocore_sen0192_motion_present(uint8_t *work, const Sen0192Motion *m)
+embed_bool protocore_sen0192_motion_present(uint8_t *work, const Sen0192Motion *m)
 {
     (void)work;
 
@@ -122,7 +122,7 @@ typedef struct
 {
     Sen0192Motion motion;
     int pin;
-    proto_bool begun; ///< begin() ran; until it has, the pin reports -1
+    embed_bool begun; ///< begin() ran; until it has, the pin reports -1
 } Sen0192Ctx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -152,29 +152,29 @@ static int dev_pin(uint8_t *work)
     return SEN0192_CTX(work)->begun ? SEN0192_CTX(work)->pin : -1;
 }
 
-proto_bool protocore_sen0192_begin(uint8_t *work)
+embed_bool protocore_sen0192_begin(uint8_t *work)
 {
     SEN0192_CTX(work)->pin = PROTOCORE_SEN0192_PIN;
-    SEN0192_CTX(work)->begun = PROTO_TRUE;
+    SEN0192_CTX(work)->begun = EMBED_TRUE;
     protocore_platform_gpio_mode((uint8_t)(SEN0192_CTX(work)->pin), PROTOCORE_GPIO_IN);
     Sen0192.motion_init(work, &SEN0192_CTX(work)->motion, PROTOCORE_SEN0192_HOLD_MS,
                         PROTOCORE_SEN0192_ACTIVE_HIGH != 0);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sen0192_poll(uint8_t *work)
+embed_bool protocore_sen0192_poll(uint8_t *work)
 {
     const int pin = dev_pin(work);
     if (pin < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool level = protocore_platform_gpio_read((uint8_t)(pin)) != 0;
+    embed_bool level = protocore_platform_gpio_read((uint8_t)(pin)) != 0;
     Sen0192.motion_update(work, &SEN0192_CTX(work)->motion, level, Clock.ms);
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-proto_bool protocore_sen0192_present(uint8_t *work)
+embed_bool protocore_sen0192_present(uint8_t *work)
 {
     Sen0192.motion_tick(work, &SEN0192_CTX(work)->motion, Clock.ms); // age presence out even between poll()s
     return Sen0192.motion_present(work, &SEN0192_CTX(work)->motion);

@@ -39,20 +39,20 @@ embed_word embed_clock_ns(void)
     return (embed_word)((embed_u64)esp_timer_get_time() * 1000u);
 }
 
-int embed_word_wait(embed_atomic_word *word, embed_atomic_word_value old_value, embed_word nanoseconds)
+int embed_word_wait(const EmbedWordWaitCfg *args)
 {
     // Explicit cast widens the tick period in milliseconds to the word of the clock
     const embed_word tick_ns = (embed_word)portTICK_PERIOD_MS * (embed_word)1000000u;
     const embed_word start_ns = embed_clock_ns();
-    while (embed_atomic_word_load(word) == old_value)
+    while (EMBED_CALL(embed_atomic_word_table.load, EmbedAtomicWordLoadCfg, .word = args->word) == args->old_value)
     {
         // Explicit cast takes the difference modulo the word, which is correct across a roll
         const embed_word elapsed_ns = (embed_word)(embed_clock_ns() - start_ns);
-        if ((nanoseconds != EMBED_WAIT_INFINITE) && (elapsed_ns >= nanoseconds))
+        if ((args->nanoseconds != EMBED_WAIT_INFINITE) && (elapsed_ns >= args->nanoseconds))
         {
             return 0;
         }
-        if ((nanoseconds - elapsed_ns) < tick_ns)
+        if ((args->nanoseconds - elapsed_ns) < tick_ns)
         {
             taskYIELD();
         }
@@ -64,9 +64,9 @@ int embed_word_wait(embed_atomic_word *word, embed_atomic_word_value old_value, 
     return 1;
 }
 
-void embed_word_wake(embed_atomic_word *word)
+void embed_word_wake(const EmbedWordWakeCfg *args)
 {
-    (void)word;
+    (void)args;
 }
 
 #if PROTOCORE_HAS_VENDOR_MAC

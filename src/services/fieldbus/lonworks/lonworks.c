@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/lonworks/lonworks.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -61,14 +61,14 @@ void protocore_lonworks_parse_nv(uint8_t *work)
 
     if (!pdu || !out || len < LON_NV_HDR_LEN)
     {
-        LonworksV.ok = PROTO_FALSE;
+        LonworksV.ok = EMBED_FALSE;
         return;
     }
     out->msg_code = (uint8_t)(pdu[0] & LON_NV_TYPE_MASK);
     out->selector = (uint16_t)(((uint16_t)(pdu[0] & LON_NV_SEL_HI_MASK) << 8) | pdu[1]);
     out->value = (len > LON_NV_HDR_LEN) ? (pdu + LON_NV_HDR_LEN) : NULL;
     out->value_len = len - LON_NV_HDR_LEN;
-    LonworksV.ok = PROTO_TRUE;
+    LonworksV.ok = EMBED_TRUE;
 }
 
 void protocore_lonworks_snvt_temp_encode(uint8_t *work)
@@ -143,6 +143,6 @@ void protocore_lonworks_snvt_switch_decode(uint8_t *work)
 /** @brief The operands and the outcome. */
 LonworksVars LonworksV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LONWORKS

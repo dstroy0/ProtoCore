@@ -13,7 +13,7 @@
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp/client/client.h" // UdpClient: the datagram out
@@ -102,7 +102,7 @@ static void put_varbind(BerEnc *e, const SnmpVarbind *vb)
         SnmpBer.put_octet_string(protocore_snmp_notify_span());
         break;
     default:
-        e->ok = PROTO_FALSE;
+        e->ok = EMBED_FALSE;
         break;
     }
     SnmpBerV.enc = e;
@@ -195,7 +195,7 @@ void protocore_snmp_notify_build_pdu(uint8_t *work)
     if (SnmpNotifyV.buf.enc == NULL || SnmpNotifyV.pdu.trap_oid == NULL)
     {
         SnmpNotifyV.n = 0;
-        SnmpNotifyV.ok = PROTO_FALSE;
+        SnmpNotifyV.ok = EMBED_FALSE;
         return;
     }
     append_pdu(work, SnmpNotifyV.buf.enc);
@@ -207,7 +207,7 @@ void protocore_snmp_notify_build_pdu(uint8_t *work)
 void protocore_snmp_notify_build_v2c(uint8_t *work)
 {
     SnmpNotifyV.n = 0;
-    SnmpNotifyV.ok = PROTO_FALSE;
+    SnmpNotifyV.ok = EMBED_FALSE;
     if (!SnmpNotifyV.buf.out || !SnmpNotifyV.dst.community || !SnmpNotifyV.pdu.trap_oid)
     {
         return;
@@ -251,7 +251,7 @@ static void send_built(uint8_t *work)
     const size_t n = SnmpNotifyV.n;
     if (n == 0)
     {
-        SnmpNotifyV.ok = PROTO_FALSE;
+        SnmpNotifyV.ok = EMBED_FALSE;
         return;
     }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
@@ -260,7 +260,7 @@ static void send_built(uint8_t *work)
     Ip.parse(work);
     if (!IpV.ok)
     {
-        SnmpNotifyV.ok = PROTO_FALSE;
+        SnmpNotifyV.ok = EMBED_FALSE;
         return;
     }
     UdpClientV.dst = &dst;
@@ -283,7 +283,7 @@ void protocore_snmp_notify_trap_v2c(uint8_t *work)
     send_built(work);
 #else
     SnmpNotifyV.n = 0;
-    SnmpNotifyV.ok = PROTO_FALSE; // no transport in this build
+    SnmpNotifyV.ok = EMBED_FALSE; // no transport in this build
 #endif
 }
 
@@ -297,7 +297,7 @@ void protocore_snmp_notify_inform_v2c(uint8_t *work)
     send_built(work);
 #else
     SnmpNotifyV.n = 0;
-    SnmpNotifyV.ok = PROTO_FALSE; // no transport in this build
+    SnmpNotifyV.ok = EMBED_FALSE; // no transport in this build
 #endif
 }
 
@@ -305,6 +305,6 @@ void protocore_snmp_notify_inform_v2c(uint8_t *work)
 /** @brief The operands and the outcome. */
 SnmpNotifyVars SnmpNotifyV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP_TRAP

@@ -15,7 +15,7 @@
 #include "idemIP/checksum.h"
 #include "idemIP/common.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Field offsets (RFC 8200 sec 3)
@@ -70,19 +70,19 @@ PROTOCORE_BEGIN_DECLS
 // boundary and are assembled from their bytes.
 
 /** @brief Version, the high nibble of the first word. */
-PROTOCORE_INLINE uint8_t idemip_ip6_version(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_ip6_version(const uint8_t *h)
 {
     return (uint8_t)((idemip_rd32(h + IDEMIP_IP6_OFF_VER_TC_FLOW) >> IDEMIP_IP6_VER_SHIFT) & IDEMIP_IP6_VER_MASK);
 }
 
 /** @brief Traffic Class, the octet below the version. */
-PROTOCORE_INLINE uint8_t idemip_ip6_traffic_class(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_ip6_traffic_class(const uint8_t *h)
 {
     return (uint8_t)((idemip_rd32(h + IDEMIP_IP6_OFF_VER_TC_FLOW) >> IDEMIP_IP6_TC_SHIFT) & IDEMIP_IP6_TC_MASK);
 }
 
 /** @brief Flow Label, the low twenty bits of the first word. */
-PROTOCORE_INLINE uint32_t idemip_ip6_flow_label(const uint8_t *h)
+EMBED_INLINE uint32_t idemip_ip6_flow_label(const uint8_t *h)
 {
     return idemip_rd32(h + IDEMIP_IP6_OFF_VER_TC_FLOW) & IDEMIP_IP6_FLOW_MASK;
 }
@@ -93,31 +93,31 @@ PROTOCORE_INLINE uint32_t idemip_ip6_flow_label(const uint8_t *h)
  * RFC 8200 sec 3: "Length of the IPv6 payload, i.e., the rest of the packet following this IPv6
  * header, in octets." Unlike IPv4's Total Length, the fixed header is not counted.
  */
-PROTOCORE_INLINE uint16_t idemip_ip6_payload_len(const uint8_t *h)
+EMBED_INLINE uint16_t idemip_ip6_payload_len(const uint8_t *h)
 {
     return idemip_rd16(h + IDEMIP_IP6_OFF_PAYLOAD_LEN);
 }
 
 /** @brief Next Header: the type of the header immediately following. */
-PROTOCORE_INLINE uint8_t idemip_ip6_next_hdr(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_ip6_next_hdr(const uint8_t *h)
 {
     return h[IDEMIP_IP6_OFF_NEXT_HDR];
 }
 
 /** @brief Hop Limit, decremented by each forwarding node. */
-PROTOCORE_INLINE uint8_t idemip_ip6_hop_limit(const uint8_t *h)
+EMBED_INLINE uint8_t idemip_ip6_hop_limit(const uint8_t *h)
 {
     return h[IDEMIP_IP6_OFF_HOP_LIMIT];
 }
 
 /** @brief The sixteen octets of the source address, in place. */
-PROTOCORE_INLINE const uint8_t *idemip_ip6_src(const uint8_t *h)
+EMBED_INLINE const uint8_t *idemip_ip6_src(const uint8_t *h)
 {
     return h + IDEMIP_IP6_OFF_SRC;
 }
 
 /** @brief The sixteen octets of the destination address, in place. */
-PROTOCORE_INLINE const uint8_t *idemip_ip6_dst(const uint8_t *h)
+EMBED_INLINE const uint8_t *idemip_ip6_dst(const uint8_t *h)
 {
     return h + IDEMIP_IP6_OFF_DST;
 }
@@ -146,13 +146,13 @@ PROTOCORE_INLINE const uint8_t *idemip_ip6_dst(const uint8_t *h)
 #define IDEMIP_IP6_EXT_BYTES(len) (((size_t)(len) + 1u) * IDEMIP_IP6_EXT_UNIT)
 
 /** @brief Next Header of an extension header carrying the common two octets. */
-PROTOCORE_INLINE uint8_t idemip_ip6_ext_next_hdr(const uint8_t *e)
+EMBED_INLINE uint8_t idemip_ip6_ext_next_hdr(const uint8_t *e)
 {
     return e[IDEMIP_IP6_EXT_OFF_NEXT_HDR];
 }
 
 /** @brief Bytes this extension header occupies. */
-PROTOCORE_INLINE size_t idemip_ip6_ext_len(const uint8_t *e)
+EMBED_INLINE size_t idemip_ip6_ext_len(const uint8_t *e)
 {
     return IDEMIP_IP6_EXT_BYTES(e[IDEMIP_IP6_EXT_OFF_LEN]);
 }
@@ -188,7 +188,7 @@ PROTOCORE_INLINE size_t idemip_ip6_ext_len(const uint8_t *e)
 #define IDEMIP_IP6_OPT_CHG_MASK 0x20u
 
 /** @brief Bytes an option occupies: Pad1 is one octet, every other type carries its length. */
-PROTOCORE_INLINE size_t idemip_ip6_opt_len(const uint8_t *o)
+EMBED_INLINE size_t idemip_ip6_opt_len(const uint8_t *o)
 {
     return (o[IDEMIP_IP6_OPT_OFF_TYPE] == IDEMIP_IP6_OPT_PAD1) ? 1u : ((size_t)o[IDEMIP_IP6_OPT_OFF_LEN] + 2u);
 }
@@ -216,19 +216,19 @@ PROTOCORE_INLINE size_t idemip_ip6_opt_len(const uint8_t *o)
 #define IDEMIP_IP6_FRAG_M (1u << 0)
 
 /** @brief Offset of this fragment's data, in bytes, from the start of the fragmentable part. */
-PROTOCORE_INLINE uint16_t idemip_ip6_frag_offset_bytes(const uint8_t *f)
+EMBED_INLINE uint16_t idemip_ip6_frag_offset_bytes(const uint8_t *f)
 {
     return (uint16_t)(idemip_rd16(f + IDEMIP_IP6_FRAG_OFF_OFFS_M) & IDEMIP_IP6_FRAG_OFF_MASK);
 }
 
 /** @brief True when more fragments follow this one. */
-PROTOCORE_INLINE proto_bool idemip_ip6_frag_more(const uint8_t *f)
+EMBED_INLINE embed_bool idemip_ip6_frag_more(const uint8_t *f)
 {
     return (idemip_rd16(f + IDEMIP_IP6_FRAG_OFF_OFFS_M) & IDEMIP_IP6_FRAG_M) != 0u;
 }
 
 /** @brief Identification: the fragments of one original packet share it. */
-PROTOCORE_INLINE uint32_t idemip_ip6_frag_ident(const uint8_t *f)
+EMBED_INLINE uint32_t idemip_ip6_frag_ident(const uint8_t *f)
 {
     return idemip_rd32(f + IDEMIP_IP6_FRAG_OFF_IDENT);
 }
@@ -246,7 +246,7 @@ PROTOCORE_INLINE uint32_t idemip_ip6_frag_ident(const uint8_t *f)
  * Segments Left is zero, the node must ignore the Routing header and proceed to process the next
  * header"; if it is not, the packet is discarded and Parameter Problem Code 0 is sent.
  */
-PROTOCORE_INLINE uint8_t idemip_ip6_rt_segs_left(const uint8_t *r)
+EMBED_INLINE uint8_t idemip_ip6_rt_segs_left(const uint8_t *r)
 {
     return r[IDEMIP_IP6_RT_OFF_SEGS_LEFT];
 }
@@ -266,7 +266,7 @@ PROTOCORE_INLINE uint8_t idemip_ip6_rt_segs_left(const uint8_t *r)
  * The addresses are summed where they lie, sixteen octets each, which is the same word pairing the
  * figure lays out. Not part of the packet: it is summed, never sent.
  */
-PROTOCORE_INLINE uint32_t idemip_ip6_pseudo_accum(uint32_t sum, const uint8_t *src, const uint8_t *dst,
+EMBED_INLINE uint32_t idemip_ip6_pseudo_accum(uint32_t sum, const uint8_t *src, const uint8_t *dst,
                                                   uint32_t upper_len, uint8_t next_hdr)
 {
     sum = idemip_cksum_accum(sum, src, IDEMIP_IP6_ADDR_LEN);
@@ -286,6 +286,6 @@ static_assert(IDEMIP_IP6_EXT_BYTES(0u) == IDEMIP_IP6_EXT_UNIT,
 static_assert(IDEMIP_IP6_FRAG_OFF_IDENT + 4u == IDEMIP_IP6_FRAG_HDR_LEN,
               "the RFC 8200 sec 4.5 fields must sum to the fragment header length");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_IPV6_H

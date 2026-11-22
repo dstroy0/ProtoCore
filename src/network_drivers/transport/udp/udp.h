@@ -35,7 +35,7 @@
 #include "network_drivers/transport/udp/client/client.h" // UdpClientNs: the sending half
 #include "network_drivers/transport/udp/server/server.h" // UdpListenerNs: the receiving half
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The datagram service.
@@ -45,14 +45,14 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-    UdpListenerNs *const listener;
-    UdpClientNs *const client;
+    const UdpListenerNs *const listener;
+    const UdpClientNs *const client;
 } UdpNs;
 
 /** @brief The one symbol this module exports. */
 extern UdpNs Udp;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_UDP
 

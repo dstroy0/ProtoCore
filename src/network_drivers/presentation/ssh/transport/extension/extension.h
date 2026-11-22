@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file extension.h
@@ -31,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    const char *(*info_indicator)(uint8_t *, proto_bool);
+    const char *(*info_indicator)(uint8_t *, embed_bool);
     int (*build)(uint8_t *, uint8_t *, size_t *, size_t);
 } ExtensionNs;
 PROTOCORE_NS_LAYOUT(ExtensionNs, info_indicator, build);
@@ -42,7 +42,7 @@ PROTOCORE_NS_LAYOUT(ExtensionNs, info_indicator, build);
  * @param client_role True for the client's indicator, false for the server's
  * @return The const char *.
  */
-const char *protocore_extension_info_indicator(uint8_t *work, proto_bool client_role);
+const char *protocore_extension_info_indicator(uint8_t *work, embed_bool client_role);
 /**
  * @brief Build SSH_MSG_EXT_INFO advertising server-sig-algs (RFC 8308). .
  * @param work PROTOCORE_EXTENSION_BORROW bytes the caller took. Not held past the call.
@@ -57,6 +57,6 @@ int protocore_extension_build(uint8_t *work, uint8_t *out, size_t *len, size_t c
 PROTOCORE_NS ExtensionNs Extension PROTOCORE_UNUSED = {.info_indicator = protocore_extension_info_indicator,
                                                        .build = protocore_extension_build};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TRANSPORT_EXTENSION_H

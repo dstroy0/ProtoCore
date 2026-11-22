@@ -122,7 +122,7 @@ typedef struct
     uint32_t auth_status;
     uint32_t tc_status;
     uint32_t create_status;
-    proto_bool cut_after_negotiate;
+    embed_bool cut_after_negotiate;
     int req_count;
     uint8_t file_data[8192];
     size_t file_data_len;
@@ -133,22 +133,22 @@ typedef struct
     const uint8_t *chal_ti;
     size_t chal_ti_len;
 
-    proto_bool require_signing;
-    proto_bool signing;
+    embed_bool require_signing;
+    embed_bool signing;
     uint8_t sign_key[16];
     int bad_req_sigs;
-    proto_bool corrupt_read_sig;
+    embed_bool corrupt_read_sig;
     const SmbConfig *creds;
 
-    proto_bool require_311;
+    embed_bool require_311;
     Smb2SignAlgo sign_algo;
     SmbPreauth preauth;
 
-    proto_bool require_encrypt;
+    embed_bool require_encrypt;
 
-    proto_bool encrypt_share_only;
+    embed_bool encrypt_share_only;
     uint16_t cipher;
-    proto_bool enc_keys;
+    embed_bool enc_keys;
     uint8_t enc_c2s[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
     uint8_t enc_s2c[PROTOCORE_SMB2_MAX_CIPHER_KEY_LEN];
     uint64_t enc_nonce;
@@ -160,38 +160,38 @@ static void append_frame(Mock *m, const uint8_t *resp, size_t rlen)
     m->rx_len += smb2_n;
 }
 
-static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConfig *cfg, uint8_t key[16])
+static embed_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConfig *cfg, uint8_t key[16])
 {
     if (mlen < 88)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint16_t sec_off = rd16(msg + 76);
     uint16_t sec_len = rd16(msg + 78);
     if ((size_t)sec_off + sec_len > mlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *auth = NULL;
     size_t auth_len = 0;
-    proto_bool spnego_ok = Spnego.parse_response(spnego_work, msg + sec_off, sec_len, &auth, &auth_len);
+    embed_bool spnego_ok = Spnego.parse_response(spnego_work, msg + sec_off, sec_len, &auth, &auth_len);
     if (!spnego_ok || auth_len < 28)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint16_t nt_len = rd16(auth + 20);
     uint32_t nt_off = rd32(auth + 24);
     if (nt_len < 16 || (size_t)nt_off + 16 > auth_len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t nt_hash[16];
     uint8_t owf[16];
     Ntlm.nt_hash(ntlm_work, cfg->pass, nt_hash);
-    proto_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, cfg->user, cfg->domain ? cfg->domain : "", owf);
+    embed_bool ntlm_ok = Ntlm.ntowfv2(ntlm_work, nt_hash, cfg->user, cfg->domain ? cfg->domain : "", owf);
     if (!ntlm_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     MdV.hmac_args.key = owf;
     MdV.hmac_args.key_len = 16;
@@ -199,7 +199,7 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     MdV.hmac_args.msg_len = 16;
     MdV.hmac_args.out = key;
     Md.hmac_md5(tw);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
@@ -213,18 +213,18 @@ static void mock_sign(const Mock *m, uint8_t *msg, size_t len)
         Smb2.sign(smb2_work, tw, m->sign_key, msg, len);
     }
 }
-static proto_bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
+static embed_bool mock_verify(const Mock *m, uint8_t *msg, size_t len)
 {
     if (m->sign_algo == SMB2_SIGN_ALGO_AES_CMAC)
     {
-        proto_bool smb2_ok = Smb2.verify_cmac(smb2_work, tw, m->sign_key, msg, len);
+        embed_bool smb2_ok = Smb2.verify_cmac(smb2_work, tw, m->sign_key, msg, len);
         return smb2_ok;
     }
-    proto_bool smb2_ok = Smb2.verify(smb2_work, tw, m->sign_key, msg, len);
+    embed_bool smb2_ok = Smb2.verify(smb2_work, tw, m->sign_key, msg, len);
     return smb2_ok;
 }
 
-static size_t build_neg_resp_311(uint8_t *resp, uint64_t msg_id, proto_bool offer_encrypt, uint16_t cipher)
+static size_t build_neg_resp_311(uint8_t *resp, uint64_t msg_id, embed_bool offer_encrypt, uint16_t cipher)
 {
     Smb2.build_header(smb2_work, resp, PROTOCORE_SMB_BUF + 128, SMB2_NEGOTIATE, 1, msg_id, 0, 0);
     uint8_t *b = resp + 64;
@@ -275,7 +275,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
     size_t mlen = n - 4;
 
     uint8_t plain[PROTOCORE_SMB_BUF];
-    proto_bool req_enc = PROTO_FALSE;
+    embed_bool req_enc = EMBED_FALSE;
     if (m->enc_keys && mlen >= PROTOCORE_SMB2_TRANSFORM_HDR_LEN && msg[0] == 0xFD && msg[1] == 'S' && msg[2] == 'M' &&
         msg[3] == 'B')
     {
@@ -287,10 +287,10 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         }
         msg = plain;
         mlen = pl;
-        req_enc = PROTO_TRUE;
+        req_enc = EMBED_TRUE;
     }
     Smb2Header h;
-    proto_bool smb2_ok = Smb2.parse_header(smb2_work, msg, mlen, &h);
+    embed_bool smb2_ok = Smb2.parse_header(smb2_work, msg, mlen, &h);
     if (!smb2_ok)
     {
         return -1;
@@ -400,13 +400,13 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                     Smb2.derive_signing_key(smb2_work, base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
                                             m->sign_key);
                     m->sign_algo = SMB2_SIGN_ALGO_AES_CMAC;
-                    m->signing = PROTO_TRUE;
+                    m->signing = EMBED_TRUE;
                     if (m->require_encrypt || m->encrypt_share_only)
                     {
 
                         Smb2.derive_encryption_keys(smb2_work, base_key, (uint16_t)SMB2_DIALECT_0311, m->preauth.hash,
                                                     protocore_smb2_cipher_key_len(m->cipher), m->enc_c2s, m->enc_s2c);
-                        m->enc_keys = PROTO_TRUE;
+                        m->enc_keys = EMBED_TRUE;
                         if (m->require_encrypt)
                         {
                             w16(b + 2, SMB2_SESSION_FLAG_ENCRYPT_DATA);
@@ -416,7 +416,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 else if (m->require_signing)
                 {
                     memcpy(m->sign_key, base_key, 16);
-                    m->signing = PROTO_TRUE;
+                    m->signing = EMBED_TRUE;
                 }
             }
             w32(resp + 8, m->auth_status);
@@ -499,12 +499,12 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
         return -1;
     }
     resp[16] |= 0x01;
-    proto_bool drop = m->cut_after_negotiate && h.command != SMB2_NEGOTIATE;
+    embed_bool drop = m->cut_after_negotiate && h.command != SMB2_NEGOTIATE;
     if (m->fault_at_req == m->req_count)
     {
         if (m->fault_kind == FAULT_DROP)
         {
-            drop = PROTO_TRUE;
+            drop = EMBED_TRUE;
         }
         else if (m->fault_kind == FAULT_BAD_HEADER)
         {
@@ -661,7 +661,7 @@ void test_create_not_found()
 void test_io_error()
 {
     Mock m = make_mock();
-    m.cut_after_negotiate = PROTO_TRUE;
+    m.cut_after_negotiate = EMBED_TRUE;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
     SmbResult smb_client_value = SmbClient.smb_open(protocore_smb_client_span(), &cfg, &h, mock_send, mock_recv, &m);
@@ -1057,7 +1057,7 @@ typedef struct
     uint8_t resp[512];
     size_t protocore_resp_len;
     size_t pos;
-    proto_bool short_send;
+    embed_bool short_send;
 } Canned;
 
 static int canned_send(void *c, const uint8_t *d, size_t n)
@@ -1133,7 +1133,7 @@ void test_read_send_io()
 {
     Canned cn;
     memset(&cn, 0, sizeof(cn));
-    cn.short_send = PROTO_TRUE;
+    cn.short_send = EMBED_TRUE;
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
@@ -1269,7 +1269,7 @@ void test_write_send_io()
 {
     Canned cn;
     memset(&cn, 0, sizeof(cn));
-    cn.short_send = PROTO_TRUE;
+    cn.short_send = EMBED_TRUE;
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
@@ -1410,7 +1410,7 @@ void test_close_send_io()
 {
     Canned cn;
     memset(&cn, 0, sizeof(cn));
-    cn.short_send = PROTO_TRUE;
+    cn.short_send = EMBED_TRUE;
     SmbHandle h = make_handle();
     SmbResult smb_client_value = SmbClient.smb_close(protocore_smb_client_span(), &h, canned_send, canned_recv, &cn);
     TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, smb_client_value);
@@ -1657,7 +1657,7 @@ void test_signed_session_roundtrip()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_signing = PROTO_TRUE;
+    m.require_signing = EMBED_TRUE;
     m.creds = &cfg;
     for (int i = 0; i < 1200; i++)
     {
@@ -1701,9 +1701,9 @@ void test_signed_response_tampered()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_signing = PROTO_TRUE;
+    m.require_signing = EMBED_TRUE;
     m.creds = &cfg;
-    m.corrupt_read_sig = PROTO_TRUE;
+    m.corrupt_read_sig = EMBED_TRUE;
     for (int i = 0; i < 64; i++)
     {
         m.file_data[i] = (uint8_t)i;
@@ -1737,7 +1737,7 @@ void test_open_signed_311_roundtrip()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_311 = PROTO_TRUE;
+    m.require_311 = EMBED_TRUE;
     m.creds = &cfg;
     for (int i = 0; i < 1400; i++)
     {
@@ -1783,9 +1783,9 @@ void test_signed_311_response_tampered()
 {
     Mock m = make_mock();
     SmbConfig cfg = make_cfg();
-    m.require_311 = PROTO_TRUE;
+    m.require_311 = EMBED_TRUE;
     m.creds = &cfg;
-    m.corrupt_read_sig = PROTO_TRUE;
+    m.corrupt_read_sig = EMBED_TRUE;
     for (int i = 0; i < 64; i++)
     {
         m.file_data[i] = (uint8_t)i;
@@ -1811,8 +1811,8 @@ void test_open_encrypted_311_roundtrip()
     SmbConfig cfg = make_cfg();
     cfg.desired_access = SMB2_FILE_GENERIC_READ | SMB2_FILE_GENERIC_WRITE;
     cfg.disposition = SMB2_FILE_OPEN_IF;
-    m.require_311 = PROTO_TRUE;
-    m.require_encrypt = PROTO_TRUE;
+    m.require_311 = EMBED_TRUE;
+    m.require_encrypt = EMBED_TRUE;
     m.creds = &cfg;
 
     SmbHandle h;
@@ -1856,10 +1856,10 @@ void test_encrypted_response_tampered()
     m.file_data_len = 100;
     m.file_size = 100;
     SmbConfig cfg = make_cfg();
-    m.require_311 = PROTO_TRUE;
-    m.require_encrypt = PROTO_TRUE;
+    m.require_311 = EMBED_TRUE;
+    m.require_encrypt = EMBED_TRUE;
     m.creds = &cfg;
-    m.corrupt_read_sig = PROTO_TRUE;
+    m.corrupt_read_sig = EMBED_TRUE;
 
     SmbHandle h;
     memset(&h, 0, sizeof(h));
@@ -1883,8 +1883,8 @@ void test_open_encrypted_all_ciphers()
     for (int ci = 0; ci < 4; ci++)
     {
         Mock m = make_mock();
-        m.require_311 = PROTO_TRUE;
-        m.require_encrypt = PROTO_TRUE;
+        m.require_311 = EMBED_TRUE;
+        m.require_encrypt = EMBED_TRUE;
         m.cipher = ciphers[ci];
         m.creds = &cfg;
 
@@ -1927,8 +1927,8 @@ void test_open_encrypted_share_requires_client_force()
 
     {
         Mock m = make_mock();
-        m.require_311 = PROTO_TRUE;
-        m.encrypt_share_only = PROTO_TRUE;
+        m.require_311 = EMBED_TRUE;
+        m.encrypt_share_only = EMBED_TRUE;
         m.creds = &cfg;
         SmbHandle h;
         memset(&h, 0, sizeof(h));
@@ -1945,12 +1945,12 @@ void test_open_encrypted_share_requires_client_force()
         }
         m.file_data_len = 60;
         m.file_size = 60;
-        m.require_311 = PROTO_TRUE;
-        m.encrypt_share_only = PROTO_TRUE;
+        m.require_311 = EMBED_TRUE;
+        m.encrypt_share_only = EMBED_TRUE;
         m.creds = &cfg;
 
         SmbConfig ecfg = cfg;
-        ecfg.encrypt = PROTO_TRUE;
+        ecfg.encrypt = EMBED_TRUE;
         SmbHandle h;
         memset(&h, 0, sizeof(h));
         SmbResult smb_client_value =

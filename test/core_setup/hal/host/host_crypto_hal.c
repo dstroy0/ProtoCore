@@ -14,19 +14,19 @@
 
 #if PROTOCORE_HOST && PROTOCORE_RSA_MODMUL_HW
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // a >= b over n limbs, little-endian. Retained for the conditional subtract below.
-static proto_bool ge_n(const uint32_t *a, const uint32_t *b, unsigned n)
+static embed_bool ge_n(const uint32_t *a, const uint32_t *b, unsigned n)
 {
     for (unsigned i = n; i-- > 0;)
     {
         if (a[i] != b[i])
         {
-            return a[i] > b[i] ? PROTO_TRUE : PROTO_FALSE;
+            return a[i] > b[i] ? EMBED_TRUE : EMBED_FALSE;
         }
     }
-    return PROTO_TRUE; // equal
+    return EMBED_TRUE; // equal
 }
 
 // a -= b over n limbs, little-endian.
@@ -110,6 +110,6 @@ void protocore_rsa_modmul(uint32_t *z, const uint32_t *x, const uint32_t *y, con
     montmul(z, xr, y, m, mprime, words);    // x*R * y * R^-1 = x*y
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST && PROTOCORE_RSA_MODMUL_HW

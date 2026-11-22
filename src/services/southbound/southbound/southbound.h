@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_SOUTHBOUND
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Southbound result codes. A dispatch reports SB_OK / a count, or a negative code, through
 // SouthboundNs::i32, so a caller's `< 0` and `== SB_OK` checks stay cast-free. A driver may also
@@ -165,7 +165,7 @@ static const SouthboundNs Southbound __attribute__((unused)) = {
  */
 uint8_t *protocore_southbound_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND
 

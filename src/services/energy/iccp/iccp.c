@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/energy/iccp/iccp.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Append a short-form TLV (value length < 128). Returns bytes written at out, or 0 on overflow.
 static size_t tlv(uint8_t tag, const uint8_t *val, size_t val_len, uint8_t *out, size_t cap)
@@ -122,6 +122,6 @@ size_t protocore_iccp_real_q(int32_t milli, uint8_t flags, const uint8_t time[4]
     return tlv(0xA3, inner, n, out, cap);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ICCP

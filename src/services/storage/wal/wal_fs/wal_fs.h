@@ -38,7 +38,7 @@
 
 #if PROTOCORE_ENABLE_WAL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "memoria_operor/memoria_operor.h"
 #include "server/storage/mnt/mnt.h" // protocore_mnt_backend - the store the log lives on
@@ -51,7 +51,7 @@ typedef struct
     int handle;
 } protocore_wal_fs_ctx;
 
-PROTOCORE_INLINE size_t protocore_wal_fs_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
+EMBED_INLINE size_t protocore_wal_fs_read(void *ctx, uint64_t off, uint8_t *buf, size_t len)
 {
     protocore_wal_fs_ctx *c = (protocore_wal_fs_ctx *)ctx;
     if (!c->fs->seek(c->handle, off))
@@ -62,7 +62,7 @@ PROTOCORE_INLINE size_t protocore_wal_fs_read(void *ctx, uint64_t off, uint8_t *
     return n < 0 ? 0 : (size_t)n;
 }
 
-PROTOCORE_INLINE size_t protocore_wal_fs_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
+EMBED_INLINE size_t protocore_wal_fs_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
 {
     protocore_wal_fs_ctx *c = (protocore_wal_fs_ctx *)ctx;
     if (!c->fs->seek(c->handle, off))
@@ -73,7 +73,7 @@ PROTOCORE_INLINE size_t protocore_wal_fs_write(void *ctx, uint64_t off, const ui
     return n < 0 ? 0 : (size_t)n;
 }
 
-PROTOCORE_INLINE proto_bool protocore_wal_fs_sync(void *ctx)
+EMBED_INLINE embed_bool protocore_wal_fs_sync(void *ctx)
 {
     protocore_wal_fs_ctx *c = (protocore_wal_fs_ctx *)ctx;
     return c->fs->sync(c->handle);
@@ -83,31 +83,31 @@ PROTOCORE_INLINE proto_bool protocore_wal_fs_sync(void *ctx)
  * @brief Ensure @p path on @p fs exists and is at least @p size bytes (created zero-filled if missing/short).
  * @return true on success. Call once before opening the file for the store.
  */
-PROTOCORE_INLINE proto_bool protocore_wal_fs_prealloc(const protocore_mnt_backend *fs, const char *path, uint64_t size)
+EMBED_INLINE embed_bool protocore_wal_fs_prealloc(const protocore_mnt_backend *fs, const char *path, uint64_t size)
 {
     if (!fs || !path)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (fs->exists(path) && fs->size(path) >= 0 && (uint64_t)fs->size(path) >= size)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     int h = fs->open(path, PROTOCORE_MNT_WRITE); // create / truncate
     if (h < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t z[256];
     EMBED_CALL(memor.set, MemoriaCfg, .dst = z, .bytes = sizeof z, .val = 0);
     uint64_t left = size;
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     while (left)
     {
         size_t n = left < sizeof z ? (size_t)left : sizeof z;
         if (fs->write(h, z, n) != (int)n)
         {
-            ok = PROTO_FALSE;
+            ok = EMBED_FALSE;
             break;
         }
         left -= n;
@@ -128,17 +128,17 @@ PROTOCORE_INLINE proto_bool protocore_wal_fs_prealloc(const protocore_mnt_backen
  * @return false if @p fs has no durability barrier, or the file will not open. On false, nothing is
  *         left open and @p dev is not usable.
  */
-PROTOCORE_INLINE proto_bool protocore_wal_fs_open(protocore_wal_fs_ctx *c, WalDev *dev, const protocore_mnt_backend *fs,
+EMBED_INLINE embed_bool protocore_wal_fs_open(protocore_wal_fs_ctx *c, WalDev *dev, const protocore_mnt_backend *fs,
                                                   const char *path, uint64_t size)
 {
     if (!c || !dev || !fs || !path || !fs->sync)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int h = fs->open(path, PROTOCORE_MNT_RDWR); // random read+write over the preallocated extent, no truncation
     if (h < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     c->fs = fs;
     c->handle = h;
@@ -147,11 +147,11 @@ PROTOCORE_INLINE proto_bool protocore_wal_fs_open(protocore_wal_fs_ctx *c, WalDe
     dev->sync = protocore_wal_fs_sync;
     dev->ctx = c;
     dev->size = size;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /** @brief Close the file a ::protocore_wal_fs_ctx holds. The ::WalDev built over it is dead after this. */
-PROTOCORE_INLINE void protocore_wal_fs_close(protocore_wal_fs_ctx *c)
+EMBED_INLINE void protocore_wal_fs_close(protocore_wal_fs_ctx *c)
 {
     if (c && c->fs)
     {
@@ -161,7 +161,7 @@ PROTOCORE_INLINE void protocore_wal_fs_close(protocore_wal_fs_ctx *c)
     }
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAL
 

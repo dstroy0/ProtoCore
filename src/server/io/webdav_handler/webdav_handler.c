@@ -30,7 +30,7 @@
 #include "shared/mime/mime.h"
 #include "verba_scribo/verba_scribo.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The parser's streaming-body sink is a single global hook (http_parser_set_stream_hooks): the last
 // registrar wins, so an OTA or upload service registering after dav() takes the sink away and a
@@ -61,10 +61,10 @@ static_assert(PROTOCORE_WEBDAV_BUF_SIZE / PROTOCORE_WEBDAV_MIN_ENTRY_BYTES < PRO
 typedef struct
 {
     int fh;             ///< accessor handle for this slot's destination file; only valid while active.
-    proto_bool active;  ///< file opened for the current PUT.
-    proto_bool error;   ///< a write (or the open) failed.
-    proto_bool existed; ///< target existed before this PUT (204 vs 201).
-    proto_bool locked;  ///< a lock blocked this PUT: consume the body but write nothing, then answer 423.
+    embed_bool active;  ///< file opened for the current PUT.
+    embed_bool error;   ///< a write (or the open) failed.
+    embed_bool existed; ///< target existed before this PUT (204 vs 201).
+    embed_bool locked;  ///< a lock blocked this PUT: consume the body but write nothing, then answer 423.
     size_t written;     ///< bytes written so far.
 } DavPut;
 #endif // PROTOCORE_ENABLE_STREAM_BODY
@@ -78,7 +78,7 @@ typedef struct
     // mount: a DAV route carries its own subtree as a request-path piece (the mount point), so
     // the subtree is part of the request and one root serves every mount registered.
     int root;
-    proto_bool bound; ///< dav() ran; until it has, the root reports -1
+    embed_bool bound; ///< dav() ran; until it has, the root reports -1
 
     char buf[PROTOCORE_WEBDAV_BUF_SIZE];
 
@@ -130,15 +130,15 @@ static int dav_root(uint8_t *work)
 
 // Join an FS root and a subpath into @p out (the separator handling serve_static_request uses).
 // Returns false on overflow.
-static proto_bool dav_join(const char *root, const char *sub, char *out, size_t cap)
+static embed_bool dav_join(const char *root, const char *sub, char *out, size_t cap)
 {
     size_t rlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = root, .cap = MAX_PATH_LEN);
-    proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
+    embed_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/')
     {
         sub++;
     }
-    proto_bool sub_slash = (sub[0] == '/');
+    embed_bool sub_slash = (sub[0] == '/');
     const char *sep = (root_slash || sub_slash) ? "" : "/";
     size_t sb_out = 0;
     sb_out = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = out, .cap = cap, .at = sb_out, .text = root);
@@ -171,7 +171,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
     const char *sub =
         (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = reqpath, .cap = MAX_PATH_LEN) >= plen) ? reqpath + plen : "";
     if (EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = sub, .cap = MAX_PATH_LEN - plen, .other = "..",
-                   .other_cap = sizeof(".."), .ci = PROTO_FALSE))
+                   .other_cap = sizeof(".."), .ci = EMBED_FALSE))
     {
         return 403;
     }
@@ -195,7 +195,7 @@ static int dav_resolve_path(const HttpRoute *r, const char *reqpath, char *out, 
 
 // True if a write to the URL @p path is blocked by a lock the request does not present a token for. The
 // token, if any, comes from the request's If header (RFC 4918 §10.4 / §7).
-static proto_bool dav_write_blocked(uint8_t *work, HttpReq *req, const char *path)
+static embed_bool dav_write_blocked(uint8_t *work, HttpReq *req, const char *path)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "If");
     const char *if_hdr = http_parser_text;
@@ -203,44 +203,44 @@ static proto_bool dav_write_blocked(uint8_t *work, HttpReq *req, const char *pat
     const char *presented = NULL;
     if (if_hdr)
     {
-        proto_bool webdav_ok = Webdav.if_token(work, if_hdr, tok, sizeof(tok));
+        embed_bool webdav_ok = Webdav.if_token(work, if_hdr, tok, sizeof(tok));
         presented = webdav_ok ? tok : NULL;
     }
-    proto_bool webdav_ok = Webdav.lock_can_write(work, &WEBDAV_HANDLER_CTX(work)->table, path, presented);
+    embed_bool webdav_ok = Webdav.lock_can_write(work, &WEBDAV_HANDLER_CTX(work)->table, path, presented);
     return !webdav_ok;
 }
 
 // True if the (always NUL-terminated) request body contains @p needle - used to spot a <shared> lockscope.
-static proto_bool dav_body_has(HttpReq *req, const char *needle)
+static embed_bool dav_body_has(HttpReq *req, const char *needle)
 {
     return EMBED_CALL(
         cellul.has, CatenaFinitaCfg, .src = (const char *)req->body, .cap = req->body_len + 1u, .other = needle,
-        .other_cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = needle, .cap = 0xFFFF) + 1u, .ci = PROTO_FALSE);
+        .other_cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = needle, .cap = 0xFFFF) + 1u, .ci = EMBED_FALSE);
 }
 
 // Extract the token from a Lock-Token Coded-URL ("<opaquelocktoken:...>") into @p out; false if malformed.
-static proto_bool dav_coded_url_token(const char *coded, char *out, size_t cap)
+static embed_bool dav_coded_url_token(const char *coded, char *out, size_t cap)
 {
     const char *lt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = coded, .cap = MAX_VAL_LEN, .other = "<",
-                                .other_cap = sizeof("<"), .ci = PROTO_FALSE);
+                                .other_cap = sizeof("<"), .ci = EMBED_FALSE);
     if (!lt)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *gt = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = lt, .cap = MAX_VAL_LEN - (size_t)(lt - coded),
-                                .other = ">", .other_cap = sizeof(">"), .ci = PROTO_FALSE);
+                                .other = ">", .other_cap = sizeof(">"), .ci = EMBED_FALSE);
     if (!gt)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t n = (size_t)(gt - lt - 1);
     if (n + 1 > cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = lt + 1, .bytes = n);
     out[n] = 0;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Registered with http_parser_set_stream_hooks in dav().
@@ -260,20 +260,20 @@ static void dav_put_abort_tramp(HttpReq *req)
     {
         Fs.io.handle = WEBDAV_HANDLER_CTX(work)->put[slot].fh;
         Fs.close(protocore_filesystem_span());
-        WEBDAV_HANDLER_CTX(work)->put[slot].active = PROTO_FALSE;
+        WEBDAV_HANDLER_CTX(work)->put[slot].active = EMBED_FALSE;
     }
 }
 
-static proto_bool dav_stream_put_begin(HttpReq *req)
+static embed_bool dav_stream_put_begin(HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *work = protocore_webdav_handler_span();
 
     if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "PUT", .cap = sizeof("PUT"),
-                    .ci = PROTO_FALSE))
+                    .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
     uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
@@ -304,19 +304,19 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
         char fs_path[256];
         if (dav_resolve_path(r, req->path, fs_path, sizeof(fs_path)) != 0)
         {
-            return PROTO_FALSE; // traversal / too long - let it buffer; the handler answers 403/414
+            return EMBED_FALSE; // traversal / too long - let it buffer; the handler answers 403/414
         }
         DavPut *d = &WEBDAV_HANDLER_CTX(work)->put[slot];
-        d->active = PROTO_FALSE;
-        d->error = PROTO_FALSE;
-        d->locked = PROTO_FALSE;
+        d->active = EMBED_FALSE;
+        d->error = EMBED_FALSE;
+        d->locked = EMBED_FALSE;
         d->written = 0;
         if (dav_write_blocked(work, req, req->path))
         {
             // Locked by another principal: consume the body but open no file, so the resource is not
             // touched; the PUT handler answers 423 (RFC 4918 §7).
-            d->locked = PROTO_TRUE;
-            return PROTO_TRUE;
+            d->locked = EMBED_TRUE;
+            return EMBED_TRUE;
         }
         Fs.path.root = dav_root(work);
         Fs.path.dir = fs_path;
@@ -331,15 +331,15 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
         d->fh = Fs.i32;
         if (d->fh >= 0)
         {
-            d->active = PROTO_TRUE;
+            d->active = EMBED_TRUE;
         }
         else
         {
-            d->error = PROTO_TRUE;
+            d->error = EMBED_TRUE;
         }
-        return PROTO_TRUE; // stream regardless so the body is consumed and the handler replies
+        return EMBED_TRUE; // stream regardless so the body is consumed and the handler replies
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
@@ -362,7 +362,7 @@ static void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
         Fs.write(protocore_filesystem_span());
         if (Fs.i32 != (int)len)
         {
-            d->error = PROTO_TRUE;
+            d->error = EMBED_TRUE;
         }
         else
         {
@@ -421,7 +421,7 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     Fs.mount = "/";
     Fs.begin(protocore_filesystem_span());
     WEBDAV_HANDLER_CTX(work)->root = Fs.i32;
-    WEBDAV_HANDLER_CTX(work)->bound = PROTO_TRUE;
+    WEBDAV_HANDLER_CTX(work)->bound = EMBED_TRUE;
 
 #if PROTOCORE_ENABLE_STREAM_BODY
     // Stream PUT bodies straight to the file (one global sink; see PROTOCORE_ENABLE_STREAM_BODY).
@@ -441,7 +441,7 @@ static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers
         HttpParser.reset(protocore_http_parser_span(), &http_pool[slot_id]);
         return;
     }
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
     char header[RESP_HDR_BUF_SIZE];
     // in this file passes either "" or a string literal. Kept so the parameter stays optional.
@@ -470,9 +470,9 @@ static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers
         (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = header, .cap = sizeof(header), .at = sb_header);
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = header;
-    ConnPoolV.io.len = (proto_u16)hlen;
+    ConnPoolV.io.len = (embed_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
-    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/EMBED_FALSE);
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -526,10 +526,10 @@ void protocore_dav_try_serve_dav(uint8_t *work)
             continue;
         }
         serve_dav_request(work, slot_id, req, r);
-        DavV.ok = PROTO_TRUE;
+        DavV.ok = EMBED_TRUE;
         return;
     }
-    DavV.ok = PROTO_FALSE;
+    DavV.ok = EMBED_FALSE;
 }
 
 static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, const HttpRoute *r)
@@ -609,7 +609,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             DavPut *d = &WEBDAV_HANDLER_CTX(work)->put[slot_id];
             if (d->locked)
             {
-                d->locked = PROTO_FALSE;
+                d->locked = EMBED_FALSE;
                 dav_send_status(slot_id, 423, ""); // Locked: the body was consumed but nothing was written
                 return;
             }
@@ -617,7 +617,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             {
                 Fs.io.handle = d->fh;
                 Fs.close(protocore_filesystem_span());
-                d->active = PROTO_FALSE; // closed here: the abort hook must not double-close
+                d->active = EMBED_FALSE; // closed here: the abort hook must not double-close
             }
             else
             {
@@ -651,7 +651,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         Fs.path.dir = fs_path;
         Fs.path.name = "";
         Fs.exists(protocore_filesystem_span());
-        proto_bool existed = Fs.ok;
+        embed_bool existed = Fs.ok;
         Fs.path.root = dav_root(work);
         Fs.path.dir = fs_path;
         Fs.path.name = "";
@@ -719,10 +719,10 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Destination");
         const char *dest_hdr = http_parser_text;
         char dest_url[256];
-        proto_bool dest_ok = PROTO_FALSE;
+        embed_bool dest_ok = EMBED_FALSE;
         if (dest_hdr)
         {
-            proto_bool webdav_ok = Webdav.dest_path(work, dest_hdr, dest_url, sizeof(dest_url));
+            embed_bool webdav_ok = Webdav.dest_path(work, dest_hdr, dest_url, sizeof(dest_url));
             dest_ok = webdav_ok;
         }
         if (!dest_ok)
@@ -732,14 +732,14 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         }
         // The destination must live under this same mount.
         if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = dest_url, .other = r->path, .cap = plen,
-                       .ci = PROTO_FALSE) != plen)
+                       .ci = EMBED_FALSE) != plen)
         {
             dav_send_status(slot_id, 502, "");
             return;
         }
         const char *dest_sub = dest_url + plen;
         if (EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = dest_sub, .cap = sizeof(dest_url) - plen, .other = "..",
-                       .other_cap = sizeof(".."), .ci = PROTO_FALSE))
+                       .other_cap = sizeof(".."), .ci = EMBED_FALSE))
         {
             dav_send_status(slot_id, 403, "");
             return;
@@ -747,7 +747,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         // Both COPY and MOVE write the destination; MOVE additionally removes the source. Each locked
         // target needs the matching token in the If header (RFC 4918 §7).
         WebDavMethod webdav_value = Webdav.method(work, req->method);
-        proto_bool is_move = webdav_value == DAV_M_MOVE;
+        embed_bool is_move = webdav_value == DAV_M_MOVE;
         if (dav_write_blocked(work, req, dest_url) || (is_move && dav_write_blocked(work, req, req->path)))
         {
             dav_send_status(slot_id, 423, "");
@@ -767,12 +767,12 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
 
         const char *http_parser_text2 = HttpParser.get_header(protocore_http_parser_span(), req, "Overwrite");
         const char *ow = http_parser_text2;
-        proto_bool overwrite = !(ow && (ow[0] == 'F' || ow[0] == 'f'));
+        embed_bool overwrite = !(ow && (ow[0] == 'F' || ow[0] == 'f'));
         Fs.path.root = dav_root(work);
         Fs.path.dir = dest_fs;
         Fs.path.name = "";
         Fs.exists(protocore_filesystem_span());
-        proto_bool dest_exists = Fs.ok;
+        embed_bool dest_exists = Fs.ok;
         if (dest_exists && !overwrite)
         {
             dav_send_status(slot_id, 412, "");
@@ -794,7 +794,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             Fs.dest.dir = dest_fs;
             Fs.dest.name = "";
             Fs.rename(protocore_filesystem_span());
-            proto_bool moved = Fs.ok;
+            embed_bool moved = Fs.ok;
             dav_send_status(slot_id, moved ? (dest_exists ? 204 : 201) : 409, "");
             return;
         }
@@ -816,7 +816,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
 
         const char *http_parser_text3 = HttpParser.get_header(protocore_http_parser_span(), req, "Depth");
         const char *depth_h = http_parser_text3;
-        proto_bool shallow = depth_h && depth_h[0] == '0'; // Depth: 0
+        embed_bool shallow = depth_h && depth_h[0] == '0'; // Depth: 0
 
         if (dest_exists)
         {
@@ -826,7 +826,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             Fs.remove(protocore_filesystem_span()); // overwrite: clear the target first
         }
 
-        proto_bool ok;
+        embed_bool ok;
         if (sst.is_dir && shallow)
         {
             Fs.path.root = dav_root(work);
@@ -859,10 +859,10 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         const char *if_hdr = http_parser_text;
         char iftok[PROTOCORE_DAV_LOCK_TOKEN_MAX];
         const DavLock *lk = NULL;
-        proto_bool have_token = PROTO_FALSE;
+        embed_bool have_token = EMBED_FALSE;
         if (if_hdr)
         {
-            proto_bool webdav_ok = Webdav.if_token(work, if_hdr, iftok, sizeof(iftok));
+            embed_bool webdav_ok = Webdav.if_token(work, if_hdr, iftok, sizeof(iftok));
             have_token = webdav_ok;
         }
         if (have_token)
@@ -872,7 +872,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         }
 
         char token[PROTOCORE_DAV_LOCK_TOKEN_MAX];
-        proto_bool shared, depth_inf;
+        embed_bool shared, depth_inf;
         if (lk) // refreshed an existing lock: echo its stored scope / depth / token
         {
             size_t sb_token = 0;
@@ -966,10 +966,10 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
         const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Lock-Token");
         const char *lt = http_parser_text;
         char token[PROTOCORE_DAV_LOCK_TOKEN_MAX];
-        proto_bool released = PROTO_FALSE;
+        embed_bool released = EMBED_FALSE;
         if (lt && dav_coded_url_token(lt, token, sizeof(token)))
         {
-            proto_bool webdav_ok = Webdav.lock_release(work, &WEBDAV_HANDLER_CTX(work)->table, token);
+            embed_bool webdav_ok = Webdav.lock_release(work, &WEBDAV_HANDLER_CTX(work)->table, token);
             released = webdav_ok;
         }
         if (!released)
@@ -995,7 +995,7 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
             dav_send_status(slot_id, 404, "");
             return;
         }
-        proto_bool isdir = fst.is_dir;
+        embed_bool isdir = fst.is_dir;
         uint32_t fsize = (uint32_t)fst.size;
         time_t mtime = (time_t)fst.mtime;
 
@@ -1157,6 +1157,6 @@ static void serve_dav_request(uint8_t *work, uint8_t slot_id, HttpReq *req, cons
 /** @brief The operands and the outcome. */
 DavVars DavV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBDAV

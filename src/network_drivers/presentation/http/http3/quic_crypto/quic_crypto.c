@@ -84,7 +84,7 @@ void protocore_quic_crypto_derive_initial_secrets(uint8_t *work, uint8_t *keys_w
 
 size_t protocore_quic_crypto_packet_protect(uint8_t *work, uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len,
                                             uint64_t full_pn, size_t payload_len, QuicPacketKeys *keys,
-                                            proto_bool is_long)
+                                            embed_bool is_long)
 {
     (void)work;
 
@@ -131,7 +131,7 @@ size_t protocore_quic_crypto_packet_protect(uint8_t *work, uint8_t *pkt, size_t 
 }
 
 size_t protocore_quic_crypto_packet_unprotect(uint8_t *work, uint8_t *pkt, size_t pn_offset, size_t length,
-                                              uint64_t largest_pn, QuicPacketKeys *keys, proto_bool is_long,
+                                              uint64_t largest_pn, QuicPacketKeys *keys, embed_bool is_long,
                                               uint8_t *out, uint64_t *out_pn)
 {
     // Header protection needs a full 16-byte sample starting at pn_offset + 4, and the AEAD region

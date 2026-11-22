@@ -28,7 +28,7 @@
 #include "network_drivers/network/forward/forward.h" // ForwardNs: carried below as network.forward
 #endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The internet layer (RFC 1122 sec 3), and the modules it carries.
@@ -59,7 +59,7 @@ typedef struct
 #if PROTOCORE_ENABLE_FORWARD
     ForwardNs *forward; ///< the forwarding plane (RFC 1812 sec 5)
 #endif
-    IpNs *ip; ///< an internet address as a value (RFC 791, RFC 8200)
+    const IpNs *ip; ///< an internet address as a value (RFC 791, RFC 8200)
 } networkVars;
 
 /** @brief The operands and the outcome. */
@@ -83,6 +83,6 @@ static const NetworkNs network __attribute__((unused)) = {
     .init = protocore_network_init,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif

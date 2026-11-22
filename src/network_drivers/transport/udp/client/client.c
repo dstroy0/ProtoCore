@@ -9,6 +9,10 @@
  * sends the caller's bytes from where they already are.
  */
 
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_UDP
+
 #include "network_drivers/transport/udp/client/client.h"
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
@@ -17,7 +21,7 @@
 #include "network_drivers/transport/net_addr/net_addr.h" // NetAddr: the stack's address as a protocore_ip
 #include "proximus_operor/proximus_operor.h"             // proxim.read: the caller's bytes into the pbuf
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The sending side's compile-time storage: the one control block every datagram leaves
@@ -50,7 +54,7 @@ typedef struct
     const uint8_t *data;
     size_t len;
     uint16_t port;
-    proto_bool ok;
+    embed_bool ok;
 } protocore_udp_send_call;
 
 // Stamp the control block with the configured UDP DSCP, applied per send so a DiffServ.set_udp()
@@ -69,18 +73,18 @@ static void apply_dscp(protocore_udp_pcb *pcb)
 }
 
 // Take a pbuf, hand the bytes over, release it. Runs in the stack's thread only.
-static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
+static embed_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint16_t port, const uint8_t *data,
                             size_t len)
 {
     protocore_net_ip dst;
     if (!protocore_net_addr_from_ip(a, &dst))
     {
-        return PROTO_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
+        return EMBED_FALSE; // a family this stack cannot send to, refused before a pbuf is taken
     }
-    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (proto_u16)len, PROTOCORE_NET_PBUF_RAM);
+    protocore_pbuf *p = protocore_net_pbuf_alloc(PROTOCORE_NET_PBUF_TRANSPORT, (embed_u16)len, PROTOCORE_NET_PBUF_RAM);
     if (p == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(proxim.read, ProximusCfg, .dst = (uint8_t *)p->payload, .at = data, .size = len);
     protocore_net_err e = protocore_net_udp_sendto(pcb, p, &dst, port);
@@ -139,12 +143,12 @@ void protocore_udp_client_sendto(uint8_t *work)
     if (UdpClientV.data == NULL || UdpClientV.len == 0 || UdpClientV.len > PROTOCORE_UDP_RX_BUF_SIZE ||
         UdpClientV.dst == NULL || UdpClientV.dst->family == PROTOCORE_IP_NONE)
     {
-        UdpClientV.ok = PROTO_FALSE;
+        UdpClientV.ok = EMBED_FALSE;
         return;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
     protocore_udp_send_call k = {{0},        UdpClientV.dst, UdpClientV.data, UdpClientV.len, UdpClientV.dst_port,
-                                 PROTO_FALSE};
+                                 EMBED_FALSE};
     (void)protocore_net_call_marshal(send_do, &k.base);
     UdpClientV.ok = k.ok;
 }
@@ -153,4 +157,6 @@ void protocore_udp_client_sendto(uint8_t *work)
 /** @brief The operands and the outcome. */
 UdpClientVars UdpClientV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
+
+#endif // PROTOCORE_ENABLE_UDP

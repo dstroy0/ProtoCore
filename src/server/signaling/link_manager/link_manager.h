@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_LINK_MANAGER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Interface kind (informational; selection is by priority). Stored in a uint8_t field and
  *  compared, so integer constants in a namespacing struct - cast-free. */
@@ -38,7 +38,7 @@ typedef struct
 {
     uint8_t kind;     ///< LINK_KIND_*.
     uint8_t priority; ///< higher wins when up (ties break to the lower index).
-    proto_bool up;    ///< link currently up.
+    embed_bool up;    ///< link currently up.
 } LinkIface;
 
 /** @brief The link-manager state over a caller-owned interface table. */
@@ -57,7 +57,7 @@ typedef struct
     LinkIface *ifaces;       ///< the interface table a bind installs
     size_t n;                ///< how many entries it has
     size_t idx;              ///< the interface whose state a set changes
-    proto_bool up;           ///< that interface's new carrier state
+    embed_bool up;           ///< that interface's new carrier state
 } LinkArgs;
 
 /**
@@ -85,7 +85,7 @@ typedef struct
     int i32;
     int from;
     int to;
-    proto_bool changed;
+    embed_bool changed;
 } LinkVars;
 
 /** @brief The operands and the outcome. */
@@ -118,7 +118,7 @@ static const LinkManagerNs Link __attribute__((unused)) = {
     .set = protocore_link_set,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LINK_MANAGER
 

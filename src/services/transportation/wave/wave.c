@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/transportation/wave/wave.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
 {
@@ -137,36 +137,36 @@ size_t protocore_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payloa
     return i;
 }
 
-proto_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out)
+embed_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out)
 {
     if (!frame || !out || len < 3)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if ((frame[0] & 0x0F) != WSMP_VERSION)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t psid = 0;
     size_t p = protocore_wave_decode_psid(frame + 1, len - 1, &psid);
     if (!p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t off = 1 + p;
     if (off + 1 > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t wlen = frame[off++];
     if (off + wlen > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->psid = psid;
     out->payload = wlen ? (frame + off) : NULL;
     out->payload_len = wlen;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out,
@@ -190,6 +190,6 @@ size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload
     return n;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAVE

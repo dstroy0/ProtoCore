@@ -1054,7 +1054,7 @@ static void bind_early(const Tls13Kdf *kdf)
     Tls13KsV.bind.kdf = kdf;
     Tls13KsV.bind.ks = &g_ks;
     Tls13KsV.bind.s = g_ks_bytes;
-    Tls13KsV.bind.is384 = PROTO_FALSE;
+    Tls13KsV.bind.is384 = EMBED_FALSE;
     Tls13Ks.early(NULL);
 }
 
@@ -1067,7 +1067,7 @@ static void bind_early384(const Tls13Kdf *kdf)
     Tls13KsV.bind.kdf = kdf;
     Tls13KsV.bind.ks = &g_ks;
     Tls13KsV.bind.s = g_ks_bytes;
-    Tls13KsV.bind.is384 = PROTO_TRUE;
+    Tls13KsV.bind.is384 = EMBED_TRUE;
     Tls13Ks.early(NULL);
 }
 

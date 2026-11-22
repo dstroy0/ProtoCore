@@ -18,7 +18,7 @@
 #include "server/core/worker/worker.h" // the persistent end this module's key material is taken from
 #include "services/net/http_client/http_client.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
@@ -29,7 +29,6 @@ PROTOCORE_BEGIN_DECLS
 #include "shared/mime/mime.h"          // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
 #include "verba_scribo/verba_scribo.h" // verba_scribo: the message builder
 #ifdef PROTOCORE_HTTP_CLIENT_DEBUG
-#include <stdio.h>
 #endif
 // ---------------------------------------------------------------------------
 // Literals
@@ -121,7 +120,7 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
 {
     (void)work;
     HttpClientVars *ns = &HttpClientV;
-    ns->ok = PROTO_FALSE;
+    ns->ok = EMBED_FALSE;
     if (!ns->target.url || !ns->target.host || !ns->target.path)
     {
         return;
@@ -129,16 +128,16 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
 
     const char *p = ns->target.url;
     if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = "https://", .cap = sizeof("https://"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
-        ns->target.https = PROTO_TRUE;
+        ns->target.https = EMBED_TRUE;
         ns->target.port = 443;
         p += sizeof("https://") - 1;
     }
     else if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = p, .other = "http://", .cap = sizeof("http://"),
-                        .ci = PROTO_FALSE)) // NOSONAR: a user agent dials http:// too
+                        .ci = EMBED_FALSE)) // NOSONAR: a user agent dials http:// too
     {
-        ns->target.https = PROTO_FALSE;
+        ns->target.https = EMBED_FALSE;
         ns->target.port = 80;
         p += sizeof("http://") - 1;
     }
@@ -200,7 +199,7 @@ void protocore_http_client_parse_target_uri(uint8_t *work)
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ns->target.path, .src = p, .bytes = plen + 1);
     }
-    ns->ok = PROTO_TRUE;
+    ns->ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -219,7 +218,7 @@ void protocore_http_client_build_request(uint8_t *work)
         return;
     }
 
-    const proto_bool default_port =
+    const embed_bool default_port =
         (ns->target.https && ns->target.port == 443) || (!ns->target.https && ns->target.port == 80);
     char hosthdr[HTTP_CLIENT_HOST_CAP + 8];
     size_t sb_host = 0;
@@ -237,7 +236,7 @@ void protocore_http_client_build_request(uint8_t *work)
         hosthdr[0] = '\0';
     }
 
-    const proto_bool has_content = (ns->request.body != NULL) && (ns->request.body_len != 0);
+    const embed_bool has_content = (ns->request.body != NULL) && (ns->request.body_len != 0);
     char *const sb_out_out = ns->request.out;
     const size_t sb_out_cap = ns->request.cap;
     size_t sb_out = 0;
@@ -302,7 +301,7 @@ static const char *field_value(const uint8_t *buf, const uint8_t *end, const cha
     while (p + nlen + 1 < end)
     {
         if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = (const char *)p, .other = name, .cap = nlen,
-                       .ci = PROTO_TRUE) == nlen &&
+                       .ci = EMBED_TRUE) == nlen &&
             p[nlen] == ':')
         {
             const uint8_t *v = p + nlen + 1;
@@ -326,7 +325,7 @@ static const char *field_value(const uint8_t *buf, const uint8_t *end, const cha
 
 // RFC 9112 sec 6.3 item 4: chunked frames the body only when it is the final transfer coding. Walks
 // the field value to its line end, back over the trailing OWS, and tests the last coding name.
-static proto_bool chunked_is_final(const char *value, const char *end)
+static embed_bool chunked_is_final(const char *value, const char *end)
 {
     const char *v = value;
     while (v < end && *v != '\r' && *v != '\n')
@@ -340,13 +339,13 @@ static proto_bool chunked_is_final(const char *value, const char *end)
     const size_t nlen = sizeof("chunked") - 1;
     if ((size_t)(v - value) < nlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *last = v - nlen;
-    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = last, .other = "chunked", .cap = nlen, .ci = PROTO_TRUE) !=
+    if (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = last, .other = "chunked", .cap = nlen, .ci = EMBED_TRUE) !=
         nlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return (last == value) || last[-1] == ',' || last[-1] == ' ' || last[-1] == '\t';
 }
@@ -361,7 +360,7 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
     while (in < len)
     {
         size_t chunk_size = 0;
-        proto_bool any = PROTO_FALSE;
+        embed_bool any = EMBED_FALSE;
         while (in < len && buf[in] != '\r')
         {
             uint8_t c = buf[in++];
@@ -387,7 +386,7 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
             {
                 chunk_size = len;
             }
-            any = PROTO_TRUE;
+            any = EMBED_TRUE;
         }
         while (in < len && buf[in] != '\n')
         {
@@ -516,13 +515,13 @@ static uint32_t now_ms(void)
 
 // The peer closed and its wire ring is drained: no further octet can arrive (RFC 9112 sec 6.3
 // item 8, the close-delimited body).
-static proto_bool peer_done(uint8_t *work)
+static embed_bool peer_done(uint8_t *work)
 {
     TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
     TcpClient.is_closed(protocore_tcp_client_span());
     if (!TcpClientV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     TcpClientV.cid = HTTP_CLIENT_CTX(work)->cid;
     TcpClient.available(protocore_tcp_client_span());
@@ -718,6 +717,6 @@ void protocore_http_client_post(uint8_t *work)
 /** @brief The operands and the outcome. */
 HttpClientVars HttpClientV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT

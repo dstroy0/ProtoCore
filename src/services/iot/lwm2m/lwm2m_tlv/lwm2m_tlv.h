@@ -52,7 +52,7 @@
 
 #if PROTOCORE_ENABLE_LWM2M
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Type byte bit-fields (LwM2M Core sec 7.4.5 Table 7.4.5.-1).
 #define LWM2M_TLV_IDTYPE_MASK 0xC0     ///< bits 7-6: the type of Identifier
@@ -62,13 +62,12 @@ PROTOCORE_BEGIN_DECLS
 #define LWM2M_TLV_INLINE_LEN_MASK 0x07 ///< bits 2-0: the Length of the Value when there is no Length field
 
 /** @brief LwM2M Core sec 7.4.5 Table 7.4.5.-1, Type bits 7-6: what the Identifier names. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(Lwm2mTlvIdType,
     LWM2M_TLV_OBJECT_INSTANCE = 0x00,     ///< 00: the Value contains one or more Resource TLVs
     LWM2M_TLV_RESOURCE_INSTANCE = 0x40,   ///< 01: Resource Instance with Value, within a multiple Resource TLV
     LWM2M_TLV_MULTIPLE_RESOURCE = 0x80,   ///< 10: the Value contains one or more Resource Instance TLVs
     LWM2M_TLV_RESOURCE_WITH_VALUE = 0xC0, ///< 11: Resource with Value
-} Lwm2mTlvIdType;
+);
 
 /** @brief Where a writer's octets land. */
 typedef struct
@@ -98,7 +97,7 @@ typedef struct
     size_t len;               ///< the Length field: how many octets the Value is
     int64_t integer_value;    ///< Integer: staged into 1, 2, 4 or 8 octets, two's complement
     double float_value;       ///< Float: staged as binary64, 8 octets
-    proto_bool boolean_value; ///< Boolean: staged as one octet, 0 for False and 1 for True
+    embed_bool boolean_value; ///< Boolean: staged as one octet, 0 for False and 1 for True
     const char *string_value; ///< String: UTF-8, measured to its NUL within the sink's capacity
 } Lwm2mTlvValueArgs;
 
@@ -132,7 +131,7 @@ typedef struct
     Lwm2mTlvSourceArgs source; ///< the octets a reader walks
     Lwm2mTlvHeaderArgs hdr;    ///< one entry's Type and Identifier fields
     Lwm2mTlvValueArgs val;     ///< its Value field
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } Lwm2mTlvVars;
 
@@ -195,7 +194,7 @@ static const Lwm2mTlvNs Lwm2mTlv __attribute__((unused)) = {
  */
 uint8_t *protocore_lwm2m_tlv_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LWM2M
 

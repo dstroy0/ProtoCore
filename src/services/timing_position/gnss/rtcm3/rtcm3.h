@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define RTCM3_PREAMBLE 0xD3u ///< frame start byte
 #define RTCM3_HDR_LEN 3      ///< preamble (1) + 6 reserved bits + 10-bit length (2)
@@ -56,7 +56,7 @@ typedef struct
     uint8_t *buf;
     size_t cap_bits; ///< capacity in bits
     size_t pos;      ///< current bit offset
-    proto_bool ok;   ///< cleared if a write would overflow
+    embed_bool ok;   ///< cleared if a write would overflow
 } RtcmBitWriter;
 
 /** @brief Start a writer over @p buf (@p cap bytes). The buffer must already be zeroed. */
@@ -81,7 +81,7 @@ typedef struct
     uint16_t msg_type;      ///< DF002 message number (first 12 payload bits)
     const uint8_t *payload; ///< start of the payload inside the parsed buffer
     uint16_t payload_len;   ///< payload length in bytes
-    proto_bool crc_ok;      ///< the trailing CRC-24Q matched
+    embed_bool crc_ok;      ///< the trailing CRC-24Q matched
 } Rtcm3Frame;
 
 /**
@@ -114,7 +114,7 @@ typedef struct
     int64_t ecef_y_01mm;
     int64_t ecef_z_01mm;
     uint16_t antenna_height_01mm; ///< 1006 only (0 for 1005)
-    proto_bool has_height;        ///< true for 1006
+    embed_bool has_height;        ///< true for 1006
 } Rtcm3StationArp;
 
 /** @brief Build a full 1005 frame (ARP, no antenna height). @return frame length or 0. */
@@ -129,9 +129,9 @@ size_t protocore_rtcm3_build_1006(uint8_t *out, size_t cap, uint16_t station_id,
  * @brief Decode a 1005 / 1006 payload (not the framed message) into @p out.
  * @return true if @p payload is a well-formed 1005 or 1006; false otherwise.
  */
-proto_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out);
+embed_bool protocore_rtcm3_parse_1005(const uint8_t *payload, uint16_t payload_len, Rtcm3StationArp *out);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER
 

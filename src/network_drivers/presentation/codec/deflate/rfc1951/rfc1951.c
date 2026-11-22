@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h" // memor.set: build_fixed zeroes its bit-length counts
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Length code base values and extra bits (RFC 1951 sec 3.2.5), codes 257..285.
 static const short len_base[29] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
@@ -173,6 +173,6 @@ Rfc1951Vars Rfc1951V = {
     .dist_extra = dist_extra,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEFLATE_RFC1951

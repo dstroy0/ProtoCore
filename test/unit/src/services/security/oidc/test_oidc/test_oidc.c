@@ -228,7 +228,7 @@ void test_malformed_tokens(void)
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, OidcV.result);
 
     // No key loaded is a format refusal before anything is read.
-    OidcV.key.rsa.loaded = PROTO_FALSE;
+    OidcV.key.rsa.loaded = EMBED_FALSE;
     OidcV.token = RFC7515_A2;
     OidcV.token_len = strlen(RFC7515_A2);
     Oidc.verify_with_key(oidc_work);

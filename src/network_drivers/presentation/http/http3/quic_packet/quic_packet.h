@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file quic_packet.h
@@ -70,11 +70,11 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*is_long_header)(uint8_t *, uint8_t);
-    proto_bool (*parse_long_header)(uint8_t *, const uint8_t *, size_t, QuicLongHeader *);
+    embed_bool (*is_long_header)(uint8_t *, uint8_t);
+    embed_bool (*parse_long_header)(uint8_t *, const uint8_t *, size_t, QuicLongHeader *);
     size_t (*build_long_header)(uint8_t *, uint8_t *, size_t, uint8_t, uint32_t, const uint8_t *, uint8_t,
                                 const uint8_t *, uint8_t, uint8_t);
-    proto_bool (*parse_short_header)(uint8_t *, const uint8_t *, size_t, uint8_t, QuicShortHeader *);
+    embed_bool (*parse_short_header)(uint8_t *, const uint8_t *, size_t, uint8_t, QuicShortHeader *);
     size_t (*build_version_negotiation)(uint8_t *, uint8_t *, size_t, const uint8_t *, uint8_t, const uint8_t *,
                                         uint8_t, const uint32_t *, size_t);
     uint8_t (*pn_length)(uint8_t *, uint64_t, int64_t);
@@ -88,18 +88,18 @@ PROTOCORE_NS_LAYOUT(QuicPacketNs, is_long_header, parse_long_header, build_long_
  * @brief True if byte 0 selects the long header form (0x80 set).
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
  * @param first First
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_quic_packet_is_long_header(uint8_t *work, uint8_t first);
+embed_bool protocore_quic_packet_is_long_header(uint8_t *work, uint8_t first);
 /**
  * @brief Parse a long header. false if truncated or a connection ID exceeds .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param len Len
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t *buf, size_t len, QuicLongHeader *out);
+embed_bool protocore_quic_packet_parse_long_header(uint8_t *work, const uint8_t *buf, size_t len, QuicLongHeader *out);
 /**
  * @brief Build a long header's invariant fields (first byte .. Source .
  * @param work PROTOCORE_QUIC_PACKET_BORROW bytes the caller took. Not held past the call.
@@ -124,9 +124,9 @@ size_t protocore_quic_packet_build_long_header(uint8_t *work, uint8_t *out, size
  * @param len Len
  * @param dcid_len Dcid len
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_quic_packet_parse_short_header(uint8_t *work, const uint8_t *buf, size_t len, uint8_t dcid_len,
+embed_bool protocore_quic_packet_parse_short_header(uint8_t *work, const uint8_t *buf, size_t len, uint8_t dcid_len,
                                                     QuicShortHeader *out);
 /**
  * @brief Build a Version Negotiation packet (RFC 9000 sec 17.2.1): Version 0 .
@@ -184,6 +184,6 @@ PROTOCORE_NS QuicPacketNs QuicPacket PROTOCORE_UNUSED = {.is_long_header = proto
                                                          .pn_encode = protocore_quic_packet_pn_encode,
                                                          .pn_decode = protocore_quic_packet_pn_decode};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_QUIC_PACKET_H

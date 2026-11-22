@@ -50,8 +50,8 @@ static size_t ws_scratch_available(void)
 }
 #endif
 
-static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const uint8_t *payload, uint16_t payload_len,
-                          proto_bool masked)
+static size_t build_frame(uint8_t *dst, WsOpcode opcode, embed_bool fin, const uint8_t *payload, uint16_t payload_len,
+                          embed_bool masked)
 {
     size_t pos = 0;
     dst[pos++] = (fin ? 0x80u : 0x00u) | (uint8_t)opcode;
@@ -91,7 +91,7 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
         conn_pool[i].pcb = protocore_net_host_pcb();
     }
 }
@@ -525,7 +525,7 @@ void test_ws_parse_text_frame_sets_ready()
     WsConn *ws = WsV.found;
     const uint8_t payload[] = {'H', 'i'};
     uint8_t frame[12];
-    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, payload, 2, PROTO_TRUE);
+    size_t flen = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, payload, 2, EMBED_TRUE);
     push_bytes(0, frame, flen);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -539,7 +539,7 @@ void test_ws_parse_payload_stored_correctly()
     WsConn *ws = WsV.found;
     const char *text = "Hello";
     uint8_t frame[16];
-    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
+    size_t flen = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), EMBED_TRUE);
     push_bytes(0, frame, flen);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -555,7 +555,7 @@ void test_ws_parse_binary_frame_sets_ready()
     WsConn *ws = WsV.found;
     const uint8_t payload[] = {0x01, 0x02, 0x03};
     uint8_t frame[16];
-    size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 3, PROTO_TRUE);
+    size_t flen = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, payload, 3, EMBED_TRUE);
     push_bytes(0, frame, flen);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -659,7 +659,7 @@ void test_ws_parse_16bit_length_frame()
     }
 
     static uint8_t frame[142];
-    size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, 130, PROTO_TRUE);
+    size_t flen = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, payload, 130, EMBED_TRUE);
 
     push_bytes(0, frame, flen);
     WsV.conn = ws;
@@ -756,8 +756,8 @@ void test_ws_fragmented_message_reassembled()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     uint8_t f1[16], f2[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
-    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, EMBED_FALSE, (const uint8_t *)"He", 2, EMBED_TRUE);
+    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, EMBED_TRUE, (const uint8_t *)"llo", 3, EMBED_TRUE);
 
     push_bytes(0, f1, n1);
     WsV.conn = ws;
@@ -779,9 +779,9 @@ void test_ws_control_frame_interleaved_in_fragments()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     uint8_t f1[16], pf[16], f2[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
-    size_t np = build_frame(pf, WS_OP_PING, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
-    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, EMBED_FALSE, (const uint8_t *)"He", 2, EMBED_TRUE);
+    size_t np = build_frame(pf, WS_OP_PING, EMBED_TRUE, (const uint8_t *)"x", 1, EMBED_TRUE);
+    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, EMBED_TRUE, (const uint8_t *)"llo", 3, EMBED_TRUE);
 
     push_bytes(0, f1, n1);
     push_bytes(0, pf, np);
@@ -806,7 +806,7 @@ void test_ws_fragment_accumulation_overflow_rejected()
         payload[i] = (uint8_t)(i & 0xFF);
     }
 
-    size_t n1 = build_frame(frame, WS_OP_TEXT, PROTO_FALSE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
+    size_t n1 = build_frame(frame, WS_OP_TEXT, EMBED_FALSE, payload, (uint16_t)WS_FRAME_SIZE, EMBED_TRUE);
     push_bytes(0, frame, n1);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -814,7 +814,7 @@ void test_ws_fragment_accumulation_overflow_rejected()
     TEST_ASSERT_NOT_EQUAL(WS_ERROR, ws->parse_state);
 
     uint8_t one = 'x';
-    size_t n2 = build_frame(frame, WS_OP_CONTINUATION, PROTO_TRUE, &one, 1, PROTO_TRUE);
+    size_t n2 = build_frame(frame, WS_OP_CONTINUATION, EMBED_TRUE, &one, 1, EMBED_TRUE);
     push_bytes(0, frame, n2);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -840,9 +840,9 @@ void test_ws_new_data_frame_during_fragmentation_rejected()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     uint8_t f1[16], f2[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, EMBED_FALSE, (const uint8_t *)"He", 2, EMBED_TRUE);
 
-    size_t n2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
+    size_t n2 = build_frame(f2, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)"llo", 3, EMBED_TRUE);
     push_bytes(0, f1, n1);
     push_bytes(0, f2, n2);
     WsV.conn = ws;
@@ -897,8 +897,8 @@ void test_ws_parse_stops_at_frame_ready()
     WsConn *ws = WsV.found;
     const uint8_t p[] = {'A'};
     uint8_t f1[8], f2[8];
-    size_t l1 = build_frame(f1, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
-    size_t l2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
+    size_t l1 = build_frame(f1, WS_OP_TEXT, EMBED_TRUE, p, 1, EMBED_TRUE);
+    size_t l2 = build_frame(f2, WS_OP_TEXT, EMBED_TRUE, p, 1, EMBED_TRUE);
 
     push_bytes(0, f1, l1);
     push_bytes(0, f2, l2);
@@ -916,7 +916,7 @@ void test_ws_parse_stops_after_close()
     uint8_t close_frame[8] = {0x88, 0x82, 0, 0, 0, 0, 0x03, 0xE8};
     const uint8_t p[] = {'z'};
     uint8_t next[8];
-    size_t nlen = build_frame(next, WS_OP_TEXT, PROTO_TRUE, p, 1, PROTO_TRUE);
+    size_t nlen = build_frame(next, WS_OP_TEXT, EMBED_TRUE, p, 1, EMBED_TRUE);
 
     push_bytes(0, close_frame, sizeof(close_frame));
     push_bytes(0, next, nlen);
@@ -934,8 +934,8 @@ void test_ws_reset_frame_clears_fields()
     ws->parse_state = WS_FRAME_READY;
     ws->payload_len = 10;
     ws->payload_idx = 10;
-    ws->fin = PROTO_TRUE;
-    ws->masked = PROTO_TRUE;
+    ws->fin = EMBED_TRUE;
+    ws->masked = EMBED_TRUE;
     ws->mask_key[0] = 0xAB;
     ws->buf[0] = 'X';
     ws->len64_count = 5;
@@ -1020,7 +1020,7 @@ void test_ws_text_invalid_utf8_rejected()
     WsConn *ws = WsV.found;
     const uint8_t bad[] = {0xC3, 0x28};
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, bad, 2, PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, bad, 2, EMBED_TRUE);
     push_bytes(0, frame, n);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -1034,7 +1034,7 @@ void test_ws_text_valid_utf8_accepted()
     WsConn *ws = WsV.found;
     const uint8_t ok[] = {'h', 0xC3, 0xA9, 'l', 'l', 'o'};
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, ok, (uint16_t)sizeof(ok), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, ok, (uint16_t)sizeof(ok), EMBED_TRUE);
     push_bytes(0, frame, n);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -1049,7 +1049,7 @@ void test_ws_binary_arbitrary_bytes_accepted()
     WsConn *ws = WsV.found;
     const uint8_t bin[] = {0xFF, 0xFE, 0x00, 0xC3, 0x28};
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, bin, (uint16_t)sizeof(bin), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, bin, (uint16_t)sizeof(bin), EMBED_TRUE);
     push_bytes(0, frame, n);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -1060,7 +1060,7 @@ void stress_ws_parse_reset_100_cycles()
 {
     const char *text = "test";
     uint8_t frame[12];
-    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, 4, PROTO_TRUE);
+    size_t flen = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)text, 4, EMBED_TRUE);
     for (int i = 0; i < 100; i++)
     {
         WsV.slot = 0;
@@ -1118,7 +1118,7 @@ void stress_ws_parse_incremental_byte_by_byte()
     WsConn *ws = WsV.found;
     const char *text = "Incremental";
     uint8_t frame[20];
-    size_t flen = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
+    size_t flen = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), EMBED_TRUE);
     for (size_t i = 0; i < flen; i++)
     {
         push_bytes(0, &frame[i], 1);
@@ -1146,7 +1146,7 @@ void stress_ws_parse_max_payload()
         payload[i] = (uint8_t)(i & 0xFF);
     }
 
-    size_t flen = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, payload, (uint16_t)WS_FRAME_SIZE, PROTO_TRUE);
+    size_t flen = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, payload, (uint16_t)WS_FRAME_SIZE, EMBED_TRUE);
     push_bytes(0, frame, flen);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -1166,8 +1166,8 @@ void stress_ws_parse_two_consecutive_frames()
     const char *t1 = "first";
     const char *t2 = "second";
     uint8_t f1[16], f2[16];
-    size_t l1 = build_frame(f1, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)t1, (uint16_t)strlen(t1), PROTO_TRUE);
-    size_t l2 = build_frame(f2, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)t2, (uint16_t)strlen(t2), PROTO_TRUE);
+    size_t l1 = build_frame(f1, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)t1, (uint16_t)strlen(t1), EMBED_TRUE);
+    size_t l2 = build_frame(f2, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)t2, (uint16_t)strlen(t2), EMBED_TRUE);
 
     push_bytes(0, f1, l1);
     WsV.conn = ws;
@@ -1194,10 +1194,10 @@ void test_ws_permessage_deflate_inbound()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
 
     uint8_t frame[64];
-    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, comp, (uint16_t)sizeof(comp), EMBED_TRUE);
     frame[0] |= 0x40;
 
     push_bytes(0, frame, n);
@@ -1214,9 +1214,9 @@ void test_ws_rsv1_without_negotiation_closes()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_FALSE;
+    ws->pmd = EMBED_FALSE;
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)"x", 1, PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)"x", 1, EMBED_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
     WsV.conn = ws;
@@ -1230,7 +1230,7 @@ void test_ws_permessage_deflate_outbound()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
 
     const char *msg = "The quick brown fox. The quick brown fox. The quick brown fox.";
     uint16_t mlen = (uint16_t)strlen(msg);
@@ -1290,7 +1290,7 @@ void test_ws_outbound_incompressible_not_flagged()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
 
     tcp_capture_reset();
     WsV.conn = ws;
@@ -1324,9 +1324,9 @@ void test_ws_deflate_inflate_error_closes()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, garbage, (uint16_t)sizeof(garbage), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, garbage, (uint16_t)sizeof(garbage), EMBED_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
     WsV.conn = ws;
@@ -1341,10 +1341,10 @@ void test_ws_permessage_deflate_inflate_overflow_closes()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
 
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, comp, (uint16_t)sizeof(comp), EMBED_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
     WsV.conn = ws;
@@ -1359,13 +1359,13 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
 
     void *hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available(), protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, comp, (uint16_t)sizeof(comp), EMBED_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
     WsV.conn = ws;
@@ -1385,13 +1385,13 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
 
     void *hog = protocore_plain_guard()->temporary_buf_alloc(ws_scratch_available() - leave, protocore_plain_owner());
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
-    size_t n = build_frame(frame, WS_OP_BINARY, PROTO_TRUE, comp, (uint16_t)sizeof(comp), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_BINARY, EMBED_TRUE, comp, (uint16_t)sizeof(comp), EMBED_TRUE);
     frame[0] |= 0x40;
     push_bytes(0, frame, n);
     WsV.conn = ws;
@@ -1412,10 +1412,10 @@ void test_ws_pmd_negotiated_uncompressed_frame_accepted()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
     const char *text = "plain";
     uint8_t frame[16];
-    size_t n = build_frame(frame, WS_OP_TEXT, PROTO_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), PROTO_TRUE);
+    size_t n = build_frame(frame, WS_OP_TEXT, EMBED_TRUE, (const uint8_t *)text, (uint16_t)strlen(text), EMBED_TRUE);
     push_bytes(0, frame, n);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
@@ -1430,7 +1430,7 @@ void test_ws_outbound_binary_and_scratch_starved()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
     WsV.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
@@ -1486,7 +1486,7 @@ void test_ws_outbound_pmd_zero_len_and_control()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
     WsV.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
@@ -1515,17 +1515,17 @@ void test_ws_pmd_continuation_with_rsv1_rejected()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
-    ws->pmd = PROTO_TRUE;
+    ws->pmd = EMBED_TRUE;
 
     uint8_t f1[16];
-    size_t n1 = build_frame(f1, WS_OP_TEXT, PROTO_FALSE, (const uint8_t *)"He", 2, PROTO_TRUE);
+    size_t n1 = build_frame(f1, WS_OP_TEXT, EMBED_FALSE, (const uint8_t *)"He", 2, EMBED_TRUE);
     push_bytes(0, f1, n1);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
     TEST_ASSERT_TRUE(ws->fragmenting);
 
     uint8_t f2[16];
-    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, PROTO_TRUE, (const uint8_t *)"llo", 3, PROTO_TRUE);
+    size_t n2 = build_frame(f2, WS_OP_CONTINUATION, EMBED_TRUE, (const uint8_t *)"llo", 3, EMBED_TRUE);
     f2[0] |= 0x40;
     push_bytes(0, f2, n2);
     WsV.conn = ws;
@@ -1542,7 +1542,7 @@ void test_ws_outbound_fragmentation()
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
 #if PROTOCORE_ENABLE_WS_DEFLATE
-    ws->pmd = PROTO_FALSE;
+    ws->pmd = EMBED_FALSE;
 #endif
     const uint8_t msg[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -1626,7 +1626,7 @@ void test_ws_send_frame_paths_and_parse_guard()
     WsV.frag_size = 0;
     Ws.set_frag_size(protocore_ws_span());
 
-    conn_pool[0].state = CONN_CLOSING;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
     WsV.conn = ws;
     WsV.frame.opcode = WS_OP_TEXT;
     WsV.frame.payload = payload;
@@ -1635,7 +1635,7 @@ void test_ws_send_frame_paths_and_parse_guard()
     TEST_ASSERT_FALSE(WsV.ok);
     WsV.conn = ws;
     Ws.parse(protocore_ws_span());
-    conn_pool[0].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
 }
 
 void test_ws_send_frame_header_write_failure()
@@ -1762,12 +1762,12 @@ void test_ws_close_when_conn_inactive_skips_flush()
     WsV.slot = 0;
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
-    conn_pool[0].state = CONN_CLOSING;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
     WsV.conn = ws;
     WsV.frame.code = WS_CLOSE_NORMAL;
     Ws.close(protocore_ws_span());
     TEST_ASSERT_EQUAL(WS_CLOSED, ws->parse_state);
-    conn_pool[0].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
 }
 
 void test_ws_ping_flush_skipped_when_conn_inactive()
@@ -1776,7 +1776,7 @@ void test_ws_ping_flush_skipped_when_conn_inactive()
     Ws.alloc(protocore_ws_span());
     WsConn *ws = WsV.found;
     uint8_t frame[6] = {0x89, 0x80, 0, 0, 0, 0};
-    conn_pool[0].state = CONN_CLOSING;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_CLOSING);
     for (size_t i = 0; i < sizeof(frame); i++)
     {
         WsV.conn = ws;
@@ -1784,7 +1784,7 @@ void test_ws_ping_flush_skipped_when_conn_inactive()
         Ws.feed_byte(protocore_ws_span());
     }
     TEST_ASSERT_EQUAL(WS_HEADER1, ws->parse_state);
-    conn_pool[0].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[0].state, .value = CONN_ACTIVE);
 }
 
 int main()

@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_NETADAPT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -78,7 +78,7 @@ typedef struct
 {
     NetadaptWindowArgs window_args;
     NetadaptDhcpFallbackArgs dhcp_fallback_args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t u32;
 } NetadaptVars;
 
@@ -106,7 +106,7 @@ static const NetadaptNs Netadapt __attribute__((unused)) = {
     .dhcp_fallback = protocore_netadapt_dhcp_fallback,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NETADAPT
 

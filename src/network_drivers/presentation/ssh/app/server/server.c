@@ -6,6 +6,10 @@
  * @brief RFC 4254 sec 6: the subsystem and exec requests that name a file-transfer service.
  */
 
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "network_drivers/presentation/ssh/app/server/server.h"
 #include "memoria_operor/memoria_operor.h"
 #include "octetus_introitus_exitus/octetus_introitus_exitus.h" // byteio.rd_str: the RFC 4251 sec 5 string reader
@@ -27,7 +31,7 @@ void protocore_ssh_app_server_classify(uint8_t *work)
     mmgr_cspan req =
         EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = SshAppServerV.req.payload, .cap = SshAppServerV.req.len);
     req.pos = SshAppServerV.req.off;
-    proto_bool *accept = &SshAppServerV.accept;
+    embed_bool *accept = &SshAppServerV.accept;
 #if !PROTOCORE_ENABLE_SSH_SFTP
     (void)accept; // only the SFTP subsystem path flips acceptance; scp exec is already accepted
 #endif
@@ -40,7 +44,7 @@ void protocore_ssh_app_server_classify(uint8_t *work)
         if (EMBED_CALL(byteio.rd_str, OctetusCfg, .read_span = &req, .blob = &arg, .blob_bytes = &arg_len) &&
             arg_len == 4 && EMBED_CALL(memor.cmp, MemoriaCfg, .src = arg, .other = "sftp", .bytes = 4) == 0)
         {
-            *accept = PROTO_TRUE;
+            *accept = EMBED_TRUE;
             SshConnectionV.chan.slot = i;
             SshConnectionV.chan.channel = channel;
             SshConnectionV.chan.service = SSH_CHAN_SERVICE_SFTP;
@@ -89,3 +93,5 @@ void protocore_ssh_app_server_classify(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshAppServerVars SshAppServerV;
+
+#endif // PROTOCORE_ENABLE_SSH

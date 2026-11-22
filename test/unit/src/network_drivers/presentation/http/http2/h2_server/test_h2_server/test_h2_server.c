@@ -139,7 +139,7 @@ static void feed_request(const Hdr *fields, size_t n)
     in_add(hf,
            (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf, H2FrameV.headers_args.stream_id = 1,
             H2FrameV.headers_args.block = block, H2FrameV.headers_args.block_len = bo,
-            H2FrameV.headers_args.end_stream = PROTO_TRUE, H2Frame.build_headers(NULL), H2FrameV.n));
+            H2FrameV.headers_args.end_stream = EMBED_TRUE, H2Frame.build_headers(NULL), H2FrameV.n));
 
     H2Server.slot = 0;
     H2Server.data(protocore_h2_server_span());

@@ -338,7 +338,7 @@ void test_response_roundtrip()
     TEST_ASSERT_TRUE(fn > 0);
 
     uint8_t resp[PROTOCORE_EDGE_MESH_RESP_MAX];
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = frame;
     EdgeMeshV.build_response_args.entry_len = fn;
     EdgeMeshV.build_response_args.out = resp;
@@ -372,7 +372,7 @@ void test_response_roundtrip()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_INCOMPLETE, EdgeMeshV.parse);
 
     uint8_t miss[8];
-    EdgeMeshV.build_response_args.hit = PROTO_FALSE;
+    EdgeMeshV.build_response_args.hit = EMBED_FALSE;
     EdgeMeshV.build_response_args.entry = NULL;
     EdgeMeshV.build_response_args.entry_len = 0;
     EdgeMeshV.build_response_args.out = miss;
@@ -418,9 +418,9 @@ typedef struct
 {
     const uint8_t *data;
     size_t len, cursor, throttle;
-    proto_bool closes;
+    embed_bool closes;
     int open_ret;
-    proto_bool send_ok;
+    embed_bool send_ok;
     int reads;
 } MockPeer;
 static int p_open(void *c, const char *h, uint16_t p, uint32_t t)
@@ -430,7 +430,7 @@ static int p_open(void *c, const char *h, uint16_t p, uint32_t t)
     (void)t;
     return ((MockPeer *)c)->open_ret;
 }
-static proto_bool p_send(void *c, int cid, const void *d, size_t l)
+static embed_bool p_send(void *c, int cid, const void *d, size_t l)
 {
     (void)cid;
     (void)d;
@@ -452,7 +452,7 @@ static size_t p_read(void *c, int cid, uint8_t *buf, size_t cap)
     m->cursor += n;
     return n;
 }
-static proto_bool p_closed(void *c, int cid)
+static embed_bool p_closed(void *c, int cid)
 {
     (void)cid;
     MockPeer *m = (MockPeer *)c;
@@ -464,7 +464,7 @@ static void p_close(void *c, int cid)
     (void)cid;
 }
 
-static proto_bool p_connected(void *c, int cid)
+static embed_bool p_connected(void *c, int cid)
 {
     (void)cid;
     return ((MockPeer *)c)->open_ret >= 0;
@@ -501,7 +501,7 @@ void test_requester_hit()
     size_t fn = 0;
     build_hit_frame(frame, sizeof(frame), &fn, 3);
     uint8_t resp[PROTOCORE_EDGE_MESH_RESP_MAX];
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = frame;
     EdgeMeshV.build_response_args.entry_len = fn;
     EdgeMeshV.build_response_args.out = resp;
@@ -509,7 +509,7 @@ void test_requester_hit()
     EdgeMesh.build_response(edge_mesh_work);
     size_t rn = EdgeMeshV.n;
 
-    MockPeer m = {resp, rn, 0, 4, PROTO_TRUE, 7, PROTO_TRUE};
+    MockPeer m = {resp, rn, 0, 4, EMBED_TRUE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -545,14 +545,14 @@ void test_requester_hit()
 void test_requester_miss()
 {
     uint8_t resp[8];
-    EdgeMeshV.build_response_args.hit = PROTO_FALSE;
+    EdgeMeshV.build_response_args.hit = EMBED_FALSE;
     EdgeMeshV.build_response_args.entry = NULL;
     EdgeMeshV.build_response_args.entry_len = 0;
     EdgeMeshV.build_response_args.out = resp;
     EdgeMeshV.build_response_args.cap = sizeof(resp);
     EdgeMesh.build_response(edge_mesh_work);
     size_t rn = EdgeMeshV.n;
-    MockPeer m = {resp, rn, 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
+    MockPeer m = {resp, rn, 0, 0, EMBED_TRUE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -570,7 +570,7 @@ void test_requester_miss()
 
 void test_requester_open_fail()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1, PROTO_TRUE};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, EMBED_FALSE, -1, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -588,7 +588,7 @@ void test_requester_open_fail()
 
 void test_requester_send_fail()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_FALSE};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, EMBED_FALSE, 7, EMBED_FALSE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -608,7 +608,7 @@ void test_requester_timeout()
 {
 
     uint8_t partial[4] = {'E', 'M', PROTOCORE_EDGE_MESH_VERSION, 1};
-    MockPeer m = {partial, sizeof(partial), 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
+    MockPeer m = {partial, sizeof(partial), 0, 0, EMBED_FALSE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -636,7 +636,7 @@ void test_requester_timeout()
 void test_requester_peer_closed_early()
 {
     uint8_t partial[5] = {'E', 'M', PROTOCORE_EDGE_MESH_VERSION, 1, 0};
-    MockPeer m = {partial, sizeof(partial), 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
+    MockPeer m = {partial, sizeof(partial), 0, 0, EMBED_TRUE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -655,7 +655,7 @@ void test_requester_peer_closed_early()
 void test_requester_malformed()
 {
     uint8_t junk[6] = {'X', 'X', 0, 0, 0, 0};
-    MockPeer m = {junk, sizeof(junk), 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
+    MockPeer m = {junk, sizeof(junk), 0, 0, EMBED_TRUE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -1014,49 +1014,49 @@ void test_build_response_guards()
 {
     uint8_t out[64];
     uint8_t entry[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    EdgeMeshV.build_response_args.hit = PROTO_FALSE;
+    EdgeMeshV.build_response_args.hit = EMBED_FALSE;
     EdgeMeshV.build_response_args.entry = NULL;
     EdgeMeshV.build_response_args.entry_len = 0;
     EdgeMeshV.build_response_args.out = NULL;
     EdgeMeshV.build_response_args.cap = sizeof(out);
     EdgeMesh.build_response(edge_mesh_work);
     TEST_ASSERT_EQUAL_UINT(0, EdgeMeshV.n);
-    EdgeMeshV.build_response_args.hit = PROTO_FALSE;
+    EdgeMeshV.build_response_args.hit = EMBED_FALSE;
     EdgeMeshV.build_response_args.entry = NULL;
     EdgeMeshV.build_response_args.entry_len = 0;
     EdgeMeshV.build_response_args.out = out;
     EdgeMeshV.build_response_args.cap = 3;
     EdgeMesh.build_response(edge_mesh_work);
     TEST_ASSERT_EQUAL_UINT(0, EdgeMeshV.n);
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = NULL;
     EdgeMeshV.build_response_args.entry_len = 8;
     EdgeMeshV.build_response_args.out = out;
     EdgeMeshV.build_response_args.cap = sizeof(out);
     EdgeMesh.build_response(edge_mesh_work);
     TEST_ASSERT_EQUAL_UINT(0, EdgeMeshV.n);
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = entry;
     EdgeMeshV.build_response_args.entry_len = 0;
     EdgeMeshV.build_response_args.out = out;
     EdgeMeshV.build_response_args.cap = sizeof(out);
     EdgeMesh.build_response(edge_mesh_work);
     TEST_ASSERT_EQUAL_UINT(0, EdgeMeshV.n);
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = entry;
     EdgeMeshV.build_response_args.entry_len = 0x10000;
     EdgeMeshV.build_response_args.out = out;
     EdgeMeshV.build_response_args.cap = sizeof(out);
     EdgeMesh.build_response(edge_mesh_work);
     TEST_ASSERT_EQUAL_UINT(0, EdgeMeshV.n);
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = entry;
     EdgeMeshV.build_response_args.entry_len = 100;
     EdgeMeshV.build_response_args.out = out;
     EdgeMeshV.build_response_args.cap = sizeof(out);
     EdgeMesh.build_response(edge_mesh_work);
     TEST_ASSERT_EQUAL_UINT(0, EdgeMeshV.n);
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = entry;
     EdgeMeshV.build_response_args.entry_len = 8;
     EdgeMeshV.build_response_args.out = out;
@@ -1072,7 +1072,7 @@ void test_parse_response_null_outputs()
     build_hit_frame(frame, sizeof(frame), &fn, 0);
     TEST_ASSERT_TRUE(fn > 0);
     uint8_t resp[PROTOCORE_EDGE_MESH_RESP_MAX];
-    EdgeMeshV.build_response_args.hit = PROTO_TRUE;
+    EdgeMeshV.build_response_args.hit = EMBED_TRUE;
     EdgeMeshV.build_response_args.entry = frame;
     EdgeMeshV.build_response_args.entry_len = fn;
     EdgeMeshV.build_response_args.out = resp;
@@ -1090,7 +1090,7 @@ void test_parse_response_null_outputs()
 
 void test_requester_begin_argument_guards()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, EMBED_FALSE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     const uint8_t req[1] = {'x'};
     EdgeMeshFetch mf;
@@ -1166,7 +1166,7 @@ void test_requester_begin_argument_guards()
 
 void test_requester_pump_guards()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, EMBED_FALSE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     const uint8_t req[1] = {'x'};
     EdgeMeshFetch mf;
@@ -1225,7 +1225,7 @@ void test_requester_buffer_full_without_a_frame()
     g_flood[3] = 1;
     g_flood[4] = 0xFF;
     g_flood[5] = 0xFF;
-    MockPeer m = {g_flood, sizeof(g_flood), 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
+    MockPeer m = {g_flood, sizeof(g_flood), 0, 0, EMBED_FALSE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -1250,7 +1250,7 @@ void test_requester_pump_skips_the_read_when_the_buffer_is_already_full()
 {
 
     static uint8_t hdr[6] = {'E', 'M', PROTOCORE_EDGE_MESH_VERSION, 1, 0xFF, 0xFF};
-    MockPeer m = {hdr, sizeof(hdr), 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
+    MockPeer m = {hdr, sizeof(hdr), 0, 0, EMBED_FALSE, 7, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;
@@ -1281,7 +1281,7 @@ void test_requester_pump_skips_the_read_when_the_buffer_is_already_full()
 
 void test_requester_end_without_a_connection()
 {
-    MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1, PROTO_TRUE};
+    MockPeer m = {(const uint8_t *)"", 0, 0, 0, EMBED_FALSE, -1, EMBED_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
     EdgeMeshFetch mf;
     EdgeMeshV.fetch_begin_args.m = &mf;

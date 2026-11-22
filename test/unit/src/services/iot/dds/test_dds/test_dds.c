@@ -98,7 +98,7 @@ static size_t build_submessage(uint8_t *buf, size_t cap, uint8_t id, uint8_t fla
     return RtpsV.n;
 }
 
-static proto_bool walk(const uint8_t *msg, size_t len)
+static embed_bool walk(const uint8_t *msg, size_t len)
 {
     g_seen_n = 0;
     g_seen_arg = NULL;

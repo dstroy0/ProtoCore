@@ -16,7 +16,7 @@ void protocore_utf8_valid(uint8_t *work)
     const uint8_t *s = Utf8V.args.s;
     const size_t n = Utf8V.args.n;
 
-    Utf8V.ok = PROTO_FALSE;
+    Utf8V.ok = EMBED_FALSE;
     size_t i = 0;
     while (i < n)
     {
@@ -70,7 +70,7 @@ void protocore_utf8_valid(uint8_t *work)
         }
         i += need + 1;
     }
-    Utf8V.ok = PROTO_TRUE;
+    Utf8V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */

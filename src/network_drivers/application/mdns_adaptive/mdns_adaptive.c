@@ -18,7 +18,7 @@
 #include "network_drivers/physical/physical/physical.h"            // Physical.wifi_channel
 #include "server/clock/clock.h"                                    // protocore_millis
 #include "services/radio/promisc/promisc.h"                        // protocore_promisc_*
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 void protocore_mdns_adaptive_beacon_adapt(uint8_t *work);
@@ -97,7 +97,7 @@ void protocore_mdns_adaptive_beacon_due(uint8_t *work)
 
     if (!b)
     {
-        MdnsAdaptiveV.ok = PROTO_FALSE;
+        MdnsAdaptiveV.ok = EMBED_FALSE;
         return;
     }
     uint32_t elapsed = now_ms - last_ms; // wrap-safe modular subtraction
@@ -114,7 +114,7 @@ void protocore_mdns_adaptive_beacon_presleep_due(uint8_t *work)
 
     if (!b)
     {
-        MdnsAdaptiveV.ok = PROTO_FALSE;
+        MdnsAdaptiveV.ok = EMBED_FALSE;
         return;
     }
     uint32_t elapsed = now_ms - last_ms;
@@ -154,13 +154,13 @@ void protocore_mdns_adaptive_contention_sample(uint8_t *work)
 
     if (!w || !out)
     {
-        MdnsAdaptiveV.ok = PROTO_FALSE;
+        MdnsAdaptiveV.ok = EMBED_FALSE;
         return;
     }
     uint32_t elapsed = now_ms - w->last_ms; // wrap-safe modular subtraction
     if (elapsed < w->window_ms)
     {
-        MdnsAdaptiveV.ok = PROTO_FALSE;
+        MdnsAdaptiveV.ok = EMBED_FALSE;
         return;
     }
     // Modular difference, so a wrapped frame counter still yields the true count as long as fewer
@@ -169,7 +169,7 @@ void protocore_mdns_adaptive_contention_sample(uint8_t *work)
     *out = delta > 0xFFFF ? 0xFFFF : (uint16_t)delta;
     w->last_count = frames_now;
     w->last_ms = now_ms;
-    MdnsAdaptiveV.ok = PROTO_TRUE;
+    MdnsAdaptiveV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ typedef struct
     uint16_t last_contention;
     uint32_t announces;
     uint8_t channel; ///< the channel capture is currently pinned to.
-    proto_bool running;
+    embed_bool running;
 } MdnsAdaptiveCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -250,14 +250,14 @@ void protocore_mdns_adaptive_begin(uint8_t *work)
 
     if (!cfg || MDNS_ADAPTIVE_CTX(work)->running)
     {
-        MdnsAdaptiveV.ok = PROTO_FALSE;
+        MdnsAdaptiveV.ok = EMBED_FALSE;
         return;
     }
     Physical.wifi_channel(protocore_physical_span());
     uint8_t ch = PhysicalV.u8;
     if (ch == 0)
     {
-        MdnsAdaptiveV.ok = PROTO_FALSE; // not associated: there is no channel to pin capture to
+        MdnsAdaptiveV.ok = EMBED_FALSE; // not associated: there is no channel to pin capture to
         return;
     }
 
@@ -291,7 +291,7 @@ void protocore_mdns_adaptive_begin(uint8_t *work)
     MDNS_ADAPTIVE_CTX(work)->channel = ch;
 
     // Pin capture to the station's OWN channel and never hop, or the association drops.
-    proto_bool promisc_ok = Promisc.begin(protocore_promisc_span(), ch, adaptive_sink);
+    embed_bool promisc_ok = Promisc.begin(protocore_promisc_span(), ch, adaptive_sink);
     MDNS_ADAPTIVE_CTX(work)->running = promisc_ok;
     MdnsAdaptiveV.ok = MDNS_ADAPTIVE_CTX(work)->running;
 }
@@ -351,7 +351,7 @@ void protocore_mdns_adaptive_end(uint8_t *work)
         return;
     }
     Promisc.end(protocore_promisc_span());
-    MDNS_ADAPTIVE_CTX(work)->running = PROTO_FALSE;
+    MDNS_ADAPTIVE_CTX(work)->running = EMBED_FALSE;
 }
 
 void protocore_mdns_adaptive_interval_ms(uint8_t *work)
@@ -372,6 +372,6 @@ void protocore_mdns_adaptive_announces(uint8_t *work)
 /** @brief The operands and the outcome. */
 MdnsAdaptiveVars MdnsAdaptiveV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MDNS_ADAPTIVE

@@ -393,13 +393,13 @@ void test_rfc9111_freshness_lifetime_precedence(void)
     protocore_cache_control cc;
     parse_cc("public, max-age=50, s-maxage=100", &cc);
     EdgeCacheV.freshness_lifetime_args.cc = &cc;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     EdgeCacheV.freshness_lifetime_args.date_epoch = -1;
     EdgeCacheV.freshness_lifetime_args.expires_epoch = -1;
     EdgeCache.freshness_lifetime(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(100, EdgeCacheV.secs);
     EdgeCacheV.freshness_lifetime_args.cc = &cc;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_FALSE;
+    EdgeCacheV.freshness_lifetime_args.shared = EMBED_FALSE;
     EdgeCacheV.freshness_lifetime_args.date_epoch = -1;
     EdgeCacheV.freshness_lifetime_args.expires_epoch = -1;
     EdgeCache.freshness_lifetime(edge_cache_work);
@@ -409,13 +409,13 @@ void test_rfc9111_freshness_lifetime_precedence(void)
     HttpcacheV.control_init_args.cc = &none;
     Httpcache.control_init(httpcache_work);
     EdgeCacheV.freshness_lifetime_args.cc = &none;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     EdgeCacheV.freshness_lifetime_args.date_epoch = NOV6_1994;
     EdgeCacheV.freshness_lifetime_args.expires_epoch = NOV6_1994 + 600;
     EdgeCache.freshness_lifetime(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(600, EdgeCacheV.secs);
     EdgeCacheV.freshness_lifetime_args.cc = &none;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     EdgeCacheV.freshness_lifetime_args.date_epoch = -1;
     EdgeCacheV.freshness_lifetime_args.expires_epoch = -1;
     EdgeCache.freshness_lifetime(edge_cache_work);
@@ -424,14 +424,14 @@ void test_rfc9111_freshness_lifetime_precedence(void)
     protocore_cache_control ma;
     parse_cc("max-age=30", &ma);
     EdgeCacheV.freshness_lifetime_args.cc = &ma;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     EdgeCacheV.freshness_lifetime_args.date_epoch = NOV6_1994;
     EdgeCacheV.freshness_lifetime_args.expires_epoch = NOV6_1994 + 600;
     EdgeCache.freshness_lifetime(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(30, EdgeCacheV.secs);
 
     EdgeCacheV.freshness_lifetime_args.cc = &none;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCacheV.freshness_lifetime_args.shared = EMBED_TRUE;
     EdgeCacheV.freshness_lifetime_args.date_epoch = NOV6_1994;
     EdgeCacheV.freshness_lifetime_args.expires_epoch = NOV6_1994 - 100;
     EdgeCache.freshness_lifetime(edge_cache_work);
@@ -583,7 +583,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "Example.COM";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = a;
     EdgeCacheV.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
@@ -594,7 +594,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "EXAMPLE.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = b;
     EdgeCacheV.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
@@ -605,7 +605,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/b";
     EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = b;
     EdgeCacheV.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
@@ -616,7 +616,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = a;
     EdgeCacheV.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
@@ -625,7 +625,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = b;
     EdgeCacheV.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
@@ -637,7 +637,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_FALSE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_FALSE;
     EdgeCacheV.key_canon_args.out = a;
     EdgeCacheV.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
@@ -646,7 +646,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=2";
-    EdgeCacheV.key_canon_args.include_query = PROTO_FALSE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_FALSE;
     EdgeCacheV.key_canon_args.out = b;
     EdgeCacheV.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
@@ -656,7 +656,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = a;
     EdgeCacheV.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
@@ -665,7 +665,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = "q=2";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = b;
     EdgeCacheV.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
@@ -677,7 +677,7 @@ void test_cache_key_is_canonical(void)
     EdgeCacheV.key_canon_args.host = "example.com";
     EdgeCacheV.key_canon_args.path = "/a/B";
     EdgeCacheV.key_canon_args.query = NULL;
-    EdgeCacheV.key_canon_args.include_query = PROTO_FALSE;
+    EdgeCacheV.key_canon_args.include_query = EMBED_FALSE;
     EdgeCacheV.key_canon_args.out = small;
     EdgeCacheV.key_canon_args.out_cap = sizeof(small);
     EdgeCache.key_canon(edge_cache_work);
@@ -1326,7 +1326,7 @@ void test_freshness_falls_back_to_the_default_ttl(void)
 
     EdgeCacheV.entry_set_freshness_args.e = e;
     EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCacheV.entry_set_freshness_args.shared = EMBED_TRUE;
     EdgeCacheV.entry_set_freshness_args.date_epoch = -1;
     EdgeCacheV.entry_set_freshness_args.expires_epoch = -1;
     EdgeCacheV.entry_set_freshness_args.last_modified_epoch = -1;
@@ -1338,7 +1338,7 @@ void test_freshness_falls_back_to_the_default_ttl(void)
 
     EdgeCacheV.entry_set_freshness_args.e = e;
     EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCacheV.entry_set_freshness_args.shared = EMBED_TRUE;
     EdgeCacheV.entry_set_freshness_args.date_epoch = NOV6_1994;
     EdgeCacheV.entry_set_freshness_args.expires_epoch = -1;
     EdgeCacheV.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 3600;
@@ -1369,7 +1369,7 @@ void test_an_expires_in_the_past_stores_as_stale(void)
 
     EdgeCacheV.entry_set_freshness_args.e = e;
     EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCacheV.entry_set_freshness_args.shared = EMBED_TRUE;
     EdgeCacheV.entry_set_freshness_args.date_epoch = NOV6_1994;
     EdgeCacheV.entry_set_freshness_args.expires_epoch = NOV6_1994 - 100;
     EdgeCacheV.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 86400;
@@ -1385,7 +1385,7 @@ void test_an_expires_in_the_past_stores_as_stale(void)
 
     EdgeCacheV.entry_set_freshness_args.e = e;
     EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCacheV.entry_set_freshness_args.shared = EMBED_TRUE;
     EdgeCacheV.entry_set_freshness_args.date_epoch = NOV6_1994;
     EdgeCacheV.entry_set_freshness_args.expires_epoch = NOV6_1994 + 100;
     EdgeCacheV.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 86400;

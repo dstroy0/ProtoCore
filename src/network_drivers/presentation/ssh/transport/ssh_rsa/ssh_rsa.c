@@ -20,7 +20,7 @@
 #include "server/core/worker/worker.h"
 #include "test/core_setup/hal/nvs.h" // the host key is read from non-volatile storage
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Public host key (BSS - no secret material).
 SshRsaPubKey ssh_host_pubkey;
@@ -31,7 +31,7 @@ SshRsaPubKey ssh_host_pubkey;
 typedef struct
 {
     mmgr_span d;      ///< private exponent, PROTOCORE_RSA_KEY_BYTES big-endian
-    proto_bool ready; ///< d holds a parsed key
+    embed_bool ready; ///< d holds a parsed key
 } SshRsaCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -77,12 +77,12 @@ _Static_assert(PROTOCORE_RSA_KEY_BYTES + SSH_RSA_KEY_DER_MAX <= PROTOCORE_WORK_S
 
 // Step over the DER element at *off. Writes the value's offset and length, and advances *off past
 // the element. False if the header or the value runs past len.
-static proto_bool der_step(const uint8_t *der, size_t len, size_t *off, size_t *val, size_t *val_len)
+static embed_bool der_step(const uint8_t *der, size_t len, size_t *off, size_t *val, size_t *val_len)
 {
     size_t p = *off;
     if (p + 2 > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p += 1; // tag
     size_t n = der[p];
@@ -93,7 +93,7 @@ static proto_bool der_step(const uint8_t *der, size_t len, size_t *off, size_t *
         size_t k = n & 0x7Fu;
         if (k == 0 || k > 4 || p + k > len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         n = 0;
         while (k != 0)
@@ -107,37 +107,37 @@ static proto_bool der_step(const uint8_t *der, size_t len, size_t *off, size_t *
     // 4-byte length can reach the top of the range.
     if (n > len - p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *val = p;
     *val_len = n;
     *off = p + n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Enter the DER element at *off: the value becomes the region, the header is skipped.
-static proto_bool der_enter(const uint8_t *der, size_t len, size_t *off, size_t *end)
+static embed_bool der_enter(const uint8_t *der, size_t len, size_t *off, size_t *end)
 {
     size_t val = 0;
     size_t val_len = 0;
     if (!der_step(der, len, off, &val, &val_len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *off = val;
     *end = val + val_len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Copy the DER INTEGER at *off into a width-byte big-endian field, left-padded with zeros. A
 // leading sign byte is dropped; a magnitude wider than the field fails.
-static proto_bool der_int(const uint8_t *der, size_t len, size_t *off, uint8_t *out, size_t width)
+static embed_bool der_int(const uint8_t *der, size_t len, size_t *off, uint8_t *out, size_t width)
 {
     size_t val = 0;
     size_t val_len = 0;
     if (!der_step(der, len, off, &val, &val_len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     while (val_len != 0 && der[val] == 0)
     {
@@ -146,11 +146,11 @@ static proto_bool der_int(const uint8_t *der, size_t len, size_t *off, uint8_t *
     }
     if (val_len > width)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .bytes = width - val_len, .val = 0);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + width - val_len, .src = der + val, .bytes = val_len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /** @brief DER tag for a constructed SEQUENCE. */
@@ -163,7 +163,7 @@ static proto_bool der_int(const uint8_t *der, size_t len, size_t *off, uint8_t *
 // holding that same RSAPrivateKey. After the outer SEQUENCE and its version the two are told apart
 // by what comes next - a SEQUENCE is PKCS#8's AlgorithmIdentifier, an INTEGER is PKCS#1's modulus.
 // The CRT factors after d go unread.
-static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
+static embed_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
 {
     size_t off = 0;
     size_t end = 0;
@@ -171,29 +171,29 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
     size_t skip_len = 0;
     if (!der_enter(der, len, &off, &end))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!der_step(der, end, &off, &skip, &skip_len)) // version
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (off < end && der[off] == SSH_RSA_DER_SEQUENCE)
     {
         if (!der_step(der, end, &off, &skip, &skip_len)) // AlgorithmIdentifier
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (!der_enter(der, end, &off, &end)) // privateKey
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (!der_enter(der, end, &off, &end)) // the RSAPrivateKey inside it
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (!der_step(der, end, &off, &skip, &skip_len)) // its version
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     return der_int(der, end, &off, ssh_host_pubkey.n, PROTOCORE_RSA_KEY_BYTES) &&
@@ -214,8 +214,8 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *work)
         SshRsaV.n = -1;
         return;
     }
-    SSH_RSA_CTX(work)->ready = PROTO_FALSE;
-    ssh_host_pubkey.loaded = PROTO_FALSE;
+    SSH_RSA_CTX(work)->ready = EMBED_FALSE;
+    ssh_host_pubkey.loaded = EMBED_FALSE;
 
     // The DER is a working set: borrowed for this call, wiped by the release on every path out.
     mmgr_span der = EMBED_CALL(
@@ -231,8 +231,8 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *work)
         protocore_nvs_get_blob(PROTOCORE_SSH_HOST_KEY_NS, PROTOCORE_SSH_HOST_KEY_ITEM, der.buf, der.cap);
     if (der_len != 0 && rsa_key_parse(der.buf, der_len, SSH_RSA_CTX(work)->d.buf))
     {
-        SSH_RSA_CTX(work)->ready = PROTO_TRUE;
-        ssh_host_pubkey.loaded = PROTO_TRUE;
+        SSH_RSA_CTX(work)->ready = EMBED_TRUE;
+        ssh_host_pubkey.loaded = EMBED_TRUE;
     }
     protocore_secure_guard()->persistent_buf_release(der.buf, protocore_secure_owner());
     if (!SSH_RSA_CTX(work)->ready)
@@ -302,7 +302,7 @@ static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
     }
     const uint8_t *src = data + off;
     size_t src_len = data_len - off;
-    proto_bool need_pad = (src_len > 0) && (src[0] & 0x80u);
+    embed_bool need_pad = (src_len > 0) && (src[0] & 0x80u);
     uint32_t mpint_len = (uint32_t)src_len + (need_pad ? 1u : 0u);
     p = put_u32(p, mpint_len);
     if (need_pad)
@@ -347,8 +347,8 @@ void protocore_ssh_rsa_encode_pubkey(uint8_t *work)
 /** @brief The operands and the outcome. */
 SshRsaVars SshRsaV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_RSA

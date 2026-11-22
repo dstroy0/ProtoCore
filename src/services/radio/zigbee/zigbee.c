@@ -17,19 +17,19 @@
 #include "services/radio/zigbee/zigbee.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
-static proto_bool is_reserved(uint8_t b)
+static embed_bool is_reserved(uint8_t b)
 {
     return b == 0x7E || b == 0x7D || b == 0x11 || b == 0x13 || b == 0x18 || b == 0x1A;
 }
 
 // Append a byte to out with ASH stuffing; return false if it would overflow cap.
-static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b)
+static embed_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b)
 {
     if (is_reserved(b))
     {
         if (*p + 2 > cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out[(*p)++] = ASH_ESCAPE;
         out[(*p)++] = (uint8_t)(b ^ 0x20);
@@ -38,11 +38,11 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
     {
         if (*p + 1 > cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out[(*p)++] = b;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The entries this file calls before reaching their definitions.

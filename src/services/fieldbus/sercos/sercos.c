@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/sercos/sercos.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the entries -----------------------------------------------------------
 
@@ -23,7 +23,7 @@ PROTOCORE_BEGIN_DECLS
 void protocore_sercos_idn(uint8_t *work)
 {
     (void)work;
-    proto_bool is_product = SercosV.idn_args.is_product;
+    embed_bool is_product = SercosV.idn_args.is_product;
     uint8_t param_set = SercosV.idn_args.param_set;
     uint16_t data_block = SercosV.idn_args.data_block;
 
@@ -35,7 +35,7 @@ void protocore_sercos_idn_parse(uint8_t *work)
 {
     (void)work;
     uint16_t idn = SercosV.idn_parse_args.idn;
-    proto_bool *is_product = SercosV.idn_parse_args.is_product;
+    embed_bool *is_product = SercosV.idn_parse_args.is_product;
     uint8_t *param_set = SercosV.idn_parse_args.param_set;
     uint16_t *data_block = SercosV.idn_parse_args.data_block;
 
@@ -95,12 +95,12 @@ void protocore_sercos_parse(uint8_t *work)
 
     if (!frame || !out || len < SERCOS_HDR_LEN)
     {
-        SercosV.ok = PROTO_FALSE;
+        SercosV.ok = EMBED_FALSE;
         return;
     }
     if (frame[0] != SERCOS_TEL_MDT && frame[0] != SERCOS_TEL_AT)
     {
-        SercosV.ok = PROTO_FALSE;
+        SercosV.ok = EMBED_FALSE;
         return;
     }
     out->type = frame[0];
@@ -108,12 +108,12 @@ void protocore_sercos_parse(uint8_t *work)
     out->cycle = (uint16_t)(frame[2] | (frame[3] << 8));
     out->data = (len > SERCOS_HDR_LEN) ? (frame + SERCOS_HDR_LEN) : NULL;
     out->data_len = len - SERCOS_HDR_LEN;
-    SercosV.ok = PROTO_TRUE;
+    SercosV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 SercosVars SercosV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SERCOS

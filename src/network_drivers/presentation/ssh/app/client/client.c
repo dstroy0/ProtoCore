@@ -6,6 +6,10 @@
  * @brief What an application calls to drive and provision the outbound role.
  */
 
+#include "protocore_config.h" // the entry point: the gate below
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "network_drivers/presentation/ssh/app/client/client.h"
 #include "memoria_operor/memoria_operor.h"
 
@@ -67,7 +71,7 @@ void protocore_ssh_app_client_state_get(uint8_t *work)
 void protocore_ssh_app_client_up(uint8_t *work)
 {
     (void)work;
-    SshAppClientV.ok = PROTO_FALSE;
+    SshAppClientV.ok = EMBED_FALSE;
 }
 
 void protocore_ssh_app_client_pubkey(uint8_t *work)
@@ -81,3 +85,5 @@ void protocore_ssh_app_client_pubkey(uint8_t *work)
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SshAppClientVars SshAppClientV;
+
+#endif // PROTOCORE_ENABLE_SSH

@@ -17,7 +17,7 @@
 
 #include "idemIP/ethernet/ethernet.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief PHY addresses a management interface can reach (Clause 22.2.4.5: 5 bits). */
 #define IDEMIP_MII_PHY_ADDR_MAX 32u
@@ -91,6 +91,6 @@ PROTOCORE_BEGIN_DECLS
 #define IDEMIP_ANAR_10BASE_T_HD (1u << 5)
 #define IDEMIP_ANAR_SELECTOR_802_3 0x0001u ///< Selector field: IEEE 802.3.
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_MII_H

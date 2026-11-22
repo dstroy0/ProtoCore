@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_AUDIT_LOG
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_AUDIT_LOG_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums it
 // into its arena. A caller takes them once and passes the pointer to every call. How they are
@@ -45,15 +45,14 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_AUDIT_HASH_LEN 32
 
 /** @brief Standard audit event categories (extend with your own values). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_audit_cat,
     PROTOCORE_AUDIT_SYSTEM = 0,    ///< Boot, shutdown, time change, generic.
     PROTOCORE_AUDIT_AUTH = 1,      ///< Authentication success (login).
     PROTOCORE_AUDIT_AUTH_FAIL = 2, ///< Authentication failure.
     PROTOCORE_AUDIT_ACCESS = 3,    ///< Resource access (request served / denied).
     PROTOCORE_AUDIT_CONFIG = 4,    ///< Configuration change.
     PROTOCORE_AUDIT_ADMIN = 5,     ///< Privileged / administrative action.
-} protocore_audit_cat;
+);
 
 /** @brief One audit record. seq is monotonic and never reused across evictions. */
 typedef struct
@@ -122,7 +121,7 @@ typedef struct
     AuditLogCatNameArgs cat_name_args;
     AuditLogFormatArgs format_args;
     AuditLogDumpJsonArgs dump_json_args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t ms;
     uint16_t value;
     const protocore_audit_entry *ptr;
@@ -186,7 +185,7 @@ static const AuditLogNs AuditLog __attribute__((unused)) = {
  */
 uint8_t *protocore_audit_log_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUDIT_LOG
 

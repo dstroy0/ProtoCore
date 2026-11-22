@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/hostlink/hostlink.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -119,17 +119,17 @@ void protocore_hostlink_parse(uint8_t *work)
     // minimum: @ UU XX FF * CR = 1 + 2 + 2 + 2 + 1 + 1 = 9
     if (!buf || !out || len < 9)
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     if (buf[0] != '@' || buf[len - 1] != '\r' || buf[len - 2] != '*')
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     if (buf[1] < '0' || buf[1] > '9' || buf[2] < '0' || buf[2] > '9')
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
 
@@ -138,7 +138,7 @@ void protocore_hostlink_parse(uint8_t *work)
     int lo = hex_val(buf[fcs_pos + 1]);
     if (hi < 0 || lo < 0)
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     uint8_t got = (uint8_t)((hi << 4) | lo);
@@ -147,7 +147,7 @@ void protocore_hostlink_parse(uint8_t *work)
     protocore_hostlink_fcs(work);
     if (HostlinkV.value != got) // XOR over '@' .. last text char
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
 
@@ -157,7 +157,7 @@ void protocore_hostlink_parse(uint8_t *work)
     out->header_code[2] = '\0';
     out->text = buf + 5;
     out->text_len = fcs_pos - 5;
-    HostlinkV.ok = PROTO_TRUE;
+    HostlinkV.ok = EMBED_TRUE;
 }
 
 void protocore_hostlink_end_code(uint8_t *work)
@@ -168,21 +168,21 @@ void protocore_hostlink_end_code(uint8_t *work)
 
     if (!f || f->text_len < 2)
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     int hi = hex_val(f->text[0]);
     int lo = hex_val(f->text[1]);
     if (hi < 0 || lo < 0)
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     if (code)
     {
         *code = (uint8_t)((hi << 4) | lo);
     }
-    HostlinkV.ok = PROTO_TRUE;
+    HostlinkV.ok = EMBED_TRUE;
 }
 
 void protocore_hostlink_build_read(uint8_t *work)
@@ -225,25 +225,25 @@ void protocore_hostlink_read_word(uint8_t *work)
 
     if (!f || !out)
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     // A read response's text is the 2-char end code followed by 4-hex-char word values.
     size_t pos = 2 + index * 4;
     if (f->text_len < pos + 4)
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     int a = hex_val(f->text[pos]), b = hex_val(f->text[pos + 1]);
     int c = hex_val(f->text[pos + 2]), d = hex_val(f->text[pos + 3]);
     if (a < 0 || b < 0 || c < 0 || d < 0)
     {
-        HostlinkV.ok = PROTO_FALSE;
+        HostlinkV.ok = EMBED_FALSE;
         return;
     }
     *out = (uint16_t)((a << 12) | (b << 8) | (c << 4) | d);
-    HostlinkV.ok = PROTO_TRUE;
+    HostlinkV.ok = EMBED_TRUE;
 }
 
 void protocore_hostlink_build_write(uint8_t *work)
@@ -306,6 +306,6 @@ void protocore_hostlink_build_write(uint8_t *work)
 /** @brief The operands and the outcome. */
 HostlinkVars HostlinkV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HOSTLINK

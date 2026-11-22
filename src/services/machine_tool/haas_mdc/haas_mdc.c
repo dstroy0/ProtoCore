@@ -14,7 +14,7 @@
 
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Trim leading and trailing spaces from [s, s+len); updates s and len in place.
 static void trim(const char **s, size_t *len)
@@ -35,11 +35,11 @@ static void trim(const char **s, size_t *len)
 }
 
 // Compare a parsed field to a NUL-terminated literal without <string.h> / strlen.
-static proto_bool field_is(const HaasMdcResp *r, size_t idx, const char *lit)
+static embed_bool field_is(const HaasMdcResp *r, size_t idx, const char *lit)
 {
     if (idx >= r->n_fields)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *f = r->field[idx];
     size_t fl = r->field_len[idx];
@@ -48,26 +48,26 @@ static proto_bool field_is(const HaasMdcResp *r, size_t idx, const char *lit)
     {
         if (lit[i] == '\0' || f[i] != lit[i])
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     return lit[i] == '\0'; // both ended together
 }
 
 // Hand-rolled unsigned decimal parse of a (space-trimmed) field; false unless all digits.
-static proto_bool parse_u32(const char *s, size_t len, uint32_t *out)
+static embed_bool parse_u32(const char *s, size_t len, uint32_t *out)
 {
     trim(&s, &len);
     if (len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t v = 0;
     for (size_t i = 0; i < len; i++)
     {
         if (s[i] < '0' || s[i] > '9')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = v * 10 + (uint32_t)(s[i] - '0');
     }
@@ -77,7 +77,7 @@ static proto_bool parse_u32(const char *s, size_t len, uint32_t *out)
     {
         *out = v;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_haas_mdc_build_q(char *buf, size_t cap, uint16_t qnum)
@@ -110,11 +110,11 @@ size_t protocore_haas_mdc_build_var(char *buf, size_t cap, uint32_t var)
     return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = buf, .cap = cap, .at = sb_var);
 }
 
-proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
+embed_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *out)
 {
     if (!buf || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->n_fields = 0;
 
@@ -127,13 +127,13 @@ proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *ou
     size_t plen = 0;
 
     size_t stx = 0;
-    proto_bool have_stx = PROTO_FALSE;
+    embed_bool have_stx = EMBED_FALSE;
     for (size_t i = 0; i < len; i++)
     {
         if (buf[i] == PROTOCORE_HAAS_MDC_STX)
         {
             stx = i;
-            have_stx = PROTO_TRUE;
+            have_stx = EMBED_TRUE;
             break;
         }
     }
@@ -156,22 +156,22 @@ proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *ou
         // reply with no terminator yet is incomplete rather than empty.
         if (len < 2u || buf[0] != PROTOCORE_HAAS_MDC_PROMPT)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         size_t end = 0;
-        proto_bool have_end = PROTO_FALSE;
+        embed_bool have_end = EMBED_FALSE;
         for (size_t i = 1; i < len; i++)
         {
             if (buf[i] == '\r' || buf[i] == '\n')
             {
                 end = i;
-                have_end = PROTO_TRUE;
+                have_end = EMBED_TRUE;
                 break;
             }
         }
         if (!have_end)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         p = buf + 1;
         plen = end - 1u;
@@ -198,11 +198,11 @@ proto_bool protocore_haas_mdc_parse(const char *buf, size_t len, HaasMdcResp *ou
     return out->n_fields > 0;
 }
 
-proto_bool protocore_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l)
+embed_bool protocore_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char **p, size_t *l)
 {
     if (!r || idx >= r->n_fields)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (p)
     {
@@ -212,43 +212,43 @@ proto_bool protocore_haas_mdc_field(const HaasMdcResp *r, size_t idx, const char
     {
         *l = r->field_len[idx];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l)
+embed_bool protocore_haas_mdc_value(const HaasMdcResp *r, const char **p, size_t *l)
 {
     return protocore_haas_mdc_field(r, 1, p, l);
 }
 
-proto_bool protocore_haas_mdc_is_error(const HaasMdcResp *r)
+embed_bool protocore_haas_mdc_is_error(const HaasMdcResp *r)
 {
     return r && field_is(r, 0, "UNKNOWN");
 }
 
-proto_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out)
+embed_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *out)
 {
     if (!r || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    out->busy = PROTO_FALSE;
+    out->busy = EMBED_FALSE;
     out->program = NULL;
     out->program_len = 0;
     out->status = NULL;
     out->status_len = 0;
     out->parts = 0;
-    out->parts_valid = PROTO_FALSE;
+    out->parts_valid = EMBED_FALSE;
 
     if (field_is(r, 0, "STATUS"))
     {
         // Busy collapse: `STATUS, BUSY`.
-        out->busy = PROTO_TRUE;
+        out->busy = EMBED_TRUE;
         if (r->n_fields >= 2)
         {
             out->status = r->field[1];
             out->status_len = r->field_len[1];
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (field_is(r, 0, "PROGRAM") && r->n_fields >= 3)
     {
@@ -263,24 +263,24 @@ proto_bool protocore_haas_mdc_parse_status(const HaasMdcResp *r, HaasMdcStatus *
             if (parse_u32(r->field[4], r->field_len[4], &n))
             {
                 out->parts = n;
-                out->parts_valid = PROTO_TRUE;
+                out->parts_valid = EMBED_TRUE;
             }
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-proto_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len)
+embed_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, const char **value, size_t *value_len)
 {
     if (!r || r->n_fields < 3 || !field_is(r, 0, "MACRO"))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t v = 0;
     if (!parse_u32(r->field[1], r->field_len[1], &v))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (var)
     {
@@ -294,21 +294,21 @@ proto_bool protocore_haas_mdc_parse_macro(const HaasMdcResp *r, uint32_t *var, c
     {
         *value_len = r->field_len[2];
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len)
+embed_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char **text, size_t *text_len)
 {
     if (!buf || len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // A framed Q response carries an STX - not a DPRNT push.
     for (size_t i = 0; i < len; i++)
     {
         if (buf[i] == PROTOCORE_HAAS_MDC_STX)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
 
@@ -327,7 +327,7 @@ proto_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char
     }
     if (n == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (text)
     {
@@ -337,9 +337,9 @@ proto_bool protocore_haas_mdc_dprnt_line(const char *buf, size_t len, const char
     {
         *text_len = n;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HAAS_MDC

@@ -37,7 +37,7 @@
 
 #if PROTOCORE_ENABLE_PMBUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -339,7 +339,7 @@ typedef struct
     PmbusClearFaultsArgs clear_faults_args;
     PmbusReadMfrStringArgs read_mfr_string_args;
 
-    proto_bool ok;
+    embed_bool ok;
     uint8_t kind;
     int8_t exp;
     int16_t mantissa;
@@ -370,7 +370,7 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern PmbusNs Pmbus;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PMBUS
 

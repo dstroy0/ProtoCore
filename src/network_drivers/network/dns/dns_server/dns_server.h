@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_DNS_SERVER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Resolve a QNAME to an IPv4 ADDRESS (RFC 1035 sec 3.4.1).
@@ -93,7 +93,7 @@ typedef struct
     DnsMsgArgs msg;    ///< the message pair a response is built from (RFC 1035 sec 4.1)
     DnsAnswerArgs ans; ///< what the answer RR carries (RFC 1035 sec 4.1.3)
     DnsRecordArgs rec; ///< the record a table call names (RFC 1035 sec 3.4.1)
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint32_t ip;
 } DnsServerVars;
@@ -153,7 +153,7 @@ uint8_t *protocore_dns_server_span(void);
  */
 uint32_t protocore_dns_server_resolve(const char *name);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNS_SERVER
 

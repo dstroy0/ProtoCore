@@ -23,7 +23,7 @@
 #include "network_drivers/presentation/codec/base64/base64.h" // shared Base64.url_decode
 #include "server/core/worker/worker.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The three parts of a JWS Compact Serialization (RFC 7515 sec 7.1).
 #define OIDC_SEG_HEADER 0u    ///< BASE64URL(UTF8(JWS Protected Header))
@@ -51,7 +51,7 @@ static const char *mem_find(const char *hs, const char *he, const char *needle)
 // Finds the JSON member @p name in [s, e). Where it finds the member, it sets *vstart and *vlen to the
 // extent of the value. The value type in *type is 's' for a string between its quotes, and 'n' for a
 // number with its leading '-'. It is 'a' for an array with its brackets.
-static proto_bool find_field(const char *s, const char *e, const char *name, const char **vstart, size_t *vlen,
+static embed_bool find_field(const char *s, const char *e, const char *name, const char **vstart, size_t *vlen,
                              char *type)
 {
     // Set before the first guard, so every failure path leaves the out-params defined.
@@ -69,12 +69,12 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
     int nn = (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = needle, .cap = sizeof(needle), .at = sb_needle);
     if (nn <= 0 || nn >= (int)sizeof(needle))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *p = mem_find(s, e, needle);
     if (!p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p += nn;
     while (p < e && (*p == ' ' || *p == '\t' || *p == ':' || *p == '\n' || *p == '\r'))
@@ -83,7 +83,7 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
     }
     if (p >= e)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     if (*p == '"')
@@ -99,12 +99,12 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
         }
         if (q >= e)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         *vstart = p;
         *vlen = (size_t)(q - p);
         *type = 's';
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (*p == '[')
     {
@@ -115,12 +115,12 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
         }
         if (q >= e)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         *vstart = p;
         *vlen = (size_t)(q - p + 1);
         *type = 'a';
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (*p == '-' || (*p >= '0' && *p <= '9'))
     {
@@ -136,21 +136,21 @@ static proto_bool find_field(const char *s, const char *e, const char *name, con
         *vstart = p;
         *vlen = (size_t)(q - p);
         *type = 'n';
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Copy a string member into @p out, taking the char after a backslash literally. False if absent,
 // not a string, or too long for @p cap.
-static proto_bool get_str(const char *s, const char *e, const char *name, char *out, size_t cap)
+static embed_bool get_str(const char *s, const char *e, const char *name, char *out, size_t cap)
 {
     const char *v = NULL;
     size_t vl = 0;
     char t = '\0';
     if (!find_field(s, e, name, &v, &vl, &t) || t != 's')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // A while loop, so an escape consumes its second char without mutating a for-loop counter.
     size_t o = 0;
@@ -164,27 +164,27 @@ static proto_bool get_str(const char *s, const char *e, const char *name, char *
         }
         if (o + 1 >= cap)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         out[o++] = ch;
         i++;
     }
     out[o] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Read a numeric member as 64-bit: epoch seconds (RFC 7519 sec 2, NumericDate) exceed 32-bit. False
 // if absent, not a number, or past the signed 64-bit range.
-static proto_bool get_int64(const char *s, const char *e, const char *name, int64_t *out)
+static embed_bool get_int64(const char *s, const char *e, const char *name, int64_t *out)
 {
     const char *v = NULL;
     size_t vl = 0;
     char t = '\0';
     if (!find_field(s, e, name, &v, &vl, &t) || t != 'n' || vl == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    proto_bool neg = (*v == '-');
+    embed_bool neg = (*v == '-');
     size_t i = neg ? 1 : 0;
     // Accumulate unsigned, refuse a digit run past the signed range, apply the sign after.
     uint64_t val = 0U;
@@ -192,28 +192,28 @@ static proto_bool get_int64(const char *s, const char *e, const char *name, int6
     {
         if (val > (uint64_t)INT64_MAX / 10U)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         val = val * 10U + (uint64_t)(v[i] - '0');
         if (val > (uint64_t)INT64_MAX)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     *out = neg ? -(int64_t)val : (int64_t)val;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // OIDC Core sec 3.1.3.7 step 3: true when the `aud` Claim equals @p want or, in the array form RFC
 // 7519 sec 4.1.3 allows, contains it.
-static proto_bool aud_contains(const char *s, const char *e, const char *want)
+static embed_bool aud_contains(const char *s, const char *e, const char *want)
 {
     const char *v = NULL;
     size_t vl = 0;
     char t = '\0';
     if (!find_field(s, e, "aud", &v, &vl, &t))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t wl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = want, .cap = vl + 1u);
     if (t == 's')
@@ -238,33 +238,33 @@ static proto_bool aud_contains(const char *s, const char *e, const char *want)
             q++;
             if ((size_t)(r - q) == wl && EMBED_CALL(memor.cmp, MemoriaCfg, .src = q, .other = want, .bytes = wl) == 0)
             {
-                return PROTO_TRUE;
+                return EMBED_TRUE;
             }
             p = r + 1;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Split a JWS Compact Serialization (RFC 7515 sec 7.1) into its three parts. False unless there are
 // exactly two '.' separators and three non-empty parts.
-static proto_bool split_compact(const char *tok, size_t len, const char **seg, size_t *seglen)
+static embed_bool split_compact(const char *tok, size_t len, const char **seg, size_t *seglen)
 {
     const char *d1 = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = tok, .bytes = len, .val = '.');
     if (!d1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t rem = len - (size_t)(d1 + 1 - tok);
     const char *d2 = (const char *)EMBED_CALL(memor.chr, MemoriaCfg, .src = d1 + 1, .bytes = rem, .val = '.');
     if (!d2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t rem2 = len - (size_t)(d2 + 1 - tok);
     if (EMBED_CALL(memor.chr, MemoriaCfg, .src = d2 + 1, .bytes = rem2, .val = '.'))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     seg[OIDC_SEG_HEADER] = tok;
     seglen[OIDC_SEG_HEADER] = (size_t)(d1 - tok);
@@ -278,7 +278,7 @@ static proto_bool split_compact(const char *tok, size_t len, const char **seg, s
 // Right-align @p len decoded bytes into a fixed @p width big-endian field. A Base64urlUInt (RFC 7518
 // sec 2) omits leading zero octets and some encoders emit one, so both a short value and a single
 // leading zero fit. False if the value does not.
-static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size_t width)
+static embed_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size_t width)
 {
     if (len > width)
     {
@@ -289,22 +289,22 @@ static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size
         }
         else
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     EMBED_CALL(memor.set, MemoriaCfg, .dst = dst, .val = 0, .bytes = width);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dst + (width - len), .src = src, .bytes = len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The `n` and `e` parameters of one RSA JWK (RFC 7518 sec 6.3.1.1 / 6.3.1.2), base64url-decoded and
 // right-aligned into the key.
-static proto_bool parse_rsa_jwk(uint8_t *work, const char *s, const char *e, protocore_oidc_key *key)
+static embed_bool parse_rsa_jwk(uint8_t *work, const char *s, const char *e, protocore_oidc_key *key)
 {
     char b64[400];
     if (!get_str(s, e, "n", b64, sizeof(b64)))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t tmp[PROTOCORE_OIDC_RSA_BYTES + 8];
     Base64V.url_decode_args.src = b64;
@@ -315,12 +315,12 @@ static proto_bool parse_rsa_jwk(uint8_t *work, const char *s, const char *e, pro
     size_t nlen = Base64V.n;
     if (nlen == 0 || !right_align(tmp, nlen, key->n, PROTOCORE_OIDC_RSA_BYTES))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     if (!get_str(s, e, "e", b64, sizeof(b64)))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t e_tmp[8];
     Base64V.url_decode_args.src = b64;
@@ -331,10 +331,10 @@ static proto_bool parse_rsa_jwk(uint8_t *work, const char *s, const char *e, pro
     size_t elen = Base64V.n;
     if (elen == 0 || !right_align(e_tmp, elen, key->e, 4))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    key->loaded = PROTO_TRUE;
-    return PROTO_TRUE;
+    key->loaded = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
 // Empty every Claim, so a failed validation never leaves the previous token's subject readable.
@@ -352,7 +352,7 @@ void protocore_oidc_token_kid(uint8_t *work)
 {
     (void)work;
     OidcV.text[0] = '\0';
-    OidcV.ok = PROTO_FALSE;
+    OidcV.ok = EMBED_FALSE;
     if (!OidcV.token)
     {
         return;
@@ -383,8 +383,8 @@ void protocore_oidc_token_kid(uint8_t *work)
 void protocore_oidc_jwks_find(uint8_t *work)
 {
     (void)work;
-    OidcV.ok = PROTO_FALSE;
-    OidcV.key.rsa.loaded = PROTO_FALSE;
+    OidcV.ok = EMBED_FALSE;
+    OidcV.key.rsa.loaded = EMBED_FALSE;
     if (!OidcV.key.jwks)
     {
         return;
@@ -419,25 +419,25 @@ void protocore_oidc_jwks_find(uint8_t *work)
         }
         end++; // include '}'
 
-        proto_bool want;
+        embed_bool want;
         char this_kid[PROTOCORE_OIDC_KID_LEN];
-        proto_bool has_kid = get_str(obj, end, "kid", this_kid, sizeof(this_kid));
+        embed_bool has_kid = get_str(obj, end, "kid", this_kid, sizeof(this_kid));
         if (want_kid && *want_kid)
         {
             // The compare reads the wanted `kid` and its terminator, which is why one that fills the
             // capture buffer matches nothing.
             want = has_kid && want_len < PROTOCORE_OIDC_KID_LEN &&
                    EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = this_kid, .other = want_kid, .cap = want_len + 1u,
-                              .ci = PROTO_FALSE);
+                              .ci = EMBED_FALSE);
         }
         else
         {
-            want = PROTO_TRUE; // no `kid` requested -> first usable RSA JWK
+            want = EMBED_TRUE; // no `kid` requested -> first usable RSA JWK
         }
 
         if (want && parse_rsa_jwk(work, obj, end, &OidcV.key.rsa))
         {
-            OidcV.ok = PROTO_TRUE;
+            OidcV.ok = EMBED_TRUE;
             return;
         }
         if (want && want_kid && *want_kid)
@@ -506,7 +506,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     char alg[16];
     if (!get_str((const char *)hdr, (const char *)hdr + hn, "alg", alg, sizeof(alg)) ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = alg, .other = "RS256", .cap = sizeof("RS256"),
-                    .ci = PROTO_FALSE))
+                    .ci = EMBED_FALSE))
     {
         protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
         OidcV.result = PROTOCORE_OIDC_ERR_ALG;
@@ -548,7 +548,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
     RsaV.verify_args.sig_len = PROTOCORE_OIDC_RSA_BYTES;
     RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
     Rsa.verify(vws.buf);
-    const proto_bool verified = RsaV.ok;
+    const embed_bool verified = RsaV.ok;
     protocore_secure_guard()->persistent_buf_release(vws.buf, protocore_secure_owner());
     if (!verified)
     {
@@ -582,7 +582,7 @@ void protocore_oidc_verify_with_key(uint8_t *work)
         size_t want_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = want_iss, .cap = PROTOCORE_OIDC_ISS_LEN);
         if (want_len >= PROTOCORE_OIDC_ISS_LEN || !get_str(ps, pe, "iss", iss, PROTOCORE_OIDC_ISS_LEN) ||
             !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = iss, .other = want_iss, .cap = want_len + 1u,
-                        .ci = PROTO_FALSE))
+                        .ci = EMBED_FALSE))
         {
             protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
             OidcV.result = PROTOCORE_OIDC_ERR_ISS;
@@ -647,6 +647,6 @@ void protocore_oidc_verify(uint8_t *work)
 /** @brief The operands and the outcome. */
 OidcVars OidcV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OIDC

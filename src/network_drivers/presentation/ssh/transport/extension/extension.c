@@ -26,7 +26,7 @@ static const char EXT_INFO_S[] = "ext-info-s";
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-const char *protocore_extension_info_indicator(uint8_t *work, proto_bool client_role)
+const char *protocore_extension_info_indicator(uint8_t *work, embed_bool client_role)
 {
     (void)work;
 

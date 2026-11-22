@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_EXC_DECODER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "server/storage/mnt/mnt.h" // protocore_mnt_backend - the store a dump is offloaded to
 #ifndef PROTOCORE_EXC_MAX_FRAMES
@@ -45,7 +45,7 @@ typedef struct
     char cause[32];                            ///< exception cause text (e.g. "LoadProhibited"), "" if absent.
     uint32_t pc;                               ///< faulting PC (register-dump PC, else first backtrace frame).
     uint32_t excvaddr;                         ///< faulting data address (EXCVADDR), 0 if absent.
-    proto_bool has_excvaddr;                   ///< true if an EXCVADDR field was present.
+    embed_bool has_excvaddr;                   ///< true if an EXCVADDR field was present.
     ExcFrame frames[PROTOCORE_EXC_MAX_FRAMES]; ///< backtrace, outermost-first as printed.
     size_t frame_count;
 } ExcInfo;
@@ -108,7 +108,7 @@ typedef struct
     ExcParseArgs parse_args;
     ExcDumpArgs dump;
     ExcOutArgs out_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 #if PROTOCORE_HAS_VENDOR_COREDUMP
 #endif
@@ -157,7 +157,7 @@ static const ExcDecoderNs Exc __attribute__((unused)) = {
 #endif
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER
 

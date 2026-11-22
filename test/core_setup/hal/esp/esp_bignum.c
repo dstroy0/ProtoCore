@@ -15,7 +15,7 @@
 #include "server/core/worker/worker.h"
 #include "spatium/spatium.h"
 
-#if PROTOCORE_HAS_HW_BIGNUM
+#if PROTOCORE_HAS_HW_BIGNUM && PROTOCORE_ENABLE_BIGNUM
 
 #include <mbedtls/bignum.h> // HW bignum acceleration for the DH-2048 modexp
 
@@ -46,7 +46,7 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
                               .cap = sizeof(BnExpmodBytes));
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = ws))
     {
-        memset(out, 0, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
+        mmgr_zero_buf(out, sizeof(*out)); // pool exhausted: a zero result fails every downstream check
         return;
     }
     BnExpmodBytes *w = (BnExpmodBytes *)(ws.buf);
@@ -92,4 +92,4 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
 }
 
-#endif // PROTOCORE_HAS_HW_BIGNUM
+#endif // PROTOCORE_HAS_HW_BIGNUM && PROTOCORE_ENABLE_BIGNUM

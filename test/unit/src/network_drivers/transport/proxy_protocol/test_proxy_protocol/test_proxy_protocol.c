@@ -51,7 +51,7 @@ static const uint32_t DST = 0xC0A8000Bu;
 // sec 2.2: "\x0D \x0A \x0D \x0A \x00 \x0D \x0A \x51 \x55 \x49 \x54 \x0A".
 static const uint8_t SIG[12] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
 
-static proto_bool parse_line(const char *line, ProxyInfo *info, size_t *consumed)
+static embed_bool parse_line(const char *line, ProxyInfo *info, size_t *consumed)
 {
     *consumed = 0;
     ProxyProtocolV.parse_args.buf = (const uint8_t *)line;
@@ -62,7 +62,7 @@ static proto_bool parse_line(const char *line, ProxyInfo *info, size_t *consumed
     return ProxyProtocolV.ok;
 }
 
-static proto_bool line_is_refused(const char *line)
+static embed_bool line_is_refused(const char *line)
 {
     ProxyInfo info;
     size_t consumed = 0;

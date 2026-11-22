@@ -168,7 +168,7 @@ void test_time_step_honors_x(void)
     TEST_ASSERT_EQUAL_UINT32(hotp_of(1111111109ull / 60ull, 8), totp_of(1111111109ull, 0, 60, 8));
 }
 
-static proto_bool verify_at(uint64_t unix_time, uint32_t otp, int32_t drift)
+static embed_bool verify_at(uint64_t unix_time, uint32_t otp, int32_t drift)
 {
     TotpV.k = RFC_SECRET;
     TotpV.keylen = sizeof(RFC_SECRET);

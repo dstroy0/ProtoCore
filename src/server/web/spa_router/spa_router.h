@@ -40,32 +40,31 @@
 
 #if PROTOCORE_ENABLE_SPA_ROUTER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
 /** @brief What to do with a request path. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_spa_action,
     PROTOCORE_SPA_SERVE_FILE,     ///< a real asset (has a file extension): serve it statically.
     PROTOCORE_SPA_SERVE_SHELL,    ///< a client route (extensionless): serve the SPA shell (index.html).
     PROTOCORE_SPA_PASSTHROUGH,    ///< under the API prefix: let the app's handlers run.
     PROTOCORE_SPA_SERVE_FALLBACK, ///< a client route the SPA cannot serve: serve the no-JS control page.
-} protocore_spa_action;
+);
 
 /** @brief What the server currently knows about its ability to serve the SPA. */
 typedef struct
 {
     const char *api_prefix;      ///< paths under this always pass through; null/empty = none.
-    proto_bool shell_available;  ///< is the shell asset actually present and servable?
-    proto_bool client_scripting; ///< will the client run the SPA (false = text browser, curl, no-JS)?
-    proto_bool degraded;         ///< force the plain control page (recovery mode, failsafe, low memory).
+    embed_bool shell_available;  ///< is the shell asset actually present and servable?
+    embed_bool client_scripting; ///< will the client run the SPA (false = text browser, curl, no-JS)?
+    embed_bool degraded;         ///< force the plain control page (recovery mode, failsafe, low memory).
 } protocore_spa_ctx;
 
 /** @brief Predicate deciding whether a fragment is part of this render. */
-typedef proto_bool (*protocore_ui_when_fn)(void *ctx);
+typedef embed_bool (*protocore_ui_when_fn)(void *ctx);
 
 /** @brief One UI panel and the condition under which it is shown. Nothing is copied. */
 typedef struct
@@ -83,7 +82,7 @@ typedef struct
     void *ctx;  ///< passed to each predicate.
     size_t idx; ///< next fragment to consider.
     size_t off; ///< bytes of the current fragment already emitted.
-    proto_bool done;
+    embed_bool done;
 } protocore_ui_stream;
 
 /** @brief What has_extension takes: path. */
@@ -168,7 +167,7 @@ typedef struct
     SpaRouterUiStreamBeginArgs ui_stream_begin_args;
     SpaRouterUiStreamNextArgs ui_stream_next_args;
     SpaRouterUiStreamDoneArgs ui_stream_done_args;
-    proto_bool ok;
+    embed_bool ok;
     protocore_spa_action action;
     size_t n;
 } SpaRouterVars;
@@ -209,7 +208,7 @@ static const SpaRouterNs SpaRouter __attribute__((unused)) = {
     .ui_stream_done = protocore_spa_router_ui_stream_done,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SPA_ROUTER
 

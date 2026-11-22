@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_IOLINK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -64,7 +64,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief What mc takes: read, channel, address. */
 typedef struct
 {
-    proto_bool read;
+    embed_bool read;
     uint8_t channel;
     uint8_t address;
 } IolinkMcArgs;
@@ -97,8 +97,8 @@ typedef struct
 /** @brief What cks takes: event, pd_invalid, checksum6. */
 typedef struct
 {
-    proto_bool event;
-    proto_bool pd_invalid;
+    embed_bool event;
+    embed_bool pd_invalid;
     uint8_t checksum6;
 } IolinkCksArgs;
 
@@ -173,7 +173,7 @@ typedef struct
     IolinkChecksum6Args checksum6_args;
     IolinkFinalizeArgs finalize_args;
     IolinkVerifyArgs verify_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
 } IolinkVars;
 
@@ -222,7 +222,7 @@ static const IolinkNs Iolink __attribute__((unused)) = {
     .verify = protocore_iolink_verify,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IOLINK
 

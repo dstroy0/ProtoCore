@@ -49,7 +49,7 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -154,17 +154,15 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief Exchange Type (RFC 7296 sec 3.1). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeExchange,
     IKE_SA_INIT = 34,
     IKE_AUTH = 35,
     IKE_CREATE_CHILD_SA = 36,
     IKE_INFORMATIONAL = 37,
-} IkeExchange;
+);
 
 /** @brief Next Payload / payload types; zero ends the chain (RFC 7296 sec 3.2). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkePayloadType,
     IKE_PL_NONE = 0,
     IKE_PL_SA = 33,      ///< Security Association, SA
     IKE_PL_KE = 34,      ///< Key Exchange, KE
@@ -183,74 +181,67 @@ typedef enum PROTO_ENUM_PACKED
     IKE_PL_CP = 47,      ///< Configuration, CP
     IKE_PL_EAP = 48,     ///< Extensible Authentication, EAP
     IKE_PL_SKF = 53,     ///< Encrypted and Authenticated Fragment, SKF (RFC 7383 sec 2.5)
-} IkePayloadType;
+);
 
 /** @brief Transform Type (RFC 7296 sec 3.3.2). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeTransformType,
     IKE_TRANSFORM_ENCR = 1,  ///< Encryption Algorithm
     IKE_TRANSFORM_PRF = 2,   ///< Pseudorandom Function
     IKE_TRANSFORM_INTEG = 3, ///< Integrity Algorithm
     IKE_TRANSFORM_DH = 4,    ///< Diffie-Hellman Group
     IKE_TRANSFORM_ESN = 5,   ///< Extended Sequence Numbers
-} IkeTransformType;
+);
 
 /** @brief Protocol ID (RFC 7296 sec 3.3.1, sec 3.10, sec 3.11). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeProtocol,
     IKE_PROTO_NONE = 0, ///< the notification concerns no existing SA and the SPI field is empty
     IKE_PROTO_IKE = 1,
     IKE_PROTO_AH = 2,
     IKE_PROTO_ESP = 3,
-} IkeProtocol;
+);
 
 /** @brief ID Type (RFC 7296 sec 3.5). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeIdType,
     IKE_ID_RESERVED = 0, ///< reserved; the value an out member holds before a parse succeeds
     IKE_ID_IPV4_ADDR = 1,
     IKE_ID_FQDN = 2,
     IKE_ID_RFC822_ADDR = 3,
     IKE_ID_IPV6_ADDR = 5,
     IKE_ID_KEY_ID = 11,
-} IkeIdType;
+);
 
 /** @brief Auth Method (RFC 7296 sec 3.8). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeAuthMethod,
     IKE_AUTH_RESERVED = 0,    ///< reserved; the value an out member holds before a parse succeeds
     IKE_AUTH_RSA_SIG = 1,     ///< RSA Digital Signature
     IKE_AUTH_PSK = 2,         ///< Shared Key Message Integrity Code
     IKE_AUTH_DSS_SIG = 3,     ///< DSS Digital Signature
     IKE_AUTH_DIGITAL_SIG = 14 ///< Digital Signature (RFC 7427 sec 3)
-} IkeAuthMethod;
+);
 
 /** @brief TS Type (RFC 7296 sec 3.13.1). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeTsType,
     IKE_TS_IPV4_ADDR_RANGE = 7,
     IKE_TS_IPV6_ADDR_RANGE = 8,
-} IkeTsType;
+);
 
 /** @brief CFG Type (RFC 7296 sec 3.15.1). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeCfgType,
     IKE_CFG_REQUEST = 1, ///< CFG_REQUEST
     IKE_CFG_REPLY = 2,   ///< CFG_REPLY
     IKE_CFG_SET = 3,     ///< CFG_SET
     IKE_CFG_ACK = 4,     ///< CFG_ACK
-} IkeCfgType;
+);
 
 /** @brief Handshake progress across IKE_SA_INIT and IKE_AUTH (RFC 7296 sec 1.2). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IkeState,
     IKE_ST_INIT = 0,     ///< nothing sent yet
     IKE_ST_SA_INIT_SENT, ///< IKE_SA_INIT emitted, awaiting the response
     IKE_ST_SA_INIT_DONE, ///< the peer's IKE_SA_INIT consumed and the SK_* keys derived
     IKE_ST_AUTH_SENT,    ///< IKE_AUTH request emitted, awaiting the response
     IKE_ST_ESTABLISHED,  ///< the peer's AUTH verified; the IKE SA is up
     IKE_ST_FAILED,       ///< a received message was rejected
-} IkeState;
+);
 
 /** @brief The IKE header, decoded or to be encoded (RFC 7296 sec 3.1). */
 typedef struct
@@ -270,7 +261,7 @@ typedef struct
 {
     IkePayloadType type;         ///< this payload's type, taken from the chain
     IkePayloadType next_payload; ///< Next Payload; IKE_PL_NONE ends the chain
-    proto_bool critical;         ///< the Critical bit
+    embed_bool critical;         ///< the Critical bit
     const uint8_t *body;         ///< the octets after the generic payload header
     size_t body_len;
 } IkePayload;
@@ -298,7 +289,7 @@ typedef struct
     IkeTransformType type; ///< Transform Type
     uint16_t id;           ///< Transform ID
     int32_t key_length;    ///< decoded Key Length attribute, or below zero when absent
-    proto_bool last;       ///< Last Substruc was 0: no transform follows
+    embed_bool last;       ///< Last Substruc was 0: no transform follows
 } IkeTransformRef;
 
 /** @brief One decoded Proposal Substructure (RFC 7296 sec 3.3.1). */
@@ -311,7 +302,7 @@ typedef struct
     const uint8_t *spi;      ///< SPI, @c spi_size octets, or nullptr when SPI Size is zero
     const uint8_t *transforms;
     size_t transforms_len;
-    proto_bool last; ///< Last Substruc was 0: no proposal follows
+    embed_bool last; ///< Last Substruc was 0: no proposal follows
 } IkeProposalRef;
 
 /** @brief Walk of the Transform Substructures inside one proposal (RFC 7296 sec 3.3.2). */
@@ -360,7 +351,7 @@ typedef struct
 {
     uint16_t total;                             ///< Total Fragments; zero until the first fragment sets it
     uint16_t count;                             ///< distinct fragments stored
-    proto_bool present[PROTOCORE_IKE_FRAG_MAX]; ///< present[i] holds fragment (i+1)
+    embed_bool present[PROTOCORE_IKE_FRAG_MAX]; ///< present[i] holds fragment (i+1)
     size_t off[PROTOCORE_IKE_FRAG_MAX];         ///< pool offset of fragment (i+1)
     size_t len[PROTOCORE_IKE_FRAG_MAX];         ///< length of fragment (i+1)
     uint8_t *pool;                              ///< caller-owned staging buffer
@@ -408,7 +399,7 @@ typedef struct
 {
     uint8_t init_spi[PROTOCORE_IKE_SPI_LEN]; ///< IKE SA Initiator's SPI
     uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN]; ///< IKE SA Responder's SPI
-    proto_bool is_initiator;                 ///< this side is the original initiator
+    embed_bool is_initiator;                 ///< this side is the original initiator
     IkeSuite suite;                          ///< the negotiated transforms
     IkeKeyMaterial keys;                     ///< SK_d, SK_ai, SK_ar, SK_ei, SK_er, SK_pi, SK_pr
     // The cookie hash, the prf+ chain, the AUTH MAC and the signature run in sequence, so one region
@@ -421,7 +412,7 @@ typedef struct
 {
     uint8_t init_spi[PROTOCORE_IKE_SPI_LEN];
     uint8_t resp_spi[PROTOCORE_IKE_SPI_LEN];
-    proto_bool is_response;  ///< the R flag was set
+    embed_bool is_response;  ///< the R flag was set
     IkeProposalRef proposal; ///< the first proposal of SAi1 or SAr1
     uint16_t dh_group;       ///< Diffie-Hellman Group Num from the KE payload
     const uint8_t *ke_data;  ///< Key Exchange Data
@@ -535,7 +526,7 @@ typedef struct
 typedef struct
 {
     IkePayloadType next_payload; ///< Next Payload: the type of the payload that follows this one
-    proto_bool critical;         ///< the Critical bit
+    embed_bool critical;         ///< the Critical bit
     const uint8_t *data;         ///< this payload's variable field, named per payload by each call
     size_t data_len;
 } IkePayloadArgs;
@@ -684,7 +675,7 @@ typedef struct
     const uint8_t *init_spi;         ///< IKE SA Initiator's SPI
     const uint8_t *resp_spi;         ///< IKE SA Responder's SPI
     uint32_t message_id;             ///< Message ID
-    proto_bool is_response;          ///< set the R flag rather than the I flag
+    embed_bool is_response;          ///< set the R flag rather than the I flag
     uint32_t length;                 ///< the Length a patch writes into an already-built header
     IkePayloadType first_inner_type; ///< the Encrypted payload's Next Payload
     const uint8_t *inner;            ///< the chained inner payloads to encrypt
@@ -846,7 +837,7 @@ typedef struct
     IkeMsgArgs msg;       ///< whole-message assembly (sec 3.1, 3.14)
     IkeWalkArgs walk;     ///< the caller-owned walks (sec 3.2)
     IkeSessionArgs sess;  ///< the SA or handshake a call acts on (sec 1.2)
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint8_t u8;
     IkePayload payload;
@@ -1087,7 +1078,7 @@ static const IkeNs Ike __attribute__((unused)) = {
     .create_child_sa_build = protocore_ike_create_child_sa_build,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2
 

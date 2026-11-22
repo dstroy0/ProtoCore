@@ -43,7 +43,7 @@
 
 #if PROTOCORE_ENABLE_TLS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h" // the suite code points TlsCipher takes its values from
 
@@ -79,15 +79,14 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Record-layer AEAD suites, as the two RFC 8446 sec B.4 mandatory-to-implement code points
  *  name them. The suite fixes both the AEAD and the hash the key schedule under it runs. Zero is the
  *  sec 9.1 mandatory-to-implement suite, so a zero-initialised config names it. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(TlsCipher,
     TLS_CIPHER_AES_128_GCM_SHA256 = 0, ///< 0x1301: AEAD_AES_128_GCM, 16-byte key, SHA-256 schedule
     TLS_CIPHER_AES_256_GCM_SHA384 = 1  ///< 0x1302: AEAD_AES_256_GCM, 32-byte key, SHA-384 schedule
-} TlsCipher;
+);
 
 /** @brief Whether @p c runs its key schedule and Transcript-Hash on SHA-384 (RFC 8446 sec 7.1).
  *  The one statement of which hash a suite binds, so a driver reads it here instead of restating it. */
-proto_bool protocore_tls_cipher_is384(TlsCipher c);
+embed_bool protocore_tls_cipher_is384(TlsCipher c);
 
 /** @brief @p c as its IANA CipherSuite code point, the form a ClientHello or ServerHello carries. */
 uint16_t protocore_tls_cipher_code(TlsCipher c);
@@ -112,7 +111,7 @@ typedef struct
     uint8_t iv[PROTOCORE_TLS_RECORD_IV_LEN];       ///< AEAD write IV (nonce = iv XOR seq)
     uint8_t nonce[PROTOCORE_TLS_RECORD_IV_LEN];    ///< this record's nonce, rebuilt from iv and seq
     uint64_t seq;                                  ///< records sealed/opened under this key, never sent
-    proto_bool ready;                              ///< the AEAD context holds a key
+    embed_bool ready;                              ///< the AEAD context holds a key
 } TlsRecordKeys;
 
 /** @brief Parsed view of a TLSPlaintext record (fields point into the caller's buffer). */
@@ -200,7 +199,7 @@ typedef struct
     TlsPlaintextArgs plain;
     TlsCiphertextArgs sealed;
     TlsRecordOut out_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } TlsRecordVars;
 
@@ -240,7 +239,7 @@ static const TlsRecordNs TlsRecord __attribute__((unused)) = {
     .keys_wipe = protocore_tls_record_keys_wipe,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TLS
 

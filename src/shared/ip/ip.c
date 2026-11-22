@@ -38,7 +38,7 @@ static int hexval(char c)
 }
 
 /** Parse the dotted-quad in s[0, len) into out[4]. Rejects empty octets, > 3 digits, or > 255. */
-static proto_bool parse_v4(const char *s, size_t len, uint8_t out[4])
+static embed_bool parse_v4(const char *s, size_t len, uint8_t out[4])
 {
     int oct = 0;
     int val = -1;
@@ -50,7 +50,7 @@ static proto_bool parse_v4(const char *s, size_t len, uint8_t out[4])
         {
             if (digits == 0 || oct >= 3)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             out[oct++] = (uint8_t)val;
             val = -1;
@@ -60,34 +60,34 @@ static proto_bool parse_v4(const char *s, size_t len, uint8_t out[4])
         {
             if (digits >= 3)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             val = (val < 0 ? 0 : val) * 10 + (c - '0');
             if (val > 255)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             digits++;
         }
         else
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     if (oct != 3 || digits == 0) // exactly four octets, the last one non-empty
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[3] = (uint8_t)val;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /** Parse one 1-4 digit IPv6 hextet in s[0, len) into *out. False if empty / too long / non-hex. */
-static proto_bool parse_hextet(const char *s, size_t len, uint16_t *out)
+static embed_bool parse_hextet(const char *s, size_t len, uint16_t *out)
 {
     if (len == 0 || len > 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int v = 0;
     for (size_t i = 0; i < len; i++)
@@ -95,12 +95,12 @@ static proto_bool parse_hextet(const char *s, size_t len, uint16_t *out)
         int h = hexval(s[i]);
         if (h < 0)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v = (v << 4) | h;
     }
     *out = (uint16_t)v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /**
@@ -135,13 +135,13 @@ static void assemble_v6(const uint16_t *head, int nhead, const uint16_t *tail, i
  * a tail list from the right, and assemble_v6() zero-fills the middle. The last token may be a
  * dotted-quad (an embedded IPv4 tail such as ::ffff:1.2.3.4), which expands to two hextets.
  */
-static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
+static embed_bool parse_v6(const char *s, size_t len, uint8_t out[16])
 {
     uint16_t head[8];
     uint16_t tail[8];
     int nhead = 0;
     int ntail = 0;
-    proto_bool seen_dc = PROTO_FALSE; // have we passed the "::" yet?
+    embed_bool seen_dc = EMBED_FALSE; // have we passed the "::" yet?
     uint16_t *cur = head;             // the list currently being filled (head, then tail after "::")
     int *ncur = &nhead;
 
@@ -152,16 +152,16 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
     {
         if (len < 2 || s[1] != ':')
         {
-            return PROTO_FALSE; // a lone leading ':' is illegal
+            return EMBED_FALSE; // a lone leading ':' is illegal
         }
-        seen_dc = PROTO_TRUE;
+        seen_dc = EMBED_TRUE;
         cur = tail;
         ncur = &ntail;
         i = 2;
         if (i == len) // the whole address is "::"
         {
             EMBED_CALL(memor.set, MemoriaCfg, .dst = out, .val = 0, .bytes = 16);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
 
@@ -169,12 +169,12 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
     {
         // Span this token up to the next ':' (noting a '.' -> it is an embedded-v4 tail).
         size_t j = i;
-        proto_bool has_dot = PROTO_FALSE;
+        embed_bool has_dot = EMBED_FALSE;
         while (j < len && s[j] != ':')
         {
             if (s[j] == '.')
             {
-                has_dot = PROTO_TRUE;
+                has_dot = EMBED_TRUE;
             }
             j++;
         }
@@ -185,7 +185,7 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
             uint8_t q[4];
             if (!parse_v4(s + i, tlen, q) || *ncur > 6 || j != len)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             cur[(*ncur)++] = (uint16_t)((q[0] << 8) | q[1]);
             cur[(*ncur)++] = (uint16_t)((q[2] << 8) | q[3]);
@@ -195,7 +195,7 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
         uint16_t hx;
         if (!parse_hextet(s + i, tlen, &hx) || *ncur >= 8)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         cur[(*ncur)++] = hx;
         i = j;
@@ -207,9 +207,9 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
             {
                 if (seen_dc)
                 {
-                    return PROTO_FALSE; // only one "::" is allowed
+                    return EMBED_FALSE; // only one "::" is allowed
                 }
-                seen_dc = PROTO_TRUE;
+                seen_dc = EMBED_TRUE;
                 cur = tail;
                 ncur = &ntail;
                 i += 2;
@@ -223,7 +223,7 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
                 i += 1;
                 if (i == len)
                 {
-                    return PROTO_FALSE; // a trailing lone ':' is illegal
+                    return EMBED_FALSE; // a trailing lone ':' is illegal
                 }
             }
         }
@@ -233,11 +233,11 @@ static proto_bool parse_v6(const char *s, size_t len, uint8_t out[16])
     int total = nhead + ntail;
     if (seen_dc ? (total > 7) : (total != 8))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     assemble_v6(head, nhead, tail, ntail, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // -------------------------------------------------------------------------------------------
@@ -340,13 +340,13 @@ static void longest_zero_run(const uint16_t g[8], int *start, int *len)
 // -------------------------------------------------------------------------------------------
 
 /** True if the 16 v6 bytes carry the ::ffff:0:0/96 IPv4-mapped prefix (RFC 4291 §2.5.5.2). */
-static proto_bool is_v4_mapped_bytes(const uint8_t *b)
+static embed_bool is_v4_mapped_bytes(const uint8_t *b)
 {
     for (int k = 0; k < 10; k++)
     {
         if (b[k])
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     return b[10] == 0xff && b[11] == 0xff;
@@ -381,12 +381,12 @@ static protocore_ip_scope classify_v4(const uint8_t *b)
 /** Classify the sixteen v6 bytes at @p b (v4-mapped addresses defer to their embedded v4). */
 static protocore_ip_scope classify_v6(const uint8_t *b)
 {
-    proto_bool allzero = PROTO_TRUE;
+    embed_bool allzero = EMBED_TRUE;
     for (int k = 0; k < 16; k++)
     {
         if (b[k])
         {
-            allzero = PROTO_FALSE;
+            allzero = EMBED_FALSE;
             break;
         }
     }
@@ -395,12 +395,12 @@ static protocore_ip_scope classify_v6(const uint8_t *b)
         return PROTOCORE_IP_SCOPE_UNSPECIFIED; // ::
     }
 
-    proto_bool loopback = (b[15] == 1);
+    embed_bool loopback = (b[15] == 1);
     for (int k = 0; k < 15 && loopback; k++)
     {
         if (b[k])
         {
-            loopback = PROTO_FALSE;
+            loopback = EMBED_FALSE;
         }
     }
     if (loopback)
@@ -439,32 +439,32 @@ void protocore_ip_parse(uint8_t *work)
 
     if (!s || !out)
     {
-        IpV.ok = PROTO_FALSE;
+        IpV.ok = EMBED_FALSE;
         return;
     }
     // A ':' means it is v6; a '.' (and no ':') means v4. Bound the scan to a legal length.
     size_t len = 0;
-    proto_bool colon = PROTO_FALSE;
-    proto_bool dot = PROTO_FALSE;
+    embed_bool colon = EMBED_FALSE;
+    embed_bool dot = EMBED_FALSE;
     while (s[len])
     {
         if (s[len] == ':')
         {
-            colon = PROTO_TRUE;
+            colon = EMBED_TRUE;
         }
         else if (s[len] == '.')
         {
-            dot = PROTO_TRUE;
+            dot = EMBED_TRUE;
         }
         if (++len > 45)
         {
-            IpV.ok = PROTO_FALSE;
+            IpV.ok = EMBED_FALSE;
             return; // longer than any legal textual address
         }
     }
     if (len == 0)
     {
-        IpV.ok = PROTO_FALSE;
+        IpV.ok = EMBED_FALSE;
         return;
     }
 
@@ -473,25 +473,25 @@ void protocore_ip_parse(uint8_t *work)
     {
         if (!parse_v6(s, len, out->bytes))
         {
-            IpV.ok = PROTO_FALSE;
+            IpV.ok = EMBED_FALSE;
             return;
         }
         out->family = PROTOCORE_IP_V6;
-        IpV.ok = PROTO_TRUE;
+        IpV.ok = EMBED_TRUE;
         return;
     }
     if (dot)
     {
         if (!parse_v4(s, len, out->bytes))
         {
-            IpV.ok = PROTO_FALSE;
+            IpV.ok = EMBED_FALSE;
             return;
         }
         out->family = PROTOCORE_IP_V4;
-        IpV.ok = PROTO_TRUE;
+        IpV.ok = EMBED_TRUE;
         return;
     }
-    IpV.ok = PROTO_FALSE;
+    IpV.ok = EMBED_FALSE;
 }
 
 void protocore_ip_format(uint8_t *work)
@@ -580,7 +580,7 @@ void protocore_ip_format(uint8_t *work)
     IpV.n = n;
 }
 
-proto_bool protocore_ip_is_v4_mapped(const protocore_ip *ip)
+embed_bool protocore_ip_is_v4_mapped(const protocore_ip *ip)
 {
     return ip && ip->family == PROTOCORE_IP_V6 && is_v4_mapped_bytes(ip->bytes);
 }
@@ -616,7 +616,7 @@ void protocore_ip_equal(uint8_t *work)
 
     if (!a || !b || a->family != b->family)
     {
-        IpV.ok = PROTO_FALSE;
+        IpV.ok = EMBED_FALSE;
         return;
     }
     int n = 0;
@@ -630,7 +630,7 @@ void protocore_ip_equal(uint8_t *work)
     }
     if (n == 0)
     {
-        IpV.ok = PROTO_TRUE;
+        IpV.ok = EMBED_TRUE;
         return; // both the same non-address family (PROTOCORE_IP_NONE)
     }
     IpV.ok = EMBED_CALL(memor.cmp, MemoriaCfg, .src = a->bytes, .other = b->bytes, .bytes = (size_t)n) == 0;
@@ -681,7 +681,7 @@ void protocore_ip_is_unspecified(uint8_t *work)
 
     if (!ip || ip->family == PROTOCORE_IP_NONE)
     {
-        IpV.ok = PROTO_TRUE;
+        IpV.ok = EMBED_TRUE;
         return;
     }
     int n = (ip->family == PROTOCORE_IP_V4) ? 4 : 16;
@@ -689,11 +689,11 @@ void protocore_ip_is_unspecified(uint8_t *work)
     {
         if (ip->bytes[i])
         {
-            IpV.ok = PROTO_FALSE;
+            IpV.ok = EMBED_FALSE;
             return;
         }
     }
-    IpV.ok = PROTO_TRUE;
+    IpV.ok = EMBED_TRUE;
 }
 
 void protocore_ip_prefix_match(uint8_t *work)
@@ -705,13 +705,13 @@ void protocore_ip_prefix_match(uint8_t *work)
 
     if (!addr || !net || addr->family != net->family)
     {
-        IpV.ok = PROTO_FALSE;
+        IpV.ok = EMBED_FALSE;
         return;
     }
     int bits = (addr->family == PROTOCORE_IP_V4) ? 32 : (addr->family == PROTOCORE_IP_V6 ? 128 : 0);
     if (bits == 0 || prefix_len > bits)
     {
-        IpV.ok = PROTO_FALSE;
+        IpV.ok = EMBED_FALSE;
         return;
     }
     int whole = prefix_len / 8; // bytes that must match exactly
@@ -719,7 +719,7 @@ void protocore_ip_prefix_match(uint8_t *work)
     {
         if (addr->bytes[i] != net->bytes[i])
         {
-            IpV.ok = PROTO_FALSE;
+            IpV.ok = EMBED_FALSE;
             return;
         }
     }
@@ -729,11 +729,11 @@ void protocore_ip_prefix_match(uint8_t *work)
         uint8_t mask = (uint8_t)(0xFF << (8 - rem));
         if ((addr->bytes[whole] & mask) != (net->bytes[whole] & mask))
         {
-            IpV.ok = PROTO_FALSE;
+            IpV.ok = EMBED_FALSE;
             return;
         }
     }
-    IpV.ok = PROTO_TRUE;
+    IpV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

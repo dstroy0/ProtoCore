@@ -63,9 +63,9 @@ typedef struct
     void *ctx;          ///< caller state passed to source (must outlive the send).
     int status;         ///< response status, for note_response.
     int total;          ///< body bytes emitted so far (excludes framing).
-    proto_bool keep;    ///< keep-alive vs close at completion.
-    proto_bool active;  ///< a chunked response is in progress on this slot.
-    proto_bool raw;     ///< HTTP/1.0 client: stream the body unframed, close-delimited (no chunk wrapping).
+    embed_bool keep;    ///< keep-alive vs close at completion.
+    embed_bool active;  ///< a chunked response is in progress on this slot.
+    embed_bool raw;     ///< HTTP/1.0 client: stream the body unframed, close-delimited (no chunk wrapping).
 } ChunkSend;
 
 /** @brief The response state this TU owns: what is in flight, and what every response carries. */
@@ -76,14 +76,14 @@ typedef struct
     // The header blocks every response emits. They live with the code that emits them rather than on
     // the server object they used to hang off, which is why the readers below are functions: a
     // caller needs the bytes, not the storage.
-    proto_bool cors_enabled;
+    embed_bool cors_enabled;
     char cors_header_buf[CORS_HDR_BUF_SIZE];
     char cache_control_buf[CACHE_CONTROL_BUF_SIZE];
     char extra_hdr[CONN_POOL_SLOTS][EXTRA_HDR_BUF_SIZE];
 } RespCtx;
 static RespCtx s_resp;
 
-proto_bool protocore_resp_cors_enabled(void)
+embed_bool protocore_resp_cors_enabled(void)
 {
     return s_resp.cors_enabled;
 }
@@ -121,7 +121,7 @@ void set_cors(const char *origin)
 {
     if (!origin || origin[0] == '\0')
     {
-        s_resp.cors_enabled = PROTO_FALSE;
+        s_resp.cors_enabled = EMBED_FALSE;
         s_resp.cors_header_buf[0] = '\0';
         return;
     }
@@ -139,7 +139,7 @@ void set_cors(const char *origin)
     {
         s_resp.cors_header_buf[0] = '\0';
     }
-    s_resp.cors_enabled = PROTO_TRUE;
+    s_resp.cors_enabled = EMBED_TRUE;
 }
 
 void set_cache_control(const char *value)
@@ -164,7 +164,7 @@ void set_cache_control(const char *value)
     }
 }
 
-proto_bool protocore_resp_holds_slot(uint8_t slot)
+embed_bool protocore_resp_holds_slot(uint8_t slot)
 {
     return s_resp.chunk[slot].active;
 }
@@ -190,12 +190,12 @@ void protocore_resp_reset(void)
 // Consume one "{{name}}" placeholder at @p p (advancing it), sizing into @p total and, when
 // @p emit, streaming the resolved value. An unterminated or over-long (> 32 char) name is emitted
 // as a literal "{{" and the scan resumes just past it.
-static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar resolver, proto_bool emit, size_t *total)
+static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar resolver, embed_bool emit, size_t *total)
 {
     const char *at = *p;
     const char *end = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = at + 2,
                                  .cap = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = at + 2, .cap = 0xFFFF) + 1u,
-                                 .other = "}}", .other_cap = sizeof("}}"), .ci = PROTO_FALSE);
+                                 .other = "}}", .other_cap = sizeof("}}"), .ci = EMBED_FALSE);
     size_t nlen = end ? (size_t)(end - (at + 2)) : 0;
     if (!end || nlen > 32)
     {
@@ -227,14 +227,14 @@ static void tmpl_take_placeholder(uint8_t slot, const char **p, TemplateVar reso
     {
         ConnPoolV.slot = slot;
         ConnPoolV.io.data = val;
-        ConnPoolV.io.len = (proto_u16)vlen;
+        ConnPoolV.io.len = (embed_u16)vlen;
         ConnPool.send(protocore_conn_pool_span());
     }
     *p = end + 2;
 }
 
 // Two-pass: pass 1 sizes the body (emit=false), pass 2 streams it (emit=true).
-static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, proto_bool emit)
+static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, embed_bool emit)
 {
     size_t total = 0;
     const char *p = tmpl;
@@ -260,7 +260,7 @@ static size_t tmpl_walk(uint8_t slot, const char *tmpl, TemplateVar resolver, pr
         {
             ConnPoolV.slot = slot;
             ConnPoolV.io.data = run;
-            ConnPoolV.io.len = (proto_u16)rlen;
+            ConnPoolV.io.len = (embed_u16)rlen;
             ConnPool.send(protocore_conn_pool_span());
         }
     }
@@ -283,9 +283,9 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     }
 
     // Pass 1: size the rendered body (no writes).
-    size_t body_len = tmpl_walk(slot_id, tmpl, resolver, PROTO_FALSE);
+    size_t body_len = tmpl_walk(slot_id, tmpl, resolver, EMBED_FALSE);
 
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
@@ -314,19 +314,19 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
 
     HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    proto_bool head = HttpV.ok;
+    embed_bool head = HttpV.ok;
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = header;
-    ConnPoolV.io.len = (proto_u16)hlen;
+    ConnPoolV.io.len = (embed_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
     // Pass 2: stream the rendered body (HEAD carries headers only).
     if (!head && body_len > 0)
     {
-        tmpl_walk(slot_id, tmpl, resolver, PROTO_TRUE);
+        tmpl_walk(slot_id, tmpl, resolver, EMBED_TRUE);
     }
 
-    protocore_resp_end(slot_id, code, (int)body_len, keep, /*pre_flushed=*/PROTO_FALSE);
+    protocore_resp_end(slot_id, code, (int)body_len, keep, /*pre_flushed=*/EMBED_FALSE);
 }
 
 // ---------------------------------------------------------------------------
@@ -356,20 +356,20 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
         return;
     }
 
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     // RFC 7230 3.3.1: chunked is an HTTP/1.1 transfer-coding - it MUST NOT be sent
     // to an HTTP/1.0 (or unknown-version) client. Fall back to a close-delimited
     // body: omit Transfer-Encoding, force Connection: close, stream the body
     // unframed, and signal its end by closing the connection (RFC 7230 3.3.3).
-    proto_bool raw = (http_pool[slot_id].version != HTTP_11);
+    embed_bool raw = (http_pool[slot_id].version != HTTP_11);
 
     char header[RESP_HDR_BUF_SIZE];
     size_t hb2 = 0;
     if (raw)
     {
-        keep = PROTO_FALSE; // close-delimited: the connection close IS the message boundary
+        keep = EMBED_FALSE; // close-delimited: the connection close IS the message boundary
         cl = "Connection: close\r\n";
         hb2 = EMBED_CALL(verba_textus.put, VerbaTextusCfg, .out = header, .cap = RESP_HDR_BUF_SIZE, .at = hb2,
                          .text = "HTTP/1.0 ");
@@ -396,7 +396,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = header;
-    ConnPoolV.io.len = (proto_u16)hlen;
+    ConnPoolV.io.len = (embed_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
 
     // HEAD carries the headers but no body or terminator.
@@ -404,7 +404,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     Http.req_is_head(protocore_http_span());
     if (HttpV.ok || !source)
     {
-        protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+        protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/EMBED_FALSE);
         return;
     }
 
@@ -414,7 +414,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     s->status = code;
     s->total = 0;
     s->keep = keep;
-    s->active = PROTO_TRUE;
+    s->active = EMBED_TRUE;
     s->raw = raw;
     chunk_send_pump(slot_id);
 }
@@ -433,7 +433,7 @@ void chunk_send_pump(uint8_t slot_id)
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPoolV.ok)
     {
-        s->active = PROTO_FALSE; // connection gone mid-stream
+        s->active = EMBED_FALSE; // connection gone mid-stream
         return;
     }
 
@@ -447,14 +447,14 @@ void chunk_send_pump(uint8_t slot_id)
     // of the body for the "<hex>\r\n" size line and 2 after for the trailing CRLF, so the source writes
     // the body in place and the whole "<hex>\r\n<body>\r\n" is one Tcp.conn->send with no extra copy.
     // FRAME reserves send-window room for that framing; the raw (HTTP/1.0) path sends the body verbatim.
-    static const proto_u16 CHUNK_HDR_RESERVE = 8; // "<hex>\r\n" is <= 6 bytes for a chunk <= 0xFFFF
-    const proto_u16 FRAME = s->raw ? 0 : 12;
+    static const embed_u16 CHUNK_HDR_RESERVE = 8; // "<hex>\r\n" is <= 6 bytes for a chunk <= 0xFFFF
+    const embed_u16 FRAME = s->raw ? 0 : 12;
     uint8_t framed[CHUNK_HDR_RESERVE + CHUNK_BUF_SIZE + 2];
     for (;;)
     {
         ConnPoolV.slot = slot_id;
         ConnPool.sndbuf(protocore_conn_pool_span());
-        proto_u16 avail = ConnPoolV.u16;
+        embed_u16 avail = ConnPoolV.u16;
         if (avail <= FRAME)
         {
             ConnPoolV.slot = slot_id;
@@ -480,9 +480,9 @@ void chunk_send_pump(uint8_t slot_id)
             }
             ConnPoolV.slot = slot_id;
             ConnPool.flush(protocore_conn_pool_span());
-            s->active = PROTO_FALSE;
+            s->active = EMBED_FALSE;
             protocore_resp_end(slot_id, s->status, s->total, s->keep,
-                               /*pre_flushed=*/PROTO_FALSE); // raw: keep==false -> connection close ends the body
+                               /*pre_flushed=*/EMBED_FALSE); // raw: keep==false -> connection close ends the body
             return;
         }
         if (n > cap)
@@ -494,7 +494,7 @@ void chunk_send_pump(uint8_t slot_id)
         {
             ConnPoolV.slot = slot_id;
             ConnPoolV.io.data = body;
-            ConnPoolV.io.len = (proto_u16)n;
+            ConnPoolV.io.len = (embed_u16)n;
             ConnPool.send(protocore_conn_pool_span()); // close-delimited: no chunk framing
         }
         else
@@ -517,7 +517,7 @@ void chunk_send_pump(uint8_t slot_id)
             body[n + 1] = '\n';
             ConnPoolV.slot = slot_id;
             ConnPoolV.io.data = start;
-            ConnPoolV.io.len = (proto_u16)(sn + n + 2);
+            ConnPoolV.io.len = (embed_u16)(sn + n + 2);
             ConnPool.send(protocore_conn_pool_span());
         }
         s->total += (int)n;
@@ -657,14 +657,14 @@ const char *mime_type(const char *path)
     {
         const char *a = ext;
         const char *b = table[i].ext;
-        proto_bool eq = PROTO_TRUE;
+        embed_bool eq = EMBED_TRUE;
         while (*a && *b)
         {
             char ca = (*a >= 'A' && *a <= 'Z') ? (char)(*a + 32) : *a;
             char cb = *b; // table is already lowercase
             if (ca != cb)
             {
-                eq = PROTO_FALSE;
+                eq = EMBED_FALSE;
                 break;
             }
             a++;
@@ -702,32 +702,32 @@ static StatsCtx s_stats;
 static const char *stats_var(const char *name)
 {
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "uptime_ms", .cap = sizeof("uptime_ms"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_stats.uptime;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "requests", .cap = sizeof("requests"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_stats.requests;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "http_2xx", .cap = sizeof("http_2xx"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_stats.n2xx;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "http_4xx", .cap = sizeof("http_4xx"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_stats.n4xx;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "http_5xx", .cap = sizeof("http_5xx"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_stats.n5xx;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "active_conns", .cap = sizeof("active_conns"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_stats.active;
     }
@@ -735,7 +735,7 @@ static const char *stats_var(const char *name)
     // PROTOCORE_STATS_JSON, and that asset's seven placeholders are exactly the seven names tested here,
     // so the last one always matches. Kept because the resolver has to answer an unknown name.
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "free_heap", .cap = sizeof("free_heap"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_stats.heap;
     }
@@ -798,52 +798,52 @@ static MetricsCtx s_metrics;
 static const char *metrics_var(const char *name)
 {
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "uptime_seconds", .cap = sizeof("uptime_seconds"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.uptime;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "requests_total", .cap = sizeof("requests_total"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.requests;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "resp_2xx", .cap = sizeof("resp_2xx"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.n2xx;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "resp_4xx", .cap = sizeof("resp_4xx"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.n4xx;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "resp_5xx", .cap = sizeof("resp_5xx"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.n5xx;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "active_conns", .cap = sizeof("active_conns"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.active;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "max_conns", .cap = sizeof("max_conns"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.max;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "free_heap", .cap = sizeof("free_heap"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.heap;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "min_free_heap", .cap = sizeof("min_free_heap"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.minheap;
     }
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "heap_size", .cap = sizeof("heap_size"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.heapsize;
     }
@@ -853,7 +853,7 @@ static const char *metrics_var(const char *name)
     // value, which fails the moment a placeholder stops resolving (as three of them silently did
     // until the resolver names were aligned with the template).
     if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = name, .other = "max_alloc_heap", .cap = sizeof("max_alloc_heap"),
-                   .ci = PROTO_FALSE))
+                   .ci = EMBED_FALSE))
     {
         return s_metrics.maxalloc;
     }
@@ -909,7 +909,7 @@ void metrics(uint8_t slot_id)
 // The connection is addressed by slot alone and the transport resolves the pcb internally, the
 // same way the RX read path does: no pcb is threaded through the app layer, so the send target
 // cannot disagree with the slot.
-void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep, proto_bool pre_flushed)
+void protocore_resp_end(uint8_t slot_id, int code, int body_len, embed_bool keep, embed_bool pre_flushed)
 {
     if (!pre_flushed)
     {
@@ -928,9 +928,9 @@ void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep
 
 // Resolve the Connection response header (and report keep-alive intent) in one
 // place so every response path agrees. Keep-alive compiled out always closes.
-const char *protocore_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
+const char *protocore_resp_conn_hdr(uint8_t slot_id, embed_bool *keep_out)
 {
-    proto_bool keep = PROTO_FALSE;
+    embed_bool keep = EMBED_FALSE;
 #if PROTOCORE_ENABLE_KEEPALIVE
     HttpConnV.slot = slot_id;
     HttpConn.keepalive_eval(protocore_http_conn_span());
@@ -1061,7 +1061,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         return;
     }
 #endif
-    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -1070,7 +1070,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
 
     int payload_len = (int)(body_len > 0xFFFF ? 0xFFFF : body_len);
 
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
@@ -1105,9 +1105,9 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         // instead and the connection closes.
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = PROTOCORE_RESP_HDR_OVERFLOW;
-        ConnPoolV.io.len = (proto_u16)PROTOCORE_RESP_HDR_OVERFLOW_LEN;
+        ConnPoolV.io.len = (embed_u16)PROTOCORE_RESP_HDR_OVERFLOW_LEN;
         ConnPool.send_flush(protocore_conn_pool_span());
-        protocore_resp_end(slot_id, 500, 0, PROTO_FALSE, /*pre_flushed=*/PROTO_FALSE);
+        protocore_resp_end(slot_id, 500, 0, EMBED_FALSE, /*pre_flushed=*/EMBED_FALSE);
         return;
     }
 
@@ -1116,7 +1116,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
 
     HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    proto_bool head = HttpV.ok;
+    embed_bool head = HttpV.ok;
 
     // HEAD responses carry the headers (incl. Content-Length) but no body. For a
     // body that fits the header scratch, coalesce headers+body into a single send
@@ -1128,29 +1128,29 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         EMBED_CALL(proxim.read, ProximusCfg, .dst = header + hlen, .at = payload, .size = (size_t)payload_len);
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)(hlen + payload_len);
+        ConnPoolV.io.len = (embed_u16)(hlen + payload_len);
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else if (!head && payload_len > 0)
     {
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPoolV.io.len = (embed_u16)hlen;
         ConnPool.send(protocore_conn_pool_span());
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = payload;
-        ConnPoolV.io.len = (proto_u16)payload_len;
+        ConnPoolV.io.len = (embed_u16)payload_len;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
         ConnPoolV.slot = slot_id;
         ConnPoolV.io.data = header;
-        ConnPoolV.io.len = (proto_u16)hlen;
+        ConnPoolV.io.len = (embed_u16)hlen;
         ConnPool.send_flush(protocore_conn_pool_span());
     }
 
-    protocore_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, code, payload_len, keep, /*pre_flushed=*/EMBED_TRUE);
 }
 
 /**
@@ -1177,14 +1177,14 @@ void send_empty(uint8_t slot_id, int code)
         return;
     }
 #endif
-    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
@@ -1206,10 +1206,10 @@ void send_empty(uint8_t slot_id, int code)
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = header;
-    ConnPoolV.io.len = (proto_u16)hlen;
+    ConnPoolV.io.len = (embed_u16)hlen;
     ConnPool.send_flush(protocore_conn_pool_span());
 
-    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/EMBED_TRUE);
 }
 
 void redirect(uint8_t slot_id, int code, const char *location)
@@ -1219,7 +1219,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
         return;
     }
     TcpConn *conn = &conn_pool[slot_id];
-    if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
+    if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE || conn->pcb == NULL)
     {
         HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
@@ -1240,7 +1240,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
         break;
     }
 
-    proto_bool keep;
+    embed_bool keep;
     const char *cl = protocore_resp_conn_hdr(slot_id, &keep);
 
     char header[RESP_HDR_BUF_SIZE];
@@ -1266,8 +1266,8 @@ void redirect(uint8_t slot_id, int code, const char *location)
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = header;
-    ConnPoolV.io.len = (proto_u16)hlen;
+    ConnPoolV.io.len = (embed_u16)hlen;
     ConnPool.send_flush(protocore_conn_pool_span());
 
-    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+    protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/EMBED_TRUE);
 }

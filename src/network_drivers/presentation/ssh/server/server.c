@@ -34,7 +34,7 @@
 // down once the current pass finishes. The slot-to-socket binding is the network layer's.
 struct SshServerStorage
 {
-    volatile proto_bool close[MAX_SSH_CONNS];
+    volatile embed_bool close[MAX_SSH_CONNS];
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -73,7 +73,7 @@ static void msg_handler(uint8_t i, uint8_t msg_type, const uint8_t *payload, siz
 {
     if (ssh_transport_dispatch(i, msg_type, payload, len) < 0)
     {
-        SSH_SERVER_CTX(protocore_ssh_server_span())->close[i] = PROTO_TRUE;
+        SSH_SERVER_CTX(protocore_ssh_server_span())->close[i] = EMBED_TRUE;
     }
 }
 
@@ -121,7 +121,7 @@ static void net_accept(uint8_t conn_slot)
     }
 
     conn->proto_slot = j;
-    SSH_SERVER_CTX(protocore_ssh_server_span())->close[j] = PROTO_FALSE;
+    SSH_SERVER_CTX(protocore_ssh_server_span())->close[j] = EMBED_FALSE;
 
     ssh_transport_init(j);
     ssh_pkt_init(j);

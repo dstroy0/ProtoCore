@@ -12,7 +12,7 @@ static size_t g_total;
 static int g_chunks;
 static uint8_t g_capture[8192];
 
-static proto_bool begin_cb(HttpReq *req)
+static embed_bool begin_cb(HttpReq *req)
 {
     return strcmp(req->method, "POST") == 0 && strcmp(req->path, "/update") == 0;
 }
@@ -150,14 +150,14 @@ void test_xff_bracketed_ipv6_overflow()
     feed(&r, req);
 
     char ip[PROTOCORE_IP_STR_MAX];
-    proto_bool http_parser_ok = HttpParser.forwarded_client(protocore_http_parser_span(), &r, ip, sizeof(ip), NULL);
+    embed_bool http_parser_ok = HttpParser.forwarded_client(protocore_http_parser_span(), &r, ip, sizeof(ip), NULL);
     TEST_ASSERT_FALSE(http_parser_ok);
 
     HttpReq r2;
     r2.slot_id = 0;
     HttpParser.reset(protocore_http_parser_span(), &r2);
     feed(&r2, "GET / HTTP/1.1\r\nX-Forwarded-For: [2001:db8::1]\r\n\r\n");
-    proto_bool http_parser_ok2 = HttpParser.forwarded_client(protocore_http_parser_span(), &r2, ip, sizeof(ip), NULL);
+    embed_bool http_parser_ok2 = HttpParser.forwarded_client(protocore_http_parser_span(), &r2, ip, sizeof(ip), NULL);
     TEST_ASSERT_TRUE(http_parser_ok2);
     TEST_ASSERT_EQUAL_STRING("2001:db8::1", ip);
 }

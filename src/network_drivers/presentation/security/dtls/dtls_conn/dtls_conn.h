@@ -45,7 +45,7 @@
 #include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -95,13 +95,12 @@ typedef struct
 } DtlsFlightMsg;
 
 /** @brief Handshake progress. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(DtlsConnState,
     DTLS_CONN_STATE_START,         ///< awaiting ClientHello
     DTLS_CONN_STATE_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
     DTLS_CONN_STATE_DONE,          ///< handshake complete; application keys installed
     DTLS_CONN_STATE_FAILED         ///< fatal error (see @ref protocore_dtls_conn_alert)
-} DtlsConnState;
+);
 
 /**
  * @brief The server's long-lived identity plus this handshake's fresh randomness.
@@ -141,25 +140,25 @@ typedef struct
     DtlsRecordKeys ep2_cli;                         ///< epoch 2 client read keys
     DtlsRecordKeys ep3_srv;                         ///< epoch 3 server write keys (application traffic)
     DtlsRecordKeys ep3_cli;                         ///< epoch 3 client read keys
-    proto_bool ep2_ready;                           ///< epoch 2 keys installed
-    proto_bool ep3_ready;                           ///< epoch 3 keys installed
+    embed_bool ep2_ready;                           ///< epoch 2 keys installed
+    embed_bool ep3_ready;                           ///< epoch 3 keys installed
     uint8_t hs_finished_hash[TLS13_SECRET_MAX];     ///< Transcript-Hash(CH..server Finished)
 
     uint64_t tx_seq_ep0;         ///< next outbound record sequence number, epoch 0
     uint64_t tx_seq_ep2;         ///< next outbound record sequence number, epoch 2
     uint64_t tx_seq_ep3;         ///< next outbound record sequence number, epoch 3
     uint16_t tx_msg_seq;         ///< next outbound handshake message_seq (advances across an optional HRR)
-    proto_bool hrr_sent;         ///< a HelloRetryRequest was sent; the next ClientHello is the retry (§5.1)
+    embed_bool hrr_sent;         ///< a HelloRetryRequest was sent; the next ClientHello is the retry (§5.1)
     uint16_t next_recv_msg_seq;  ///< handshake message_seq expected next from the client
     DtlsReplayWindow replay_ep2; ///< anti-replay window for inbound epoch-2 records
     DtlsReplayWindow replay_ep3; ///< anti-replay window for inbound epoch-3 (application) records
     uint64_t rx_ep2_seq;         ///< sequence number of the last inbound epoch-2 record (the client Finished)
-    proto_bool hs_ack_sent;      ///< the client Finished has been acknowledged (RFC 9147 §5.8.3 / §7)
+    embed_bool hs_ack_sent;      ///< the client Finished has been acknowledged (RFC 9147 §5.8.3 / §7)
     uint8_t peer_addr[PROTOCORE_DTLS_PEER_ADDR_MAX]; ///< serialized peer address the HRR cookie is bound to (§5.1)
     uint8_t peer_addr_len;                           ///< bytes of @ref peer_addr in use (0 = no address bound)
 
     // Connection ids (RFC 9146 / RFC 9147 §9), negotiated by the connection_id extension.
-    proto_bool cid_negotiated;                ///< the client offered connection_id and we accepted it
+    embed_bool cid_negotiated;                ///< the client offered connection_id and we accepted it
     uint8_t peer_cid[PROTOCORE_DTLS_CID_MAX]; ///< the client's CID: placed in every record we send to the client (may
                                               ///< be empty)
     uint8_t peer_cid_len;                     ///< bytes of @ref peer_cid in use
@@ -174,7 +173,7 @@ typedef struct
         flight_rec[PROTOCORE_DTLS_FLIGHT_MSGS]; ///< record numbers of each message's last transmission (for ACKs)
     uint8_t flight_count;                       ///< messages in the current flight
     uint16_t flight_len;                        ///< bytes used in @ref flight_buf
-    proto_bool awaiting_reply;                  ///< a flight is outstanding and a peer reply is expected (timer runs)
+    embed_bool awaiting_reply;                  ///< a flight is outstanding and a peer reply is expected (timer runs)
     uint8_t retransmits;                        ///< times the current flight has been retransmitted
     uint16_t pmtu;                              ///< largest datagram this connection puts on the wire (sec 4.3)
     uint32_t pto_ms;                            ///< current retransmission timeout (doubles each retransmit)
@@ -328,7 +327,7 @@ typedef struct
     DtlsServerLocalCidArgs local_cid_args;
     DtlsServerOpenAppArgs open_app_args;
     DtlsServerSealAppArgs seal_app_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
     uint8_t value;
     DtlsRecordKeys *ptr;
@@ -385,7 +384,7 @@ static const DtlsConnNs DtlsServer __attribute__((unused)) = {
     .seal_app = protocore_dtls_server_seal_app,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DTLS
 

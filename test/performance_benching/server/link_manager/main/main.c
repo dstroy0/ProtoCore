@@ -40,7 +40,7 @@ static int link_select(const LinkManager *m)
 }
 
 /** @brief Set interface @p idx of @p m to @p up and rescan; whether the active egress moved. */
-static proto_bool link_set(LinkManager *m, size_t idx, proto_bool up, int *from, int *to)
+static embed_bool link_set(LinkManager *m, size_t idx, embed_bool up, int *from, int *to)
 {
     LinkV.args.m = m;
     LinkV.args.idx = idx;
@@ -78,10 +78,10 @@ void dbench_run(void)
         DBENCH_OP("Link.init recompute", 200000, link_init(&m, ifaces, 3));
 
         // State change + recompute + change detection (idx 0 held up -> escalation path, full rescan).
-        DBENCH_OP("Link.set escalate", 100000, bsink = link_set(&m, 0, PROTO_TRUE, &from, &to));
+        DBENCH_OP("Link.set escalate", 100000, bsink = link_set(&m, 0, EMBED_TRUE, &from, &to));
 
         // Fail-over path: drop the top-priority link, rescan picks the next best up.
-        DBENCH_OP("Link.set failover", 100000, bsink = link_set(&m, 0, PROTO_FALSE, &from, &to));
+        DBENCH_OP("Link.set failover", 100000, bsink = link_set(&m, 0, EMBED_FALSE, &from, &to));
 
         (void)sink;
         (void)bsink;

@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/transportation/ocit/ocit.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type,
                             const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)
@@ -46,11 +46,11 @@ size_t protocore_ocit_set_u16(uint16_t object_type, uint16_t instance, uint16_t 
     return protocore_ocit_build(OCIT_MSG_SET, object_type, instance, OCIT_TYPE_UINT16, v, 2, out, cap);
 }
 
-proto_bool protocore_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out)
+embed_bool protocore_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out)
 {
     if (!msg || !out || len < 6)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->msg_type = msg[0];
     out->object_type = (uint16_t)((msg[1] << 8) | msg[2]);
@@ -58,7 +58,7 @@ proto_bool protocore_ocit_parse(const uint8_t *msg, size_t len, OcitMsg *out)
     out->data_type = msg[5];
     out->value = (len > 6) ? (msg + 6) : NULL;
     out->value_len = len - 6;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 uint16_t protocore_ocit_value_u16(const OcitMsg *m)
@@ -70,6 +70,6 @@ uint16_t protocore_ocit_value_u16(const OcitMsg *m)
     return (uint16_t)((m->value[0] << 8) | m->value[1]);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OCIT

@@ -16,7 +16,7 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The request methods a route binds to. */
 typedef enum
@@ -45,7 +45,7 @@ typedef struct
 typedef struct
 {
     const char *route;      ///< the route path a match tests
-    proto_bool is_wildcard; ///< that route ends in a trailing star
+    embed_bool is_wildcard; ///< that route ends in a trailing star
     const char *path;       ///< the request path a match tests against
     HttpReq *req;           ///< the request a param capture writes into
 } HttpRouteArgs;
@@ -96,9 +96,9 @@ typedef struct
     HttpRouteArgs route_args;   ///< the target a route is matched against
     HttpAllowArgs allow;        ///< the Allow list an append builds
 #if PROTOCORE_ENABLE_EDGE_CACHE
-    proto_bool (*edge_poll)(uint8_t slot);
+    embed_bool (*edge_poll)(uint8_t slot);
 #endif
-    proto_bool ok;
+    embed_bool ok;
     const char *text;
     HttpMethod method_of;
 #if PROTOCORE_ENABLE_EDGE_CACHE
@@ -170,6 +170,6 @@ static const HttpNs Http __attribute__((unused)) = {
  */
 uint8_t *protocore_http_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HTTP_H

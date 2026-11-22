@@ -224,7 +224,7 @@ void test_real_format_round_trips(void)
 // equivalents, matched case-insensitively like every other mnemonic.
 void test_boolean_responses(void)
 {
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
     TEST_ASSERT_TRUE(protocore_scpi_parse_bool("1", 1, &b));
     TEST_ASSERT_TRUE(b);
     TEST_ASSERT_TRUE(protocore_scpi_parse_bool("0", 1, &b));

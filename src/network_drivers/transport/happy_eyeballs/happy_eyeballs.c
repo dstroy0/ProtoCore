@@ -14,7 +14,7 @@
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 #include "shared/ip/ip.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The one address a preference step reads.
@@ -49,7 +49,7 @@ static_assert(HAPPY_EYEBALLS_OFF_CTX % _Alignof(HappyEyeballsCtx) == 0,
 #define HAPPY_EYEBALLS_CTX(w) ((HappyEyeballsCtx *)(void *)((w) + HAPPY_EYEBALLS_OFF_CTX))
 
 // Effective family for interleave: an IPv4-mapped IPv6 address is treated as IPv4.
-static proto_bool eff_is_v6(uint8_t *work)
+static embed_bool eff_is_v6(uint8_t *work)
 {
     return HAPPY_EYEBALLS_CTX(work)->ip->family == PROTOCORE_IP_V6 &&
            !protocore_ip_is_v4_mapped(HAPPY_EYEBALLS_CTX(work)->ip);
@@ -175,7 +175,7 @@ void protocore_happy_eyeballs_order(uint8_t *work)
         }
     }
     HAPPY_EYEBALLS_CTX(work)->ip = &list[0];
-    proto_bool take_v6 = eff_is_v6(work); // whichever family the best address belongs to goes first
+    embed_bool take_v6 = eff_is_v6(work); // whichever family the best address belongs to goes first
     while (iv6 < nv6 || iv4 < nv4)
     {
         if (take_v6 && iv6 < nv6)
@@ -216,6 +216,6 @@ void protocore_happy_eyeballs_attempt_due(uint8_t *work)
 /** @brief The operands and the outcome. */
 HappyEyeballsVars HappyEyeballsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HAPPY_EYEBALLS

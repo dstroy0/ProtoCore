@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/machine_tool/focas/focas.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // FOCAS is big-endian throughout.
 static size_t put16be(uint8_t *p, uint16_t v)
@@ -145,32 +145,32 @@ size_t protocore_focas_build_read_spindle(uint8_t *buf, size_t cap)
     return protocore_focas_build_request(buf, cap, FOCAS_CMD_READ_SPINDLE, 0, 0, 0, 0, 0, NULL, 0);
 }
 
-proto_bool protocore_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out)
+embed_bool protocore_focas_parse_frame(const uint8_t *buf, size_t len, FocasFrame *out)
 {
     if (!buf || !out || len < (size_t)FOCAS_FRAME_HDR_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (buf[0] != 0xA0 || buf[1] != 0xA0 || buf[2] != 0xA0 || buf[3] != 0xA0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->version = get16be(buf + 4);
     out->type = (FocasFrameType)get16be(buf + 6); // wire byte out
     out->payload_len = get16be(buf + 8);
     if ((size_t)FOCAS_FRAME_HDR_LEN + out->payload_len > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->payload = buf + FOCAS_FRAME_HDR_LEN;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out)
+embed_bool protocore_focas_parse_response(const uint8_t *payload, size_t payload_len, FocasResponse *out)
 {
     if (!payload || !out || payload_len < (size_t)FOCAS_RESP_HDR_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->c1 = get16be(payload);
     out->c2 = get16be(payload + 2);
@@ -179,31 +179,31 @@ proto_bool protocore_focas_parse_response(const uint8_t *payload, size_t payload
     out->data_len = get16be(payload + 12);
     if ((size_t)FOCAS_RESP_HDR_LEN + out->data_len > payload_len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->data = payload + FOCAS_RESP_HDR_LEN;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out)
+embed_bool protocore_focas_parse_command_frame(const uint8_t *buf, size_t len, FocasResponse *out)
 {
     FocasFrame f;
     if (!protocore_focas_parse_frame(buf, len, &f))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (f.type != FOCAS_FRAME_TYPE_COMMAND_RESP)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return protocore_focas_parse_response(f.payload, f.payload_len, out);
 }
 
-proto_bool protocore_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out)
+embed_bool protocore_focas_parse_sysinfo(const uint8_t *data, size_t data_len, FocasSysInfo *out)
 {
     if (!data || !out || data_len < (size_t)FOCAS_SYSINFO_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->add_info = get16be(data);
     out->max_axis = get16be(data + 2);
@@ -217,24 +217,24 @@ proto_bool protocore_focas_parse_sysinfo(const uint8_t *data, size_t data_len, F
     out->version[4] = '\0';
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->axes, .src = data + 16, .bytes = 2);
     out->axes[2] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status)
+embed_bool protocore_focas_parse_alarm(const uint8_t *data, size_t data_len, uint32_t *alarm_status)
 {
     if (!data || !alarm_status || data_len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *alarm_status = get32be(data);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out)
+embed_bool protocore_focas_decode8(const uint8_t *chunk, size_t len, FocasValue *out)
 {
     if (!chunk || !out || len < (size_t)FOCAS_VALUE_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->data = (int32_t)get32be(chunk);
     out->base = chunk[5];
@@ -258,6 +258,6 @@ float protocore_focas_value_f(const FocasValue *v)
     return (float)v->data / div;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FOCAS

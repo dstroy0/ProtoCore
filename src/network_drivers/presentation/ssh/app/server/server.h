@@ -17,7 +17,7 @@
 
 #include "network_drivers/presentation/ssh/connection/connection.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 4254 sec 5.4 CHANNEL_REQUEST: the type it names, and the body that follows. */
 typedef struct
@@ -45,7 +45,7 @@ typedef struct
 {
     uint8_t slot;       ///< the SSH slot the request arrived on
     uint32_t channel;   ///< the channel it names
-    proto_bool accept;  ///< in/out: set when an accepted SFTP subsystem flips acceptance
+    embed_bool accept;  ///< in/out: set when an accepted SFTP subsystem flips acceptance
     SshChanReqArgs req; ///< what one channel request names and carries
 } SshAppServerVars;
 
@@ -70,6 +70,6 @@ static const SshAppServerNs SshAppServer __attribute__((unused)) = {
     .classify = protocore_ssh_app_server_classify,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_APP_SERVER_H

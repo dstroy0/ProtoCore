@@ -21,7 +21,7 @@
 #include "crypto/hash/sha1/sha1.h"
 #include "server/core/worker/worker.h" // the cellblock guards the temporary borrows go through
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief B: the block length HMAC pads K out to for SHA-1 (RFC 2104 sec 2). */
 #define PROTOCORE_TOTP_HMAC_B 64
@@ -146,7 +146,7 @@ void protocore_totp_totp(uint8_t *work)
 // and backward of it. Steps below the epoch are skipped; a negative drift matches nothing.
 void protocore_totp_verify(uint8_t *work)
 {
-    TotpV.ok = PROTO_FALSE;
+    TotpV.ok = EMBED_FALSE;
     const int32_t drift = TotpV.check.drift;
     if (drift < 0)
     {
@@ -163,7 +163,7 @@ void protocore_totp_verify(uint8_t *work)
         }
         if (hotp_value(TotpV.k, TotpV.keylen, (uint64_t)c, digit) == TotpV.check.otp)
         {
-            TotpV.ok = PROTO_TRUE;
+            TotpV.ok = EMBED_TRUE;
             return;
         }
     }
@@ -231,6 +231,6 @@ void protocore_totp_base32_decode(uint8_t *work)
 /** @brief The operands and the outcome. */
 TotpVars TotpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TOTP

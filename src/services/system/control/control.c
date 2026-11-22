@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/system/control/control.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // clamp helper is control_clamp() from control.h (inline) - reused here, not re-declared.
 
@@ -128,7 +128,7 @@ void protocore_control_pid_reset(uint8_t *work)
     p->integ = 0.0f;
     p->prev_meas = 0.0f;
     p->d_filt = 0.0f;
-    p->primed = PROTO_FALSE;
+    p->primed = EMBED_FALSE;
 }
 
 // pid_update() is defined inline in control.h (zero call overhead); this TU just uses it below.
@@ -216,7 +216,7 @@ void protocore_control_pid_log_record(uint8_t *work)
     float setpoint = ControlV.pid_log_record_args.setpoint;
     float measurement = ControlV.pid_log_record_args.measurement;
     float output = ControlV.pid_log_record_args.output;
-    proto_bool saturated = ControlV.pid_log_record_args.saturated;
+    embed_bool saturated = ControlV.pid_log_record_args.saturated;
 
     if (!buf || cap < PID_LOG_RECORD_LEN)
     {
@@ -234,6 +234,6 @@ void protocore_control_pid_log_record(uint8_t *work)
 /** @brief The operands and the outcome. */
 ControlVars ControlV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CONTROL

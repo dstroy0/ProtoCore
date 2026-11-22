@@ -41,7 +41,7 @@
 
 #if PROTOCORE_ENABLE_COAP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 7252 sec 3 Code: a 3-bit class and a 5-bit detail, written "c.dd". */
 #define COAP_CODE(c, dd) ((uint8_t)(((c) << 5) | ((dd) & 0x1F)))
@@ -54,26 +54,23 @@ PROTOCORE_BEGIN_DECLS
 #define COAP_ALLOW_DELETE (1u << 4) ///< 0x10, Method Code 0.04
 
 /** @brief RFC 7252 sec 3 Type (T), the 2-bit field. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(CoapType,
     COAP_TYPE_CON = 0, ///< Confirmable
     COAP_TYPE_NON = 1, ///< Non-confirmable
     COAP_TYPE_ACK = 2, ///< Acknowledgement
     COAP_TYPE_RST = 3, ///< Reset
-} CoapType;
+);
 
 /** @brief RFC 7252 sec 12.1.1 Method Codes, the detail of a class-0 Code byte. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(CoapMethod,
     COAP_GET = 1,    ///< 0.01 GET (RFC 7252 sec 5.8.1)
     COAP_POST = 2,   ///< 0.02 POST (sec 5.8.2)
     COAP_PUT = 3,    ///< 0.03 PUT (sec 5.8.3)
     COAP_DELETE = 4, ///< 0.04 DELETE (sec 5.8.4)
-} CoapMethod;
+);
 
 /** @brief RFC 7252 sec 5.9 Response Codes, plus the three RFC 7959 sec 2.9 adds. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(CoapResponseCode,
     COAP_RSP_CREATED = COAP_CODE(2, 1),                   ///< 2.01 Created
     COAP_RSP_DELETED = COAP_CODE(2, 2),                   ///< 2.02 Deleted
     COAP_RSP_VALID = COAP_CODE(2, 3),                     ///< 2.03 Valid
@@ -89,11 +86,10 @@ typedef enum PROTO_ENUM_PACKED
     COAP_RSP_REQUEST_ENTITY_TOO_LARGE = COAP_CODE(4, 13), ///< 4.13 Request Entity Too Large (RFC 7959 sec 2.9.3)
     COAP_RSP_INTERNAL_SERVER_ERROR = COAP_CODE(5, 0),     ///< 5.00 Internal Server Error
     COAP_RSP_NOT_IMPLEMENTED = COAP_CODE(5, 1),           ///< 5.01 Not Implemented
-} CoapResponseCode;
+);
 
 /** @brief CoAP Content-Formats (RFC 7252 sec 12.3 Table 9; 60 from the IANA sub-registry, RFC 8949). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(CoapContentFormat,
     COAP_CF_TEXT = 0,      ///< text/plain;charset=utf-8
     COAP_CF_LINK = 40,     ///< application/link-format (RFC 6690)
     COAP_CF_XML = 41,      ///< application/xml
@@ -101,7 +97,7 @@ typedef enum PROTO_ENUM_PACKED
     COAP_CF_JSON = 50,     ///< application/json
     COAP_CF_CBOR = 60,     ///< application/cbor (RFC 8949)
     COAP_CF_NONE = 0xFFFF, ///< no Content-Format option present or emitted
-} CoapContentFormat;
+);
 
 /**
  * @brief A decoded request handed to a resource handler.
@@ -212,7 +208,7 @@ typedef struct
     CoapObserveArgs observe;   ///< what the Observe option carries
     CoapExchangeArgs exchange; ///< what a deduplication entry is keyed by
     CoapBindArgs bind;         ///< what binding the receive port takes
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     const uint8_t *bytes;
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
@@ -282,7 +278,7 @@ static const CoapNs Coap __attribute__((unused)) = {
  */
 uint8_t *protocore_coap_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_COAP
 

@@ -106,7 +106,7 @@ int main(void)
                 Json.kv_int(json_work);
                 JsonV.kv_bool_args.w = &w;
                 JsonV.kv_bool_args.k = "wifi";
-                JsonV.kv_bool_args.v = PROTO_TRUE;
+                JsonV.kv_bool_args.v = EMBED_TRUE;
                 Json.kv_bool(json_work);
                 JsonV.kv_str_args.w = &w;
                 JsonV.kv_str_args.k = "ip";
@@ -144,7 +144,7 @@ int main(void)
         char ssid[33];
         long port = 0;
         long chan = 0;
-        proto_bool tls = PROTO_FALSE;
+        embed_bool tls = EMBED_FALSE;
         volatile size_t sink = 0;
         double ns = 0.0;
         HBENCH_NS(

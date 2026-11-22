@@ -36,11 +36,10 @@
 
 #if PROTOCORE_ENABLE_SNMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The identifier octets SNMP puts on the wire. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SnmpTag,
     // ASN.1 simple types, encoded primitive (RFC 3417 sec 8 item 2).
     SNMP_TAG_BER_INTEGER = 0x02,
     SNMP_TAG_BER_OCTET_STRING = 0x04,
@@ -67,7 +66,7 @@ typedef enum PROTO_ENUM_PACKED
     SNMP_TAG_SNMP_PDU_INFORM = 0xA6,   ///< InformRequest-PDU ::= [6] IMPLICIT PDU
     SNMP_TAG_SNMP_PDU_TRAPV2 = 0xA7,   ///< SNMPv2-Trap-PDU ::= [7] IMPLICIT PDU
     SNMP_TAG_SNMP_PDU_REPORT = 0xA8,   ///< Report-PDU ::= [8] IMPLICIT PDU
-} SnmpTag;
+);
 
 /**
  * @brief An encoder's cursor: the caller buffer, how far it is written, and whether it still fits.
@@ -80,7 +79,7 @@ typedef struct BerEnc
     uint8_t *buf;  ///< the buffer octets are written into
     size_t cap;    ///< how many it holds
     size_t len;    ///< how many are written
-    proto_bool ok; ///< no write has run past cap
+    embed_bool ok; ///< no write has run past cap
 } BerEnc;
 
 /** @brief A decoder's cursor: the octets being read, and how far the read has walked. */
@@ -89,7 +88,7 @@ typedef struct
     const uint8_t *buf; ///< the octets being read
     size_t len;         ///< how many
     size_t pos;         ///< the next octet a read takes
-    proto_bool ok;      ///< no read has run past len
+    embed_bool ok;      ///< no read has run past len
 } BerDec;
 
 /** @brief The caller buffer a codec runs over. */
@@ -164,7 +163,7 @@ typedef struct
     SnmpBerBufArgs buf;        ///< the caller buffer an init binds
     SnmpBerTlvArgs tlv;        ///< what a write carries
     SnmpBerReadArgs read_args; ///< where a read lands
-    proto_bool ok;
+    embed_bool ok;
     uint8_t tag;
     size_t vlen;
     long ival;
@@ -233,7 +232,7 @@ static const SnmpBerNs SnmpBer __attribute__((unused)) = {
     .skip = protocore_snmp_ber_skip,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP
 

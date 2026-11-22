@@ -50,7 +50,7 @@ static size_t wamp_goodbye(char *buf, size_t cap)
 }
 
 /** @brief Read the message type code of @p msg into @p type; whether element 0 held one. */
-static proto_bool wamp_type(const char *msg, int32_t *type)
+static embed_bool wamp_type(const char *msg, int32_t *type)
 {
     WampV.parse.msg = msg;
     Wamp.get_type(wamp_work);

@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_TLS_POLICY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief TLS protocol version wire words. */
 #define TLS_VERSION_1_2 0x0303
@@ -105,11 +105,11 @@ typedef struct
     TlsPolicyNameArgs name_args;
     TlsPolicySelectArgs select_args;
     TlsPolicyAeadArgs aead_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t version;
     uint16_t suite;
     const char *text;
-    proto_bool aead;
+    embed_bool aead;
 } TlsPolicyVars;
 
 /** @brief The operands and the outcome. */
@@ -142,7 +142,7 @@ static const TlsPolicyNs TlsPolicy __attribute__((unused)) = {
     .is_aead = protocore_tls_policy_is_aead,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TLS_POLICY
 

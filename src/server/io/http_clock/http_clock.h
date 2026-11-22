@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLOCK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The operands and the outcome.
@@ -84,7 +84,7 @@ static const HttpClockNs HttpClock __attribute__((unused)) = {
     .date = protocore_http_clock_date,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CLOCK
 

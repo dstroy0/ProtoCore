@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_AES128GCM
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief AEAD_AES_128_GCM key length in bytes. */
 #define PROTOCORE_AES128GCM_KEY_LEN 16
@@ -147,7 +147,7 @@ typedef struct
     Aes128GcmOpenArgs open_args;
     Aes128GcmBlockKeyArgs block_key_args;
     Aes128GcmBlockArgs block_args;
-    proto_bool ok;
+    embed_bool ok;
 } Aes128GcmVars;
 
 /** @brief The operands and the outcome. */
@@ -189,7 +189,7 @@ static const Aes128GcmNs Aes128Gcm __attribute__((unused)) = {
     .block_wipe = protocore_aes128_gcm_block_wipe,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AES128GCM
 

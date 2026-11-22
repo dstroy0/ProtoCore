@@ -20,7 +20,7 @@
 #include "services/machine_tool/mtconnect/mtconnect.h"
 #include "shared/time_compat/time_compat.h" // the UTC breakdown creationTime is formatted from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One buffered observation (a value at a sequence number), stored in fixed fields. */
 typedef struct
@@ -48,8 +48,8 @@ typedef struct
     size_t len;        ///< bytes of the document written so far
     size_t comp_start; ///< where the open component's runs begin
     size_t run[3];     ///< one past the last byte of the Samples, Events and Condition runs
-    proto_bool ok;
-    proto_bool in_comp;
+    embed_bool ok;
+    embed_bool in_comp;
 
     uint32_t count;     ///< observations the ring holds (<= PROTOCORE_MTC_SAMPLE_BUFFER)
     uint32_t head;      ///< ring write index
@@ -105,7 +105,7 @@ static void put(uint8_t *work, const char *text)
     size_t tl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = text, .cap = c->cap + 1);
     if (c->len + tl >= c->cap)
     {
-        c->ok = PROTO_FALSE;
+        c->ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c->out + c->len, .src = text, .bytes = tl);
@@ -147,7 +147,7 @@ static void put_escaped(uint8_t *work, const char *text)
         }
         if (c->len + 1 >= c->cap)
         {
-            c->ok = PROTO_FALSE;
+            c->ok = EMBED_FALSE;
             return;
         }
         c->out[c->len++] = *p;
@@ -184,7 +184,7 @@ static char *open_gap(uint8_t *work, size_t at, size_t n)
     }
     if (c->len + n >= c->cap)
     {
-        c->ok = PROTO_FALSE;
+        c->ok = EMBED_FALSE;
         return NULL;
     }
     EMBED_CALL(memor.move_up, MemoriaCfg, .dst = c->out + at + n, .src = c->out + at, .bytes = c->len - at);
@@ -296,7 +296,7 @@ static void doc_open(uint8_t *work, const char *root)
     c->cap = MtConnectV.doc.cap;
     c->len = 0;
     c->ok = (c->out != NULL && c->cap > 0);
-    c->in_comp = PROTO_FALSE;
+    c->in_comp = EMBED_FALSE;
     put(work, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
     put(work, "<");
     put(work, root);
@@ -331,7 +331,7 @@ static void close_component(uint8_t *work)
     {
         return;
     }
-    c->in_comp = PROTO_FALSE;
+    c->in_comp = EMBED_FALSE;
     static const char *const OPEN[3] = {"<Samples>", "<Events>", "<Condition>"};
     static const char *const CLOSE[3] = {"</Samples>", "</Events>", "</Condition>"};
     for (int i = 2; i >= 0; i--)
@@ -380,7 +380,7 @@ void protocore_mt_connect_streams_add(uint8_t *work)
         put(work, "\" componentId=\"");
         put_escaped(work, MtConnectV.streams.component_id);
         put(work, "\">");
-        c->in_comp = PROTO_TRUE;
+        c->in_comp = EMBED_TRUE;
         c->comp_start = c->len;
         c->run[0] = c->len;
         c->run[1] = c->len;
@@ -619,7 +619,7 @@ void protocore_mt_connect_ring_init(uint8_t *work)
     c->head = 0;
     c->next_seq = MtConnectV.streams.next_seq ? MtConnectV.streams.next_seq : 1u;
     c->first_seq = c->next_seq; // empty: first == next, so lastSequence sits just below first
-    MtConnectV.ok = PROTO_TRUE;
+    MtConnectV.ok = EMBED_TRUE;
 }
 
 void protocore_mt_connect_ring_add(uint8_t *work)
@@ -642,7 +642,7 @@ void protocore_mt_connect_ring_add(uint8_t *work)
         c->first_seq++; // full: the oldest was overwritten, so the window slides forward
     }
     MtConnectV.seq = c->next_seq++;
-    MtConnectV.ok = PROTO_TRUE;
+    MtConnectV.ok = EMBED_TRUE;
 }
 
 void protocore_mt_connect_ring_query(uint8_t *work)
@@ -689,6 +689,6 @@ void protocore_mt_connect_ring_query(uint8_t *work)
 /** @brief The operands and the outcome. */
 MtConnectVars MtConnectV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MTCONNECT

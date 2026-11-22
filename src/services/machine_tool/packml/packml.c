@@ -14,7 +14,7 @@
 
 #include "server/clock/clock.h" // Clock - the monotonic source
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The library's monotonic millisecond count.
 static uint32_t now_ms(void)
@@ -129,7 +129,7 @@ PackMlState protocore_packml_execute_complete(PackMlState s)
     return (s == PACK_ML_STATE_EXECUTE) ? PACK_ML_STATE_COMPLETING : s;
 }
 
-proto_bool protocore_packml_is_acting(PackMlState s)
+embed_bool protocore_packml_is_acting(PackMlState s)
 {
     switch (s)
     {
@@ -143,13 +143,13 @@ proto_bool protocore_packml_is_acting(PackMlState s)
     case PACK_ML_STATE_UNSUSPENDING:
     case PACK_ML_STATE_RESETTING:
     case PACK_ML_STATE_COMPLETING:
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     default:
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 }
 
-proto_bool protocore_packml_command_valid(PackMlState s, PackMlCommand c)
+embed_bool protocore_packml_command_valid(PackMlState s, PackMlCommand c)
 {
     return protocore_packml_command(s, c) != s;
 }
@@ -268,19 +268,19 @@ void protocore_packml_svc_init(PackMlMode mode)
     enter_state(PACK_ML_STATE_STOPPED);
 }
 
-proto_bool protocore_packml_svc_command(PackMlCommand c)
+embed_bool protocore_packml_svc_command(PackMlCommand c)
 {
     PackMlState next = protocore_packml_command(s_pml.state, c);
     if (next == s_pml.state)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (c == PACK_ML_COMMAND_RESET) // a fresh run: restart the accumulated-time clock
     {
         s_pml.reset_ms = now_ms();
     }
     enter_state(next);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 PackMlState protocore_packml_svc_state_complete(void)
@@ -289,7 +289,7 @@ PackMlState protocore_packml_svc_state_complete(void)
     return s_pml.state;
 }
 
-void protocore_packml_svc_count(proto_bool defective)
+void protocore_packml_svc_count(embed_bool defective)
 {
     if (s_pml.state != PACK_ML_STATE_EXECUTE)
     {
@@ -302,27 +302,27 @@ void protocore_packml_svc_count(proto_bool defective)
     }
 }
 
-proto_bool protocore_packml_svc_complete_run(void)
+embed_bool protocore_packml_svc_complete_run(void)
 {
     PackMlState next = protocore_packml_execute_complete(s_pml.state);
     if (next == s_pml.state)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     enter_state(next);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_packml_svc_set_mode(PackMlMode mode)
+embed_bool protocore_packml_svc_set_mode(PackMlMode mode)
 {
     // A unit-mode change is only allowed in a stable, non-producing state (ISA-TR88.00.02 mode-change rules).
     if (s_pml.state != PACK_ML_STATE_STOPPED && s_pml.state != PACK_ML_STATE_IDLE &&
         s_pml.state != PACK_ML_STATE_ABORTED)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s_pml.mode = mode;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_packml_svc_set_speed(float mach_speed)
@@ -352,6 +352,6 @@ void protocore_packml_svc_status(PackMlStatus *out)
     out->prod_defective = s_pml.prod_defective;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PACKML

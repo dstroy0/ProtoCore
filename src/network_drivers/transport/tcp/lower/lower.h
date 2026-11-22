@@ -32,7 +32,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The TTL outbound TCP segments carry.
@@ -47,8 +47,7 @@ PROTOCORE_BEGIN_DECLS
 #endif
 
 /** @brief Which call into the lower-level module a marshaled op performs. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_tcp_op,
     PROTOCORE_OP_SEND,
     PROTOCORE_OP_OUTPUT,
     PROTOCORE_OP_CLOSE,
@@ -58,8 +57,8 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_OP_CLOSE_CHECK, // in stack context: finalize a CONN_CLOSING slot if its TX has drained
     PROTOCORE_OP_RECVED,      // in stack context: reopen the receive window (ack-on-consume)
     PROTOCORE_OP_SET_TTL,     // in stack context: stamp the TTL on a control block; len carries the value
-} protocore_tcp_op;
-static_assert(sizeof(protocore_tcp_op) == 1, "protocore_tcp_op must stay one byte (PROTO_ENUM_PACKED)");
+);
+static_assert(sizeof(protocore_tcp_op) == 1, "protocore_tcp_op must stay one byte (EMBED_ENUM_BYTE)");
 
 /**
  * @brief The lower-level interface: what this endpoint can ask the module below it to do.
@@ -83,10 +82,10 @@ typedef struct
     uint8_t slot;
     protocore_pcb *pcb;
     const void *data;
-    proto_u16 len;
-    proto_bool flush;
+    embed_u16 len;
+    embed_bool flush;
     protocore_net_err result;
-    proto_bool ok;
+    embed_bool ok;
     /// Run the op set above, in the one context where it is safe. The outcome lands in @c result.
     /// Drop the control block's back-reference, so a late callback finds a null arg.
     /// Reset the control block (RFC 9293 sec 3.10.5): a hard close, no FIN.
@@ -138,6 +137,6 @@ static const TcpLowerNs TcpLower __attribute__((unused)) = {
  */
 uint8_t *protocore_tcp_lower_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TCP_LOWER_H

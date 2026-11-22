@@ -41,20 +41,18 @@
 
 #if PROTOCORE_ENABLE_SNMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/net/snmp/snmp_ber/snmp_ber.h"
 /** @brief The version field of the message wrapper, as it is encoded. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SnmpVersion,
     SNMP_V1 = 0,  ///< version-1(0), RFC 1157 sec 4
     SNMP_V2C = 1, ///< version(1), RFC 1901 sec 3
     SNMP_V3 = 3,  ///< msgVersion, RFC 3412 sec 6
-} SnmpVersion;
+);
 
 /** @brief error-status values (RFC 1157 sec 4.1.1 for 0 through 5, RFC 3416 sec 3 for the rest). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(SnmpErr,
     SNMP_ERR_NO_ERROR = 0,
     SNMP_ERR_TOO_BIG = 1,
     SNMP_ERR_NO_SUCH_NAME = 2,
@@ -64,7 +62,7 @@ typedef enum PROTO_ENUM_PACKED
     SNMP_ERR_NO_ACCESS = 6,
     SNMP_ERR_WRONG_TYPE = 7,
     SNMP_ERR_NOT_WRITABLE = 17,
-} SnmpErr;
+);
 
 /**
  * @brief The value half of a variable-binding (RFC 3416 sec 3).
@@ -85,9 +83,9 @@ typedef struct
 } SnmpValue;
 
 /** @brief Read a dynamic object's value: fill @p out and return true, or false for noSuchInstance. */
-typedef proto_bool (*SnmpGetFn)(SnmpValue *out);
+typedef embed_bool (*SnmpGetFn)(SnmpValue *out);
 /** @brief Write a read-write object (RFC 2578 sec 7.3): true on success, false to reject the value. */
-typedef proto_bool (*SnmpSetFn)(const SnmpValue *in);
+typedef embed_bool (*SnmpSetFn)(const SnmpValue *in);
 
 /** @brief RFC 1157 sec 3.2.5: the communities a message is authenticated against. */
 typedef struct
@@ -134,8 +132,8 @@ typedef struct
     size_t req_len;         ///< its length in octets
     uint8_t *out;           ///< where the Response-PDU TLV is written
     size_t out_cap;         ///< how many octets that holds
-    proto_bool allow_write; ///< a SetRequest-PDU is authorized (RFC 3416 sec 4.2.5)
-    proto_bool v2c;         ///< report per-binding exceptions rather than v1 error-status
+    embed_bool allow_write; ///< a SetRequest-PDU is authorized (RFC 3416 sec 4.2.5)
+    embed_bool v2c;         ///< report per-binding exceptions rather than v1 error-status
 } SnmpPduArgs;
 
 /**
@@ -170,7 +168,7 @@ typedef struct
     SnmpSystemArgs system;       ///< the system group values (RFC 3418 sec 2)
     SnmpMsgArgs msg;             ///< the message pair (RFC 3417 sec 3.1)
     SnmpPduArgs pdu;             ///< the PDU pair (RFC 3416 sec 4.2)
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } SnmpAgentVars;
 
@@ -230,7 +228,7 @@ static const SnmpAgentNs SnmpAgent __attribute__((unused)) = {
  */
 uint8_t *protocore_snmp_agent_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP
 

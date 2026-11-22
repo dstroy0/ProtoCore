@@ -15,7 +15,7 @@
 #include "numeros_scribo/numeros_scribo.h" // the one frame engine
 #include "services/instrumentation/scpi/scpi.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
 static const mmgr_field SCPI_REAL[] = {{MMGR_FK_G, 10, 0, NULL}, MMGR_END};
@@ -28,28 +28,28 @@ static char lower(char c)
 }
 
 // Case-insensitive equality of two byte ranges.
-static proto_bool ieq(const char *a, size_t alen, const char *b, size_t blen)
+static embed_bool ieq(const char *a, size_t alen, const char *b, size_t blen)
 {
     if (alen != blen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < alen; i++)
     {
         if (lower(a[i]) != lower(b[i]))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool is_digit(char c)
+static embed_bool is_digit(char c)
 {
     return c >= '0' && c <= '9';
 }
 
-static proto_bool is_alpha(char c)
+static embed_bool is_alpha(char c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
@@ -160,15 +160,15 @@ static int scan_digits(const char *s, size_t len, size_t *i, double *acc)
 }
 
 // Optional E[+-]ddd suffix. Absent is not an error (*exp stays 0); false only for an E with no digits.
-static proto_bool scan_exponent(const char *s, size_t len, size_t *i, int *exp)
+static embed_bool scan_exponent(const char *s, size_t len, size_t *i, int *exp)
 {
     *exp = 0;
     if (*i >= len || (s[*i] != 'e' && s[*i] != 'E'))
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     (*i)++;
-    proto_bool neg = PROTO_FALSE;
+    embed_bool neg = EMBED_FALSE;
     if (*i < len && (s[*i] == '+' || s[*i] == '-'))
     {
         neg = (s[*i] == '-');
@@ -183,13 +183,13 @@ static proto_bool scan_exponent(const char *s, size_t len, size_t *i, int *exp)
     }
     if (digits == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (neg)
     {
         *exp = -*exp;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Repeated multiply/divide rather than pow(): no libm dependency, and the digit counts here are small.
@@ -206,14 +206,14 @@ static double apply_scale(double v, int scale)
     return v;
 }
 
-proto_bool protocore_scpi_parse_number(const char *s, size_t len, double *out)
+embed_bool protocore_scpi_parse_number(const char *s, size_t len, double *out)
 {
     if (!s || !out || len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t i = 0;
-    proto_bool neg = PROTO_FALSE;
+    embed_bool neg = EMBED_FALSE;
     if (s[i] == '+' || s[i] == '-')
     {
         neg = (s[i] == '-');
@@ -230,50 +230,50 @@ proto_bool protocore_scpi_parse_number(const char *s, size_t len, double *out)
     }
     if (digits == 0) // no mantissa digit on either side of the point
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int exp = 0;
     if (!scan_exponent(s, len, &i, &exp))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (i != len) // trailing junk -> not a clean numeric field
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     double val = apply_scale(mant, exp - frac); // decimal point and exponent applied together
     *out = neg ? -val : val;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_scpi_parse_bool(const char *s, size_t len, proto_bool *out)
+embed_bool protocore_scpi_parse_bool(const char *s, size_t len, embed_bool *out)
 {
     if (!s || !out || len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (len == 1 && s[0] == '1')
     {
-        *out = PROTO_TRUE;
-        return PROTO_TRUE;
+        *out = EMBED_TRUE;
+        return EMBED_TRUE;
     }
     if (len == 1 && s[0] == '0')
     {
-        *out = PROTO_FALSE;
-        return PROTO_TRUE;
+        *out = EMBED_FALSE;
+        return EMBED_TRUE;
     }
     if (ieq(s, len, "ON", 2))
     {
-        *out = PROTO_TRUE;
-        return PROTO_TRUE;
+        *out = EMBED_TRUE;
+        return EMBED_TRUE;
     }
     if (ieq(s, len, "OFF", 3))
     {
-        *out = PROTO_FALSE;
-        return PROTO_TRUE;
+        *out = EMBED_FALSE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 size_t protocore_scpi_parse_string(const char *s, size_t len, char *out, size_t cap)
@@ -315,33 +315,33 @@ size_t protocore_scpi_parse_string(const char *s, size_t len, char *out, size_t 
     return o;
 }
 
-proto_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
+embed_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint8_t **data, size_t *data_len,
                                       size_t *consumed)
 {
     if (!buf || !data || !data_len || !consumed || len < 2 || buf[0] != '#')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     char n = (char)buf[1];
     if (n == '0') // indefinite: #0<data><NL with EOI> - data runs to the final newline
     {
         if (len < 3 || buf[len - 1] != '\n')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         *data = buf + 2;
         *data_len = len - 3; // drop the leading "#0" and the trailing NL
         *consumed = len;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (n < '1' || n > '9') // definite: one nonzero digit giving the length-field width
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t ndig = (size_t)(n - '0');
     if (len < 2 + ndig)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t dlen = 0;
     for (size_t i = 0; i < ndig; i++)
@@ -349,19 +349,19 @@ proto_bool protocore_scpi_parse_block(const uint8_t *buf, size_t len, const uint
         char c = (char)buf[2 + i];
         if (!is_digit(c))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         dlen = dlen * 10 + (size_t)(c - '0');
     }
     size_t start = 2 + ndig;
     if (start + dlen > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *data = buf + start;
     *data_len = dlen;
     *consumed = start + dlen;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ── IEEE 488.2 / SCPI status model ─────────────────────────────────────────────────────────────
@@ -524,22 +524,22 @@ void protocore_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg)
     s->count++;
 }
 
-proto_bool protocore_scpi_pop_error(ScpiStatus *s, ScpiError *out)
+embed_bool protocore_scpi_pop_error(ScpiStatus *s, ScpiError *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!s || s->count == 0)
     {
         out->number = 0;
         out->msg = "No error";
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *out = s->queue[s->head];
     s->head = (uint8_t)((s->head + 1) % PROTOCORE_SCPI_ERR_QUEUE);
     s->count--;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 uint8_t protocore_scpi_stb(const ScpiStatus *s)
@@ -598,11 +598,11 @@ static int suffix_val(const char *s, size_t len)
 }
 
 // Match one header node: input [i,ilen) vs pattern [p,plen) (uppercase run = short form).
-static proto_bool match_node(const char *i, size_t ilen, const char *p, size_t plen)
+static embed_bool match_node(const char *i, size_t ilen, const char *p, size_t plen)
 {
     if (ilen == 0 || plen == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // pattern alpha length + short-form (uppercase-prefix) length
     size_t palpha = 0;
@@ -628,7 +628,7 @@ static proto_bool match_node(const char *i, size_t ilen, const char *p, size_t p
     // the input alpha must equal the short form OR the whole long form (case-insensitive)
     if (!ieq(i, ialpha, p, pshort) && !ieq(i, ialpha, p, palpha))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // numeric suffix (rest of each node) - omitted defaults to 1
     int pv = suffix_val(p + palpha, plen - palpha);
@@ -636,11 +636,11 @@ static proto_bool match_node(const char *i, size_t ilen, const char *p, size_t p
     return pv >= 0 && iv >= 0 && pv == iv;
 }
 
-proto_bool protocore_scpi_match(const char *input, size_t input_len, const char *pattern)
+embed_bool protocore_scpi_match(const char *input, size_t input_len, const char *pattern)
 {
     if (!input || !pattern)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // clip the input to its header (everything before the first space)
     size_t hlen = 0;
@@ -668,11 +668,11 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
     const char *pp = pattern;
 
     // reconcile the query '?' suffix: both must have it or neither
-    proto_bool pq = prem && pp[prem - 1] == '?';
-    proto_bool iq = irem && ip[irem - 1] == '?';
+    embed_bool pq = prem && pp[prem - 1] == '?';
+    embed_bool iq = irem && ip[irem - 1] == '?';
     if (pq != iq)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (pq)
     {
@@ -684,7 +684,7 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
     }
 
     // walk the ':'-separated nodes in lockstep
-    while (PROTO_TRUE)
+    while (EMBED_TRUE)
     {
         size_t pn = 0;
         while (pn < prem && pp[pn] != ':')
@@ -698,18 +698,18 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
         }
         if (!match_node(ip, in, pp, pn))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         // advance past this node (and its ':' if present)
-        proto_bool p_more = pn < prem;
-        proto_bool i_more = in < irem;
+        embed_bool p_more = pn < prem;
+        embed_bool i_more = in < irem;
         if (p_more != i_more) // different depth
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         if (!p_more) // both exhausted -> full match
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         pp += pn + 1;
         prem -= pn + 1;
@@ -718,6 +718,6 @@ proto_bool protocore_scpi_match(const char *input, size_t input_len, const char 
     }
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SCPI

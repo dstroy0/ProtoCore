@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_LDC1614
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_I2C_DEVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -144,7 +144,7 @@ typedef struct
     Ldc1614BuildConfigArgs build_config_args;
     Ldc1614BeginArgs begin_args;
     Ldc1614ReadCh0Args read_ch0_args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t value;
     uint8_t flags;
     uint64_t hz;
@@ -198,7 +198,7 @@ static const Ldc1614Ns Ldc1614 __attribute__((unused)) = {
  */
 uint8_t *protocore_ldc1614_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LDC1614
 

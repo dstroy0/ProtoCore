@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_GUARDRAILS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief A health snapshot. */
 typedef struct
@@ -134,7 +134,7 @@ static const GuardrailsNs Guardrails __attribute__((unused)) = {
  */
 uint8_t *protocore_guardrails_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS
 

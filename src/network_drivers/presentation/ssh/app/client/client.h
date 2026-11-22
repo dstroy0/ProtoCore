@@ -15,7 +15,7 @@
 
 #include "network_drivers/presentation/ssh/client/client.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SSH_CLIENT
 
@@ -50,7 +50,7 @@ typedef struct
 {
     const uint8_t *seed;
     uint8_t *pub;
-    proto_bool ok;
+    embed_bool ok;
     protocore_ssh_client_state state;
 } SshAppClientVars;
 
@@ -81,6 +81,6 @@ static const SshAppClientNs SshAppClient __attribute__((unused)) = {
     .pubkey = protocore_ssh_app_client_pubkey,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_APP_CLIENT_H

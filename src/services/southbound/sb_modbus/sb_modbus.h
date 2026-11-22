@@ -38,7 +38,7 @@
 #include "services/fieldbus/modbus/modbus/modbus.h"    // ModbusFunction, MODBUS_ADU_MAX
 #include "services/southbound/southbound/southbound.h" // SouthboundDriver, Southbound
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Request/response transport seam.
@@ -120,7 +120,7 @@ static const SbModbusNs SbModbus __attribute__((unused)) = {
     .driver = protocore_sb_modbus_driver,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER
 

@@ -28,7 +28,7 @@
 
 #if PROTOCORE_ENABLE_LONWORKS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -142,7 +142,7 @@ typedef struct
     LonworksSnvtTempDecodeArgs snvt_temp_decode_args;
     LonworksSnvtSwitchEncodeArgs snvt_switch_encode_args;
     LonworksSnvtSwitchDecodeArgs snvt_switch_decode_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     double value;
 } LonworksVars;
@@ -183,7 +183,7 @@ static const LonworksNs Lonworks __attribute__((unused)) = {
     .snvt_switch_decode = protocore_lonworks_snvt_switch_decode,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LONWORKS
 

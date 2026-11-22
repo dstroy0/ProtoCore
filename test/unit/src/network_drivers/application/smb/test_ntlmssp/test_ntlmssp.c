@@ -57,7 +57,7 @@ void test_msnlmp_challenge_message(void)
 {
     NtlmChallenge c;
     memset(&c, 0, sizeof(c));
-    proto_bool ntlmssp_ok = Ntlmssp.parse_challenge(ntlmssp_work, CHALLENGE, sizeof(CHALLENGE), &c);
+    embed_bool ntlmssp_ok = Ntlmssp.parse_challenge(ntlmssp_work, CHALLENGE, sizeof(CHALLENGE), &c);
     TEST_ASSERT_TRUE(ntlmssp_ok);
 
     static const uint8_t WANT_CHALLENGE[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
@@ -173,7 +173,7 @@ void test_msnlmp_authenticate_message(void)
     uint8_t buf[512];
     size_t ntlmssp_n =
         Ntlmssp.build_authenticate(ntlmssp_work, buf, sizeof(buf), LM_RESP, sizeof(LM_RESP), NT_RESP, sizeof(NT_RESP),
-                                   "Domain", "User", "COMPUTER", 0xe2888235u, PROTO_FALSE);
+                                   "Domain", "User", "COMPUTER", 0xe2888235u, EMBED_FALSE);
     size_t n = ntlmssp_n;
     // 64 fixed + 24 LM + 84 NT + 12 "Domain" + 8 "User" + 16 "COMPUTER" = 208, no key exchange.
     TEST_ASSERT_EQUAL_size_t(208, n);
@@ -208,7 +208,7 @@ void test_authenticate_with_mic_reserves_version_and_mic(void)
     uint8_t buf[256];
     memset(buf, 0xEE, sizeof(buf));
     size_t ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, sizeof(buf), NULL, 0, NT_RESP, sizeof(NT_RESP),
-                                                  "D", "U", NULL, NTLMSSP_CLIENT_DEFAULT_FLAGS, PROTO_TRUE);
+                                                  "D", "U", NULL, NTLMSSP_CLIENT_DEFAULT_FLAGS, EMBED_TRUE);
     size_t n = ntlmssp_n;
     // 88 fixed + 0 LM + 8 NT + 2 "D" + 2 "U" + 0 workstation = 100
     TEST_ASSERT_EQUAL_size_t(100, n);
@@ -232,7 +232,7 @@ void test_authenticate_with_mic_reserves_version_and_mic(void)
 
     // Without a MIC the fixed part is 64 and neither field is reserved.
     ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, sizeof(buf), NULL, 0, NT_RESP, sizeof(NT_RESP), "D", "U",
-                                           NULL, NTLMSSP_CLIENT_DEFAULT_FLAGS, PROTO_FALSE);
+                                           NULL, NTLMSSP_CLIENT_DEFAULT_FLAGS, EMBED_FALSE);
     n = ntlmssp_n;
     TEST_ASSERT_EQUAL_size_t(76, n); // 64 + 8 + 2 + 2
     assert_field(buf, n, 20, NT_RESP, sizeof(NT_RESP));
@@ -253,7 +253,7 @@ void test_challenge_parse_fails_closed(void)
 
     memcpy(bad, CHALLENGE, sizeof(bad));
     bad[0] = 'X'; // signature
-    proto_bool ntlmssp_ok = Ntlmssp.parse_challenge(ntlmssp_work, bad, sizeof(bad), &c);
+    embed_bool ntlmssp_ok = Ntlmssp.parse_challenge(ntlmssp_work, bad, sizeof(bad), &c);
     TEST_ASSERT_FALSE(ntlmssp_ok);
 
     memcpy(bad, CHALLENGE, sizeof(bad));
@@ -306,7 +306,7 @@ void test_challenge_without_target_info(void)
     NtlmChallenge c;
     c.target_info = CHALLENGE;
     c.target_info_len = 99;
-    proto_bool ntlmssp_ok = Ntlmssp.parse_challenge(ntlmssp_work, msg, sizeof(msg), &c);
+    embed_bool ntlmssp_ok = Ntlmssp.parse_challenge(ntlmssp_work, msg, sizeof(msg), &c);
     TEST_ASSERT_TRUE(ntlmssp_ok);
     TEST_ASSERT_NULL(c.target_info);
     TEST_ASSERT_EQUAL_UINT16(0, c.target_info_len);
@@ -322,19 +322,19 @@ void test_authenticate_fails_closed(void)
     uint8_t buf[256];
     // 64 + 8 + 2 + 2 = 76 with no MIC.
     size_t ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, 75, NULL, 0, NT_RESP, sizeof(NT_RESP), "D", "U",
-                                                  NULL, 0, PROTO_FALSE);
+                                                  NULL, 0, EMBED_FALSE);
     TEST_ASSERT_EQUAL_size_t(0, ntlmssp_n);
     ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, 76, NULL, 0, NT_RESP, sizeof(NT_RESP), "D", "U", NULL, 0,
-                                           PROTO_FALSE);
+                                           EMBED_FALSE);
     TEST_ASSERT_EQUAL_size_t(76, ntlmssp_n);
     ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, NULL, 256, NULL, 0, NT_RESP, sizeof(NT_RESP), "D", "U", NULL,
-                                           0, PROTO_FALSE);
+                                           0, EMBED_FALSE);
     TEST_ASSERT_EQUAL_size_t(0, ntlmssp_n);
 
     // With a MIC the fixed part alone is 88, so anything under that cannot hold the message.
-    ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, 87, NULL, 0, NULL, 0, NULL, NULL, NULL, 0, PROTO_TRUE);
+    ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, 87, NULL, 0, NULL, 0, NULL, NULL, NULL, 0, EMBED_TRUE);
     TEST_ASSERT_EQUAL_size_t(0, ntlmssp_n);
-    ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, 88, NULL, 0, NULL, 0, NULL, NULL, NULL, 0, PROTO_TRUE);
+    ntlmssp_n = Ntlmssp.build_authenticate(ntlmssp_work, buf, 88, NULL, 0, NULL, 0, NULL, NULL, NULL, 0, EMBED_TRUE);
     TEST_ASSERT_EQUAL_size_t(88, ntlmssp_n);
 }
 
@@ -344,7 +344,7 @@ void test_absent_identity_fields(void)
 {
     uint8_t buf[256];
     size_t ntlmssp_n =
-        Ntlmssp.build_authenticate(ntlmssp_work, buf, sizeof(buf), NULL, 0, NULL, 0, NULL, NULL, NULL, 0, PROTO_FALSE);
+        Ntlmssp.build_authenticate(ntlmssp_work, buf, sizeof(buf), NULL, 0, NULL, 0, NULL, NULL, NULL, 0, EMBED_FALSE);
     size_t n = ntlmssp_n;
     TEST_ASSERT_EQUAL_size_t(64, n);
     for (size_t at = 12; at <= 52; at += 8)

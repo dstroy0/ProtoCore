@@ -18,7 +18,7 @@
 #include "server/signaling/bus_capture/bus_capture.h"
 #include "shared/pcap/pcap.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -91,7 +91,7 @@ void protocore_bus_capture_can_to_socketcan(uint8_t *work)
 typedef struct
 {
     bus_capture_sink_fn sink;
-    proto_bool running;
+    embed_bool running;
 } BusCaptureCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -127,12 +127,12 @@ void protocore_bus_capture_begin(uint8_t *work)
 
     if (!sink || !protocore_platform_can_open(tx_pin, rx_pin, bitrate))
     {
-        BusCaptureV.ok = PROTO_FALSE;
+        BusCaptureV.ok = EMBED_FALSE;
         return;
     }
     BUS_CAPTURE_CTX(work)->sink = sink;
-    BUS_CAPTURE_CTX(work)->running = PROTO_TRUE;
-    BusCaptureV.ok = PROTO_TRUE;
+    BUS_CAPTURE_CTX(work)->running = EMBED_TRUE;
+    BusCaptureV.ok = EMBED_TRUE;
 }
 
 void protocore_bus_capture_poll(uint8_t *work)
@@ -166,7 +166,7 @@ void protocore_bus_capture_end(uint8_t *work)
         return;
     }
     protocore_platform_can_close();
-    BUS_CAPTURE_CTX(work)->running = PROTO_FALSE;
+    BUS_CAPTURE_CTX(work)->running = EMBED_FALSE;
     BUS_CAPTURE_CTX(work)->sink = NULL;
 }
 
@@ -184,8 +184,8 @@ void protocore_bus_capture_begin(uint8_t *work)
     // The context is still cleared, so a later poll or end reads a stopped capture rather than
     // whatever the borrow held before.
     BUS_CAPTURE_CTX(work)->sink = NULL;
-    BUS_CAPTURE_CTX(work)->running = PROTO_FALSE;
-    BusCaptureV.ok = PROTO_FALSE; // no controller was opened
+    BUS_CAPTURE_CTX(work)->running = EMBED_FALSE;
+    BusCaptureV.ok = EMBED_FALSE; // no controller was opened
 }
 
 void protocore_bus_capture_poll(uint8_t *work)
@@ -203,6 +203,6 @@ void protocore_bus_capture_end(uint8_t *work)
 /** @brief The operands and the outcome. */
 BusCaptureVars BusCaptureV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BUS_CAPTURE

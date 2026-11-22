@@ -25,7 +25,7 @@
 #endif
 #include "crypto/cipher/aes256ctr/aes256ctr.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // AES-256 single-block encrypt seam - one small wrapper, two platform bodies
@@ -149,7 +149,7 @@ static void aes256ctr_keystream(uint8_t *work, const uint8_t *key, const uint8_t
 
 void protocore_aes256_ctr_crypt(uint8_t *work)
 {
-    Aes256CtrV.ok = PROTO_FALSE;
+    Aes256CtrV.ok = EMBED_FALSE;
     if (!Aes256CtrV.crypt_args.key || !Aes256CtrV.crypt_args.counter || !Aes256CtrV.crypt_args.in ||
         !Aes256CtrV.crypt_args.out)
     {
@@ -157,13 +157,13 @@ void protocore_aes256_ctr_crypt(uint8_t *work)
     }
     aes256ctr_stream(work, Aes256CtrV.crypt_args.key, Aes256CtrV.crypt_args.counter, Aes256CtrV.crypt_args.in,
                      Aes256CtrV.crypt_args.out, Aes256CtrV.crypt_args.len);
-    Aes256CtrV.ok = PROTO_TRUE;
+    Aes256CtrV.ok = EMBED_TRUE;
 }
 
 // The keystream block for the current counter, XOR'd over the 4 length bytes; the counter stands still.
 void protocore_aes256_ctr_get_length(uint8_t *work)
 {
-    Aes256CtrV.ok = PROTO_FALSE;
+    Aes256CtrV.ok = EMBED_FALSE;
     Aes256CtrV.length = 0;
     if (!Aes256CtrV.get_length_args.key || !Aes256CtrV.get_length_args.counter || !Aes256CtrV.get_length_args.enc4)
     {
@@ -174,12 +174,12 @@ void protocore_aes256_ctr_get_length(uint8_t *work)
     const uint8_t *ks = AES256CTR_KS(work);
     Aes256CtrV.length = ((uint32_t)(enc4[0] ^ ks[0]) << 24) | ((uint32_t)(enc4[1] ^ ks[1]) << 16) |
                         ((uint32_t)(enc4[2] ^ ks[2]) << 8) | (uint32_t)(enc4[3] ^ ks[3]);
-    Aes256CtrV.ok = PROTO_TRUE;
+    Aes256CtrV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Aes256CtrVars Aes256CtrV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AES256CTR

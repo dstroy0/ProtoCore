@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_WEBHOOK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RFC 9110 sec 7.1 / sec 6.4: what a POST names and what it carries. */
 typedef struct
@@ -121,7 +121,7 @@ static const WebhookNs Webhook __attribute__((unused)) = {
     .ifttt_trigger = protocore_webhook_ifttt_trigger,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WEBHOOK
 

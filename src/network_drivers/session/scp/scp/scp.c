@@ -87,14 +87,14 @@ ScpMode protocore_scp_parse_cmd(uint8_t *work, const char *cmd, size_t cmd_len, 
     return mode;
 }
 
-proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len, uint32_t *mode_out,
+embed_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len, uint32_t *mode_out,
                                      uint64_t *size_out, char *name_out, size_t name_cap)
 {
     (void)work;
 
     if (!line || len < 1 || line[0] != 'C') // only plain file records (not D/E directory records)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t i = 1;
 
@@ -107,7 +107,7 @@ proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len
     }
     if (i == ms || i >= len || line[i] != ' ')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     i++;
 
@@ -120,7 +120,7 @@ proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len
     }
     if (i == ss || i >= len || line[i] != ' ')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     i++;
 
@@ -132,7 +132,7 @@ proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len
     size_t nlen = i - ns;
     if (nlen == 0 || nlen >= name_cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = name_out, .src = line + ns, .bytes = nlen);
     name_out[nlen] = '\0';
@@ -145,7 +145,7 @@ proto_bool protocore_scp_parse_cline(uint8_t *work, const char *line, size_t len
     {
         *size_out = size;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_scp_build_cline(uint8_t *work, uint32_t mode, uint64_t size, const char *name, char *out, size_t cap)

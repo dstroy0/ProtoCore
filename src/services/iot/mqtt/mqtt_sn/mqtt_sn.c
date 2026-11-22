@@ -23,7 +23,7 @@
 // Literals
 // ---------------------------------------------------------------------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #define MQTTSN_LEN1_MAX 255   // the 1-octet Length form reaches this total (sec 5.2.1)
 #define MQTTSN_LEN3_OCTETS 3  // the 3-octet Length form: the prefix and a big-endian uint16
@@ -119,7 +119,7 @@ void protocore_mqttsn_make_flags(uint8_t *work)
     }
     f |= (uint8_t)(MqttsnV.flags.topic_id_type & MQTTSN_FLAG_TOPICIDTYPE_MASK);
     MqttsnV.flags.octet = f;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ void protocore_mqttsn_build_connect(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     const size_t cap = MqttsnV.buf.cap;
     if (!buf || !MqttsnV.field.client_id)
@@ -151,7 +151,7 @@ void protocore_mqttsn_build_connect(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.field.client_id, .bytes = idlen);
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // REGISTER: TopicId, MsgId, TopicName (sec 5.4.10).
@@ -159,7 +159,7 @@ void protocore_mqttsn_build_register(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     const size_t cap = MqttsnV.buf.cap;
     if (!buf || !MqttsnV.topic.topic_name)
@@ -179,7 +179,7 @@ void protocore_mqttsn_build_register(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.topic.topic_name, .bytes = nlen);
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
@@ -187,7 +187,7 @@ void protocore_mqttsn_build_regack(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     if (!buf)
     {
@@ -205,7 +205,7 @@ void protocore_mqttsn_build_regack(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     buf[p] = MqttsnV.field.return_code;
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // PUBLISH: Flags, TopicId, MsgId, Data (sec 5.4.12).
@@ -213,7 +213,7 @@ void protocore_mqttsn_build_publish(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     const size_t data_len = MqttsnV.data.data_len;
     if (!buf || (data_len && !MqttsnV.data.data))
@@ -237,7 +237,7 @@ void protocore_mqttsn_build_publish(uint8_t *work)
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.data.data, .bytes = data_len);
     }
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // PUBACK: TopicId, MsgId, ReturnCode (sec 5.4.13).
@@ -245,7 +245,7 @@ void protocore_mqttsn_build_puback(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     if (!buf)
     {
@@ -263,7 +263,7 @@ void protocore_mqttsn_build_puback(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     buf[p] = MqttsnV.field.return_code;
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // SUBSCRIBE naming a TopicName: Flags, MsgId, TopicName (sec 5.4.15).
@@ -271,7 +271,7 @@ void protocore_mqttsn_build_subscribe_name(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     const size_t cap = MqttsnV.buf.cap;
     if (!buf || !MqttsnV.topic.topic_name)
@@ -290,7 +290,7 @@ void protocore_mqttsn_build_subscribe_name(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.topic.topic_name, .bytes = nlen);
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // SUBSCRIBE naming a pre-defined TopicId: Flags, MsgId, TopicId (sec 5.4.15).
@@ -298,7 +298,7 @@ void protocore_mqttsn_build_subscribe_id(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     if (!buf)
     {
@@ -315,7 +315,7 @@ void protocore_mqttsn_build_subscribe_id(uint8_t *work)
     p += MQTTSN_ID_OCTETS;
     wr16(buf + p, MqttsnV.topic.topic_id);
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // PINGREQ, with the optional ClientId a woken sleeping client includes (sec 5.4.19, sec 6.14).
@@ -323,7 +323,7 @@ void protocore_mqttsn_build_pingreq(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     const size_t cap = MqttsnV.buf.cap;
     if (!buf)
@@ -344,7 +344,7 @@ void protocore_mqttsn_build_pingreq(uint8_t *work)
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf + p, .src = MqttsnV.field.client_id, .bytes = idlen);
     }
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // DISCONNECT, carrying the sleep Duration when asked (sec 5.4.21, sec 6.14).
@@ -352,7 +352,7 @@ void protocore_mqttsn_build_disconnect(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     if (!buf)
     {
@@ -370,7 +370,7 @@ void protocore_mqttsn_build_disconnect(uint8_t *work)
         wr16(buf + p, MqttsnV.field.duration);
     }
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // SEARCHGW: Radius (sec 5.4.2).
@@ -378,7 +378,7 @@ void protocore_mqttsn_build_searchgw(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     uint8_t *buf = MqttsnV.buf.out;
     if (!buf)
     {
@@ -392,7 +392,7 @@ void protocore_mqttsn_build_searchgw(uint8_t *work)
     }
     buf[p] = MqttsnV.field.radius;
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ void protocore_mqttsn_parse_header(uint8_t *work)
 {
     (void)work;
     MqttsnV.n = 0;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     const uint8_t *buf = MqttsnV.buf.in;
     const size_t len = MqttsnV.buf.avail;
     if (!buf || len < 2)
@@ -440,27 +440,27 @@ void protocore_mqttsn_parse_header(uint8_t *work)
     MqttsnV.header.variable = buf + lenfield + 1;
     MqttsnV.header.variable_len = total - lenfield - 1;
     MqttsnV.n = total;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // CONNACK: ReturnCode (sec 5.4.5).
 void protocore_mqttsn_parse_connack(uint8_t *work)
 {
     (void)work;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     if (!MqttsnV.buf.in || MqttsnV.buf.avail < 1)
     {
         return;
     }
     MqttsnV.field.return_code = MqttsnV.buf.in[0];
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
 void protocore_mqttsn_parse_regack(uint8_t *work)
 {
     (void)work;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     const uint8_t *p = MqttsnV.buf.in;
     if (!p || MqttsnV.buf.avail < MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
     {
@@ -469,7 +469,7 @@ void protocore_mqttsn_parse_regack(uint8_t *work)
     MqttsnV.topic.topic_id = rd16(p);
     MqttsnV.field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
     MqttsnV.field.return_code = p[MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // PUBACK, whose Message Variable Part has REGACK's layout (sec 5.4.13).
@@ -482,7 +482,7 @@ void protocore_mqttsn_parse_puback(uint8_t *work)
 void protocore_mqttsn_parse_suback(uint8_t *work)
 {
     (void)work;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     const uint8_t *p = MqttsnV.buf.in;
     if (!p || MqttsnV.buf.avail < 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
     {
@@ -492,14 +492,14 @@ void protocore_mqttsn_parse_suback(uint8_t *work)
     MqttsnV.topic.topic_id = rd16(p + 1);
     MqttsnV.field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
     MqttsnV.field.return_code = p[1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // PUBLISH: Flags, TopicId, MsgId, then the Data that fills the rest (sec 5.4.12).
 void protocore_mqttsn_parse_publish(uint8_t *work)
 {
     (void)work;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     const uint8_t *p = MqttsnV.buf.in;
     const size_t len = MqttsnV.buf.avail;
     const size_t head = 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS;
@@ -512,14 +512,14 @@ void protocore_mqttsn_parse_publish(uint8_t *work)
     MqttsnV.field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
     MqttsnV.data.data = p + head;
     MqttsnV.data.data_len = len - head;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // REGISTER: TopicId, MsgId, then the TopicName that fills the rest (sec 5.4.10).
 void protocore_mqttsn_parse_register(uint8_t *work)
 {
     (void)work;
-    MqttsnV.ok = PROTO_FALSE;
+    MqttsnV.ok = EMBED_FALSE;
     const uint8_t *p = MqttsnV.buf.in;
     const size_t len = MqttsnV.buf.avail;
     const size_t head = MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS;
@@ -531,13 +531,13 @@ void protocore_mqttsn_parse_register(uint8_t *work)
     MqttsnV.field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
     MqttsnV.topic.topic_name = (const char *)(p + head);
     MqttsnV.topic.topic_name_len = len - head;
-    MqttsnV.ok = PROTO_TRUE;
+    MqttsnV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 MqttsnVars MqttsnV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MQTT_SN

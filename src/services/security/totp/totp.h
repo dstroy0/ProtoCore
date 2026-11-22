@@ -34,7 +34,7 @@
 
 #if PROTOCORE_ENABLE_TOTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief X: the time step in seconds a zero @c step.x takes (RFC 6238 sec 4.1). */
 #define PROTOCORE_TOTP_X_DEFAULT 30u
@@ -99,7 +99,7 @@ typedef struct
     TotpStepArgs step;      ///< the moving factor an OTP is computed for
     TotpValidateArgs check; ///< what a validation judges, and the drift around it
     TotpSecretArgs secret;  ///< the base32 secret and where a decode writes K
-    proto_bool ok;
+    embed_bool ok;
     uint32_t u32;
     int32_t i32;
 } TotpVars;
@@ -134,7 +134,7 @@ static const TotpNs Totp __attribute__((unused)) = {
     .base32_decode = protocore_totp_base32_decode,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TOTP
 

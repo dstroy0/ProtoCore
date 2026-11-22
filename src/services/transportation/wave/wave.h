@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_WAVE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // WSMP / 1609.2 versions + content types + PSIDs: wire values, so integer constants in a struct.
 #define WSMP_VERSION 0x03         ///< WSMP version (in the low nibble of byte 0).
@@ -67,7 +67,7 @@ typedef struct
 } WsmpFrame;
 
 /** @brief Parse a WSMP data frame. @return true if well-formed. */
-proto_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out);
+embed_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out);
 
 /**
  * @brief Build a 1609.2 secured-message envelope header + payload: [version][contentType][payload...].
@@ -77,7 +77,7 @@ proto_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out
 size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out,
                                     size_t cap);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAVE
 

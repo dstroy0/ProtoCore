@@ -25,7 +25,7 @@
 static uint8_t grpcweb_work[16]; // the borrow an entry takes; GrpcWeb never reads it
 
 /** @brief Frame @p body as a Length-Prefixed-Message into @p out; the octets written. */
-static size_t gw_frame_message(uint8_t *out, size_t cap, const uint8_t *body, size_t len, proto_bool compressed)
+static size_t gw_frame_message(uint8_t *out, size_t cap, const uint8_t *body, size_t len, embed_bool compressed)
 {
     GrpcWebV.out.buf = out;
     GrpcWebV.out.cap = cap;
@@ -48,7 +48,7 @@ static size_t gw_frame_trailers(uint8_t *out, size_t cap, int32_t status, const 
 }
 
 /** @brief Decode the frame at the head of @p data into @p f; whether one was there. */
-static proto_bool gw_parse(GrpcWebFrame *f, const uint8_t *data, size_t len)
+static embed_bool gw_parse(GrpcWebFrame *f, const uint8_t *data, size_t len)
 {
     GrpcWebV.in.data = data;
     GrpcWebV.in.len = len;
@@ -58,7 +58,7 @@ static proto_bool gw_parse(GrpcWebFrame *f, const uint8_t *data, size_t len)
 }
 
 /** @brief Read "grpc-status" out of the trailer-section at @p data into @p status. */
-static proto_bool gw_trailers_status(const uint8_t *data, size_t len, int32_t *status)
+static embed_bool gw_trailers_status(const uint8_t *data, size_t len, int32_t *status)
 {
     GrpcWebV.in.data = data;
     GrpcWebV.in.len = len;
@@ -83,7 +83,7 @@ void dbench_run(void)
     }
 
     // Pre-build one message frame and one trailers frame to feed the parser / status extractor.
-    const size_t msg_frame_len = gw_frame_message(framebuf, sizeof(framebuf), msg, sizeof(msg), PROTO_FALSE);
+    const size_t msg_frame_len = gw_frame_message(framebuf, sizeof(framebuf), msg, sizeof(msg), EMBED_FALSE);
     const size_t trailer_len = gw_frame_trailers(trailerbuf, sizeof(trailerbuf), 0, "OK");
 
     // Parse the trailers frame once so the status extractor benches against its real body slice
@@ -102,9 +102,9 @@ void dbench_run(void)
         int32_t status = 0;
 
         DBENCH_OP("GrpcWeb.frame_message", 200000,
-                  sinksz += gw_frame_message(framebuf, sizeof(framebuf), msg, sizeof(msg), PROTO_FALSE));
+                  sinksz += gw_frame_message(framebuf, sizeof(framebuf), msg, sizeof(msg), EMBED_FALSE));
         DBENCH_BULK("GrpcWeb.frame_message 256B", 50000, sizeof(bigbody),
-                    sinksz += gw_frame_message(bigframe, sizeof(bigframe), bigbody, sizeof(bigbody), PROTO_FALSE));
+                    sinksz += gw_frame_message(bigframe, sizeof(bigframe), bigbody, sizeof(bigbody), EMBED_FALSE));
         DBENCH_OP("GrpcWeb.frame_trailers", 100000,
                   sinksz += gw_frame_trailers(trailerbuf, sizeof(trailerbuf), 0, "OK"));
         DBENCH_OP("GrpcWeb.parse", 200000, sinksz += gw_parse(&f, framebuf, msg_frame_len) ? 1u : 0u);

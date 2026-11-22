@@ -194,7 +194,7 @@ int protocore_modbus_master_parse_read_bits_response(uint8_t *work, const uint8_
 }
 
 size_t protocore_modbus_master_build_write_single_coil(uint8_t *work, uint16_t txid, uint8_t unit, uint16_t addr,
-                                                       proto_bool on, uint8_t *out, size_t cap)
+                                                       embed_bool on, uint8_t *out, size_t cap)
 {
     (void)work;
 
@@ -388,7 +388,7 @@ int protocore_modbus_master_parse_write_response(uint8_t *work, const uint8_t *a
         *addr_out = (uint16_t)((adu[8] << 8) | adu[9]);
     }
     uint16_t tail = (uint16_t)((adu[10] << 8) | adu[11]); // value (0x05/0x06) or quantity (0x0F/0x10)
-    proto_bool single = (fc == 0x05 || fc == 0x06);       // single-write echoes a value; multi echoes a count
+    embed_bool single = (fc == 0x05 || fc == 0x06);       // single-write echoes a value; multi echoes a count
     return single ? 1 : (int)tail;
 }
 

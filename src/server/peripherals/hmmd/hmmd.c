@@ -18,7 +18,7 @@
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/hmmd/hmmd.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // --- the borrow, carved above the capability gate ---------------------------
 //
@@ -41,7 +41,7 @@ typedef struct
 {
     HmmdStream stream;
     HmmdReport last;
-    proto_bool have;
+    embed_bool have;
     uint8_t rx[HMMD_RX_CHUNK];
 } HmmdCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -112,22 +112,22 @@ static void hmmd_parse_report(uint8_t *work)
 
     if (!f || !out || len != PROTOCORE_HMMD_FRAME_MAX)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
     if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f, .other = HDR, .bytes = 4) != 0)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
     if (rd16(f + 4) != PROTOCORE_HMMD_REPORT_LEN)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return; // the only report length this module emits
     }
     if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f + 6 + PROTOCORE_HMMD_REPORT_LEN, .other = FTR, .bytes = 4) != 0)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
 
@@ -141,7 +141,7 @@ static void hmmd_parse_report(uint8_t *work)
         r.gate_energy[i] = rd16(p + 3 + 2 * i);
     }
     *out = r;
-    Hmmd.ok = PROTO_TRUE;
+    Hmmd.ok = EMBED_TRUE;
 }
 
 static void hmmd_stream_reset(uint8_t *work)
@@ -168,7 +168,7 @@ static void hmmd_stream_push(uint8_t *work)
 
     if (!s || !out)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
     switch (s->phase)
@@ -191,7 +191,7 @@ static void hmmd_stream_push(uint8_t *work)
                 s->buf[0] = b;
             }
         }
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     case 1: // little-endian length field
         s->buf[s->pos++] = b;
@@ -203,13 +203,13 @@ static void hmmd_stream_push(uint8_t *work)
             {
                 Hmmd.stream_reset_args.s = s;
                 hmmd_stream_reset(work); // absurd length: drop and resync
-                Hmmd.ok = PROTO_FALSE;
+                Hmmd.ok = EMBED_FALSE;
                 return;
             }
             s->total = (uint16_t)total;
             s->phase = 2;
         }
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     default: // body + footer
         s->buf[s->pos++] = b;
@@ -219,13 +219,13 @@ static void hmmd_stream_push(uint8_t *work)
             Hmmd.parse_report_args.len = s->total;
             Hmmd.parse_report_args.out = out;
             hmmd_parse_report(work);
-            proto_bool ok = Hmmd.ok;
+            embed_bool ok = Hmmd.ok;
             Hmmd.stream_reset_args.s = s;
             hmmd_stream_reset(work);
             Hmmd.ok = ok;
             return;
         }
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
 }
@@ -388,29 +388,29 @@ static void hmmd_parse_ack(uint8_t *work)
     // layout: four header bytes, two length bytes, two command-word bytes, optional data, four footer bytes
     if (!f || !out || len < 12)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
     if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f, .other = CMD_HDR, .bytes = 4) != 0)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
     size_t dl = (size_t)rd16(f + 4); // command word + data
     if (dl < 2 || len != 4 + 2 + dl + 4)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return; // the declared length must account for exactly this frame
     }
     if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = f + 6 + dl, .other = CMD_FTR, .bytes = 4) != 0)
     {
-        Hmmd.ok = PROTO_FALSE;
+        Hmmd.ok = EMBED_FALSE;
         return;
     }
     out->command = rd16(f + 6);
     out->payload_len = dl - 2;
     out->payload = out->payload_len ? f + 8 : NULL;
-    Hmmd.ok = PROTO_TRUE;
+    Hmmd.ok = EMBED_TRUE;
 }
 
 static void hmmd_ack_matches(uint8_t *work)
@@ -435,14 +435,14 @@ static void hmmd_begin(uint8_t *work)
 
     Hmmd.stream_reset_args.s = &HMMD_CTX(work)->stream;
     hmmd_stream_reset(work);
-    HMMD_CTX(work)->have = PROTO_FALSE;
+    HMMD_CTX(work)->have = EMBED_FALSE;
     Hmmd.ok = protocore_uart_begin((uint8_t)PROTOCORE_HMMD_UART, PROTOCORE_HMMD_BAUD, rx_pin, tx_pin);
 }
 
 static void hmmd_poll(uint8_t *work)
 {
 
-    proto_bool fresh = PROTO_FALSE;
+    embed_bool fresh = EMBED_FALSE;
     size_t n = protocore_uart_read((uint8_t)PROTOCORE_HMMD_UART, HMMD_CTX(work)->rx, sizeof(HMMD_CTX(work)->rx), 0);
     for (size_t i = 0; i < n; i++)
     {
@@ -454,8 +454,8 @@ static void hmmd_poll(uint8_t *work)
         if (Hmmd.ok)
         {
             HMMD_CTX(work)->last = r;
-            HMMD_CTX(work)->have = PROTO_TRUE;
-            fresh = PROTO_TRUE;
+            HMMD_CTX(work)->have = EMBED_TRUE;
+            fresh = EMBED_TRUE;
         }
     }
     Hmmd.ok = fresh;
@@ -486,14 +486,14 @@ static void hmmd_begin(uint8_t *work)
     // it after begin() gets the same answers here as it does with a radio wired up.
     Hmmd.stream_reset_args.s = &HMMD_CTX(work)->stream;
     hmmd_stream_reset(work);
-    HMMD_CTX(work)->have = PROTO_FALSE;
-    Hmmd.ok = PROTO_FALSE; // no UART was opened, and no caller should act as though one was
+    HMMD_CTX(work)->have = EMBED_FALSE;
+    Hmmd.ok = EMBED_FALSE; // no UART was opened, and no caller should act as though one was
 }
 
 static void hmmd_poll(uint8_t *work)
 {
     (void)work;
-    Hmmd.ok = PROTO_FALSE; // nothing to read from
+    Hmmd.ok = EMBED_FALSE; // nothing to read from
 }
 
 static void hmmd_last(uint8_t *work)
@@ -523,6 +523,6 @@ HmmdNs Hmmd = {.parse_report = hmmd_parse_report,
                .poll = hmmd_poll,
                .last = hmmd_last};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HMMD

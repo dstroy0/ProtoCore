@@ -34,7 +34,7 @@
 #if PROTOCORE_ENABLE_DNS_SERVER
 #include "network_drivers/network/dns/dns_server/dns_server.h" // DnsServerNs: the NAME SERVER (RFC 1034 sec 4)
 #endif
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Name resolution (RFC 1034 sec 2.4).
@@ -57,20 +57,20 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
 #if PROTOCORE_ENABLE_DNS_RESOLVER
-    ResolverNs *const resolver;
+    const ResolverNs *const resolver;
 #endif
 #if PROTOCORE_ENABLE_DNS_SERVER
     DnsServerNs *const server;
 #endif
 #if !PROTOCORE_ENABLE_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
-    proto_bool present;
+    embed_bool present;
 #endif
 } DnsNs;
 
 /** @brief The one symbol this module exports. */
 extern DnsNs Dns;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNS
 

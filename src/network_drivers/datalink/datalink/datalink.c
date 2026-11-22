@@ -15,10 +15,10 @@
 #include "network_drivers/datalink/datalink/datalink.h"
 
 // Reports the layer up. The driver below performs every RFC 1122 sec 2.3.3 encapsulation step.
-proto_bool protocore_datalink_init(uint8_t *work)
+embed_bool protocore_datalink_init(uint8_t *work)
 {
     (void)work;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

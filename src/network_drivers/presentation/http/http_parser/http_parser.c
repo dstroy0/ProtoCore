@@ -137,15 +137,15 @@ static const uint8_t kCharClass[256] = {
     0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
 };
 
-static inline proto_bool is_tchar(uint8_t b)
+static inline embed_bool is_tchar(uint8_t b)
 {
     return (kCharClass[b] & PROTOCORE_CC_TCHAR) != 0;
 }
-static inline proto_bool is_vchar(uint8_t b)
+static inline embed_bool is_vchar(uint8_t b)
 {
     return (kCharClass[b] & PROTOCORE_CC_VCHAR) != 0;
 }
-static inline proto_bool is_field_value_char(uint8_t b)
+static inline embed_bool is_field_value_char(uint8_t b)
 {
     return (kCharClass[b] & PROTOCORE_CC_FIELD_VALUE) != 0;
 }
@@ -168,7 +168,7 @@ static void parse_query_params(HttpReq *req)
         QueryParam *qp = &req->query_params[req->query_count];
         size_t key_idx = 0;
         size_t val_idx = 0;
-        proto_bool in_val = PROTO_FALSE;
+        embed_bool in_val = EMBED_FALSE;
 
         while (i < len)
         {
@@ -179,7 +179,7 @@ static void parse_query_params(HttpReq *req)
             }
             if (c == '=' && !in_val)
             {
-                in_val = PROTO_TRUE;
+                in_val = EMBED_TRUE;
                 continue;
             }
             if (!in_val && key_idx < QUERY_KEY_LEN - 1)
@@ -354,7 +354,7 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
             // The Authorization value (Digest / JWT bearer) exceeds MAX_VAL_LEN,
             // so capture it whole into a dedicated buffer independent of scratch.
             p->cur_is_auth = (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = p->cur_key, .other = "Authorization",
-                                         .cap = MAX_KEY_LEN, .ci = PROTO_TRUE));
+                                         .cap = MAX_KEY_LEN, .ci = EMBED_TRUE));
             if (p->cur_is_auth)
             {
                 p->auth_idx = 0;
@@ -420,7 +420,7 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
                     p->auth_idx--;
                 }
                 p->authorization[p->auth_idx] = '\0';
-                p->cur_is_auth = PROTO_FALSE;
+                p->cur_is_auth = EMBED_FALSE;
             }
 #endif
 
@@ -428,22 +428,22 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
             // it is correct even for headers past MAX_HEADERS (RFC 7230 §5.4,
             // §3.3.2).
             if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = p->cur_key, .other = "Host", .cap = MAX_KEY_LEN,
-                           .ci = PROTO_TRUE))
+                           .ci = EMBED_TRUE))
             {
                 p->host_count++;
             }
 
             if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = p->cur_key, .other = "Content-Length", .cap = MAX_KEY_LEN,
-                           .ci = PROTO_TRUE))
+                           .ci = EMBED_TRUE))
             {
                 // RFC 7230 §3.3.2: Content-Length = 1*DIGIT.
                 size_t cl = 0;
-                proto_bool valid = (p->cur_val[0] != '\0');
+                embed_bool valid = (p->cur_val[0] != '\0');
                 for (const char *q = p->cur_val; *q; q++)
                 {
                     if (*q < '0' || *q > '9')
                     {
-                        valid = PROTO_FALSE;
+                        valid = EMBED_FALSE;
                         break;
                     }
                     cl = cl * 10 + (size_t)(*q - '0');
@@ -466,7 +466,7 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
             // the buffer and reparsed as the next request. Reject any request bearing
             // Transfer-Encoding (fail closed).
             if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = p->cur_key, .other = "Transfer-Encoding",
-                           .cap = MAX_KEY_LEN, .ci = PROTO_TRUE))
+                           .cap = MAX_KEY_LEN, .ci = EMBED_TRUE))
             {
                 p->parse_state = PARSE_ERROR;
                 break;
@@ -523,11 +523,11 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
             // RFC 7230 §5.4: a request MUST NOT carry more than one Host header
             // (always enforced); an HTTP/1.1 request MUST carry exactly one Host
             // header (enforced only when PROTOCORE_ENFORCE_HOST_HEADER is set).
-            proto_bool host_violation = (p->host_count > 1);
+            embed_bool host_violation = (p->host_count > 1);
 #if PROTOCORE_ENFORCE_HOST_HEADER
             if (p->version == HTTP_11 && p->host_count == 0)
             {
-                host_violation = PROTO_TRUE;
+                host_violation = EMBED_TRUE;
             }
 #endif
             if (host_violation)
@@ -542,7 +542,7 @@ void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
             else if (p->content_length > 0 && HTTP_PARSER_CTX(work)->stream_begin &&
                      HTTP_PARSER_CTX(work)->stream_begin(p))
             {
-                p->body_streaming = PROTO_TRUE;
+                p->body_streaming = EMBED_TRUE;
                 p->parse_state = PARSE_BODY;
             }
 #endif
@@ -621,7 +621,7 @@ const char *protocore_http_parser_get_header(uint8_t *work, const HttpReq *req, 
     for (uint8_t i = 0; i < req->header_count; i++)
     {
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->headers[i].key, .other = key, .cap = MAX_KEY_LEN,
-                       .ci = PROTO_TRUE))
+                       .ci = EMBED_TRUE))
         {
             return req->headers[i].val;
         }
@@ -629,17 +629,17 @@ const char *protocore_http_parser_get_header(uint8_t *work, const HttpReq *req, 
     return NULL;
 }
 
-proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, const char *name, char *out,
+embed_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, const char *name, char *out,
                                             size_t out_size)
 {
     if (out == NULL || out_size == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[0] = '\0';
     if (req == NULL || name == NULL || name[0] == '\0')
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // RFC 6265 4.2.1: the request "Cookie" header is "name1=value1; name2=value2".
@@ -648,7 +648,7 @@ proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, c
     const char *c = http_parser_text;
     if (c == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const size_t clen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = c, .cap = MAX_VAL_LEN);
     const size_t nlen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name,
@@ -658,7 +658,7 @@ proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, c
     for (size_t g = 0; g < clen && at < clen; ++g) // each pair consumes at least its ';', so clen bounds the trips
     {
         const char *semi = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = c + at, .cap = clen - at, .other = ";",
-                                      .other_cap = sizeof(";"), .ci = PROTO_FALSE);
+                                      .other_cap = sizeof(";"), .ci = EMBED_FALSE);
         const size_t stop = semi ? (size_t)(semi - c) : clen;
 
         size_t a = at;
@@ -668,12 +668,12 @@ proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, c
         }
 
         const char *eqp = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = c + a, .cap = stop - a, .other = "=",
-                                     .other_cap = sizeof("="), .ci = PROTO_FALSE);
+                                     .other_cap = sizeof("="), .ci = EMBED_FALSE);
         if (eqp)
         {
             const size_t eq = (size_t)(eqp - c);
             if (eq - a == nlen && EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = c + a, .other = name, .cap = nlen,
-                                             .ci = PROTO_FALSE) == nlen)
+                                             .ci = EMBED_FALSE) == nlen)
             {
                 size_t v = eq + 1u;
                 size_t end = stop;
@@ -693,12 +693,12 @@ proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, c
                 }
                 EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = c + v, .bytes = vlen);
                 out[vlen] = '\0';
-                return PROTO_TRUE;
+                return EMBED_TRUE;
             }
         }
         at = stop + 1u;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Extract and validate a Forwarded / X-Forwarded-For client-address token from
@@ -707,7 +707,7 @@ proto_bool protocore_http_parser_get_cookie(uint8_t *work, const HttpReq *req, c
 // X-Forwarded-For form). The candidate is confirmed with protocore_ip_parse, so "unknown",
 // an obfuscated "_id" identifier (RFC 7239 §6.3), or any malformed token returns
 // false. Returns true and writes the RFC 5952 canonical address on success.
-static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
+static embed_bool fwd_extract_client(const char *s, size_t n, char *out, size_t cap)
 {
     // Trim leading/trailing OWS and a wrapping DQUOTE (RFC 7239 quotes the v6+port form).
     while (n > 0 && (*s == ' ' || *s == '\t'))
@@ -726,7 +726,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     }
     if (n == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     char tok[PROTOCORE_IP_STR_MAX];
@@ -746,13 +746,13 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
         {
             if (tlen + 1 >= sizeof(tok))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             tok[tlen++] = s[i];
         }
         if (i >= n) // unterminated bracket
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     else
@@ -781,7 +781,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
         }
         if (take == 0 || take + 1 > sizeof(tok))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = tok, .src = s, .bytes = take);
         tlen = take;
@@ -794,7 +794,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     Ip.parse(protocore_http_parser_span()); // rejects "unknown" / "_obf" / malformed
     if (!IpV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     IpV.args.ip = &ip;
     IpV.args.buf = out;
@@ -812,14 +812,14 @@ static size_t fwd_skip_quoted(const char *s, size_t n, size_t i)
     for (size_t g = 0; g < n && at < n; ++g)
     {
         const char *dq = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = s + at, .cap = n - at, .other = "\"",
-                                    .other_cap = sizeof("\""), .ci = PROTO_FALSE);
+                                    .other_cap = sizeof("\""), .ci = EMBED_FALSE);
         if (!dq)
         {
             return n;
         }
         const size_t span = (size_t)(dq - (s + at));
         const char *bs = span ? EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = s + at, .cap = span, .other = "\\",
-                                           .other_cap = sizeof("\\"), .ci = PROTO_FALSE)
+                                           .other_cap = sizeof("\\"), .ci = EMBED_FALSE)
                               : NULL;
         if (!bs)
         {
@@ -838,14 +838,14 @@ static size_t fwd_split(const char *s, size_t n, const char *stop)
     for (size_t g = 0; g < n && at < n; ++g)
     {
         const char *hit = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = s + at, .cap = n - at, .other = stop,
-                                     .other_cap = 2u, .ci = PROTO_FALSE);
+                                     .other_cap = 2u, .ci = EMBED_FALSE);
         if (!hit)
         {
             return n;
         }
         const size_t span = (size_t)(hit - (s + at));
         const char *dq = span ? EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = s + at, .cap = span, .other = "\"",
-                                           .other_cap = sizeof("\""), .ci = PROTO_FALSE)
+                                           .other_cap = sizeof("\""), .ci = EMBED_FALSE)
                               : NULL;
         if (!dq)
         {
@@ -868,7 +868,7 @@ static const char *fwd_param(const char *el, size_t n, const char *name, size_t 
         const size_t stop = at + fwd_split(el + at, n - at, ";");
         const size_t eq = at + fwd_split(el + at, stop - at, "=");
         if (eq < stop && eq - at == nlen &&
-            EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = el + at, .other = name, .cap = nlen, .ci = PROTO_TRUE) ==
+            EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = el + at, .other = name, .cap = nlen, .ci = EMBED_TRUE) ==
                 nlen)
         {
             *vlen = stop - (eq + 1u);
@@ -880,7 +880,7 @@ static const char *fwd_param(const char *el, size_t n, const char *name, size_t 
 }
 
 // RFC 7239 §4: value = token / quoted-string, so a parameter value can arrive quoted.
-static proto_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t litlen)
+static embed_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t litlen)
 {
     if (n >= 2u && v[0] == '"' && v[n - 1u] == '"')
     {
@@ -888,19 +888,19 @@ static proto_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t 
         n -= 2u;
     }
     return n == litlen &&
-           EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = v, .other = lit, .cap = litlen, .ci = PROTO_TRUE) == litlen;
+           EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = v, .other = lit, .cap = litlen, .ci = EMBED_TRUE) == litlen;
 }
 
-proto_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
-                                                  proto_bool *is_https)
+embed_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *req, char *ip_out, size_t ip_cap,
+                                                  embed_bool *is_https)
 {
     if (is_https)
     {
-        *is_https = PROTO_FALSE;
+        *is_https = EMBED_FALSE;
     }
     if (!ip_out || ip_cap == 0 || !req)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     ip_out[0] = '\0';
 
@@ -927,7 +927,7 @@ proto_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *
         const char *f = fwd_param(fwd, elen, "for", 3u, &flen);
         if (f && fwd_extract_client(f, flen, ip_out, ip_cap))
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
 
@@ -936,9 +936,9 @@ proto_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *
     {
         const char *http_parser_text = HttpParser.get_header(work, req, "X-Forwarded-Proto");
         const char *xfp = http_parser_text;
-        if (xfp && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = xfp, .other = "https", .cap = 5, .ci = PROTO_TRUE))
+        if (xfp && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = xfp, .other = "https", .cap = 5, .ci = EMBED_TRUE))
         {
-            *is_https = PROTO_TRUE;
+            *is_https = EMBED_TRUE;
         }
     }
     const char *http_parser_text2 = HttpParser.get_header(work, req, "X-Forwarded-For");
@@ -946,15 +946,15 @@ proto_bool protocore_http_parser_forwarded_client(uint8_t *work, const HttpReq *
     if (xff)
     {
         const char *end = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = xff, .cap = MAX_VAL_LEN, .other = ",",
-                                     .other_cap = sizeof(","), .ci = PROTO_FALSE);
+                                     .other_cap = sizeof(","), .ci = EMBED_FALSE);
         size_t len =
             end ? (size_t)(end - xff) : EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = xff, .cap = MAX_VAL_LEN);
         if (fwd_extract_client(xff, len, ip_out, ip_cap))
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 const char *protocore_http_parser_get_query(uint8_t *work, const HttpReq *req, const char *key)
@@ -964,7 +964,7 @@ const char *protocore_http_parser_get_query(uint8_t *work, const HttpReq *req, c
     for (uint8_t i = 0; i < req->query_count; i++)
     {
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->query_params[i].key, .other = key, .cap = QUERY_KEY_LEN,
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             return req->query_params[i].val;
         }
@@ -972,26 +972,26 @@ const char *protocore_http_parser_get_query(uint8_t *work, const HttpReq *req, c
     return NULL;
 }
 
-proto_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, const char *key, char *out,
+embed_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, const char *key, char *out,
                                           size_t out_size)
 {
     if (out == NULL || out_size == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out[0] = '\0';
     if (req == NULL || key == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Only urlencoded bodies (allow a trailing "; charset=..." suffix).
     const char *http_parser_text = HttpParser.get_header(work, req, "Content-Type");
     const char *ct = http_parser_text;
     if (ct == NULL || !EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = ct,
-                                  .other = "application/x-www-form-urlencoded", .cap = 33, .ci = PROTO_TRUE))
+                                  .other = "application/x-www-form-urlencoded", .cap = 33, .ci = EMBED_TRUE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     const char *body = (const char *)req->body;
@@ -1007,9 +1007,9 @@ proto_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, con
         {
             i++;
         }
-        proto_bool key_matches =
+        embed_bool key_matches =
             (i - ks == key_len) && (EMBED_CALL(cellul.diff, CatenaFinitaCfg, .src = body + ks, .other = key,
-                                               .cap = key_len, .ci = PROTO_FALSE) == key_len);
+                                               .cap = key_len, .ci = EMBED_FALSE) == key_len);
 
         size_t vs = i;
         size_t ve = i;
@@ -1042,10 +1042,10 @@ proto_bool protocore_http_parser_get_form(uint8_t *work, const HttpReq *req, con
             }
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out, .src = body + vs, .bytes = vlen);
             out[vlen] = '\0';
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 const char *protocore_http_parser_get_param(uint8_t *work, const HttpReq *req, const char *key)
@@ -1059,7 +1059,7 @@ const char *protocore_http_parser_get_param(uint8_t *work, const HttpReq *req, c
     for (uint8_t i = 0; i < req->path_param_count; i++)
     {
         if (EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->path_params[i].key, .other = key, .cap = QUERY_KEY_LEN,
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             return req->path_params[i].val;
         }

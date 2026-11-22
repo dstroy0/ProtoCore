@@ -244,8 +244,8 @@ void test_any_single_octet_change_fails_verification(void)
 void test_bit_addressing_matches_the_documented_index_arithmetic(void)
 {
     uint8_t bits[2] = {0xA5, 0x00};
-    static const proto_bool WANT[8] = {PROTO_TRUE,  PROTO_FALSE, PROTO_TRUE,  PROTO_FALSE,
-                                       PROTO_FALSE, PROTO_TRUE,  PROTO_FALSE, PROTO_TRUE};
+    static const embed_bool WANT[8] = {EMBED_TRUE,  EMBED_FALSE, EMBED_TRUE,  EMBED_FALSE,
+                                       EMBED_FALSE, EMBED_TRUE,  EMBED_FALSE, EMBED_TRUE};
     for (size_t i = 0; i < 8; i++)
     {
         CclinkV.get_bit_args.bits = bits;
@@ -258,7 +258,7 @@ void test_bit_addressing_matches_the_documented_index_arithmetic(void)
     CclinkV.set_bit_args.bits = bits;
     CclinkV.set_bit_args.bit_len = 2;
     CclinkV.set_bit_args.index = 8;
-    CclinkV.set_bit_args.value = PROTO_TRUE;
+    CclinkV.set_bit_args.value = EMBED_TRUE;
     Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0x01u, bits[1]);
     CclinkV.get_bit_args.bits = bits;
@@ -270,14 +270,14 @@ void test_bit_addressing_matches_the_documented_index_arithmetic(void)
     CclinkV.set_bit_args.bits = bits;
     CclinkV.set_bit_args.bit_len = 2;
     CclinkV.set_bit_args.index = 15;
-    CclinkV.set_bit_args.value = PROTO_TRUE;
+    CclinkV.set_bit_args.value = EMBED_TRUE;
     Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0x81u, bits[1]);
 
     CclinkV.set_bit_args.bits = bits;
     CclinkV.set_bit_args.bit_len = 2;
     CclinkV.set_bit_args.index = 8;
-    CclinkV.set_bit_args.value = PROTO_FALSE;
+    CclinkV.set_bit_args.value = EMBED_FALSE;
     Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0x80u, bits[1]);
     TEST_ASSERT_EQUAL_HEX8(0xA5u, bits[0]);
@@ -294,12 +294,12 @@ void test_bit_accessors_round_trip_over_a_block(void)
         CclinkV.set_bit_args.bits = bits;
         CclinkV.set_bit_args.bit_len = sizeof(bits);
         CclinkV.set_bit_args.index = i;
-        CclinkV.set_bit_args.value = (i % 3) == 0 ? PROTO_TRUE : PROTO_FALSE;
+        CclinkV.set_bit_args.value = (i % 3) == 0 ? EMBED_TRUE : EMBED_FALSE;
         Cclink.set_bit(cclink_work);
     }
     for (size_t i = 0; i < 32; i++)
     {
-        proto_bool want = ((i % 3) == 0) ? PROTO_TRUE : PROTO_FALSE;
+        embed_bool want = ((i % 3) == 0) ? EMBED_TRUE : EMBED_FALSE;
         CclinkV.get_bit_args.bits = bits;
         CclinkV.get_bit_args.bit_len = sizeof(bits);
         CclinkV.get_bit_args.index = i;
@@ -312,7 +312,7 @@ void test_bit_accessors_round_trip_over_a_block(void)
         CclinkV.set_bit_args.bits = bits;
         CclinkV.set_bit_args.bit_len = sizeof(bits);
         CclinkV.set_bit_args.index = i;
-        CclinkV.set_bit_args.value = PROTO_FALSE;
+        CclinkV.set_bit_args.value = EMBED_FALSE;
         Cclink.set_bit(cclink_work);
     }
     static const uint8_t ZERO[4] = {0, 0, 0, 0};
@@ -374,14 +374,14 @@ void test_accessors_refuse_out_of_range(void)
     CclinkV.set_bit_args.bits = bits;
     CclinkV.set_bit_args.bit_len = 2;
     CclinkV.set_bit_args.index = 16;
-    CclinkV.set_bit_args.value = PROTO_FALSE;
+    CclinkV.set_bit_args.value = EMBED_FALSE;
     Cclink.set_bit(cclink_work);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, bits[0]);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, bits[1]);
     CclinkV.set_bit_args.bits = NULL;
     CclinkV.set_bit_args.bit_len = 2;
     CclinkV.set_bit_args.index = 0;
-    CclinkV.set_bit_args.value = PROTO_TRUE;
+    CclinkV.set_bit_args.value = EMBED_TRUE;
     Cclink.set_bit(cclink_work);
 
     static const uint8_t WORDS[4] = {0x11, 0x22, 0x33, 0x44};

@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_MODBUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_MODBUS_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -46,8 +46,7 @@ PROTOCORE_BEGIN_DECLS
 #define MODBUS_ADU_MAX 260
 
 /** @brief Modbus function codes (Modbus Application Protocol §6). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(ModbusFunction,
     MODBUS_FC_READ_COILS = 0x01,
     MODBUS_FC_READ_DISCRETE_INPUTS = 0x02,
     MODBUS_FC_READ_HOLDING_REGS = 0x03,
@@ -58,16 +57,15 @@ typedef enum PROTO_ENUM_PACKED
     MODBUS_FC_WRITE_MULTIPLE_REGS = 0x10,
     MODBUS_FC_MASK_WRITE_REG = 0x16,
     MODBUS_FC_READ_WRITE_MULTIPLE_REGS = 0x17,
-} ModbusFunction;
+);
 
 /** @brief Modbus exception codes (Modbus Application Protocol §7). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(ModbusException,
     MODBUS_EX_ILLEGAL_FUNCTION = 0x01,
     MODBUS_EX_ILLEGAL_DATA_ADDRESS = 0x02,
     MODBUS_EX_ILLEGAL_DATA_VALUE = 0x03,
     MODBUS_EX_SERVER_FAILURE = 0x04,
-} ModbusException;
+);
 
 /**
  * @brief Notified after a client write is applied to the data model.
@@ -94,7 +92,7 @@ typedef struct
 typedef struct
 {
     uint16_t addr;
-    proto_bool on;
+    embed_bool on;
 } ModbusSetCoilArgs;
 
 /** @brief What get_discrete_input takes: addr. */
@@ -107,7 +105,7 @@ typedef struct
 typedef struct
 {
     uint16_t addr;
-    proto_bool on;
+    embed_bool on;
 } ModbusSetDiscreteInputArgs;
 
 /** @brief What get_holding_reg takes: addr. */
@@ -220,7 +218,7 @@ typedef struct
     ModbusProcessAduArgs process_adu_args;
     ModbusRtuProcessAduArgs rtu_process_adu_args;
     ModbusRxArgs rx_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t value;
     size_t n;
     const struct ProtoHandler *ptr;
@@ -297,7 +295,7 @@ static const ModbusNs Modbus __attribute__((unused)) = {
  */
 uint8_t *protocore_modbus_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MODBUS
 

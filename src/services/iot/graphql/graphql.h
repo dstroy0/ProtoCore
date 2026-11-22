@@ -51,17 +51,16 @@
 
 #if PROTOCORE_ENABLE_GRAPHQL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief The scalar kinds a resolved leaf or an argument carries (GraphQL spec sec 3.5). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_gql_type,
     PROTOCORE_GQL_NULL = 0, ///< the Null value (sec 2.9.5).
     PROTOCORE_GQL_INT,      ///< Int (sec 3.5.1), read from @c i.
     PROTOCORE_GQL_FLOAT,    ///< Float (sec 3.5.2), read from @c f.
     PROTOCORE_GQL_BOOL,     ///< Boolean (sec 3.5.4), read from @c b.
     PROTOCORE_GQL_STR,      ///< String (sec 3.5.3), read from @c s, NUL-terminated and stable for the call.
-} protocore_gql_type;
+);
 
 /** @brief One scalar: a resolved field value, or an argument's Value (spec sec 2.9). */
 typedef struct
@@ -69,7 +68,7 @@ typedef struct
     protocore_gql_type type; ///< which member below holds the value.
     long long i;             ///< the Int.
     double f;                ///< the Float.
-    proto_bool b;            ///< the Boolean.
+    embed_bool b;            ///< the Boolean.
     const char *s;           ///< the String.
 } protocore_gql_value;
 
@@ -83,17 +82,16 @@ struct protocore_gql_args;
  * @p args names the argument values in scope, read back through ::GraphQLNs::arg_int,
  * ::GraphQLNs::arg_str and ::GraphQLNs::arg_bool.
  */
-typedef proto_bool (*protocore_gql_resolver_fn)(const char *path, const struct protocore_gql_args *args,
+typedef embed_bool (*protocore_gql_resolver_fn)(const char *path, const struct protocore_gql_args *args,
                                                 protocore_gql_value *out);
 
 /** @brief What one execute reports. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_gql_result,
     PROTOCORE_GQL_OK = 0,           ///< Executed; the response map holds `data` (spec sec 7.1.1).
     PROTOCORE_GQL_ERR_PARSE = -1,   ///< Request error (sec 7.1.2): the document does not parse.
     PROTOCORE_GQL_ERR_LIMIT = -2,   ///< Request error (sec 7.1.2): a PROTOCORE_GQL_* bound was exceeded.
     PROTOCORE_GQL_ERR_OVERFLOW = -3 ///< The serialized response did not fit the buffer.
-} protocore_gql_result;
+);
 
 /** @brief ExecuteRequest (spec sec 6.1): the document to run and the resolver its leaves call. */
 typedef struct
@@ -148,12 +146,12 @@ typedef struct
     GraphQLRequestArgs request;   ///< what an execute runs
     GraphQLResponseArgs response; ///< where its response lands
     GraphQLArgumentArgs argument; ///< what an accessor reads
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     protocore_gql_result result;
     long long i64;
     const char *text;
-    proto_bool b;
+    embed_bool b;
 } GraphQLVars;
 
 /** @brief The operands and the outcome. */
@@ -197,7 +195,7 @@ static const GraphQLNs GraphQL __attribute__((unused)) = {
  */
 uint8_t *protocore_graphql_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GRAPHQL
 

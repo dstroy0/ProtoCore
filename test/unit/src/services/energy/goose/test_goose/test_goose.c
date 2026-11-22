@@ -39,9 +39,9 @@ static protocore_goose sample(void)
     g.t = ZERO_TIME;
     g.st_num = 1u;
     g.sq_num = 2u;
-    g.simulation = PROTO_FALSE;
+    g.simulation = EMBED_FALSE;
     g.conf_rev = 1u;
-    g.nds_com = PROTO_FALSE;
+    g.nds_com = EMBED_FALSE;
     g.num_entries = 0u;
     g.all_data = ALL_DATA;
     g.all_data_len = sizeof(ALL_DATA);
@@ -95,8 +95,8 @@ void test_boolean_true_is_all_ones(void)
 {
     uint8_t out[128];
     protocore_goose g = sample();
-    g.simulation = PROTO_TRUE;
-    g.nds_com = PROTO_TRUE;
+    g.simulation = EMBED_TRUE;
+    g.nds_com = EMBED_TRUE;
     size_t n = protocore_goose_pdu(&g, out, sizeof(out));
     TEST_ASSERT_EQUAL_UINT(47u, n);
     TEST_ASSERT_EQUAL_HEX8(0x87u, out[31]);
@@ -219,9 +219,9 @@ void test_publish_subscribe_round_trip(void)
     g.time_allowed_to_live = 4000u;
     g.st_num = 0x00010203u;
     g.sq_num = 0x00FFFFFFu;
-    g.simulation = PROTO_TRUE;
+    g.simulation = EMBED_TRUE;
     g.conf_rev = 7u;
-    g.nds_com = PROTO_FALSE;
+    g.nds_com = EMBED_FALSE;
     g.num_entries = 3u;
 
     size_t n = protocore_goose_frame(DST, SRC, 0x1234u, &g, frame, sizeof(frame));

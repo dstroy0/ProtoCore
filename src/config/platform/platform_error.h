@@ -13,20 +13,20 @@
 #ifndef PROTOCORE_PLATFORM_ERROR_H
 #define PROTOCORE_PLATFORM_ERROR_H
 
-#if PROTO_WORD_BITS != 16 && PROTO_WORD_BITS != 32 && PROTO_WORD_BITS != 64
-#error "PROTO_WORD_BITS must be 16, 32 or 64"
+#if EMBED_WORD_BITS != 16 && EMBED_WORD_BITS != 32 && EMBED_WORD_BITS != 64
+#error "EMBED_WORD_BITS must be 16, 32 or 64"
 #endif
-#if PROTO_INDEX_BITS != 16 && PROTO_INDEX_BITS != 32
-#error "PROTO_INDEX_BITS must be 16 or 32"
+#if EMBED_INDEX_BITS != 16 && EMBED_INDEX_BITS != 32
+#error "EMBED_INDEX_BITS must be 16 or 32"
 #endif
 #if PROTO_SWAR_BITS != 8 && PROTO_SWAR_BITS != 16 && PROTO_SWAR_BITS != 32 && PROTO_SWAR_BITS != 64
 #error "PROTO_SWAR_BITS must be 8, 16, 32 or 64"
 #endif
-#if PROTO_INDEX_BITS > PROTO_WORD_BITS
-#error "PROTO_INDEX_BITS exceeds PROTO_WORD_BITS: an index must fit the register it is carried in"
+#if EMBED_INDEX_BITS > EMBED_WORD_BITS
+#error "EMBED_INDEX_BITS exceeds EMBED_WORD_BITS: an index must fit the register it is carried in"
 #endif
-#if PROTO_SWAR_BITS > PROTO_WORD_BITS
-#error "PROTO_SWAR_BITS exceeds PROTO_WORD_BITS: a lane carrier wider than the register is synthesized \
+#if PROTO_SWAR_BITS > EMBED_WORD_BITS
+#error "PROTO_SWAR_BITS exceeds EMBED_WORD_BITS: a lane carrier wider than the register is synthesized \
 from halves and is slower than the width it decomposes into"
 #endif
 

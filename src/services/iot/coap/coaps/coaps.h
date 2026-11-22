@@ -33,7 +33,7 @@
 
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h" // DtlsConn: the connection a call drives
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One inbound datagram and the buffer whatever it owes is written into. */
 typedef struct
@@ -88,7 +88,7 @@ static const CoapsNs Coaps __attribute__((unused)) = {
     .process = protocore_coaps_process,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
 

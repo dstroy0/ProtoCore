@@ -52,13 +52,13 @@ static const char WS_MAGIC[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
  * the result, and base64-encodes the 20-byte digest into @p out.
  * @p out must be at least 29 bytes (28 base64 chars + null terminator).
  */
-static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out)
+static embed_bool ws_accept_key(uint8_t *work, const char *client_key, char *out)
 {
     size_t key_len = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = client_key, .cap = WS_MAX_KEY_LEN + 1);
     if (key_len > WS_MAX_KEY_LEN)
     {
         out[0] = '\0';
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 bytes.
     uint8_t raw[24];
@@ -69,7 +69,7 @@ static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out
     if (Base64V.n != 16)
     {
         out[0] = '\0';
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t magic_len = sizeof(WS_MAGIC) - 1;
     char concat[WS_MAX_KEY_LEN + sizeof(WS_MAGIC)];
@@ -84,7 +84,7 @@ static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = w))
     {
         out[0] = '\0';
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     Sha1.hash(w.buf, (const uint8_t *)concat, key_len + magic_len, digest);
     protocore_secure_guard()->persistent_buf_release(w.buf, protocore_secure_owner());
@@ -92,7 +92,7 @@ static proto_bool ws_accept_key(uint8_t *work, const char *client_key, char *out
     Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
     Base64V.encode_args.dst = out;
     Base64.encode(work);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 /**
@@ -119,7 +119,7 @@ void ws_send_version_required(uint8_t slot_id)
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = resp;
-    ConnPoolV.io.len = (proto_u16)(sizeof(resp) - 1);
+    ConnPoolV.io.len = (embed_u16)(sizeof(resp) - 1);
     ConnPool.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
@@ -133,26 +133,26 @@ void ws_send_version_required(uint8_t slot_id)
  * Does NOT close the TCP connection: the slot moves from HTTP parse ownership to WS frame parse
  * ownership.
  */
-proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
+embed_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Key");
     const char *client_key = http_parser_text;
     if (!client_key)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     char accept[32];
     if (!ws_accept_key(work, client_key, accept))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPoolV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     char hdr[WS_HDR_BUF_SIZE];
@@ -164,9 +164,9 @@ proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
     const char *http_parser_text2 =
         HttpParser.get_header(protocore_http_parser_span(), req, "Sec-WebSocket-Extensions");
     const char *ws_ext = http_parser_text2;
-    proto_bool pmd = ws_ext && EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = ws_ext, .cap = MAX_VAL_LEN,
+    embed_bool pmd = ws_ext && EMBED_CALL(cellul.has, CatenaFinitaCfg, .src = ws_ext, .cap = MAX_VAL_LEN,
                                           .other = "permessage-deflate", .other_cap = sizeof("permessage-deflate"),
-                                          .ci = PROTO_FALSE);
+                                          .ci = EMBED_FALSE);
     size_t sb_hdr = 0;
     sb_hdr = EMBED_CALL(
         verba_textus.put, VerbaTextusCfg, .out = hdr, .cap = sizeof(hdr), .at = sb_hdr,
@@ -195,7 +195,7 @@ proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = hdr;
-    ConnPoolV.io.len = (proto_u16)hlen;
+    ConnPoolV.io.len = (embed_u16)hlen;
     ConnPool.send(protocore_conn_pool_span());
     ConnPoolV.slot = slot_id;
     ConnPool.flush(protocore_conn_pool_span());
@@ -216,10 +216,10 @@ proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
         // No channel available -- abort the connection (transport owns the teardown)
         ConnPoolV.slot = slot_id;
         ConnPool.abort_slot(protocore_conn_pool_span());
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 #endif // PROTOCORE_ENABLE_WEBSOCKET
 
@@ -231,13 +231,13 @@ proto_bool ws_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t r
 /**
  * @brief Send the HTTP 200 + SSE headers and promote the slot to SSE mode.
  */
-proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
+embed_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
     ConnPoolV.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPoolV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     static const char SSE_HDR[] = "HTTP/1.1 200 OK\r\n"
@@ -247,7 +247,7 @@ proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req
 
     ConnPoolV.slot = slot_id;
     ConnPoolV.io.data = SSE_HDR;
-    ConnPoolV.io.len = (proto_u16)(sizeof(SSE_HDR) - 1);
+    ConnPoolV.io.len = (embed_u16)(sizeof(SSE_HDR) - 1);
     ConnPool.send(protocore_conn_pool_span());
     ConnPoolV.slot = slot_id;
     ConnPool.flush(protocore_conn_pool_span());
@@ -269,10 +269,10 @@ proto_bool protocore_sse_do_upgrade(uint8_t *work, uint8_t slot_id, HttpReq *req
     {
         ConnPoolV.slot = slot_id;
         ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns detach + reset + RST
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 #endif // PROTOCORE_ENABLE_SSE
 
@@ -401,7 +401,7 @@ void protocore_sse_broadcast(const char *path, const char *data, const char *eve
             continue;
         }
         if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = protocore_sse_pool[i].path, .other = path,
-                        .cap = MAX_PATH_LEN, .ci = PROTO_FALSE))
+                        .cap = MAX_PATH_LEN, .ci = EMBED_FALSE))
         {
             continue;
         }

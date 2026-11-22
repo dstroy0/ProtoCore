@@ -23,7 +23,7 @@
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one metric, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the daemon address, once
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Bytes the stored DogStatsD tag list occupies, the NUL included. */
 #ifndef PROTOCORE_STATSD_TAGS_MAX
@@ -48,7 +48,7 @@ struct StatsdStorage
     protocore_ip server;                  ///< the daemon address, parsed by an init
     uint16_t port;                        ///< its UDP port
     char tags[PROTOCORE_STATSD_TAGS_MAX]; ///< the DogStatsD list every metric carries
-    proto_bool ready;                     ///< the daemon address parsed; every send is gated on it
+    embed_bool ready;                     ///< the daemon address parsed; every send is gated on it
     char val[PROTOCORE_STATSD_VALUE_MAX]; ///< the value a metric call renders
     char buf[PROTOCORE_STATSD_LINE_MAX];  ///< the line a metric call builds
 };
@@ -139,15 +139,15 @@ static size_t rate_str(char *b, float r)
 
 // Append len bytes at *pos while the line still leaves room for a trailing NUL. False the moment it
 // would not fit, so an over-long line reports 0 rather than a truncated metric.
-static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const char *src, size_t len)
+static inline embed_bool line_append(char *out, size_t cap, size_t *pos, const char *src, size_t len)
 {
     if (*pos + len >= cap)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + *pos, .src = src, .bytes = len);
     *pos += len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -175,8 +175,8 @@ uint8_t *protocore_statsd_span(void)
 // Parse the daemon address and store the port and the tag list every later line carries.
 void protocore_statsd_init(uint8_t *work)
 {
-    STATSD_CTX(work)->ready = PROTO_FALSE;
-    StatsdV.ok = PROTO_FALSE;
+    STATSD_CTX(work)->ready = EMBED_FALSE;
+    StatsdV.ok = EMBED_FALSE;
     STATSD_CTX(work)->port = StatsdV.server.port ? StatsdV.server.port : PROTOCORE_STATSD_PORT;
     if (StatsdV.tags.global && StatsdV.tags.global[0])
     {
@@ -209,7 +209,7 @@ void protocore_statsd_format(uint8_t *work)
     const StatsdType type = StatsdV.metric.type;
     const char *tags = StatsdV.tags.metric;
     StatsdV.n = 0;
-    StatsdV.ok = PROTO_FALSE;
+    StatsdV.ok = EMBED_FALSE;
     if (!out || cap == 0 || !name || !name[0] || !value)
     {
         return;
@@ -258,13 +258,13 @@ void protocore_statsd_format(uint8_t *work)
 
     out[pos] = '\0'; // pos <= cap-1 by construction
     StatsdV.n = pos;
-    StatsdV.ok = PROTO_TRUE;
+    StatsdV.ok = EMBED_TRUE;
 }
 
 // Stamp the stored tag list, format into the client's line storage, and send it as one datagram.
 static void statsd_emit(uint8_t *work)
 {
-    StatsdV.ok = PROTO_FALSE;
+    StatsdV.ok = EMBED_FALSE;
     StatsdV.n = 0;
     if (!STATSD_CTX(work)->ready)
     {
@@ -339,6 +339,6 @@ void protocore_statsd_set(uint8_t *work)
 /** @brief The operands and the outcome. */
 StatsdVars StatsdV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_STATSD

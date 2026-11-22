@@ -25,7 +25,7 @@
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -103,7 +103,7 @@ typedef struct
     const uint8_t *p;
     size_t len;
     size_t off;
-    proto_bool ok; ///< false once any read ran past the end (all further reads are no-ops)
+    embed_bool ok; ///< false once any read ran past the end (all further reads are no-ops)
 } SftpReader;
 
 typedef struct
@@ -111,7 +111,7 @@ typedef struct
     uint8_t *p;
     size_t cap;
     size_t off;     ///< current write position (starts at 4, past the reserved length prefix)
-    proto_bool ovf; ///< set once a write would exceed cap
+    embed_bool ovf; ///< set once a write would exceed cap
 } SftpWriter;
 
 /** @brief What rd_init takes: r, payload, len. */
@@ -295,7 +295,7 @@ typedef struct
 /** @brief What format_longname takes: is_dir, perms, size, mtime, ... */
 typedef struct
 {
-    proto_bool is_dir;
+    embed_bool is_dir;
     uint32_t perms;
     uint64_t size;
     uint32_t mtime;
@@ -400,7 +400,7 @@ typedef struct
     SftpBuildDataArgs build_data_args;
     SftpBuildName1Args build_name1_args;
     SftpFormatLongnameArgs format_longname_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     uint32_t u32;
     uint64_t u64;
@@ -497,7 +497,7 @@ static const SftpNs Sftp __attribute__((unused)) = {
     .format_longname = protocore_sftp_format_longname,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_SFTP
 

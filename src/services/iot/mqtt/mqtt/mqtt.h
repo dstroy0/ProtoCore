@@ -40,7 +40,7 @@
 
 #if PROTOCORE_ENABLE_MQTT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -60,8 +60,7 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 
 /** @brief MQTT Control Packet type, byte 1 bits 7-4 (MQTT 3.1.1 sec 2.2.1, Table 2.1). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(MqttType,
     MQTT_CONNECT = 1,      ///< Client request to connect to a Server
     MQTT_CONNACK = 2,      ///< Connect acknowledgment
     MQTT_PUBLISH = 3,      ///< Publish message
@@ -76,7 +75,7 @@ typedef enum PROTO_ENUM_PACKED
     MQTT_PINGREQ = 12,     ///< PING request
     MQTT_PINGRESP = 13,    ///< PING response
     MQTT_DISCONNECT = 14,  ///< Client is disconnecting
-} MqttType;
+);
 
 /** @brief Where an inbound PUBLISH's Topic Name and Payload are delivered (MQTT 3.1.1 sec 3.3). */
 typedef void (*MqttMessageCb)(const char *topic_name, const uint8_t *payload, size_t payload_len);
@@ -86,7 +85,7 @@ typedef struct
 {
     const char *host;   ///< the Server's name; read on every connect step, so it outlives the call
     uint16_t port;      ///< its TCP port
-    proto_bool use_tls; ///< the Network Connection runs over TLS (`mqtts://`)
+    embed_bool use_tls; ///< the Network Connection runs over TLS (`mqtts://`)
 } MqttServerArgs;
 
 /**
@@ -101,7 +100,7 @@ typedef struct
     const char *user_name;    ///< User Name (sec 3.1.3.4), or null for none
     const char *password;     ///< Password (sec 3.1.3.5), or null for none
     uint16_t keep_alive;      ///< Keep Alive seconds (sec 3.1.2.10); 0 turns the mechanism off
-    proto_bool clean_session; ///< Clean Session (sec 3.1.2.4)
+    embed_bool clean_session; ///< Clean Session (sec 3.1.2.4)
 } MqttSessionArgs;
 
 /**
@@ -115,7 +114,7 @@ typedef struct
     const uint8_t *message; ///< Will Message (sec 3.1.3.3); may be null when @c message_len is 0
     size_t message_len;     ///< its octet count
     uint8_t qos;            ///< Will QoS, 0 to 2 (sec 3.1.2.6)
-    proto_bool retain;      ///< Will Retain (sec 3.1.2.7)
+    embed_bool retain;      ///< Will Retain (sec 3.1.2.7)
 } MqttWillArgs;
 
 /**
@@ -133,8 +132,8 @@ typedef struct
     const uint8_t *payload; ///< Payload a build writes, or where a parse found it inside @c in (sec 3.3.3)
     size_t payload_len;     ///< its octet count
     uint8_t qos;            ///< QoS level, 0 to 2 (sec 3.3.1.2)
-    proto_bool retain;      ///< RETAIN (sec 3.3.1.3)
-    proto_bool dup;         ///< DUP, set on a re-delivery (sec 3.3.1.1)
+    embed_bool retain;      ///< RETAIN (sec 3.3.1.3)
+    embed_bool dup;         ///< DUP, set on a re-delivery (sec 3.3.1.1)
 } MqttPublishArgs;
 
 /** @brief MQTT 3.1.1 sec 3.8.3, sec 3.10.3: the Topic Filter a SUBSCRIBE or UNSUBSCRIBE names. */
@@ -272,11 +271,11 @@ typedef struct
     MqttPacketArgs packet;     ///< the fixed header a build stamps or a parse reads
     MqttBufArgs buf;           ///< the octets a codec call moves
     MqttDeliveryArgs delivery; ///< where an inbound Application Message is handed on
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     int32_t i32;
     uint8_t u8;
-    proto_bool session_present;
+    embed_bool session_present;
 } MqttVars;
 
 /** @brief The operands and the outcome. */
@@ -376,7 +375,7 @@ static const MqttNs Mqtt __attribute__((unused)) = {
 uint8_t *protocore_mqtt_span(void);
 #endif // PROTOCORE_HAS_NET_STACK
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MQTT
 

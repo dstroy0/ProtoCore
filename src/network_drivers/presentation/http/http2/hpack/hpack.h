@@ -27,10 +27,10 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Callback invoked for each decoded header; return false to abort the decode. */
-typedef proto_bool (*HpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
+typedef embed_bool (*HpackEmitFn)(void *ctx, const char *name, size_t name_len, const char *value, size_t value_len);
 
 /** @brief RFC 7541 sec 4.2: the size a table is initialised to. */
 typedef struct
@@ -83,7 +83,7 @@ typedef struct
     HpackInitArgs init_args;     ///< the members ::HpackNs::dyn_init takes
     HpackDecodeArgs decode_args; ///< the members ::HpackNs::decode takes
     HpackEncodeArgs encode_args; ///< the members ::HpackNs::encode_header takes
-    proto_bool ok;               ///< whether the whole block decoded cleanly
+    embed_bool ok;               ///< whether the whole block decoded cleanly
     size_t n;                    ///< bytes an encode wrote, or 0 on overflow
 } HpackVars;
 
@@ -116,7 +116,7 @@ static const HpackNs Hpack __attribute__((unused)) = {
 
 // The prefix-integer and Huffman primitives moved to protocore_hpack_prim.h (shared with QPACK).
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP2
 

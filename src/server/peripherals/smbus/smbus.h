@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file smbus.h
@@ -45,20 +45,20 @@ typedef struct
     uint8_t (*addr_byte)(uint8_t *, uint8_t, uint8_t);
     uint8_t (*pec_write)(uint8_t *, uint8_t, const uint8_t *, size_t);
     uint8_t (*pec_read)(uint8_t *, uint8_t, const uint8_t *, size_t, const uint8_t *, size_t);
-    void (*set_pec)(uint8_t *, proto_bool);
-    proto_bool (*pec_enabled)(uint8_t *);
-    proto_bool (*begin)(uint8_t *);
-    proto_bool (*quick)(uint8_t *, uint8_t, uint8_t);
-    proto_bool (*send_byte)(uint8_t *, uint8_t, uint8_t);
-    proto_bool (*receive_byte)(uint8_t *, uint8_t, uint8_t *);
-    proto_bool (*write_byte)(uint8_t *, uint8_t, uint8_t, uint8_t);
-    proto_bool (*read_byte)(uint8_t *, uint8_t, uint8_t, uint8_t *);
-    proto_bool (*write_word)(uint8_t *, uint8_t, uint8_t, uint16_t);
-    proto_bool (*read_word)(uint8_t *, uint8_t, uint8_t, uint16_t *);
-    proto_bool (*write_block)(uint8_t *, uint8_t, uint8_t, const uint8_t *, size_t);
-    proto_bool (*read_block)(uint8_t *, uint8_t, uint8_t, uint8_t *, size_t, size_t *);
-    proto_bool (*process_call)(uint8_t *, uint8_t, uint8_t, uint16_t, uint16_t *);
-    proto_bool (*block_process_call)(uint8_t *, uint8_t, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
+    void (*set_pec)(uint8_t *, embed_bool);
+    embed_bool (*pec_enabled)(uint8_t *);
+    embed_bool (*begin)(uint8_t *);
+    embed_bool (*quick)(uint8_t *, uint8_t, uint8_t);
+    embed_bool (*send_byte)(uint8_t *, uint8_t, uint8_t);
+    embed_bool (*receive_byte)(uint8_t *, uint8_t, uint8_t *);
+    embed_bool (*write_byte)(uint8_t *, uint8_t, uint8_t, uint8_t);
+    embed_bool (*read_byte)(uint8_t *, uint8_t, uint8_t, uint8_t *);
+    embed_bool (*write_word)(uint8_t *, uint8_t, uint8_t, uint16_t);
+    embed_bool (*read_word)(uint8_t *, uint8_t, uint8_t, uint16_t *);
+    embed_bool (*write_block)(uint8_t *, uint8_t, uint8_t, const uint8_t *, size_t);
+    embed_bool (*read_block)(uint8_t *, uint8_t, uint8_t, uint8_t *, size_t, size_t *);
+    embed_bool (*process_call)(uint8_t *, uint8_t, uint8_t, uint16_t, uint16_t *);
+    embed_bool (*block_process_call)(uint8_t *, uint8_t, uint8_t, const uint8_t *, size_t, uint8_t *, size_t, size_t *);
 } SmbusNs;
 PROTOCORE_NS_LAYOUT(SmbusNs, addr_byte, pec_write, pec_read, set_pec, pec_enabled, begin, quick, send_byte,
                     receive_byte, write_byte, read_byte, write_word, read_word, write_block, read_block, process_call,
@@ -98,79 +98,79 @@ uint8_t protocore_smbus_pec_read(uint8_t *work, uint8_t addr, const uint8_t *sen
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param on On
  */
-void protocore_smbus_set_pec(uint8_t *work, proto_bool on);
+void protocore_smbus_set_pec(uint8_t *work, embed_bool on);
 /**
  * @brief Whether the Packet Error Code is on.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_pec_enabled(uint8_t *work);
+embed_bool protocore_smbus_pec_enabled(uint8_t *work);
 /**
  * @brief Bring up the shared I2C bus for SMBus traffic.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_begin(uint8_t *work);
+embed_bool protocore_smbus_begin(uint8_t *work);
 /**
  * @brief Quick command: address the part with rw and stop. The direction bit .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param rw Rw
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_quick(uint8_t *work, uint8_t addr, uint8_t rw);
+embed_bool protocore_smbus_quick(uint8_t *work, uint8_t addr, uint8_t rw);
 /**
  * @brief Send byte: one byte with no command code in front of it.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param value Value
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_send_byte(uint8_t *work, uint8_t addr, uint8_t value);
+embed_bool protocore_smbus_send_byte(uint8_t *work, uint8_t addr, uint8_t value);
 /**
  * @brief Receive byte: one byte with no command code, from whatever the part .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_receive_byte(uint8_t *work, uint8_t addr, uint8_t *out);
+embed_bool protocore_smbus_receive_byte(uint8_t *work, uint8_t addr, uint8_t *out);
 /**
  * @brief Write byte: cmd then one data byte.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param cmd Cmd
  * @param value Value
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_write_byte(uint8_t *work, uint8_t addr, uint8_t cmd, uint8_t value);
+embed_bool protocore_smbus_write_byte(uint8_t *work, uint8_t addr, uint8_t cmd, uint8_t value);
 /**
  * @brief Read byte: cmd, a repeated start, then one data byte back.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param cmd Cmd
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_read_byte(uint8_t *work, uint8_t addr, uint8_t cmd, uint8_t *out);
+embed_bool protocore_smbus_read_byte(uint8_t *work, uint8_t addr, uint8_t cmd, uint8_t *out);
 /**
  * @brief Write word: cmd then two data bytes, low byte first.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param cmd Cmd
  * @param value Value
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_write_word(uint8_t *work, uint8_t addr, uint8_t cmd, uint16_t value);
+embed_bool protocore_smbus_write_word(uint8_t *work, uint8_t addr, uint8_t cmd, uint16_t value);
 /**
  * @brief Read word: cmd, a repeated start, then two data bytes back, low .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param cmd Cmd
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_read_word(uint8_t *work, uint8_t addr, uint8_t cmd, uint16_t *out);
+embed_bool protocore_smbus_read_word(uint8_t *work, uint8_t addr, uint8_t cmd, uint16_t *out);
 /**
  * @brief Block write: cmd, a count byte, then len payload bytes (at most .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
@@ -178,9 +178,9 @@ proto_bool protocore_smbus_read_word(uint8_t *work, uint8_t addr, uint8_t cmd, u
  * @param cmd Cmd
  * @param buf Buf
  * @param len Len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_write_block(uint8_t *work, uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len);
+embed_bool protocore_smbus_write_block(uint8_t *work, uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len);
 /**
  * @brief Block read: cmd, a repeated start, then a count byte and that many .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
@@ -189,9 +189,9 @@ proto_bool protocore_smbus_write_block(uint8_t *work, uint8_t addr, uint8_t cmd,
  * @param out caller-owned, cap bytes
  * @param cap Cap
  * @param len out: how many bytes the part returned
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_read_block(uint8_t *work, uint8_t addr, uint8_t cmd, uint8_t *out, size_t cap, size_t *len);
+embed_bool protocore_smbus_read_block(uint8_t *work, uint8_t addr, uint8_t cmd, uint8_t *out, size_t cap, size_t *len);
 /**
  * @brief Process call: write a word to cmd and read a word back in the same .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
@@ -199,9 +199,9 @@ proto_bool protocore_smbus_read_block(uint8_t *work, uint8_t addr, uint8_t cmd, 
  * @param cmd Cmd
  * @param value Value
  * @param out Out
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_process_call(uint8_t *work, uint8_t addr, uint8_t cmd, uint16_t value, uint16_t *out);
+embed_bool protocore_smbus_process_call(uint8_t *work, uint8_t addr, uint8_t cmd, uint16_t value, uint16_t *out);
 /**
  * @brief Block process call: write len bytes to cmd and read a block back in .
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
@@ -212,9 +212,9 @@ proto_bool protocore_smbus_process_call(uint8_t *work, uint8_t addr, uint8_t cmd
  * @param out Out
  * @param cap Cap
  * @param out_len Out len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_smbus_block_process_call(uint8_t *work, uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len,
+embed_bool protocore_smbus_block_process_call(uint8_t *work, uint8_t addr, uint8_t cmd, const uint8_t *buf, size_t len,
                                               uint8_t *out, size_t cap, size_t *out_len);
 
 /**
@@ -247,6 +247,6 @@ PROTOCORE_NS SmbusNs Smbus PROTOCORE_UNUSED = {.addr_byte = protocore_smbus_addr
                                                .process_call = protocore_smbus_process_call,
                                                .block_process_call = protocore_smbus_block_process_call};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SMBUS_H

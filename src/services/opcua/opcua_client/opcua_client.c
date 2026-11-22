@@ -16,7 +16,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/opcua/opcua_client/opcua_client.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 void protocore_opcua_client_init(OpcUaClient *c)
 {
@@ -41,7 +41,7 @@ static size_t cw_patch(UaWriter *w)
 
 // RequestHeader: the session AuthenticationToken (if available and requested) or a
 // null NodeId, then the fixed trailer. RequestHandle increments per request.
-static void cw_request_header(OpcUaClient *c, UaWriter *w, proto_bool with_session_token)
+static void cw_request_header(OpcUaClient *c, UaWriter *w, embed_bool with_session_token)
 {
     if (with_session_token && c->session_auth_id)
     {
@@ -81,7 +81,7 @@ static void cw_msg(OpcUaClient *c, UaWriter *w, uint32_t type_id)
 // ---------------------------------------------------------------------------
 size_t protocore_opcua_client_hello(const char *endpoint_url, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     protocore_ua_w_u8(&w, 'H');
     protocore_ua_w_u8(&w, 'E');
     protocore_ua_w_u8(&w, 'L');
@@ -100,7 +100,7 @@ size_t protocore_opcua_client_hello(const char *endpoint_url, uint8_t *out, size
 
 size_t protocore_opcua_client_open(OpcUaClient *c, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     protocore_ua_w_u8(&w, 'O');
     protocore_ua_w_u8(&w, 'P');
     protocore_ua_w_u8(&w, 'N');
@@ -113,7 +113,7 @@ size_t protocore_opcua_client_open(OpcUaClient *c, uint8_t *out, size_t cap)
     protocore_ua_w_u32(&w, ++c->seq);        // SequenceNumber
     protocore_ua_w_u32(&w, ++c->request_id); // RequestId
     protocore_ua_w_nodeid_numeric(&w, 0, OPCUA_ID_OPEN_REQ);
-    cw_request_header(c, &w, PROTO_FALSE);
+    cw_request_header(c, &w, EMBED_FALSE);
     protocore_ua_w_u32(&w, 0);           // ClientProtocolVersion
     protocore_ua_w_u32(&w, 0);           // RequestType = Issue
     protocore_ua_w_u32(&w, 1);           // MessageSecurityMode = None
@@ -124,9 +124,9 @@ size_t protocore_opcua_client_open(OpcUaClient *c, uint8_t *out, size_t cap)
 
 size_t protocore_opcua_client_get_endpoints(OpcUaClient *c, const char *endpoint_url, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     cw_msg(c, &w, OPCUA_ID_GET_ENDPOINTS_REQ);
-    cw_request_header(c, &w, PROTO_FALSE); // GetEndpoints needs no session
+    cw_request_header(c, &w, EMBED_FALSE); // GetEndpoints needs no session
     protocore_ua_w_string(&w, endpoint_url,
                           endpoint_url
                               ? (int32_t)EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = endpoint_url, .cap = w.cap)
@@ -139,9 +139,9 @@ size_t protocore_opcua_client_get_endpoints(OpcUaClient *c, const char *endpoint
 size_t protocore_opcua_client_create_session(OpcUaClient *c, const char *session_name, const char *endpoint_url,
                                              uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     cw_msg(c, &w, OPCUA_ID_CREATE_SESSION_REQ);
-    cw_request_header(c, &w, PROTO_FALSE);
+    cw_request_header(c, &w, EMBED_FALSE);
     // ClientDescription (ApplicationDescription).
     protocore_ua_w_string(&w, "urn:det:opcua:client", 20);            // ApplicationUri
     protocore_ua_w_string(&w, "urn:det:opcua", 13);                   // ProductUri
@@ -168,9 +168,9 @@ size_t protocore_opcua_client_create_session(OpcUaClient *c, const char *session
 
 size_t protocore_opcua_client_activate_session(OpcUaClient *c, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     cw_msg(c, &w, OPCUA_ID_ACTIVATE_SESSION_REQ);
-    cw_request_header(c, &w, PROTO_TRUE);
+    cw_request_header(c, &w, EMBED_TRUE);
     protocore_ua_w_string(&w, NULL, -1); // ClientSignature.Algorithm
     protocore_ua_w_string(&w, NULL, -1); // ClientSignature.Signature
     protocore_ua_w_i32(&w, -1);          // ClientSoftwareCertificates[] (null)
@@ -187,9 +187,9 @@ size_t protocore_opcua_client_activate_session(OpcUaClient *c, uint8_t *out, siz
 
 size_t protocore_opcua_client_read(OpcUaClient *c, const OpcUaReadItem *items, uint32_t n, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     cw_msg(c, &w, OPCUA_ID_READ_REQ);
-    cw_request_header(c, &w, PROTO_TRUE);
+    cw_request_header(c, &w, EMBED_TRUE);
     protocore_ua_w_f64(&w, 0.0);        // MaxAge
     protocore_ua_w_u32(&w, 0);          // TimestampsToReturn (Source)
     protocore_ua_w_i32(&w, (int32_t)n); // NodesToRead count
@@ -206,9 +206,9 @@ size_t protocore_opcua_client_read(OpcUaClient *c, const OpcUaReadItem *items, u
 
 size_t protocore_opcua_client_browse(OpcUaClient *c, uint16_t ns, uint32_t id, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     cw_msg(c, &w, OPCUA_ID_BROWSE_REQ);
-    cw_request_header(c, &w, PROTO_TRUE);
+    cw_request_header(c, &w, EMBED_TRUE);
     protocore_ua_w_nodeid_numeric(&w, 0, 0);   // View.ViewId (null)
     protocore_ua_w_u64(&w, 0);                 // View.Timestamp
     protocore_ua_w_u32(&w, 0);                 // View.ViewVersion
@@ -217,7 +217,7 @@ size_t protocore_opcua_client_browse(OpcUaClient *c, uint16_t ns, uint32_t id, u
     protocore_ua_w_nodeid_numeric(&w, ns, id); // BrowseDescription.NodeId
     protocore_ua_w_u32(&w, 0);                 // BrowseDirection (Forward)
     protocore_ua_w_nodeid_numeric(&w, 0, 0);   // ReferenceTypeId (null = all)
-    protocore_ua_w_bool(&w, PROTO_TRUE);       // IncludeSubtypes
+    protocore_ua_w_bool(&w, EMBED_TRUE);       // IncludeSubtypes
     protocore_ua_w_u32(&w, 0);                 // NodeClassMask
     protocore_ua_w_u32(&w, 0x3F);              // ResultMask
     return cw_patch(&w);
@@ -225,9 +225,9 @@ size_t protocore_opcua_client_browse(OpcUaClient *c, uint16_t ns, uint32_t id, u
 
 size_t protocore_opcua_client_write(OpcUaClient *c, const OpcUaWriteItem *items, uint32_t n, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     cw_msg(c, &w, OPCUA_ID_WRITE_REQ);
-    cw_request_header(c, &w, PROTO_TRUE);
+    cw_request_header(c, &w, EMBED_TRUE);
     protocore_ua_w_i32(&w, (int32_t)n); // NodesToWrite count
     for (uint32_t i = 0; i < n; i++)
     {
@@ -241,16 +241,16 @@ size_t protocore_opcua_client_write(OpcUaClient *c, const OpcUaWriteItem *items,
 
 size_t protocore_opcua_client_close_session(OpcUaClient *c, uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     cw_msg(c, &w, OPCUA_ID_CLOSE_SESSION_REQ);
-    cw_request_header(c, &w, PROTO_TRUE);
-    protocore_ua_w_bool(&w, PROTO_TRUE); // DeleteSubscriptions
+    cw_request_header(c, &w, EMBED_TRUE);
+    protocore_ua_w_bool(&w, EMBED_TRUE); // DeleteSubscriptions
     return cw_patch(&w);
 }
 
 size_t protocore_opcua_client_close_channel(uint8_t *out, size_t cap)
 {
-    UaWriter w = {out, cap, 0, PROTO_TRUE};
+    UaWriter w = {out, cap, 0, EMBED_TRUE};
     protocore_ua_w_u8(&w, 'C');
     protocore_ua_w_u8(&w, 'L');
     protocore_ua_w_u8(&w, 'O');
@@ -268,7 +268,7 @@ static void cr_skip(UaReader *r, size_t n)
     // and a latched reader decodes every length as 0 - so that operand is excluded below.
     if (r->err || r->off + n > r->len)
     {
-        r->err = PROTO_TRUE;
+        r->err = EMBED_TRUE;
         return;
     }
     r->off += n;
@@ -294,7 +294,7 @@ static void cr_skip_string_array(UaReader *r)
 
 // Consume a ResponseHeader (SecurityPolicy None encoding: empty diagnostics, no body
 // AdditionalHeader). Captures the ServiceResult.
-static proto_bool cr_response_header(UaReader *r, uint32_t *service_result)
+static embed_bool cr_response_header(UaReader *r, uint32_t *service_result)
 {
     (void)protocore_ua_r_u64(r); // Timestamp
     (void)protocore_ua_r_u32(r); // RequestHandle
@@ -312,16 +312,16 @@ static proto_bool cr_response_header(UaReader *r, uint32_t *service_result)
 }
 
 // Open a MSG response: validate type + body TypeId, then consume the ResponseHeader.
-static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint32_t expect_type,
+static embed_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint32_t expect_type,
                               uint32_t *service_result)
 {
     UaMsgHeader h;
     if (!protocore_opcua_parse_header(msg, len, &h) ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "MSG", .bytes = 3) != 0 || h.size != len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    *r = (UaReader){msg + 8, len - 8, 0, PROTO_FALSE};
+    *r = (UaReader){msg + 8, len - 8, 0, EMBED_FALSE};
     (void)protocore_ua_r_u32(r); // SecureChannelId
     (void)protocore_ua_r_u32(r); // TokenId
     (void)protocore_ua_r_u32(r); // SequenceNumber
@@ -329,11 +329,11 @@ static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint3
     UaNodeId tid;
     if (!protocore_ua_r_nodeid(r, &tid))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!(tid.numeric && tid.id == expect_type))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return cr_response_header(r, service_result);
 }
@@ -341,19 +341,19 @@ static proto_bool cr_msg_open(const uint8_t *msg, size_t len, UaReader *r, uint3
 // ---------------------------------------------------------------------------
 // Response parsers
 // ---------------------------------------------------------------------------
-proto_bool protocore_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out)
+embed_bool protocore_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out)
 {
     UaMsgHeader h;
     if (!protocore_opcua_parse_header(msg, len, &h) ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "ACK", .bytes = 3) != 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h.size != len || len < 8 + 20)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    UaReader r = {msg + 8, len - 8, 0, PROTO_FALSE};
+    UaReader r = {msg + 8, len - 8, 0, EMBED_FALSE};
     (void)protocore_ua_r_u32(&r); // ProtocolVersion
     out->recv_buf_size = protocore_ua_r_u32(&r);
     out->send_buf_size = protocore_ua_r_u32(&r);
@@ -362,15 +362,15 @@ proto_bool protocore_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAc
     return !r.err;
 }
 
-proto_bool protocore_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len)
+embed_bool protocore_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len)
 {
     UaMsgHeader h;
     if (!protocore_opcua_parse_header(msg, len, &h) ||
         EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "OPN", .bytes = 3) != 0 || h.size != len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    UaReader r = {msg + 8, len - 8, 0, PROTO_FALSE};
+    UaReader r = {msg + 8, len - 8, 0, EMBED_FALSE};
     (void)protocore_ua_r_u32(&r); // SecureChannelId (asymmetric security header)
     cr_skip_string(&r);           // SecurityPolicyUri
     cr_skip_string(&r);           // SenderCertificate
@@ -380,12 +380,12 @@ proto_bool protocore_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, si
     UaNodeId tid;
     if (!protocore_ua_r_nodeid(&r, &tid) || !(tid.numeric && tid.id == OPCUA_ID_OPEN_RESP))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t svc = 0;
     if (!cr_response_header(&r, &svc))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     (void)protocore_ua_r_u32(&r);           // ServerProtocolVersion
     c->channel_id = protocore_ua_r_u32(&r); // SecurityToken.ChannelId
@@ -407,13 +407,13 @@ int32_t protocore_opcua_client_on_get_endpoints(const uint8_t *msg, size_t len)
     return (cnt < 0 || r.err) ? -1 : cnt;
 }
 
-proto_bool protocore_opcua_client_on_create_session(OpcUaClient *c, const uint8_t *msg, size_t len)
+embed_bool protocore_opcua_client_on_create_session(OpcUaClient *c, const uint8_t *msg, size_t len)
 {
     UaReader r;
     uint32_t svc = 0;
     if (!cr_msg_open(msg, len, &r, OPCUA_ID_CREATE_SESSION_RESP, &svc))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     UaNodeId sid;
     protocore_ua_r_nodeid(&r, &sid); // SessionId
@@ -425,13 +425,13 @@ proto_bool protocore_opcua_client_on_create_session(OpcUaClient *c, const uint8_
     return !r.err && svc == OPCUA_STATUS_GOOD;
 }
 
-proto_bool protocore_opcua_client_on_activate_session(const uint8_t *msg, size_t len)
+embed_bool protocore_opcua_client_on_activate_session(const uint8_t *msg, size_t len)
 {
     UaReader r;
     uint32_t svc = 0;
     if (!cr_msg_open(msg, len, &r, OPCUA_ID_ACTIVATE_SESSION_RESP, &svc))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return svc == OPCUA_STATUS_GOOD;
 }
@@ -489,7 +489,7 @@ int32_t protocore_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVari
                 break;
             }
             default:
-                r.err = PROTO_TRUE; // unsupported Variant type
+                r.err = EMBED_TRUE; // unsupported Variant type
                 break;
             }
         }
@@ -601,6 +601,6 @@ int32_t protocore_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaCl
     return r.err ? -1 : (int32_t)out_n;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OPCUA_CLIENT

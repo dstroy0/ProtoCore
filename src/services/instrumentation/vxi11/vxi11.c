@@ -16,7 +16,7 @@
 
 #include "endian/endian.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const uint32_t RPC_MSGTYPE_CALL = 0;
 static const uint32_t RPC_MSGTYPE_REPLY = 1;
@@ -28,14 +28,14 @@ typedef struct
     uint8_t *p;
     size_t cap;
     size_t off;
-    proto_bool ok;
+    embed_bool ok;
 } XdrW;
 
 static void xw_u32(XdrW *w, uint32_t v)
 {
     if (!w->ok || w->off + 4 > w->cap)
     {
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = w->p + w->off, .val = v, .width = MMGR_ENDIAN_32);
@@ -48,7 +48,7 @@ static void xw_bytes(XdrW *w, const uint8_t *d, size_t n)
     size_t pad = (4 - (n & 3)) & 3;
     if (!w->ok || w->off + 4 + n + pad > w->cap)
     {
-        w->ok = PROTO_FALSE;
+        w->ok = EMBED_FALSE;
         return;
     }
     EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = w->p + w->off, .val = (uint32_t)n, .width = MMGR_ENDIAN_32);
@@ -69,14 +69,14 @@ typedef struct
     const uint8_t *p;
     size_t len;
     size_t off;
-    proto_bool ok;
+    embed_bool ok;
 } XdrR;
 
 static uint32_t xr_u32(XdrR *r)
 {
     if (!r->ok || r->off + 4 > r->len)
     {
-        r->ok = PROTO_FALSE;
+        r->ok = EMBED_FALSE;
         return 0;
     }
     uint32_t v = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = r->p + r->off, .width = MMGR_ENDIAN_32);
@@ -85,18 +85,18 @@ static uint32_t xr_u32(XdrR *r)
 }
 
 // Read a length-prefixed opaque; @p d/@p n may be null (to skip). Advances past the pad.
-static proto_bool xr_bytes(XdrR *r, const uint8_t **d, size_t *n)
+static embed_bool xr_bytes(XdrR *r, const uint8_t **d, size_t *n)
 {
     uint32_t len = xr_u32(r);
     if (!r->ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t pad = (4 - (len & 3)) & 3;
     if (r->off + len + pad > r->len)
     {
-        r->ok = PROTO_FALSE;
-        return PROTO_FALSE;
+        r->ok = EMBED_FALSE;
+        return EMBED_FALSE;
     }
     if (d)
     {
@@ -107,7 +107,7 @@ static proto_bool xr_bytes(XdrR *r, const uint8_t **d, size_t *n)
         *n = len;
     }
     r->off += len + pad;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ── ONC RPC framing ─────────────────────────────────────────────────────────────────────────────
@@ -123,11 +123,11 @@ size_t protocore_rpc_record_mark(uint8_t *buf, size_t cap, uint32_t payload_len)
     return 4;
 }
 
-proto_bool protocore_rpc_parse_record_mark(const uint8_t *buf, size_t len, proto_bool *last, uint32_t *frag_len)
+embed_bool protocore_rpc_parse_record_mark(const uint8_t *buf, size_t len, embed_bool *last, uint32_t *frag_len)
 {
     if (!buf || len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t rm = (uint32_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = buf, .width = MMGR_ENDIAN_32);
     if (last)
@@ -138,7 +138,7 @@ proto_bool protocore_rpc_parse_record_mark(const uint8_t *buf, size_t len, proto
     {
         *frag_len = rm & 0x7FFFFFFFu;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Start a CALL: reserve 4 bytes for the record mark, then write the RPC call header (through the
@@ -169,14 +169,14 @@ static size_t finish_call(XdrW *w)
     return w->off;
 }
 
-proto_bool protocore_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *xid, uint32_t *accept_stat,
+embed_bool protocore_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *xid, uint32_t *accept_stat,
                                      size_t *result_off)
 {
     if (!rpc)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    XdrR r = {rpc, len, 0, PROTO_TRUE};
+    XdrR r = {rpc, len, 0, EMBED_TRUE};
     uint32_t x = xr_u32(&r);
     uint32_t mtype = xr_u32(&r);
     uint32_t reply_stat = xr_u32(&r);
@@ -185,7 +185,7 @@ proto_bool protocore_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *x
     uint32_t astat = xr_u32(&r);
     if (!r.ok || mtype != RPC_MSGTYPE_REPLY || reply_stat != PROTOCORE_RPC_MSG_ACCEPTED)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (xid)
     {
@@ -199,23 +199,23 @@ proto_bool protocore_rpc_parse_reply(const uint8_t *rpc, size_t len, uint32_t *x
     {
         *result_off = r.off;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Parse the reply header and position a reader at the results; returns false unless SUCCESS.
-static proto_bool reply_results(const uint8_t *rpc, size_t len, XdrR *r)
+static embed_bool reply_results(const uint8_t *rpc, size_t len, XdrR *r)
 {
     uint32_t astat = 0;
     size_t off = 0;
     if (!protocore_rpc_parse_reply(rpc, len, NULL, &astat, &off) || astat != PROTOCORE_RPC_ACCEPT_SUCCESS)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     r->p = rpc;
     r->len = len;
     r->off = off;
-    r->ok = PROTO_TRUE;
-    return PROTO_TRUE;
+    r->ok = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
 // ── portmapper ──────────────────────────────────────────────────────────────────────────────────
@@ -231,29 +231,29 @@ size_t protocore_vxi11_build_getport(uint8_t *buf, size_t cap, uint32_t xid, uin
     return finish_call(&w);
 }
 
-proto_bool protocore_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t *port)
+embed_bool protocore_vxi11_parse_getport_resp(const uint8_t *rpc, size_t len, uint32_t *port)
 {
     XdrR r;
     if (!reply_results(rpc, len, &r))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint32_t p = xr_u32(&r);
     if (!r.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (port)
     {
         *port = p;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ── VXI-11 DEVICE_CORE ──────────────────────────────────────────────────────────────────────────
 
 size_t protocore_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid, int32_t client_id,
-                                         proto_bool lock_device, uint32_t lock_timeout, const char *device)
+                                         embed_bool lock_device, uint32_t lock_timeout, const char *device)
 {
     XdrW w = begin_call(buf, cap, xid, PROTOCORE_VXI11_CORE_PROG, PROTOCORE_VXI11_CORE_VERS,
                         (uint32_t)VXI11_PROC_CREATE_LINK);
@@ -265,12 +265,12 @@ size_t protocore_vxi11_build_create_link(uint8_t *buf, size_t cap, uint32_t xid,
     return finish_call(&w);
 }
 
-proto_bool protocore_vxi11_parse_create_link_resp(const uint8_t *rpc, size_t len, Vxi11CreateLinkResp *out)
+embed_bool protocore_vxi11_parse_create_link_resp(const uint8_t *rpc, size_t len, Vxi11CreateLinkResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->error = (int32_t)xr_u32(&r);
     out->lid = (int32_t)xr_u32(&r);
@@ -296,12 +296,12 @@ size_t protocore_vxi11_build_device_write(uint8_t *buf, size_t cap, uint32_t xid
     return finish_call(&w);
 }
 
-proto_bool protocore_vxi11_parse_write_resp(const uint8_t *rpc, size_t len, Vxi11WriteResp *out)
+embed_bool protocore_vxi11_parse_write_resp(const uint8_t *rpc, size_t len, Vxi11WriteResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->error = (int32_t)xr_u32(&r);
     out->size = xr_u32(&r);
@@ -322,12 +322,12 @@ size_t protocore_vxi11_build_device_read(uint8_t *buf, size_t cap, uint32_t xid,
     return finish_call(&w);
 }
 
-proto_bool protocore_vxi11_parse_read_resp(const uint8_t *rpc, size_t len, Vxi11ReadResp *out)
+embed_bool protocore_vxi11_parse_read_resp(const uint8_t *rpc, size_t len, Vxi11ReadResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->error = (int32_t)xr_u32(&r);
     out->reason = (int32_t)xr_u32(&r);
@@ -349,12 +349,12 @@ size_t protocore_vxi11_build_device_readstb(uint8_t *buf, size_t cap, uint32_t x
     return finish_call(&w);
 }
 
-proto_bool protocore_vxi11_parse_readstb_resp(const uint8_t *rpc, size_t len, Vxi11ReadStbResp *out)
+embed_bool protocore_vxi11_parse_readstb_resp(const uint8_t *rpc, size_t len, Vxi11ReadStbResp *out)
 {
     XdrR r;
     if (!out || !reply_results(rpc, len, &r))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->error = (int32_t)xr_u32(&r);
     out->stb = (uint8_t)xr_u32(&r); // stb is a full 4-byte XDR word; the value is the low byte
@@ -393,23 +393,23 @@ size_t protocore_vxi11_build_destroy_link(uint8_t *buf, size_t cap, uint32_t xid
     return finish_call(&w);
 }
 
-proto_bool protocore_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error)
+embed_bool protocore_vxi11_parse_error_resp(const uint8_t *rpc, size_t len, int32_t *error)
 {
     XdrR r;
     if (!reply_results(rpc, len, &r))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int32_t e = (int32_t)xr_u32(&r);
     if (!r.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (error)
     {
         *error = e;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 const char *protocore_vxi11_error_str(int32_t error)
@@ -451,6 +451,6 @@ const char *protocore_vxi11_error_str(int32_t error)
     }
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_VXI11

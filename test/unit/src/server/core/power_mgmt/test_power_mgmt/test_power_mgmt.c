@@ -46,8 +46,8 @@ static const PowerCfg CFG = {
 };
 
 // Run the decision over one set of arguments and hand back what it decided.
-static PowerPlan decide_cfg(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout,
-                            uint32_t since_boot_ms, proto_bool was_throttled)
+static PowerPlan decide_cfg(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, embed_bool brownout,
+                            uint32_t since_boot_ms, embed_bool was_throttled)
 {
     PowerV.plan_args.cfg = cfg;
     PowerV.plan_args.load_pct = load_pct;
@@ -59,8 +59,8 @@ static PowerPlan decide_cfg(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_
     return PowerV.plan;
 }
 
-static PowerPlan decide(uint8_t load_pct, int16_t temp_c, proto_bool brownout, uint32_t since_boot_ms,
-                        proto_bool was_throttled)
+static PowerPlan decide(uint8_t load_pct, int16_t temp_c, embed_bool brownout, uint32_t since_boot_ms,
+                        embed_bool was_throttled)
 {
     return decide_cfg(&CFG, load_pct, temp_c, brownout, since_boot_ms, was_throttled);
 }
@@ -73,18 +73,18 @@ static PowerPlan decide(uint8_t load_pct, int16_t temp_c, proto_bool brownout, u
 // does, from a cold start.
 void test_the_throttle_engages_at_the_hot_threshold(void)
 {
-    TEST_ASSERT_FALSE(decide(100, (int16_t)(CFG.temp_hot_c - 1), PROTO_FALSE, 60000u, PROTO_FALSE).throttled);
-    TEST_ASSERT_TRUE(decide(100, CFG.temp_hot_c, PROTO_FALSE, 60000u, PROTO_FALSE).throttled);
-    TEST_ASSERT_TRUE(decide(100, (int16_t)(CFG.temp_hot_c + 50), PROTO_FALSE, 60000u, PROTO_FALSE).throttled);
+    TEST_ASSERT_FALSE(decide(100, (int16_t)(CFG.temp_hot_c - 1), EMBED_FALSE, 60000u, EMBED_FALSE).throttled);
+    TEST_ASSERT_TRUE(decide(100, CFG.temp_hot_c, EMBED_FALSE, 60000u, EMBED_FALSE).throttled);
+    TEST_ASSERT_TRUE(decide(100, (int16_t)(CFG.temp_hot_c + 50), EMBED_FALSE, 60000u, EMBED_FALSE).throttled);
 }
 
 // power_mgmt.h: temp_cool_c is "release the throttle at/below this one", so cool+1 holds and cool
 // releases, from a throttled start.
 void test_the_throttle_releases_at_the_cool_threshold(void)
 {
-    TEST_ASSERT_TRUE(decide(100, (int16_t)(CFG.temp_cool_c + 1), PROTO_FALSE, 60000u, PROTO_TRUE).throttled);
-    TEST_ASSERT_FALSE(decide(100, CFG.temp_cool_c, PROTO_FALSE, 60000u, PROTO_TRUE).throttled);
-    TEST_ASSERT_FALSE(decide(100, (int16_t)(CFG.temp_cool_c - 50), PROTO_FALSE, 60000u, PROTO_TRUE).throttled);
+    TEST_ASSERT_TRUE(decide(100, (int16_t)(CFG.temp_cool_c + 1), EMBED_FALSE, 60000u, EMBED_TRUE).throttled);
+    TEST_ASSERT_FALSE(decide(100, CFG.temp_cool_c, EMBED_FALSE, 60000u, EMBED_TRUE).throttled);
+    TEST_ASSERT_FALSE(decide(100, (int16_t)(CFG.temp_cool_c - 50), EMBED_FALSE, 60000u, EMBED_TRUE).throttled);
 }
 
 // Between the two thresholds neither rule applies - the temperature is below hot and above cool - so
@@ -93,8 +93,8 @@ void test_the_band_between_the_thresholds_retains_state(void)
 {
     for (int16_t t = (int16_t)(CFG.temp_cool_c + 1); t < CFG.temp_hot_c; t++)
     {
-        TEST_ASSERT_FALSE(decide(100, t, PROTO_FALSE, 60000u, PROTO_FALSE).throttled);
-        TEST_ASSERT_TRUE(decide(100, t, PROTO_FALSE, 60000u, PROTO_TRUE).throttled);
+        TEST_ASSERT_FALSE(decide(100, t, EMBED_FALSE, 60000u, EMBED_FALSE).throttled);
+        TEST_ASSERT_TRUE(decide(100, t, EMBED_FALSE, 60000u, EMBED_TRUE).throttled);
     }
 }
 
@@ -102,11 +102,11 @@ void test_the_band_between_the_thresholds_retains_state(void)
 // A single threshold flaps once per degree inside the band; two thresholds cross once per direction.
 void test_a_feedback_ramp_crosses_once_per_direction(void)
 {
-    proto_bool held = PROTO_FALSE;
+    embed_bool held = EMBED_FALSE;
     int up = 0;
     for (int16_t t = (int16_t)(CFG.temp_cool_c - 10); t <= (int16_t)(CFG.temp_hot_c + 10); t++)
     {
-        proto_bool now = decide(100, t, PROTO_FALSE, 60000u, held).throttled;
+        embed_bool now = decide(100, t, EMBED_FALSE, 60000u, held).throttled;
         if (now != held)
         {
             up++;
@@ -119,7 +119,7 @@ void test_a_feedback_ramp_crosses_once_per_direction(void)
     int down = 0;
     for (int16_t t = (int16_t)(CFG.temp_hot_c + 10); t >= (int16_t)(CFG.temp_cool_c - 10); t--)
     {
-        proto_bool now = decide(100, t, PROTO_FALSE, 60000u, held).throttled;
+        embed_bool now = decide(100, t, EMBED_FALSE, 60000u, held).throttled;
         if (now != held)
         {
             down++;
@@ -136,17 +136,17 @@ void test_a_feedback_ramp_crosses_once_per_direction(void)
 // temperature, is at/below cool, and does release.
 void test_no_sensor_holds_a_throttle_already_held(void)
 {
-    TEST_ASSERT_FALSE(decide(100, (int16_t)(INT16_MIN + 1), PROTO_FALSE, 60000u, PROTO_TRUE).throttled);
-    TEST_ASSERT_TRUE(decide(100, INT16_MIN, PROTO_FALSE, 60000u, PROTO_TRUE).throttled);
+    TEST_ASSERT_FALSE(decide(100, (int16_t)(INT16_MIN + 1), EMBED_FALSE, 60000u, EMBED_TRUE).throttled);
+    TEST_ASSERT_TRUE(decide(100, INT16_MIN, EMBED_FALSE, 60000u, EMBED_TRUE).throttled);
 }
 
 // A threshold cannot be crossed by a reading that does not exist, so an absent sensor never starts a
 // throttle on its own.
 void test_no_sensor_never_engages_a_throttle(void)
 {
-    TEST_ASSERT_FALSE(decide(0, INT16_MIN, PROTO_FALSE, 60000u, PROTO_FALSE).throttled);
-    TEST_ASSERT_FALSE(decide(100, INT16_MIN, PROTO_FALSE, 60000u, PROTO_FALSE).throttled);
-    TEST_ASSERT_FALSE(decide(255, INT16_MIN, PROTO_TRUE, 0u, PROTO_FALSE).throttled);
+    TEST_ASSERT_FALSE(decide(0, INT16_MIN, EMBED_FALSE, 60000u, EMBED_FALSE).throttled);
+    TEST_ASSERT_FALSE(decide(100, INT16_MIN, EMBED_FALSE, 60000u, EMBED_FALSE).throttled);
+    TEST_ASSERT_FALSE(decide(255, INT16_MIN, EMBED_TRUE, 0u, EMBED_FALSE).throttled);
 }
 
 // power_mgmt.h: busy_pct is "load at/above which the ceiling is used", mhz_max the "clock when there
@@ -164,7 +164,7 @@ void test_the_load_picks_the_rail(void)
             const uint8_t pct = (load > 100) ? 100u : (uint8_t)load; // a percentage saturates at 100
             const uint16_t want = (pct >= cfg.busy_pct) ? cfg.mhz_max : cfg.mhz_min;
             TEST_ASSERT_EQUAL_UINT16(want,
-                                     decide_cfg(&cfg, (uint8_t)load, 25, PROTO_FALSE, 60000u, PROTO_FALSE).cpu_mhz);
+                                     decide_cfg(&cfg, (uint8_t)load, 25, EMBED_FALSE, 60000u, EMBED_FALSE).cpu_mhz);
         }
     }
 }
@@ -172,10 +172,10 @@ void test_the_load_picks_the_rail(void)
 // load_pct is a percentage, so anything a caller reports above 100 decides exactly as 100 does.
 void test_a_load_over_a_hundred_decides_as_a_hundred(void)
 {
-    const PowerPlan at_full = decide(100, 25, PROTO_FALSE, 60000u, PROTO_FALSE);
+    const PowerPlan at_full = decide(100, 25, EMBED_FALSE, 60000u, EMBED_FALSE);
     for (int load = 101; load <= 255; load++)
     {
-        const PowerPlan p = decide((uint8_t)load, 25, PROTO_FALSE, 60000u, PROTO_FALSE);
+        const PowerPlan p = decide((uint8_t)load, 25, EMBED_FALSE, 60000u, EMBED_FALSE);
         TEST_ASSERT_EQUAL_UINT16(at_full.cpu_mhz, p.cpu_mhz);
         TEST_ASSERT_EQUAL_INT(at_full.throttled, p.throttled);
     }
@@ -186,10 +186,10 @@ void test_a_load_over_a_hundred_decides_as_a_hundred(void)
 // is the first instant outside it.
 void test_a_brownout_boot_holds_the_floor_for_its_window(void)
 {
-    TEST_ASSERT_TRUE(decide(100, 25, PROTO_TRUE, 0u, PROTO_FALSE).recovering);
-    TEST_ASSERT_TRUE(decide(100, 25, PROTO_TRUE, CFG.recover_ms - 1u, PROTO_FALSE).recovering);
-    TEST_ASSERT_FALSE(decide(100, 25, PROTO_TRUE, CFG.recover_ms, PROTO_FALSE).recovering);
-    TEST_ASSERT_FALSE(decide(100, 25, PROTO_TRUE, 0xFFFFFFFFu, PROTO_FALSE).recovering);
+    TEST_ASSERT_TRUE(decide(100, 25, EMBED_TRUE, 0u, EMBED_FALSE).recovering);
+    TEST_ASSERT_TRUE(decide(100, 25, EMBED_TRUE, CFG.recover_ms - 1u, EMBED_FALSE).recovering);
+    TEST_ASSERT_FALSE(decide(100, 25, EMBED_TRUE, CFG.recover_ms, EMBED_FALSE).recovering);
+    TEST_ASSERT_FALSE(decide(100, 25, EMBED_TRUE, 0xFFFFFFFFu, EMBED_FALSE).recovering);
 }
 
 // The window only opens for a boot that followed a brownout.
@@ -197,7 +197,7 @@ void test_a_clean_boot_never_recovers(void)
 {
     for (uint32_t ms = 0; ms < CFG.recover_ms; ms += CFG.recover_ms / 8u)
     {
-        TEST_ASSERT_FALSE(decide(100, 25, PROTO_FALSE, ms, PROTO_FALSE).recovering);
+        TEST_ASSERT_FALSE(decide(100, 25, EMBED_FALSE, ms, EMBED_FALSE).recovering);
     }
 }
 
@@ -205,19 +205,19 @@ void test_a_clean_boot_never_recovers(void)
 // floor away from a load that would otherwise buy the ceiling, and both together do the same.
 void test_either_hold_forces_the_floor(void)
 {
-    TEST_ASSERT_EQUAL_UINT16(CFG.mhz_max, decide(100, 25, PROTO_FALSE, 60000u, PROTO_FALSE).cpu_mhz);
+    TEST_ASSERT_EQUAL_UINT16(CFG.mhz_max, decide(100, 25, EMBED_FALSE, 60000u, EMBED_FALSE).cpu_mhz);
 
-    const PowerPlan hot = decide(100, (int16_t)(CFG.temp_hot_c + 5), PROTO_FALSE, 60000u, PROTO_FALSE);
+    const PowerPlan hot = decide(100, (int16_t)(CFG.temp_hot_c + 5), EMBED_FALSE, 60000u, EMBED_FALSE);
     TEST_ASSERT_TRUE(hot.throttled);
     TEST_ASSERT_FALSE(hot.recovering);
     TEST_ASSERT_EQUAL_UINT16(CFG.mhz_min, hot.cpu_mhz);
 
-    const PowerPlan brown = decide(100, 25, PROTO_TRUE, 0u, PROTO_FALSE);
+    const PowerPlan brown = decide(100, 25, EMBED_TRUE, 0u, EMBED_FALSE);
     TEST_ASSERT_FALSE(brown.throttled);
     TEST_ASSERT_TRUE(brown.recovering);
     TEST_ASSERT_EQUAL_UINT16(CFG.mhz_min, brown.cpu_mhz);
 
-    const PowerPlan both = decide(100, (int16_t)(CFG.temp_hot_c + 5), PROTO_TRUE, 0u, PROTO_FALSE);
+    const PowerPlan both = decide(100, (int16_t)(CFG.temp_hot_c + 5), EMBED_TRUE, 0u, EMBED_FALSE);
     TEST_ASSERT_TRUE(both.throttled);
     TEST_ASSERT_TRUE(both.recovering);
     TEST_ASSERT_EQUAL_UINT16(CFG.mhz_min, both.cpu_mhz);
@@ -227,10 +227,10 @@ void test_either_hold_forces_the_floor(void)
 // same way however many other decisions ran in between.
 void test_the_decision_is_a_pure_function_of_its_arguments(void)
 {
-    const PowerPlan first = decide(100, (int16_t)(CFG.temp_hot_c + 5), PROTO_TRUE, 0u, PROTO_TRUE);
-    (void)decide(0, (int16_t)(CFG.temp_cool_c - 20), PROTO_FALSE, 0xFFFFFFFFu, PROTO_FALSE);
-    (void)decide(50, INT16_MIN, PROTO_TRUE, 1u, PROTO_TRUE);
-    const PowerPlan again = decide(100, (int16_t)(CFG.temp_hot_c + 5), PROTO_TRUE, 0u, PROTO_TRUE);
+    const PowerPlan first = decide(100, (int16_t)(CFG.temp_hot_c + 5), EMBED_TRUE, 0u, EMBED_TRUE);
+    (void)decide(0, (int16_t)(CFG.temp_cool_c - 20), EMBED_FALSE, 0xFFFFFFFFu, EMBED_FALSE);
+    (void)decide(50, INT16_MIN, EMBED_TRUE, 1u, EMBED_TRUE);
+    const PowerPlan again = decide(100, (int16_t)(CFG.temp_hot_c + 5), EMBED_TRUE, 0u, EMBED_TRUE);
 
     TEST_ASSERT_EQUAL_UINT16(first.cpu_mhz, again.cpu_mhz);
     TEST_ASSERT_EQUAL_INT(first.throttled, again.throttled);
@@ -241,7 +241,7 @@ void test_the_decision_is_a_pure_function_of_its_arguments(void)
 // neither rail, and a caller that applied it would be setting the part to no frequency.
 void test_a_null_config_decides_nothing(void)
 {
-    const PowerPlan p = decide_cfg(NULL, 100, (int16_t)(CFG.temp_hot_c + 5), PROTO_TRUE, 0u, PROTO_TRUE);
+    const PowerPlan p = decide_cfg(NULL, 100, (int16_t)(CFG.temp_hot_c + 5), EMBED_TRUE, 0u, EMBED_TRUE);
     TEST_ASSERT_EQUAL_UINT16(0u, p.cpu_mhz);
     TEST_ASSERT_FALSE(p.throttled);
     TEST_ASSERT_FALSE(p.recovering);
@@ -616,8 +616,8 @@ void test_every_report_is_a_json_text(void)
             {
                 PowerPlan p;
                 p.cpu_mhz = (thr || rec) ? CFG.mhz_min : CFG.mhz_max;
-                p.throttled = thr ? PROTO_TRUE : PROTO_FALSE;
-                p.recovering = rec ? PROTO_TRUE : PROTO_FALSE;
+                p.throttled = thr ? EMBED_TRUE : EMBED_FALSE;
+                p.recovering = rec ? EMBED_TRUE : EMBED_FALSE;
                 TEST_ASSERT_TRUE_MESSAGE(json_ok(report(&p, TEMP[t], sizeof(g_json))), g_json);
                 TEST_ASSERT_EQUAL_UINT((unsigned)strlen(g_json), (unsigned)PowerV.n);
             }
@@ -631,14 +631,14 @@ void test_the_flags_use_the_literal_names_the_rfc_publishes(void)
 {
     PowerPlan p;
     p.cpu_mhz = CFG.mhz_min;
-    p.throttled = PROTO_TRUE;
-    p.recovering = PROTO_FALSE;
+    p.throttled = EMBED_TRUE;
+    p.recovering = EMBED_FALSE;
     TEST_ASSERT_TRUE(json_ok(report(&p, 85, sizeof(g_json))));
     TEST_ASSERT_TRUE(has_literal("true"));
     TEST_ASSERT_TRUE(has_literal("false"));
 
-    p.throttled = PROTO_FALSE;
-    p.recovering = PROTO_TRUE;
+    p.throttled = EMBED_FALSE;
+    p.recovering = EMBED_TRUE;
     TEST_ASSERT_TRUE(json_ok(report(&p, 85, sizeof(g_json))));
     TEST_ASSERT_TRUE(has_literal("true"));
     TEST_ASSERT_TRUE(has_literal("false"));
@@ -654,8 +654,8 @@ void test_a_reading_survives_the_report(void)
     {
         PowerPlan p;
         p.cpu_mhz = CFG.mhz_max;
-        p.throttled = PROTO_FALSE;
-        p.recovering = PROTO_FALSE;
+        p.throttled = EMBED_FALSE;
+        p.recovering = EMBED_FALSE;
         TEST_ASSERT_TRUE(json_ok(report(&p, TEMP[t], sizeof(g_json))));
         TEST_ASSERT_TRUE_MESSAGE(has_number((long)TEMP[t]), g_json);
     }
@@ -669,8 +669,8 @@ void test_the_clock_survives_the_report(void)
     {
         PowerPlan p;
         p.cpu_mhz = MHZ[m];
-        p.throttled = PROTO_FALSE;
-        p.recovering = PROTO_FALSE;
+        p.throttled = EMBED_FALSE;
+        p.recovering = EMBED_FALSE;
         TEST_ASSERT_TRUE(json_ok(report(&p, 25, sizeof(g_json))));
         TEST_ASSERT_TRUE_MESSAGE(has_number((long)MHZ[m]), g_json);
     }
@@ -683,8 +683,8 @@ void test_the_sentinel_is_never_reported_as_a_reading(void)
 {
     PowerPlan p;
     p.cpu_mhz = CFG.mhz_max;
-    p.throttled = PROTO_FALSE;
-    p.recovering = PROTO_FALSE;
+    p.throttled = EMBED_FALSE;
+    p.recovering = EMBED_FALSE;
     TEST_ASSERT_TRUE(json_ok(report(&p, INT16_MIN, sizeof(g_json))));
     TEST_ASSERT_TRUE(has_literal("null"));
     TEST_ASSERT_FALSE(has_number(-32768L));
@@ -700,8 +700,8 @@ void test_a_short_buffer_yields_nothing_not_a_prefix(void)
 {
     PowerPlan p;
     p.cpu_mhz = CFG.mhz_min;
-    p.throttled = PROTO_TRUE;
-    p.recovering = PROTO_TRUE;
+    p.throttled = EMBED_TRUE;
+    p.recovering = EMBED_TRUE;
     (void)report(&p, -40, sizeof(g_json));
     const size_t full = PowerV.n;
     TEST_ASSERT_TRUE(full > 0u);
@@ -723,8 +723,8 @@ void test_the_report_refuses_what_it_cannot_write(void)
 {
     PowerPlan p;
     p.cpu_mhz = CFG.mhz_max;
-    p.throttled = PROTO_FALSE;
-    p.recovering = PROTO_FALSE;
+    p.throttled = EMBED_FALSE;
+    p.recovering = EMBED_FALSE;
 
     PowerV.out_args.plan = NULL;
     PowerV.out_args.temp_c = 25;

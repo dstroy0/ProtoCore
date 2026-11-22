@@ -17,7 +17,7 @@
 
 #include "server/clock/clock.h" // Clock.ms - the monotonic source the dwell schedule is stamped from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_PROMISC
 #include "services/radio/promisc/promisc.h" // the promiscuous-capture owner
@@ -60,7 +60,7 @@ void protocore_wifi_sniffer_parse(uint8_t *work)
 
     if (!frame || !out || len < 10) // FrameControl(2) + Duration(2) + Address1(6)
     {
-        WifiSnifferV.ok = PROTO_FALSE;
+        WifiSnifferV.ok = EMBED_FALSE;
         return;
     }
 
@@ -89,7 +89,7 @@ void protocore_wifi_sniffer_parse(uint8_t *work)
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out->addr3, .src = frame + 16, .bytes = 6);
         out->naddr = 3;
     }
-    WifiSnifferV.ok = PROTO_TRUE;
+    WifiSnifferV.ok = EMBED_TRUE;
 }
 
 void protocore_wifi_sniffer_stats_reset(uint8_t *work)
@@ -192,7 +192,7 @@ void protocore_wifi_sniffer_scan_due(uint8_t *work)
 
     if (!s)
     {
-        WifiSnifferV.ok = PROTO_FALSE;
+        WifiSnifferV.ok = EMBED_FALSE;
         return;
     }
     // Unsigned subtraction is correct across a millis() rollover.
@@ -306,10 +306,10 @@ void protocore_wifi_sniffer_survey_best(uint8_t *work)
 
     if (!s)
     {
-        WifiSnifferV.ok = PROTO_FALSE;
+        WifiSnifferV.ok = EMBED_FALSE;
         return;
     }
-    proto_bool found = PROTO_FALSE;
+    embed_bool found = EMBED_FALSE;
     uint8_t best_ch = 0;
     int8_t best = PROTOCORE_WIFI_RSSI_NONE;
     for (uint8_t i = 0; i < s->count; i++)
@@ -321,7 +321,7 @@ void protocore_wifi_sniffer_survey_best(uint8_t *work)
         }
         if (!found || s->ch[i].best_rssi > best)
         {
-            found = PROTO_TRUE;
+            found = EMBED_TRUE;
             best = s->ch[i].best_rssi;
             best_ch = ch;
         }
@@ -346,7 +346,7 @@ typedef struct
     WifiStats stats;
     WifiSurvey survey;
     WifiScan scan;
-    proto_bool running;
+    embed_bool running;
 } WifiSnifferCtx;
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -418,7 +418,7 @@ void protocore_wifi_sniffer_begin(uint8_t *work)
     WifiSnifferV.survey_reset_args.count =
         (uint8_t)(WIFI_SNIFFER_CTX(work)->scan.chan_last - WIFI_SNIFFER_CTX(work)->scan.chan_first + 1);
     protocore_wifi_sniffer_survey_reset(work);
-    proto_bool promisc_ok = Promisc.begin(protocore_promisc_span(), WIFI_SNIFFER_CTX(work)->scan.channel, sniffer_sink);
+    embed_bool promisc_ok = Promisc.begin(protocore_promisc_span(), WIFI_SNIFFER_CTX(work)->scan.channel, sniffer_sink);
     WIFI_SNIFFER_CTX(work)->running = promisc_ok;
     WifiSnifferV.ok = WIFI_SNIFFER_CTX(work)->running;
 }
@@ -450,7 +450,7 @@ void protocore_wifi_sniffer_end(uint8_t *work)
         return;
     }
     Promisc.end(protocore_promisc_span());
-    WIFI_SNIFFER_CTX(work)->running = PROTO_FALSE;
+    WIFI_SNIFFER_CTX(work)->running = EMBED_FALSE;
 }
 
 void protocore_wifi_sniffer_stats(uint8_t *work)
@@ -492,8 +492,8 @@ void protocore_wifi_sniffer_begin(uint8_t *work)
     WifiSnifferV.survey_reset_args.count =
         (uint8_t)(WIFI_SNIFFER_CTX(work)->scan.chan_last - WIFI_SNIFFER_CTX(work)->scan.chan_first + 1);
     protocore_wifi_sniffer_survey_reset(work);
-    WIFI_SNIFFER_CTX(work)->running = PROTO_FALSE;
-    WifiSnifferV.ok = PROTO_FALSE;
+    WIFI_SNIFFER_CTX(work)->running = EMBED_FALSE;
+    WifiSnifferV.ok = EMBED_FALSE;
 }
 
 // Hopping moves a capture that is not running, so the dwell schedule stands still.
@@ -504,7 +504,7 @@ void protocore_wifi_sniffer_tick(uint8_t *work)
 
 void protocore_wifi_sniffer_end(uint8_t *work)
 {
-    WIFI_SNIFFER_CTX(work)->running = PROTO_FALSE;
+    WIFI_SNIFFER_CTX(work)->running = EMBED_FALSE;
 }
 
 void protocore_wifi_sniffer_stats(uint8_t *work)
@@ -527,6 +527,6 @@ void protocore_wifi_sniffer_scan(uint8_t *work)
 /** @brief The operands and the outcome. */
 WifiSnifferVars WifiSnifferV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WIFI_SNIFFER

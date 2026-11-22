@@ -48,7 +48,7 @@ void test_the_borrow_covers_the_context(void)
 // Header: publish binds a listener id to an origin and returns true.
 void test_publish_binds_a_listener_to_an_origin(void)
 {
-    proto_bool relay_listener_ok = RelayListener.publish(work, 3, "192.168.1.60", 80);
+    embed_bool relay_listener_ok = RelayListener.publish(work, 3, "192.168.1.60", 80);
     TEST_ASSERT_TRUE(relay_listener_ok);
 
     RelayBind *b = bind_by_listener(work, 3);
@@ -78,13 +78,13 @@ void test_a_bad_origin_host_is_refused_and_takes_no_slot(void)
     }
     toolong[sizeof(toolong) - 1] = '\0';
 
-    proto_bool relay_listener_ok = RelayListener.publish(work, 1, NULL, 80);
+    embed_bool relay_listener_ok = RelayListener.publish(work, 1, NULL, 80);
     TEST_ASSERT_FALSE(relay_listener_ok);
 
-    proto_bool relay_listener_ok2 = RelayListener.publish(work, 1, "", 80);
+    embed_bool relay_listener_ok2 = RelayListener.publish(work, 1, "", 80);
     TEST_ASSERT_FALSE(relay_listener_ok2); // an empty host names no origin
 
-    proto_bool relay_listener_ok3 = RelayListener.publish(work, 1, toolong, 80);
+    embed_bool relay_listener_ok3 = RelayListener.publish(work, 1, toolong, 80);
     TEST_ASSERT_FALSE(relay_listener_ok3);
 
     TEST_ASSERT_NULL(bind_by_listener(work, 1)); // none of the three consumed a slot
@@ -101,11 +101,11 @@ void test_the_host_length_boundary(void)
     }
     host[PROTOCORE_RELAY_HOST_MAX] = '\0'; // exactly HOST_MAX characters: one too many
 
-    proto_bool relay_listener_ok = RelayListener.publish(work, 1, host, 80);
+    embed_bool relay_listener_ok = RelayListener.publish(work, 1, host, 80);
     TEST_ASSERT_FALSE(relay_listener_ok);
 
     host[PROTOCORE_RELAY_HOST_MAX - 1] = '\0'; // HOST_MAX-1 characters plus the NUL: the longest fit
-    proto_bool relay_listener_ok2 = RelayListener.publish(work, 1, host, 80);
+    embed_bool relay_listener_ok2 = RelayListener.publish(work, 1, host, 80);
     TEST_ASSERT_TRUE(relay_listener_ok2);
     TEST_ASSERT_EQUAL_STRING(host, bind_by_listener(work, 1)->host);
 }
@@ -115,10 +115,10 @@ void test_the_table_fills_at_its_bound_and_then_refuses(void)
 {
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
-        proto_bool relay_listener_ok = RelayListener.publish(work, (uint8_t)i, "10.0.0.1", (uint16_t)(1000 + i));
+        embed_bool relay_listener_ok = RelayListener.publish(work, (uint8_t)i, "10.0.0.1", (uint16_t)(1000 + i));
         TEST_ASSERT_TRUE_MESSAGE(relay_listener_ok, "a bind inside the bound was refused");
     }
-    proto_bool relay_listener_ok2 = RelayListener.publish(work, 99, "10.0.0.2", 9999);
+    embed_bool relay_listener_ok2 = RelayListener.publish(work, 99, "10.0.0.2", 9999);
     TEST_ASSERT_FALSE(relay_listener_ok2); // one past the bound
 
     TEST_ASSERT_NULL(bind_by_listener(work, 99));
@@ -135,7 +135,7 @@ void test_reset_returns_the_table_to_empty(void)
     {
         RelayListener.publish(work, (uint8_t)i, "10.0.0.1", 80);
     }
-    RELAY_LISTENER_CTX(work)->bridges[0].active = PROTO_TRUE;
+    RELAY_LISTENER_CTX(work)->bridges[0].active = EMBED_TRUE;
 
     RelayListener.reset(work);
 
@@ -158,11 +158,11 @@ void test_the_bridge_allocator_hands_out_each_slot_once(void)
     {
         int idx = bridge_find_free(work);
         TEST_ASSERT_EQUAL_INT_MESSAGE(i, idx, "a free bridge slot was handed out twice");
-        RELAY_LISTENER_CTX(work)->bridges[idx].active = PROTO_TRUE;
+        RELAY_LISTENER_CTX(work)->bridges[idx].active = EMBED_TRUE;
     }
     TEST_ASSERT_EQUAL_INT(-1, bridge_find_free(work)); // full
 
-    RELAY_LISTENER_CTX(work)->bridges[2].active = PROTO_FALSE;
+    RELAY_LISTENER_CTX(work)->bridges[2].active = EMBED_FALSE;
     TEST_ASSERT_EQUAL_INT(2, bridge_find_free(work)); // the freed slot is the next one out
 }
 
@@ -172,13 +172,13 @@ void test_a_bridge_is_found_by_its_connection_slot(void)
 {
     TEST_ASSERT_NULL(bridge_by_conn(work, 5));
 
-    RELAY_LISTENER_CTX(work)->bridges[1].active = PROTO_TRUE;
+    RELAY_LISTENER_CTX(work)->bridges[1].active = EMBED_TRUE;
     RELAY_LISTENER_CTX(work)->bridges[1].conn_slot = 5;
     RelayBridge *br = bridge_by_conn(work, 5);
     TEST_ASSERT_NOT_NULL(br);
     TEST_ASSERT_EQUAL_PTR(&RELAY_LISTENER_CTX(work)->bridges[1], br);
 
-    RELAY_LISTENER_CTX(work)->bridges[1].active = PROTO_FALSE;
+    RELAY_LISTENER_CTX(work)->bridges[1].active = EMBED_FALSE;
     TEST_ASSERT_NULL(bridge_by_conn(work, 5)); // an inactive bridge is not a match
 }
 
@@ -186,9 +186,9 @@ void test_a_bridge_is_found_by_its_connection_slot(void)
 // id twice takes a second slot rather than overwriting, which is what the table's fill order says.
 void test_each_publish_takes_its_own_slot(void)
 {
-    proto_bool relay_listener_ok = RelayListener.publish(work, 2, "10.0.0.1", 80);
+    embed_bool relay_listener_ok = RelayListener.publish(work, 2, "10.0.0.1", 80);
     TEST_ASSERT_TRUE(relay_listener_ok);
-    proto_bool relay_listener_ok2 = RelayListener.publish(work, 2, "10.0.0.1", 80);
+    embed_bool relay_listener_ok2 = RelayListener.publish(work, 2, "10.0.0.1", 80);
     TEST_ASSERT_TRUE(relay_listener_ok2);
 
     TEST_ASSERT_TRUE(RELAY_LISTENER_CTX(work)->binds[0].active);

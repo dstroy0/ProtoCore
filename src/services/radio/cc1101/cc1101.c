@@ -38,7 +38,7 @@ static void write_reg(const protocore_cc1101_bus *b, uint8_t addr, uint8_t val)
     b->spi(tx, rx, 2, b->ctx);
 }
 
-static uint8_t read_reg(const protocore_cc1101_bus *b, uint8_t addr, proto_bool status)
+static uint8_t read_reg(const protocore_cc1101_bus *b, uint8_t addr, embed_bool status)
 {
     // Status registers (0x30-0x3D) require the burst bit to distinguish them from strobes.
     uint8_t hdr = (uint8_t)(addr | READ | (status ? BURST : 0));
@@ -78,14 +78,14 @@ int16_t protocore_cc1101_rssi_dbm(uint8_t *work, uint8_t raw)
     return (int16_t)(r / 2 - 74);
 }
 
-proto_bool protocore_cc1101_init(uint8_t *work, const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)
+embed_bool protocore_cc1101_init(uint8_t *work, const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     (void)work;
 
     if (!bus || !bus->spi || !cfg)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     strobe(bus, STROBE_SRES);
     for (size_t i = 0; i < cfg->nregs && cfg->regs; i++)
@@ -93,18 +93,18 @@ proto_bool protocore_cc1101_init(uint8_t *work, const protocore_cc1101_bus *bus,
         write_reg(bus, cfg->regs[i].addr, cfg->regs[i].value);
     }
     write_reg(bus, REG_CHANNR, cfg->channel);
-    uint8_t ver = read_reg(bus, STAT_VERSION, PROTO_TRUE);
+    uint8_t ver = read_reg(bus, STAT_VERSION, EMBED_TRUE);
     ok = ver != 0x00 && ver != 0xFF; // a floating bus reads all-0 or all-1
     return ok;
 }
 
-proto_bool protocore_cc1101_send(uint8_t *work, const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len)
+embed_bool protocore_cc1101_send(uint8_t *work, const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len)
 {
     (void)work;
 
     if (!bus || !bus->spi || !data || len == 0 || len > 63)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     strobe(bus, STROBE_SIDLE);
     strobe(bus, STROBE_SFTX);
@@ -119,16 +119,16 @@ proto_bool protocore_cc1101_send(uint8_t *work, const protocore_cc1101_bus *bus,
     }
     bus->spi(tx, rx, (uint8_t)(2 + len), bus->ctx);
     strobe(bus, STROBE_STX);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_cc1101_tx_done(uint8_t *work, const protocore_cc1101_bus *bus)
+embed_bool protocore_cc1101_tx_done(uint8_t *work, const protocore_cc1101_bus *bus)
 {
     (void)work;
 
     if (!bus || !bus->spi)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t st = (uint8_t)((status_byte(bus) >> 4) & 0x07);
     return st == STATE_IDLE;
@@ -153,12 +153,12 @@ int protocore_cc1101_recv(uint8_t *work, const protocore_cc1101_bus *bus, uint8_
     {
         return -1;
     }
-    uint8_t rxbytes = (uint8_t)(read_reg(bus, STAT_RXBYTES, PROTO_TRUE) & 0x7F); // low 7 bits = count
+    uint8_t rxbytes = (uint8_t)(read_reg(bus, STAT_RXBYTES, EMBED_TRUE) & 0x7F); // low 7 bits = count
     if (rxbytes == 0)
     {
         return -1;
     }
-    uint8_t len = read_reg(bus, FIFO, PROTO_FALSE); // variable-length: leading length byte
+    uint8_t len = read_reg(bus, FIFO, EMBED_FALSE); // variable-length: leading length byte
     if (len == 0 || len > 63)
     {
         strobe(bus, STROBE_SFRX); // corrupt length: flush and bail

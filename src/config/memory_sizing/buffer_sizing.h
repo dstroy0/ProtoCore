@@ -3767,15 +3767,35 @@
 #define PROTOCORE_PLAINTEXT_WORK_DIFFSERV 0
 #endif
 
+#if PROTOCORE_ENABLE_UDP
 #define PROTOCORE_PLAINTEXT_WORK_UDPCLIENT PROTOCORE_UDP_CLIENT_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_UDPCLIENT 0
+#endif
 
+#if PROTOCORE_ENABLE_UDP
 #define PROTOCORE_PLAINTEXT_WORK_UDPLISTENER PROTOCORE_UDP_LISTENER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_UDPLISTENER 0
+#endif
 
+#if PROTOCORE_ENABLE_TCP
 #define PROTOCORE_PLAINTEXT_WORK_TCPLOWER PROTOCORE_TCP_LOWER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_TCPLOWER 0
+#endif
 
+#if PROTOCORE_ENABLE_TCP
 #define PROTOCORE_PLAINTEXT_WORK_CONNPOOL PROTOCORE_CONN_POOL_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_CONNPOOL 0
+#endif
 
+#if PROTOCORE_ENABLE_TCP
 #define PROTOCORE_PLAINTEXT_WORK_TCPLISTENER PROTOCORE_TCP_LISTENER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_TCPLISTENER 0
+#endif
 
 #if PROTOCORE_ENABLE_TCP_CLIENT
 #define PROTOCORE_PLAINTEXT_WORK_TCPCLIENT PROTOCORE_TCP_CLIENT_BORROW
@@ -3818,40 +3838,94 @@
  */
 #define PROTOCORE_STACK_CELLBLOCK_BYTES                                                                                \
     IDEMIP_ROUND_UP(IDEMIP_TOTAL_BORROW + (PROTOCORE_STACK_CELLS * PROTOCORE_STACK_CELL_COST), MMGR_ALIGN_BYTES)
-/** @brief The share of the stack module in the plaintext arena: its context alone. */
-#define PROTOCORE_PLAINTEXT_WORK_STACK PROTOCORE_STACK_BORROW
 /**
- * @brief The segments of the transmit ring of each TCP pool entry, a power of two. Each segment holds the
+ * @brief The TCP connections that the stack carries at one time, below 255. Each entry holds one TCB while
+ *        its connection is open, so an entry above IDEMIP_TCP_PCBS can carry no connection.
+ */
+#ifndef PROTOCORE_STACK_TCP_ENTRIES
+#define PROTOCORE_STACK_TCP_ENTRIES IDEMIP_TCP_PCBS
+#endif
+static_assert(PROTOCORE_STACK_TCP_ENTRIES <= IDEMIP_TCP_PCBS,
+              "PROTOCORE_STACK_TCP_ENTRIES is above IDEMIP_TCP_PCBS: the entries above it can carry no connection");
+/**
+ * @brief The segments of the transmit ring of each TCP connection, a power of two. Each segment holds the
  *        octets of one write, up to its size.
  */
-#ifndef PROTOCORE_TCP_ENGINE_SEGMENTS
-#define PROTOCORE_TCP_ENGINE_SEGMENTS 4u
+#ifndef PROTOCORE_STACK_TCP_SEGMENTS
+#define PROTOCORE_STACK_TCP_SEGMENTS 4u
 #endif
-/** @brief The TcpEvt records that the event ring of the TCP engine holds, a power of two. */
-#ifndef PROTOCORE_TCP_ENGINE_EVENTS
-#define PROTOCORE_TCP_ENGINE_EVENTS 32u
+/** @brief The StackTcpEvent records that the event ring of the TCP of the stack holds, a power of two. */
+#ifndef PROTOCORE_STACK_TCP_EVENTS
+#define PROTOCORE_STACK_TCP_EVENTS 32u
 #endif
 /**
- * @brief The context of the TCP engine: one row for each TCB, one record for each pool entry, and two
+ * @brief The context of the TCP of the stack: one row for each TCB, one record for each entry, and two
  *        pointers. 64 bytes hold the state and the padding.
  */
-#ifndef PROTOCORE_TCP_ENGINE_BORROW
-#define PROTOCORE_TCP_ENGINE_BORROW                                                                                    \
-    ((IDEMIP_TCP_PCBS * 32u) + (MAX_CONNS * ((2u * sizeof(uint8_t *)) + 24u)) + (2u * sizeof(uint8_t *)) + 64u)
+#ifndef PROTOCORE_STACK_TCP_BORROW
+#define PROTOCORE_STACK_TCP_BORROW                                                                                     \
+    ((IDEMIP_TCP_PCBS * 32u) + (PROTOCORE_STACK_TCP_ENTRIES * ((2u * sizeof(uint8_t *)) + 24u)) +                   \
+     (2u * sizeof(uint8_t *)) + 64u)
 #endif
 /**
- * @brief The milliseconds that a TCB stays in FIN-WAIT-2 after its pool entry goes back. The peer then sent
- *        no FIN, and the TCB closes. RFC 9293 sets no bound, and a TCB that waits forever takes a TCB from
- *        each later connection.
+ * @brief The milliseconds that a TCB stays in FIN-WAIT-2 after its entry goes back. The peer then sent no
+ *        FIN, and the TCB closes. RFC 9293 sets no bound, and a TCB that waits forever takes a TCB from each
+ *        later connection.
  */
-#ifndef PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS
-#define PROTOCORE_TCP_ENGINE_FIN_WAIT_2_MS 60000u
+#ifndef PROTOCORE_STACK_TCP_FIN_WAIT_2_MS
+#define PROTOCORE_STACK_TCP_FIN_WAIT_2_MS 60000u
 #endif
-/** @brief The share of the TCP engine in the plaintext arena: its context alone. */
-#define PROTOCORE_PLAINTEXT_WORK_TCPENGINE PROTOCORE_TCP_ENGINE_BORROW
+/** @brief The TCP control blocks of the raw API that listen, apart from one for each entry. */
+#ifndef PROTOCORE_STACK_NET_LISTENERS
+#define PROTOCORE_STACK_NET_LISTENERS 4u
+#endif
+/**
+ * @brief The octets of the receive ring of each entry, a power of two. The receive window of the entry is
+ *        this count less one, and the transport frees the octets with protocore_net_recved.
+ */
+#ifndef PROTOCORE_STACK_NET_RX_BYTES
+#define PROTOCORE_STACK_NET_RX_BYTES 2048u
+#endif
+/** @brief The octets of each transmit segment of an entry: the count in front, and the text of one write. */
+#ifndef PROTOCORE_STACK_NET_SEGMENT_BYTES
+#define PROTOCORE_STACK_NET_SEGMENT_BYTES 1028u
+#endif
+/** @brief The packet buffers of the raw API, which carry received text to the transport. */
+#ifndef PROTOCORE_STACK_NET_PBUFS
+#define PROTOCORE_STACK_NET_PBUFS 4u
+#endif
+/** @brief The stack octets of the task that runs the pass of the stack. */
+#ifndef PROTOCORE_STACK_NET_TASK_STACK
+#define PROTOCORE_STACK_NET_TASK_STACK 8192
+#endif
+/** @brief The priority of that task, above each worker, as the tcpip thread of lwIP is. */
+#ifndef PROTOCORE_STACK_NET_TASK_PRIORITY
+#define PROTOCORE_STACK_NET_TASK_PRIORITY (PROTOCORE_WORKER_TASK_PRIORITY + 1)
+#endif
+/** @brief The core of that task. */
+#ifndef PROTOCORE_STACK_NET_TASK_CORE
+#define PROTOCORE_STACK_NET_TASK_CORE 0
+#endif
+/** @brief The milliseconds that an active open waits for the ARP row of its next hop. */
+#ifndef PROTOCORE_STACK_NET_ARP_WAIT_MS
+#define PROTOCORE_STACK_NET_ARP_WAIT_MS 3000u
+#endif
+/** @brief The milliseconds between two ARP requests of one active open. RFC 1122 sec 2.3.2.1 sets one each second. */
+#ifndef PROTOCORE_STACK_NET_ARP_RETRY_MS
+#define PROTOCORE_STACK_NET_ARP_RETRY_MS 1000u
+#endif
+/** @brief The UDP control blocks of the raw API, at most IDEMIP_UDP_PCBS. */
+#ifndef PROTOCORE_STACK_NET_UDP_PCBS
+#define PROTOCORE_STACK_NET_UDP_PCBS 8u
+#endif
+/** @brief The octets of each packet buffer of the raw API. */
+#ifndef PROTOCORE_STACK_NET_PBUF_BYTES
+#define PROTOCORE_STACK_NET_PBUF_BYTES 1460u
+#endif
+/** @brief The share of the stack module in the plaintext arena: its context and that of its TCP. */
+#define PROTOCORE_PLAINTEXT_WORK_STACK (PROTOCORE_STACK_BORROW + PROTOCORE_STACK_TCP_BORROW)
 #else
 #define PROTOCORE_PLAINTEXT_WORK_STACK 0
-#define PROTOCORE_PLAINTEXT_WORK_TCPENGINE 0
 #endif
 
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
@@ -3878,7 +3952,7 @@
      PROTOCORE_PLAINTEXT_WORK_NTPSERVICE + PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE +                                    \
      PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE + PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +  \
      PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_MTCONNECT + PROTOCORE_PLAINTEXT_WORK_FILESERVING +    \
-     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + PROTOCORE_PLAINTEXT_WORK_STACK + PROTOCORE_PLAINTEXT_WORK_TCPENGINE + 256)
+     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + PROTOCORE_PLAINTEXT_WORK_STACK + 256)
 #endif
 
 /**
@@ -4097,8 +4171,7 @@
  * part of the listener API.  Feature flags gate the implementation, not the
  * identifier.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(ProtoConn,
     PROTO_NONE = 0,     ///< Unassigned slot.
     PROTO_HTTP = 1,     ///< HTTP/1.1 with optional WS and SSE upgrades.
     PROTO_TELNET = 2,   ///< Telnet (RFC 854).
@@ -4112,7 +4185,7 @@ typedef enum PROTO_ENUM_PACKED
     PROTO_MESH =
         10,         ///< Edge-cache sibling link (PROTOCORE_ENABLE_EDGE_MESH): answers a peer's content-addressed query.
     PROTO_UDP = 11, ///< A bound datagram port. The slot carries the peer per entry, not per slot.
-} ProtoConn;
+);
 
 /**
  * @brief What an interface is, and the filter that selects one.
@@ -4123,15 +4196,14 @@ typedef enum PROTO_ENUM_PACKED
  * comparing its local IP to the softAP IP; a bus or radio interface is registered by the
  * application and forwarded to like any other.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_if_kind,
     PROTOCORE_IF_ANY = 0,      ///< unspecified kind, and the filter that matches any interface
     PROTOCORE_IF_WIFI_STA = 1, ///< station interface (joined to an AP / your LAN)
     PROTOCORE_IF_WIFI_AP = 2,  ///< softAP interface (clients joined to the device)
     PROTOCORE_IF_ETH = 3,      ///< wired Ethernet PHY
     PROTOCORE_IF_BUS = 4,      ///< a bus bridged onto the network (uart, spi, can)
     PROTOCORE_IF_RADIO = 5,    ///< a non-wifi radio
-} protocore_if_kind;
+);
 
 // --- feature dependency guards (centralized; see the BUILD-FLAG DEPENDENCY TREE
 //     near the top of this file). A child feature requires its parent(s). ---

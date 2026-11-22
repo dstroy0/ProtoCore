@@ -19,7 +19,7 @@
 #include "endian/endian.h"                 // magna_extremitas.wr / rd32be: the network byte order of sec 4.2.5.1
 #include "memoria_operor/memoria_operor.h" // memor.cpy: the payload spans a frame carries
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Write the 7 octet frame header at buf: type, channel, payload size (sec 4.2.3). Returns 7.
 static size_t write_frame_header(uint8_t *buf, uint8_t type, uint16_t channel, uint32_t size)
@@ -37,14 +37,14 @@ void protocore_amqp_protocol_header(uint8_t *work)
     (void)work;
     static const uint8_t hdr[8] = {'A', 'M', 'Q', 'P', 0, 0, 9, 1};
     AmqpV.n = 0;
-    AmqpV.ok = PROTO_FALSE;
+    AmqpV.ok = EMBED_FALSE;
     if (!AmqpV.out.buf || AmqpV.out.cap < sizeof(hdr))
     {
         return;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = AmqpV.out.buf, .src = hdr, .bytes = sizeof(hdr));
     AmqpV.n = sizeof(hdr);
-    AmqpV.ok = PROTO_TRUE;
+    AmqpV.ok = EMBED_TRUE;
 }
 
 // One frame: header, ns->payload, frame-end (sec 4.2.3). The size field is a long-uint, so a
@@ -53,7 +53,7 @@ void protocore_amqp_build_frame(uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
-    AmqpV.ok = PROTO_FALSE;
+    AmqpV.ok = EMBED_FALSE;
     uint8_t *buf = AmqpV.out.buf;
     const size_t payload_len = AmqpV.payload.len;
     if (!buf || (payload_len && !AmqpV.payload.data) || payload_len > 0xFFFFFFFFu)
@@ -73,7 +73,7 @@ void protocore_amqp_build_frame(uint8_t *work)
     }
     buf[p++] = AMQP_FRAME_END;
     AmqpV.n = p;
-    AmqpV.ok = PROTO_TRUE;
+    AmqpV.ok = EMBED_TRUE;
 }
 
 // A METHOD frame on ns->frame.channel: class-id, method-id, then the arguments (sec 4.2.4). The
@@ -82,7 +82,7 @@ void protocore_amqp_build_method(uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
-    AmqpV.ok = PROTO_FALSE;
+    AmqpV.ok = EMBED_FALSE;
     uint8_t *buf = AmqpV.out.buf;
     const size_t args_len = AmqpV.method.args_len;
     if (!buf || (args_len && !AmqpV.method.args))
@@ -107,7 +107,7 @@ void protocore_amqp_build_method(uint8_t *work)
     }
     buf[p++] = AMQP_FRAME_END;
     AmqpV.n = p;
-    AmqpV.ok = PROTO_TRUE;
+    AmqpV.ok = EMBED_TRUE;
 }
 
 // A content HEADER frame on ns->frame.channel: class-id, weight, body size, property flags, then
@@ -116,7 +116,7 @@ void protocore_amqp_build_content_header(uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
-    AmqpV.ok = PROTO_FALSE;
+    AmqpV.ok = EMBED_FALSE;
     uint8_t *buf = AmqpV.out.buf;
     const size_t list_len = AmqpV.content.property_list_len;
     if (!buf || (list_len && !AmqpV.content.property_list))
@@ -144,7 +144,7 @@ void protocore_amqp_build_content_header(uint8_t *work)
     }
     buf[p++] = AMQP_FRAME_END;
     AmqpV.n = p;
-    AmqpV.ok = PROTO_TRUE;
+    AmqpV.ok = EMBED_TRUE;
 }
 
 // A heartbeat: type 8, channel 0, size 0, frame-end (sec 4.2.1 grammar, sec 4.2.7). Reads ns->out
@@ -153,7 +153,7 @@ void protocore_amqp_build_heartbeat(uint8_t *work)
 {
     (void)work;
     AmqpV.n = 0;
-    AmqpV.ok = PROTO_FALSE;
+    AmqpV.ok = EMBED_FALSE;
     if (!AmqpV.out.buf || AmqpV.out.cap < AMQP_FRAME_OVERHEAD)
     {
         return;
@@ -161,7 +161,7 @@ void protocore_amqp_build_heartbeat(uint8_t *work)
     size_t p = write_frame_header(AmqpV.out.buf, AMQP_FRAME_HEARTBEAT, 0, 0);
     AmqpV.out.buf[p++] = AMQP_FRAME_END;
     AmqpV.n = p;
-    AmqpV.ok = PROTO_TRUE;
+    AmqpV.ok = EMBED_TRUE;
 }
 
 // One frame off the head of ns->in, the frame-end checked before anything is decoded (sec 4.2.3).
@@ -169,7 +169,7 @@ void protocore_amqp_build_heartbeat(uint8_t *work)
 void protocore_amqp_parse_frame(uint8_t *work)
 {
     (void)work;
-    AmqpV.ok = PROTO_FALSE;
+    AmqpV.ok = EMBED_FALSE;
     AmqpV.consumed = 0;
     const uint8_t *buf = AmqpV.in.buf;
     const size_t len = AmqpV.in.len;
@@ -193,14 +193,14 @@ void protocore_amqp_parse_frame(uint8_t *work)
     AmqpV.payload.data = buf + 7;
     AmqpV.payload.len = size;
     AmqpV.consumed = AMQP_FRAME_OVERHEAD + (size_t)size;
-    AmqpV.ok = PROTO_TRUE;
+    AmqpV.ok = EMBED_TRUE;
 }
 
 // ns->payload split into class-id, method-id and the arguments behind them (sec 4.2.4).
 void protocore_amqp_parse_method(uint8_t *work)
 {
     (void)work;
-    AmqpV.ok = PROTO_FALSE;
+    AmqpV.ok = EMBED_FALSE;
     const uint8_t *payload = AmqpV.payload.data;
     const size_t payload_len = AmqpV.payload.len;
     if (!payload || payload_len < 4)
@@ -213,13 +213,13 @@ void protocore_amqp_parse_method(uint8_t *work)
         (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = payload + 2, .width = MMGR_ENDIAN_16);
     AmqpV.method.args = payload + 4;
     AmqpV.method.args_len = payload_len - 4;
-    AmqpV.ok = PROTO_TRUE;
+    AmqpV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 AmqpVars AmqpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AMQP

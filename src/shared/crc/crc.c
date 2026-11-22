@@ -17,24 +17,24 @@
 // Each carries its published check value: the CRC of the ASCII octets "123456789". test_crc asserts
 // every one of them, so an incorrect parameter here fails the suite rather than corrupting a codec.
 
-const protocore_crc_params PROTOCORE_CRC8_SMBUS = {8, 0x07u, 0x00u, PROTO_FALSE, PROTO_FALSE, 0x00u};
-const protocore_crc_params PROTOCORE_CRC8_MAXIM_DOW = {8, 0x31u, 0x00u, PROTO_TRUE, PROTO_TRUE, 0x00u};
-const protocore_crc_params PROTOCORE_CRC8_NRSC5 = {8, 0x31u, 0xFFu, PROTO_FALSE, PROTO_FALSE, 0x00u};
+const protocore_crc_params PROTOCORE_CRC8_SMBUS = {8, 0x07u, 0x00u, EMBED_FALSE, EMBED_FALSE, 0x00u};
+const protocore_crc_params PROTOCORE_CRC8_MAXIM_DOW = {8, 0x31u, 0x00u, EMBED_TRUE, EMBED_TRUE, 0x00u};
+const protocore_crc_params PROTOCORE_CRC8_NRSC5 = {8, 0x31u, 0xFFu, EMBED_FALSE, EMBED_FALSE, 0x00u};
 
-const protocore_crc_params PROTOCORE_CRC16_ARC = {16, 0x8005u, 0x0000u, PROTO_TRUE, PROTO_TRUE, 0x0000u};
-const protocore_crc_params PROTOCORE_CRC16_MODBUS = {16, 0x8005u, 0xFFFFu, PROTO_TRUE, PROTO_TRUE, 0x0000u};
-const protocore_crc_params PROTOCORE_CRC16_IBM_3740 = {16, 0x1021u, 0xFFFFu, PROTO_FALSE, PROTO_FALSE, 0x0000u};
-const protocore_crc_params PROTOCORE_CRC16_XMODEM = {16, 0x1021u, 0x0000u, PROTO_FALSE, PROTO_FALSE, 0x0000u};
-const protocore_crc_params PROTOCORE_CRC16_KERMIT = {16, 0x1021u, 0x0000u, PROTO_TRUE, PROTO_TRUE, 0x0000u};
-const protocore_crc_params PROTOCORE_CRC16_X25 = {16, 0x1021u, 0xFFFFu, PROTO_TRUE, PROTO_TRUE, 0xFFFFu};
-const protocore_crc_params PROTOCORE_CRC16_DNP = {16, 0x3D65u, 0x0000u, PROTO_TRUE, PROTO_TRUE, 0xFFFFu};
+const protocore_crc_params PROTOCORE_CRC16_ARC = {16, 0x8005u, 0x0000u, EMBED_TRUE, EMBED_TRUE, 0x0000u};
+const protocore_crc_params PROTOCORE_CRC16_MODBUS = {16, 0x8005u, 0xFFFFu, EMBED_TRUE, EMBED_TRUE, 0x0000u};
+const protocore_crc_params PROTOCORE_CRC16_IBM_3740 = {16, 0x1021u, 0xFFFFu, EMBED_FALSE, EMBED_FALSE, 0x0000u};
+const protocore_crc_params PROTOCORE_CRC16_XMODEM = {16, 0x1021u, 0x0000u, EMBED_FALSE, EMBED_FALSE, 0x0000u};
+const protocore_crc_params PROTOCORE_CRC16_KERMIT = {16, 0x1021u, 0x0000u, EMBED_TRUE, EMBED_TRUE, 0x0000u};
+const protocore_crc_params PROTOCORE_CRC16_X25 = {16, 0x1021u, 0xFFFFu, EMBED_TRUE, EMBED_TRUE, 0xFFFFu};
+const protocore_crc_params PROTOCORE_CRC16_DNP = {16, 0x3D65u, 0x0000u, EMBED_TRUE, EMBED_TRUE, 0xFFFFu};
 
-const protocore_crc_params PROTOCORE_CRC24_OPENPGP = {24, 0x864CFBu, 0xB704CEu, PROTO_FALSE, PROTO_FALSE, 0x000000u};
+const protocore_crc_params PROTOCORE_CRC24_OPENPGP = {24, 0x864CFBu, 0xB704CEu, EMBED_FALSE, EMBED_FALSE, 0x000000u};
 
 const protocore_crc_params PROTOCORE_CRC32_ISO_HDLC = {32,         0x04C11DB7u, 0xFFFFFFFFu,
-                                                       PROTO_TRUE, PROTO_TRUE,  0xFFFFFFFFu};
+                                                       EMBED_TRUE, EMBED_TRUE,  0xFFFFFFFFu};
 const protocore_crc_params PROTOCORE_CRC32_BZIP2 = {32,          0x04C11DB7u, 0xFFFFFFFFu,
-                                                    PROTO_FALSE, PROTO_FALSE, 0xFFFFFFFFu};
+                                                    EMBED_FALSE, EMBED_FALSE, 0xFFFFFFFFu};
 
 // Mask of width low bits. Width 32 is handled without a 32-bit shift, which is undefined.
 static uint32_t crc_mask(uint8_t width)

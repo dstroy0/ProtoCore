@@ -39,7 +39,7 @@
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h" // the complete type a public struct below holds by value
 #include "network_drivers/tls/key_schedule/key_schedule.h" // the complete type a public struct below holds by value
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -65,13 +65,12 @@ typedef struct QuicTlsConfig
 } QuicTlsConfig;
 
 /** @brief Handshake state (a mutually-exclusive internal state, not a wire value). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(QtlsState,
     QTLS_START = 0,     ///< awaiting ClientHello
     QTLS_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
     QTLS_DONE,          ///< client Finished verified
     QTLS_FAILED,        ///< a fatal handshake error (see alert)
-} QtlsState;
+);
 
 /** @brief One server handshake's state (fixed storage, no heap). */
 typedef struct
@@ -90,11 +89,11 @@ typedef struct
     QtlsState state;
     uint8_t alert; ///< TLS alert code (RFC 8446 sec 6) when state == QTLS_FAILED
 #if PROTOCORE_ENABLE_PQC_KEX
-    proto_bool hrr_sent; ///< a HelloRetryRequest was sent (X25519MLKEM768); the next ClientHello is the retry
+    embed_bool hrr_sent; ///< a HelloRetryRequest was sent (X25519MLKEM768); the next ClientHello is the retry
 #endif
-    proto_bool hs_keys_ready; ///< Handshake-level keys derived (after ServerHello)
-    proto_bool ap_keys_ready; ///< 1-RTT keys derived (after the server Finished)
-    proto_bool complete;      ///< client Finished verified
+    embed_bool hs_keys_ready; ///< Handshake-level keys derived (after ServerHello)
+    embed_bool ap_keys_ready; ///< 1-RTT keys derived (after the server Finished)
+    embed_bool complete;      ///< client Finished verified
 
     QuicPacketKeys hs_client; ///< Handshake: opens client packets
     QuicPacketKeys hs_server; ///< Handshake: seals server packets
@@ -113,7 +112,7 @@ typedef struct
     size_t flight_hs_len;
 
     QuicTransportParams peer; ///< the client's parsed transport parameters
-    proto_bool have_peer;
+    embed_bool have_peer;
 } QuicTls;
 
 /** @brief What server_init takes: qt, cfg. */
@@ -145,7 +144,7 @@ typedef struct
 {
     QuicTls *qt;
     int level;
-    proto_bool is_server;
+    embed_bool is_server;
 } QuicTlsServerKeysArgs;
 
 /** @brief What peer_params takes: qt. */
@@ -191,7 +190,7 @@ typedef struct
     QuicTlsServerFlightArgs flight_args;
     QuicTlsServerKeysArgs keys_args;
     QuicTlsServerPeerParamsArgs peer_params_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     const uint8_t *bytes;
     QuicPacketKeys *pkt_keys;
@@ -231,7 +230,7 @@ static const QuicTlsServerNs QuicTlsServer __attribute__((unused)) = {
     .peer_params = protocore_quic_tls_server_peer_params,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

@@ -7,7 +7,7 @@
 #include "crypto/kdf/hkdf/hkdf.h" // the complete type a public struct below holds by value
 #include "protocore_config.h"     // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file quic_crypto.h
@@ -65,8 +65,8 @@ typedef struct
     void (*derive_initial_secrets)(uint8_t *, uint8_t *, const uint8_t *, size_t, QuicInitialSecrets *);
     void (*keys_from_secret)(uint8_t *, uint8_t *, const uint8_t *, QuicPacketKeys *);
     size_t (*packet_protect)(uint8_t *, uint8_t *, size_t, size_t, uint8_t, uint64_t, size_t, QuicPacketKeys *,
-                             proto_bool);
-    size_t (*packet_unprotect)(uint8_t *, uint8_t *, size_t, size_t, uint64_t, QuicPacketKeys *, proto_bool, uint8_t *,
+                             embed_bool);
+    size_t (*packet_unprotect)(uint8_t *, uint8_t *, size_t, size_t, uint64_t, QuicPacketKeys *, embed_bool, uint8_t *,
                                uint64_t *);
     void (*retry_integrity_tag)(uint8_t *, const uint8_t *, size_t, const uint8_t *, size_t, uint8_t *);
 } QuicCryptoNs;
@@ -107,7 +107,7 @@ void protocore_quic_crypto_keys_from_secret(uint8_t *work, uint8_t *keys_work, c
  */
 size_t protocore_quic_crypto_packet_protect(uint8_t *work, uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len,
                                             uint64_t full_pn, size_t payload_len, QuicPacketKeys *keys,
-                                            proto_bool is_long);
+                                            embed_bool is_long);
 /**
  * @brief Remove header protection and AEAD-open one QUIC packet in place .
  * @param work PROTOCORE_QUIC_CRYPTO_BORROW bytes the caller took. Not held past the call.
@@ -122,7 +122,7 @@ size_t protocore_quic_crypto_packet_protect(uint8_t *work, uint8_t *pkt, size_t 
  * @return The size_t.
  */
 size_t protocore_quic_crypto_packet_unprotect(uint8_t *work, uint8_t *pkt, size_t pn_offset, size_t length,
-                                              uint64_t largest_pn, QuicPacketKeys *keys, proto_bool is_long,
+                                              uint64_t largest_pn, QuicPacketKeys *keys, embed_bool is_long,
                                               uint8_t *out, uint64_t *out_pn);
 /**
  * @brief Compute the Retry Integrity Tag (RFC 9001 sec 5.8). .
@@ -144,6 +144,6 @@ PROTOCORE_NS QuicCryptoNs QuicCrypto PROTOCORE_UNUSED = {
     .packet_unprotect = protocore_quic_crypto_packet_unprotect,
     .retry_integrity_tag = protocore_quic_crypto_retry_integrity_tag};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_QUIC_CRYPTO_H

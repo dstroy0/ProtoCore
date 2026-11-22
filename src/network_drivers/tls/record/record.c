@@ -52,9 +52,9 @@ static_assert(PROTOCORE_AES128GCM_TAG_LEN == PROTOCORE_AESGCM_TAG_LEN,
               "both record AEADs must produce the same tag length the record body is sized on");
 
 // Whether the suite's key schedule and transcript run on SHA-384 (RFC 8446 sec 7.1).
-proto_bool protocore_tls_cipher_is384(TlsCipher c)
+embed_bool protocore_tls_cipher_is384(TlsCipher c)
 {
-    return c == TLS_CIPHER_AES_256_GCM_SHA384 ? PROTO_TRUE : PROTO_FALSE;
+    return c == TLS_CIPHER_AES_256_GCM_SHA384 ? EMBED_TRUE : EMBED_FALSE;
 }
 
 // The suite's IANA CipherSuite code point (RFC 8446 sec B.4).
@@ -71,7 +71,7 @@ static size_t cipher_key_len(TlsCipher c)
 }
 
 // Bind the key into the suite's context; the outcome is whether the arm accepted it.
-static proto_bool aead_key_init(TlsCipher c, uint8_t *ctx, const uint8_t *key)
+static embed_bool aead_key_init(TlsCipher c, uint8_t *ctx, const uint8_t *key)
 {
     if (c == TLS_CIPHER_AES_256_GCM_SHA384)
     {
@@ -95,7 +95,7 @@ static void aead_key_wipe(TlsCipher c, uint8_t *ctx)
 }
 
 // Open ct_len octets into out under the bound key; false when the tag does not check.
-static proto_bool aead_open(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
+static embed_bool aead_open(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_len, const uint8_t *ct, size_t ct_len,
                             const uint8_t *tag, uint8_t *out)
 {
     if (keys->cipher == TLS_CIPHER_AES_256_GCM_SHA384)
@@ -122,7 +122,7 @@ static proto_bool aead_open(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_
 }
 
 // Seal pt_len octets in place under the bound key, tag detached.
-static proto_bool aead_seal(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_len, uint8_t *pt, size_t pt_len,
+static embed_bool aead_seal(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_len, uint8_t *pt, size_t pt_len,
                             uint8_t *tag_out)
 {
     if (keys->cipher == TLS_CIPHER_AES_256_GCM_SHA384)
@@ -177,7 +177,7 @@ void protocore_tls_record_keys_derive(uint8_t *work)
     TlsRecordKeys *out = TlsRecordV.key.keys;
     out->cipher = TlsRecordV.key.cipher;
     out->seq = 0;
-    out->ready = PROTO_FALSE;
+    out->ready = EMBED_FALSE;
 
     // The suite's key and a 12-byte IV, each HKDF-Expand-Label of the traffic secret under the
     // "tls13 " prefix (RFC 8446 sec 7.3): 16 octets of key for AEAD_AES_128_GCM, 32 for
@@ -214,7 +214,7 @@ void protocore_tls_record_keys_wipe(uint8_t *work)
     aead_key_wipe(keys->cipher, keys->gcm);
     mmgr_zero_buf(keys->iv, sizeof(keys->iv));
     mmgr_zero_buf(keys->nonce, sizeof(keys->nonce));
-    keys->ready = PROTO_FALSE;
+    keys->ready = EMBED_FALSE;
     keys->seq = 0;
 }
 
@@ -321,7 +321,7 @@ void protocore_tls_record_unprotect(uint8_t *work)
     uint8_t *out = TlsRecordV.out_args.out;
     TlsCiphertext *out_info = TlsRecordV.sealed.info;
 
-    TlsRecordV.ok = PROTO_FALSE;
+    TlsRecordV.ok = EMBED_FALSE;
     if (!keys->ready || rec_len < PROTOCORE_TLS_PLAINTEXT_HDR_LEN)
     {
         return;
@@ -365,7 +365,7 @@ void protocore_tls_record_unprotect(uint8_t *work)
         return;
     }
     keys->seq++;
-    TlsRecordV.ok = PROTO_TRUE;
+    TlsRecordV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */

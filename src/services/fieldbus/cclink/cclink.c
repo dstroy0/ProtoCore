@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/cclink/cclink.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
@@ -88,7 +88,7 @@ void protocore_cclink_parse(uint8_t *work)
 
     if (!frame || !out || len < 3) // station + command + checksum
     {
-        CclinkV.ok = PROTO_FALSE;
+        CclinkV.ok = EMBED_FALSE;
         return;
     }
     size_t body = len - 1;
@@ -97,14 +97,14 @@ void protocore_cclink_parse(uint8_t *work)
     protocore_cclink_sum(work);
     if (CclinkV.value != frame[body])
     {
-        CclinkV.ok = PROTO_FALSE;
+        CclinkV.ok = EMBED_FALSE;
         return;
     }
     out->station = frame[0];
     out->command = frame[1];
     out->payload = (body > 2) ? (frame + 2) : NULL;
     out->payload_len = body - 2;
-    CclinkV.ok = PROTO_TRUE;
+    CclinkV.ok = EMBED_TRUE;
 }
 
 void protocore_cclink_get_bit(uint8_t *work)
@@ -116,7 +116,7 @@ void protocore_cclink_get_bit(uint8_t *work)
 
     if (!bits || index / 8 >= bit_len)
     {
-        CclinkV.ok = PROTO_FALSE;
+        CclinkV.ok = EMBED_FALSE;
         return;
     }
     CclinkV.ok = (bits[index / 8] >> (index % 8)) & 1u;
@@ -128,7 +128,7 @@ void protocore_cclink_set_bit(uint8_t *work)
     uint8_t *bits = CclinkV.set_bit_args.bits;
     size_t bit_len = CclinkV.set_bit_args.bit_len;
     size_t index = CclinkV.set_bit_args.index;
-    proto_bool value = CclinkV.set_bit_args.value;
+    embed_bool value = CclinkV.set_bit_args.value;
 
     if (!bits || index / 8 >= bit_len)
     {
@@ -164,6 +164,6 @@ void protocore_cclink_get_word(uint8_t *work)
 /** @brief The operands and the outcome. */
 CclinkVars CclinkV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CCLINK

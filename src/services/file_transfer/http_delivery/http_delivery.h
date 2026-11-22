@@ -29,19 +29,18 @@
 
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
 // same way.
 
 /** @brief Cache-freshness verdict (the sole return of swr). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(DeliveryVerdict,
     DELIVERY_FRESH = 0,            ///< age <= max-age: serve from cache, no revalidation.
     DELIVERY_STALE_REVALIDATE = 1, ///< within the stale-while-revalidate window: serve stale, refresh in bg.
     DELIVERY_EXPIRED = 2           ///< past both windows: must revalidate before serving.
-} DeliveryVerdict;
+);
 
 /** @brief What swr takes: age_s, max_age_s, swr_s. */
 typedef struct
@@ -114,7 +113,7 @@ typedef struct
     HttpDeliveryCacheControlArgs cache_control_args;
     HttpDeliverySwManifestArgs sw_manifest_args;
     HttpDeliveryServeSwArgs serve_sw_args;
-    proto_bool ok;
+    embed_bool ok;
     DeliveryVerdict value;
     size_t n;
 } HttpDeliveryVars;
@@ -149,7 +148,7 @@ static const HttpDeliveryNs HttpDelivery __attribute__((unused)) = {
     .serve_sw = protocore_http_delivery_serve_sw,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_DELIVERY
 

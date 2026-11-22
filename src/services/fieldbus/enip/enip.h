@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_ENIP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -210,7 +210,7 @@ typedef struct
     EnipParseSendRrDataArgs parse_send_rr_data_args;
     EnipBuildListIdentityArgs build_list_identity_args;
     EnipParseListIdentityArgs parse_list_identity_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } EnipVars;
 
@@ -256,7 +256,7 @@ static const EnipNs Enip __attribute__((unused)) = {
     .parse_list_identity = protocore_enip_parse_list_identity,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ENIP
 

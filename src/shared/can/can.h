@@ -43,8 +43,8 @@
 typedef struct
 {
     uint32_t id;
-    proto_bool extended;
-    proto_bool rtr;
+    embed_bool extended;
+    embed_bool rtr;
     uint8_t dlc;
     uint8_t data[PROTOCORE_CAN_MAX_DLC];
 } CanFrame;

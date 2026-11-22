@@ -230,7 +230,7 @@ void test_emit_literal_puts_the_code_on_the_wire(void)
 
     uint8_t out[4];
     memset(out, 0, sizeof(out));
-    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, EMBED_FALSE};
 
     emit_literal(&w, ll_code, ll_len, 'A');
     EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
@@ -254,7 +254,7 @@ void test_emit_match_selects_the_code_for_the_span(void)
 
     uint8_t out[4];
     memset(out, 0, sizeof(out));
-    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, EMBED_FALSE};
 
     emit_match(&w, ll_code, ll_len, d_code, d_len, 3, 1);
     EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
@@ -278,7 +278,7 @@ void test_emit_match_uses_the_single_length_code_for_258(void)
 
     uint8_t out[8];
     memset(out, 0, sizeof(out));
-    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, EMBED_FALSE};
 
     emit_match(&w, ll_code, ll_len, d_code, d_len, 258, 1);
     EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
@@ -310,7 +310,7 @@ void test_emit_match_writes_the_offset_in_the_extra_bits(void)
 
     uint8_t out[8];
     memset(out, 0, sizeof(out));
-    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, sizeof(out), 0, 0, 0, EMBED_FALSE};
 
     emit_match(&w, ll_code, ll_len, d_code, d_len, 12, 5);
     EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);
@@ -331,7 +331,7 @@ void test_emit_past_the_buffer_latches_overflow(void)
 
     uint8_t out[1];
     out[0] = 0;
-    mmgr_bitor w = {out, 0, 0, 0, 0, PROTO_FALSE};
+    mmgr_bitor w = {out, 0, 0, 0, 0, EMBED_FALSE};
 
     emit_literal(&w, ll_code, ll_len, 'A');
     EMBED_CALL(bitio.align, BitorumCfg, .writer = &w);

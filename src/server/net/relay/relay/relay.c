@@ -13,17 +13,17 @@
 #include "memoria_operor/memoria_operor.h"
 #include "server/net/relay/relay/relay.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Read one non-blocking chunk from src and forward it to dst. Sets *src_eof on a src seam error;
 // returns -1 on a dst send error, else 0. A zero-length read leaves the buffers untouched.
 static int pump_refill(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off,
-                       proto_bool *src_eof, uint32_t *counter)
+                       embed_bool *src_eof, uint32_t *counter)
 {
     int r = src->recv(src->ctx, buf, PROTOCORE_RELAY_BUF);
     if (r < 0)
     {
-        *src_eof = PROTO_TRUE;
+        *src_eof = EMBED_TRUE;
         return 0;
     }
     if (r > 0)
@@ -44,7 +44,7 @@ static int pump_refill(protocore_relay_end *src, protocore_relay_end *dst, uint8
 // @param dst_shut_sent  the "shutdown already called" flag for @p dst (the peer that stops receiving
 //                       once this direction finishes). Returns -1 on a seam error, else 0.
 static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf, uint16_t *len, uint16_t *off,
-                proto_bool *src_eof, proto_bool *dir_done, proto_bool *dst_shut_sent, uint32_t *counter)
+                embed_bool *src_eof, embed_bool *dir_done, embed_bool *dst_shut_sent, uint32_t *counter)
 {
     if (*dir_done)
     {
@@ -78,7 +78,7 @@ static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf
     // 3. this direction is finished once src is at EOF and nothing is left to flush
     if (*src_eof && *off >= *len)
     {
-        *dir_done = PROTO_TRUE;
+        *dir_done = EMBED_TRUE;
         // The `!*dst_shut_sent` == false side is unreachable: *dst_shut_sent is written only inside
         // this block (right below), which can execute at most once per direction over a protocore_relay's
         // lifetime - *dir_done just went true on the line above, and the guard at the top of this
@@ -89,7 +89,7 @@ static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf
         if (dst->shutdown && !*dst_shut_sent)
         {
             dst->shutdown(dst->ctx); // propagate the half-close to the peer that stops receiving
-            *dst_shut_sent = PROTO_TRUE;
+            *dst_shut_sent = EMBED_TRUE;
         }
     }
     return 0;
@@ -148,7 +148,7 @@ void protocore_relay_note_eof(uint8_t *work)
 {
     (void)work;
     protocore_relay *r = RelayV.note_eof_args.r;
-    proto_bool origin = RelayV.note_eof_args.origin;
+    embed_bool origin = RelayV.note_eof_args.origin;
 
     if (!r)
     {
@@ -157,17 +157,17 @@ void protocore_relay_note_eof(uint8_t *work)
     // The next protocore_relay_step drains that source's buffered bytes, then finishes its direction.
     if (origin)
     {
-        r->b_eof = PROTO_TRUE;
+        r->b_eof = EMBED_TRUE;
     }
     else
     {
-        r->a_eof = PROTO_TRUE;
+        r->a_eof = EMBED_TRUE;
     }
 }
 
 /** @brief The operands and the outcome. */
 RelayVars RelayV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RELAY

@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/snp/snp.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // GFK-0582D p. 7-62: seed zero, then per byte XOR into the accumulator and rotate it left one bit
 // with the top bit wrapping into the bottom.
@@ -80,14 +80,14 @@ void protocore_snp_parse(uint8_t *work)
 
     if (!frame || !out || len < 3) // control + length + BCC
     {
-        SnpV.ok = PROTO_FALSE;
+        SnpV.ok = EMBED_FALSE;
         return;
     }
     uint8_t data_len = frame[1];
     size_t expect = 2 + (size_t)data_len + 1;
     if (len < expect)
     {
-        SnpV.ok = PROTO_FALSE;
+        SnpV.ok = EMBED_FALSE;
         return;
     }
     SnpV.bcc_args.bytes = frame;
@@ -95,18 +95,18 @@ void protocore_snp_parse(uint8_t *work)
     protocore_snp_bcc(work);
     if (SnpV.value != frame[2 + data_len])
     {
-        SnpV.ok = PROTO_FALSE;
+        SnpV.ok = EMBED_FALSE;
         return;
     }
     out->control = frame[0];
     out->data = data_len ? (frame + 2) : NULL;
     out->data_len = data_len;
-    SnpV.ok = PROTO_TRUE;
+    SnpV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 SnpVars SnpV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNP

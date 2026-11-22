@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_AESGCM
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief AES-256-GCM key length in bytes. */
 #define PROTOCORE_AESGCM_KEY_LEN 32
@@ -132,7 +132,7 @@ typedef struct
     AesGcmSealArgs seal_args;
     AesGcmOpenArgs open_args;
     AesGcmIvArgs iv_args;
-    proto_bool ok;
+    embed_bool ok;
 } AesGcmVars;
 
 /** @brief The operands and the outcome. */
@@ -168,7 +168,7 @@ static const AesGcmNs AesGcm __attribute__((unused)) = {
     .iv_increment = protocore_aes_gcm_iv_increment,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AESGCM
 

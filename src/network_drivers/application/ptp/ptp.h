@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_PTP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -396,7 +396,7 @@ typedef struct
     PtpParsePdelayRespFollowUpArgs parse_pdelay_resp_follow_up_args;
     PtpComputeArgs compute_args;
     PtpComputeLinkDelayArgs compute_link_delay_args;
-    proto_bool ok;
+    embed_bool ok;
     int64_t value;
     size_t n;
 } PtpVars;
@@ -485,7 +485,7 @@ static const PtpNs Ptp __attribute__((unused)) = {
     .compute_link_delay = protocore_ptp_compute_link_delay,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PTP
 

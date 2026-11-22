@@ -243,16 +243,16 @@ static void poly1305_finish(uint8_t *work, const uint8_t *key, uint8_t tag[PROTO
 // --- the entries -----------------------------------------------------------
 
 // One-shot over the members already set: split the key, absorb the message, reduce and add s.
-proto_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out)
+embed_bool protocore_poly1305_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t len, uint8_t *out)
 {
     if (!key || !out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     poly1305_state_init(work, key);
     poly1305_absorb(work, msg, len);
     poly1305_finish(work, key, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_POLY1305

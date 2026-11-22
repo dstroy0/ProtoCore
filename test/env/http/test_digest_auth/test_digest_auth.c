@@ -20,7 +20,7 @@ static uint32_t fake_clock()
     return g_fake_ms;
 }
 
-static proto_bool g_called;
+static embed_bool g_called;
 
 static const char *kUser = "admin";
 static const char *kRealm = "secure area";
@@ -29,7 +29,7 @@ static const char *kPass = "s3cret";
 static void h_secure(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_called = PROTO_TRUE;
+    g_called = EMBED_TRUE;
     send_text(slot, 200, "text/plain", "secret");
 }
 
@@ -46,18 +46,18 @@ static void sha256_hex(const char *s, char out[65])
     out[64] = '\0';
 }
 
-static proto_bool extract_nonce(const char *resp, char *out, size_t n)
+static embed_bool extract_nonce(const char *resp, char *out, size_t n)
 {
     const char *p = strstr(resp, "nonce=\"");
     if (!p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     p += 7;
     const char *e = strchr(p, '"');
     if (!e)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t len = (size_t)(e - p);
     if (len > n - 1)
@@ -66,7 +66,7 @@ static proto_bool extract_nonce(const char *resp, char *out, size_t n)
     }
     memcpy(out, p, len);
     out[len] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static void compute_response(const char *user, const char *realm, const char *pass, const char *method, const char *uri,
@@ -84,12 +84,12 @@ static void compute_response(const char *user, const char *realm, const char *pa
 void setUp()
 {
     protocore_server_reset();
-    g_called = PROTO_FALSE;
+    g_called = EMBED_FALSE;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -112,7 +112,7 @@ static void rearm_slot(uint8_t slot)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    conn_pool[slot].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConnV.slot = slot;
@@ -130,7 +130,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 
 void test_challenge_is_digest_sha256()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     const char *resp = tcp_captured();
     TEST_ASSERT_FALSE(g_called);
@@ -143,7 +143,7 @@ void test_challenge_is_digest_sha256()
 
 void test_valid_digest_authenticates()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
 
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
@@ -168,7 +168,7 @@ void test_valid_digest_authenticates()
 
 void test_wrong_password_rejected()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
 
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
@@ -192,7 +192,7 @@ void test_wrong_password_rejected()
 
 void test_bad_nonce_rejected()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
 
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
 
@@ -215,7 +215,7 @@ void test_bad_nonce_rejected()
 
 void test_wrong_username_rejected()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -236,7 +236,7 @@ void test_wrong_username_rejected()
 
 void test_wrong_qop_rejected()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -257,7 +257,7 @@ void test_wrong_qop_rejected()
 
 void test_missing_response_field_rejected()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -276,7 +276,7 @@ void test_missing_response_field_rejected()
 
 void test_basic_scheme_on_digest_route_rejected()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
 
     char authreq[256];
     snprintf(authreq, sizeof(authreq),
@@ -288,7 +288,7 @@ void test_basic_scheme_on_digest_route_rejected()
 
 void test_uri_mismatch_rejected()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -309,7 +309,7 @@ void test_uri_mismatch_rejected()
 
 void test_nonce_is_stateless_timestamped()
 {
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];
     TEST_ASSERT_TRUE(extract_nonce(tcp_captured(), nonce, sizeof(nonce)));
@@ -322,7 +322,7 @@ void test_nonce_is_stateless_timestamped()
             continue;
         }
         char ch = nonce[i];
-        proto_bool is_hex = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
+        embed_bool is_hex = (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f');
         TEST_ASSERT_TRUE(is_hex);
     }
 }
@@ -334,7 +334,7 @@ void test_stale_nonce_triggers_transparent_retry()
     Clock.set_ms(Clock.internal);
     g_fake_ms = 0;
     protocore_server_reset();
-    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, PROTO_TRUE);
+    on_http_auth("/secure", HTTP_GET, h_secure, kRealm, kUser, kPass, EMBED_TRUE);
 
     feed_and_handle(0, "GET /secure HTTP/1.1\r\nHost: x\r\n\r\n");
     char nonce[48];

@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/fins/fins.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static size_t write_header(uint8_t *buf, const FinsHeader *h)
 {
@@ -209,7 +209,7 @@ void protocore_fins_parse_command(uint8_t *work)
 
     if (!buf || !out || len < FINS_HEADER_SIZE + 2)
     {
-        FinsV.ok = PROTO_FALSE;
+        FinsV.ok = EMBED_FALSE;
         return;
     }
     read_header(buf, &out->header);
@@ -217,7 +217,7 @@ void protocore_fins_parse_command(uint8_t *work)
     out->src = buf[FINS_HEADER_SIZE + 1];
     out->params = buf + FINS_HEADER_SIZE + 2;
     out->params_len = len - (FINS_HEADER_SIZE + 2);
-    FinsV.ok = PROTO_TRUE;
+    FinsV.ok = EMBED_TRUE;
 }
 
 void protocore_fins_parse_response(uint8_t *work)
@@ -229,7 +229,7 @@ void protocore_fins_parse_response(uint8_t *work)
 
     if (!buf || !out || len < FINS_HEADER_SIZE + 4) // header + MRC + SRC + MRES + SRES
     {
-        FinsV.ok = PROTO_FALSE;
+        FinsV.ok = EMBED_FALSE;
         return;
     }
     read_header(buf, &out->header);
@@ -239,12 +239,12 @@ void protocore_fins_parse_response(uint8_t *work)
     out->sres = buf[FINS_HEADER_SIZE + 3];
     out->data = buf + FINS_HEADER_SIZE + 4;
     out->data_len = len - (FINS_HEADER_SIZE + 4);
-    FinsV.ok = PROTO_TRUE;
+    FinsV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 FinsVars FinsV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FINS

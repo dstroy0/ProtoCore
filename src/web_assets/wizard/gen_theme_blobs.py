@@ -97,7 +97,7 @@ def render_header(themes):
         "",
         '#include "protocore_config.h" // the entry point: protocore_types.h for the widths',
         "",
-        "PROTOCORE_BEGIN_DECLS",
+        "EMBED_BEGIN_DECLS",
         "",
         "/**",
         " * @file binary_asset_blobs.h",
@@ -141,7 +141,7 @@ def render_header(themes):
         "/** @brief Module namespace. */",
         "PROTOCORE_NS BinaryAssetBlobsNs BinaryAssetBlobs PROTOCORE_UNUSED = {.css = protocore_binary_asset_blobs_css};",
         "",
-        "PROTOCORE_END_DECLS",
+        "EMBED_END_DECLS",
         "",
         "#endif // " + guard,
     ]
@@ -164,7 +164,7 @@ def render_source(themes):
         "// the length scan stops there and nothing matches.",
         "#define THEME_NAME_CAP %du" % name_cap,
         "",
-        "PROTOCORE_BEGIN_DECLS",
+        "EMBED_BEGIN_DECLS",
         "",
     ]
     for name, css in themes:
@@ -207,7 +207,7 @@ def render_source(themes):
         "    {",
         "        const char *have = PROTOCORE_THEME_BLOBS[i].name;",
         "        if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = have, .cap = THEME_NAME_CAP) == n &&",
-        "            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = have, .other = name, .cap = n + 1u, .ci = PROTO_FALSE))",
+        "            EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = have, .other = name, .cap = n + 1u, .ci = EMBED_FALSE))",
         "        {",
         "            return PROTOCORE_THEME_BLOBS[i].css;",
         "        }",
@@ -215,7 +215,7 @@ def render_source(themes):
         "    return NULL;",
         "}",
         "",
-        "PROTOCORE_END_DECLS",
+        "EMBED_END_DECLS",
         "",
         "#endif // PROTOCORE_ENABLE_THEMES",
     ]

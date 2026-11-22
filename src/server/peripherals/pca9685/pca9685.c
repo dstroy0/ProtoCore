@@ -24,7 +24,7 @@
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/pca9685/pca9685.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static const uint32_t PCA9685_OSC_HZ = 25000000u;
 static const uint8_t PCA9685_PRESCALE_MIN = 3;
@@ -177,7 +177,7 @@ static uint32_t dev_freq(uint8_t *work)
     return PCA9685_CTX(work)->freq ? PCA9685_CTX(work)->freq : (uint32_t)PROTOCORE_PCA9685_FREQ;
 }
 
-static proto_bool wr(uint8_t *work, uint8_t reg, uint8_t val)
+static embed_bool wr(uint8_t *work, uint8_t reg, uint8_t val)
 {
     PCA9685_CTX(work)->frame[0] = reg;
     PCA9685_CTX(work)->frame[1] = val;
@@ -192,7 +192,7 @@ void protocore_pca9685_begin(uint8_t *work)
     PCA9685_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
     PCA9685_CTX(work)->freq = freq_hz ? freq_hz : (uint32_t)PROTOCORE_PCA9685_FREQ;
     protocore_i2c_begin();
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     ok &= wr(work, PCA9685_REG_MODE1, 0x10); // SLEEP (required before changing PRESCALE)
     Pca9685V.prescale_args.freq_hz = dev_freq(work);
     protocore_pca9685_prescale(work);
@@ -218,7 +218,7 @@ void protocore_pca9685_set_pwm(uint8_t *work)
     protocore_pca9685_set_pwm_bytes(work);
     if (Pca9685V.n != 5)
     {
-        Pca9685V.ok = PROTO_FALSE;
+        Pca9685V.ok = EMBED_FALSE;
         return;
     }
     Pca9685V.ok = protocore_i2c_write(dev_addr(work), PCA9685_CTX(work)->frame, 5);
@@ -243,6 +243,6 @@ void protocore_pca9685_set_servo_us(uint8_t *work)
 /** @brief The operands and the outcome. */
 Pca9685Vars Pca9685V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PCA9685

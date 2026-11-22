@@ -40,10 +40,10 @@ static size_t ram_write(void *ctx, uint64_t off, const uint8_t *buf, size_t len)
     memcpy(d->buf + off, buf, len);
     return len;
 }
-static proto_bool ram_sync(void *ctx)
+static embed_bool ram_sync(void *ctx)
 {
     ((RamDisk *)ctx)->syncs++;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static WalDev make_dev(RamDisk *d)
@@ -108,7 +108,7 @@ static size_t fault_write(void *ctx, uint64_t off, const uint8_t *buf, size_t le
     memcpy(d->buf + off, buf, len);
     return len;
 }
-static proto_bool fault_sync(void *ctx)
+static embed_bool fault_sync(void *ctx)
 {
     FaultDisk *d = (FaultDisk *)ctx;
     d->sync_calls++;

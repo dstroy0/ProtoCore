@@ -13,7 +13,7 @@
 #include "services/energy/openadr/openadr.h"
 #include "verba_scribo/verba_scribo.h" // verba_*: the text and number writers the builders chain
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static size_t put_u64(char *out, size_t cap, size_t at, uint64_t v)
 {
@@ -103,6 +103,6 @@ size_t protocore_openadr_report(const char *program_id, const char *event_id, co
     return EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = out, .cap = cap, .at = b2);
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OPENADR

@@ -23,7 +23,7 @@ void tearDown(void)
 }
 
 // Unity's double assertions are compiled out in this build, so doubles are compared by their bits.
-static proto_bool same_double(double a, double b)
+static embed_bool same_double(double a, double b)
 {
     return memcmp(&a, &b, sizeof(a)) == 0;
 }
@@ -118,7 +118,7 @@ void test_part6_builtin_type_encodings(void)
 
     // sec 5.2.2.2: "All integer types shall be encoded as little-endian values where the least
     // significant byte appears first". The worked example is 1000000000 (3B9ACA00h) -> 00 CA 9A 3B.
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     protocore_ua_w_u32(&w, 1000000000u);
     static const uint8_t INT_EXAMPLE[4] = {0x00, 0xCA, 0x9A, 0x3B};
     TEST_ASSERT_EQUAL_UINT(4u, w.n);
@@ -126,7 +126,7 @@ void test_part6_builtin_type_encodings(void)
 
     // sec 5.2.2.3: Float is IEEE 754 little-endian. The worked example is -6.5 (C0D00000h).
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_f32(&w, -6.5f);
     static const uint8_t FLOAT_EXAMPLE[4] = {0x00, 0x00, 0xD0, 0xC0};
     TEST_ASSERT_EQUAL_UINT(4u, w.n);
@@ -137,7 +137,7 @@ void test_part6_builtin_type_encodings(void)
     // E6 B0 B4, so the length is 6 and the encoding is 06 00 00 00 E6 B0 B4 42 6F 79.
     static const char CJK_BOY[7] = {(char)0xE6, (char)0xB0, (char)0xB4, 'B', 'o', 'y', '\0'};
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_string(&w, CJK_BOY, 6);
     static const uint8_t STR_EXAMPLE[10] = {0x06, 0x00, 0x00, 0x00, 0xE6, 0xB0, 0xB4, 0x42, 0x6F, 0x79};
     TEST_ASSERT_EQUAL_UINT(10u, w.n);
@@ -145,7 +145,7 @@ void test_part6_builtin_type_encodings(void)
 
     // sec 5.2.2.4: "A value of -1 is used to indicate a null string", so it is the length alone.
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_string(&w, NULL, -1);
     static const uint8_t NULL_STR[4] = {0xFF, 0xFF, 0xFF, 0xFF};
     TEST_ASSERT_EQUAL_UINT(4u, w.n);
@@ -153,9 +153,9 @@ void test_part6_builtin_type_encodings(void)
 
     // sec 5.2.2.1: "a value of 0 is false and any non-zero value is true", encoded as one byte.
     w.n = 0;
-    w.ok = PROTO_TRUE;
-    protocore_ua_w_bool(&w, PROTO_TRUE);
-    protocore_ua_w_bool(&w, PROTO_FALSE);
+    w.ok = EMBED_TRUE;
+    protocore_ua_w_bool(&w, EMBED_TRUE);
+    protocore_ua_w_bool(&w, EMBED_FALSE);
     TEST_ASSERT_EQUAL_HEX8(0x01, buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[1]);
 }
@@ -164,7 +164,7 @@ void test_part6_builtin_type_encodings(void)
 void test_reader_inverts_the_writer(void)
 {
     uint8_t buf[64];
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     protocore_ua_w_u8(&w, 0xFF);
     protocore_ua_w_u16(&w, 0xFEDC);
     protocore_ua_w_u32(&w, 0xFEDCBA98u);
@@ -172,10 +172,10 @@ void test_reader_inverts_the_writer(void)
     protocore_ua_w_i32(&w, -2147483647 - 1);
     protocore_ua_w_f32(&w, 3.5f);
     protocore_ua_w_f64(&w, -1.0e300);
-    protocore_ua_w_bool(&w, PROTO_TRUE);
+    protocore_ua_w_bool(&w, EMBED_TRUE);
     TEST_ASSERT_TRUE(w.ok);
 
-    UaReader r = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_EQUAL_HEX8(0xFF, protocore_ua_r_u8(&r));
     TEST_ASSERT_EQUAL_HEX16(0xFEDC, protocore_ua_r_u16(&r));
     TEST_ASSERT_EQUAL_HEX32(0xFEDCBA98u, protocore_ua_r_u32(&r));
@@ -193,7 +193,7 @@ void test_reader_inverts_the_writer(void)
 void test_bounds_latch(void)
 {
     uint8_t small[3];
-    UaWriter w = {small, sizeof(small), 0, PROTO_TRUE};
+    UaWriter w = {small, sizeof(small), 0, EMBED_TRUE};
     protocore_ua_w_u16(&w, 0x1234);
     TEST_ASSERT_TRUE(w.ok);
     protocore_ua_w_u32(&w, 1); // one octet of room left, four wanted
@@ -203,7 +203,7 @@ void test_bounds_latch(void)
     TEST_ASSERT_FALSE(w.ok);
 
     static const uint8_t two[2] = {0x01, 0x02};
-    UaReader r = {two, sizeof(two), 0, PROTO_FALSE};
+    UaReader r = {two, sizeof(two), 0, EMBED_FALSE};
     TEST_ASSERT_EQUAL_HEX16(0x0201, protocore_ua_r_u16(&r));
     TEST_ASSERT_FALSE(r.err);
     (void)protocore_ua_r_u32(&r);
@@ -216,13 +216,13 @@ void test_bounds_latch(void)
 void test_string_decoding(void)
 {
     uint8_t buf[32];
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     protocore_ua_w_string(&w, "opc.tcp", 7);
     protocore_ua_w_string(&w, NULL, -1);
 
     char out[16];
     int32_t len = 0;
-    UaReader r = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_string(&r, out, sizeof(out), &len));
     TEST_ASSERT_EQUAL_INT32(7, len);
     TEST_ASSERT_EQUAL_STRING("opc.tcp", out);
@@ -231,7 +231,7 @@ void test_string_decoding(void)
     TEST_ASSERT_EQUAL_STRING("", out);
 
     char tiny[4];
-    UaReader r2 = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r2 = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_FALSE(protocore_ua_r_string(&r2, tiny, sizeof(tiny), &len));
     TEST_ASSERT_TRUE(r2.err);
 }
@@ -244,7 +244,7 @@ void test_nodeid_encoding_forms(void)
 {
     uint8_t buf[16];
 
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     protocore_ua_w_nodeid_numeric(&w, 0, 255);
     TEST_ASSERT_EQUAL_UINT(2u, w.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[0]);
@@ -282,9 +282,9 @@ void test_nodeid_round_trip(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         uint8_t buf[16];
-        UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+        UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
         protocore_ua_w_nodeid_numeric(&w, CASES[i].ns, CASES[i].id);
-        UaReader r = {buf, w.n, 0, PROTO_FALSE};
+        UaReader r = {buf, w.n, 0, EMBED_FALSE};
         UaNodeId got;
         TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r, &got));
         TEST_ASSERT_TRUE(got.numeric);
@@ -301,7 +301,7 @@ void test_nodeid_non_numeric_forms_are_skipped(void)
 {
     // String form: 03, ns, Int32 length, bytes
     static const uint8_t STR_ID[] = {0x03, 0x01, 0x00, 0x03, 0x00, 0x00, 0x00, 'a', 'b', 'c', 0xAA};
-    UaReader r = {STR_ID, sizeof(STR_ID), 0, PROTO_FALSE};
+    UaReader r = {STR_ID, sizeof(STR_ID), 0, EMBED_FALSE};
     UaNodeId n;
     TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r, &n));
     TEST_ASSERT_FALSE(n.numeric);
@@ -310,14 +310,14 @@ void test_nodeid_non_numeric_forms_are_skipped(void)
 
     // Guid form: 04, ns, 16 octets
     static const uint8_t GUID_ID[] = {0x04, 0x02, 0x00, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0xBB};
-    UaReader r2 = {GUID_ID, sizeof(GUID_ID), 0, PROTO_FALSE};
+    UaReader r2 = {GUID_ID, sizeof(GUID_ID), 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r2, &n));
     TEST_ASSERT_FALSE(n.numeric);
     TEST_ASSERT_EQUAL_HEX8(0xBB, GUID_ID[r2.off]);
 
     // Two Byte form with the NamespaceUri (0x80) and ServerIndex (0x40) flags set
     static const uint8_t EXPANDED[] = {0xC0, 0x07, 0x02, 0x00, 0x00, 0x00, 'n', 's', 0x09, 0x00, 0x00, 0x00, 0xCC};
-    UaReader r3 = {EXPANDED, sizeof(EXPANDED), 0, PROTO_FALSE};
+    UaReader r3 = {EXPANDED, sizeof(EXPANDED), 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_nodeid(&r3, &n));
     TEST_ASSERT_TRUE(n.numeric);
     TEST_ASSERT_EQUAL_UINT32(7, n.id);
@@ -325,7 +325,7 @@ void test_nodeid_non_numeric_forms_are_skipped(void)
 
     // an unknown identifier kind is not decodable
     static const uint8_t BAD[] = {0x06, 0x00};
-    UaReader r4 = {BAD, sizeof(BAD), 0, PROTO_FALSE};
+    UaReader r4 = {BAD, sizeof(BAD), 0, EMBED_FALSE};
     TEST_ASSERT_FALSE(protocore_ua_r_nodeid(&r4, &n));
 }
 
@@ -434,7 +434,7 @@ void test_ack_negotiation(void)
     TEST_ASSERT_TRUE(protocore_opcua_parse_header(out, n, &h));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)n, h.size); // MessageSize includes the header
 
-    UaReader r = {out + 8, n - 8, 0, PROTO_FALSE};
+    UaReader r = {out + 8, n - 8, 0, EMBED_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0u, protocore_ua_r_u32(&r));                  // ProtocolVersion
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_OPCUA_BUF, protocore_ua_r_u32(&r)); // ReceiveBufferSize, capped
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_OPCUA_BUF, protocore_ua_r_u32(&r)); // SendBufferSize, capped
@@ -445,7 +445,7 @@ void test_ack_negotiation(void)
     // a client asking for less than the server can hold gets what it asked for
     OpcUaHello small = {0, 4096, 2048, 4096, 1};
     TEST_ASSERT_EQUAL_UINT(28u, protocore_opcua_build_ack(&small, out, sizeof(out)));
-    UaReader r2 = {out + 8, 20, 0, PROTO_FALSE};
+    UaReader r2 = {out + 8, 20, 0, EMBED_FALSE};
     (void)protocore_ua_r_u32(&r2);
     TEST_ASSERT_EQUAL_UINT32(2048u, protocore_ua_r_u32(&r2)); // = the client's SendBufferSize
     TEST_ASSERT_EQUAL_UINT32(4096u, protocore_ua_r_u32(&r2)); // = the client's ReceiveBufferSize
@@ -476,7 +476,7 @@ void test_error_message(void)
     TEST_ASSERT_TRUE(protocore_opcua_parse_header(out, n, &h));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)n, h.size);
 
-    UaReader r = {out + 8, n - 8, 0, PROTO_FALSE};
+    UaReader r = {out + 8, n - 8, 0, EMBED_FALSE};
     TEST_ASSERT_EQUAL_HEX32(PROTOCORE_OPCUA_BAD_TCP_MESSAGE_TOO_LARGE, protocore_ua_r_u32(&r));
     char reason[32];
     int32_t rl = 0;
@@ -572,7 +572,7 @@ void test_open_secure_channel(void)
     TEST_ASSERT_TRUE(protocore_opcua_parse_header(out, rn, &h));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)rn, h.size); // the size field is patched to the real length
 
-    UaReader r = {out + 8, rn - 8, 0, PROTO_FALSE};
+    UaReader r = {out + 8, rn - 8, 0, EMBED_FALSE};
     TEST_ASSERT_EQUAL_UINT32(0x1234u, protocore_ua_r_u32(&r)); // SecureChannelId
     char uri[128];
     int32_t ul = 0;
@@ -678,7 +678,7 @@ static void check_msg_response(const uint8_t *out, size_t n, const OpcUaMsg *req
     TEST_ASSERT_TRUE(protocore_opcua_parse_header(out, n, &h));
     TEST_ASSERT_EQUAL_UINT32((uint32_t)n, h.size);
 
-    UaReader r = {out + 8, n - 8, 0, PROTO_FALSE};
+    UaReader r = {out + 8, n - 8, 0, EMBED_FALSE};
     TEST_ASSERT_EQUAL_UINT32(req->secure_channel_id, protocore_ua_r_u32(&r));
     TEST_ASSERT_EQUAL_UINT32(req->token_id, protocore_ua_r_u32(&r));
     TEST_ASSERT_EQUAL_UINT32(seq, protocore_ua_r_u32(&r));
@@ -741,11 +741,11 @@ void test_variant_round_trip(void)
 
     memset(&v, 0, sizeof(v));
     v.type = OPCUA_VAR_BOOL;
-    v.b = PROTO_TRUE;
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    v.b = EMBED_TRUE;
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     protocore_ua_w_variant(&w, &v);
     TEST_ASSERT_EQUAL_HEX8(1, buf[0]); // the Boolean built-in type id
-    UaReader r = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_variant(&r, &got));
     TEST_ASSERT_EQUAL_INT(OPCUA_VAR_BOOL, got.type);
     TEST_ASSERT_TRUE(got.b);
@@ -754,10 +754,10 @@ void test_variant_round_trip(void)
     v.type = OPCUA_VAR_INT32;
     v.i32 = -12345;
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_variant(&w, &v);
     TEST_ASSERT_EQUAL_HEX8(6, buf[0]);
-    UaReader r2 = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r2 = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_variant(&r2, &got));
     TEST_ASSERT_EQUAL_INT32(-12345, got.i32);
 
@@ -765,10 +765,10 @@ void test_variant_round_trip(void)
     v.type = OPCUA_VAR_DOUBLE;
     v.f64 = 3.14159265358979;
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_variant(&w, &v);
     TEST_ASSERT_EQUAL_HEX8(11, buf[0]);
-    UaReader r3 = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r3 = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_variant(&r3, &got));
     TEST_ASSERT_TRUE(same_double(3.14159265358979, got.f64));
 
@@ -777,24 +777,24 @@ void test_variant_round_trip(void)
     v.str = "hello";
     v.str_len = 5;
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_variant(&w, &v);
     TEST_ASSERT_EQUAL_HEX8(12, buf[0]);
-    UaReader r4 = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r4 = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_variant(&r4, &got));
     TEST_ASSERT_EQUAL_INT32(5, got.str_len);
     TEST_ASSERT_EQUAL_INT(0, memcmp(got.str, "hello", 5));
 
     // a null Variant is the encoding byte 0 alone
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_variant(&w, NULL);
     TEST_ASSERT_EQUAL_UINT(1u, w.n);
     TEST_ASSERT_EQUAL_HEX8(0, buf[0]);
 
     // sec 5.2.2.16: bit 7 of the encoding byte marks an array, which this scalar decoder refuses
     static const uint8_t ARRAY_VARIANT[5] = {0x86, 0x01, 0x00, 0x00, 0x00};
-    UaReader r5 = {ARRAY_VARIANT, sizeof(ARRAY_VARIANT), 0, PROTO_FALSE};
+    UaReader r5 = {ARRAY_VARIANT, sizeof(ARRAY_VARIANT), 0, EMBED_FALSE};
     TEST_ASSERT_FALSE(protocore_ua_r_variant(&r5, &got));
 }
 
@@ -809,14 +809,14 @@ void test_datavalue_mask(void)
     v.type = OPCUA_VAR_UINT32;
     v.u32 = 0xDEADBEEFu;
 
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     protocore_ua_w_datavalue(&w, &v, OPCUA_STATUS_GOOD);
     TEST_ASSERT_EQUAL_HEX8(0x01, buf[0]);
     TEST_ASSERT_EQUAL_UINT(6u, w.n); // mask + encoding byte + UInt32
 
     OpcUaVariant got;
     uint32_t status = 0xFFFFFFFFu;
-    UaReader r = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_datavalue(&r, &got, &status));
     TEST_ASSERT_EQUAL_INT(OPCUA_VAR_UINT32, got.type);
     TEST_ASSERT_EQUAL_HEX32(0xDEADBEEFu, got.u32);
@@ -824,16 +824,16 @@ void test_datavalue_mask(void)
 
     // a Bad status sets bit 1 as well
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_datavalue(&w, &v, OPCUA_STATUS_BAD_NODE_ID_UNKNOWN);
     TEST_ASSERT_EQUAL_HEX8(0x03, buf[0]);
-    UaReader r2 = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r2 = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_datavalue(&r2, &got, &status));
     TEST_ASSERT_EQUAL_HEX32(OPCUA_STATUS_BAD_NODE_ID_UNKNOWN, status);
 
     // an error-only DataValue carries no Variant at all
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_datavalue(&w, NULL, OPCUA_STATUS_BAD_NODE_ID_UNKNOWN);
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[0]);
     TEST_ASSERT_EQUAL_UINT(5u, w.n);
@@ -846,7 +846,7 @@ void test_datavalue_mask(void)
         0,    0,    0,    0,    0,    0, 0, 0, // SourceTimestamp
         0,    0,    0,    0,    0,    0, 0, 0, // ServerTimestamp
     };
-    UaReader r3 = {WITH_STAMPS, sizeof(WITH_STAMPS), 0, PROTO_FALSE};
+    UaReader r3 = {WITH_STAMPS, sizeof(WITH_STAMPS), 0, EMBED_FALSE};
     TEST_ASSERT_TRUE(protocore_ua_r_datavalue(&r3, &got, &status));
     TEST_ASSERT_EQUAL_INT32(42, got.i32);
     TEST_ASSERT_EQUAL_HEX32(0x80340000u, status);
@@ -906,7 +906,7 @@ void test_read_request_and_response(void)
     check_msg_response(out, rn, &req.msg, 9, OPCUA_ID_READ_RESP, OPCUA_STATUS_GOOD);
 
     // the response carries one DataValue per captured node, in request order
-    UaReader r = {out + 8, rn - 8, 0, PROTO_FALSE};
+    UaReader r = {out + 8, rn - 8, 0, EMBED_FALSE};
     for (int i = 0; i < 4; i++)
     {
         (void)protocore_ua_r_u32(&r); // channel, token, seq, request id
@@ -984,7 +984,7 @@ static int32_t browse_handler(uint16_t ns, uint32_t id, OpcUaReference *out, uin
         return -1; // an unknown node
     }
     out[0].ref_type_id = OPCUA_REFTYPE_ORGANIZES;
-    out[0].is_forward = PROTO_TRUE;
+    out[0].is_forward = EMBED_TRUE;
     out[0].target_ns = 1;
     out[0].target_id = 1000;
     out[0].browse_name_ns = 1;
@@ -1082,11 +1082,11 @@ void test_resolver_registration(void)
 
     // the endpoint url the server advertises reaches the EndpointDescription encoder
     uint8_t buf[512];
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     OpcUaServerInfo info = {"opc.tcp://127.0.0.1:4840", "urn:x", "X"};
     protocore_ua_w_endpoint_description(&w, &info);
     TEST_ASSERT_TRUE(w.ok);
-    UaReader r = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r = {buf, w.n, 0, EMBED_FALSE};
     char url[64];
     int32_t ul = 0;
     TEST_ASSERT_TRUE(protocore_ua_r_string(&r, url, sizeof(url), &ul));
@@ -1098,9 +1098,9 @@ void test_resolver_registration(void)
 void test_qualifiedname_and_localizedtext(void)
 {
     uint8_t buf[64];
-    UaWriter w = {buf, sizeof(buf), 0, PROTO_TRUE};
+    UaWriter w = {buf, sizeof(buf), 0, EMBED_TRUE};
     protocore_ua_w_qualifiedname(&w, 3, "Name");
-    UaReader r = {buf, w.n, 0, PROTO_FALSE};
+    UaReader r = {buf, w.n, 0, EMBED_FALSE};
     TEST_ASSERT_EQUAL_UINT16(3, protocore_ua_r_u16(&r));
     char name[16];
     int32_t nl = 0;
@@ -1108,16 +1108,16 @@ void test_qualifiedname_and_localizedtext(void)
     TEST_ASSERT_EQUAL_STRING("Name", name);
 
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_localizedtext(&w, NULL, "Temperature");
     TEST_ASSERT_EQUAL_HEX8(0x02, buf[0]); // Text only
-    UaReader r2 = {buf + 1, w.n - 1, 0, PROTO_FALSE};
+    UaReader r2 = {buf + 1, w.n - 1, 0, EMBED_FALSE};
     char text[32];
     TEST_ASSERT_TRUE(protocore_ua_r_string(&r2, text, sizeof(text), &nl));
     TEST_ASSERT_EQUAL_STRING("Temperature", text);
 
     w.n = 0;
-    w.ok = PROTO_TRUE;
+    w.ok = EMBED_TRUE;
     protocore_ua_w_localizedtext(&w, "en", "Temperature");
     TEST_ASSERT_EQUAL_HEX8(0x03, buf[0]); // Locale and Text
 }

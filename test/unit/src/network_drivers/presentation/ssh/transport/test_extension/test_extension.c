@@ -35,14 +35,14 @@ static const uint8_t *take_str(const uint8_t *p, size_t *off, uint32_t *out_len)
     return body;
 }
 
-static proto_bool body_equals(const uint8_t *body, uint32_t len, const char *s)
+static embed_bool body_equals(const uint8_t *body, uint32_t len, const char *s)
 {
     uint32_t k = 0;
     for (; k < len; k++)
     {
         if (s[k] == 0 || body[k] != (uint8_t)s[k])
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     return s[k] == 0;
@@ -170,13 +170,13 @@ void test_sec3_1_preference_reorders_but_keeps_the_same_members(void)
     size_t alen = 0;
     size_t blen = 0;
 
-    ssh_kex_set_prefer_rsa(PROTO_FALSE);
+    ssh_kex_set_prefer_rsa(EMBED_FALSE);
     int extension_n = Extension.build(extension_work, a, &alen, sizeof(a));
     TEST_ASSERT_EQUAL_INT(0, extension_n);
-    ssh_kex_set_prefer_rsa(PROTO_TRUE);
+    ssh_kex_set_prefer_rsa(EMBED_TRUE);
     extension_n = Extension.build(extension_work, b, &blen, sizeof(b));
     TEST_ASSERT_EQUAL_INT(0, extension_n);
-    ssh_kex_set_prefer_rsa(PROTO_FALSE); // leave the module as it was found
+    ssh_kex_set_prefer_rsa(EMBED_FALSE); // leave the module as it was found
 
     TEST_ASSERT_EQUAL_UINT32((uint32_t)alen, (uint32_t)blen); // same names, same total length
     TEST_ASSERT_NOT_EQUAL(0, memcmp(a, b, alen));             // different order
@@ -187,10 +187,10 @@ void test_sec3_1_rsa_preference_puts_rsa_first(void)
     uint8_t out[512];
     size_t len = 0;
 
-    ssh_kex_set_prefer_rsa(PROTO_TRUE);
+    ssh_kex_set_prefer_rsa(EMBED_TRUE);
     int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
     TEST_ASSERT_EQUAL_INT(0, extension_n);
-    ssh_kex_set_prefer_rsa(PROTO_FALSE);
+    ssh_kex_set_prefer_rsa(EMBED_FALSE);
 
     size_t off = 5u;
     uint32_t nlen = 0;
@@ -206,7 +206,7 @@ void test_sec3_1_default_preference_puts_ed25519_first(void)
     uint8_t out[512];
     size_t len = 0;
 
-    ssh_kex_set_prefer_rsa(PROTO_FALSE);
+    ssh_kex_set_prefer_rsa(EMBED_FALSE);
     int extension_n = Extension.build(extension_work, out, &len, sizeof(out));
     TEST_ASSERT_EQUAL_INT(0, extension_n);
 

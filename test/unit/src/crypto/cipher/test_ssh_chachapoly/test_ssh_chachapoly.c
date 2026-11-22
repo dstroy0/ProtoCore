@@ -45,7 +45,7 @@ static void cp_encrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const 
     ChachaPoly.encrypt(g_ws);
 }
 
-static proto_bool cp_decrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src,
+static embed_bool cp_decrypt(const uint8_t *key, uint32_t seqnr, uint8_t *dest, const uint8_t *src,
                              uint32_t payload_len)
 {
     ChachaPolyV.decrypt_args.key = key;

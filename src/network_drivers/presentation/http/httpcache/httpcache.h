@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_CACHE
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -48,17 +48,17 @@ PROTOCORE_BEGIN_DECLS
 typedef struct protocore_cache_control
 {
     // response cacheability
-    proto_bool cc_public;        ///< `public`
-    proto_bool cc_private;       ///< `private` (field-name list not captured)
-    proto_bool no_store;         ///< `no-store`
-    proto_bool no_cache;         ///< `no-cache` (field-name list not captured)
-    proto_bool no_transform;     ///< `no-transform`
-    proto_bool must_revalidate;  ///< `must-revalidate`
-    proto_bool proxy_revalidate; ///< `proxy-revalidate`
-    proto_bool must_understand;  ///< `must-understand`
-    proto_bool cc_immutable;     ///< `immutable` (RFC 8246)
+    embed_bool cc_public;        ///< `public`
+    embed_bool cc_private;       ///< `private` (field-name list not captured)
+    embed_bool no_store;         ///< `no-store`
+    embed_bool no_cache;         ///< `no-cache` (field-name list not captured)
+    embed_bool no_transform;     ///< `no-transform`
+    embed_bool must_revalidate;  ///< `must-revalidate`
+    embed_bool proxy_revalidate; ///< `proxy-revalidate`
+    embed_bool must_understand;  ///< `must-understand`
+    embed_bool cc_immutable;     ///< `immutable` (RFC 8246)
     // request
-    proto_bool only_if_cached; ///< `only-if-cached` (request)
+    embed_bool only_if_cached; ///< `only-if-cached` (request)
     // delta-seconds (-1 = absent)
     int32_t max_age;                ///< `max-age=N`
     int32_t s_maxage;               ///< `s-maxage=N`
@@ -123,7 +123,7 @@ typedef struct
 typedef struct
 {
     const protocore_cache_control *cc;
-    proto_bool shared;       ///< true for a shared cache (honors s-maxage)
+    embed_bool shared;       ///< true for a shared cache (honors s-maxage)
     long expires_minus_date; ///< `Expires` minus `Date` in seconds, or < 0 when that pair is absent
 } HttpcacheFreshnessLifetimeArgs;
 
@@ -170,7 +170,7 @@ typedef struct
     HttpcacheNoStoreArgs no_store_args;
     HttpcacheSharedArgs shared_args;
     HttpcacheFreshnessLifetimeArgs freshness_lifetime_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     long value;
 } HttpcacheVars;
@@ -217,7 +217,7 @@ static const HttpcacheNs Httpcache __attribute__((unused)) = {
     .freshness_lifetime = protocore_httpcache_freshness_lifetime,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CACHE
 

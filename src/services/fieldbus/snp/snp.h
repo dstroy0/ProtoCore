@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_SNP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -101,7 +101,7 @@ typedef struct
     SnpBccArgs bcc_args;
     SnpBuildArgs build_args;
     SnpParseArgs parse_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     size_t n;
 } SnpVars;
@@ -133,7 +133,7 @@ static const SnpNs Snp __attribute__((unused)) = {
     .parse = protocore_snp_parse,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNP
 

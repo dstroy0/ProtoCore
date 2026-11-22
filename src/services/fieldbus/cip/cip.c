@@ -13,7 +13,7 @@
 #include "memoria_operor/memoria_operor.h"
 #include "services/fieldbus/cip/cip.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Write one logical segment (class/instance/attribute) for @p id; 8-bit when it fits, else
 // 16-bit (segment byte + pad + LE value). Returns the octets written (2 or 4), or 0 if it
@@ -58,7 +58,7 @@ void protocore_cip_build_epath(uint8_t *work)
     uint16_t class_id = CipV.build_epath_args.class_id;
     uint16_t instance_id = CipV.build_epath_args.instance_id;
     uint16_t attribute_id = CipV.build_epath_args.attribute_id;
-    proto_bool with_attribute = CipV.build_epath_args.with_attribute;
+    embed_bool with_attribute = CipV.build_epath_args.with_attribute;
 
     if (!buf)
     {
@@ -143,7 +143,7 @@ void protocore_cip_build_get_attr_single(uint8_t *work)
     CipV.build_epath_args.class_id = class_id;
     CipV.build_epath_args.instance_id = instance_id;
     CipV.build_epath_args.attribute_id = attribute_id;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     protocore_cip_build_epath(work);
     size_t elen = CipV.n;
     if (!elen)
@@ -174,7 +174,7 @@ void protocore_cip_build_get_attr_all(uint8_t *work)
     CipV.build_epath_args.class_id = class_id;
     CipV.build_epath_args.instance_id = instance_id;
     CipV.build_epath_args.attribute_id = 0;
-    CipV.build_epath_args.with_attribute = PROTO_FALSE;
+    CipV.build_epath_args.with_attribute = EMBED_FALSE;
     protocore_cip_build_epath(work);
     size_t elen = CipV.n;
     if (!elen)
@@ -208,7 +208,7 @@ void protocore_cip_build_set_attr_single(uint8_t *work)
     CipV.build_epath_args.class_id = class_id;
     CipV.build_epath_args.instance_id = instance_id;
     CipV.build_epath_args.attribute_id = attribute_id;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     protocore_cip_build_epath(work);
     size_t elen = CipV.n;
     if (!elen)
@@ -235,7 +235,7 @@ void protocore_cip_parse_response(uint8_t *work)
 
     if (!buf || !out || len < 4) // service + reserved + general status + additional-status size
     {
-        CipV.ok = PROTO_FALSE;
+        CipV.ok = EMBED_FALSE;
         return;
     }
     out->service = buf[0];
@@ -244,17 +244,17 @@ void protocore_cip_parse_response(uint8_t *work)
     size_t data_start = 4 + (size_t)addl_words * 2;
     if (data_start > len)
     {
-        CipV.ok = PROTO_FALSE;
+        CipV.ok = EMBED_FALSE;
         return;
     }
     out->data = buf + data_start;
     out->data_len = len - data_start;
-    CipV.ok = PROTO_TRUE;
+    CipV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 CipVars CipV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CIP

@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file zlib.h
@@ -45,7 +45,7 @@ typedef struct
     uint16_t *d_code;       ///< fixed distance Huffman codes (bit-reversed), 30 entries.
     uint8_t *d_len;         ///< their bit lengths, 30 entries.
     size_t hist;            ///< bytes of history currently at the front of @ref work.
-    proto_bool header_sent; ///< true once the leading 2-byte zlib header has been emitted.
+    embed_bool header_sent; ///< true once the leading 2-byte zlib header has been emitted.
 } SshDeflate;
 
 /**
@@ -99,6 +99,6 @@ int protocore_zlib_packet(uint8_t *work, SshDeflate *z, const uint8_t *src, size
 /** @brief Module namespace. */
 PROTOCORE_NS ZlibNs Zlib PROTOCORE_UNUSED = {.init = protocore_zlib_init, .packet = protocore_zlib_packet};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_TRANSPORT_ZLIB_H

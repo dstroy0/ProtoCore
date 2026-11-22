@@ -311,9 +311,9 @@ void test_disassociation_imminent_overrides_the_signal(void)
 
     protocore_roam_btm req;
     memset(&req, 0, sizeof req);
-    req.present = PROTO_TRUE;
-    req.disassoc_imminent = PROTO_TRUE;
-    req.has_preferred = PROTO_TRUE;
+    req.present = EMBED_TRUE;
+    req.disassoc_imminent = EMBED_TRUE;
+    req.has_preferred = EMBED_TRUE;
     memcpy(req.preferred_bssid, AP_A, 6);
 
     // The link is strong (-40) and the preferred candidate is the weaker of the two: it still wins.
@@ -324,7 +324,7 @@ void test_disassociation_imminent_overrides_the_signal(void)
     TEST_ASSERT_EQUAL_UINT8(6, RoamV.decision.target_channel);
 
     // No preferred candidate named: the strongest in the list.
-    req.has_preferred = PROTO_FALSE;
+    req.has_preferred = EMBED_FALSE;
     decide(SERVING, -40, nb, 2, &req, NULL);
     TEST_ASSERT_TRUE(RoamV.decision.roam);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_ROAM_BTM_IMMINENT, RoamV.decision.reason);
@@ -348,8 +348,8 @@ void test_a_suggested_candidate_is_taken_only_when_it_is_no_weaker(void)
 
     protocore_roam_btm req;
     memset(&req, 0, sizeof req);
-    req.present = PROTO_TRUE;
-    req.has_preferred = PROTO_TRUE;
+    req.present = EMBED_TRUE;
+    req.has_preferred = EMBED_TRUE;
     memcpy(req.preferred_bssid, AP_A, 6);
 
     nb[0].rssi_dbm = -50; // equal to the serving BSS: "not weaker" includes equal

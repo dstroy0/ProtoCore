@@ -14,7 +14,7 @@
 
 #if PROTOCORE_ENABLE_SNMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SNMP_V3
 #endif
@@ -84,13 +84,13 @@ struct SnmpAgentStorage
     size_t mib_count;
     char ro[SNMP_COMMUNITY_MAX];
     char rw[SNMP_COMMUNITY_MAX];
-    proto_bool rw_set;
+    embed_bool rw_set;
 
     InVb in[SNMP_MAX_VARBINDS];
     OutVb out[SNMP_MAX_VARBINDS];
     const uint32_t *cur_oid[SNMP_MAX_VARBINDS];
     size_t cur_len[SNMP_MAX_VARBINDS];
-    proto_bool ended[SNMP_MAX_VARBINDS];
+    embed_bool ended[SNMP_MAX_VARBINDS];
 
     uint8_t pdu_stage[SNMP_MSG_BUF_SIZE];
     uint8_t tx[SNMP_MSG_BUF_SIZE];
@@ -203,27 +203,27 @@ static const SnmpMibEntry *mib_find_next(uint8_t *work, const uint32_t *oid, siz
 // only the instance is absent, noSuchObject when no such object exists. Every entry is a full
 // instance name, so its object name is that minus the trailing instance subidentifier, and the
 // request names a known object exactly when that prefix is a prefix of the request.
-static proto_bool mib_object_exists(uint8_t *work, const uint32_t *oid, size_t n)
+static embed_bool mib_object_exists(uint8_t *work, const uint32_t *oid, size_t n)
 {
     for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
     {
         size_t objn = SNMP_AGENT_CTX(work)->mib[i].oid_len - 1;
         if (objn <= n && oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, objn, oid, objn) == 0)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-static proto_bool fetch_value(const SnmpMibEntry *en, SnmpValue *out)
+static embed_bool fetch_value(const SnmpMibEntry *en, SnmpValue *out)
 {
     if (en->getter)
     {
         return en->getter(out);
     }
     *out = en->val;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +253,7 @@ static SnmpMibEntry *mib_alloc(uint8_t *work)
 void protocore_snmp_agent_init(uint8_t *work)
 {
     SNMP_AGENT_CTX(work)->mib_count = 0;
-    SNMP_AGENT_CTX(work)->rw_set = PROTO_FALSE;
+    SNMP_AGENT_CTX(work)->rw_set = EMBED_FALSE;
     SNMP_AGENT_CTX(work)->rw[0] = '\0';
     const char *ro = SnmpAgentV.community.ro;
     if (!ro || !ro[0])
@@ -262,7 +262,7 @@ void protocore_snmp_agent_init(uint8_t *work)
     }
     (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SNMP_AGENT_CTX(work)->ro, .src = ro,
                      .cap = sizeof(SNMP_AGENT_CTX(work)->ro));
-    SnmpAgentV.ok = PROTO_TRUE;
+    SnmpAgentV.ok = EMBED_TRUE;
 }
 
 void protocore_snmp_agent_set_rw_community(uint8_t *work)
@@ -270,15 +270,15 @@ void protocore_snmp_agent_set_rw_community(uint8_t *work)
     const char *rw = SnmpAgentV.community.rw;
     if (!rw || !rw[0])
     {
-        SNMP_AGENT_CTX(work)->rw_set = PROTO_FALSE;
+        SNMP_AGENT_CTX(work)->rw_set = EMBED_FALSE;
         SNMP_AGENT_CTX(work)->rw[0] = '\0';
-        SnmpAgentV.ok = PROTO_FALSE;
+        SnmpAgentV.ok = EMBED_FALSE;
         return;
     }
     (void)EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = SNMP_AGENT_CTX(work)->rw, .src = rw,
                      .cap = sizeof(SNMP_AGENT_CTX(work)->rw));
-    SNMP_AGENT_CTX(work)->rw_set = PROTO_TRUE;
-    SnmpAgentV.ok = PROTO_TRUE;
+    SNMP_AGENT_CTX(work)->rw_set = EMBED_TRUE;
+    SnmpAgentV.ok = EMBED_TRUE;
 }
 
 void protocore_snmp_agent_add_string(uint8_t *work)
@@ -286,7 +286,7 @@ void protocore_snmp_agent_add_string(uint8_t *work)
     SnmpMibEntry *e = mib_alloc(work);
     if (!e)
     {
-        SnmpAgentV.ok = PROTO_FALSE;
+        SnmpAgentV.ok = EMBED_FALSE;
         return;
     }
     const char *value = SnmpAgentV.object.text;
@@ -294,7 +294,7 @@ void protocore_snmp_agent_add_string(uint8_t *work)
     e->val.str = value;
     e->val.str_len = value ? EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = value, .cap = SNMP_MSG_BUF_SIZE) : 0;
     e->setter = SnmpAgentV.object.setter;
-    SnmpAgentV.ok = PROTO_TRUE;
+    SnmpAgentV.ok = EMBED_TRUE;
 }
 
 void protocore_snmp_agent_add_integer(uint8_t *work)
@@ -302,13 +302,13 @@ void protocore_snmp_agent_add_integer(uint8_t *work)
     SnmpMibEntry *e = mib_alloc(work);
     if (!e)
     {
-        SnmpAgentV.ok = PROTO_FALSE;
+        SnmpAgentV.ok = EMBED_FALSE;
         return;
     }
     e->val.type = (uint8_t)SNMP_TAG_BER_INTEGER;
     e->val.ival = SnmpAgentV.object.ival;
     e->setter = SnmpAgentV.object.setter;
-    SnmpAgentV.ok = PROTO_TRUE;
+    SnmpAgentV.ok = EMBED_TRUE;
 }
 
 void protocore_snmp_agent_add_dynamic(uint8_t *work)
@@ -316,12 +316,12 @@ void protocore_snmp_agent_add_dynamic(uint8_t *work)
     SnmpMibEntry *e = mib_alloc(work);
     if (!e)
     {
-        SnmpAgentV.ok = PROTO_FALSE;
+        SnmpAgentV.ok = EMBED_FALSE;
         return;
     }
     e->val.type = SnmpAgentV.object.type;
     e->getter = SnmpAgentV.object.getter;
-    SnmpAgentV.ok = PROTO_TRUE;
+    SnmpAgentV.ok = EMBED_TRUE;
 }
 
 // sysUpTime.0 is TimeTicks: hundredths of a second since the network management portion of the
@@ -335,11 +335,11 @@ static uint32_t snmp_uptime_cs(void)
 #endif
 }
 
-static proto_bool sys_uptime_get(SnmpValue *out)
+static embed_bool sys_uptime_get(SnmpValue *out)
 {
     out->type = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
     out->uval = snmp_uptime_cs();
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The system group, 1.3.6.1.2.1.1 (RFC 3418 sec 2): sysDescr.0 through sysServices.0. sysUpTime.0
@@ -463,7 +463,7 @@ static void enc_value(BerEnc *e, const SnmpValue *v)
 
 // One binding value at the decoder cursor into v, with an OBJECT IDENTIFIER value landing in
 // oidbuf. Leaves the cursor past the value.
-static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
+static embed_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
 {
     EMBED_CALL(memor.set, MemoriaCfg, .dst = v, .val = 0, .bytes = sizeof(*v));
     size_t save = d->pos;
@@ -471,7 +471,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
     SnmpBer.read_header(protocore_snmp_agent_span());
     if (!SnmpBerV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t tag = SnmpBerV.tag;
     const size_t len = SnmpBerV.vlen;
@@ -494,14 +494,14 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
         }
         v->uval = acc;
         d->pos += len;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     case (uint8_t)SNMP_TAG_BER_OCTET_STRING:
     case (uint8_t)SNMP_TAG_SNMP_OPAQUE:
         v->str = (const char *)(d->buf + d->pos);
         v->str_len = len;
         d->pos += len;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case (uint8_t)SNMP_TAG_BER_OID:
         d->pos = save;
         SnmpBerV.read_args.arc_out = oidbuf;
@@ -509,14 +509,14 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
         SnmpBer.read_oid(protocore_snmp_agent_span());
         if (!SnmpBerV.ok)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         v->oid_len = SnmpBerV.n;
         v->oid = oidbuf;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     default: // NULL, the value a GetRequest-PDU binding carries, and anything else: step past it
         d->pos += len;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 }
 
@@ -527,7 +527,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
 // Apply each binding of a SetRequest-PDU in order, stopping at the first failure and reporting it
 // as error-status with the 1-based error-index (RFC 3416 sec 4.2.5). Both outputs are left alone
 // when every binding succeeds.
-static void apply_set_all(uint8_t *work, size_t nvb, proto_bool v2c, long *err_status, long *err_index)
+static void apply_set_all(uint8_t *work, size_t nvb, embed_bool v2c, long *err_status, long *err_index)
 {
     for (size_t i = 0; i < nvb; i++)
     {
@@ -558,7 +558,7 @@ static void apply_set_all(uint8_t *work, size_t nvb, proto_bool v2c, long *err_s
 
 // The community a message names matches a configured one: same length, same octets. Reads the
 // stored community it is handed and no module state.
-static proto_bool community_match(const char *stored, const char *p, size_t len)
+static embed_bool community_match(const char *stored, const char *p, size_t len)
 {
     return stored[0] != '\0' && EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = stored, .cap = len + 1) == len &&
            EMBED_CALL(memor.cmp, MemoriaCfg, .src = stored, .other = p, .bytes = len) == 0;
@@ -658,9 +658,9 @@ static void echo_varbinds(uint8_t *work, size_t nvb)
 
 // GetRequest-PDU (RFC 3416 sec 4.2.1) and GetNextRequest-PDU (sec 4.2.2). Reports the binding
 // count written; a v1 name failure stops the walk and reports through err_status/err_index.
-static size_t run_get(uint8_t *work, uint8_t pdu_tag, size_t nvb, proto_bool v2c, long *err_status, long *err_index)
+static size_t run_get(uint8_t *work, uint8_t pdu_tag, size_t nvb, embed_bool v2c, long *err_status, long *err_index)
 {
-    const proto_bool is_next = (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GETNEXT);
+    const embed_bool is_next = (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GETNEXT);
     size_t nout = 0;
     for (size_t i = 0; i < nvb; i++)
     {
@@ -668,7 +668,7 @@ static size_t run_get(uint8_t *work, uint8_t pdu_tag, size_t nvb, proto_bool v2c
             is_next ? mib_find_next(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len)
                     : mib_find_exact(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len);
         SnmpValue val;
-        proto_bool ok = en && fetch_value(en, &val);
+        embed_bool ok = en && fetch_value(en, &val);
         if (!ok)
         {
             if (!v2c)
@@ -685,7 +685,7 @@ static size_t run_get(uint8_t *work, uint8_t pdu_tag, size_t nvb, proto_bool v2c
             // the last name in the view is always endOfMibView.
             if (!is_next)
             {
-                proto_bool inst =
+                embed_bool inst =
                     en || mib_object_exists(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len);
                 val.type = inst ? (uint8_t)SNMP_TAG_SNMP_NO_SUCH_INSTANCE : (uint8_t)SNMP_TAG_SNMP_NO_SUCH_OBJECT;
             }
@@ -749,7 +749,7 @@ static size_t run_bulk(uint8_t *work, size_t nvb, long non_repeaters, long max_r
     {
         SNMP_AGENT_CTX(work)->cur_oid[r] = SNMP_AGENT_CTX(work)->in[non_rep + r].oid;
         SNMP_AGENT_CTX(work)->cur_len[r] = SNMP_AGENT_CTX(work)->in[non_rep + r].oid_len;
-        SNMP_AGENT_CTX(work)->ended[r] = PROTO_FALSE;
+        SNMP_AGENT_CTX(work)->ended[r] = EMBED_FALSE;
     }
     for (long rep = 0; rep < max_rep && nout < SNMP_MAX_VARBINDS; rep++)
     {
@@ -778,7 +778,7 @@ static size_t run_bulk(uint8_t *work, size_t nvb, long non_repeaters, long max_r
                 SNMP_AGENT_CTX(work)->out[nout].oid = SNMP_AGENT_CTX(work)->cur_oid[r];
                 SNMP_AGENT_CTX(work)->out[nout].oid_len = SNMP_AGENT_CTX(work)->cur_len[r];
                 SNMP_AGENT_CTX(work)->out[nout].val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
-                SNMP_AGENT_CTX(work)->ended[r] = PROTO_TRUE;
+                SNMP_AGENT_CTX(work)->ended[r] = EMBED_TRUE;
             }
             nout++;
         }
@@ -792,8 +792,8 @@ void protocore_snmp_agent_dispatch_pdu(uint8_t *work)
 {
     const uint8_t *pdu = SnmpAgentV.pdu.req;
     const size_t pdu_len = SnmpAgentV.pdu.req_len;
-    const proto_bool allow_write = SnmpAgentV.pdu.allow_write;
-    const proto_bool v2c = SnmpAgentV.pdu.v2c;
+    const embed_bool allow_write = SnmpAgentV.pdu.allow_write;
+    const embed_bool v2c = SnmpAgentV.pdu.v2c;
     uint8_t *out = SnmpAgentV.pdu.out;
     const size_t out_cap = SnmpAgentV.pdu.out_cap;
     SnmpAgentV.n = 0;
@@ -952,9 +952,9 @@ void protocore_snmp_agent_process(uint8_t *work)
 
     // RFC 1157 sec 3.2.5: the message is authentic when it names a community it belongs to. The
     // read-write community also authorizes reads.
-    const proto_bool is_rw =
+    const embed_bool is_rw =
         SNMP_AGENT_CTX(work)->rw_set && community_match(SNMP_AGENT_CTX(work)->rw, community, community_len);
-    const proto_bool is_ro = is_rw || community_match(SNMP_AGENT_CTX(work)->ro, community, community_len);
+    const embed_bool is_ro = is_rw || community_match(SNMP_AGENT_CTX(work)->ro, community, community_len);
     if (!is_ro)
     {
         return; // RFC 1157 sec 4.1: an authentication failure discards the datagram
@@ -1034,7 +1034,7 @@ void protocore_snmp_agent_listen(uint8_t *work)
     UdpListener.listen(protocore_udp_listener_span());
     SnmpAgentV.ok = UdpListenerV.ok;
 #else
-    SnmpAgentV.ok = PROTO_FALSE; // no transport in this build
+    SnmpAgentV.ok = EMBED_FALSE; // no transport in this build
 #endif
 }
 
@@ -1042,6 +1042,6 @@ void protocore_snmp_agent_listen(uint8_t *work)
 /** @brief The operands and the outcome. */
 SnmpAgentVars SnmpAgentV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP

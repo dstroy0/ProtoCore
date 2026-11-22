@@ -38,7 +38,7 @@ static void hex_encode_nonce(const uint8_t *raw, char *out)
     HexV.io.in = raw;
     HexV.io.n = CSRF_NONCE_BYTES;
     HexV.io.out = out;
-    HexV.args.upper = PROTO_FALSE;
+    HexV.args.upper = EMBED_FALSE;
     Hex.encode(hex_work);
 }
 

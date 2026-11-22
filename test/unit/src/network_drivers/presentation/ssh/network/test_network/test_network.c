@@ -38,7 +38,7 @@ static void net_release(uint8_t ssh_slot)
     SshNetwork.release(protocore_ssh_network_span());
 }
 
-static proto_bool net_owns(uint8_t ssh_slot, uint8_t conn_slot)
+static embed_bool net_owns(uint8_t ssh_slot, uint8_t conn_slot)
 {
     SshNetworkV.ssh_slot = ssh_slot;
     SshNetworkV.conn_slot = conn_slot;

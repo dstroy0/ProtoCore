@@ -17,7 +17,7 @@
 // state, so each takes that cursor rather than the handle.
 // ---------------------------------------------------------------------------
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static void enc_byte(BerEnc *e, uint8_t b)
 {
@@ -27,7 +27,7 @@ static void enc_byte(BerEnc *e, uint8_t b)
     }
     if (e->len >= e->cap)
     {
-        e->ok = PROTO_FALSE;
+        e->ok = EMBED_FALSE;
         return;
     }
     e->buf[e->len++] = b;
@@ -97,7 +97,7 @@ static void oid_emit_arc(uint8_t *tmp, size_t cap, size_t *t, uint32_t v, BerEnc
         }
         else
         {
-            e->ok = PROTO_FALSE;
+            e->ok = EMBED_FALSE;
         }
     }
 }
@@ -198,8 +198,8 @@ void protocore_snmp_ber_put_oid(uint8_t *work)
     const size_t n = SnmpBerV.tlv.arc_count;
     if (n < 2)
     {
-        e->ok = PROTO_FALSE;
-        SnmpBerV.ok = PROTO_FALSE;
+        e->ok = EMBED_FALSE;
+        SnmpBerV.ok = EMBED_FALSE;
         return;
     }
     uint8_t tmp[SNMP_MAX_OID_LEN * 5];
@@ -242,20 +242,20 @@ void protocore_snmp_ber_seq_end(uint8_t *work)
     const size_t token = SnmpBerV.tlv.token;
     if (!e->ok)
     {
-        SnmpBerV.ok = PROTO_FALSE;
+        SnmpBerV.ok = EMBED_FALSE;
         return;
     }
     size_t content = e->len - (token + 3);
     if (content > 0xFFFF)
     {
-        e->ok = PROTO_FALSE;
-        SnmpBerV.ok = PROTO_FALSE;
+        e->ok = EMBED_FALSE;
+        SnmpBerV.ok = EMBED_FALSE;
         return;
     }
     e->buf[token] = 0x82;
     e->buf[token + 1] = (uint8_t)((content >> 8) & 0xFF);
     e->buf[token + 2] = (uint8_t)(content & 0xFF);
-    SnmpBerV.ok = PROTO_TRUE;
+    SnmpBerV.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -275,19 +275,19 @@ void protocore_snmp_ber_dec_init(uint8_t *work)
 
 // Identifier octet then definite length, leaving the cursor at the value. Runs over the caller's
 // cursor and touches no module state, so the three reads below share it directly.
-static proto_bool dec_header(BerDec *d, uint8_t *tag, size_t *length)
+static embed_bool dec_header(BerDec *d, uint8_t *tag, size_t *length)
 {
     if (!d->ok || d->pos >= d->len)
     {
-        d->ok = PROTO_FALSE;
-        return PROTO_FALSE;
+        d->ok = EMBED_FALSE;
+        return EMBED_FALSE;
     }
     *tag = d->buf[d->pos++];
 
     if (d->pos >= d->len)
     {
-        d->ok = PROTO_FALSE;
-        return PROTO_FALSE;
+        d->ok = EMBED_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t l0 = d->buf[d->pos++];
     size_t length_val;
@@ -300,8 +300,8 @@ static proto_bool dec_header(BerDec *d, uint8_t *tag, size_t *length)
         int k = l0 & 0x7F;
         if (k == 0 || k > 4 || d->pos + (size_t)k > d->len)
         {
-            d->ok = PROTO_FALSE; // indefinite form (k == 0) is prohibited by RFC 3417 sec 8 item 1
-            return PROTO_FALSE;
+            d->ok = EMBED_FALSE; // indefinite form (k == 0) is prohibited by RFC 3417 sec 8 item 1
+            return EMBED_FALSE;
         }
         length_val = 0;
         for (int i = 0; i < k; i++)
@@ -314,11 +314,11 @@ static proto_bool dec_header(BerDec *d, uint8_t *tag, size_t *length)
     // d->pos <= d->len holds here, bounded by the count-byte check above.
     if (length_val > d->len - d->pos)
     {
-        d->ok = PROTO_FALSE;
-        return PROTO_FALSE;
+        d->ok = EMBED_FALSE;
+        return EMBED_FALSE;
     }
     *length = length_val;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_snmp_ber_read_header(uint8_t *work)
@@ -341,8 +341,8 @@ void protocore_snmp_ber_read_integer(uint8_t *work)
     size_t len;
     if (!dec_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_INTEGER || len == 0 || len > 8)
     {
-        d->ok = PROTO_FALSE;
-        SnmpBerV.ok = PROTO_FALSE;
+        d->ok = EMBED_FALSE;
+        SnmpBerV.ok = EMBED_FALSE;
         return;
     }
     uint64_t uv = (d->buf[d->pos] & 0x80) ? ~(uint64_t)0 : 0;
@@ -352,7 +352,7 @@ void protocore_snmp_ber_read_integer(uint8_t *work)
     }
     d->pos += len;
     SnmpBerV.ival = (long)uv;
-    SnmpBerV.ok = PROTO_TRUE;
+    SnmpBerV.ok = EMBED_TRUE;
 }
 
 // OBJECT IDENTIFIER: each subidentifier is base 128 with the high bit as a continuation flag. The
@@ -368,14 +368,14 @@ void protocore_snmp_ber_read_oid(uint8_t *work)
     size_t len;
     if (!dec_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_OID || len == 0 || max < 2)
     {
-        d->ok = PROTO_FALSE;
-        SnmpBerV.ok = PROTO_FALSE;
+        d->ok = EMBED_FALSE;
+        SnmpBerV.ok = EMBED_FALSE;
         return;
     }
     const uint8_t *p = d->buf + d->pos;
     size_t count = 0;
     uint32_t acc = 0;
-    proto_bool first_done = PROTO_FALSE;
+    embed_bool first_done = EMBED_FALSE;
     for (size_t i = 0; i < len; i++)
     {
         acc = (acc << 7) | (uint32_t)(p[i] & 0x7F);
@@ -392,14 +392,14 @@ void protocore_snmp_ber_read_oid(uint8_t *work)
             }
             arcs[count++] = arc0; // count is 0 here and max is at least 2
             arcs[count++] = acc - 40u * arc0;
-            first_done = PROTO_TRUE;
+            first_done = EMBED_TRUE;
         }
         else
         {
             if (count >= max)
             {
-                d->ok = PROTO_FALSE;
-                SnmpBerV.ok = PROTO_FALSE;
+                d->ok = EMBED_FALSE;
+                SnmpBerV.ok = EMBED_FALSE;
                 return;
             }
             arcs[count++] = acc;
@@ -408,7 +408,7 @@ void protocore_snmp_ber_read_oid(uint8_t *work)
     }
     d->pos += len;
     SnmpBerV.n = count;
-    SnmpBerV.ok = PROTO_TRUE;
+    SnmpBerV.ok = EMBED_TRUE;
 }
 
 void protocore_snmp_ber_skip(uint8_t *work)
@@ -418,18 +418,18 @@ void protocore_snmp_ber_skip(uint8_t *work)
     const size_t length = SnmpBerV.read_args.skip;
     if (!d->ok || d->pos > d->len || length > d->len - d->pos) // wrap-safe, as in dec_header
     {
-        d->ok = PROTO_FALSE;
-        SnmpBerV.ok = PROTO_FALSE;
+        d->ok = EMBED_FALSE;
+        SnmpBerV.ok = EMBED_FALSE;
         return;
     }
     d->pos += length;
-    SnmpBerV.ok = PROTO_TRUE;
+    SnmpBerV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SnmpBerVars SnmpBerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SNMP

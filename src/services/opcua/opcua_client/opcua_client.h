@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_OPCUA_CLIENT
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/opcua/opcua.h"
 // Dependency (OPCUA_CLIENT requires OPCUA) is enforced centrally in protocore_config.h.
@@ -45,7 +45,7 @@ typedef struct
     uint32_t token_id;               ///< security TokenId (from the OPN response; sent in every MSG).
     uint16_t session_auth_ns;        ///< session AuthenticationToken NodeId namespace (from CreateSession).
     uint32_t session_auth_id;        ///< session AuthenticationToken NodeId identifier.
-    proto_bool session_auth_numeric; ///< whether the AuthenticationToken is numeric.
+    embed_bool session_auth_numeric; ///< whether the AuthenticationToken is numeric.
     uint32_t seq;                    ///< client SequenceNumber (incremented per message).
     uint32_t request_id;             ///< client RequestId (incremented per message).
     uint32_t request_handle;         ///< client RequestHandle (incremented per request).
@@ -103,19 +103,19 @@ typedef struct
 } OpcUaAckInfo;
 
 /** @brief Parse an `ACK`. @return true if valid. */
-proto_bool protocore_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out);
+embed_bool protocore_opcua_client_on_ack(const uint8_t *msg, size_t len, OpcUaAckInfo *out);
 
 /** @brief Parse an `OPN` OpenSecureChannelResponse; sets channel_id + token_id. @return true if Good. */
-proto_bool protocore_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len);
+embed_bool protocore_opcua_client_on_open(OpcUaClient *c, const uint8_t *msg, size_t len);
 
 /** @brief Parse a GetEndpointsResponse. @return the advertised endpoint count, or -1 on error. */
 int32_t protocore_opcua_client_on_get_endpoints(const uint8_t *msg, size_t len);
 
 /** @brief Parse a CreateSessionResponse; stores the session AuthenticationToken. @return true if Good. */
-proto_bool protocore_opcua_client_on_create_session(OpcUaClient *c, const uint8_t *msg, size_t len);
+embed_bool protocore_opcua_client_on_create_session(OpcUaClient *c, const uint8_t *msg, size_t len);
 
 /** @brief Parse an ActivateSessionResponse. @return true if ServiceResult is Good. */
-proto_bool protocore_opcua_client_on_activate_session(const uint8_t *msg, size_t len);
+embed_bool protocore_opcua_client_on_activate_session(const uint8_t *msg, size_t len);
 
 /**
  * @brief Parse a ReadResponse into @p vals / @p statuses (one per result, capped at @p max).
@@ -129,7 +129,7 @@ int32_t protocore_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVari
 typedef struct
 {
     uint32_t ref_type_id;
-    proto_bool is_forward;
+    embed_bool is_forward;
     uint16_t target_ns;
     uint32_t target_id;
     uint32_t node_class;
@@ -148,7 +148,7 @@ int32_t protocore_opcua_client_on_browse(const uint8_t *msg, size_t len, OpcUaCl
  */
 int32_t protocore_opcua_client_on_write(const uint8_t *msg, size_t len, uint32_t *results, uint32_t max);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OPCUA_CLIENT
 

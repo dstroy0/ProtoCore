@@ -42,28 +42,27 @@
 
 typedef struct
 {
-    proto_bool used;
+    embed_bool used;
     char prefix[MAX_PATH_LEN];
     char origin_host[PROTOCORE_EDGE_ORIGIN_URL_MAX];
     uint16_t origin_port;
-    proto_bool https; ///< the mapped origin named https://, which this build cannot fetch
+    embed_bool https; ///< the mapped origin named https://, which this build cannot fetch
 } EdgeRouteMap;
 
 #if PROTOCORE_ENABLE_EDGE_MESH
 // A fetch runs the mesh phase (query siblings) first on a full miss, then falls to the origin.
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(EdgeFetchPhase,
     EDGE_FETCH_PHASE_MESH,
     EDGE_FETCH_PHASE_ORIGIN,
-} EdgeFetchPhase;
+);
 #endif
 
 typedef struct
 {
-    proto_bool used;
+    embed_bool used;
     EdgeFetch f;
     uint8_t client_slot;
-    proto_bool revalidate;
+    embed_bool revalidate;
     EdgeEntry *reval_entry;              // the stale entry being revalidated (nullptr for a plain miss)
     const EdgeFetchTransport *transport; // plaintext or TLS transport, chosen per route at start_fetch
     char canon[PROTOCORE_EDGE_KEY_MAX];
@@ -82,14 +81,14 @@ typedef struct
 
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t fetch_idx;
 } EdgePending;
 
 // The ChunkSource ctx for a paged send; must outlive the response, so it lives in the owned Ctx.
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     EdgeEntry *entry;
     uint32_t off, end;
 } EdgeServeCursor;
@@ -98,7 +97,7 @@ typedef struct
 // A configured sibling peer to query on a local miss.
 typedef struct
 {
-    proto_bool used;
+    embed_bool used;
     char host[PROTOCORE_MESH_HOST_MAX];
     uint16_t port;
 } MeshPeer;
@@ -106,11 +105,11 @@ typedef struct
 // One in-flight inbound peer-serve connection: accumulate the request, answer from the local cache, page out.
 typedef struct
 {
-    proto_bool active;
+    embed_bool active;
     uint8_t conn_slot;
     uint16_t req_len; // request bytes accumulated
     uint8_t reqbuf[PROTOCORE_EDGE_MESH_REQ_MAX];
-    proto_bool responded; // the whole response is built (out_len) and paging out
+    embed_bool responded; // the whole response is built (out_len) and paging out
     uint16_t out_off, out_len;
     uint8_t outbuf[PROTOCORE_EDGE_MESH_RESP_MAX];
 } MeshConn;
@@ -119,7 +118,7 @@ typedef struct
 // The single owned file-static: all of this subsystem's mutable state.
 typedef struct
 {
-    proto_bool registered;
+    embed_bool registered;
     EdgeCacheStore store;
     EdgeRouteMap maps[PROTOCORE_EDGE_MAP_MAX];
     EdgeFetchSlot fetches[PROTOCORE_EDGE_FETCH_SLOTS];
@@ -141,7 +140,7 @@ typedef struct
     MeshPeer peers[PROTOCORE_MESH_MAX_PEERS]; // static sibling list queried on a full miss
     MeshConn mesh_conns[PROTOCORE_MESH_MAX_CONNS];
     char mesh_hdrs[PROTOCORE_MESH_HDRS_MAX]; // scratch: a served request's header snapshot (serve is single-threaded)
-    proto_bool mesh_registered;              // the PROTO_MESH serving handler is installed
+    embed_bool mesh_registered;              // the PROTO_MESH serving handler is installed
 #endif
 } EdgeCacheProxyCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
@@ -195,14 +194,14 @@ static int t_open(void *c, const char *host, uint16_t port, uint32_t timeout)
     TcpClient.open(protocore_tcp_client_span());
     return TcpClientV.i32;
 }
-static proto_bool t_connected(void *c, int cid)
+static embed_bool t_connected(void *c, int cid)
 {
     (void)c;
     TcpClientV.cid = cid;
     TcpClient.connected(protocore_tcp_client_span());
     return TcpClientV.ok;
 }
-static proto_bool t_send(void *c, int cid, const void *d, size_t l)
+static embed_bool t_send(void *c, int cid, const void *d, size_t l)
 {
     (void)c;
     TcpClientV.cid = cid;
@@ -220,7 +219,7 @@ static size_t t_read(void *c, int cid, uint8_t *b, size_t cap)
     TcpClient.read(protocore_tcp_client_span());
     return TcpClientV.n;
 }
-static proto_bool t_closed(void *c, int cid)
+static embed_bool t_closed(void *c, int cid)
 {
     (void)c;
     TcpClientV.cid = cid;
@@ -250,7 +249,7 @@ static EdgeRouteMap *map_match(uint8_t *work, const char *path)
             continue;
         }
         if (EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = path, .other = EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix,
-                       .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix), .ci = PROTO_FALSE))
+                       .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].prefix), .ci = EMBED_FALSE))
         {
             return &EDGE_CACHE_PROXY_CTX(work)->maps[i];
         }
@@ -286,7 +285,7 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
     size_t remaining = c->end - c->off;
     if (remaining == 0)
     {
-        c->active = PROTO_FALSE;
+        c->active = EMBED_FALSE;
         if (c->entry->key[0] == '\0') // transient passthrough entry -> free its slot
         {
             EdgeCacheV.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
@@ -307,7 +306,7 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
 static void serve_hit(uint8_t *work, uint8_t slot, EdgeEntry *e, uint32_t now, const char *xcache)
 {
     EdgeServeCursor *c = &EDGE_CACHE_PROXY_CTX(work)->serve[slot];
-    c->active = PROTO_TRUE;
+    c->active = EMBED_TRUE;
     c->entry = e;
     c->off = 0;
     c->end = e->body_len;
@@ -335,7 +334,7 @@ static void serve_hit(uint8_t *work, uint8_t slot, EdgeEntry *e, uint32_t now, c
                 cr[0] = '\0';
             }
             proto_add_response_header(slot, "Content-Range", cr);
-            c->active = PROTO_FALSE;
+            c->active = EMBED_FALSE;
             c->entry = NULL;
             send_text(slot, 416, PROTOCORE_MIME_TEXT_PLAIN, "Range Not Satisfiable");
             return;
@@ -446,7 +445,7 @@ static void serve_passthrough(uint8_t *work, uint8_t slot, EdgeFetch *f)
     e->body_len = (uint16_t)bl;
 
     EdgeServeCursor *c = &EDGE_CACHE_PROXY_CTX(work)->serve[slot];
-    c->active = PROTO_TRUE;
+    c->active = EMBED_TRUE;
     c->entry = e;
     c->off = 0;
     c->end = e->body_len;
@@ -587,7 +586,7 @@ static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpR
     }
     EdgeCacheV.entry_set_freshness_args.e = e;
     EdgeCacheV.entry_set_freshness_args.cc = cc;
-    EdgeCacheV.entry_set_freshness_args.shared = /*shared=*/PROTO_TRUE;
+    EdgeCacheV.entry_set_freshness_args.shared = /*shared=*/EMBED_TRUE;
     EdgeCacheV.entry_set_freshness_args.date_epoch = date;
     EdgeCacheV.entry_set_freshness_args.expires_epoch = expires;
     EdgeCacheV.entry_set_freshness_args.last_modified_epoch = last_mod;
@@ -671,12 +670,12 @@ static void on_fetch_done(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, uint32
 
 // Forward decls for the seam functions installed by protocore_edge_cache_enable().
 static MwResult edge_cache_mw(uint8_t slot, HttpReq *req);
-static proto_bool edge_cache_poll(uint8_t slot);
+static embed_bool edge_cache_poll(uint8_t slot);
 
 // Build + begin the origin fetch for @p fs from its captured route/path/query (so it can begin either
 // immediately at mw time or later, after the mesh phase exhausts its peers). Picks the plaintext or TLS
 // transport; a revalidation adds the conditional headers. @return false if no fetch could start (fail open).
-static proto_bool begin_origin_fetch(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
+static embed_bool begin_origin_fetch(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
 {
     EdgeRouteMap *m = fs->route;
     const EdgeFetchTransport *tport = &EDGE_CACHE_PROXY_CTX(work)->transport;
@@ -714,17 +713,17 @@ static proto_bool begin_origin_fetch(uint8_t *work, EdgeFetchSlot *fs, uint32_t 
         (int)EMBED_CALL(verba_finis.finish, VerbaFinisCfg, .out = sb_reqbuf_out, .cap = sb_reqbuf_cap, .at = sb_reqbuf);
     if (rl <= 0 || (size_t)rl >= sizeof(EDGE_CACHE_PROXY_CTX(work)->reqbuf))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EdgeFetcher.begin(work, &fs->f, tport, m->origin_host, m->origin_port, EDGE_CACHE_PROXY_CTX(work)->reqbuf,
                       (size_t)rl, now);
     if (fs->f.st == EDGE_FETCH_STATUS_FAILED)
     {
         EdgeFetcher.end(work, &fs->f, tport);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     fs->transport = tport;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_EDGE_MESH
@@ -787,12 +786,12 @@ static void mesh_snapshot_headers(const HttpReq *req, char *out, size_t cap)
 #endif
 
 // Begin the mesh query against the peer at fs->peer_idx. @return false if there is no such peer.
-static proto_bool mesh_begin_peer(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
+static embed_bool mesh_begin_peer(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
 {
     MeshPeer *p = mesh_peer_nth(work, fs->peer_idx);
     if (!p)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EdgeMeshV.fetch_begin_args.m = &fs->mf;
     EdgeMeshV.fetch_begin_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
@@ -804,12 +803,12 @@ static proto_bool mesh_begin_peer(uint8_t *work, EdgeFetchSlot *fs, uint32_t now
     EdgeMeshV.fetch_begin_args.cap = sizeof(fs->f.buf);
     EdgeMeshV.fetch_begin_args.now_ms = now;
     EdgeMesh.fetch_begin(work);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // A peer HIT: rehydrate the entry into a fresh L1 slot, verify it matches the request, and serve it as fresh
 // (age propagated). @return true if it was served; false (freeing the slot) if corrupt / wrong / already stale.
-static proto_bool mesh_store_and_serve(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
+static embed_bool mesh_store_and_serve(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
 {
     EdgeCacheV.store_alloc_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCacheV.store_alloc_args.canon = fs->canon;
@@ -818,7 +817,7 @@ static proto_bool mesh_store_and_serve(uint8_t *work, uint8_t slot, EdgeFetchSlo
     EdgeEntry *e = EdgeCacheV.entry;
     if (!e)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EdgeMeshV.deserialize_entry_args.entry_buf = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
     EdgeMeshV.deserialize_entry_args.buf = fs->mf.buf + fs->mf.entry_off;
@@ -831,45 +830,45 @@ static proto_bool mesh_store_and_serve(uint8_t *work, uint8_t slot, EdgeFetchSlo
     EdgeCache.entry_fresh(work);
     if (!EdgeMeshV.ok ||
         !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = e->key, .other = fs->canon, .cap = sizeof(fs->canon),
-                    .ci = PROTO_FALSE) ||
+                    .ci = EMBED_FALSE) ||
         !EdgeCacheV.ok)
     {
         EdgeCacheV.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
         EdgeCacheV.store_free_entry_args.e = e;
         EdgeCache.store_free_entry(work);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EDGE_CACHE_PROXY_CTX(work)->store.stats.bytes_stored += e->body_len;
     serve_hit(work, slot, e, now, "MESH");
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The current peer query ended without a served hit: try the next sibling, else begin the origin fetch.
 // @return true if the slot still owns work (mesh continues or origin began); false = give up.
-static proto_bool mesh_advance_or_origin(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
+static embed_bool mesh_advance_or_origin(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
 {
     fs->peer_idx++;
     if (mesh_begin_peer(work, fs, now))
     {
-        return PROTO_TRUE; // querying the next sibling (still MESH phase)
+        return EMBED_TRUE; // querying the next sibling (still MESH phase)
     }
     EDGE_CACHE_PROXY_CTX(work)->store.stats.mesh_misses++;
     if (begin_origin_fetch(work, fs, now))
     {
         fs->phase = EDGE_FETCH_PHASE_ORIGIN;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 
-static proto_bool start_fetch(uint8_t *work, uint8_t slot, HttpReq *req, EdgeRouteMap *m, const char *canon,
+static embed_bool start_fetch(uint8_t *work, uint8_t slot, HttpReq *req, EdgeRouteMap *m, const char *canon,
                               EdgeEntry *reval, uint32_t now)
 {
     int fi = alloc_fetch(work);
     if (fi < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EdgeFetchSlot *fs = &EDGE_CACHE_PROXY_CTX(work)->fetches[fi];
     fs->client_slot = slot;
@@ -905,22 +904,22 @@ static proto_bool start_fetch(uint8_t *work, uint8_t slot, HttpReq *req, EdgeRou
         if (fs->mreq_len > 0 && mesh_begin_peer(work, fs, now))
         {
             fs->phase = EDGE_FETCH_PHASE_MESH;
-            fs->used = PROTO_TRUE;
-            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_TRUE;
+            fs->used = EMBED_TRUE;
+            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = EMBED_TRUE;
             EDGE_CACHE_PROXY_CTX(work)->pending[slot].fetch_idx = (uint8_t)fi;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
     fs->phase = EDGE_FETCH_PHASE_ORIGIN;
 #endif
     if (!begin_origin_fetch(work, fs, now))
     {
-        return PROTO_FALSE; // fs->used stays false -> the slot is reclaimed
+        return EMBED_FALSE; // fs->used stays false -> the slot is reclaimed
     }
-    fs->used = PROTO_TRUE;
-    EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_TRUE;
+    fs->used = EMBED_TRUE;
+    EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = EMBED_TRUE;
     EDGE_CACHE_PROXY_CTX(work)->pending[slot].fetch_idx = (uint8_t)fi;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_DBM
@@ -952,7 +951,7 @@ static EdgeEntry *try_promote_l2(uint8_t *work, const char *canon, uint32_t now)
     EdgeCacheSdV.get_args.scratch_cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->sd_buf);
     EdgeCacheSd.get(work);
     if (!EdgeCacheSdV.ok || !EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = e->key, .other = canon,
-                                        .cap = sizeof(e->key), .ci = PROTO_FALSE))
+                                        .cap = sizeof(e->key), .ci = EMBED_FALSE))
     {
         EdgeCacheV.store_free_entry_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
         EdgeCacheV.store_free_entry_args.e = e;
@@ -984,10 +983,10 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     {
         return MW_NEXT;
     }
-    proto_bool is_get = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "GET", .cap = sizeof("GET"),
-                                   .ci = PROTO_FALSE);
-    proto_bool is_head = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "HEAD",
-                                    .cap = sizeof("HEAD"), .ci = PROTO_FALSE);
+    embed_bool is_get = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "GET", .cap = sizeof("GET"),
+                                   .ci = EMBED_FALSE);
+    embed_bool is_head = EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "HEAD",
+                                    .cap = sizeof("HEAD"), .ci = EMBED_FALSE);
     if (!is_get && !is_head)
     {
         return MW_NEXT; // only cache safe methods
@@ -1014,7 +1013,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     EdgeCacheV.key_canon_args.host = host;
     EdgeCacheV.key_canon_args.path = req->path;
     EdgeCacheV.key_canon_args.query = req->query;
-    EdgeCacheV.key_canon_args.include_query = /*include_query=*/PROTO_TRUE;
+    EdgeCacheV.key_canon_args.include_query = /*include_query=*/EMBED_TRUE;
     EdgeCacheV.key_canon_args.out = canon;
     EdgeCacheV.key_canon_args.out_cap = sizeof(canon);
     EdgeCache.key_canon(protocore_edge_cache_proxy_span());
@@ -1069,7 +1068,7 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 
 // Per-slot poll hook: drive an in-flight sibling query then origin fetch, then serve. Returns true while it
 // owns the slot.
-static proto_bool edge_cache_poll(uint8_t slot)
+static embed_bool edge_cache_poll(uint8_t slot)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
@@ -1077,7 +1076,7 @@ static proto_bool edge_cache_poll(uint8_t slot)
 
     if (slot >= MAX_CONNS || !EDGE_CACHE_PROXY_CTX(work)->pending[slot].active)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t fi = EDGE_CACHE_PROXY_CTX(work)->pending[slot].fetch_idx;
     EdgeFetchSlot *fs = &EDGE_CACHE_PROXY_CTX(work)->fetches[fi];
@@ -1093,9 +1092,9 @@ static proto_bool edge_cache_poll(uint8_t slot)
             EdgeMeshV.fetch_end_args.m = &fs->mf;
             EdgeMeshV.fetch_end_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
             EdgeMesh.fetch_end(protocore_edge_cache_proxy_span());
-            fs->used = PROTO_FALSE;
-            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
-            return PROTO_TRUE;
+            fs->used = EMBED_FALSE;
+            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = EMBED_FALSE;
+            return EMBED_TRUE;
         }
         EdgeMeshV.fetch_pump_args.m = &fs->mf;
         EdgeMeshV.fetch_pump_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
@@ -1104,27 +1103,27 @@ static proto_bool edge_cache_poll(uint8_t slot)
         EdgeMeshStatus ms = EdgeMeshV.status;
         if (ms == EDGE_MESH_STATUS_PENDING)
         {
-            return PROTO_TRUE; // still querying this sibling
+            return EMBED_TRUE; // still querying this sibling
         }
-        proto_bool served = (ms == EDGE_MESH_STATUS_HIT) && mesh_store_and_serve(work, slot, fs, now);
+        embed_bool served = (ms == EDGE_MESH_STATUS_HIT) && mesh_store_and_serve(work, slot, fs, now);
         EdgeMeshV.fetch_end_args.m = &fs->mf;
         EdgeMeshV.fetch_end_args.t = &EDGE_CACHE_PROXY_CTX(work)->transport;
         EdgeMesh.fetch_end(protocore_edge_cache_proxy_span());
         if (served)
         {
             EDGE_CACHE_PROXY_CTX(work)->store.stats.mesh_hits++;
-            fs->used = PROTO_FALSE;
-            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
-            return PROTO_TRUE;
+            fs->used = EMBED_FALSE;
+            EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = EMBED_FALSE;
+            return EMBED_TRUE;
         }
         if (mesh_advance_or_origin(work, fs, now)) // try the next sibling, else begin the origin fetch
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         send_text(slot, 502, PROTOCORE_MIME_TEXT_PLAIN, "Bad Gateway"); // no sibling + origin start failed
-        fs->used = PROTO_FALSE;
-        EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
-        return PROTO_TRUE;
+        fs->used = EMBED_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = EMBED_FALSE;
+        return EMBED_TRUE;
     }
 #endif
 
@@ -1134,16 +1133,16 @@ static proto_bool edge_cache_poll(uint8_t slot)
     if (!ConnPoolV.ok) // client vanished mid-fetch: abort
     {
         EdgeFetcher.end(protocore_edge_cache_proxy_span(), &fs->f, tport);
-        fs->used = PROTO_FALSE;
-        EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
-        return PROTO_TRUE;
+        fs->used = EMBED_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = EMBED_FALSE;
+        return EMBED_TRUE;
     }
 
     EdgeFetchStatus edge_fetcher_status = EdgeFetcher.pump(protocore_edge_cache_proxy_span(), &fs->f, tport, now);
     EdgeFetchStatus st = edge_fetcher_status;
     if (st == EDGE_FETCH_STATUS_PENDING)
     {
-        return PROTO_TRUE; // still receiving; owns the slot
+        return EMBED_TRUE; // still receiving; owns the slot
     }
 
     if (st == EDGE_FETCH_STATUS_DONE)
@@ -1159,9 +1158,9 @@ static proto_bool edge_cache_poll(uint8_t slot)
         send_text(slot, 502, PROTOCORE_MIME_TEXT_PLAIN, "Bad Gateway");
     }
     EdgeFetcher.end(protocore_edge_cache_proxy_span(), &fs->f, tport);
-    fs->used = PROTO_FALSE;
-    EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = PROTO_FALSE;
-    return PROTO_TRUE;
+    fs->used = EMBED_FALSE;
+    EDGE_CACHE_PROXY_CTX(work)->pending[slot].active = EMBED_FALSE;
+    return EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_EDGE_MESH
@@ -1169,7 +1168,7 @@ static proto_bool edge_cache_poll(uint8_t slot)
 //     this node's own origin or peers, so the fleet cannot loop) -------------------------------------------
 
 // Case-insensitive compare of the first @p n bytes (header names).
-static proto_bool mesh_name_eq(const char *a, const char *b, size_t n)
+static embed_bool mesh_name_eq(const char *a, const char *b, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
@@ -1185,10 +1184,10 @@ static proto_bool mesh_name_eq(const char *a, const char *b, size_t n)
         }
         if (ca != cb)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // EdgeHdrLookup over a request-header snapshot blob (`name RS value US ...`); ctx is a MeshLookupCtx. The
@@ -1211,14 +1210,14 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
     {
         const char *rs = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p,
                                     .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(p - lc->blob),
-                                    .other = "\x1e", .other_cap = sizeof("\x1e"), .ci = PROTO_FALSE);
+                                    .other = "\x1e", .other_cap = sizeof("\x1e"), .ci = EMBED_FALSE);
         if (!rs)
         {
             break;
         }
         const char *us = EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = rs + 1,
                                     .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->mesh_hdrs) - (size_t)(rs + 1 - lc->blob),
-                                    .other = "\x1f", .other_cap = sizeof("\x1f"), .ci = PROTO_FALSE);
+                                    .other = "\x1f", .other_cap = sizeof("\x1f"), .ci = EMBED_FALSE);
         if (!us)
         {
             break;
@@ -1255,7 +1254,7 @@ static MeshConn *mesh_conn_by_slot(uint8_t *work, uint8_t slot)
 // Build the response for a parsed request into mc->outbuf: a HIT carrying a fresh local variant, else a MISS.
 static void mesh_answer(uint8_t *work, MeshConn *mc, const uint8_t digest[32], const char *canon, uint32_t now)
 {
-    proto_bool hit = PROTO_FALSE;
+    embed_bool hit = EMBED_FALSE;
     uint8_t verify[32];
     EdgeCacheV.key_digest_args.digest_work = EDGE_CACHE_PROXY_CTX(work)->store.digest_work;
     EdgeCacheV.key_digest_args.canon = canon;
@@ -1305,13 +1304,13 @@ static void mesh_answer(uint8_t *work, MeshConn *mc, const uint8_t digest[32], c
                 mc->outbuf[4] = (uint8_t)(fn & 0xFF);
                 mc->outbuf[5] = (uint8_t)(fn >> 8);
                 mc->out_len = (uint16_t)(6 + fn);
-                hit = PROTO_TRUE;
+                hit = EMBED_TRUE;
             }
         }
     }
     if (!hit)
     {
-        EdgeMeshV.build_response_args.hit = PROTO_FALSE;
+        EdgeMeshV.build_response_args.hit = EMBED_FALSE;
         EdgeMeshV.build_response_args.entry = NULL;
         EdgeMeshV.build_response_args.entry_len = 0;
         EdgeMeshV.build_response_args.out = mc->outbuf;
@@ -1320,12 +1319,12 @@ static void mesh_answer(uint8_t *work, MeshConn *mc, const uint8_t digest[32], c
         mc->out_len = (uint16_t)EdgeMeshV.n;
     }
     mc->out_off = 0;
-    mc->responded = PROTO_TRUE;
+    mc->responded = EMBED_TRUE;
 }
 
 static void mesh_serve_end(MeshConn *mc)
 {
-    mc->active = PROTO_FALSE;
+    mc->active = EMBED_FALSE;
     ConnPoolV.slot = mc->conn_slot;
     ConnPool.close(protocore_conn_pool_span());
 }
@@ -1376,13 +1375,13 @@ static void mesh_serve_pump(uint8_t *work, MeshConn *mc)
     {
         ConnPoolV.slot = slot;
         ConnPool.sndbuf(protocore_conn_pool_span());
-        proto_u16 room = ConnPoolV.u16;
+        embed_u16 room = ConnPoolV.u16;
         if (room == 0)
         {
             return; // backpressure; retry next poll
         }
         uint16_t remaining = (uint16_t)(mc->out_len - mc->out_off);
-        proto_u16 n = remaining < room ? remaining : room;
+        embed_u16 n = remaining < room ? remaining : room;
         ConnPoolV.slot = slot;
         ConnPoolV.io.data = mc->outbuf + mc->out_off;
         ConnPoolV.io.len = n;
@@ -1401,7 +1400,7 @@ static void mesh_serve_pump(uint8_t *work, MeshConn *mc)
     ConnPool.flush(protocore_conn_pool_span());
     ConnPoolV.slot = slot;
     ConnPool.begin_close(protocore_conn_pool_span());
-    mc->active = PROTO_FALSE;
+    mc->active = EMBED_FALSE;
 }
 
 static void mesh_on_accept(uint8_t slot)
@@ -1415,10 +1414,10 @@ static void mesh_on_accept(uint8_t slot)
         if (!EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i].active)
         {
             MeshConn *mc = &EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i];
-            mc->active = PROTO_TRUE;
+            mc->active = EMBED_TRUE;
             mc->conn_slot = slot;
             mc->req_len = 0;
-            mc->responded = PROTO_FALSE;
+            mc->responded = EMBED_FALSE;
             mc->out_off = 0;
             mc->out_len = 0;
             return;
@@ -1469,7 +1468,7 @@ static void mesh_on_close(uint8_t slot)
     MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
     {
-        mc->active = PROTO_FALSE; // the transport owns the closing slot
+        mc->active = EMBED_FALSE; // the transport owns the closing slot
     }
 }
 
@@ -1507,13 +1506,13 @@ void protocore_edge_proxy_enable(uint8_t *work)
     EdgeCache.store_init(work);
     for (int i = 0; i < PROTOCORE_EDGE_FETCH_SLOTS; i++)
     {
-        EDGE_CACHE_PROXY_CTX(work)->fetches[i].used = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->fetches[i].used = EMBED_FALSE;
         EDGE_CACHE_PROXY_CTX(work)->fetches[i].f.cid = -1;
     }
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        EDGE_CACHE_PROXY_CTX(work)->pending[i].active = PROTO_FALSE;
-        EDGE_CACHE_PROXY_CTX(work)->serve[i].active = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->pending[i].active = EMBED_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->serve[i].active = EMBED_FALSE;
         EDGE_CACHE_PROXY_CTX(work)->serve[i].entry = NULL;
 #if PROTOCORE_ENABLE_RANGE
         EDGE_CACHE_PROXY_CTX(work)->range_hdr[i][0] = '\0';
@@ -1534,7 +1533,7 @@ void protocore_edge_proxy_enable(uint8_t *work)
 #if PROTOCORE_ENABLE_EDGE_MESH
     for (int i = 0; i < PROTOCORE_MESH_MAX_CONNS; i++)
     {
-        EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i].active = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->mesh_conns[i].active = EMBED_FALSE;
     }
 #endif
     if (!EDGE_CACHE_PROXY_CTX(work)->registered)
@@ -1542,7 +1541,7 @@ void protocore_edge_proxy_enable(uint8_t *work)
         use(edge_cache_mw);
         HttpV.edge_poll = edge_cache_poll;
         Http.set_edge_poll(protocore_http_span());
-        EDGE_CACHE_PROXY_CTX(work)->registered = PROTO_TRUE;
+        EDGE_CACHE_PROXY_CTX(work)->registered = EMBED_TRUE;
     }
 }
 
@@ -1556,18 +1555,18 @@ void protocore_edge_proxy_bind_sd(uint8_t *work, struct protocore_dbm *dbm)
 }
 #endif
 
-proto_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, const char *origin_base_url)
+embed_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, const char *origin_base_url)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     if (!path_prefix || !origin_base_url)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = path_prefix,
                    .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[0].prefix)) >=
         sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[0].prefix))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     char host[PROTOCORE_EDGE_ORIGIN_URL_MAX];
     char ignore_path[256];
@@ -1580,13 +1579,13 @@ proto_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, cons
     HttpClient.parse_target_uri(work);
     if (!HttpClientV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    const proto_bool https = HttpClientV.target.https;
+    const embed_bool https = HttpClientV.target.https;
     const uint16_t port = HttpClientV.target.port;
     if (https)
     {
-        return PROTO_FALSE; // plaintext origins only: the library ships no client-side TLS engine
+        return EMBED_FALSE; // plaintext origins only: the library ships no client-side TLS engine
     }
     for (int i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
@@ -1600,25 +1599,25 @@ proto_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, cons
                    .cap = sizeof(EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_host));
         EDGE_CACHE_PROXY_CTX(work)->maps[i].origin_port = port;
         EDGE_CACHE_PROXY_CTX(work)->maps[i].https = https;
-        EDGE_CACHE_PROXY_CTX(work)->maps[i].used = PROTO_TRUE;
-        return PROTO_TRUE;
+        EDGE_CACHE_PROXY_CTX(work)->maps[i].used = EMBED_TRUE;
+        return EMBED_TRUE;
     }
-    ok = PROTO_FALSE; // map table full
+    ok = EMBED_FALSE; // map table full
     return ok;
 }
 
 #if PROTOCORE_ENABLE_EDGE_MESH
-proto_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16_t port)
+embed_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16_t port)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     if (!host)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t hl = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = host, .cap = PROTOCORE_MESH_HOST_MAX + 1);
     if (hl == 0 || hl >= PROTOCORE_MESH_HOST_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
     {
@@ -1627,11 +1626,11 @@ proto_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = EDGE_CACHE_PROXY_CTX(work)->peers[i].host, .src = host,
                        .bytes = hl + 1);
             EDGE_CACHE_PROXY_CTX(work)->peers[i].port = port;
-            EDGE_CACHE_PROXY_CTX(work)->peers[i].used = PROTO_TRUE;
-            return PROTO_TRUE;
+            EDGE_CACHE_PROXY_CTX(work)->peers[i].used = EMBED_TRUE;
+            return EMBED_TRUE;
         }
     }
-    ok = PROTO_FALSE; // peer table full
+    ok = EMBED_FALSE; // peer table full
     return ok;
 }
 
@@ -1642,7 +1641,7 @@ void protocore_edge_proxy_mesh_serve(uint8_t *work)
         ProtocolsV.proto = PROTO_MESH;
         ProtocolsV.h = &s_mesh_handler;
         Protocols.add(protocore_session_span());
-        EDGE_CACHE_PROXY_CTX(work)->mesh_registered = PROTO_TRUE;
+        EDGE_CACHE_PROXY_CTX(work)->mesh_registered = EMBED_TRUE;
     }
 }
 #endif // PROTOCORE_ENABLE_EDGE_MESH
@@ -1662,26 +1661,26 @@ void protocore_edge_proxy_reset(uint8_t *work)
 #endif
     for (int i = 0; i < PROTOCORE_EDGE_MAP_MAX; i++)
     {
-        EDGE_CACHE_PROXY_CTX(work)->maps[i].used = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->maps[i].used = EMBED_FALSE;
     }
 #if PROTOCORE_ENABLE_EDGE_MESH
     for (int i = 0; i < PROTOCORE_MESH_MAX_PEERS; i++)
     {
-        EDGE_CACHE_PROXY_CTX(work)->peers[i].used = PROTO_FALSE;
+        EDGE_CACHE_PROXY_CTX(work)->peers[i].used = EMBED_FALSE;
     }
 #endif
 }
 
-proto_bool protocore_edge_proxy_purge(uint8_t *work, const char *canonical_key)
+embed_bool protocore_edge_proxy_purge(uint8_t *work, const char *canonical_key)
 {
     if (!canonical_key)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     EdgeCacheV.store_purge_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCacheV.store_purge_args.canon = canonical_key;
     EdgeCache.store_purge(work);
-    proto_bool purged = EdgeCacheV.count > 0;
+    embed_bool purged = EdgeCacheV.count > 0;
 #if PROTOCORE_ENABLE_DBM
     if (EDGE_CACHE_PROXY_CTX(work)->l2)
     {
@@ -1697,7 +1696,7 @@ proto_bool protocore_edge_proxy_purge(uint8_t *work, const char *canonical_key)
         EdgeCacheSd.del(work);
         if (EdgeCacheSdV.ok)
         {
-            purged = PROTO_TRUE;
+            purged = EMBED_TRUE;
         }
     }
 #endif

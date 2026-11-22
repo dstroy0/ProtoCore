@@ -68,14 +68,14 @@ static inline void wr(const protocore_lora_bus *b, uint8_t reg, uint8_t val)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-proto_bool protocore_lora_frame_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
+embed_bool protocore_lora_frame_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
                                       const uint8_t **payload, uint16_t *payload_len)
 {
     (void)work;
 
     if (!raw || !hdr || len < 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     hdr->to = raw[0];
     hdr->from = raw[1];
@@ -89,7 +89,7 @@ proto_bool protocore_lora_frame_parse(uint8_t *work, const uint8_t *raw, uint16_
     {
         *payload_len = (uint16_t)(len - 4);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 uint16_t protocore_lora_frame_build(uint8_t *work, const protocore_lora_header *hdr, const uint8_t *payload,
@@ -112,18 +112,18 @@ uint16_t protocore_lora_frame_build(uint8_t *work, const protocore_lora_header *
     return (uint16_t)(len + 4);
 }
 
-proto_bool protocore_lora_init(uint8_t *work, const protocore_lora_bus *bus, const protocore_lora_config *cfg)
+embed_bool protocore_lora_init(uint8_t *work, const protocore_lora_bus *bus, const protocore_lora_config *cfg)
 {
-    proto_bool ok = PROTO_FALSE;
+    embed_bool ok = EMBED_FALSE;
     (void)work;
 
     if (!bus || !bus->read || !bus->write || !cfg)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (rd(bus, REG_VERSION) != SX127X_VERSION)
     {
-        ok = PROTO_FALSE; // the bus is not talking to an SX127x
+        ok = EMBED_FALSE; // the bus is not talking to an SX127x
         return ok;
     }
 
@@ -152,16 +152,16 @@ proto_bool protocore_lora_init(uint8_t *work, const protocore_lora_bus *bus, con
     wr(bus, REG_PA_CONFIG, (uint8_t)(0x80 | ((cfg->tx_power - 2) & 0x0F))); // PA_BOOST pin
 
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_STDBY);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_lora_send(uint8_t *work, const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len)
+embed_bool protocore_lora_send(uint8_t *work, const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len)
 {
     (void)work;
 
     if (!bus || !frame || len == 0 || len > PROTOCORE_LORA_MAX_PAYLOAD + 4)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_STDBY);
     wr(bus, REG_FIFO_ADDR_PTR, 0x00);
@@ -171,23 +171,23 @@ proto_bool protocore_lora_send(uint8_t *work, const protocore_lora_bus *bus, con
     }
     wr(bus, REG_PAYLOAD_LENGTH, len);
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_TX);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_lora_tx_done(uint8_t *work, const protocore_lora_bus *bus)
+embed_bool protocore_lora_tx_done(uint8_t *work, const protocore_lora_bus *bus)
 {
     (void)work;
 
     if (!bus)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (rd(bus, REG_IRQ_FLAGS) & IRQ_TX_DONE)
     {
         wr(bus, REG_IRQ_FLAGS, 0xFF); // clear all IRQ flags
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 void protocore_lora_set_rx(uint8_t *work, const protocore_lora_bus *bus)

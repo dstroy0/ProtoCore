@@ -49,9 +49,9 @@ static void mlkem_keygen(const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_
     MlKem.keygen(g_ws, d, z, ek, dk);
 }
 
-static proto_bool mlkem_encaps(const uint8_t *ek, const uint8_t *m, uint8_t *ct, uint8_t *ss)
+static embed_bool mlkem_encaps(const uint8_t *ek, const uint8_t *m, uint8_t *ct, uint8_t *ss)
 {
-    proto_bool ml_kem_ok = MlKem.encaps(g_ws, ek, m, ct, ss);
+    embed_bool ml_kem_ok = MlKem.encaps(g_ws, ek, m, ct, ss);
     return ml_kem_ok;
 }
 

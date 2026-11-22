@@ -31,23 +31,22 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief NTRIP protocol revision detected in / used for a request or response. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(NtripVersion,
     NTRIP_V1 = 1, ///< legacy: ICY 200 OK / SOURCETABLE 200 OK
     NTRIP_V2 = 2, ///< RFC-style: HTTP/1.1 200 OK, Content-Type: gnss/data
-} NtripVersion;
+);
 
 /** @brief A parsed NTRIP rover request. String spans point into the caller's request buffer. */
 typedef struct
 {
-    proto_bool complete;  ///< the full request header block (up to a blank line) was present
-    proto_bool is_get;    ///< the request line was a GET
+    embed_bool complete;  ///< the full request header block (up to a blank line) was present
+    embed_bool is_get;    ///< the request line was a GET
     NtripVersion version; ///< NTRIP_V2 if an Ntrip-Version: Ntrip/2.0 header was present, else NTRIP_V1
     char mountpoint[PROTOCORE_NTRIP_MOUNT_MAX]; ///< requested mountpoint (empty = source-table request, "GET /")
-    proto_bool want_sourcetable;                ///< the request targets "/" (list the source table)
+    embed_bool want_sourcetable;                ///< the request targets "/" (list the source table)
     const char *auth_b64;                       ///< base64 of user:pass from an "Authorization: Basic" header, or null
     uint16_t auth_b64_len;                      ///< length of @c auth_b64 (0 if none)
 } NtripRequest;
@@ -59,7 +58,7 @@ typedef struct
  *         filled; false if more bytes are still needed. A completed request with @c is_get false is a
  *         malformed / unsupported request the caller should reject.
  */
-proto_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out);
+embed_bool protocore_ntrip_request_parse(const char *buf, size_t len, NtripRequest *out);
 
 /**
  * @brief Build the stream-accept response the caster sends before streaming RTCM to a rover.
@@ -93,7 +92,7 @@ typedef struct
     const char *generator;      ///< producing hardware/software (null -> "PC")
     double lat_deg;             ///< approximate base latitude (source-table advertises 2 decimals)
     double lon_deg;             ///< approximate base longitude
-    proto_bool nmea_required;   ///< rover must send a GGA (1) or not (0); false for a single-base caster
+    embed_bool nmea_required;   ///< rover must send a GGA (1) or not (0); false for a single-base caster
 } NtripMount;
 
 /**
@@ -110,7 +109,7 @@ size_t protocore_ntrip_build_str_record(char *out, size_t cap, const NtripMount 
 size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion version, const NtripMount *mounts,
                                          size_t mount_count);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTRIP_CASTER
 

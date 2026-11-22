@@ -10,7 +10,7 @@
 #include "rx_feed.h"
 #include <unity.h>
 
-static proto_bool g_handler_called;
+static embed_bool g_handler_called;
 static int g_log_count;
 static char g_order[16];
 static size_t g_order_len;
@@ -28,7 +28,7 @@ static void arm_slot(uint8_t slot)
 {
     conn_pool[slot] = (TcpConn){0};
     conn_pool[slot].id = slot;
-    conn_pool[slot].state = CONN_ACTIVE;
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[slot].state, .value = CONN_ACTIVE);
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConnV.slot = slot;
@@ -49,7 +49,7 @@ static const char *do_req(uint8_t slot, const char *req_str)
 static void h_ok(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_handler_called = PROTO_TRUE;
+    g_handler_called = EMBED_TRUE;
     send_text(slot, 200, "text/plain", "OK");
 }
 
@@ -97,7 +97,7 @@ void setUp()
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;
@@ -107,7 +107,7 @@ void setUp()
     Sse.init(protocore_sse_span());
     tcp_capture_reset();
 
-    g_handler_called = PROTO_FALSE;
+    g_handler_called = EMBED_FALSE;
     g_log_count = 0;
     g_order[0] = '\0';
     g_order_len = 0;

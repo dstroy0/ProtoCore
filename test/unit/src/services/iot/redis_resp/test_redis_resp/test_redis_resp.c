@@ -46,7 +46,7 @@ static size_t encode(const char *const *argv, size_t argc, const size_t *argv_le
     return RespV.n;
 }
 
-static proto_bool parse(const char *wire, size_t len)
+static embed_bool parse(const char *wire, size_t len)
 {
     RespV.wire.buf = (const uint8_t *)wire;
     RespV.wire.len = len;
@@ -54,7 +54,7 @@ static proto_bool parse(const char *wire, size_t len)
     return RespV.ok;
 }
 
-static proto_bool parse_z(const char *wire)
+static embed_bool parse_z(const char *wire)
 {
     return parse(wire, strlen(wire));
 }

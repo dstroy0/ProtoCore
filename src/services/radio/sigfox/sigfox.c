@@ -21,7 +21,7 @@ static char hex_nibble(uint8_t v)
 }
 
 // Is the needle present in the first len bytes of haystack?
-static proto_bool contains(const char *hay, uint16_t len, const char *needle)
+static embed_bool contains(const char *hay, uint16_t len, const char *needle)
 {
     uint16_t nlen = 0;
     while (needle[nlen])
@@ -30,7 +30,7 @@ static proto_bool contains(const char *hay, uint16_t len, const char *needle)
     }
     if (nlen == 0 || len < nlen)
     {
-        return PROTO_FALSE; // (internally, both call sites below) with the literal non-empty needles "ERROR"/"OK"
+        return EMBED_FALSE; // (internally, both call sites below) with the literal non-empty needles "ERROR"/"OK"
     }
     for (uint16_t i = 0; i + nlen <= len; i++)
     {
@@ -41,10 +41,10 @@ static proto_bool contains(const char *hay, uint16_t len, const char *needle)
         }
         if (j == nlen)
         {
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // --- the entries -----------------------------------------------------------

@@ -110,7 +110,7 @@ void test_rfc1833_getport_call_is_byte_exact(void)
 void test_rfc5531_record_marking(void)
 {
     uint8_t buf[8];
-    proto_bool last = PROTO_FALSE;
+    embed_bool last = EMBED_FALSE;
     uint32_t frag = 0;
 
     TEST_ASSERT_EQUAL_UINT(4u, protocore_rpc_record_mark(buf, sizeof(buf), 0x2C));
@@ -155,7 +155,7 @@ void test_create_link_call_pads_the_device_string(void)
         0x00, 0x00, 0x27, 0x10,                                                             // lock_timeout 10000
         0x00, 0x00, 0x00, 0x05, 'i',  'n',  's',  't',  '0',  0x00, 0x00, 0x00};            // "inst0" + 3 pad
     uint8_t buf[96];
-    size_t n = protocore_vxi11_build_create_link(buf, sizeof(buf), 2, 1234, PROTO_FALSE, 10000, "inst0");
+    size_t n = protocore_vxi11_build_create_link(buf, sizeof(buf), 2, 1234, EMBED_FALSE, 10000, "inst0");
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));
 }
@@ -456,8 +456,8 @@ void test_builders_refuse_a_short_buffer(void)
     TEST_ASSERT_EQUAL_UINT(60u, protocore_vxi11_build_getport(buf, 60, 1, 1, 1, 6));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_vxi11_build_getport(buf, 59, 1, 1, 1, 6));
 
-    TEST_ASSERT_EQUAL_UINT(68u, protocore_vxi11_build_create_link(buf, 68, 1, 1, PROTO_FALSE, 0, "inst0"));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_vxi11_build_create_link(buf, 67, 1, 1, PROTO_FALSE, 0, "inst0"));
+    TEST_ASSERT_EQUAL_UINT(68u, protocore_vxi11_build_create_link(buf, 68, 1, 1, EMBED_FALSE, 0, "inst0"));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_vxi11_build_create_link(buf, 67, 1, 1, EMBED_FALSE, 0, "inst0"));
 
     // 44 header + 16 parameter words + (4 count + 3 data + 1 XDR pad) = 68
     TEST_ASSERT_EQUAL_UINT(68u, protocore_vxi11_build_device_write(buf, 68, 1, 1, 0, 0, 0, D, sizeof(D)));

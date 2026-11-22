@@ -15,7 +15,7 @@
 #include "memoria_operor/memoria_operor.h" // memor.set: the view is cleared before a parse fills it
 #include "shared/der/der.h"                // Der: the one reader
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // The object identifiers this profile knows, each as its encoded content octets
@@ -48,7 +48,7 @@ static const uint8_t OID_BASIC_CONSTRAINTS[] = {0x55, 0x1D, 0x13}; // { id-ce 19
 // ---------------------------------------------------------------------------
 
 // One value at @p pos in @p der. The reader is stateless, so every step names its own bytes.
-static proto_bool at(uint8_t *work, const uint8_t *der, size_t len, size_t pos)
+static embed_bool at(uint8_t *work, const uint8_t *der, size_t len, size_t pos)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -58,7 +58,7 @@ static proto_bool at(uint8_t *work, const uint8_t *der, size_t len, size_t pos)
 }
 
 // Whether the OID value at @p pos is @p oid.
-static proto_bool oid_is(uint8_t *work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid, size_t oid_len)
+static embed_bool oid_is(uint8_t *work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid, size_t oid_len)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -117,11 +117,11 @@ static protocore_x509_sig_alg sig_alg_at(uint8_t *work, const uint8_t *der, size
 }
 
 // SubjectPublicKeyInfo (sec 4.1.2.7): the algorithm, and the key octets under it.
-static proto_bool spki_read(uint8_t *work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
+static embed_bool spki_read(uint8_t *work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
 {
     if (!at(work, der, len, pos))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->spki.p = der + pos;
     out->spki.len = DerV.tlv.next - pos;
@@ -130,7 +130,7 @@ static proto_bool spki_read(uint8_t *work, const uint8_t *der, size_t len, size_
     // AlgorithmIdentifier first.
     if (!at(work, der, len, inner))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const size_t alg_seq = inner;
     const size_t after_alg = DerV.tlv.next;
@@ -150,7 +150,7 @@ static proto_bool spki_read(uint8_t *work, const uint8_t *der, size_t len, size_
         // curve this build does not implement is not an EC key it can use.
         if (!at(work, der, len, alg_oid))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         const size_t params = DerV.tlv.next;
         out->key_alg =
@@ -170,26 +170,26 @@ static proto_bool spki_read(uint8_t *work, const uint8_t *der, size_t len, size_
     Der.bitstring(work);
     if (!DerV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->key.p = DerV.tlv.content;
     out->key.len = DerV.tlv.len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // One Extension (sec 4.2): { extnID OID, critical BOOLEAN DEFAULT FALSE, extnValue OCTET STRING }.
-static proto_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
+static embed_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, size_t pos, X509Cert *out)
 {
     if (!at(work, der, len, pos))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const size_t end = DerV.tlv.next;
     size_t p = (size_t)(DerV.tlv.content - der);
 
     if (!at(work, der, len, p))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const size_t oid_pos = p;
     p = DerV.tlv.next;
@@ -202,7 +202,7 @@ static proto_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, 
 
     if (!at(work, der, len, p) || DerV.tlv.tag != PROTOCORE_DER_OCTET_STRING)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const uint8_t *val = DerV.tlv.content;
     const size_t val_len = DerV.tlv.len;
@@ -211,10 +211,10 @@ static proto_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, 
     if (oid_is(work, der, len, oid_pos, OID_BASIC_CONSTRAINTS, sizeof(OID_BASIC_CONSTRAINTS)))
     {
         // sec 4.2.1.9: BasicConstraints ::= SEQUENCE { cA BOOLEAN DEFAULT FALSE, pathLen INTEGER OPTIONAL }
-        out->has_bc = PROTO_TRUE;
+        out->has_bc = EMBED_TRUE;
         if (!at(work, der, len, val_pos) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         const size_t bc_end = DerV.tlv.next;
         size_t q = (size_t)(DerV.tlv.content - der);
@@ -223,7 +223,7 @@ static proto_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, 
             // X.690 sec 11.1: in DER, TRUE is all ones. Any other non-zero is a second encoding.
             if (DerV.tlv.len != 1u || (DerV.tlv.content[0] != 0x00u && DerV.tlv.content[0] != 0xFFu))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             out->is_ca = (DerV.tlv.content[0] == 0xFFu);
             q = DerV.tlv.next;
@@ -236,24 +236,24 @@ static proto_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, 
             Der.uint(work);
             if (!DerV.ok || DerV.u64 > 0xFFFFFFFFULL)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
             out->path_len = (uint32_t)DerV.u64;
-            out->has_path_len = PROTO_TRUE;
+            out->has_path_len = EMBED_TRUE;
         }
     }
     else if (oid_is(work, der, len, oid_pos, OID_KEY_USAGE, sizeof(OID_KEY_USAGE)))
     {
         // sec 4.2.1.3: KeyUsage ::= BIT STRING, bit 0 the most significant of the first octet.
-        out->has_ku = PROTO_TRUE;
+        out->has_ku = EMBED_TRUE;
         if (!at(work, der, len, val_pos) || DerV.tlv.tag != PROTOCORE_DER_BIT_STRING || DerV.tlv.len < 2u)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         const uint8_t unused = DerV.tlv.content[0];
         if (unused > 7u)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint16_t bits = 0;
         for (size_t i = 1; i < DerV.tlv.len && i <= 2u; i++)
@@ -275,13 +275,13 @@ static proto_bool extension_read(uint8_t *work, const uint8_t *der, size_t len, 
         out->san.p = val;
         out->san.len = val_len;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_x509_parse(uint8_t *work)
 {
     (void)work;
-    X509V.ok = PROTO_FALSE;
+    X509V.ok = EMBED_FALSE;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &X509V.cert, .val = 0, .bytes = sizeof(X509V.cert));
 
     const uint8_t *der = X509V.parse_args.der;
@@ -470,7 +470,7 @@ void protocore_x509_parse(uint8_t *work)
     c->sig.p = DerV.tlv.content;
     c->sig.len = DerV.tlv.len;
 
-    X509V.ok = PROTO_TRUE;
+    X509V.ok = EMBED_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -484,11 +484,11 @@ static uint8_t lower(uint8_t c)
 
 // One presented dNSName against the reference name, case-insensitively (sec 6.4.1), with the
 // wildcard rules of sec 6.4.3.
-static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, size_t rn)
+static embed_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, size_t rn)
 {
     if (pn == 0u || rn == 0u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // A presented name is a domain name; an embedded NUL is an attempt to end it early for a
     // consumer that reads it as a C string.
@@ -496,7 +496,7 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     {
         if (pres[i] == 0u)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
 
@@ -507,7 +507,7 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
         {
             if (star != pn)
             {
-                return PROTO_FALSE; // more than one wildcard is not a form this matches
+                return EMBED_FALSE; // more than one wildcard is not a form this matches
             }
             star = i;
         }
@@ -517,16 +517,16 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     {
         if (pn != rn)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         for (size_t i = 0; i < pn; i++)
         {
             if (lower(pres[i]) != lower((uint8_t)ref[i]))
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 
     // sec 6.4.3 rule 1: the wildcard is in the left-most label and nowhere else.
@@ -541,11 +541,11 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     }
     if (star > first_dot)
     {
-        return PROTO_FALSE; // bar.*.example.net
+        return EMBED_FALSE; // bar.*.example.net
     }
     if (first_dot == pn)
     {
-        return PROTO_FALSE; // a wildcard with no domain under it matches everything; refuse it
+        return EMBED_FALSE; // a wildcard with no domain under it matches everything; refuse it
     }
     // A wildcard must leave at least two labels behind it, or *.com would match every .com name.
     size_t dots = 0;
@@ -558,7 +558,7 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     }
     if (dots < 2u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // sec 6.4.3 rule 2: the wildcard label matches exactly one label of the reference name, so the
@@ -574,19 +574,19 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     }
     if (ref_dot == rn)
     {
-        return PROTO_FALSE; // the reference has no label under it to match the domain part
+        return EMBED_FALSE; // the reference has no label under it to match the domain part
     }
     const size_t pres_rest = pn - first_dot;
     const size_t ref_rest = rn - ref_dot;
     if (pres_rest != ref_rest)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < pres_rest; i++)
     {
         if (lower(pres[first_dot + i]) != lower((uint8_t)ref[ref_dot + i]))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
 
@@ -596,29 +596,29 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     const size_t post_len = first_dot - star - 1u;
     if (pre_len + post_len > ref_dot)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < pre_len; i++)
     {
         if (lower(pres[i]) != lower((uint8_t)ref[i]))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
     for (size_t i = 0; i < post_len; i++)
     {
         if (lower(pres[star + 1u + i]) != lower((uint8_t)ref[ref_dot - post_len + i]))
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_x509_name_match(uint8_t *work)
 {
     (void)work;
-    X509V.ok = PROTO_FALSE;
+    X509V.ok = EMBED_FALSE;
 
     const X509Cert *c = X509V.match_args.cert;
     const char *host = X509V.match_args.host;
@@ -668,7 +668,7 @@ void protocore_x509_name_match(uint8_t *work)
         }
         if (DerV.tlv.tag == PROTOCORE_DER_CONTEXT(2) && dns_match(DerV.tlv.content, DerV.tlv.len, host, rn))
         {
-            X509V.ok = PROTO_TRUE;
+            X509V.ok = EMBED_TRUE;
             return;
         }
         p = DerV.tlv.next;
@@ -679,6 +679,6 @@ void protocore_x509_name_match(uint8_t *work)
 /** @brief The operands and the outcome. */
 X509Vars X509V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_X509

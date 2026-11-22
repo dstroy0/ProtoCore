@@ -60,49 +60,49 @@
 #define PROTOCORE_I2C_SCAN_FIRST 0x08u
 #define PROTOCORE_I2C_SCAN_LAST 0x77u
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
 
 /** @brief Bring up @p bus on @p sda / @p scl at @p hz (-1 on a pin = the platform default). */
-PROTOCORE_INLINE proto_bool protocore_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
+EMBED_INLINE embed_bool protocore_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
 {
     return protocore_platform_i2c_begin(bus, sda, scl, hz) != 0;
 }
 
 /** @brief Bring up the shared I2C bus on PROTOCORE_I2C_SDA_PIN / PROTOCORE_I2C_SCL_PIN (-1 = default). */
-PROTOCORE_INLINE proto_bool protocore_i2c_begin(void)
+EMBED_INLINE embed_bool protocore_i2c_begin(void)
 {
     return protocore_i2c_begin_on((uint8_t)PROTOCORE_I2C_BUS, (int)PROTOCORE_I2C_SDA_PIN, (int)PROTOCORE_I2C_SCL_PIN,
                                   PROTOCORE_I2C_HZ);
 }
 
 /** @brief Write @p len bytes to @p addr on @p bus, closing with a stop. */
-PROTOCORE_INLINE proto_bool protocore_i2c_write_on(uint8_t bus, uint16_t addr, const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_write_on(uint8_t bus, uint16_t addr, const uint8_t *buf, size_t len)
 {
     return protocore_platform_i2c_write(bus, addr, buf, (uint32_t)len, PROTOCORE_I2C_TIMEOUT_MS) != 0;
 }
 
 /** @brief Write @p len bytes to @p addr, closing with a stop. */
-PROTOCORE_INLINE proto_bool protocore_i2c_write(uint16_t addr, const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_write(uint16_t addr, const uint8_t *buf, size_t len)
 {
     return protocore_i2c_write_on((uint8_t)PROTOCORE_I2C_BUS, addr, buf, len);
 }
 
 /** @brief Read @p len bytes from @p addr on @p bus. */
-PROTOCORE_INLINE proto_bool protocore_i2c_read_on(uint8_t bus, uint16_t addr, uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_read_on(uint8_t bus, uint16_t addr, uint8_t *buf, size_t len)
 {
     return protocore_platform_i2c_read(bus, addr, buf, (uint32_t)len, PROTOCORE_I2C_TIMEOUT_MS) != 0;
 }
 
 /** @brief Read @p len bytes from @p addr. */
-PROTOCORE_INLINE proto_bool protocore_i2c_read(uint16_t addr, uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_read(uint16_t addr, uint8_t *buf, size_t len)
 {
     return protocore_i2c_read_on((uint8_t)PROTOCORE_I2C_BUS, addr, buf, len);
 }
 
 /** @brief Write @p wlen bytes to @p addr on @p bus, then read @p rlen back through a repeated start. */
-PROTOCORE_INLINE proto_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint8_t *w, size_t wlen,
+EMBED_INLINE embed_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint8_t *w, size_t wlen,
                                                         uint8_t *r, size_t rlen)
 {
     return protocore_platform_i2c_write_read(bus, addr, w, (uint32_t)wlen, r, (uint32_t)rlen,
@@ -110,32 +110,32 @@ PROTOCORE_INLINE proto_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t ad
 }
 
 /** @brief Write @p wlen bytes, then read @p rlen back in the same transaction (repeated start). */
-PROTOCORE_INLINE proto_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r,
+EMBED_INLINE embed_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r,
                                                      size_t rlen)
 {
     return protocore_i2c_write_read_on((uint8_t)PROTOCORE_I2C_BUS, addr, w, wlen, r, rlen);
 }
 
 /** @brief Run @p bus at @p hz from here on. */
-PROTOCORE_INLINE proto_bool protocore_i2c_set_clock_on(uint8_t bus, uint32_t hz)
+EMBED_INLINE embed_bool protocore_i2c_set_clock_on(uint8_t bus, uint32_t hz)
 {
     return protocore_platform_i2c_set_clock(bus, hz) != 0;
 }
 
 /** @brief Run the shared bus at @p hz from here on; a part slower than the bus needs this. */
-PROTOCORE_INLINE proto_bool protocore_i2c_set_clock(uint32_t hz)
+EMBED_INLINE embed_bool protocore_i2c_set_clock(uint32_t hz)
 {
     return protocore_i2c_set_clock_on((uint8_t)PROTOCORE_I2C_BUS, hz);
 }
 
 /** @brief Address @p addr on @p bus and stop. @return true if a device drove ACK. */
-PROTOCORE_INLINE proto_bool protocore_i2c_probe_on(uint8_t bus, uint16_t addr)
+EMBED_INLINE embed_bool protocore_i2c_probe_on(uint8_t bus, uint16_t addr)
 {
     return protocore_platform_i2c_probe(bus, addr, PROTOCORE_I2C_TIMEOUT_MS) != 0;
 }
 
 /** @brief Address @p addr and stop. @return true if a device drove ACK. */
-PROTOCORE_INLINE proto_bool protocore_i2c_probe(uint16_t addr)
+EMBED_INLINE embed_bool protocore_i2c_probe(uint16_t addr)
 {
     return protocore_i2c_probe_on((uint8_t)PROTOCORE_I2C_BUS, addr);
 }
@@ -145,7 +145,7 @@ PROTOCORE_INLINE proto_bool protocore_i2c_probe(uint16_t addr)
  *        @p out (caller-owned, @p cap entries).
  * @return how many answered, which is how many entries of @p out were written.
  */
-PROTOCORE_INLINE size_t protocore_i2c_scan_on(uint8_t bus, uint8_t *out, size_t cap)
+EMBED_INLINE size_t protocore_i2c_scan_on(uint8_t bus, uint8_t *out, size_t cap)
 {
     size_t n = 0;
     for (uint16_t a = PROTOCORE_I2C_SCAN_FIRST; a <= PROTOCORE_I2C_SCAN_LAST && n < cap; a++)
@@ -160,80 +160,80 @@ PROTOCORE_INLINE size_t protocore_i2c_scan_on(uint8_t bus, uint8_t *out, size_t 
 }
 
 /** @brief Probe every non-reserved 7-bit address on the shared bus into @p out. */
-PROTOCORE_INLINE size_t protocore_i2c_scan(uint8_t *out, size_t cap)
+EMBED_INLINE size_t protocore_i2c_scan(uint8_t *out, size_t cap)
 {
     return protocore_i2c_scan_on((uint8_t)PROTOCORE_I2C_BUS, out, cap);
 }
 
 /** @brief Write @p len bytes to address 0x00 on @p bus, which every device answers. */
-PROTOCORE_INLINE proto_bool protocore_i2c_general_call_on(uint8_t bus, const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_general_call_on(uint8_t bus, const uint8_t *buf, size_t len)
 {
     return protocore_i2c_write_on(bus, PROTOCORE_I2C_GENERAL_CALL, buf, len);
 }
 
 /** @brief Write @p len bytes to the general call address, which every device on the bus answers. */
-PROTOCORE_INLINE proto_bool protocore_i2c_general_call(const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_general_call(const uint8_t *buf, size_t len)
 {
     return protocore_i2c_general_call_on((uint8_t)PROTOCORE_I2C_BUS, buf, len);
 }
 
 /** @brief Clock @p bus until the device holding SDA low releases it, then drive a stop. */
-PROTOCORE_INLINE proto_bool protocore_i2c_recover_on(uint8_t bus, int sda, int scl)
+EMBED_INLINE embed_bool protocore_i2c_recover_on(uint8_t bus, int sda, int scl)
 {
     return protocore_platform_i2c_recover(bus, sda, scl) != 0;
 }
 
 /** @brief Free the shared bus from a device holding SDA low. @return true if SDA came back high. */
-PROTOCORE_INLINE proto_bool protocore_i2c_recover(void)
+EMBED_INLINE embed_bool protocore_i2c_recover(void)
 {
     return protocore_i2c_recover_on((uint8_t)PROTOCORE_I2C_BUS, (int)PROTOCORE_I2C_SDA_PIN, (int)PROTOCORE_I2C_SCL_PIN);
 }
 
 #else // no bus seam on this build
 
-PROTOCORE_INLINE proto_bool protocore_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
+EMBED_INLINE embed_bool protocore_i2c_begin_on(uint8_t bus, int sda, int scl, uint32_t hz)
 {
     (void)bus;
     (void)sda;
     (void)scl;
     (void)hz;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_begin(void)
+EMBED_INLINE embed_bool protocore_i2c_begin(void)
 {
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_write_on(uint8_t bus, uint16_t addr, const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_write_on(uint8_t bus, uint16_t addr, const uint8_t *buf, size_t len)
 {
     (void)bus;
     (void)addr;
     (void)buf;
     (void)len;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_write(uint16_t addr, const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_write(uint16_t addr, const uint8_t *buf, size_t len)
 {
     return protocore_i2c_write_on((uint8_t)PROTOCORE_I2C_BUS, addr, buf, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_read_on(uint8_t bus, uint16_t addr, uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_read_on(uint8_t bus, uint16_t addr, uint8_t *buf, size_t len)
 {
     (void)bus;
     (void)addr;
     (void)buf;
     (void)len;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_read(uint16_t addr, uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_read(uint16_t addr, uint8_t *buf, size_t len)
 {
     return protocore_i2c_read_on((uint8_t)PROTOCORE_I2C_BUS, addr, buf, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint8_t *w, size_t wlen,
+EMBED_INLINE embed_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t addr, const uint8_t *w, size_t wlen,
                                                         uint8_t *r, size_t rlen)
 {
     (void)bus;
@@ -242,41 +242,41 @@ PROTOCORE_INLINE proto_bool protocore_i2c_write_read_on(uint8_t bus, uint16_t ad
     (void)wlen;
     (void)r;
     (void)rlen;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r,
+EMBED_INLINE embed_bool protocore_i2c_write_read(uint16_t addr, const uint8_t *w, size_t wlen, uint8_t *r,
                                                      size_t rlen)
 {
     return protocore_i2c_write_read_on((uint8_t)PROTOCORE_I2C_BUS, addr, w, wlen, r, rlen);
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_set_clock_on(uint8_t bus, uint32_t hz)
+EMBED_INLINE embed_bool protocore_i2c_set_clock_on(uint8_t bus, uint32_t hz)
 {
     (void)bus;
     (void)hz;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_set_clock(uint32_t hz)
+EMBED_INLINE embed_bool protocore_i2c_set_clock(uint32_t hz)
 {
     (void)hz;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_probe_on(uint8_t bus, uint16_t addr)
+EMBED_INLINE embed_bool protocore_i2c_probe_on(uint8_t bus, uint16_t addr)
 {
     (void)bus;
     (void)addr;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_probe(uint16_t addr)
+EMBED_INLINE embed_bool protocore_i2c_probe(uint16_t addr)
 {
     return protocore_i2c_probe_on((uint8_t)PROTOCORE_I2C_BUS, addr);
 }
 
-PROTOCORE_INLINE size_t protocore_i2c_scan_on(uint8_t bus, uint8_t *out, size_t cap)
+EMBED_INLINE size_t protocore_i2c_scan_on(uint8_t bus, uint8_t *out, size_t cap)
 {
     size_t n = 0;
     for (uint16_t a = PROTOCORE_I2C_SCAN_FIRST; a <= PROTOCORE_I2C_SCAN_LAST && n < cap; a++)
@@ -290,36 +290,36 @@ PROTOCORE_INLINE size_t protocore_i2c_scan_on(uint8_t bus, uint8_t *out, size_t 
     return n;
 }
 
-PROTOCORE_INLINE size_t protocore_i2c_scan(uint8_t *out, size_t cap)
+EMBED_INLINE size_t protocore_i2c_scan(uint8_t *out, size_t cap)
 {
     return protocore_i2c_scan_on((uint8_t)PROTOCORE_I2C_BUS, out, cap);
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_general_call_on(uint8_t bus, const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_general_call_on(uint8_t bus, const uint8_t *buf, size_t len)
 {
     return protocore_i2c_write_on(bus, PROTOCORE_I2C_GENERAL_CALL, buf, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_general_call(const uint8_t *buf, size_t len)
+EMBED_INLINE embed_bool protocore_i2c_general_call(const uint8_t *buf, size_t len)
 {
     return protocore_i2c_general_call_on((uint8_t)PROTOCORE_I2C_BUS, buf, len);
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_recover_on(uint8_t bus, int sda, int scl)
+EMBED_INLINE embed_bool protocore_i2c_recover_on(uint8_t bus, int sda, int scl)
 {
     (void)bus;
     (void)sda;
     (void)scl;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-PROTOCORE_INLINE proto_bool protocore_i2c_recover(void)
+EMBED_INLINE embed_bool protocore_i2c_recover(void)
 {
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 #endif // PROTOCORE_HAS_BUS
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_I2C_H

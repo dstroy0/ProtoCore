@@ -103,7 +103,7 @@ void test_wide_ids_use_the_sixteen_bit_segment_form(void)
     CipV.build_epath_args.class_id = 0x0100u;
     CipV.build_epath_args.instance_id = 0x0001u;
     CipV.build_epath_args.attribute_id = 0x0001u;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     Cip.build_epath(cip_work);
     size_t n = CipV.n;
     static const uint8_t WIDE_CLASS[8] = {0x21, 0x00, 0x00, 0x01, 0x24, 0x01, 0x30, 0x01};
@@ -116,7 +116,7 @@ void test_wide_ids_use_the_sixteen_bit_segment_form(void)
     CipV.build_epath_args.class_id = 0x1234u;
     CipV.build_epath_args.instance_id = 0xABCDu;
     CipV.build_epath_args.attribute_id = 0x0102u;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     Cip.build_epath(cip_work);
     n = CipV.n;
     static const uint8_t ALL_WIDE[12] = {0x21, 0x00, 0x34, 0x12, 0x25, 0x00, 0xCD, 0xAB, 0x31, 0x00, 0x02, 0x01};
@@ -129,7 +129,7 @@ void test_wide_ids_use_the_sixteen_bit_segment_form(void)
     CipV.build_epath_args.class_id = 0x00FFu;
     CipV.build_epath_args.instance_id = 0x0100u;
     CipV.build_epath_args.attribute_id = 0;
-    CipV.build_epath_args.with_attribute = PROTO_FALSE;
+    CipV.build_epath_args.with_attribute = EMBED_FALSE;
     Cip.build_epath(cip_work);
     n = CipV.n;
     static const uint8_t BOUNDARY[6] = {0x20, 0xFF, 0x25, 0x00, 0x00, 0x01};
@@ -150,7 +150,7 @@ void test_epath_is_always_word_aligned(void)
             CipV.build_epath_args.class_id = (uint16_t)class_id;
             CipV.build_epath_args.instance_id = (uint16_t)instance;
             CipV.build_epath_args.attribute_id = 5;
-            CipV.build_epath_args.with_attribute = PROTO_TRUE;
+            CipV.build_epath_args.with_attribute = EMBED_TRUE;
             Cip.build_epath(cip_work);
             size_t n = CipV.n;
             TEST_ASSERT_TRUE(n != 0u);
@@ -386,7 +386,7 @@ void test_epath_refuses_a_short_buffer(void)
     CipV.build_epath_args.class_id = 1;
     CipV.build_epath_args.instance_id = 1;
     CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_FALSE;
+    CipV.build_epath_args.with_attribute = EMBED_FALSE;
     Cip.build_epath(cip_work);
     TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // class needs 2
     CipV.build_epath_args.buf = epath;
@@ -394,7 +394,7 @@ void test_epath_refuses_a_short_buffer(void)
     CipV.build_epath_args.class_id = 1;
     CipV.build_epath_args.instance_id = 1;
     CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     Cip.build_epath(cip_work);
     TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // instance needs 2 more
     CipV.build_epath_args.buf = epath;
@@ -402,7 +402,7 @@ void test_epath_refuses_a_short_buffer(void)
     CipV.build_epath_args.class_id = 1;
     CipV.build_epath_args.instance_id = 1;
     CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     Cip.build_epath(cip_work);
     TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // attribute needs 2 more
     CipV.build_epath_args.buf = epath;
@@ -410,7 +410,7 @@ void test_epath_refuses_a_short_buffer(void)
     CipV.build_epath_args.class_id = 1;
     CipV.build_epath_args.instance_id = 1;
     CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     Cip.build_epath(cip_work);
     TEST_ASSERT_EQUAL_size_t(6u, CipV.n);
     CipV.build_epath_args.buf = epath;
@@ -418,7 +418,7 @@ void test_epath_refuses_a_short_buffer(void)
     CipV.build_epath_args.class_id = 0x0100u;
     CipV.build_epath_args.instance_id = 1;
     CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_FALSE;
+    CipV.build_epath_args.with_attribute = EMBED_FALSE;
     Cip.build_epath(cip_work);
     TEST_ASSERT_EQUAL_size_t(0u, CipV.n); // wide needs 4
     CipV.build_epath_args.buf = NULL;
@@ -426,7 +426,7 @@ void test_epath_refuses_a_short_buffer(void)
     CipV.build_epath_args.class_id = 1;
     CipV.build_epath_args.instance_id = 1;
     CipV.build_epath_args.attribute_id = 1;
-    CipV.build_epath_args.with_attribute = PROTO_TRUE;
+    CipV.build_epath_args.with_attribute = EMBED_TRUE;
     Cip.build_epath(cip_work);
     TEST_ASSERT_EQUAL_size_t(0u, CipV.n);
 

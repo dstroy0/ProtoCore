@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file nrf24.h
@@ -42,7 +42,7 @@ PROTOCORE_BEGIN_DECLS
 typedef void (*nrf_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
 
 /** @brief Drive the CE pin (true = high). */
-typedef void (*nrf_ce_fn)(proto_bool level, void *ctx);
+typedef void (*nrf_ce_fn)(embed_bool level, void *ctx);
 
 /** @brief The bus a driver call uses: your SPI transfer + CE control behind it. */
 typedef struct
@@ -64,9 +64,9 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*init)(uint8_t *, const nrf_bus *, const nrf_config *);
-    proto_bool (*send)(uint8_t *, const nrf_bus *, const uint8_t *, uint8_t);
-    proto_bool (*tx_done)(uint8_t *, const nrf_bus *);
+    embed_bool (*init)(uint8_t *, const nrf_bus *, const nrf_config *);
+    embed_bool (*send)(uint8_t *, const nrf_bus *, const uint8_t *, uint8_t);
+    embed_bool (*tx_done)(uint8_t *, const nrf_bus *);
     void (*set_rx)(uint8_t *, const nrf_bus *);
     int (*recv)(uint8_t *, const nrf_bus *, uint8_t *, uint8_t, uint8_t *);
 } Nrf24Ns;
@@ -77,25 +77,25 @@ PROTOCORE_NS_LAYOUT(Nrf24Ns, init, send, tx_done, set_rx, recv);
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param cfg Cfg
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_config *cfg);
+embed_bool protocore_nrf24_init(uint8_t *work, const nrf_bus *bus, const nrf_config *cfg);
 /**
  * @brief Transmit len bytes (zero-padded to PROTOCORE_NRF24_PAYLOAD). Poll .
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param data Data
  * @param len Len
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len);
+embed_bool protocore_nrf24_send(uint8_t *work, const nrf_bus *bus, const uint8_t *data, uint8_t len);
 /**
  * @brief True once a transmit has finished (STATUS TX_DS); clears the flag.
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_nrf24_tx_done(uint8_t *work, const nrf_bus *bus);
+embed_bool protocore_nrf24_tx_done(uint8_t *work, const nrf_bus *bus);
 /**
  * @brief Enter receive mode (PRX + CE high); then poll protocore_nrf24_recv().
  * @param work PROTOCORE_NRF24_BORROW bytes the caller took. Not held past the call.
@@ -123,6 +123,6 @@ PROTOCORE_NS Nrf24Ns Nrf24 PROTOCORE_UNUSED = {.init = protocore_nrf24_init,
                                                .set_rx = protocore_nrf24_set_rx,
                                                .recv = protocore_nrf24_recv};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_NRF24_H

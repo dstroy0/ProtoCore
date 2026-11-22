@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file aes_cmac.h
@@ -37,7 +37,7 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*mac)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
+    embed_bool (*mac)(uint8_t *, const uint8_t *, const uint8_t *, size_t, uint8_t *);
 } AesCmacNs;
 PROTOCORE_NS_LAYOUT(AesCmacNs, mac);
 
@@ -48,13 +48,13 @@ PROTOCORE_NS_LAYOUT(AesCmacNs, mac);
  * @param msg the message; null iff msg_len is 0
  * @param msg_len message length in bytes; 0 is the empty-message CMAC
  * @param out PROTOCORE_AES_CMAC_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t msg_len, uint8_t *out);
+embed_bool protocore_aes_cmac_mac(uint8_t *work, const uint8_t *key, const uint8_t *msg, size_t msg_len, uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS AesCmacNs AesCmac PROTOCORE_UNUSED = {.mac = protocore_aes_cmac_mac};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_AES_CMAC_H

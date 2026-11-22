@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file chacha20.h
@@ -45,8 +45,8 @@ PROTOCORE_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    proto_bool (*xor_)(uint8_t *, const uint8_t *, const uint8_t *, uint64_t, const uint8_t *, uint8_t *, size_t);
-    proto_bool (*block_ietf)(uint8_t *, const uint8_t *, uint32_t, const uint8_t *, uint8_t *);
+    embed_bool (*xor_)(uint8_t *, const uint8_t *, const uint8_t *, uint64_t, const uint8_t *, uint8_t *, size_t);
+    embed_bool (*block_ietf)(uint8_t *, const uint8_t *, uint32_t, const uint8_t *, uint8_t *);
 } Chacha20Ns;
 PROTOCORE_NS_LAYOUT(Chacha20Ns, xor_, block_ietf);
 
@@ -59,9 +59,9 @@ PROTOCORE_NS_LAYOUT(Chacha20Ns, xor_, block_ietf);
  * @param in plaintext, or ciphertext when decrypting; nullptr emits raw keystream
  * @param out len bytes; may alias in
  * @param len how many
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
+embed_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
                                    const uint8_t *in, uint8_t *out, size_t len);
 /**
  * @brief One 64-byte keystream block in the RFC 8439 layout.
@@ -70,15 +70,15 @@ proto_bool protocore_chacha20_xor_(uint8_t *work, const uint8_t *key, const uint
  * @param counter 32-bit block counter, state word 12
  * @param nonce 12-byte nonce, state words 13-15
  * @param out PROTOCORE_CHACHA20_BLOCK_LEN bytes
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint32_t counter, const uint8_t *nonce,
+embed_bool protocore_chacha20_block_ietf(uint8_t *work, const uint8_t *key, uint32_t counter, const uint8_t *nonce,
                                          uint8_t *out);
 
 /** @brief Module namespace. */
 PROTOCORE_NS Chacha20Ns Chacha20 PROTOCORE_UNUSED = {.xor_ = protocore_chacha20_xor_,
                                                      .block_ietf = protocore_chacha20_block_ietf};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_CHACHA20_H

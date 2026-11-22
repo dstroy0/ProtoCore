@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_HOSTLINK
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -150,7 +150,7 @@ typedef struct
     HostlinkBuildReadArgs build_read_args;
     HostlinkReadWordArgs read_word_args;
     HostlinkBuildWriteArgs build_write_args;
-    proto_bool ok;
+    embed_bool ok;
     uint8_t value;
     size_t n;
 } HostlinkVars;
@@ -194,7 +194,7 @@ static const HostlinkNs Hostlink __attribute__((unused)) = {
     .build_write = protocore_hostlink_build_write,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HOSTLINK
 

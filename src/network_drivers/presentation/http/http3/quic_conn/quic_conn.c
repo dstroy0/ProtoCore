@@ -32,7 +32,7 @@ static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint ne
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 #include "server/core/worker/worker.h" // the context span is key material
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Per-connection stream state. The bytes it sends out of are the plaintext span at a fixed offset,
 // so only what is not derivable lives here.
@@ -41,9 +41,9 @@ typedef struct
     uint64_t id;            ///< stream id (UINT64_MAX = free slot)
     uint64_t rx_off;        ///< next in-order byte offset expected
     uint64_t tx_off;        ///< next send offset
-    proto_bool rx_fin;      ///< a FIN was received (final size known)
-    proto_bool tx_fin;      ///< a FIN should be sent after the buffered tx bytes
-    proto_bool tx_fin_sent; ///< the FIN has been sent
+    embed_bool rx_fin;      ///< a FIN was received (final size known)
+    embed_bool tx_fin;      ///< a FIN should be sent after the buffered tx bytes
+    embed_bool tx_fin_sent; ///< the FIN has been sent
     uint8_t *tx;            ///< PROTOCORE_QUIC_STREAM_TX bytes of the connection's plaintext span
     size_t tx_have;         ///< bytes buffered to send
     size_t tx_sent;         ///< bytes of tx already put on the wire
@@ -56,9 +56,9 @@ typedef struct
     int64_t largest_acked;       ///< largest of our PNs the peer has acknowledged (-1 = none)
     int64_t last_ae_pn;          ///< PN of the last ack-eliciting packet we sent here (-1 = none)
     uint64_t largest_rx;         ///< largest PN received in this space
-    proto_bool have_rx;          ///< at least one packet received
-    proto_bool ack_eliciting_rx; ///< an ack-eliciting packet is unacknowledged (we owe an ACK)
-    proto_bool discarded;        ///< this space's keys have been dropped
+    embed_bool have_rx;          ///< at least one packet received
+    embed_bool ack_eliciting_rx; ///< an ack-eliciting packet is unacknowledged (we owe an ACK)
+    embed_bool discarded;        ///< this space's keys have been dropped
     uint64_t crypto_rx_off;      ///< in-order CRYPTO bytes already delivered to the TLS handshake
     uint8_t *crypto_rx;          ///< PROTOCORE_QUIC_CRYPTO_RX bytes of the connection's plaintext span
     size_t crypto_rx_have;       ///< contiguous CRYPTO bytes buffered at crypto_rx_off
@@ -87,21 +87,21 @@ typedef struct
 
     QuicConnCallbacks cb;
 
-    proto_bool handshake_done_queued; ///< a HANDSHAKE_DONE frame still needs sending
-    proto_bool handshake_done_sent;
-    proto_bool closed;            ///< a CONNECTION_CLOSE has been sent or received
-    proto_bool draining;          ///< peer closed; we only drain
+    embed_bool handshake_done_queued; ///< a HANDSHAKE_DONE frame still needs sending
+    embed_bool handshake_done_sent;
+    embed_bool closed;            ///< a CONNECTION_CLOSE has been sent or received
+    embed_bool draining;          ///< peer closed; we only drain
     uint64_t recv_bytes;          ///< total bytes received (anti-amplification budget)
     uint64_t sent_bytes;          ///< total bytes sent before address validation
-    proto_bool address_validated; ///< handshake-complete or received enough to lift the 3x limit
+    embed_bool address_validated; ///< handshake-complete or received enough to lift the 3x limit
 
-    proto_bool pto_armed;     ///< a Probe Timeout is running for the outstanding handshake flight
+    embed_bool pto_armed;     ///< a Probe Timeout is running for the outstanding handshake flight
     uint8_t pto_count;        ///< consecutive PTO expirations (exponential backoff exponent)
     uint32_t pto_deadline_ms; ///< when the PTO fires (caller's monotonic ms; valid when pto_armed)
 
-    proto_bool close_queued;   ///< a CONNECTION_CLOSE is owed to the peer (fatal error hit)
-    proto_bool close_is_app;   ///< send the application variant (0x1d)
-    proto_bool close_sent;     ///< the CONNECTION_CLOSE has been put on the wire
+    embed_bool close_queued;   ///< a CONNECTION_CLOSE is owed to the peer (fatal error hit)
+    embed_bool close_is_app;   ///< send the application variant (0x1d)
+    embed_bool close_sent;     ///< the CONNECTION_CLOSE has been put on the wire
     uint64_t close_error;      ///< error code to report
     uint64_t close_frame_type; ///< frame type that triggered it (0 when not frame-specific)
     uint8_t close_level;       ///< encryption level to send the close at
@@ -165,7 +165,7 @@ static QuicPacketKeys *open_keys(QuicConnCtx *qc, int level)
     }
     QuicTlsServerV.keys_args.qt = &qc->tls;
     QuicTlsServerV.keys_args.level = level;
-    QuicTlsServerV.keys_args.is_server = /*is_server=*/PROTO_FALSE;
+    QuicTlsServerV.keys_args.is_server = /*is_server=*/EMBED_FALSE;
     QuicTlsServer.keys(quic_tls_work);
     return QuicTlsServerV.pkt_keys;
 }
@@ -177,7 +177,7 @@ static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
     }
     QuicTlsServerV.keys_args.qt = &qc->tls;
     QuicTlsServerV.keys_args.level = level;
-    QuicTlsServerV.keys_args.is_server = /*is_server=*/PROTO_TRUE;
+    QuicTlsServerV.keys_args.is_server = /*is_server=*/EMBED_TRUE;
     QuicTlsServer.keys(quic_tls_work);
     return QuicTlsServerV.pkt_keys;
 }
@@ -186,16 +186,16 @@ static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
 static void quic_conn_close_transport(QuicConnCtx *qc, uint64_t error_code);
 static void quic_conn_close_application(QuicConnCtx *qc, uint64_t error_code);
 static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const uint8_t *data, size_t len,
-                                   proto_bool fin);
-static proto_bool quic_conn_done(const QuicConnCtx *qc);
-static proto_bool quic_conn_gone(const QuicConnCtx *qc);
+                                   embed_bool fin);
+static embed_bool quic_conn_done(const QuicConnCtx *qc);
+static embed_bool quic_conn_gone(const QuicConnCtx *qc);
 
 // The connection's plaintext bytes, split by offset over its streams and packet-number spaces.
-static proto_bool quic_conn_slot_storage(QuicConnCtx *qc)
+static embed_bool quic_conn_slot_storage(QuicConnCtx *qc)
 {
     if (qc->b == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
@@ -205,12 +205,12 @@ static proto_bool quic_conn_slot_storage(QuicConnCtx *qc)
     {
         qc->space[i].crypto_rx = QUIC_CRYPTO(qc->b, i);
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Find a stream slot by id, or allocate one; NULL if the table is full.
 
-static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, proto_bool create)
+static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, embed_bool create)
 {
     if (!quic_conn_slot_storage(qc))
     {
@@ -250,7 +250,7 @@ static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *
     qc->b = b;
     if (!quic_conn_slot_storage(qc))
     {
-        qc->closed = PROTO_TRUE; // no bytes to run out of; the connection answers nothing
+        qc->closed = EMBED_TRUE; // no bytes to run out of; the connection answers nothing
         return;
     }
     // The span carries the previous connection's stream and handshake bytes.
@@ -280,10 +280,10 @@ static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *
 
     // The server's transport parameters carry the connection IDs the handshake must echo.
     QuicTlsConfig c = *cfg;
-    c.params.has_original_dcid = PROTO_TRUE;
+    c.params.has_original_dcid = EMBED_TRUE;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c.params.original_dcid, .src = odcid, .bytes = odcid_len);
     c.params.original_dcid_len = odcid_len;
-    c.params.has_initial_scid = PROTO_TRUE;
+    c.params.has_initial_scid = EMBED_TRUE;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = c.params.initial_scid, .src = our_scid, .bytes = our_scid_len);
     c.params.initial_scid_len = our_scid_len;
     QuicTlsServerV.server_init_args.qt = &qc->tls;
@@ -294,13 +294,13 @@ static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *
 // --- Frame handling --------------------------------------------------------------------------
 // Queue a transport CONNECTION_CLOSE for a fatal error at @p level; the first error wins (RFC 9000 sec
 // 10.2.3). Sending at the level the error was seen on guarantees the peer holds keys to read it.
-static void queue_close(QuicConnCtx *qc, uint64_t error_code, uint64_t frame_type, int level, proto_bool app)
+static void queue_close(QuicConnCtx *qc, uint64_t error_code, uint64_t frame_type, int level, embed_bool app)
 {
     if (qc->close_queued || qc->closed)
     {
         return;
     }
-    qc->close_queued = PROTO_TRUE;
+    qc->close_queued = EMBED_TRUE;
     qc->close_is_app = app;
     qc->close_error = error_code;
     qc->close_frame_type = frame_type;
@@ -346,7 +346,7 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
     // to the client with the TLS alert in the low byte (RFC 9001 sec 4.8) instead of stalling.
     if (qc->tls.state == QTLS_FAILED)
     {
-        queue_close(qc, QUIC_ERR_CRYPTO_BASE + qc->tls.alert, QUIC_FT_CRYPTO, level, PROTO_FALSE);
+        queue_close(qc, QUIC_ERR_CRYPTO_BASE + qc->tls.alert, QUIC_FT_CRYPTO, level, EMBED_FALSE);
         return;
     }
     // Completing the handshake opens 1-RTT and lets us send HANDSHAKE_DONE. We keep the Handshake
@@ -354,8 +354,8 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
     // 1-RTT) is what tells the client the handshake is confirmed (RFC 9001 sec 4.1.2).
     if (qc->tls.state == QTLS_DONE && !qc->handshake_done_sent && !qc->handshake_done_queued)
     {
-        qc->handshake_done_queued = PROTO_TRUE;
-        qc->address_validated = PROTO_TRUE;
+        qc->handshake_done_queued = EMBED_TRUE;
+        qc->address_validated = EMBED_TRUE;
         if (qc->cb.on_handshake_done)
         {
             qc->cb.on_handshake_done(qc->cb.app, QUIC_SPAN(qc));
@@ -365,7 +365,7 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
 
 static void handle_stream(QuicConnCtx *qc, const QuicFrameHeader *f)
 {
-    QuicStream *st = stream_get(qc, f->stream.id, PROTO_TRUE);
+    QuicStream *st = stream_get(qc, f->stream.id, EMBED_TRUE);
     if (!st)
     {
         return;
@@ -388,7 +388,7 @@ static void handle_stream(QuicConnCtx *qc, const QuicFrameHeader *f)
         st->rx_off += nl;
         if (f->stream.fin)
         {
-            st->rx_fin = PROTO_TRUE;
+            st->rx_fin = EMBED_TRUE;
         }
         if (qc->cb.on_stream_data)
         {
@@ -398,16 +398,16 @@ static void handle_stream(QuicConnCtx *qc, const QuicFrameHeader *f)
     }
     if (f->stream.fin && f->stream.offset + f->stream.length == want && !st->rx_fin)
     {
-        st->rx_fin = PROTO_TRUE;
+        st->rx_fin = EMBED_TRUE;
         if (qc->cb.on_stream_data)
         {
-            qc->cb.on_stream_data(qc->cb.app, QUIC_SPAN(qc), st->id, NULL, 0, PROTO_TRUE);
+            qc->cb.on_stream_data(qc->cb.app, QUIC_SPAN(qc), st->id, NULL, 0, EMBED_TRUE);
         }
     }
 }
 
 // Process the frames in one decrypted packet. Returns false on a fatal connection error.
-static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, size_t len, proto_bool *ack_eliciting)
+static embed_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, size_t len, embed_bool *ack_eliciting)
 {
     size_t off = 0;
     while (off < len)
@@ -423,15 +423,15 @@ static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, s
         if (!n)
         {
             // Undecodable frame: a transport FRAME_ENCODING_ERROR (RFC 9000 sec 20.1). Report it.
-            queue_close(qc, QUIC_ERR_FRAME_ENCODING, 0, level, PROTO_FALSE);
-            return PROTO_FALSE;
+            queue_close(qc, QUIC_ERR_FRAME_ENCODING, 0, level, EMBED_FALSE);
+            return EMBED_FALSE;
         }
         off += n;
 
         if (f.type != QUIC_FT_ACK && f.type != QUIC_FT_ACK_ECN && f.type != QUIC_FT_CONNECTION_CLOSE &&
             f.type != QUIC_FT_CONNECTION_CLOSE_APP)
         {
-            *ack_eliciting = PROTO_TRUE;
+            *ack_eliciting = EMBED_TRUE;
         }
 
         switch (f.type)
@@ -446,13 +446,13 @@ static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, s
                 qc->space[level].largest_acked = (int64_t)f.ack.largest;
                 // Forward progress: reset the PTO backoff and re-evaluate the timer (RFC 9002 sec 6.2).
                 qc->pto_count = 0;
-                qc->pto_armed = PROTO_FALSE;
+                qc->pto_armed = EMBED_FALSE;
             }
             break;
         case QUIC_FT_CONNECTION_CLOSE:
         case QUIC_FT_CONNECTION_CLOSE_APP:
-            qc->draining = PROTO_TRUE;
-            qc->closed = PROTO_TRUE;
+            qc->draining = EMBED_TRUE;
+            qc->closed = EMBED_TRUE;
             break;
         case QUIC_FT_HANDSHAKE_DONE:
             break; // server-only frame; ignore if a peer sends it
@@ -467,18 +467,18 @@ static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, s
             break;
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Skip an Initial packet's Token field (RFC 9000 sec 17.2.2), advancing *off. False if malformed.
-static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
+static embed_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 {
     uint64_t tok_len = 0;
     size_t c = 0;
-    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, dg + *off, len - *off, &tok_len, &c);
+    embed_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, dg + *off, len - *off, &tok_len, &c);
     if (!quic_varint_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *off += c + (size_t)tok_len;
     return *off <= len;
@@ -486,7 +486,7 @@ static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 
 // Parse one packet's (long or short) header, filling the fields needed to locate + unprotect it.
 // Returns false on a malformed header or an unsupported type/version (drop the packet).
-static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, size_t len, proto_bool is_long,
+static embed_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, size_t len, embed_bool is_long,
                                       int *level, size_t *pn_offset, size_t *pkt_len, uint64_t *payload_length)
 {
     if (!is_long)
@@ -496,22 +496,22 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
         *pn_offset = 1 + qc->scid_len;
         if (*pn_offset >= len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         *payload_length = len - *pn_offset;
         *pkt_len = len;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
 
     QuicLongHeader h;
-    proto_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
+    embed_bool quic_packet_ok = QuicPacket.parse_long_header(quic_packet_work, dg, len, &h);
     if (!quic_packet_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (h.version == 0 || h.version != QUIC_VERSION_1)
     {
-        return PROTO_FALSE; // Version Negotiation is a client concern; unknown versions are dropped
+        return EMBED_FALSE; // Version Negotiation is a client concern; unknown versions are dropped
     }
     if (h.type == QUIC_LP_INITIAL)
     {
@@ -523,19 +523,19 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
     }
     else
     {
-        return PROTO_FALSE; // 0-RTT / Retry not supported
+        return EMBED_FALSE; // 0-RTT / Retry not supported
     }
 
     size_t off = h.hdr_len;
     if (*level == QUIC_ENC_INITIAL && !skip_initial_token(dg, len, &off))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t c = 0;
-    proto_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, dg + off, len - off, payload_length, &c);
+    embed_bool quic_varint_ok = QuicVarint.decode(quic_varint_work, dg + off, len - off, payload_length, &c);
     if (!quic_varint_ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     off += c;
     *pn_offset = off;
@@ -550,8 +550,8 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     {
         return 0;
     }
-    proto_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, dg[0]);
-    proto_bool is_long = quic_packet_ok;
+    embed_bool quic_packet_ok = QuicPacket.is_long_header(quic_packet_work, dg[0]);
+    embed_bool is_long = quic_packet_ok;
 
     int level = 0;
     size_t pn_offset = 0;
@@ -604,34 +604,34 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     {
         qc->space[level].largest_rx = pn;
     }
-    qc->space[level].have_rx = PROTO_TRUE;
+    qc->space[level].have_rx = EMBED_TRUE;
 
     // Receiving a Handshake packet validates the client's address (lifts anti-amplification).
     if (level == QUIC_ENC_HANDSHAKE)
     {
-        qc->address_validated = PROTO_TRUE;
-        qc->space[QUIC_ENC_INITIAL].discarded = PROTO_TRUE;
+        qc->address_validated = EMBED_TRUE;
+        qc->space[QUIC_ENC_INITIAL].discarded = EMBED_TRUE;
     }
 
-    proto_bool ack_eliciting = PROTO_FALSE;
+    embed_bool ack_eliciting = EMBED_FALSE;
     process_frames(qc, level, plain, pt, &ack_eliciting);
     if (ack_eliciting)
     {
-        qc->space[level].ack_eliciting_rx = PROTO_TRUE;
+        qc->space[level].ack_eliciting_rx = EMBED_TRUE;
     }
 
     return pkt_len;
 }
 
-static proto_bool quic_conn_take(QuicConnCtx *qc, const uint8_t *datagram, size_t len)
+static embed_bool quic_conn_take(QuicConnCtx *qc, const uint8_t *datagram, size_t len)
 {
     if (qc->closed)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     qc->recv_bytes += len;
     size_t off = 0;
-    proto_bool any = PROTO_FALSE;
+    embed_bool any = EMBED_FALSE;
     while (off < len)
     {
         size_t n = recv_packet(qc, datagram + off, len - off);
@@ -639,7 +639,7 @@ static proto_bool quic_conn_take(QuicConnCtx *qc, const uint8_t *datagram, size_
         {
             break;
         }
-        any = PROTO_TRUE;
+        any = EMBED_TRUE;
         off += n;
     }
     return any;
@@ -658,7 +658,7 @@ static size_t build_ack_frame(uint8_t *work, QuicPnSpace *s, uint8_t *buf, size_
     if (n)
     {
         s->ack_eliciting_rx =
-            PROTO_FALSE; // static_assert above), and one ACK frame is at most ~20 bytes: it always fits
+            EMBED_FALSE; // static_assert above), and one ACK frame is at most ~20 bytes: it always fits
     }
     return n;
 }
@@ -666,7 +666,7 @@ static size_t build_ack_frame(uint8_t *work, QuicPnSpace *s, uint8_t *buf, size_
 // Append the CRYPTO flight for INITIAL/HANDSHAKE (ServerHello / EE..Finished); returns bytes written,
 // sets *ae when it emits an ack-eliciting CRYPTO frame.
 static size_t build_crypto_frame(uint8_t *work, const QuicConnCtx *qc, int level, QuicPnSpace *s, uint8_t *buf,
-                                 size_t cap, proto_bool *ae)
+                                 size_t cap, embed_bool *ae)
 {
     if (level != QUIC_ENC_INITIAL && level != QUIC_ENC_HANDSHAKE)
     {
@@ -695,13 +695,13 @@ static size_t build_crypto_frame(uint8_t *work, const QuicConnCtx *qc, int level
     if (n)
     {
         s->crypto_tx_off += take;
-        *ae = PROTO_TRUE;
+        *ae = EMBED_TRUE;
     }
     return n;
 }
 
 // Append 1-RTT extras (HANDSHAKE_DONE + stream data) at APP level; returns bytes written, sets *ae.
-static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, embed_bool *ae)
 {
     if (level != QUIC_ENC_APP)
     {
@@ -716,9 +716,9 @@ static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_
         { // ACK/CRYPTO, so the datagram-sized scratch always has room for it
 
             p += n;
-            qc->handshake_done_queued = PROTO_FALSE;
-            qc->handshake_done_sent = PROTO_TRUE;
-            *ae = PROTO_TRUE;
+            qc->handshake_done_queued = EMBED_FALSE;
+            qc->handshake_done_sent = EMBED_TRUE;
+            *ae = EMBED_TRUE;
         }
     }
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
@@ -728,8 +728,8 @@ static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_
         {
             continue;
         }
-        proto_bool more = st->tx_sent < st->tx_have;
-        proto_bool fin_due = st->tx_fin && !st->tx_fin_sent && st->tx_sent == st->tx_have;
+        embed_bool more = st->tx_sent < st->tx_have;
+        embed_bool fin_due = st->tx_fin && !st->tx_fin_sent && st->tx_sent == st->tx_have;
         if (!more && !fin_due)
         {
             continue;
@@ -737,7 +737,7 @@ static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_
         size_t room = (cap - p > 24) ? (cap - p - 24) : 0;
         size_t remain = st->tx_have - st->tx_sent;
         size_t take = remain < room ? remain : room;
-        proto_bool fin = st->tx_fin && (st->tx_sent + take == st->tx_have);
+        embed_bool fin = st->tx_fin && (st->tx_sent + take == st->tx_have);
         size_t quic_frame_n =
             QuicFrame.build_stream(work, buf + p, cap - p, st->id, st->tx_off, st->tx + st->tx_sent, take, fin);
         size_t n = quic_frame_n;
@@ -747,7 +747,7 @@ static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_
             st->tx_off += take;
             st->tx_sent += take;
             st->tx_fin_sent = st->tx_fin_sent || fin;
-            *ae = PROTO_TRUE;
+            *ae = EMBED_TRUE;
         }
     }
     return p;
@@ -756,11 +756,11 @@ static size_t build_app_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_
 // Build the frame payload for one encryption level into buf; returns its length (0 = nothing to send).
 // @p ae is set true if the payload carries an ack-eliciting frame (CRYPTO / STREAM / HANDSHAKE_DONE),
 // which arms loss recovery for this space.
-static size_t build_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, proto_bool *ae)
+static size_t build_frames(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *buf, size_t cap, embed_bool *ae)
 {
     QuicPnSpace *s = &qc->space[level];
     size_t p = 0;
-    *ae = PROTO_FALSE;
+    *ae = EMBED_FALSE;
 
     // While closing, the only frame we send is the transport CONNECTION_CLOSE (RFC 9000 sec 10.2.3).
     // It is not ack-eliciting (*ae stays false), so no PTO is armed for it. QuicConnNs::send invokes
@@ -785,7 +785,7 @@ static uint8_t level_lp_type(int level)
 }
 
 // Bytes a protected packet needs on top of its payload: AEAD tag + packet number, plus the header.
-static size_t packet_overhead(const QuicConnCtx *qc, proto_bool is_long, uint8_t pn_len)
+static size_t packet_overhead(const QuicConnCtx *qc, embed_bool is_long, uint8_t pn_len)
 {
     size_t overhead = (size_t)PROTOCORE_AES128GCM_TAG_LEN + pn_len;
     if (is_long)
@@ -818,7 +818,7 @@ static size_t build_packet(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *o
     uint64_t pn = s->next_pn;
     uint8_t quic_packet_u8 = QuicPacket.pn_length(work, pn, s->largest_acked);
     uint8_t pn_len = quic_packet_u8;
-    proto_bool is_long = (level != QUIC_ENC_APP);
+    embed_bool is_long = (level != QUIC_ENC_APP);
 
     // Reserve the framing BEFORE filling the payload. build_frames() advances the connection's send
     // offsets (crypto_tx_off, and each stream's tx_off / tx_sent) as it writes, so a payload that
@@ -849,7 +849,7 @@ static size_t build_packet(uint8_t *work, QuicConnCtx *qc, int level, uint8_t *o
         return 0;
     }
     budget -= 4;
-    proto_bool ae = PROTO_FALSE;
+    embed_bool ae = EMBED_FALSE;
     size_t frame_len = build_frames(work, qc, level, frames, budget, &ae);
     if (frame_len == 0)
     {
@@ -990,8 +990,8 @@ static size_t quic_conn_build(uint8_t *work, QuicConnCtx *qc, uint8_t *out, size
         size_t n = build_packet(work, qc, level, out, cap);
         if (n)
         {
-            qc->close_sent = PROTO_TRUE;
-            qc->closed = PROTO_TRUE;
+            qc->close_sent = EMBED_TRUE;
+            qc->closed = EMBED_TRUE;
             qc->sent_bytes += n;
         }
         return n;
@@ -1024,7 +1024,7 @@ static uint32_t pto_period(uint8_t count)
 }
 // A space has unacknowledged ack-eliciting data outstanding: it sent an ack-eliciting packet the peer
 // has not yet acknowledged, and its keys are still live.
-static proto_bool space_outstanding(const QuicPnSpace *s)
+static embed_bool space_outstanding(const QuicPnSpace *s)
 {
     return !s->discarded && s->last_ae_pn >= 0 && s->largest_acked < s->last_ae_pn;
 }
@@ -1039,18 +1039,18 @@ static void quic_conn_timeout(QuicConnCtx *qc, uint32_t now_ms)
     // packet is not re-triggered by the peer (a duplicate ClientHello re-delivers no CRYPTO; a lost
     // 1-RTT response is never re-requested). Anything the peer has not acknowledged in a live space -
     // the handshake CRYPTO flight, HANDSHAKE_DONE, or the 1-RTT response - is outstanding.
-    proto_bool outstanding = space_outstanding(&qc->space[QUIC_ENC_INITIAL]) ||
+    embed_bool outstanding = space_outstanding(&qc->space[QUIC_ENC_INITIAL]) ||
                              space_outstanding(&qc->space[QUIC_ENC_HANDSHAKE]) ||
                              space_outstanding(&qc->space[QUIC_ENC_APP]);
     if (!outstanding)
     {
-        qc->pto_armed = PROTO_FALSE; // everything acknowledged: nothing to retransmit
+        qc->pto_armed = EMBED_FALSE; // everything acknowledged: nothing to retransmit
         qc->pto_count = 0;
         return;
     }
     if (!qc->pto_armed)
     {
-        qc->pto_armed = PROTO_TRUE;
+        qc->pto_armed = EMBED_TRUE;
         qc->pto_deadline_ms = now_ms + pto_period(qc->pto_count);
         return;
     }
@@ -1074,8 +1074,8 @@ static void quic_conn_timeout(QuicConnCtx *qc, uint32_t now_ms)
         // recovers a lost response and is a no-op for data already received.
         if (qc->handshake_done_sent)
         {
-            qc->handshake_done_queued = PROTO_TRUE;
-            qc->handshake_done_sent = PROTO_FALSE;
+            qc->handshake_done_queued = EMBED_TRUE;
+            qc->handshake_done_sent = EMBED_FALSE;
         }
         for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
         {
@@ -1086,7 +1086,7 @@ static void quic_conn_timeout(QuicConnCtx *qc, uint32_t now_ms)
             }
             st->tx_off = 0;
             st->tx_sent = 0;
-            st->tx_fin_sent = PROTO_FALSE;
+            st->tx_fin_sent = EMBED_FALSE;
         }
     }
     if (qc->pto_count < 8)
@@ -1096,9 +1096,9 @@ static void quic_conn_timeout(QuicConnCtx *qc, uint32_t now_ms)
     qc->pto_deadline_ms = now_ms + pto_period(qc->pto_count);
 }
 
-static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const uint8_t *data, size_t len, proto_bool fin)
+static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const uint8_t *data, size_t len, embed_bool fin)
 {
-    QuicStream *st = stream_get(qc, stream_id, PROTO_TRUE);
+    QuicStream *st = stream_get(qc, stream_id, EMBED_TRUE);
     if (!st)
     {
         return 0;
@@ -1109,7 +1109,7 @@ static size_t quic_conn_stream_put(QuicConnCtx *qc, uint64_t stream_id, const ui
     st->tx_have += take;
     if (fin && take == len)
     {
-        st->tx_fin = PROTO_TRUE;
+        st->tx_fin = EMBED_TRUE;
     }
     return take;
 }
@@ -1118,7 +1118,7 @@ static void quic_conn_close_transport(QuicConnCtx *qc, uint64_t error_code)
 {
     // Application-initiated close: send at the highest level we still hold keys for.
     int level = protocore_quic_highest_sealed_level(qc);
-    queue_close(qc, error_code, 0, level, PROTO_FALSE);
+    queue_close(qc, error_code, 0, level, EMBED_FALSE);
 }
 
 static void quic_conn_close_application(QuicConnCtx *qc, uint64_t error_code)
@@ -1129,18 +1129,18 @@ static void quic_conn_close_application(QuicConnCtx *qc, uint64_t error_code)
     int level = protocore_quic_highest_sealed_level(qc);
     if (level != QUIC_ENC_APP)
     {
-        queue_close(qc, QUIC_ERR_APPLICATION, 0, level, PROTO_FALSE);
+        queue_close(qc, QUIC_ERR_APPLICATION, 0, level, EMBED_FALSE);
         return;
     }
-    queue_close(qc, error_code, 0, level, PROTO_TRUE);
+    queue_close(qc, error_code, 0, level, EMBED_TRUE);
 }
 
-static proto_bool quic_conn_done(const QuicConnCtx *qc)
+static embed_bool quic_conn_done(const QuicConnCtx *qc)
 {
     return qc->tls.state == QTLS_DONE;
 }
 
-static proto_bool quic_conn_gone(const QuicConnCtx *qc)
+static embed_bool quic_conn_gone(const QuicConnCtx *qc)
 {
     return qc->closed || qc->draining;
 }
@@ -1157,7 +1157,7 @@ static QuicConnCtx *qc_bound(uint8_t *work)
 void protocore_quic_conn_init(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     if (!qc || !QuicConnV.bind.b || !QuicConnV.init_args.cfg)
     {
         return;
@@ -1172,19 +1172,19 @@ void protocore_quic_conn_init(uint8_t *work)
 void protocore_quic_conn_callbacks(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     if (!qc)
     {
         return;
     }
     qc->cb = QuicConnV.cb;
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConnV.ok = EMBED_TRUE;
 }
 
 void protocore_quic_conn_recv(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     if (!qc || !QuicConnV.recv_args.datagram)
     {
         return;
@@ -1195,32 +1195,32 @@ void protocore_quic_conn_recv(uint8_t *work)
 void protocore_quic_conn_send(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     QuicConnV.n = 0;
     if (!qc || !QuicConnV.send_args.out)
     {
         return;
     }
     QuicConnV.n = quic_conn_build(work, qc, QuicConnV.send_args.out, QuicConnV.send_args.cap);
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConnV.ok = EMBED_TRUE;
 }
 
 void protocore_quic_conn_on_timeout(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     if (!qc)
     {
         return;
     }
     quic_conn_timeout(qc, QuicConnV.timeout_args.now_ms);
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConnV.ok = EMBED_TRUE;
 }
 
 void protocore_quic_conn_stream_send(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     QuicConnV.n = 0;
     if (!qc)
     {
@@ -1228,7 +1228,7 @@ void protocore_quic_conn_stream_send(uint8_t *work)
     }
     QuicConnV.n = quic_conn_stream_put(qc, QuicConnV.stream_send_args.stream_id, QuicConnV.stream_send_args.data,
                                        QuicConnV.stream_send_args.len, QuicConnV.stream_send_args.fin);
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConnV.ok = EMBED_TRUE;
 }
 
 // A datagram names its connection by DCID: a long header carries the id we chose (scid) or the one
@@ -1237,7 +1237,7 @@ void protocore_quic_conn_stream_send(uint8_t *work)
 void protocore_quic_conn_owns(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     const uint8_t *dcid = QuicConnV.owns_args.dcid;
     const uint8_t len = QuicConnV.owns_args.dcid_len;
     if (!qc || !dcid)
@@ -1246,43 +1246,43 @@ void protocore_quic_conn_owns(uint8_t *work)
     }
     if (len == qc->scid_len && EMBED_CALL(memor.cmp, MemoriaCfg, .src = dcid, .other = qc->scid, .bytes = len) == 0)
     {
-        QuicConnV.ok = PROTO_TRUE;
+        QuicConnV.ok = EMBED_TRUE;
         return;
     }
     if (len == qc->odcid_len && EMBED_CALL(memor.cmp, MemoriaCfg, .src = dcid, .other = qc->odcid, .bytes = len) == 0)
     {
-        QuicConnV.ok = PROTO_TRUE;
+        QuicConnV.ok = EMBED_TRUE;
     }
 }
 
 void protocore_quic_conn_close(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     if (!qc)
     {
         return;
     }
     quic_conn_close_transport(qc, QuicConnV.close_args.error_code);
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConnV.ok = EMBED_TRUE;
 }
 
 void protocore_quic_conn_close_app(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConnV.ok = EMBED_FALSE;
     if (!qc)
     {
         return;
     }
     quic_conn_close_application(qc, QuicConnV.close_args.error_code);
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConnV.ok = EMBED_TRUE;
 }
 
 void protocore_quic_conn_is_established(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.established = PROTO_FALSE;
+    QuicConnV.established = EMBED_FALSE;
     QuicConnV.ok = (qc != NULL);
     if (qc)
     {
@@ -1293,7 +1293,7 @@ void protocore_quic_conn_is_established(uint8_t *work)
 void protocore_quic_conn_is_closed(uint8_t *work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.closed = PROTO_TRUE; // an unbound connection answers nothing, which is closed
+    QuicConnV.closed = EMBED_TRUE; // an unbound connection answers nothing, which is closed
     QuicConnV.ok = (qc != NULL);
     if (qc)
     {
@@ -1304,7 +1304,7 @@ void protocore_quic_conn_is_closed(uint8_t *work)
 /** @brief The operands and the outcome. */
 QuicConnVars QuicConnV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

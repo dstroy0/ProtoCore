@@ -38,11 +38,11 @@ static HalRsaCtx s_rsa = {NULL, portMUX_INITIALIZER_UNLOCKED};
 
 // Is the accelerator already clocked (and, where applicable, powered)? Reads clock-domain registers only,
 // which are always accessible even when the RSA block itself is unclocked.
-static proto_bool rsa_is_up(void)
+static embed_bool rsa_is_up(void)
 {
-    const proto_bool clocked = (PROTOCORE_HW_RD(PROTOCORE_RSA_CLK_REG) & PROTOCORE_RSA_CLK_BIT) != 0u;
+    const embed_bool clocked = (PROTOCORE_HW_RD(PROTOCORE_RSA_CLK_REG) & PROTOCORE_RSA_CLK_BIT) != 0u;
 #if PROTOCORE_RSA_HAS_PD
-    const proto_bool powered = (PROTOCORE_HW_RD(PROTOCORE_RSA_PD_REG) & PROTOCORE_RSA_PD_DOWN_BIT) == 0u;
+    const embed_bool powered = (PROTOCORE_HW_RD(PROTOCORE_RSA_PD_REG) & PROTOCORE_RSA_PD_DOWN_BIT) == 0u;
     return clocked && powered;
 #else
     return clocked;

@@ -27,7 +27,7 @@
 
 #if PROTOCORE_ENABLE_ROAMING
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One BSS Transition Candidate: a Neighbor Report entry (IEEE 802.11 sec 9.4.2.36) or a scan row. */
 typedef struct
@@ -40,9 +40,9 @@ typedef struct
 /** @brief What a BSS Transition Management Request asks of us (IEEE 802.11 WNM, 802.11v). */
 typedef struct
 {
-    proto_bool present;           ///< a BTM Request decoded this cycle
-    proto_bool disassoc_imminent; ///< Request Mode bit 2: the BSS disassociates us shortly
-    proto_bool has_preferred;     ///< a Preferred Candidate List named @ref preferred_bssid
+    embed_bool present;           ///< a BTM Request decoded this cycle
+    embed_bool disassoc_imminent; ///< Request Mode bit 2: the BSS disassociates us shortly
+    embed_bool has_preferred;     ///< a Preferred Candidate List named @ref preferred_bssid
     uint8_t preferred_bssid[6];   ///< the highest-preference candidate's BSSID
 } protocore_roam_btm;
 
@@ -65,7 +65,7 @@ typedef enum
 /** @brief The verdict: transition or stay, and to what. */
 typedef struct
 {
-    proto_bool roam;              ///< true to transition to @ref target_bssid
+    embed_bool roam;              ///< true to transition to @ref target_bssid
     uint8_t target_bssid[6];      ///< the BSSID to transition to (valid only when @ref roam)
     uint8_t target_channel;       ///< that candidate's Channel Number
     protocore_roam_reason reason; ///< which rule produced it (see @ref protocore_roam_reason)
@@ -176,7 +176,7 @@ typedef struct
     protocore_roam_decision decision;
     protocore_roam_btm hint;
     uint8_t n;
-    proto_bool ok;
+    embed_bool ok;
 } RoamVars;
 
 /** @brief The operands and the outcome. */
@@ -206,7 +206,7 @@ static const RoamNs Roam __attribute__((unused)) = {
     .parse_btm_request = protocore_roam_parse_btm_request,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ROAMING
 

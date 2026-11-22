@@ -26,8 +26,8 @@ static MockCC g;
 static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
 {
     uint8_t hdr = tx[0];
-    proto_bool read = (hdr & 0x80) != 0;
-    proto_bool burst = (hdr & 0x40) != 0;
+    embed_bool read = (hdr & 0x80) != 0;
+    embed_bool burst = (hdr & 0x40) != 0;
     uint8_t addr = hdr & 0x3F;
     rx[0] = (uint8_t)((g.state << 4) | (g.rxcount & 0x0F));
 
@@ -141,7 +141,7 @@ void tearDown()
 void test_init_configures_and_detects(void)
 {
     protocore_cc1101_config c = default_cfg();
-    proto_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
+    embed_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
     TEST_ASSERT_TRUE(cc1101_ok);
     TEST_ASSERT_EQUAL_HEX8(0x30, g.last_strobe);
     TEST_ASSERT_EQUAL_HEX8(0x29, g.reg[0x00]);
@@ -153,7 +153,7 @@ void test_init_fails_when_absent(void)
 {
     g.version = 0x00;
     protocore_cc1101_config c = default_cfg();
-    proto_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
+    embed_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
     TEST_ASSERT_FALSE(cc1101_ok);
     g.version = 0xFF;
     cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
@@ -163,7 +163,7 @@ void test_init_fails_when_absent(void)
 void test_send_writes_fifo_and_strobes_tx(void)
 {
     const uint8_t data[3] = {0xAA, 0xBB, 0xCC};
-    proto_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus, data, 3);
+    embed_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus, data, 3);
     TEST_ASSERT_TRUE(cc1101_ok);
     TEST_ASSERT_EQUAL_UINT8(4, g.txlen);
     TEST_ASSERT_EQUAL_UINT8(3, g.txfifo[0]);
@@ -175,7 +175,7 @@ void test_send_writes_fifo_and_strobes_tx(void)
 void test_send_rejects_bad_len(void)
 {
     const uint8_t d[1] = {0};
-    proto_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus, d, 0);
+    embed_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus, d, 0);
     TEST_ASSERT_FALSE(cc1101_ok);
     uint8_t big[64] = {0};
     cc1101_ok = Cc1101.send(cc1101_work, &g_bus, big, 64);
@@ -185,7 +185,7 @@ void test_send_rejects_bad_len(void)
 void test_tx_done(void)
 {
     g.state = 2;
-    proto_bool cc1101_ok = Cc1101.tx_done(cc1101_work, &g_bus);
+    embed_bool cc1101_ok = Cc1101.tx_done(cc1101_work, &g_bus);
     TEST_ASSERT_FALSE(cc1101_ok);
     g.state = 0;
     cc1101_ok = Cc1101.tx_done(cc1101_work, &g_bus);
@@ -259,7 +259,7 @@ void test_rssi_decode(void)
 void test_send_guard_subconditions()
 {
     uint8_t data[8] = {0};
-    proto_bool cc1101_ok = Cc1101.send(cc1101_work, NULL, data, 8);
+    embed_bool cc1101_ok = Cc1101.send(cc1101_work, NULL, data, 8);
     TEST_ASSERT_FALSE(cc1101_ok);
     cc1101_ok = Cc1101.send(cc1101_work, &g_bus, NULL, 8);
     TEST_ASSERT_FALSE(cc1101_ok);
@@ -274,7 +274,7 @@ void test_send_guard_subconditions()
 void test_init_null_args(void)
 {
     protocore_cc1101_config c = default_cfg();
-    proto_bool cc1101_ok = Cc1101.init(cc1101_work, NULL, &c);
+    embed_bool cc1101_ok = Cc1101.init(cc1101_work, NULL, &c);
     TEST_ASSERT_FALSE(cc1101_ok);
     cc1101_ok = Cc1101.init(cc1101_work, &g_bus_no_spi, &c);
     TEST_ASSERT_FALSE(cc1101_ok);
@@ -288,14 +288,14 @@ void test_init_no_regs(void)
     c.regs = NULL;
     c.nregs = 2;
     c.channel = 7;
-    proto_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
+    embed_bool cc1101_ok = Cc1101.init(cc1101_work, &g_bus, &c);
     TEST_ASSERT_TRUE(cc1101_ok);
     TEST_ASSERT_EQUAL_UINT8(7, g.reg[0x0A]);
 }
 
 void test_tx_done_null_args(void)
 {
-    proto_bool cc1101_ok = Cc1101.tx_done(cc1101_work, NULL);
+    embed_bool cc1101_ok = Cc1101.tx_done(cc1101_work, NULL);
     TEST_ASSERT_FALSE(cc1101_ok);
     cc1101_ok = Cc1101.tx_done(cc1101_work, &g_bus_no_spi);
     TEST_ASSERT_FALSE(cc1101_ok);
@@ -345,6 +345,6 @@ void test_recv_bad_length(void)
 void test_send_null_spi(void)
 {
     const uint8_t data[8] = {0};
-    proto_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus_no_spi, data, 8);
+    embed_bool cc1101_ok = Cc1101.send(cc1101_work, &g_bus_no_spi, data, 8);
     TEST_ASSERT_FALSE(cc1101_ok);
 }

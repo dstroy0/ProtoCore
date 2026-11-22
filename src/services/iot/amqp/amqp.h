@@ -57,7 +57,7 @@
 
 #if PROTOCORE_ENABLE_AMQP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Frame types, octet 0 of a frame (sec 4.2.3).
 #define AMQP_FRAME_METHOD 1    ///< method frame
@@ -151,7 +151,7 @@ typedef struct
     AmqpPayloadArgs payload; ///< the framed octets
     AmqpMethodArgs method;   ///< a method payload's fields
     AmqpContentArgs content; ///< a content header payload's fields
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     size_t consumed;
 } AmqpVars;
@@ -195,7 +195,7 @@ static const AmqpNs Amqp __attribute__((unused)) = {
     .parse_method = protocore_amqp_parse_method,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AMQP
 

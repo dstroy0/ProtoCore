@@ -137,12 +137,12 @@ void test_rfc8949_appendix_a_vectors(void)
     // false | 0xf4   true | 0xf5   null | 0xf6
     static const uint8_t V_FALSE[] = {0xf4};
     EMBED_CALL(spat.reset, SpatiumCfg, .at = &g_w);
-    Cbor.put_bool(&g_w, PROTO_FALSE);
+    Cbor.put_bool(&g_w, EMBED_FALSE);
     expect(V_FALSE, sizeof(V_FALSE));
 
     static const uint8_t V_TRUE[] = {0xf5};
     EMBED_CALL(spat.reset, SpatiumCfg, .at = &g_w);
-    Cbor.put_bool(&g_w, PROTO_TRUE);
+    Cbor.put_bool(&g_w, EMBED_TRUE);
     expect(V_TRUE, sizeof(V_TRUE));
 
     static const uint8_t V_NULL[] = {0xf6};
@@ -403,12 +403,12 @@ void test_peek_names_every_item(void)
     TEST_ASSERT_EQUAL_INT(PROTOCORE_CODEC_MAP, Cbor.peek(&r));
 
     EMBED_CALL(spat.reset, SpatiumCfg, .at = &g_w);
-    Cbor.put_bool(&g_w, PROTO_TRUE);
+    Cbor.put_bool(&g_w, EMBED_TRUE);
     r = produced();
     TEST_ASSERT_EQUAL_INT(PROTOCORE_CODEC_BOOL, Cbor.peek(&r));
 
     EMBED_CALL(spat.reset, SpatiumCfg, .at = &g_w);
-    Cbor.put_bool(&g_w, PROTO_FALSE);
+    Cbor.put_bool(&g_w, EMBED_FALSE);
     r = produced();
     TEST_ASSERT_EQUAL_INT(PROTOCORE_CODEC_BOOL, Cbor.peek(&r));
 
@@ -446,7 +446,7 @@ void test_map_round_trips_item_by_item(void)
     Cbor.put_str(&g_w, "name");
     Cbor.put_str(&g_w, "esp");
     Cbor.put_str(&g_w, "on");
-    Cbor.put_bool(&g_w, PROTO_TRUE);
+    Cbor.put_bool(&g_w, EMBED_TRUE);
     TEST_ASSERT_TRUE(EMBED_CALL(spat.ok, SpatiumCfg, .span = g_w));
 
     mmgr_cspan r = produced();
@@ -459,7 +459,7 @@ void test_map_round_trips_item_by_item(void)
     uint64_t u = 0;
     const char *s = NULL;
     size_t sl = 0;
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
 
     TEST_ASSERT_TRUE(Cbor.get_str(&r, &k, &kl));
     TEST_ASSERT_EQUAL_size_t(4, kl);
@@ -568,7 +568,7 @@ void test_type_mismatch_fails_and_marks_the_reader(void)
 
     static const uint8_t NULL_ITEM[] = {0xf6};
     r = EMBED_CALL(spat.cfrom, SpatiumCfg, .cbuf = NULL_ITEM, .cap = sizeof(NULL_ITEM));
-    proto_bool b = PROTO_FALSE;
+    embed_bool b = EMBED_FALSE;
     TEST_ASSERT_FALSE(Cbor.get_bool(&r, &b));
 
     static const uint8_t FALSE_ITEM[] = {0xf4};
@@ -616,7 +616,7 @@ void test_the_read_error_is_sticky(void)
     TEST_ASSERT_FALSE(EMBED_CALL(spat.cok, SpatiumCfg, .cspan = r));
 
     int64_t iv = 0;
-    proto_bool bv = PROTO_FALSE;
+    embed_bool bv = EMBED_FALSE;
     float fv = 0.0f;
     const char *s = NULL;
     const uint8_t *p = NULL;
@@ -650,7 +650,7 @@ void test_every_reader_fails_closed_on_an_empty_region(void)
     static const uint8_t NONE[] = {0x00};
     uint64_t uv = 0;
     int64_t iv = 0;
-    proto_bool bv = PROTO_FALSE;
+    embed_bool bv = EMBED_FALSE;
     float fv = 0.0f;
     const char *s = NULL;
     const uint8_t *p = NULL;

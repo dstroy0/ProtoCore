@@ -29,11 +29,11 @@
 #ifndef PROTOCORE_AES256CTR_H
 #define PROTOCORE_AES256CTR_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths and PROTOCORE_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths and EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_AES256CTR
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief AES-256-CTR key length (bytes). */
 #define PROTOCORE_AES256CTR_KEY_LEN 32
@@ -102,7 +102,7 @@ typedef struct
 {
     Aes256CtrCryptArgs crypt_args;
     Aes256CtrGetLengthArgs get_length_args;
-    proto_bool ok;
+    embed_bool ok;
     uint32_t length;
 } Aes256CtrVars;
 
@@ -130,7 +130,7 @@ static const Aes256CtrNs Aes256Ctr __attribute__((unused)) = {
     .get_length = protocore_aes256_ctr_get_length,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AES256CTR
 

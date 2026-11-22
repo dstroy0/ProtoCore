@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file deflate.h
@@ -54,12 +54,11 @@ PROTOCORE_BEGIN_DECLS
 #define DEFLATE_SCRATCH_SIZE 4096
 
 /** @brief deflate_raw() return codes (mirror ::InflateResult). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(DeflateResult,
     DEFLATE_OK = 0,            ///< success; *out_len holds the compressed length
     DEFLATE_ERR_OVERFLOW = -2, ///< output would exceed dst_cap (incompressible)
     DEFLATE_ERR_SCRATCH = -3   ///< scratch_len < DEFLATE_SCRATCH_SIZE
-} DeflateResult;
+);
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
@@ -86,6 +85,6 @@ DeflateResult protocore_deflate_raw(uint8_t *work, const uint8_t *src, size_t sr
 /** @brief Module namespace. */
 PROTOCORE_NS DeflateNs Deflate PROTOCORE_UNUSED = {.raw = protocore_deflate_raw};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_DEFLATE_H

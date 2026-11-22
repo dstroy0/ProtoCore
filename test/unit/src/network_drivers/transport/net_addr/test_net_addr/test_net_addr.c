@@ -26,7 +26,7 @@ void setUp(void)
 {
     memset(&g_stack, 0, sizeof(g_stack));
     memset(&g_lib, 0, sizeof(g_lib));
-    NetAddr.ok = PROTO_FALSE;
+    NetAddr.ok = EMBED_FALSE;
 }
 
 void tearDown(void)
@@ -123,7 +123,7 @@ void test_v6_writes_into_the_stack_address(void)
 {
     g_lib = protocore_ip_from_v6_bytes(V6_DOC);
 
-    proto_bool ok = protocore_net_addr_from_ip(&g_lib, &g_stack);
+    embed_bool ok = protocore_net_addr_from_ip(&g_lib, &g_stack);
 
 #if PROTOCORE_NET_HAS_IPV6
     TEST_ASSERT_TRUE(ok);
@@ -196,7 +196,7 @@ void test_the_entry_reports_a_refusal_on_the_handle(void)
     g_lib.family = PROTOCORE_IP_NONE;
     NetAddr.out.ip = &g_lib;
     NetAddr.out.out_addr = &g_stack;
-    NetAddr.ok = PROTO_TRUE;
+    NetAddr.ok = EMBED_TRUE;
 
     NetAddr.from_ip(NULL);
 
@@ -211,7 +211,7 @@ void test_each_entry_reaches_the_call_its_name_promises(void)
     protocore_net_ip4_set(&g_stack, 203, 0, 113, 42);
     NetAddr.in.addr = &g_stack;
     NetAddr.in.out_ip = &g_lib;
-    NetAddr.ok = PROTO_TRUE;
+    NetAddr.ok = EMBED_TRUE;
 
     NetAddr.to_ip(NULL); // reads; leaves ok alone
 

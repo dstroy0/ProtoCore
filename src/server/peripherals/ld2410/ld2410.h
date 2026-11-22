@@ -30,7 +30,7 @@
 
 #if PROTOCORE_ENABLE_LD2410
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_LD2410_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -139,7 +139,7 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    proto_bool on;
+    embed_bool on;
 } Ld2410CmdEngineeringArgs;
 
 /** @brief What cmd_restart takes: buf, cap. */
@@ -154,7 +154,7 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    proto_bool on;
+    embed_bool on;
 } Ld2410CmdBluetoothArgs;
 
 /** @brief What cmd_get_mac takes: buf, cap. */
@@ -203,7 +203,7 @@ typedef struct
 /** @brief What set_engineering takes: on. */
 typedef struct
 {
-    proto_bool on;
+    embed_bool on;
 } Ld2410SetEngineeringArgs;
 
 /**
@@ -284,7 +284,7 @@ typedef struct
     Ld2410BeginArgs begin_args;
     Ld2410SetEngineeringArgs set_engineering_args;
 
-    proto_bool ok;
+    embed_bool ok;
     uint16_t cm;
     size_t n;
     const Ld2410Report *report;
@@ -325,7 +325,7 @@ extern Ld2410Ns Ld2410;
  */
 uint8_t *protocore_ld2410_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LD2410
 

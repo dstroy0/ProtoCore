@@ -41,7 +41,7 @@
 
 #if PROTOCORE_ENABLE_LSV2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Default LSV/2-over-TCP port a Heidenhain control listens on. */
 #define PROTOCORE_LSV2_TCP_PORT 19000
@@ -120,12 +120,12 @@ size_t protocore_lsv2_build(uint8_t *buf, size_t cap, const char *mnemonic, cons
  * @return true if a complete telegram was found; false if fewer than `8 + payload_len` bytes are
  *         available yet (the caller should accumulate more).
  */
-proto_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed);
+embed_bool protocore_lsv2_parse(const uint8_t *buf, size_t len, Lsv2Telegram *out, size_t *consumed);
 
 /**
  * @brief True if the parsed telegram's mnemonic equals the four characters at @p mnemonic4.
  */
-proto_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4);
+embed_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4);
 
 /**
  * @brief Build a login telegram (`A_LG`): payload is the NUL-terminated privilege group (one of the
@@ -159,20 +159,20 @@ size_t protocore_lsv2_build_run_info(uint8_t *buf, size_t cap, uint16_t info_cod
 /**
  * @brief True if the response is `T_OK` (transaction completed).
  */
-proto_bool protocore_lsv2_is_ok(const Lsv2Telegram *t);
+embed_bool protocore_lsv2_is_ok(const Lsv2Telegram *t);
 
 /**
  * @brief True if the response is an error mnemonic (`T_ER` transaction error or `T_BD` transfer error).
  */
-proto_bool protocore_lsv2_is_error(const Lsv2Telegram *t);
+embed_bool protocore_lsv2_is_error(const Lsv2Telegram *t);
 
 /**
  * @brief Decode an error response's two-byte payload into @p err_class and @p err_code.
  * @return true on an error mnemonic (`T_ER` / `T_BD`) carrying exactly two payload bytes.
  */
-proto_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
+embed_bool protocore_lsv2_error(const Lsv2Telegram *t, uint8_t *err_class, uint8_t *err_code);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LSV2
 

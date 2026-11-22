@@ -11,7 +11,7 @@
 
 #include <unity.h>
 
-static size_t make_query(uint8_t *buf, uint16_t id, const char *name, uint16_t qtype, proto_bool rd)
+static size_t make_query(uint8_t *buf, uint16_t id, const char *name, uint16_t qtype, embed_bool rd)
 {
     size_t n = 0;
     buf[n++] = (uint8_t)(id >> 8);
@@ -67,7 +67,7 @@ void tearDown()
 void test_a_record_answer()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 0x1234, "foo.lan", 1, PROTO_TRUE);
+    size_t qlen = make_query(q, 0x1234, "foo.lan", 1, EMBED_TRUE);
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = qlen;
     DnsServerV.ans.ttl = 60;
@@ -105,7 +105,7 @@ void test_a_record_answer()
 void test_nxdomain()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "unknown.lan", 1, PROTO_FALSE);
+    size_t qlen = make_query(q, 1, "unknown.lan", 1, EMBED_FALSE);
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = qlen;
     DnsServerV.ans.ttl = 60;
@@ -122,7 +122,7 @@ void test_nxdomain()
 void test_non_a_query_no_error()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "foo.lan", 28, PROTO_FALSE);
+    size_t qlen = make_query(q, 1, "foo.lan", 28, EMBED_FALSE);
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = qlen;
     DnsServerV.ans.ttl = 60;
@@ -147,7 +147,7 @@ static uint32_t capture_name(const char *name)
 void test_multilabel_name_reaches_resolver()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "a.b.c.example", 1, PROTO_FALSE);
+    size_t qlen = make_query(q, 1, "a.b.c.example", 1, EMBED_FALSE);
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = qlen;
     DnsServerV.ans.ttl = 60;
@@ -161,7 +161,7 @@ void test_multilabel_name_reaches_resolver()
 void test_malformed_guards()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "foo.lan", 1, PROTO_FALSE);
+    size_t qlen = make_query(q, 1, "foo.lan", 1, EMBED_FALSE);
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = 11;
     DnsServerV.ans.ttl = 60;
@@ -262,7 +262,7 @@ void test_end_to_end_with_table()
     DnsServerV.rec.d = 1;
     DnsServer.add(protocore_dns_server_span());
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 0xABCD, "gw.lan", 1, PROTO_FALSE);
+    size_t qlen = make_query(q, 0xABCD, "gw.lan", 1, EMBED_FALSE);
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = qlen;
     DnsServerV.ans.ttl = 60;
@@ -303,7 +303,7 @@ static size_t make_query_labels(uint8_t *buf, const uint8_t *label_lens, int nla
 void test_dns_opcode_notimp()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 0x2222, "foo.lan", 1, PROTO_FALSE);
+    size_t qlen = make_query(q, 0x2222, "foo.lan", 1, EMBED_FALSE);
     q[2] = (uint8_t)(q[2] | (2u << 3));
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = qlen;
@@ -386,7 +386,7 @@ void test_dns_oversized_name()
 void test_dns_question_exceeds_out_cap()
 {
     uint8_t q[128], out[256];
-    size_t qlen = make_query(q, 1, "foo.lan", 1, PROTO_FALSE);
+    size_t qlen = make_query(q, 1, "foo.lan", 1, EMBED_FALSE);
     DnsServerV.msg.query = q;
     DnsServerV.msg.qlen = qlen;
     DnsServerV.ans.ttl = 60;
@@ -466,7 +466,7 @@ void test_dns_begin_answers_a_query_over_the_wire()
     TEST_ASSERT_TRUE(DnsServerV.ok);
 
     uint8_t q[256];
-    size_t qn = make_query(q, 0x1234, "gw.lan", 1, PROTO_TRUE);
+    size_t qn = make_query(q, 0x1234, "gw.lan", 1, EMBED_TRUE);
     protocore_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
     UdpListener.poll(protocore_udp_listener_span());
 
@@ -484,7 +484,7 @@ void test_dns_begin_answers_a_query_over_the_wire()
     TEST_ASSERT_EQUAL_UINT8(1, d->data[d->len - 1]);
 
     protocore_net_host_udp_reset();
-    qn = make_query(q, 0x5678, "absent.lan", 1, PROTO_TRUE);
+    qn = make_query(q, 0x5678, "absent.lan", 1, EMBED_TRUE);
     protocore_net_host_udp_deliver(53, "192.168.1.50", 40000, q, (uint16_t)qn);
     UdpListener.poll(protocore_udp_listener_span());
     TEST_ASSERT_EQUAL_size_t(1, protocore_net_host_udp_count());

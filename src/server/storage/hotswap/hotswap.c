@@ -16,7 +16,7 @@
 
 #include "server/clock/clock.h" // protocore_millis
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Pure core
@@ -77,17 +77,17 @@ void protocore_hotswap_core_io(uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_io_args.c;
-    proto_bool ok = HotswapV.core_io_args.ok;
+    embed_bool ok = HotswapV.core_io_args.ok;
 
     if (!c || c->state != STORAGE_STATE_READY)
     {
-        HotswapV.ok = PROTO_FALSE;
+        HotswapV.ok = EMBED_FALSE;
         return; // not mounted: the caller should not have been touching it
     }
     if (ok)
     {
         c->fail_run = 0; // any success proves the medium is still there
-        HotswapV.ok = PROTO_FALSE;
+        HotswapV.ok = EMBED_FALSE;
         return;
     }
     if (c->fail_run < 0xFF)
@@ -100,12 +100,12 @@ void protocore_hotswap_core_io(uint8_t *work)
     const uint8_t threshold = c->fail_threshold ? c->fail_threshold : 1u;
     if (c->fail_run < threshold)
     {
-        HotswapV.ok = PROTO_FALSE;
+        HotswapV.ok = EMBED_FALSE;
         return; // one bad write is not a removal
     }
     c->state = STORAGE_STATE_FAULTED;
     c->faults++;
-    HotswapV.ok = PROTO_TRUE;
+    HotswapV.ok = EMBED_TRUE;
 }
 
 void protocore_hotswap_core_due(uint8_t *work)
@@ -116,7 +116,7 @@ void protocore_hotswap_core_due(uint8_t *work)
 
     if (!c || c->state == STORAGE_STATE_READY)
     {
-        HotswapV.ok = PROTO_FALSE;
+        HotswapV.ok = EMBED_FALSE;
         return;
     }
     // Unsigned delta, so this is correct across a millis() rollover.
@@ -127,13 +127,13 @@ void protocore_hotswap_core_probe(uint8_t *work)
 {
     (void)work;
     HotswapCore *c = HotswapV.core_probe_args.c;
-    proto_bool present = HotswapV.core_probe_args.present;
-    proto_bool mounted = HotswapV.core_probe_args.mounted;
+    embed_bool present = HotswapV.core_probe_args.present;
+    embed_bool mounted = HotswapV.core_probe_args.mounted;
     uint32_t now = HotswapV.core_probe_args.now;
 
     if (!c)
     {
-        HotswapV.ok = PROTO_FALSE;
+        HotswapV.ok = EMBED_FALSE;
         return;
     }
     c->last_probe_ms = now;
@@ -169,7 +169,7 @@ typedef struct
     protocore_hotswap_present present;
     protocore_hotswap_event event;
     void *ctx;
-    proto_bool begun;
+    embed_bool begun;
 } HotswapCtx;
 // The caller's borrow, split: the context at its offset. One pointer arrives and every
 // region is that pointer plus a compile-time offset, so the assert below proves the span
@@ -211,7 +211,7 @@ void protocore_hotswap_begin(uint8_t *work)
     HOTSWAP_CTX(work)->unmount = unmount;
     HOTSWAP_CTX(work)->present = present;
     HOTSWAP_CTX(work)->ctx = ctx;
-    HOTSWAP_CTX(work)->begun = PROTO_TRUE;
+    HOTSWAP_CTX(work)->begun = EMBED_TRUE;
     HotswapV.core_init_args.c = &HOTSWAP_CTX(work)->core;
     HotswapV.core_init_args.fail_threshold = PROTOCORE_HOTSWAP_FAIL_THRESHOLD;
     HotswapV.core_init_args.probe_interval_ms = PROTOCORE_HOTSWAP_PROBE_MS;
@@ -251,8 +251,8 @@ void protocore_hotswap_poll_at(uint8_t *work)
         HOTSWAP_CTX(work)->unmount(HOTSWAP_CTX(work)->ctx);
     }
 
-    proto_bool present = HOTSWAP_CTX(work)->present ? HOTSWAP_CTX(work)->present(HOTSWAP_CTX(work)->ctx) : PROTO_TRUE;
-    proto_bool mounted = PROTO_FALSE;
+    embed_bool present = HOTSWAP_CTX(work)->present ? HOTSWAP_CTX(work)->present(HOTSWAP_CTX(work)->ctx) : EMBED_TRUE;
+    embed_bool mounted = EMBED_FALSE;
     if (present && HOTSWAP_CTX(work)->mount)
     {
         mounted = HOTSWAP_CTX(work)->mount(HOTSWAP_CTX(work)->ctx);
@@ -285,7 +285,7 @@ void protocore_hotswap_ready(uint8_t *work)
 
 void protocore_hotswap_io(uint8_t *work)
 {
-    proto_bool ok = HotswapV.io_args.ok;
+    embed_bool ok = HotswapV.io_args.ok;
 
     StorageState was = HOTSWAP_CTX(work)->core.state;
     HotswapV.core_io_args.c = &HOTSWAP_CTX(work)->core;
@@ -369,6 +369,6 @@ void protocore_hotswap_json(uint8_t *work)
 /** @brief The operands and the outcome. */
 HotswapVars HotswapV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HOTSWAP

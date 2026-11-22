@@ -55,7 +55,7 @@
 
 #if PROTOCORE_ENABLE_STOMP
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief One header entry (sec 9 `header = header-name ":" header-value`), sliced from the source. */
 typedef struct
@@ -134,7 +134,7 @@ typedef struct
     StompBufArgs buf;          ///< the caller buffer a codec runs over
     StompBuildArgs build_args; ///< what a build emits
     StompLookupArgs lookup;    ///< what a lookup matches
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     size_t consumed;
     const char *value;
@@ -171,7 +171,7 @@ static const StompNs Stomp __attribute__((unused)) = {
     .unescape = protocore_stomp_unescape,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_STOMP
 

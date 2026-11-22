@@ -42,17 +42,17 @@ void setUp(void)
     protocore_smbus_dev_place(&s_part, TEST_SMBUS_ADDR);
     s_part.block_cmd = TEST_SMBUS_BLOCK_CMD;
     s_part.process_cmd = TEST_SMBUS_PROCESS_CMD;
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
 }
 void tearDown(void)
 {
     protocore_bus_host_detach_all();
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
 }
 
 // Turn the PEC on for both ends at once: 6.4.1 has the slave prepared either way, and a suite that
 // moved only one of them would be testing a mismatch rather than the checksum.
-static void use_pec(proto_bool on)
+static void use_pec(embed_bool on)
 {
     Smbus.set_pec(protocore_smbus_span(), on);
     s_part.pec = on ? 1u : 0u;
@@ -190,13 +190,13 @@ void test_pec_holds_nothing_between_transactions(void)
 // The flag starts off, and reads back whichever way it was last set.
 void test_pec_flag_round_trips(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
-    proto_bool smbus_ok = Smbus.pec_enabled(protocore_smbus_span());
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
+    embed_bool smbus_ok = Smbus.pec_enabled(protocore_smbus_span());
     TEST_ASSERT_FALSE(smbus_ok);
-    Smbus.set_pec(protocore_smbus_span(), PROTO_TRUE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_TRUE);
     smbus_ok = Smbus.pec_enabled(protocore_smbus_span());
     TEST_ASSERT_TRUE(smbus_ok);
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
     smbus_ok = Smbus.pec_enabled(protocore_smbus_span());
     TEST_ASSERT_FALSE(smbus_ok);
 }
@@ -205,10 +205,10 @@ void test_pec_flag_round_trips(void)
 // one, Write Word a command and two with the low octet first.
 void test_write_shapes_put_their_own_octets_on_the_wire(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
 
     protocore_bus_host_reset();
-    proto_bool smbus_ok = Smbus.send_byte(protocore_smbus_span(), 0x2A, 0x5A);
+    embed_bool smbus_ok = Smbus.send_byte(protocore_smbus_span(), 0x2A, 0x5A);
     TEST_ASSERT_TRUE(smbus_ok);
     uint32_t n = 0;
     const uint8_t *tx = protocore_bus_host_written(&n);
@@ -237,9 +237,9 @@ void test_write_shapes_put_their_own_octets_on_the_wire(void)
 // CRC-8 over the address octet plus those octets.
 void test_pec_octet_is_appended_to_a_write(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_TRUE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_TRUE);
     protocore_bus_host_reset();
-    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), 0x2A, 0x10, 0x5A);
+    embed_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), 0x2A, 0x10, 0x5A);
     TEST_ASSERT_TRUE(smbus_ok);
 
     uint32_t n = 0;
@@ -247,16 +247,16 @@ void test_pec_octet_is_appended_to_a_write(void)
     TEST_ASSERT_EQUAL_UINT32(3u, n);
     const uint8_t seq[3] = {0x54, 0x10, 0x5A};
     TEST_ASSERT_EQUAL_HEX8(crc8_smbus(seq, sizeof(seq)), tx[2]);
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
 }
 
 // SMBus 3.1 sec 6.5.9: Block Write puts a byte count between the command and the payload.
 void test_block_write_counts_the_payload(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
     protocore_bus_host_reset();
     static const uint8_t payload[4] = {0xAA, 0xBB, 0xCC, 0xDD};
-    proto_bool smbus_ok = Smbus.write_block(protocore_smbus_span(), 0x2A, 0x30, payload, sizeof(payload));
+    embed_bool smbus_ok = Smbus.write_block(protocore_smbus_span(), 0x2A, 0x30, payload, sizeof(payload));
     TEST_ASSERT_TRUE(smbus_ok);
 
     uint32_t n = 0;
@@ -274,7 +274,7 @@ void test_block_write_refuses_over_the_protocol_cap(void)
 
     protocore_bus_host_reset();
     uint8_t big[PROTOCORE_SMBUS_BLOCK_MAX + 1] = {0};
-    proto_bool smbus_ok = Smbus.write_block(protocore_smbus_span(), 0x2A, 0x30, big, sizeof(big));
+    embed_bool smbus_ok = Smbus.write_block(protocore_smbus_span(), 0x2A, 0x30, big, sizeof(big));
     TEST_ASSERT_FALSE(smbus_ok);
     uint32_t n = 1;
     (void)protocore_bus_host_written(&n);
@@ -292,11 +292,11 @@ void test_block_write_refuses_over_the_protocol_cap(void)
 // sec 6.5.6/6.5.8: a read answers with the octets the slave returned, word reads low octet first.
 void test_read_shapes_take_their_octets_back(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
 
     s_part.reg[0x40] = 0x7E;
     uint8_t b = 0;
-    proto_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), 0x2A, 0x40, &b);
+    embed_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), 0x2A, 0x40, &b);
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX8(0x7E, b);
 
@@ -310,7 +310,7 @@ void test_read_shapes_take_their_octets_back(void)
 // A null destination is refused rather than written through.
 void test_reads_refuse_a_null_destination(void)
 {
-    proto_bool smbus_ok = Smbus.receive_byte(protocore_smbus_span(), 0x2A, NULL);
+    embed_bool smbus_ok = Smbus.receive_byte(protocore_smbus_span(), 0x2A, NULL);
     TEST_ASSERT_FALSE(smbus_ok);
     smbus_ok = Smbus.read_byte(protocore_smbus_span(), 0x2A, 0x40, NULL);
     TEST_ASSERT_FALSE(smbus_ok);
@@ -331,14 +331,14 @@ void test_reads_refuse_a_null_destination(void)
 // the end of the buffer.
 void test_block_read_refuses_a_count_over_the_capacity(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
     protocore_bus_host_reset();
     static const uint8_t reply[6] = {5, 1, 2, 3, 4, 5}; // count 5, then its five octets
     protocore_bus_host_preload(reply, sizeof(reply));
 
     uint8_t out[4];
     size_t len = 99;
-    proto_bool smbus_ok = Smbus.read_block(protocore_smbus_span(), 0x2A, 0x43, out, sizeof(out), &len);
+    embed_bool smbus_ok = Smbus.read_block(protocore_smbus_span(), 0x2A, 0x43, out, sizeof(out), &len);
     TEST_ASSERT_FALSE(smbus_ok);
     TEST_ASSERT_EQUAL_UINT(0u, (unsigned)len);
 }
@@ -346,14 +346,14 @@ void test_block_read_refuses_a_count_over_the_capacity(void)
 // A count of zero is not a block: sec 6.5.10 says a block carries 1..32 octets.
 void test_block_read_refuses_a_zero_count(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
     protocore_bus_host_reset();
     static const uint8_t reply[1] = {0};
     protocore_bus_host_preload(reply, sizeof(reply));
 
     uint8_t out[8];
     size_t len = 99;
-    proto_bool smbus_ok = Smbus.read_block(protocore_smbus_span(), 0x2A, 0x43, out, sizeof(out), &len);
+    embed_bool smbus_ok = Smbus.read_block(protocore_smbus_span(), 0x2A, 0x43, out, sizeof(out), &len);
     TEST_ASSERT_FALSE(smbus_ok);
     TEST_ASSERT_EQUAL_UINT(0u, (unsigned)len);
 }
@@ -361,13 +361,13 @@ void test_block_read_refuses_a_zero_count(void)
 // sec 6.5.11: Process Call writes a word and reads a word back, both low octet first.
 void test_process_call_exchanges_a_word(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
     // 6.5.6: the slave answers with a word it computed, not the one it was sent.
     s_part.process_reply = 0x1234;
     protocore_bus_host_reset();
 
     uint16_t out = 0;
-    proto_bool smbus_ok = Smbus.process_call(protocore_smbus_span(), 0x2A, TEST_SMBUS_PROCESS_CMD, 0xBEEF, &out);
+    embed_bool smbus_ok = Smbus.process_call(protocore_smbus_span(), 0x2A, TEST_SMBUS_PROCESS_CMD, 0xBEEF, &out);
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX16(0x1234, out);
     TEST_ASSERT_EQUAL_HEX16(0xBEEF, s_part.reg[TEST_SMBUS_PROCESS_CMD]); // and it got what was sent
@@ -383,10 +383,10 @@ void test_process_call_exchanges_a_word(void)
 // A slave that does not acknowledge fails the shape rather than reporting a value it never sent.
 void test_a_slave_that_does_not_acknowledge_fails_the_shape(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
     protocore_bus_host_reset();
     protocore_bus_host_fail_next(1);
-    proto_bool smbus_ok = Smbus.send_byte(protocore_smbus_span(), 0x2A, 0x5A);
+    embed_bool smbus_ok = Smbus.send_byte(protocore_smbus_span(), 0x2A, 0x5A);
     TEST_ASSERT_FALSE(smbus_ok);
 
     protocore_bus_host_reset();
@@ -401,7 +401,7 @@ void test_a_slave_that_does_not_acknowledge_fails_the_shape(void)
 // whole point of the octet is that a corrupted reply is refused, not delivered.
 void test_a_wrong_pec_on_a_read_is_rejected(void)
 {
-    Smbus.set_pec(protocore_smbus_span(), PROTO_TRUE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_TRUE);
     protocore_bus_host_reset();
 
     // The slave supplies a corrupted checksum, which is the line noise 6.4 exists to catch.
@@ -409,7 +409,7 @@ void test_a_wrong_pec_on_a_read_is_rejected(void)
     s_part.reg[0x40] = 0x7E;
     s_part.corrupt_pec = 1u;
     uint8_t b = 0;
-    proto_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), 0x2A, 0x40, &b);
+    embed_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), 0x2A, 0x40, &b);
     TEST_ASSERT_FALSE(smbus_ok);
 
     // The same reply with the correct checksum octet is accepted.
@@ -417,7 +417,7 @@ void test_a_wrong_pec_on_a_read_is_rejected(void)
     smbus_ok = Smbus.read_byte(protocore_smbus_span(), 0x2A, 0x40, &b);
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX8(0x7E, b);
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE);
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE);
 }
 
 // ---------------------------------------------------------------------------
@@ -428,7 +428,7 @@ void test_a_wrong_pec_on_a_read_is_rejected(void)
 // 6.5.4 / 6.5.5 pair.
 void test_a_byte_round_trips_through_a_command_code(void)
 {
-    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x10u, 0xA5u);
+    embed_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x10u, 0xA5u);
     TEST_ASSERT_TRUE(smbus_ok);
 
     uint8_t got = 0;
@@ -441,7 +441,7 @@ void test_a_byte_round_trips_through_a_command_code(void)
 // the halves exchanged rather than equal.
 void test_a_word_round_trips_low_octet_first(void)
 {
-    proto_bool smbus_ok = Smbus.write_word(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x11u, 0x1234u);
+    embed_bool smbus_ok = Smbus.write_word(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x11u, 0x1234u);
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX16(0x1234u, s_part.reg[0x11u]);
 
@@ -456,7 +456,7 @@ void test_a_word_round_trips_low_octet_first(void)
 void test_a_block_round_trips_with_its_count(void)
 {
     static const uint8_t payload[5] = {0xDE, 0xAD, 0xBE, 0xEF, 0x42};
-    proto_bool smbus_ok =
+    embed_bool smbus_ok =
         Smbus.write_block(protocore_smbus_span(), TEST_SMBUS_ADDR, TEST_SMBUS_BLOCK_CMD, payload, sizeof(payload));
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_UINT8(5u, s_part.block_len);
@@ -475,8 +475,8 @@ void test_a_block_round_trips_with_its_count(void)
 // processed at all, which is what the rejection count records.
 void test_smbus31_the_pec_spans_the_address_octets(void)
 {
-    use_pec(PROTO_TRUE);
-    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x20u, 0x5Au);
+    use_pec(EMBED_TRUE);
+    embed_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x20u, 0x5Au);
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_UINT8(0u, s_part.rejected); // the slave agreed with the driver's checksum
     TEST_ASSERT_EQUAL_HEX16(0x5Au, s_part.reg[0x20u]);
@@ -486,10 +486,10 @@ void test_smbus31_the_pec_spans_the_address_octets(void)
 // driver verifies it, so a reading only comes back when both computed the same span.
 void test_smbus31_a_read_verifies_the_pec_the_slave_supplied(void)
 {
-    use_pec(PROTO_TRUE);
+    use_pec(EMBED_TRUE);
     s_part.reg[0x21u] = 0x77u;
     uint8_t got = 0;
-    proto_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x21u, &got);
+    embed_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x21u, &got);
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX8(0x77u, got);
 }
@@ -500,7 +500,7 @@ void test_smbus31_a_read_verifies_the_pec_the_slave_supplied(void)
 void test_smbus31_a_wrong_pec_is_not_processed(void)
 {
     s_part.pec = 1u;                                    // the slave expects a PEC
-    Smbus.set_pec(protocore_smbus_span(), PROTO_FALSE); // the driver does not send one
+    Smbus.set_pec(protocore_smbus_span(), EMBED_FALSE); // the driver does not send one
     Smbus.write_word(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x22u, 0xBEEFu);
     TEST_ASSERT_EQUAL_UINT8(1u, s_part.rejected);
     TEST_ASSERT_EQUAL_HEX16(0x0000u, s_part.reg[0x22u]); // refused, so nothing landed
@@ -510,8 +510,8 @@ void test_smbus31_a_wrong_pec_is_not_processed(void)
 // longer than one octet as well.
 void test_smbus31_a_word_and_a_block_round_trip_with_the_pec_on(void)
 {
-    use_pec(PROTO_TRUE);
-    proto_bool smbus_ok = Smbus.write_word(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x23u, 0xCAFEu);
+    use_pec(EMBED_TRUE);
+    embed_bool smbus_ok = Smbus.write_word(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x23u, 0xCAFEu);
     TEST_ASSERT_TRUE(smbus_ok);
     uint16_t word = 0;
     smbus_ok = Smbus.read_word(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x23u, &word);
@@ -543,7 +543,7 @@ void test_smbus31_two_slaves_keep_their_own_command_codes(void)
     Smbus.write_byte(protocore_smbus_span(), 0x2Bu, 0x30u, 0x22u);
 
     uint8_t got = 0;
-    proto_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x30u, &got);
+    embed_bool smbus_ok = Smbus.read_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x30u, &got);
     TEST_ASSERT_TRUE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX8(0x11u, got);
     smbus_ok = Smbus.read_byte(protocore_smbus_span(), 0x2Bu, 0x30u, &got);
@@ -555,7 +555,7 @@ void test_smbus31_two_slaves_keep_their_own_command_codes(void)
 void test_a_refused_transfer_fails_the_write(void)
 {
     protocore_bus_host_fail = 1u;
-    proto_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x31u, 0x99u);
+    embed_bool smbus_ok = Smbus.write_byte(protocore_smbus_span(), TEST_SMBUS_ADDR, 0x31u, 0x99u);
     TEST_ASSERT_FALSE(smbus_ok);
     TEST_ASSERT_EQUAL_HEX16(0x0000u, s_part.reg[0x31u]);
 }

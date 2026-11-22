@@ -98,7 +98,7 @@ static const uint32_t H0[8] = {
 // contexts interleaving never share what the H bank holds.
 static void sha256_block(uint32_t h[8], const uint8_t blk[PROTOCORE_SHA256_BLOCK_LEN])
 {
-    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, h, 8u, (const uint32_t *)(const void *)blk, 16u, PROTO_FALSE);
+    protocore_sha_hw_block(PROTOCORE_SHA_MODE_256, h, 8u, (const uint32_t *)(const void *)blk, 16u, EMBED_FALSE);
 }
 #endif
 
@@ -367,39 +367,39 @@ static void sha256_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA256_DIGEST_
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_sha256_init(uint8_t *work)
+embed_bool protocore_sha256_init(uint8_t *work)
 {
     sha256_state_init(work);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sha256_update(uint8_t *work, const uint8_t *data, size_t len)
+embed_bool protocore_sha256_update(uint8_t *work, const uint8_t *data, size_t len)
 {
     sha256_absorb(work, data, len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sha256_final(uint8_t *work, uint8_t *out)
+embed_bool protocore_sha256_final(uint8_t *work, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sha256_finish(work, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-proto_bool protocore_sha256_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
+embed_bool protocore_sha256_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sha256_state_init(work);
     sha256_absorb(work, data, len);
     sha256_finish(work, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_SHA256

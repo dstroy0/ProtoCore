@@ -20,7 +20,7 @@
 
 typedef struct
 {
-    proto_bool is_dir;
+    embed_bool is_dir;
     char name[PROTOCORE_MNT_NAME_MAX];
     size_t len;
     uint8_t data[PROTOCORE_MNT_RAM_FILE_SIZE];
@@ -28,8 +28,8 @@ typedef struct
 
 typedef struct
 {
-    proto_bool open;
-    proto_bool is_dir;
+    embed_bool open;
+    embed_bool is_dir;
     int file;   ///< index into rf[]; for a directory cursor, -1 means the root
     size_t pos; ///< file: byte offset. directory: the next rf[] index to examine.
     protocore_mnt_mode mode;
@@ -51,7 +51,7 @@ static_assert(PROTOCORE_MNT_RAM_FILES > 0 && PROTOCORE_MNT_RAM_FILES <= 32,
               "the RAM pool's occupancy is one 32-bit word, one bit per file");
 #define PROTOCORE_MNT_RAM_BITS ((uint32_t)(((uint64_t)1 << PROTOCORE_MNT_RAM_FILES) - 1u))
 
-static proto_bool ram_used(int i)
+static embed_bool ram_used(int i)
 {
     return (s_mnt.used & (1u << i)) != 0;
 }
@@ -61,7 +61,7 @@ static int ram_find(const char *name)
     for (int i = 0; i < PROTOCORE_MNT_RAM_FILES; i++)
     {
         if (ram_used(i) && EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = s_mnt.rf[i].name, .other = name,
-                                      .cap = PROTOCORE_MNT_NAME_MAX, .ci = PROTO_FALSE))
+                                      .cap = PROTOCORE_MNT_NAME_MAX, .ci = EMBED_FALSE))
         {
             return i;
         }
@@ -69,7 +69,7 @@ static int ram_find(const char *name)
     return -1;
 }
 
-static int ram_create(const char *name, proto_bool is_dir)
+static int ram_create(const char *name, embed_bool is_dir)
 {
     if (EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = name, .cap = PROTOCORE_MNT_NAME_MAX + 1) >=
         PROTOCORE_MNT_NAME_MAX)
@@ -102,7 +102,7 @@ static int ram_alloc_handle(void)
     return -1;
 }
 
-static proto_bool ram_handle_ok(int h)
+static embed_bool ram_handle_ok(int h)
 {
     return h >= 0 && h < PROTOCORE_MNT_MAX_OPEN && s_mnt.rh[h].open;
 }
@@ -116,30 +116,30 @@ static const char *ram_dirpath(const RamHandle *h)
 
 // True if @p name lies directly in @p prefix (one level down, not deeper); @p rest gets the entry's
 // own name. The root prefix is "/" and carries its own separator; any other prefix needs one.
-static proto_bool ram_child_of(const char *name, const char *prefix, const char **rest)
+static embed_bool ram_child_of(const char *name, const char *prefix, const char **rest)
 {
     size_t plen = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = prefix, .cap = PROTOCORE_MNT_NAME_MAX);
-    if (!EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = name, .other = prefix, .cap = plen, .ci = PROTO_FALSE))
+    if (!EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = name, .other = prefix, .cap = plen, .ci = EMBED_FALSE))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *tail = name + plen;
     if (plen > 1) // a non-root prefix does not include the separator
     {
         if (tail[0] != '/')
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         tail++;
     }
     if (tail[0] == '\0' ||
         EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = tail, .cap = PROTOCORE_MNT_NAME_MAX - (size_t)(tail - name),
-                   .other = "/", .other_cap = sizeof("/"), .ci = PROTO_FALSE) != NULL)
+                   .other = "/", .other_cap = sizeof("/"), .ci = EMBED_FALSE) != NULL)
     {
-        return PROTO_FALSE; // the prefix itself, or something deeper than one level
+        return EMBED_FALSE; // the prefix itself, or something deeper than one level
     }
     *rest = tail;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static int ram_open(const char *path, int mode)
@@ -165,7 +165,7 @@ static int ram_open(const char *path, int mode)
     {
         if (f < 0)
         {
-            f = ram_create(path, PROTO_FALSE);
+            f = ram_create(path, EMBED_FALSE);
         }
         if (f < 0)
         {
@@ -181,8 +181,8 @@ static int ram_open(const char *path, int mode)
     {
         return -1; // handle pool exhausted
     }
-    s_mnt.rh[h].open = PROTO_TRUE;
-    s_mnt.rh[h].is_dir = PROTO_FALSE;
+    s_mnt.rh[h].open = EMBED_TRUE;
+    s_mnt.rh[h].is_dir = EMBED_FALSE;
     s_mnt.rh[h].file = f;
     s_mnt.rh[h].mode = m;
     s_mnt.rh[h].pos = (m == PROTOCORE_MNT_APPEND) ? s_mnt.rf[f].len : 0;
@@ -225,18 +225,18 @@ static void ram_close(int h)
 {
     if (h >= 0 && h < PROTOCORE_MNT_MAX_OPEN)
     {
-        s_mnt.rh[h].open = PROTO_FALSE;
+        s_mnt.rh[h].open = EMBED_FALSE;
     }
 }
 
-static proto_bool ram_seek(int h, uint64_t off)
+static embed_bool ram_seek(int h, uint64_t off)
 {
     if (!ram_handle_ok(h) || s_mnt.rh[h].is_dir || off > PROTOCORE_MNT_RAM_FILE_SIZE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s_mnt.rh[h].pos = (size_t)(off);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static long ram_size(const char *path)
@@ -245,7 +245,7 @@ static long ram_size(const char *path)
     return (f < 0 || s_mnt.rf[f].is_dir) ? -1 : (long)(s_mnt.rf[f].len);
 }
 
-static proto_bool ram_exists(const char *path)
+static embed_bool ram_exists(const char *path)
 {
     return ram_find(path) >= 0;
 }
@@ -253,28 +253,28 @@ static proto_bool ram_exists(const char *path)
 // Delete one file. mnt is blind: it does not know what a subtree is, because it does not know what a
 // path means. Removing a directory and its members is the accessor's operation (protocore_fs_remove), built
 // out of these per-node calls.
-static proto_bool ram_remove(const char *path)
+static embed_bool ram_remove(const char *path)
 {
     int f = ram_find(path);
     if (f < 0 || s_mnt.rf[f].is_dir)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s_mnt.used &= ~(1u << f);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool ram_rename(const char *from, const char *to)
+static embed_bool ram_rename(const char *from, const char *to)
 {
     if (from == NULL || to == NULL ||
         EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = to, .cap = PROTOCORE_MNT_NAME_MAX + 1) >= PROTOCORE_MNT_NAME_MAX)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int f = ram_find(from);
     if (f < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     int dst = ram_find(to);
     if (dst >= 0)
@@ -283,35 +283,35 @@ static proto_bool ram_rename(const char *from, const char *to)
     }
     EMBED_CALL(cellul.copy, CatenaFinitaCfg, .dst = s_mnt.rf[f].name, .src = to, .cap = sizeof(s_mnt.rf[f].name));
     s_mnt.rf[f].name[PROTOCORE_MNT_NAME_MAX - 1] = '\0';
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-static proto_bool ram_mkdir(const char *path)
+static embed_bool ram_mkdir(const char *path)
 {
     if (path == NULL || ram_find(path) >= 0)
     {
-        return PROTO_FALSE; // already exists
+        return EMBED_FALSE; // already exists
     }
-    return ram_create(path, PROTO_TRUE) >= 0;
+    return ram_create(path, EMBED_TRUE) >= 0;
 }
 
-static proto_bool ram_rmdir(const char *path)
+static embed_bool ram_rmdir(const char *path)
 {
     int d = ram_find(path);
     if (d < 0 || !s_mnt.rf[d].is_dir)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (int i = 0; i < PROTOCORE_MNT_RAM_FILES; i++)
     {
         const char *rest = NULL;
         if (i != d && ram_used(i) && ram_child_of(s_mnt.rf[i].name, s_mnt.rf[d].name, &rest))
         {
-            return PROTO_FALSE; // not empty
+            return EMBED_FALSE; // not empty
         }
     }
     s_mnt.used &= ~(1u << d);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The RAM pool keeps no clock, so mtime is 0 - which protocore_mnt_stat states as the contract. A listing
@@ -323,26 +323,26 @@ static void ram_fill_stat(const RamFile *f, protocore_mnt_stat *out)
     out->mtime = 0;
 }
 
-static proto_bool ram_stat(const char *path, protocore_mnt_stat *out)
+static embed_bool ram_stat(const char *path, protocore_mnt_stat *out)
 {
     if (path == NULL || out == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (path[0] == '/' && path[1] == '\0') // the root always exists and is a directory
     {
-        out->is_dir = PROTO_TRUE;
+        out->is_dir = EMBED_TRUE;
         out->size = 0;
         out->mtime = 0;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     int f = ram_find(path);
     if (f < 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     ram_fill_stat(&s_mnt.rf[f], out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 static int ram_opendir(const char *path)
@@ -365,18 +365,18 @@ static int ram_opendir(const char *path)
     {
         return -1;
     }
-    s_mnt.rh[h].open = PROTO_TRUE;
-    s_mnt.rh[h].is_dir = PROTO_TRUE;
+    s_mnt.rh[h].open = EMBED_TRUE;
+    s_mnt.rh[h].is_dir = EMBED_TRUE;
     s_mnt.rh[h].file = d;
     s_mnt.rh[h].pos = 0;
     return h;
 }
 
-static proto_bool ram_readdir(int h, protocore_mnt_stat *out, char *name, size_t name_cap)
+static embed_bool ram_readdir(int h, protocore_mnt_stat *out, char *name, size_t name_cap)
 {
     if (!ram_handle_ok(h) || !s_mnt.rh[h].is_dir || out == NULL || name == NULL || name_cap == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     const char *prefix = ram_dirpath(&s_mnt.rh[h]);
     for (size_t i = s_mnt.rh[h].pos; i < PROTOCORE_MNT_RAM_FILES; i++)
@@ -395,10 +395,10 @@ static proto_bool ram_readdir(int h, protocore_mnt_stat *out, char *name, size_t
         name[rl] = '\0';
         ram_fill_stat(&s_mnt.rf[i], out);
         s_mnt.rh[h].pos = i + 1;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     s_mnt.rh[h].pos = PROTOCORE_MNT_RAM_FILES;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // sync is NULL: the RAM disk has no medium to push bytes to, so it cannot promise durability and
@@ -420,7 +420,7 @@ void protocore_mnt_ram_format(uint8_t *work)
     s_mnt.used = 0; // the whole pool, one store rather than a loop
     for (int h = 0; h < PROTOCORE_MNT_MAX_OPEN; h++)
     {
-        s_mnt.rh[h].open = PROTO_FALSE;
+        s_mnt.rh[h].open = EMBED_FALSE;
     }
 }
 

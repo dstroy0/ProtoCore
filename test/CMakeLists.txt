@@ -19,6 +19,18 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(PROTOCORE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 
+# The widths of embedded_types, for each target of the build. ProtoCore, MMgr and idemIP thus read one word
+# and one index. The word is that of the board profile in vendor/board_profiles, and not that of the host.
+set(PROTOCORE_WORD_BITS 32 CACHE STRING "EMBED_WORD_BITS of each target")
+set(PROTOCORE_INDEX_BITS 32 CACHE STRING "EMBED_INDEX_BITS of each target")
+add_compile_definitions(EMBED_WORD_BITS=${PROTOCORE_WORD_BITS} EMBED_INDEX_BITS=${PROTOCORE_INDEX_BITS})
+
+# What the dependencies ask each build to state. The host reads its clock through embed_clock_ns, in
+# nanoseconds. memoriam_praetereo of MMgr drives no engine on the host, and so it takes no recovery, no
+# settle and the library default of channels and keepalive.
+add_compile_definitions(EMBED_CLOCK_SOURCE=EMBED_CLOCK_CALLER EMBED_CLOCK_HZ=1000000000
+                        PRAET_RECOVERY=0 PRAET_CHANNELS=8 PRAET_SETTLE_MICROS=0 PRAET_KEEPALIVE_MICROS=1000)
+
 enable_testing()
 
 # The library's own build description. Until this was here nothing evaluated it: the 401 module
@@ -5070,6 +5082,7 @@ protocore_env(native_iface_bridge_hw
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6217,6 +6230,7 @@ protocore_env(native_modbus
     "PROTOCORE_MODBUS_HOLDING_REGS=256"
     "PROTOCORE_MODBUS_INPUT_REGS=256"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6251,6 +6265,7 @@ protocore_env(native_modbus_master
     "PROTOCORE_ENABLE_MODBUS_MASTER=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MODBUS_RTU=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7402,6 +7417,7 @@ protocore_env(native_pentest
     "PROTOCORE_ENABLE_UDP=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
     "PROTOCORE_ENABLE_DNS_RESOLVER=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8690,6 +8706,7 @@ protocore_env(native_relay_listener
     "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_TCP_CLIENT=1"
     "PROTOCORE_ENABLE_DNS_RESOLVER=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8999,6 +9016,7 @@ protocore_env(native_sb_modbus
     "PROTOCORE_ENABLE_MODBUS_MASTER=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MODBUS_RTU=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11621,6 +11639,7 @@ protocore_env(native_ssh_flow
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_HAS_HW_BIGNUM=1"
     "PROTOCORE_RSA_MODMUL_HW=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11678,6 +11697,7 @@ protocore_env(native_ssh_flow_sw
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_HAS_HW_BIGNUM=0"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11880,10 +11900,60 @@ protocore_env(native_stack
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/engine/engine.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net.c"
   DEFINES
     "PROTOCORE_ENABLE_IDEMIP=1"
+  LIBS
+    pc_idemip
+  INCLUDES
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
+    "${PROTOCORE_ROOT}/test/support"
+    "${PROTOCORE_ROOT}/src"
+    "${PROTOCORE_ROOT}/include"
+    "${PROTOCORE_ROOT}/include/idemIP"
+    "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/include/MMgr/include"
+    "${PROTOCORE_ROOT}/include/MMgr/src"
+    "${PROTOCORE_ROOT}/include/embedded_types/include"
+    "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
+)
+
+# The TCP and UDP transport, the DNS resolver and the TCP client over the idemIP arm of the protocore_net_* seam (network_drivers/network/stack/stack_net.c).
+protocore_env(native_stack_transport
+  SUITE unit/src/network_drivers/network/stack/test_stack
+  SOURCES
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
+    "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/client/client.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/protocol/protocol.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/lower/lower.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/server/server.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
+    "${PROTOCORE_ROOT}/src/server/clock/clock.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/network.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_resolver/dns_resolver.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns_wire/dns_wire.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/dns/dns/dns.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/udp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/server/server.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
+    "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net.c"
+  DEFINES
+    "PROTOCORE_ENABLE_IDEMIP=1"
+    "PROTOCORE_ENABLE_HTTP_CLIENT=1"
+    "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
+    "PROTOCORE_ENABLE_TCP_CLIENT=1"
+    "PROTOCORE_ENABLE_DNS_RESOLVER=1"
   LIBS
     pc_idemip
   INCLUDES
@@ -12181,31 +12251,6 @@ protocore_env(native_tcp_conn
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TCP=1"
-  INCLUDES
-    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
-    "${PROTOCORE_ROOT}/test/support"
-    "${PROTOCORE_ROOT}/src"
-    "${PROTOCORE_ROOT}/include"
-    "${PROTOCORE_ROOT}/include/idemIP"
-    "${PROTOCORE_ROOT}/."
-    "${PROTOCORE_ROOT}/include/MMgr/include"
-    "${PROTOCORE_ROOT}/include/MMgr/src"
-    "${PROTOCORE_ROOT}/include/embedded_types/include"
-    "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
-)
-
-# The TCP engine (network_drivers/transport/tcp/engine) on the idemIP stack over the fake PHY of idemIP.
-protocore_env(native_tcp_engine
-  SUITE unit/src/network_drivers/transport/tcp/test_tcp_engine
-  SOURCES
-    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/engine/engine.c"
-    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-  DEFINES
-    "PROTOCORE_ENABLE_IDEMIP=1"
-  LIBS
-    pc_idemip
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12735,6 +12780,7 @@ protocore_env(native_tls_seam
     "PROTOCORE_ENABLE_TLS_RPK=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_X509=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12867,6 +12913,7 @@ protocore_env(native_udp
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13484,9 +13531,10 @@ protocore_env(native_wifi_link
   SOURCES
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/engine/engine.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/wifi_link/wifi_link.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net.c"
   DEFINES
     "PROTOCORE_ENABLE_IDEMIP=1"
   LIBS

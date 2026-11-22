@@ -53,7 +53,7 @@ void test_rfc9000_sample_varints_as_frame_lengths(void)
         TEST_ASSERT_EQUAL_MEMORY(CASES[i].bytes, g_out + 1, CASES[i].n);
 
         H3FrameHeader f;
-        proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
+        embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
         TEST_ASSERT_TRUE(h3_frame_ok);
         TEST_ASSERT_EQUAL_HEX64(H3_DATA, f.type);
         TEST_ASSERT_EQUAL_HEX64(CASES[i].length, f.length);
@@ -68,7 +68,7 @@ void test_rfc9000_long_spelling_decodes_but_is_not_emitted(void)
 {
     static const uint8_t LONG_FORM[3] = {0x00, 0x40, 0x25};
     H3FrameHeader f;
-    proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, LONG_FORM, sizeof(LONG_FORM), &f);
+    embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, LONG_FORM, sizeof(LONG_FORM), &f);
     TEST_ASSERT_TRUE(h3_frame_ok);
     TEST_ASSERT_EQUAL_HEX64(37u, f.length);
     TEST_ASSERT_EQUAL_UINT(3u, f.header_len);
@@ -99,16 +99,16 @@ void test_rfc9114_reserved_http2_frame_types(void)
     static const uint64_t ASSIGNED[7] = {0x00, 0x01, 0x03, 0x04, 0x05, 0x07, 0x0d};
     for (size_t i = 0; i < 4; i++)
     {
-        proto_bool h3_frame_ok = H3Frame.type_reserved(h3_frame_work, RESERVED[i]);
+        embed_bool h3_frame_ok = H3Frame.type_reserved(h3_frame_work, RESERVED[i]);
         TEST_ASSERT_TRUE(h3_frame_ok);
     }
     for (size_t i = 0; i < 7; i++)
     {
-        proto_bool h3_frame_ok = H3Frame.type_reserved(h3_frame_work, ASSIGNED[i]);
+        embed_bool h3_frame_ok = H3Frame.type_reserved(h3_frame_work, ASSIGNED[i]);
         TEST_ASSERT_FALSE(h3_frame_ok);
     }
     // sec 7.2.8 grease: 0x1f * N + 0x21, here N = 0 and N = 1
-    proto_bool h3_frame_ok = H3Frame.type_reserved(h3_frame_work, 0x21);
+    embed_bool h3_frame_ok = H3Frame.type_reserved(h3_frame_work, 0x21);
     TEST_ASSERT_FALSE(h3_frame_ok);
     h3_frame_ok = H3Frame.type_reserved(h3_frame_work, 0x40);
     TEST_ASSERT_FALSE(h3_frame_ok);
@@ -145,7 +145,7 @@ void test_rfc9114_settings_round_trip(void)
     TEST_ASSERT_EQUAL_UINT(2u + 13u, n);
 
     H3FrameHeader f;
-    proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
+    embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
     TEST_ASSERT_TRUE(h3_frame_ok);
     TEST_ASSERT_EQUAL_HEX64(H3_SETTINGS, f.type);
     TEST_ASSERT_EQUAL_HEX64(13u, f.length);
@@ -169,13 +169,13 @@ void test_rfc9114_reserved_settings_identifiers(void)
         uint8_t pay[2] = {id, 0x00};
         H3Settings s;
         H3Frame.settings_defaults(h3_frame_work, &s);
-        proto_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, pay, sizeof(pay), &s);
+        embed_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, pay, sizeof(pay), &s);
         TEST_ASSERT_FALSE(h3_frame_ok);
     }
     // an empty SETTINGS payload is legal and changes nothing
     H3Settings s;
     H3Frame.settings_defaults(h3_frame_work, &s);
-    proto_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, g_out, 0, &s);
+    embed_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, g_out, 0, &s);
     TEST_ASSERT_TRUE(h3_frame_ok);
     TEST_ASSERT_EQUAL_HEX64(0xFFFFFFFFFFFFFFFFULL, s.max_field_section_size);
 }
@@ -186,7 +186,7 @@ void test_rfc9114_settings_truncated_pair(void)
     static const uint8_t ODD[1] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE}; // an id with no value
     H3Settings s;
     H3Frame.settings_defaults(h3_frame_work, &s);
-    proto_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, ODD, sizeof(ODD), &s);
+    embed_bool h3_frame_ok = H3Frame.parse_settings(h3_frame_work, ODD, sizeof(ODD), &s);
     TEST_ASSERT_FALSE(h3_frame_ok);
 
     static const uint8_t SHORT_VAL[2] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE, 0x40}; // 2-byte value, 1 present
@@ -205,7 +205,7 @@ void test_rfc9114_data_and_headers_builders(void)
     size_t h3_frame_n = H3Frame.build_data(h3_frame_work, g_out, sizeof(g_out), BODY, sizeof(BODY));
     size_t n = h3_frame_n;
     TEST_ASSERT_EQUAL_UINT(2u + 5u, n);
-    proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
+    embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
     TEST_ASSERT_TRUE(h3_frame_ok);
     TEST_ASSERT_EQUAL_HEX64(H3_DATA, f.type);
     TEST_ASSERT_EQUAL_HEX64(5u, f.length);
@@ -239,7 +239,7 @@ void test_rfc9114_goaway_builder(void)
     TEST_ASSERT_EQUAL_HEX8(0xbd, g_out[3]);
 
     H3FrameHeader f;
-    proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
+    embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, g_out, n, &f);
     TEST_ASSERT_TRUE(h3_frame_ok);
     TEST_ASSERT_EQUAL_HEX64(H3_GOAWAY, f.type);
     TEST_ASSERT_EQUAL_HEX64(2u, f.length);
@@ -253,7 +253,7 @@ void test_truncated_header_is_refused(void)
     static const uint8_t TYPE_ONLY[1] = {0x00};       // a type with no length
     static const uint8_t SHORT_LEN[2] = {0x00, 0x40}; // length announces 2 octets, 1 present
     static const uint8_t SHORT_TYPE[1] = {0x9d};      // type announces 4 octets, 1 present
-    proto_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, TYPE_ONLY, sizeof(TYPE_ONLY), &f);
+    embed_bool h3_frame_ok = H3Frame.parse_header(h3_frame_work, TYPE_ONLY, sizeof(TYPE_ONLY), &f);
     TEST_ASSERT_FALSE(h3_frame_ok);
     h3_frame_ok = H3Frame.parse_header(h3_frame_work, SHORT_LEN, sizeof(SHORT_LEN), &f);
     TEST_ASSERT_FALSE(h3_frame_ok);

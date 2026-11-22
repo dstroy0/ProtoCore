@@ -18,7 +18,7 @@
 #include "server/web/edge_cache/edge_mesh/edge_mesh.h"
 #include "services/storage/dbm/dbm.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 static void put_u16(uint8_t *p, uint16_t v)
 {
@@ -59,21 +59,21 @@ static int64_t get_i64(const uint8_t *p)
 }
 
 // True (and stops) once buf[0..min(len,4)] diverges from the fixed request/response magic+version prefix.
-static proto_bool magic_bad(const uint8_t *buf, size_t len)
+static embed_bool magic_bad(const uint8_t *buf, size_t len)
 {
     if (len >= 1 && buf[0] != PROTOCORE_EDGE_MESH_MAGIC0)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (len >= 2 && buf[1] != PROTOCORE_EDGE_MESH_MAGIC1)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (len >= 3 && buf[2] != PROTOCORE_EDGE_MESH_VERSION)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // --- frame codec ---------------------------------------------------------------------------------
@@ -271,7 +271,7 @@ void protocore_edge_mesh_deserialize_entry(uint8_t *work)
 
     if (!buf || !e || len < PROTOCORE_EDGE_MESH_TRAILER)
     {
-        EdgeMeshV.ok = PROTO_FALSE;
+        EdgeMeshV.ok = EMBED_FALSE;
         return;
     }
     int64_t date = get_i64(buf + 0);
@@ -286,7 +286,7 @@ void protocore_edge_mesh_deserialize_entry(uint8_t *work)
     EdgeCacheSd.deserialize(work);
     if (!EdgeCacheSdV.ok)
     {
-        EdgeMeshV.ok = PROTO_FALSE;
+        EdgeMeshV.ok = EMBED_FALSE;
         return;
     }
     e->date_epoch = date;
@@ -296,13 +296,13 @@ void protocore_edge_mesh_deserialize_entry(uint8_t *work)
     e->initial_age = (long)current_age; // the sender's age at transfer -> receiver keeps propagating it
     e->insert_ms = now_ms;
     e->last_used_ms = now_ms;
-    EdgeMeshV.ok = PROTO_TRUE;
+    EdgeMeshV.ok = EMBED_TRUE;
 }
 
 void protocore_edge_mesh_build_response(uint8_t *work)
 {
     (void)work;
-    proto_bool hit = EdgeMeshV.build_response_args.hit;
+    embed_bool hit = EdgeMeshV.build_response_args.hit;
     const uint8_t *entry = EdgeMeshV.build_response_args.entry;
     size_t entry_len = EdgeMeshV.build_response_args.entry_len;
     uint8_t *out = EdgeMeshV.build_response_args.out;
@@ -508,6 +508,6 @@ void protocore_edge_mesh_fetch_end(uint8_t *work)
 /** @brief The operands and the outcome. */
 EdgeMeshVars EdgeMeshV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_MESH

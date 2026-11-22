@@ -29,7 +29,7 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The sender of a received datagram.
@@ -111,7 +111,7 @@ typedef struct
     UdpBindArgs bind;      ///< what creating a receive port takes (RFC 768 User Interface)
     UdpSendArgs send_args; ///< what sending a datagram takes
     UdpPeerArgs peer_args; ///< what a sender lookup reads and writes
-    proto_bool ok;
+    embed_bool ok;
     const char *text;
 } UdpListenerVars;
 
@@ -171,6 +171,6 @@ static const UdpListenerNs UdpListener __attribute__((unused)) = {
  */
 uint8_t *protocore_udp_listener_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_UDP_SERVER_H

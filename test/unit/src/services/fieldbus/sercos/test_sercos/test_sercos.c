@@ -65,14 +65,14 @@ void test_idn_symbolic_names(void)
 {
     struct
     {
-        proto_bool product;
+        embed_bool product;
         uint8_t set;
         uint16_t block;
         uint16_t idn;
     } static const CASES[] = {
-        {PROTO_FALSE, 0, 100, 0x0064}, {PROTO_FALSE, 0, 1, 0x0001},   {PROTO_FALSE, 0, 0, 0x0000},
-        {PROTO_TRUE, 0, 100, 0x8064},  {PROTO_FALSE, 1, 100, 0x1064}, {PROTO_FALSE, 7, 4095, 0x7FFF},
-        {PROTO_TRUE, 7, 4095, 0xFFFF}, {PROTO_TRUE, 0, 0, 0x8000},
+        {EMBED_FALSE, 0, 100, 0x0064}, {EMBED_FALSE, 0, 1, 0x0001},   {EMBED_FALSE, 0, 0, 0x0000},
+        {EMBED_TRUE, 0, 100, 0x8064},  {EMBED_FALSE, 1, 100, 0x1064}, {EMBED_FALSE, 7, 4095, 0x7FFF},
+        {EMBED_TRUE, 7, 4095, 0xFFFF}, {EMBED_TRUE, 0, 0, 0x8000},
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
@@ -83,7 +83,7 @@ void test_idn_symbolic_names(void)
         uint16_t got = SercosV.value;
         TEST_ASSERT_EQUAL_HEX16(CASES[i].idn, got);
 
-        proto_bool p = PROTO_FALSE;
+        embed_bool p = EMBED_FALSE;
         uint8_t s = 0xFF;
         uint16_t b = 0xFFFF;
         SercosV.idn_parse_args.idn = CASES[i].idn;
@@ -105,17 +105,17 @@ void test_idn_symbolic_names(void)
 // (0x8000 | 0x7000 | 0x0FFF = 0xFFFF), which is what "no field overlaps another" means.
 void test_idn_fields_are_disjoint_and_tile_the_word(void)
 {
-    SercosV.idn_args.is_product = PROTO_TRUE;
+    SercosV.idn_args.is_product = EMBED_TRUE;
     SercosV.idn_args.param_set = 0;
     SercosV.idn_args.data_block = 0;
     Sercos.idn(sercos_work);
     const uint16_t sp = SercosV.value;
-    SercosV.idn_args.is_product = PROTO_FALSE;
+    SercosV.idn_args.is_product = EMBED_FALSE;
     SercosV.idn_args.param_set = 7;
     SercosV.idn_args.data_block = 0;
     Sercos.idn(sercos_work);
     const uint16_t ps = SercosV.value;
-    SercosV.idn_args.is_product = PROTO_FALSE;
+    SercosV.idn_args.is_product = EMBED_FALSE;
     SercosV.idn_args.param_set = 0;
     SercosV.idn_args.data_block = 4095;
     Sercos.idn(sercos_work);
@@ -138,7 +138,7 @@ void test_an_over_wide_argument_stays_in_its_own_field(void)
 {
     for (unsigned set = 8; set < 256; set++)
     {
-        SercosV.idn_args.is_product = PROTO_FALSE;
+        SercosV.idn_args.is_product = EMBED_FALSE;
         SercosV.idn_args.param_set = (uint8_t)set;
         SercosV.idn_args.data_block = 0x0ABC;
         Sercos.idn(sercos_work);
@@ -148,7 +148,7 @@ void test_an_over_wide_argument_stays_in_its_own_field(void)
     }
     for (uint32_t block = 0x1000; block <= 0xFFFF; block += 0x111)
     {
-        SercosV.idn_args.is_product = PROTO_TRUE;
+        SercosV.idn_args.is_product = EMBED_TRUE;
         SercosV.idn_args.param_set = 5;
         SercosV.idn_args.data_block = (uint16_t)block;
         Sercos.idn(sercos_work);
@@ -164,7 +164,7 @@ void test_idn_round_trip_over_every_word(void)
 {
     for (uint32_t v = 0; v <= 0xFFFFu; v++)
     {
-        proto_bool p = PROTO_FALSE;
+        embed_bool p = EMBED_FALSE;
         uint8_t s = 0;
         uint16_t b = 0;
         SercosV.idn_parse_args.idn = (uint16_t)v;
@@ -186,7 +186,7 @@ void test_idn_parse_accepts_null_outputs(void)
 {
     uint8_t s = 0;
     uint16_t b = 0;
-    proto_bool p = PROTO_FALSE;
+    embed_bool p = EMBED_FALSE;
 
     SercosV.idn_parse_args.idn = 0x9064;
     SercosV.idn_parse_args.is_product = NULL;
@@ -430,7 +430,7 @@ void test_only_the_two_defined_types_are_accepted(void)
     SercosTelegram s;
     for (unsigned t = 0; t < 256; t++)
     {
-        const proto_bool defined = (t == SERCOS_TEL_MDT || t == SERCOS_TEL_AT) ? PROTO_TRUE : PROTO_FALSE;
+        const embed_bool defined = (t == SERCOS_TEL_MDT || t == SERCOS_TEL_AT) ? EMBED_TRUE : EMBED_FALSE;
 
         SercosV.build_args.type = (uint8_t)t;
         SercosV.build_args.phase = 0;
@@ -552,12 +552,12 @@ void test_mdt_at_exchange(void)
     uint8_t buf[32];
     SercosTelegram s;
 
-    SercosV.idn_args.is_product = PROTO_FALSE;
+    SercosV.idn_args.is_product = EMBED_FALSE;
     SercosV.idn_args.param_set = 0;
     SercosV.idn_args.data_block = 47;
     Sercos.idn(sercos_work);
     TEST_ASSERT_EQUAL_HEX16(0x002F, SercosV.value);
-    SercosV.idn_args.is_product = PROTO_FALSE;
+    SercosV.idn_args.is_product = EMBED_FALSE;
     SercosV.idn_args.param_set = 0;
     SercosV.idn_args.data_block = 51;
     Sercos.idn(sercos_work);

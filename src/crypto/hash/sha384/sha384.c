@@ -109,7 +109,7 @@ static const uint64_t H0[8] = {
 static void sha384_block(uint64_t h[8], const uint8_t blk[PROTOCORE_SHA384_BLOCK_LEN])
 {
     protocore_sha_hw_block(PROTOCORE_SHA_MODE_512, (uint32_t *)(void *)h, 16u, (const uint32_t *)(const void *)blk, 32u,
-                           PROTO_FALSE);
+                           EMBED_FALSE);
 }
 #endif
 
@@ -385,39 +385,39 @@ static void sha384_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA384_DIGEST_
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_sha384_init(uint8_t *work)
+embed_bool protocore_sha384_init(uint8_t *work)
 {
     sha384_state_init(work);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sha384_update(uint8_t *work, const uint8_t *data, size_t len)
+embed_bool protocore_sha384_update(uint8_t *work, const uint8_t *data, size_t len)
 {
     sha384_absorb(work, data, len);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_sha384_final(uint8_t *work, uint8_t *out)
+embed_bool protocore_sha384_final(uint8_t *work, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sha384_finish(work, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-proto_bool protocore_sha384_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
+embed_bool protocore_sha384_hash(uint8_t *work, const uint8_t *data, size_t len, uint8_t *out)
 {
     if (!out)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     sha384_state_init(work);
     sha384_absorb(work, data, len);
     sha384_finish(work, out);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_SHA384

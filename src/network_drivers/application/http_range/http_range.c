@@ -31,7 +31,7 @@ int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, s
         return 0;
     }
     // Require the "bytes=" unit (case-insensitive).
-    if (!EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = hdr, .other = "bytes=", .cap = 6, .ci = PROTO_TRUE))
+    if (!EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = hdr, .other = "bytes=", .cap = 6, .ci = EMBED_TRUE))
     {
         return 0;
     }
@@ -41,19 +41,19 @@ int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, s
         p++;
     }
     if (EMBED_CALL(cellul.find, CatenaFinitaCfg, .src = p, .cap = MAX_VAL_LEN, .other = ",", .other_cap = sizeof(","),
-                   .ci = PROTO_FALSE)) // multi-range not supported -> fall back to full 200
+                   .ci = EMBED_FALSE)) // multi-range not supported -> fall back to full 200
     {
         return 0;
     }
 
-    proto_bool have_start = PROTO_FALSE;
-    proto_bool have_end = PROTO_FALSE;
+    embed_bool have_start = EMBED_FALSE;
+    embed_bool have_end = EMBED_FALSE;
     size_t start = 0;
     size_t end = 0;
     const size_t SZMAX = (size_t)-1;
     if (*p >= '0' && *p <= '9')
     {
-        have_start = PROTO_TRUE;
+        have_start = EMBED_TRUE;
         while (*p >= '0' && *p <= '9')
         {
             size_t d = (size_t)(*p++ - '0');
@@ -69,7 +69,7 @@ int protocore_http_range_http_parse_byte_range(uint8_t *work, const char *hdr, s
     p++;
     if (*p >= '0' && *p <= '9')
     {
-        have_end = PROTO_TRUE;
+        have_end = EMBED_TRUE;
         end = 0;
         while (*p >= '0' && *p <= '9')
         {

@@ -54,7 +54,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool split(const char *url)
+static embed_bool split(const char *url)
 {
     HttpClientV.target.url = url;
     HttpClient.parse_target_uri(http_client_work());

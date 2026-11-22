@@ -21,7 +21,7 @@
 #include "services/opcua/models/euromap77/euromap77.h"
 #include "services/opcua/opcua.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // Node identifiers (namespace PROTOCORE_EM77_NS). Objects end in 0; their variables count up from it.
@@ -131,7 +131,7 @@ static void set_f64(OpcUaVariant *o, double v)
     o->type = OPCUA_VAR_DOUBLE;
     o->f64 = v;
 }
-static void set_bool(OpcUaVariant *o, proto_bool v)
+static void set_bool(OpcUaVariant *o, embed_bool v)
 {
     o->type = OPCUA_VAR_BOOL;
     o->b = v;
@@ -151,7 +151,7 @@ static int32_t add_ref(const EuroMap77Ctx *c, OpcUaReference *out, int32_t n, ui
     }
     OpcUaReference *r = &out[n];
     r->ref_type_id = ref_type;
-    r->is_forward = PROTO_TRUE;
+    r->is_forward = EMBED_TRUE;
     r->target_ns = c->ns;
     r->target_id = target_id;
     r->browse_name_ns = c->ns;
@@ -229,12 +229,12 @@ void protocore_euromap77_bind(uint8_t *work)
     c->ns = protocore_opcua_namespace_index(EUROMAP77_NS_URI);
     c->ns_gt = protocore_opcua_namespace_index(EUROMAP83_NS_URI);
     Euromap77V.ns = c->ns;
-    Euromap77V.ok = PROTO_TRUE;
+    Euromap77V.ok = EMBED_TRUE;
 }
 
 // OPC UA Part 4 sec 5.11.2: Read is a Server service over the Server's AddressSpace, so this is the
 // server's OpcUaReadHandler contract rather than an entry of this module's own.
-static proto_bool em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
+static embed_bool em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaVariant *out)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
@@ -244,94 +244,94 @@ static proto_bool em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaV
     const EmImm *imm = c->imm;
     if (!imm || ns != c->ns || attribute != OPCUA_ATTR_VALUE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     switch (id)
     {
     // MachineInformation
     case MI_MANUFACTURER:
         set_str(out, imm->info.manufacturer);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MI_MODEL:
         set_str(out, imm->info.model);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MI_SERIAL:
         set_str(out, imm->info.serial_number);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MI_PRODUCTCODE:
         set_str(out, imm->info.product_code);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MI_HWREV:
         set_str(out, imm->info.hardware_revision);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MI_SWREV:
         set_str(out, imm->info.software_revision);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MI_DEVREV:
         set_str(out, imm->info.device_revision);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MI_MANUFACTURERURI:
         set_str(out, imm->info.manufacturer_uri);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // MachineStatus
     case MS_ISPRESENT:
         set_bool(out, imm->status.is_present);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case MS_MACHINEMODE:
         set_i32(out, (int32_t)imm->status.machine_mode);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Jobs / ActiveJob
     case AJ_JOBNAME:
         set_str(out, imm->active_job.job_name);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJ_JOBDESC:
         set_str(out, imm->active_job.job_description);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJ_MATERIAL:
         set_str(out, imm->active_job.material);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJ_PRODUCTNAME:
         set_str(out, imm->active_job.product_name);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJ_MOULDID:
         set_str(out, imm->active_job.mould_id);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJ_EXPECTEDCYCLE:
         set_f64(out, imm->active_job.expected_cycle_time);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJ_NUMCAVITIES:
         set_u32(out, imm->active_job.num_cavities);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJ_NOMINALPARTS:
         set_u64(out, imm->active_job.nominal_parts);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     // Jobs / ActiveJobValues
     case AJV_JOBCYCLECOUNTER:
         set_u64(out, imm->active_job_values.job_cycle_counter);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJV_MACHINECYCLECOUNTER:
         set_u64(out, imm->active_job_values.machine_cycle_counter);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJV_LASTCYCLETIME:
         set_f64(out, imm->active_job_values.last_cycle_time);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJV_AVERAGECYCLETIME:
         set_f64(out, imm->active_job_values.average_cycle_time);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJV_JOBPARTSCOUNTER:
         set_u64(out, imm->active_job_values.job_parts_counter);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJV_JOBGOODPARTSCOUNTER:
         set_u64(out, imm->active_job_values.job_good_parts_counter);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJV_JOBBADPARTSCOUNTER:
         set_u64(out, imm->active_job_values.job_bad_parts_counter);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     case AJV_JOBSTATUS:
         set_i32(out, (int32_t)imm->active_job_values.job_status);
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     default:
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 }
 
@@ -430,6 +430,6 @@ void protocore_euromap77_install(uint8_t *work)
 /** @brief The operands and the outcome. */
 Euromap77Vars Euromap77V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EUROMAP77

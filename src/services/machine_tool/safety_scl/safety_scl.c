@@ -17,7 +17,7 @@
 
 #include "services/machine_tool/safety_scl/safety_scl.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Latch the first fault: once fail-safe, later failures do not overwrite the diagnostically
 // interesting one that actually broke the connection.
@@ -53,16 +53,16 @@ void protocore_scl_init(SclConn *c, uint32_t first_counter, uint32_t counter_mod
     c->rejected = 0;
 }
 
-proto_bool protocore_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t counter, uint32_t now)
+embed_bool protocore_scl_on_frame(SclConn *c, embed_bool signature_ok, uint32_t counter, uint32_t now)
 {
     if (!c)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (c->state == SCL_STATE_FAILSAFE)
     {
         c->rejected++; // refused, but the original fault stands
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // Corruption is checked first: a frame whose signature failed cannot be trusted to carry a
@@ -71,40 +71,40 @@ proto_bool protocore_scl_on_frame(SclConn *c, proto_bool signature_ok, uint32_t 
     {
         c->rejected++;
         trip(c, SCL_FAULT_SIGNATURE);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (wrap(counter, c->counter_mod) != c->expected)
     {
         c->rejected++;
         trip(c, SCL_FAULT_COUNTER);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     c->expected = protocore_scl_next_counter(c->expected, c->counter_mod);
     c->last_ok_ms = now;
     c->accepted++;
     c->state = SCL_STATE_RUNNING;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_scl_poll(SclConn *c, uint32_t now)
+embed_bool protocore_scl_poll(SclConn *c, uint32_t now)
 {
     if (!c)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (c->state == SCL_STATE_FAILSAFE)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     // Only a connection that has actually run can time out; one still in INIT is starting up, not
     // silent. A zero watchdog disables the check entirely.
     if (c->state == SCL_STATE_RUNNING && c->watchdog_ms && (now - c->last_ok_ms) >= c->watchdog_ms)
     {
         trip(c, SCL_FAULT_TIMEOUT);
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_scl_reset(SclConn *c, uint32_t first_counter, uint32_t now)
@@ -121,7 +121,7 @@ void protocore_scl_reset(SclConn *c, uint32_t first_counter, uint32_t now)
     // attempt, so a flapping link is visible rather than reset away.
 }
 
-proto_bool protocore_scl_ok(const SclConn *c)
+embed_bool protocore_scl_ok(const SclConn *c)
 {
     return c && c->state != SCL_STATE_FAILSAFE;
 }
@@ -142,6 +142,6 @@ uint32_t protocore_scl_next_counter(uint32_t counter, uint32_t counter_mod)
     return counter_mod ? (n % counter_mod) : n;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SAFETY_SCL

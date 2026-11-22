@@ -22,10 +22,10 @@
 
 #include "src/idemip.h" // every unit of idemIP, its borrow and its operand block
 
-#include "network_drivers/transport/tcp/engine/engine.h" // the TCP engine, which acts on each TCP decision of Dispatch
+#include "network_drivers/network/stack/stack_tcp.h" // the TCP engine, which acts on each TCP decision of Dispatch
 #include "server/core/worker/worker.h" // the owners of the units, mmgr_zero_buf, and the context of this module
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The context of the stack: the unit cells and the interfaces that ::StackNs::bind bound. Each
@@ -37,7 +37,7 @@ struct StackStorage
     uint8_t *transmit[IDEMIP_NETIF_COUNT];      ///< the buffer for the next reply, NULL where the interface holds none
     uint8_t transmit_index[IDEMIP_NETIF_COUNT]; ///< the descriptor of that buffer
     uint32_t bound;                             ///< one bit for each interface that bind bound
-    proto_bool started;                         ///< ::StackNs::start ran
+    embed_bool started;                         ///< ::StackNs::start ran
 };
 
 #define STACK_OFF_CONTEXT 0u
@@ -69,7 +69,7 @@ static uint8_t *stack_take(size_t bytes, const CellOwner *owner)
 }
 
 // Takes the cell of each unit. False where the cellblock cannot hold one of them.
-static proto_bool stack_take_all(StackUnits *units)
+static embed_bool stack_take_all(StackUnits *units)
 {
     units->netif = stack_take(IDEMIP_NETIF_BORROW, idemip_owner_netif);
     units->loopif = stack_take(IDEMIP_LOOPIF_BORROW, idemip_owner_loopif);
@@ -103,7 +103,7 @@ static proto_bool stack_take_all(StackUnits *units)
     units->stats = stack_take(IDEMIP_STATS_BORROW, idemip_owner_stats);
     units->vlan = stack_take(IDEMIP_VLAN_BORROW, idemip_owner_vlan);
     units->ethip6 = stack_take(IDEMIP_ETHIP6_BORROW, idemip_owner_ethip6);
-    proto_bool taken = PROTO_TRUE;
+    embed_bool taken = EMBED_TRUE;
     for (uint8_t index = 0u; index < IDEMIP_NETIF_COUNT; index++)
     {
         units->phy[index] = stack_take(IDEMIP_PHY_BORROW, idemip_owner_phy);
@@ -182,7 +182,7 @@ static void stack_clear_all(const StackUnits *units)
 }
 
 // Binds the units that every interface shares: the receive path and the scheduler.
-static proto_bool stack_bind_shared(const StackUnits *units)
+static embed_bool stack_bind_shared(const StackUnits *units)
 {
     DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(units->dispatch);
     dispatch_io->bind_args.stats = units->stats;
@@ -207,7 +207,7 @@ static proto_bool stack_bind_shared(const StackUnits *units)
     Dispatch.bind(units->dispatch);
     if (dispatch_io->status != IDEMIP_OK)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     TickIo *const tick_io = IDEMIP_TICK_IO(units->tick);
     tick_io->bind_args.dispatch = units->dispatch;
@@ -228,7 +228,7 @@ static proto_bool stack_bind_shared(const StackUnits *units)
 void protocore_stack_start(uint8_t *work)
 {
     struct StackStorage *const context = STACK_CONTEXT(work);
-    StackV.ok = PROTO_FALSE;
+    StackV.ok = EMBED_FALSE;
     if (context->started || StackV.start_args.isn_secret == NULL || !stack_take_all(&context->units))
     {
         return;
@@ -243,15 +243,15 @@ void protocore_stack_start(uint8_t *work)
     {
         return;
     }
-    context->started = PROTO_TRUE;
-    StackV.ok = PROTO_TRUE;
+    context->started = EMBED_TRUE;
+    StackV.ok = EMBED_TRUE;
 }
 
 void protocore_stack_bind(uint8_t *work)
 {
     struct StackStorage *const context = STACK_CONTEXT(work);
     const StackBindArgs *const args = &StackV.bind_args;
-    StackV.ok = PROTO_FALSE;
+    StackV.ok = EMBED_FALSE;
     if (!context->started || args->index >= IDEMIP_NETIF_COUNT || args->driver == NULL || args->mac == NULL)
     {
         return;
@@ -297,13 +297,13 @@ void protocore_stack_bind(uint8_t *work)
         return;
     }
     context->bound |= 1u << index;
-    StackV.ok = PROTO_TRUE;
+    StackV.ok = EMBED_TRUE;
 }
 
 void protocore_stack_set_addr4(uint8_t *work)
 {
     struct StackStorage *const context = STACK_CONTEXT(work);
-    StackV.ok = PROTO_FALSE;
+    StackV.ok = EMBED_FALSE;
     if (!context->started)
     {
         return;
@@ -336,26 +336,26 @@ static size_t stack_reply_offset(const uint8_t *request)
 
 // Holds one transmit buffer for the next reply of an interface. The interface keeps the buffer until a
 // reply goes out in it. False where the ring has no free buffer.
-static proto_bool stack_transmit_hold(struct StackStorage *context, uint8_t index)
+static embed_bool stack_transmit_hold(struct StackStorage *context, uint8_t index)
 {
     if (context->transmit[index] != NULL)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     const DmaIo *const dma_io = IDEMIP_DMA_IO(context->units.dma[index]);
     Dma.tx_take(context->units.dma[index]);
     if (dma_io->status != IDEMIP_OK)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     context->transmit[index] = dma_io->buf;
     context->transmit_index[index] = dma_io->index;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Sends the buffer that an interface holds, with len octets of frame in it. False where the ring takes no
 // frame. The interface then keeps the buffer for its next frame.
-static proto_bool stack_transmit_post(struct StackStorage *context, uint8_t index, size_t len)
+static embed_bool stack_transmit_post(struct StackStorage *context, uint8_t index, size_t len)
 {
     DmaIo *const dma_io = IDEMIP_DMA_IO(context->units.dma[index]);
     dma_io->desc_args.index = context->transmit_index[index];
@@ -364,10 +364,10 @@ static proto_bool stack_transmit_post(struct StackStorage *context, uint8_t inde
     Dma.tx_post(context->units.dma[index]);
     if (dma_io->status != IDEMIP_OK)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     context->transmit[index] = NULL;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Writes the IP header and the Ethernet header of an ICMP reply in front of its message. The two go in
@@ -422,12 +422,12 @@ static size_t stack_icmp_frame(const struct StackStorage *context, uint8_t index
 // Sends the reply that the last dispatch built in the reply buffer. False where Dispatch asks for no send,
 // or where the reply is not of the kind that its offset has room for. False also where the ring takes no
 // frame. The interface then keeps the buffer for its next reply.
-static proto_bool stack_answer(struct StackStorage *context, uint8_t index, const uint8_t *request, size_t offset)
+static embed_bool stack_answer(struct StackStorage *context, uint8_t index, const uint8_t *request, size_t offset)
 {
     const DispatchIo *const dispatch_io = IDEMIP_DISPATCH_IO(context->units.dispatch);
     if ((dispatch_io->act & IDEMIP_DISPATCH_ACT_SEND) == 0u)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t len = 0u;
     if (dispatch_io->pcb_kind == IDEMIP_DISPATCH_PCB_ARP && offset == 0u)
@@ -459,7 +459,7 @@ static void stack_drain(struct StackStorage *context, uint8_t index, uint32_t no
         const size_t request_len = dma_io->len;
         const size_t offset = stack_reply_offset(request);
         // Without a reply buffer, Dispatch has nowhere to build a reply and reports the frame BUSY.
-        const proto_bool held = stack_transmit_hold(context, index);
+        const embed_bool held = stack_transmit_hold(context, index);
         dispatch_io->input_args.frame = request;
         dispatch_io->input_args.len = request_len;
         dispatch_io->input_args.out = held ? context->transmit[index] + offset : NULL;
@@ -474,13 +474,19 @@ static void stack_drain(struct StackStorage *context, uint8_t index, uint32_t no
         {
             StackV.sent++;
         }
+        // A UDP datagram goes to its control block before the descriptor goes back.
+        if ((dispatch_io->act & IDEMIP_DISPATCH_ACT_DELIVER) != 0u && dispatch_io->pcb_kind == IDEMIP_DISPATCH_PCB_UDP)
+        {
+            protocore_stack_net_udp_input(request, dispatch_io->pcb, dispatch_io->ip_off, dispatch_io->payload_off,
+                                          dispatch_io->payload_len);
+        }
         // The engine reads the text of a segment out of the request. The descriptor thus goes back after it.
         if (engine != NULL && (dispatch_io->act & IDEMIP_DISPATCH_ACT_TCP) != 0u)
         {
-            TcpEngineV.segment_args.frame = request;
-            TcpEngineV.segment_args.now_ms = now_ms;
-            TcpEngineV.segment_args.netif = index;
-            TcpEngine.segment(engine);
+            StackTcpV.segment_args.frame = request;
+            StackTcpV.segment_args.now_ms = now_ms;
+            StackTcpV.segment_args.netif = index;
+            StackTcp.segment(engine);
         }
         dma_io->desc_args.index = descriptor;
         Dma.rx_post(context->units.dma[index]);
@@ -491,7 +497,7 @@ static void stack_drain(struct StackStorage *context, uint8_t index, uint32_t no
 void protocore_stack_tick(uint8_t *work)
 {
     struct StackStorage *const context = STACK_CONTEXT(work);
-    StackV.ok = PROTO_FALSE;
+    StackV.ok = EMBED_FALSE;
     StackV.frames = 0u;
     StackV.sent = 0u;
     if (!context->started)
@@ -503,7 +509,7 @@ void protocore_stack_tick(uint8_t *work)
     tick_io->open_args.rand = StackV.tick_args.random_word;
     Tick.open(context->units.tick);
     // NULL where the plaintext arena has no room for the borrow of the engine. The stack then runs without TCP.
-    uint8_t *const engine = protocore_tcp_engine_span();
+    uint8_t *const engine = protocore_stack_tcp_span();
     for (uint8_t index = 0u; index < IDEMIP_NETIF_COUNT; index++)
     {
         if ((context->bound & (1u << index)) != 0u)
@@ -529,14 +535,14 @@ void protocore_stack_tick(uint8_t *work)
     {
         if (engine != NULL && tick_io->unit == IDEMIP_TICK_UNIT_TCP_ACK)
         {
-            TcpEngine.acknowledge(engine);
+            StackTcp.acknowledge(engine);
         }
         Tick.flush(context->units.tick);
     }
     if (engine != NULL)
     {
-        TcpEngineV.service_args.now_ms = StackV.tick_args.now_ms;
-        TcpEngine.service(engine);
+        StackTcpV.service_args.now_ms = StackV.tick_args.now_ms;
+        StackTcp.service(engine);
     }
     for (uint8_t index = 0u; index < IDEMIP_NETIF_COUNT; index++)
     {
@@ -545,14 +551,14 @@ void protocore_stack_tick(uint8_t *work)
             Dma.tx_reap(context->units.dma[index]);
         }
     }
-    StackV.ok = PROTO_TRUE;
+    StackV.ok = EMBED_TRUE;
 }
 
 void protocore_stack_transmit_hold(uint8_t *work)
 {
     struct StackStorage *const context = STACK_CONTEXT(work);
     const uint8_t index = StackV.transmit_args.index;
-    StackV.ok = PROTO_FALSE;
+    StackV.ok = EMBED_FALSE;
     StackV.transmit_frame = NULL;
     if (!context->started || index >= IDEMIP_NETIF_COUNT || (context->bound & (1u << index)) == 0u ||
         !stack_transmit_hold(context, index))
@@ -560,21 +566,21 @@ void protocore_stack_transmit_hold(uint8_t *work)
         return;
     }
     StackV.transmit_frame = context->transmit[index];
-    StackV.ok = PROTO_TRUE;
+    StackV.ok = EMBED_TRUE;
 }
 
 void protocore_stack_transmit_post(uint8_t *work)
 {
     struct StackStorage *const context = STACK_CONTEXT(work);
     const StackTransmitArgs *const args = &StackV.transmit_args;
-    StackV.ok = PROTO_FALSE;
+    StackV.ok = EMBED_FALSE;
     if (!context->started || args->index >= IDEMIP_NETIF_COUNT || context->transmit[args->index] == NULL ||
         args->len == 0u || args->len > IDEMIP_DMA_FRAME_MAX || !stack_transmit_post(context, args->index, args->len))
     {
         return;
     }
     StackV.sent++;
-    StackV.ok = PROTO_TRUE;
+    StackV.ok = EMBED_TRUE;
 }
 
 const StackUnits *protocore_stack_units(const uint8_t *work)
@@ -603,6 +609,6 @@ uint8_t *protocore_stack_span(void)
 /** @brief The operands and the outcome. */
 StackVars StackV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IDEMIP

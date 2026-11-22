@@ -29,7 +29,7 @@ void tearDown(void)
 
 static void test_sec6_2_neither_direction_starts_compressed(void)
 {
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
     comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
@@ -41,7 +41,7 @@ static void test_sec6_2_none_never_activates(void)
     Comp.set_s2c(protocore_ssh_comp_span(), 0, SSH_COMP_NONE);
     Comp.set_c2s(protocore_ssh_comp_span(), 0, SSH_COMP_NONE);
     Comp.on_newkeys(protocore_ssh_comp_span(), 0);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
     comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
@@ -62,7 +62,7 @@ static void test_sec6_2_zlib_starts_at_newkeys_not_at_negotiation(void)
 {
     Comp.set_s2c(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB);
     Comp.set_c2s(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok); // negotiated, not yet in use
     comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
@@ -81,7 +81,7 @@ static void test_sec7_1_the_two_directions_are_independent(void)
     Comp.set_s2c(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB);
     Comp.set_c2s(protocore_ssh_comp_span(), 0, SSH_COMP_NONE);
     Comp.on_newkeys(protocore_ssh_comp_span(), 0);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_TRUE(comp_ok);
     comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
@@ -123,7 +123,7 @@ static void test_delayed_does_not_start_at_newkeys(void)
     Comp.set_s2c(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB_DELAYED);
     Comp.set_c2s(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB_DELAYED);
     Comp.on_newkeys(protocore_ssh_comp_span(), 0);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
     comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
@@ -135,7 +135,7 @@ static void test_delayed_starts_at_authentication_success(void)
     Comp.set_c2s(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB_DELAYED);
     Comp.on_newkeys(protocore_ssh_comp_span(), 0);
     Comp.on_auth_success(protocore_ssh_comp_span(), 0);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_TRUE(comp_ok);
     comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_TRUE(comp_ok);
@@ -194,7 +194,7 @@ static void test_inactive_direction_refuses_rather_than_transforming(void)
     uint8_t out[256];
     size_t n = 0;
 
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_FALSE(comp_ok);
     int comp_n = Comp.s2c(protocore_ssh_comp_span(), 0, msg, len, out, sizeof(out), &n);
     TEST_ASSERT_EQUAL_INT(-1, comp_n);
@@ -232,7 +232,7 @@ static void test_reset_clears_both_directions(void)
     Comp.set_s2c(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB);
     Comp.set_c2s(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB);
     Comp.on_newkeys(protocore_ssh_comp_span(), 0);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_TRUE(comp_ok);
 
     Comp.reset(protocore_ssh_comp_span(), 0);
@@ -259,7 +259,7 @@ static void test_state_is_per_slot(void)
     Comp.reset(protocore_ssh_comp_span(), 1);
     Comp.set_s2c(protocore_ssh_comp_span(), 0, SSH_COMP_ZLIB);
     Comp.on_newkeys(protocore_ssh_comp_span(), 0);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 0);
     TEST_ASSERT_TRUE(comp_ok);
     comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), 1);
     TEST_ASSERT_FALSE(comp_ok);
@@ -273,7 +273,7 @@ static void test_slot_past_the_pool_is_inert(void)
     Comp.set_s2c(protocore_ssh_comp_span(), bad, SSH_COMP_ZLIB);
     Comp.on_newkeys(protocore_ssh_comp_span(), bad);
     Comp.on_auth_success(protocore_ssh_comp_span(), bad);
-    proto_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), bad);
+    embed_bool comp_ok = Comp.s2c_active(protocore_ssh_comp_span(), bad);
     TEST_ASSERT_FALSE(comp_ok);
     comp_ok = Comp.c2s_active(protocore_ssh_comp_span(), bad);
     TEST_ASSERT_FALSE(comp_ok);

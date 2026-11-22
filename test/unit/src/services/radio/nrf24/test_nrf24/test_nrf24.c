@@ -16,8 +16,8 @@ typedef struct
     uint8_t rx_payload[32];
     uint8_t tx_payload[32];
     uint8_t tx_len;
-    proto_bool ce;
-    proto_bool present;
+    embed_bool ce;
+    embed_bool present;
 } MockNrf;
 static MockNrf g;
 
@@ -73,7 +73,7 @@ static void mock_spi(const uint8_t *tx, uint8_t *rx, uint8_t len, void *)
         }
     }
 }
-static void mock_ce(proto_bool level, void *)
+static void mock_ce(embed_bool level, void *)
 {
     g.ce = level;
 }
@@ -94,7 +94,7 @@ static nrf_config default_cfg()
 void setUp()
 {
     memset(&g, 0, sizeof(g));
-    g.present = PROTO_TRUE;
+    g.present = EMBED_TRUE;
 }
 void tearDown()
 {
@@ -103,7 +103,7 @@ void tearDown()
 void test_init_configures_and_powers_up()
 {
     nrf_config c = default_cfg();
-    proto_bool nrf24_ok = Nrf24.init(nrf24_work, &g_bus, &c);
+    embed_bool nrf24_ok = Nrf24.init(nrf24_work, &g_bus, &c);
     TEST_ASSERT_TRUE(nrf24_ok);
     TEST_ASSERT_EQUAL_HEX8(0x0E, g.reg[0x00]);
     TEST_ASSERT_EQUAL_UINT8(76, g.reg[0x05]);
@@ -116,9 +116,9 @@ void test_init_configures_and_powers_up()
 
 void test_init_fails_when_absent()
 {
-    g.present = PROTO_FALSE;
+    g.present = EMBED_FALSE;
     nrf_config c = default_cfg();
-    proto_bool nrf24_ok = Nrf24.init(nrf24_work, &g_bus, &c);
+    embed_bool nrf24_ok = Nrf24.init(nrf24_work, &g_bus, &c);
     TEST_ASSERT_FALSE(nrf24_ok);
 }
 
@@ -127,7 +127,7 @@ void test_send_pads_to_width_and_keys_tx()
     nrf_config c = default_cfg();
     Nrf24.init(nrf24_work, &g_bus, &c);
     const uint8_t data[3] = {0xAB, 0xCD, 0xEF};
-    proto_bool nrf24_ok = Nrf24.send(nrf24_work, &g_bus, data, 3);
+    embed_bool nrf24_ok = Nrf24.send(nrf24_work, &g_bus, data, 3);
     TEST_ASSERT_TRUE(nrf24_ok);
     TEST_ASSERT_EQUAL_UINT8(8, g.tx_len);
     TEST_ASSERT_EQUAL_MEMORY(data, g.tx_payload, 3);
@@ -139,13 +139,13 @@ void test_send_pads_to_width_and_keys_tx()
 void test_send_rejects_oversize()
 {
     const uint8_t big[9] = {0};
-    proto_bool nrf24_ok = Nrf24.send(nrf24_work, &g_bus, big, 9);
+    embed_bool nrf24_ok = Nrf24.send(nrf24_work, &g_bus, big, 9);
     TEST_ASSERT_FALSE(nrf24_ok);
 }
 
 void test_tx_done_flag()
 {
-    proto_bool nrf24_ok = Nrf24.tx_done(nrf24_work, &g_bus);
+    embed_bool nrf24_ok = Nrf24.tx_done(nrf24_work, &g_bus);
     TEST_ASSERT_FALSE(nrf24_ok);
     g.reg[0x07] = 0x20;
     nrf24_ok = Nrf24.tx_done(nrf24_work, &g_bus);
@@ -212,7 +212,7 @@ void test_data_rate_variants()
 {
     nrf_config c = default_cfg();
     c.data_rate = 1;
-    proto_bool nrf24_ok = Nrf24.init(nrf24_work, &g_bus, &c);
+    embed_bool nrf24_ok = Nrf24.init(nrf24_work, &g_bus, &c);
     TEST_ASSERT_TRUE(nrf24_ok);
     nrf_config c2 = default_cfg();
     c2.data_rate = 2;
@@ -223,7 +223,7 @@ void test_data_rate_variants()
 void test_init_rejects_null_args()
 {
     nrf_config c = default_cfg();
-    proto_bool nrf24_ok = Nrf24.init(nrf24_work, NULL, &c);
+    embed_bool nrf24_ok = Nrf24.init(nrf24_work, NULL, &c);
     TEST_ASSERT_FALSE(nrf24_ok);
 
     nrf_bus no_spi = {NULL, mock_ce, NULL};
@@ -246,7 +246,7 @@ void test_init_rejects_null_args()
 void test_send_rejects_null_args_and_zero_len()
 {
     const uint8_t data[3] = {0x01, 0x02, 0x03};
-    proto_bool nrf24_ok = Nrf24.send(nrf24_work, NULL, data, 3);
+    embed_bool nrf24_ok = Nrf24.send(nrf24_work, NULL, data, 3);
     TEST_ASSERT_FALSE(nrf24_ok);
     nrf24_ok = Nrf24.send(nrf24_work, &g_bus, NULL, 3);
     TEST_ASSERT_FALSE(nrf24_ok);
@@ -256,7 +256,7 @@ void test_send_rejects_null_args_and_zero_len()
 
 void test_tx_done_null_bus()
 {
-    proto_bool nrf24_ok = Nrf24.tx_done(nrf24_work, NULL);
+    embed_bool nrf24_ok = Nrf24.tx_done(nrf24_work, NULL);
     TEST_ASSERT_FALSE(nrf24_ok);
 }
 

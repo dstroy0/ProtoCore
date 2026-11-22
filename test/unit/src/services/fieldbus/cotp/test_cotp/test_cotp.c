@@ -57,7 +57,7 @@ void test_smallest_tpkt_is_seven_octets(void)
     CotpV.build_dt_args.cap = sizeof(dt);
     CotpV.build_dt_args.data = NULL;
     CotpV.build_dt_args.data_len = 0;
-    CotpV.build_dt_args.eot = PROTO_TRUE;
+    CotpV.build_dt_args.eot = EMBED_TRUE;
     Cotp.build_dt(cotp_work);
     size_t dlen = CotpV.n;
     TEST_ASSERT_EQUAL_size_t(3u, dlen);
@@ -240,7 +240,7 @@ void test_data_tpdu_layout(void)
     CotpV.build_dt_args.cap = sizeof(buf);
     CotpV.build_dt_args.data = DATA;
     CotpV.build_dt_args.data_len = sizeof(DATA);
-    CotpV.build_dt_args.eot = PROTO_TRUE;
+    CotpV.build_dt_args.eot = EMBED_TRUE;
     Cotp.build_dt(cotp_work);
     size_t n = CotpV.n;
     static const uint8_t WANT[7] = {0x02, 0xF0, 0x80, 0x32, 0x01, 0x00, 0x00};
@@ -263,7 +263,7 @@ void test_data_tpdu_layout(void)
     CotpV.build_dt_args.cap = sizeof(buf);
     CotpV.build_dt_args.data = DATA;
     CotpV.build_dt_args.data_len = sizeof(DATA);
-    CotpV.build_dt_args.eot = PROTO_FALSE;
+    CotpV.build_dt_args.eot = EMBED_FALSE;
     Cotp.build_dt(cotp_work);
     n = CotpV.n;
     TEST_ASSERT_EQUAL_HEX8(0x00u, buf[2]);
@@ -278,21 +278,21 @@ void test_data_tpdu_layout(void)
     CotpV.build_dt_args.cap = 2;
     CotpV.build_dt_args.data = DATA;
     CotpV.build_dt_args.data_len = sizeof(DATA);
-    CotpV.build_dt_args.eot = PROTO_TRUE;
+    CotpV.build_dt_args.eot = EMBED_TRUE;
     Cotp.build_dt(cotp_work);
     TEST_ASSERT_EQUAL_size_t(0u, CotpV.n);
     CotpV.build_dt_args.buf = NULL;
     CotpV.build_dt_args.cap = sizeof(buf);
     CotpV.build_dt_args.data = DATA;
     CotpV.build_dt_args.data_len = sizeof(DATA);
-    CotpV.build_dt_args.eot = PROTO_TRUE;
+    CotpV.build_dt_args.eot = EMBED_TRUE;
     Cotp.build_dt(cotp_work);
     TEST_ASSERT_EQUAL_size_t(0u, CotpV.n);
     CotpV.build_dt_args.buf = buf;
     CotpV.build_dt_args.cap = sizeof(buf);
     CotpV.build_dt_args.data = NULL;
     CotpV.build_dt_args.data_len = 4;
-    CotpV.build_dt_args.eot = PROTO_TRUE;
+    CotpV.build_dt_args.eot = EMBED_TRUE;
     Cotp.build_dt(cotp_work);
     TEST_ASSERT_EQUAL_size_t(0u, CotpV.n);
 }
@@ -608,7 +608,7 @@ void test_stack_round_trip(void)
     CotpV.build_dt_args.cap = sizeof(dt);
     CotpV.build_dt_args.data = S7;
     CotpV.build_dt_args.data_len = sizeof(S7);
-    CotpV.build_dt_args.eot = PROTO_TRUE;
+    CotpV.build_dt_args.eot = EMBED_TRUE;
     Cotp.build_dt(cotp_work);
     size_t dlen = CotpV.n;
     uint8_t frame[64];

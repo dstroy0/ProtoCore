@@ -326,16 +326,16 @@ void test_parse_write_response_edges()
 void test_round_trip_read_coils()
 {
     ModbusV.set_coil_args.addr = 0;
-    ModbusV.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.on = EMBED_TRUE;
     Modbus.set_coil(protocore_modbus_span());
     ModbusV.set_coil_args.addr = 1;
-    ModbusV.set_coil_args.on = PROTO_FALSE;
+    ModbusV.set_coil_args.on = EMBED_FALSE;
     Modbus.set_coil(protocore_modbus_span());
     ModbusV.set_coil_args.addr = 2;
-    ModbusV.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.on = EMBED_TRUE;
     Modbus.set_coil(protocore_modbus_span());
     ModbusV.set_coil_args.addr = 9;
-    ModbusV.set_coil_args.on = PROTO_TRUE;
+    ModbusV.set_coil_args.on = EMBED_TRUE;
     Modbus.set_coil(protocore_modbus_span());
 
     uint8_t req[16];
@@ -371,10 +371,10 @@ void test_round_trip_read_coils()
 void test_round_trip_read_discrete_inputs()
 {
     ModbusV.set_discrete_input_args.addr = 3;
-    ModbusV.set_discrete_input_args.on = PROTO_TRUE;
+    ModbusV.set_discrete_input_args.on = EMBED_TRUE;
     Modbus.set_discrete_input(protocore_modbus_span());
     ModbusV.set_discrete_input_args.addr = 4;
-    ModbusV.set_discrete_input_args.on = PROTO_TRUE;
+    ModbusV.set_discrete_input_args.on = EMBED_TRUE;
     Modbus.set_discrete_input(protocore_modbus_span());
 
     uint8_t req[16];
@@ -403,11 +403,11 @@ void test_round_trip_read_discrete_inputs()
 void test_round_trip_write_single_coil()
 {
     ModbusV.set_coil_args.addr = 5;
-    ModbusV.set_coil_args.on = PROTO_FALSE;
+    ModbusV.set_coil_args.on = EMBED_FALSE;
     Modbus.set_coil(protocore_modbus_span());
     uint8_t req[16];
     size_t modbus_master_n =
-        ModbusMaster.build_write_single_coil(modbus_master_work, 11, 1, 5, PROTO_TRUE, req, sizeof(req));
+        ModbusMaster.build_write_single_coil(modbus_master_work, 11, 1, 5, EMBED_TRUE, req, sizeof(req));
     size_t rn = modbus_master_n;
     TEST_ASSERT_EQUAL_size_t(12, rn);
     TEST_ASSERT_EQUAL_HEX8(0x05, req[7]);
@@ -439,7 +439,7 @@ void test_round_trip_write_multiple_coils()
     for (uint16_t a = 0; a < 12; a++)
     {
         ModbusV.set_coil_args.addr = a;
-        ModbusV.set_coil_args.on = PROTO_FALSE;
+        ModbusV.set_coil_args.on = EMBED_FALSE;
         Modbus.set_coil(protocore_modbus_span());
     }
     const uint8_t pattern[12] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1};
@@ -488,7 +488,7 @@ void test_bit_build_and_parse_guards()
     modbus_master_n = ModbusMaster.build_read_bits(modbus_master_work, 0x01, 1, 1, 0, 8, NULL, 16);
     TEST_ASSERT_EQUAL_size_t(0, modbus_master_n);
 
-    modbus_master_n = ModbusMaster.build_write_single_coil(modbus_master_work, 1, 1, 0, PROTO_TRUE, NULL, 16);
+    modbus_master_n = ModbusMaster.build_write_single_coil(modbus_master_work, 1, 1, 0, EMBED_TRUE, NULL, 16);
     TEST_ASSERT_EQUAL_size_t(0, modbus_master_n);
     const uint8_t bits[4] = {1, 0, 1, 1};
     modbus_master_n = ModbusMaster.build_write_multiple_coils(modbus_master_work, 1, 1, 0, NULL, 4, adu, sizeof(adu));

@@ -23,7 +23,7 @@
 
 #if PROTOCORE_ENABLE_DEVICE_ID
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Length of a formatted UUID string including the null terminator. */
 #define PROTOCORE_UUID_STR_LEN 37
@@ -88,7 +88,7 @@ static const DeviceIdNs DeviceId __attribute__((unused)) = {
 
 #endif
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID
 

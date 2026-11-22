@@ -55,7 +55,7 @@ void setUp(void)
     Oauth2V.refresh_grant.refresh_token = NULL;
     Oauth2V.response.json = NULL;
     Oauth2V.response.tokens = NULL;
-    Oauth2V.ok = PROTO_FALSE;
+    Oauth2V.ok = EMBED_FALSE;
     Oauth2V.i32 = 0;
     Oauth2V.request.token_endpoint = "http://10.0.0.5:8080/token";
 }

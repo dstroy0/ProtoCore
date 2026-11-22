@@ -330,7 +330,7 @@ static void poly_compress4(uint8_t r[128], const int16_t a[MK_N])
 }
 
 // FIPS 203 modulus check: ek's decoded coefficients must all be < q.
-static proto_bool check_ek(const uint8_t ek[MLKEM768_EK_BYTES])
+static embed_bool check_ek(const uint8_t ek[MLKEM768_EK_BYTES])
 {
     for (unsigned i = 0; i < MK_K; i++)
     {
@@ -340,11 +340,11 @@ static proto_bool check_ek(const uint8_t ek[MLKEM768_EK_BYTES])
         {
             if ((uint16_t)p[j] >= MK_Q)
             {
-                return PROTO_FALSE;
+                return EMBED_FALSE;
             }
         }
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // K-PKE.Encrypt(ek, m, r) -> ct. u is streamed and compressed one row at a time to bound stack.
@@ -583,11 +583,11 @@ static void k_pke_decrypt(uint8_t m[32], const uint8_t dk_pke[MK_K * MK_POLYBYTE
 
 // --- the entries -----------------------------------------------------------
 
-proto_bool protocore_ml_kem_keygen(uint8_t *work, const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_t *dk)
+embed_bool protocore_ml_kem_keygen(uint8_t *work, const uint8_t *d, const uint8_t *z, uint8_t *ek, uint8_t *dk)
 {
     if (!d || !z || !ek || !dk)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // dk = dk_PKE || ek || H(ek) || z  (FIPS 203 Algorithm 16).
@@ -595,18 +595,18 @@ proto_bool protocore_ml_kem_keygen(uint8_t *work, const uint8_t *d, const uint8_
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dk + MK_K * MK_POLYBYTES, .src = ek, .bytes = MLKEM768_EK_BYTES);
     mk_sha3_256(work, dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES, ek, MLKEM768_EK_BYTES);
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = dk + MK_K * MK_POLYBYTES + MLKEM768_EK_BYTES + 32, .src = z, .bytes = 32);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ml_kem_encaps(uint8_t *work, const uint8_t *ek, const uint8_t *m, uint8_t *ct, uint8_t *ss)
+embed_bool protocore_ml_kem_encaps(uint8_t *work, const uint8_t *ek, const uint8_t *m, uint8_t *ct, uint8_t *ss)
 {
     if (!ek || !m || !ct || !ss)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!check_ek(ek))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     // (K, r) = G(m || H(ek)); ss = K.
@@ -618,14 +618,14 @@ proto_bool protocore_ml_kem_encaps(uint8_t *work, const uint8_t *ek, const uint8
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = ss, .src = g_out, .bytes = 32);
 
     k_pke_encrypt(work, ct, ek, m, g_out + 32);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8_t *ct, uint8_t *ss)
+embed_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8_t *ct, uint8_t *ss)
 {
     if (!dk || !ct || !ss)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     const uint8_t *dk_pke = dk;
@@ -657,7 +657,7 @@ proto_bool protocore_ml_kem_decaps(uint8_t *work, const uint8_t *dk, const uint8
     {
         ss[i] = (uint8_t)((g_out[i] & (uint8_t)~diff) | (kbar[i] & diff)); // K' if match, K_bar if not
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_ENABLE_MLKEM

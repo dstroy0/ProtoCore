@@ -16,7 +16,7 @@
 #include "server/core/logbuf/logbuf.h"
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // A log line is its severity letter, a space, then the message.
 static const mmgr_field LOG_LINE[] = {MMGR_CH, {MMGR_FK_LIT, 0, 1, " "}, MMGR_STR, MMGR_END};
@@ -173,6 +173,6 @@ void protocore_logbuf_set_trap(uint8_t *work)
 /** @brief The operands and the outcome. */
 LogbufVars LogbufV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LOGBUF

@@ -81,7 +81,7 @@ static void out_reset()
 }
 
 // The datagram the server sent to ip:port, oldest first, taken out of the capture.
-static proto_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
+static embed_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
 {
     protocore_net_ip want;
     memset(&want, 0, sizeof want);
@@ -108,17 +108,17 @@ static proto_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
             protocore_net_host_dgrams[j] = protocore_net_host_dgrams[j + 1];
         }
         protocore_net_host_dgram_n--;
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // One datagram from ip:port into the port the server bound.
-static proto_bool ingest_dgram(const uint8_t *data, size_t len, const char *ip, uint16_t port)
+static embed_bool ingest_dgram(const uint8_t *data, size_t len, const char *ip, uint16_t port)
 {
     return protocore_net_host_udp_deliver(CoapsServerV.bind.port, ip, port, (void *)(uintptr_t)data, (uint16_t)len)
-               ? PROTO_TRUE
-               : PROTO_FALSE;
+               ? EMBED_TRUE
+               : EMBED_FALSE;
 }
 
 // One turn of the loop, in the order the loop takes it: handle() takes the clock reading its whole
@@ -160,7 +160,7 @@ static void out_sink(void *, const uint8_t *dg, size_t len, const char *ip, uint
     o->port = port;
 }
 
-static proto_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
+static embed_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
 {
     for (int i = 0; i < g_out_n; i++)
     {
@@ -172,13 +172,13 @@ static proto_bool take_out_for(const char *ip, uint16_t port, OutDg *dst)
                 g_out[j] = g_out[j + 1];
             }
             g_out_n--;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-static proto_bool ingest_dgram(const uint8_t *data, size_t len, const char *ip, uint16_t port)
+static embed_bool ingest_dgram(const uint8_t *data, size_t len, const char *ip, uint16_t port)
 {
     CoapsServerV.dgram.data = data;
     CoapsServerV.dgram.len = len;
@@ -312,11 +312,11 @@ static size_t build_client_hello(uint8_t *out, const uint8_t client_pub[32], con
     return b.n;
 }
 
-static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
+static embed_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
 {
     if (len < 44)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t o = 4 + 2 + 32;
     uint8_t sid = sh[o++];
@@ -324,7 +324,7 @@ static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
     o += 2 + 1;
     if (o + 2 > len)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t ext_end = o + 2 + ((sh[o] << 8) | sh[o + 1]);
     o += 2;
@@ -336,11 +336,11 @@ static proto_bool sh_keyshare(const uint8_t *sh, size_t len, uint8_t pub[32])
         if (et == 0x0033 && el >= 4 + 32)
         {
             memcpy(pub, sh + o + 4, 32);
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         o += el;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 static size_t frag_to_tls(const uint8_t *payload, size_t plen, uint8_t *tls_out)
@@ -488,7 +488,7 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
         TEST_ASSERT_TRUE(crl > 0);
         uint8_t inner[512];
         DtlsCiphertext info;
-        proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &srv_read, exp_seq, flight + off, crl, inner,
+        embed_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, &srv_read, exp_seq, flight + off, crl, inner,
                                                          sizeof(inner), &info, client_cid, client_cid_len);
         TEST_ASSERT_TRUE(dtls_record_ok);
         exp_seq = info.seq + 1;
@@ -552,7 +552,7 @@ static void assert_coap_205(DtlsRecordKeys *r, const OutDg *dg, const uint8_t *c
 {
     uint8_t coap_resp[256];
     DtlsCiphertext info;
-    proto_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, r, 1, dg->buf, dg->len, coap_resp,
+    embed_bool dtls_record_ok = DtlsRecord.unprotect(dtls_record_work, r, 1, dg->buf, dg->len, coap_resp,
                                                      sizeof(coap_resp), &info, cid, cid_len);
     TEST_ASSERT_TRUE(dtls_record_ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_APPLICATION_DATA, info.content_type);

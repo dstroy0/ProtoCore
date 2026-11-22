@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_PROXY_PROTOCOL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -44,7 +44,7 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     uint8_t version;     ///< 1 or 2
-    proto_bool has_addr; ///< true when TCP/IPv4 addresses were decoded
+    embed_bool has_addr; ///< true when TCP/IPv4 addresses were decoded
     uint32_t src_addr;   ///< real client IPv4 (host order)
     uint32_t dst_addr;   ///< proxied destination IPv4
     uint16_t src_port;
@@ -115,7 +115,7 @@ typedef struct
     ProxyProtocolParseArgs parse_args;
     ProxyProtocolV1BuildArgs v1_build_args;
     ProxyProtocolV2BuildArgs v2_build_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } ProxyProtocolVars;
 
@@ -146,7 +146,7 @@ static const ProxyProtocolNs ProxyProtocol __attribute__((unused)) = {
     .v2_build = protocore_proxy_protocol_v2_build,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROXY_PROTOCOL
 

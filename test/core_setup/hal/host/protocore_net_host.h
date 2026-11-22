@@ -1205,6 +1205,10 @@ static inline protocore_platform_task protocore_platform_task_self(void)
     return (void *)1;
 }
 
+// With PROTOCORE_ENABLE_IDEMIP, the stack module of the network layer answers each protocore_net_* call, and
+// the imitation below stays out.
+#if !defined(PROTOCORE_ENABLE_IDEMIP) || !PROTOCORE_ENABLE_IDEMIP
+
 // ---------------------------------------------------------------------------
 // Address
 // ---------------------------------------------------------------------------
@@ -1754,7 +1758,7 @@ static inline void protocore_net_opt_set(void *p, uint32_t opt)
 // renderer in protocore_net_pcap.h turns that log into a .pcap the test parses and Wireshark opens.
 //
 // The log holds the fields rather than the pcap bytes because this header is parsed from inside
-// protocore_config.h, before shared/protocore_types.h supplies PROTOCORE_INLINE - so pcap.h cannot be
+// protocore_config.h, before shared/protocore_types.h supplies EMBED_INLINE - so pcap.h cannot be
 // included here.
 
 #ifndef PROTOCORE_NET_HOST_PBUFS
@@ -2176,5 +2180,9 @@ static inline int protocore_net_host_udp_deliver(uint16_t port, const char *src_
     p->on_recv(p->arg, p, &b, &src, src_port);
     return 1;
 }
+
+#else
+#include "network_drivers/network/stack/stack_net.h" // the protocore_net_* calls over idemIP
+#endif // PROTOCORE_ENABLE_IDEMIP
 
 #endif // PROTOCORE_PROTOCORE_NET_HOST_H

@@ -10,11 +10,11 @@
 #include "rx_feed.h"
 #include <unity.h>
 
-static proto_bool g_called;
+static embed_bool g_called;
 static char g_a[32], g_b[32];
-static proto_bool g_found_a, g_found_b, g_found_missing;
+static embed_bool g_found_a, g_found_b, g_found_missing;
 
-static void copy_param(const HttpReq *req, const char *key, char *out, size_t n, proto_bool *found)
+static void copy_param(const HttpReq *req, const char *key, char *out, size_t n, embed_bool *found)
 {
     const char *http_parser_text = HttpParser.get_param(protocore_http_parser_span(), req, key);
     const char *v = http_parser_text;
@@ -32,7 +32,7 @@ static void copy_param(const HttpReq *req, const char *key, char *out, size_t n,
 
 static void h_one(uint8_t slot, HttpReq *req)
 {
-    g_called = PROTO_TRUE;
+    g_called = EMBED_TRUE;
     copy_param(req, "id", g_a, sizeof(g_a), &g_found_a);
     char dummy[8];
     copy_param(req, "nope", dummy, sizeof(dummy), &g_found_missing);
@@ -41,7 +41,7 @@ static void h_one(uint8_t slot, HttpReq *req)
 
 static void h_two(uint8_t slot, HttpReq *req)
 {
-    g_called = PROTO_TRUE;
+    g_called = EMBED_TRUE;
     copy_param(req, "uid", g_a, sizeof(g_a), &g_found_a);
     copy_param(req, "pid", g_b, sizeof(g_b), &g_found_b);
     send_text(slot, 200, "text/plain", "ok");
@@ -50,20 +50,20 @@ static void h_two(uint8_t slot, HttpReq *req)
 static void h_exact(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    g_called = PROTO_TRUE;
+    g_called = EMBED_TRUE;
     send_text(slot, 200, "text/plain", "exact");
 }
 
 void setUp()
 {
     protocore_server_reset();
-    g_called = g_found_a = g_found_b = g_found_missing = PROTO_FALSE;
+    g_called = g_found_a = g_found_b = g_found_missing = EMBED_FALSE;
     g_a[0] = g_b[0] = '\0';
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
         conn_pool[i].id = (uint8_t)i;
-        conn_pool[i].state = CONN_ACTIVE;
+        EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &conn_pool[i].state, .value = CONN_ACTIVE);
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConnV.slot = i;

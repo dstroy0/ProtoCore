@@ -14,7 +14,7 @@
 #include "server/core/worker/worker.h"           // the cellblock this module's state is taken from
 #include "services/southbound/southbound/southbound.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #ifndef PROTOCORE_SOUTHBOUND_MAX_DRIVERS
 #define PROTOCORE_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.
@@ -82,7 +82,7 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
     {
         if (store->drivers[i] && store->drivers[i]->name &&
             EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = store->drivers[i]->name, .other = name, .cap = MAX_KEY_LEN,
-                       .ci = PROTO_FALSE))
+                       .ci = EMBED_FALSE))
         {
             return store->drivers[i];
         }
@@ -220,6 +220,6 @@ void protocore_southbound_write_block(uint8_t *work)
 /** @brief The operands and the outcome. */
 SouthboundVars SouthboundV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND

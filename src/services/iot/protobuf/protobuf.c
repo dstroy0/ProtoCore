@@ -19,7 +19,7 @@
 #include "cellularum_laboro/cellularum_laboro.h" // cellul.len: the bounded length of a NUL-terminated LEN payload
 #include "memoria_operor/memoria_operor.h"       // memor.cpy: the payload octets and the float bit patterns
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // One encoder row: the caller buffer it appends into, how far it has appended, and the sticky flag
 // an overflow sets.
@@ -28,7 +28,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     size_t pos;
-    proto_bool error;
+    embed_bool error;
 } ProtobufWriterRow;
 
 // One decoder row: the encoded octets it walks and the offset it has walked to.
@@ -83,12 +83,12 @@ static ProtobufReaderRow *reader_row(uint8_t *work)
 
 // Append v as a Base 128 varint: seven payload bits per octet, little-endian, the continuation bit
 // (MSB) set on every octet but the last. Sets the row's sticky error when it does not fit.
-static proto_bool writer_varint(uint8_t *work, uint64_t v)
+static embed_bool writer_varint(uint8_t *work, uint64_t v)
 {
     ProtobufWriterRow *w = writer_row(work);
     if (!w || w->error)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t tmp[PROTOCORE_PROTOBUF_VARINT_MAX];
     size_t n = 0;
@@ -104,74 +104,74 @@ static proto_bool writer_varint(uint8_t *work, uint64_t v)
     } while (v);
     if (w->pos + n > w->cap)
     {
-        w->error = PROTO_TRUE;
-        return PROTO_FALSE;
+        w->error = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = tmp, .bytes = n);
     w->pos += n;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append the low n octets of v, least significant first, the layout I32 and I64 payloads take.
-static proto_bool writer_le(uint8_t *work, uint64_t v, size_t n)
+static embed_bool writer_le(uint8_t *work, uint64_t v, size_t n)
 {
     ProtobufWriterRow *w = writer_row(work);
     if (!w || w->error)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (w->pos + n > w->cap)
     {
-        w->error = PROTO_TRUE;
-        return PROTO_FALSE;
+        w->error = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     for (size_t i = 0; i < n; i++)
     {
         w->buf[w->pos++] = (uint8_t)(v >> (8u * i));
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Append the tag (field_number << 3) | wire_type, the field number coming off ns->tag.
-static proto_bool writer_tag(uint8_t *work, uint8_t wire_type)
+static embed_bool writer_tag(uint8_t *work, uint8_t wire_type)
 {
     return writer_varint(work, ((uint64_t)ProtobufV.tag.field_number << 3) | (uint64_t)(wire_type & 0x07u));
 }
 
 // Append a LEN record: the tag, the length prefix varint, then len payload octets.
-static proto_bool writer_len(uint8_t *work, const uint8_t *data, size_t len)
+static embed_bool writer_len(uint8_t *work, const uint8_t *data, size_t len)
 {
     if (!writer_tag(work, PROTOCORE_PROTOBUF_WT_LEN) || !writer_varint(work, (uint64_t)len))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     ProtobufWriterRow *w = writer_row(work);
     if (!w || w->error)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (len == 0)
     {
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     if (!data || w->pos + len > w->cap)
     {
-        w->error = PROTO_TRUE;
-        return PROTO_FALSE;
+        w->error = EMBED_TRUE;
+        return EMBED_FALSE;
     }
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->buf + w->pos, .src = data, .bytes = len);
     w->pos += len;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // Decode the Base 128 varint at the row's cursor into *out and advance the cursor past it. False on
 // a truncated varint or one that runs past ten octets.
-static proto_bool reader_varint(uint8_t *work, uint64_t *out)
+static embed_bool reader_varint(uint8_t *work, uint64_t *out)
 {
     ProtobufReaderRow *r = reader_row(work);
     if (!r || !r->buf)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint64_t v = 0;
     size_t shift = 0;
@@ -180,7 +180,7 @@ static proto_bool reader_varint(uint8_t *work, uint64_t *out)
     {
         if (i >= r->len)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         uint8_t c = r->buf[i++];
         v |= (uint64_t)(c & 0x7Fu) << shift;
@@ -188,20 +188,20 @@ static proto_bool reader_varint(uint8_t *work, uint64_t *out)
         {
             *out = v;
             r->pos = i;
-            return PROTO_TRUE;
+            return EMBED_TRUE;
         }
         shift += 7;
     }
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
 // Take n little-endian octets at the row's cursor into *out and advance the cursor past them.
-static proto_bool reader_le(uint8_t *work, size_t n, uint64_t *out)
+static embed_bool reader_le(uint8_t *work, size_t n, uint64_t *out)
 {
     ProtobufReaderRow *r = reader_row(work);
     if (!r || !r->buf || n > r->len - r->pos)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint64_t v = 0;
     for (size_t i = 0; i < n; i++)
@@ -210,7 +210,7 @@ static proto_bool reader_le(uint8_t *work, size_t n, uint64_t *out)
     }
     r->pos += n;
     *out = v;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -237,7 +237,7 @@ uint8_t *protocore_protobuf_span(void)
 void protocore_protobuf_writer_open(uint8_t *work)
 {
     ProtobufWriterRow *w = writer_row(work);
-    ProtobufV.ok = PROTO_FALSE;
+    ProtobufV.ok = EMBED_FALSE;
     if (!w)
     {
         return;
@@ -328,7 +328,7 @@ void protocore_protobuf_write_bytes(uint8_t *work)
 void protocore_protobuf_write_string(uint8_t *work)
 {
     ProtobufWriterRow *w = writer_row(work);
-    ProtobufV.ok = PROTO_FALSE;
+    ProtobufV.ok = EMBED_FALSE;
     if (!w)
     {
         return;
@@ -336,7 +336,7 @@ void protocore_protobuf_write_string(uint8_t *work)
     const char *s = ProtobufV.value.text;
     if (!s)
     {
-        w->error = PROTO_TRUE;
+        w->error = EMBED_TRUE;
         return;
     }
     ProtobufV.ok =
@@ -355,7 +355,7 @@ void protocore_protobuf_writer_finish(uint8_t *work)
 void protocore_protobuf_reader_open(uint8_t *work)
 {
     ProtobufReaderRow *r = reader_row(work);
-    ProtobufV.ok = PROTO_FALSE;
+    ProtobufV.ok = EMBED_FALSE;
     ProtobufV.n = 0;
     if (!r)
     {
@@ -383,7 +383,7 @@ void protocore_protobuf_read_varint(uint8_t *work)
 void protocore_protobuf_read_record(uint8_t *work)
 {
     ProtobufReaderRow *r = reader_row(work);
-    ProtobufV.ok = PROTO_FALSE;
+    ProtobufV.ok = EMBED_FALSE;
     ProtobufV.record.field_number = 0;
     ProtobufV.record.wire_type = 0;
     ProtobufV.record.value = 0;
@@ -410,7 +410,7 @@ void protocore_protobuf_read_record(uint8_t *work)
         if (reader_varint(work, &v))
         {
             ProtobufV.record.value = v;
-            ProtobufV.ok = PROTO_TRUE;
+            ProtobufV.ok = EMBED_TRUE;
         }
         break;
     }
@@ -419,7 +419,7 @@ void protocore_protobuf_read_record(uint8_t *work)
         if (reader_le(work, 8, &v))
         {
             ProtobufV.record.value = v;
-            ProtobufV.ok = PROTO_TRUE;
+            ProtobufV.ok = EMBED_TRUE;
         }
         break;
     }
@@ -428,7 +428,7 @@ void protocore_protobuf_read_record(uint8_t *work)
         if (reader_le(work, 4, &v))
         {
             ProtobufV.record.value = v;
-            ProtobufV.ok = PROTO_TRUE;
+            ProtobufV.ok = EMBED_TRUE;
         }
         break;
     }
@@ -439,7 +439,7 @@ void protocore_protobuf_read_record(uint8_t *work)
             ProtobufV.record.data = r->buf + r->pos;
             ProtobufV.record.len = (size_t)l;
             r->pos += (size_t)l;
-            ProtobufV.ok = PROTO_TRUE;
+            ProtobufV.ok = EMBED_TRUE;
         }
         break;
     }
@@ -455,7 +455,7 @@ void protocore_protobuf_zigzag64(uint8_t *work)
     (void)work;
     const uint64_t v = ProtobufV.value.u64;
     ProtobufV.i64 = (int64_t)(v >> 1) ^ -(int64_t)(v & 1u);
-    ProtobufV.ok = PROTO_TRUE;
+    ProtobufV.ok = EMBED_TRUE;
 }
 
 // Convert the ZigZag varint ns->value.u32 to the sint32 ns->i32: even maps to positive, odd to negative.
@@ -464,7 +464,7 @@ void protocore_protobuf_zigzag32(uint8_t *work)
     (void)work;
     const uint32_t v = ProtobufV.value.u32;
     ProtobufV.i32 = (int32_t)(v >> 1) ^ -(int32_t)(v & 1u);
-    ProtobufV.ok = PROTO_TRUE;
+    ProtobufV.ok = EMBED_TRUE;
 }
 
 // Read the I32 bit pattern ns->value.u32 as the float ns->f32.
@@ -475,7 +475,7 @@ void protocore_protobuf_float_bits(uint8_t *work)
     float f = 0.0f;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &f, .src = &bits, .bytes = 4);
     ProtobufV.f32 = f;
-    ProtobufV.ok = PROTO_TRUE;
+    ProtobufV.ok = EMBED_TRUE;
 }
 
 // Read the I64 bit pattern ns->value.u64 as the double ns->f64.
@@ -486,13 +486,13 @@ void protocore_protobuf_double_bits(uint8_t *work)
     double d = 0.0;
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = &d, .src = &bits, .bytes = 8);
     ProtobufV.f64 = d;
-    ProtobufV.ok = PROTO_TRUE;
+    ProtobufV.ok = EMBED_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 ProtobufVars ProtobufV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROTOBUF

@@ -36,7 +36,7 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/security/ikev2/ikev2/ikev2.h" // IkePayloadType: the Next Payload a detection Notify carries
 // ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ typedef struct
     IkeNattDigestArgs digest; ///< where a digest lands and the one a compare judges
     IkeNattOutArgs out;       ///< where a Notify payload is written (sec 3.10)
     IkeNattPktArgs pkt;       ///< the UDP payload the demux judges (RFC 3948 sec 2)
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } IkeNattVars;
 
@@ -175,7 +175,7 @@ static const IkeNattNs IkeNatt __attribute__((unused)) = {
     .is_ike = protocore_ike_natt_is_ike,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IKEV2
 

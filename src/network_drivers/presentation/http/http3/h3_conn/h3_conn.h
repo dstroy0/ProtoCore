@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_H3_CONN_BORROW - the bytes one connection runs out of - is stated in
 // protocore_config.h, which sums it into the plaintext arena. The connection carries no key
@@ -104,7 +104,7 @@ typedef struct
     H3ConnBind bind;
     H3ConnAppArgs app_args;
     H3ConnRespondArgs respond_args;
-    proto_bool ok;
+    embed_bool ok;
 } H3ConnVars;
 
 /** @brief The operands and the outcome. */
@@ -131,7 +131,7 @@ static const H3ConnNs H3Conn __attribute__((unused)) = {
     .respond = protocore_h3_conn_respond,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3
 

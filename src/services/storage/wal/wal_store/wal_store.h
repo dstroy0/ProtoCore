@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_WAL
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/storage/wal/wal/wal.h"
 /** @brief Superblock magic ("WSB1", little-endian). */
@@ -59,7 +59,7 @@ typedef struct
 {
     size_t (*read)(void *ctx, uint64_t off, uint8_t *buf, size_t len);
     size_t (*write)(void *ctx, uint64_t off, const uint8_t *buf, size_t len);
-    proto_bool (*sync)(void *ctx);
+    embed_bool (*sync)(void *ctx);
     void *ctx;
     uint64_t size;
 } WalDev;
@@ -81,27 +81,27 @@ typedef struct
  * @brief Format @p dev into an empty store (writes a generation-1 superblock). Erases any existing log.
  * @return false if @p dev is too small to hold both superblocks plus a data region.
  */
-proto_bool protocore_wal_store_format(WalStore *s, const WalDev *dev);
+embed_bool protocore_wal_store_format(WalStore *s, const WalDev *dev);
 
 /**
  * @brief Mount an existing store: pick the newest valid superblock, then replay the tail past its committed
  * head to recover records appended since the last checkpoint. @return false if neither superblock is valid
  * (unformatted / both torn).
  */
-proto_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev);
+embed_bool protocore_wal_store_mount(WalStore *s, const WalDev *dev);
 
 /**
  * @brief Append one record (wal.h framing) at the current head. Does **not** sync - call
  * ::protocore_wal_store_checkpoint to make appends durable. @return false if the record does not fit the remaining data
  * region (log full) or a device write is short.
  */
-proto_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len);
+embed_bool protocore_wal_store_append(WalStore *s, const uint8_t *payload, uint32_t len);
 
 /**
  * @brief Make every append so far durable and advance the committed head: sync data, write the next-generation
  * superblock to the inactive copy, sync it. @return false on a device write/sync failure.
  */
-proto_bool protocore_wal_store_checkpoint(WalStore *s);
+embed_bool protocore_wal_store_checkpoint(WalStore *s);
 
 /** @brief Per-record callback for ::protocore_wal_store_scan - like ::WalRecordCb but also gives the record's
  * data-region byte offset (so an index can record where to re-read the payload later). */
@@ -120,7 +120,7 @@ size_t protocore_wal_store_scan(WalStore *s, WalStoreRecordCb cb, void *ctx, uin
  * @brief Read @p len bytes from data-region offset @p off (as reported to ::WalStoreRecordCb) into @p buf.
  * @return true on success. Lets an index re-read a value straight from the log without buffering it.
  */
-proto_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len);
+embed_bool protocore_wal_store_pread(WalStore *s, uint64_t off, uint8_t *buf, size_t len);
 
 /** @brief Bytes used in the data region (including appends not yet checkpointed). */
 static inline uint64_t protocore_wal_store_used(const WalStore *s)
@@ -138,7 +138,7 @@ static inline uint64_t protocore_wal_store_capacity(const WalStore *s)
     return s->data_cap;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WAL
 

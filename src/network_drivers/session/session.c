@@ -17,7 +17,9 @@
 
 #include "network_drivers/session/session.h"
 #include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
+#if PROTOCORE_ENABLE_SSH_SCP || PROTOCORE_ENABLE_SSH_SFTP
 #include "network_drivers/presentation/ssh/network/network.h" // SshNetwork.owns: which SSH slot this stream carries
+#endif
 #include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the slot an event names
 #include "network_drivers/transport/tcp/server/server.h"      // TcpListener: the queues this tick drains
 #include "network_drivers/transport/udp/server/server.h"      // UdpListener: the datagram rings this tick drains
@@ -146,7 +148,7 @@ static void conn_release(uint8_t slot)
     {
         Fs.io.handle = file_send[slot].fh; // the source outlived the connection reading it
         Fs.close(protocore_filesystem_span());
-        file_send[slot].active = PROTO_FALSE;
+        file_send[slot].active = EMBED_FALSE;
     }
 #endif
 #if PROTOCORE_ENABLE_SSH_SCP || PROTOCORE_ENABLE_SSH_SFTP
@@ -168,7 +170,7 @@ static void conn_release(uint8_t slot)
             Fs.io.handle = scp_conns[i].fh; // the destination outlived the transfer writing it
             Fs.close(protocore_filesystem_span());
             scp_conns[i].fh = -1;
-            scp_conns[i].active = PROTO_FALSE;
+            scp_conns[i].active = EMBED_FALSE;
         }
 #endif
 #if PROTOCORE_ENABLE_SSH_SFTP
@@ -179,7 +181,7 @@ static void conn_release(uint8_t slot)
             Fs.close(protocore_filesystem_span());
             sftp_sess[i].open_mask &= ~(1u << h);
         }
-        sftp_sess[i].active = PROTO_FALSE;
+        sftp_sess[i].active = EMBED_FALSE;
 #endif
     }
 #endif

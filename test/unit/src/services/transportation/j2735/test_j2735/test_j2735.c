@@ -203,9 +203,9 @@ void test_bits_are_packed_msb_first(void)
     TEST_ASSERT_EQUAL_HEX8(0xC0, buf[1]);
 
     protocore_uper_writer_init(&w, buf, sizeof(buf));
-    protocore_uper_put_bool(&w, PROTO_TRUE);
-    protocore_uper_put_bool(&w, PROTO_FALSE);
-    protocore_uper_put_bool(&w, PROTO_TRUE);
+    protocore_uper_put_bool(&w, EMBED_TRUE);
+    protocore_uper_put_bool(&w, EMBED_FALSE);
+    protocore_uper_put_bool(&w, EMBED_TRUE);
     TEST_ASSERT_EQUAL_UINT(1u, protocore_uper_writer_finish(&w));
     TEST_ASSERT_EQUAL_HEX8(0xA0, buf[0]);
 }
@@ -413,8 +413,8 @@ void test_map_round_trip(void)
 {
     J2735MapIntersection isect = {0xBEEF, 0x1234, 0x5678};
     J2735Lane lanes[2] = {
-        {7, PROTO_TRUE, -2048, 2047},
-        {200, PROTO_FALSE, 0, -1},
+        {7, EMBED_TRUE, -2048, 2047},
+        {200, EMBED_FALSE, 0, -1},
     };
     J2735MapIntersection got_isect;
     J2735Lane got_lanes[2];
@@ -446,7 +446,7 @@ void test_map_round_trip(void)
 void test_map_bounds(void)
 {
     J2735MapIntersection isect = {1, 2, 3};
-    J2735Lane lanes[1] = {{5, PROTO_TRUE, 0, 0}};
+    J2735Lane lanes[1] = {{5, EMBED_TRUE, 0, 0}};
     J2735MapIntersection got_isect;
     J2735Lane got_lanes[1];
     uint8_t out[32];

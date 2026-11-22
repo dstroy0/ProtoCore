@@ -155,7 +155,7 @@ typedef struct
     uint8_t slot;               ///< the connection every call names
     void (*poll)(uint8_t slot); ///< what set_poll installs as the per-tick step
     HttpHdrArgs hdr_args;       ///< the header a token scan reads
-    proto_bool ok;
+    embed_bool ok;
     const struct ProtoHandler *handler;
 #if PROTOCORE_ENABLE_KEEPALIVE
 #endif

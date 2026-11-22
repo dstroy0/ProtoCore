@@ -43,7 +43,7 @@
 // An interface is a physical thing: its id, its kind, and how bytes reach the wire all live at L1.
 // This plane picks the interface a frame leaves on and asks L1 to put it there.
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_FORWARD
 
@@ -51,11 +51,10 @@ PROTOCORE_BEGIN_DECLS
  * @brief What an access-list entry or a control on forwarding does to a frame.
  *        RFC 1812 sec 5.3.9, sec 5.3.11.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_fwd_action,
     PROTOCORE_FWD_DENY = 0,
     PROTOCORE_FWD_ALLOW = 1,
-} protocore_fwd_action;
+);
 
 /** @brief Wildcard source interface: an entry carrying it matches a frame from any interface. */
 #define PROTOCORE_FWD_IF_ANY 0xFF
@@ -75,11 +74,10 @@ typedef struct
 
 #if PROTOCORE_FWD_INSPECT
 /** @brief The verdict an inspection hook returns for a frame. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_fwd_verdict,
     PROTOCORE_FWD_INSPECT_PASS = 0, ///< the frame continues to the route lookup and the fan-out
     PROTOCORE_FWD_INSPECT_DROP = 1, ///< the frame is dropped and counted as inspect_dropped
-} protocore_fwd_verdict;
+);
 
 /**
  * @brief Ingress inspection hook: reads @p len bytes at @p data arriving on @p src_if and returns a
@@ -177,7 +175,7 @@ typedef struct
 #if PROTOCORE_FWD_INSPECT
     FwdInspectArgs inspect; ///< the ingress inspection hook
 #endif
-    proto_bool ok;
+    embed_bool ok;
     uint8_t n;
     protocore_forward_stats stats;
 #if PROTOCORE_FWD_INSPECT
@@ -243,6 +241,6 @@ uint8_t *protocore_forward_span(void);
 
 #endif // PROTOCORE_ENABLE_FORWARD
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_FORWARD_H

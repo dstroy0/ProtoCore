@@ -28,15 +28,14 @@
 
 #if PROTOCORE_ENABLE_DASHBOARD
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_DASHBOARD_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
 // are carved is this module's and is never named here.
 
 /** @brief Widget rendering / interaction style. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_widget_type,
     // Display widgets - updated from the SSE value stream.
     PROTOCORE_WIDGET_VALUE = 0, ///< plain numeric readout
     PROTOCORE_WIDGET_GAUGE,     ///< radial arc gauge over [min, max]
@@ -47,7 +46,7 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_WIDGET_BUTTON, ///< momentary button -> control value 1
     PROTOCORE_WIDGET_TOGGLE, ///< on/off toggle -> control value 0/1 (reflects SSE state)
     PROTOCORE_WIDGET_SLIDER  ///< range slider over [min, max] -> control value
-} protocore_widget_type;
+);
 
 /** @brief Control callback: invoked when a control widget sends a value over WebSocket. */
 typedef void (*protocore_control_cb)(const char *key, float value);
@@ -163,7 +162,7 @@ typedef struct
     DashboardParseControlArgs parse_control_args;
     DashboardDispatchControlArgs dispatch_control_args;
     DashboardBeginArgs begin_args;
-    proto_bool ok;
+    embed_bool ok;
     int32_t value;
 } DashboardVars;
 
@@ -223,7 +222,7 @@ static const DashboardNs Dashboard __attribute__((unused)) = {
  */
 uint8_t *protocore_dashboard_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DASHBOARD
 

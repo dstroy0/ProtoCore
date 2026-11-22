@@ -27,7 +27,7 @@
 
 #include "protocore_config.h" // the entry point: the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @name X.690 sec 8.1.2 identifier octets: the universal tags this profile reads.
  *  @{ */
@@ -105,7 +105,7 @@ typedef struct
     DerReadArgs read_args;
     DerOidArgs oid_args;
     DerTlv tlv;
-    proto_bool ok;
+    embed_bool ok;
     uint64_t u64;
 } DerVars;
 
@@ -145,6 +145,6 @@ static const DerNs Der __attribute__((unused)) = {
     .time = protocore_der_time,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_DER_H

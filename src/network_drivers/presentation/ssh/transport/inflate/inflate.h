@@ -13,7 +13,7 @@
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -40,7 +40,7 @@ typedef struct
     uint8_t carry[SSH_INFLATE_CARRY]; ///< un-decoded tail bytes from the previous packet (flush block).
     uint8_t carry_len;                ///< number of valid bytes in @ref carry.
     uint8_t bit_off;                  ///< bits already consumed from carry[0] at the last block boundary (0..7).
-    proto_bool header_seen;           ///< true once the leading 2-byte RFC 1950 zlib header was consumed.
+    embed_bool header_seen;           ///< true once the leading 2-byte RFC 1950 zlib header was consumed.
 } SshInflate;
 
 /** @brief What init takes: z, window. */
@@ -86,7 +86,7 @@ typedef struct
 {
     InflateInitArgs init_args;
     InflatePacketArgs packet_args;
-    proto_bool ok;
+    embed_bool ok;
     int n;
 } InflateVars;
 
@@ -114,7 +114,7 @@ static const InflateNs Inflate __attribute__((unused)) = {
     .packet = protocore_inflate_packet,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_ZLIB
 

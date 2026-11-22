@@ -114,19 +114,19 @@ int protocore_zwave_parse_frame(uint8_t *work, const uint8_t *raw, uint16_t len,
     return (int)total;
 }
 
-proto_bool protocore_zwave_is_ack(uint8_t *work, uint8_t b)
+embed_bool protocore_zwave_is_ack(uint8_t *work, uint8_t b)
 {
     (void)work;
 
     return b == ZWAVE_ACK;
 }
-proto_bool protocore_zwave_is_nak(uint8_t *work, uint8_t b)
+embed_bool protocore_zwave_is_nak(uint8_t *work, uint8_t b)
 {
     (void)work;
 
     return b == ZWAVE_NAK;
 }
-proto_bool protocore_zwave_is_can(uint8_t *work, uint8_t b)
+embed_bool protocore_zwave_is_can(uint8_t *work, uint8_t b)
 {
     (void)work;
 

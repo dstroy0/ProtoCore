@@ -20,7 +20,7 @@
 
 #include "crypto/asymmetric/fe25519/fe25519.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_FE25519_MPI_HW
 
@@ -31,198 +31,198 @@ void protocore_fe25519_hw_enable(uint8_t *work)
 {
     (void)work;
     protocore_fe_hw_enable();
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_hw_disable(uint8_t *work)
 {
     (void)work;
     protocore_fe_hw_disable();
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_mul(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.mul_args.z || !Fe25519V.mul_args.x || !Fe25519V.mul_args.y)
     {
         return;
     }
     fe_mul(Fe25519V.mul_args.z, Fe25519V.mul_args.x, Fe25519V.mul_args.y);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_sq(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.sq_args.o || !Fe25519V.sq_args.x)
     {
         return;
     }
     fe_sq(Fe25519V.sq_args.o, Fe25519V.sq_args.x);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_copy(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.copy_args.o || !Fe25519V.copy_args.a)
     {
         return;
     }
     fe_copy(Fe25519V.copy_args.o, Fe25519V.copy_args.a);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_zero(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.zero_args.o)
     {
         return;
     }
     fe_0(Fe25519V.zero_args.o);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_one(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.one_args.o)
     {
         return;
     }
     fe_1(Fe25519V.one_args.o);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_reduce_once(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.reduce_args.o)
     {
         return;
     }
     fe_reduce_once(Fe25519V.reduce_args.o);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_add(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.add_args.o || !Fe25519V.add_args.x || !Fe25519V.add_args.y)
     {
         return;
     }
     fe_add(Fe25519V.add_args.o, Fe25519V.add_args.x, Fe25519V.add_args.y);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_sub(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.sub_args.o || !Fe25519V.sub_args.x || !Fe25519V.sub_args.y)
     {
         return;
     }
     fe_sub(Fe25519V.sub_args.o, Fe25519V.sub_args.x, Fe25519V.sub_args.y);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_cswap(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.cswap_args.x || !Fe25519V.cswap_args.y)
     {
         return;
     }
     fe_cswap(Fe25519V.cswap_args.x, Fe25519V.cswap_args.y, Fe25519V.cswap_args.swap);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_frombytes(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.frombytes_args.o || !Fe25519V.frombytes_args.b)
     {
         return;
     }
     fe_frombytes(Fe25519V.frombytes_args.o, Fe25519V.frombytes_args.b);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_tobytes(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.tobytes_args.b || !Fe25519V.tobytes_args.a)
     {
         return;
     }
     fe_tobytes(Fe25519V.tobytes_args.b, Fe25519V.tobytes_args.a);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_invert(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.invert_args.o || !Fe25519V.invert_args.a)
     {
         return;
     }
     fe_invert(Fe25519V.invert_args.o, Fe25519V.invert_args.a);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 void protocore_fe25519_pow2523(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     if (!Fe25519V.pow2523_args.o || !Fe25519V.pow2523_args.a)
     {
         return;
     }
     fe_pow2523(Fe25519V.pow2523_args.o, Fe25519V.pow2523_args.a);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 // The low bit of the canonical encoding, onto the handle beside ok.
 void protocore_fe25519_get_parity(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     Fe25519V.parity = 0;
     if (!Fe25519V.parity_args.a)
     {
         return;
     }
     Fe25519V.parity = fe_parity(Fe25519V.parity_args.a);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 // 0 when the two encode the same element, -1 otherwise, onto the handle beside ok.
 void protocore_fe25519_get_neq(uint8_t *work)
 {
     (void)work;
-    Fe25519V.ok = PROTO_FALSE;
+    Fe25519V.ok = EMBED_FALSE;
     Fe25519V.neq = -1;
     if (!Fe25519V.neq_args.a || !Fe25519V.neq_args.b)
     {
         return;
     }
     Fe25519V.neq = fe_neq(Fe25519V.neq_args.a, Fe25519V.neq_args.b);
-    Fe25519V.ok = PROTO_TRUE;
+    Fe25519V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
@@ -230,6 +230,6 @@ Fe25519Vars Fe25519V;
 
 #endif // PROTOCORE_FE25519_MPI_HW
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FE25519

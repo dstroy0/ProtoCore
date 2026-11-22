@@ -33,7 +33,7 @@
 
 #if PROTOCORE_ENABLE_MBUS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -76,13 +76,12 @@ PROTOCORE_BEGIN_DECLS
 #define MBUS_MEDIUM_COLD_WATER 0x16u
 
 /** @brief M-Bus frame kinds. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(MbusFrameType,
     MBUS_FRAME_NONE = 0,
     MBUS_FRAME_ACK,   ///< single 0xE5
     MBUS_FRAME_SHORT, ///< 10 C A CS 16
     MBUS_FRAME_LONG,  ///< 68 L L 68 C A CI ... CS 16 (control frame = long with no data)
-} MbusFrameType;
+);
 
 /** @brief A parsed M-Bus frame (data points into the caller's buffer). */
 typedef struct
@@ -95,8 +94,7 @@ typedef struct
     uint8_t data_len;    ///< user-data length (long only)
 } MbusFrame;
 
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(MbusDifCoding,
     MBUS_DIF_NONE = 0x0,     ///< no data
     MBUS_DIF_INT8 = 0x1,     ///< 8-bit integer
     MBUS_DIF_INT16 = 0x2,    ///< 16-bit integer
@@ -113,7 +111,7 @@ typedef enum PROTO_ENUM_PACKED
     MBUS_DIF_VARIABLE = 0xD, ///< variable length (LVAR octet precedes the data)
     MBUS_DIF_BCD12 = 0xE,    ///< 12-digit BCD (6 octets)
     MBUS_DIF_SPECIAL = 0xF,  ///< special functions (no data)
-} MbusDifCoding;
+);
 
 /** @brief One decoded EN 13757-3 data record. */
 typedef struct
@@ -126,8 +124,7 @@ typedef struct
 } MbusRecord;
 
 /** @brief Physical unit a VIF decodes to (the common EN 13757-3 measurement ranges). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(MbusUnit,
     MBUS_UNIT_UNKNOWN = 0,
     MBUS_UNIT_WH,       ///< energy, watt-hours
     MBUS_UNIT_J,        ///< energy, joules
@@ -139,7 +136,7 @@ typedef enum PROTO_ENUM_PACKED
     MBUS_UNIT_CELSIUS,  ///< temperature, degrees Celsius
     MBUS_UNIT_K,        ///< temperature difference, kelvin
     MBUS_UNIT_BAR,      ///< pressure, bar
-} MbusUnit;
+);
 
 /** @brief The decoded EN 13757-3 variable-data-structure fixed header. */
 typedef struct
@@ -196,7 +193,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     uint8_t a;
-    proto_bool fcb;
+    embed_bool fcb;
 } MbusBuildReqUd2Args;
 
 /** @brief What build_req_ud1 takes: buf, cap, a, fcb. */
@@ -205,7 +202,7 @@ typedef struct
     uint8_t *buf;
     size_t cap;
     uint8_t a;
-    proto_bool fcb;
+    embed_bool fcb;
 } MbusBuildReqUd1Args;
 
 /** @brief What parse takes: buf, len, out, consumed. */
@@ -322,7 +319,7 @@ typedef struct
     MbusRecordValueRealArgs record_value_real_args;
     MbusVifDecodeArgs vif_decode_args;
     MbusParseVarHeaderArgs parse_var_header_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     uint8_t value;
 } MbusVars;
@@ -384,7 +381,7 @@ static const MbusNs Mbus __attribute__((unused)) = {
     .parse_var_header = protocore_mbus_parse_var_header,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MBUS
 

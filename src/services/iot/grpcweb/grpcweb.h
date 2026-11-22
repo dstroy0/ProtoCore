@@ -51,7 +51,7 @@
 
 #if PROTOCORE_ENABLE_GRPC_WEB
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief Compressed-Flag set in the frame byte: the Message uses the Message-Encoding. */
 #define PROTOCORE_GRPCWEB_COMPRESSED 0x01
@@ -64,8 +64,8 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     uint8_t flags;         ///< the 1st gRPC frame byte as it arrived
-    proto_bool compressed; ///< its Compressed-Flag, bit 0
-    proto_bool trailers;   ///< its 8th (MSB) bit: the body is a trailer-section
+    embed_bool compressed; ///< its Compressed-Flag, bit 0
+    embed_bool trailers;   ///< its 8th (MSB) bit: the body is a trailer-section
     const uint8_t *body;   ///< the Message, or the trailer-section when @c trailers is set
     size_t body_len;       ///< Message-Length, the octets @c body spans
 } GrpcWebFrame;
@@ -83,7 +83,7 @@ typedef struct
     const uint8_t *body;   ///< Message, the octets Message-Length measures
     size_t body_len;       ///< Message-Length, capped at what a 4-byte big-endian field expresses
     uint8_t flags;         ///< the whole 1st gRPC frame byte, when a caller sets it outright
-    proto_bool compressed; ///< Compressed-Flag, the bit a frame_message sets in @c flags
+    embed_bool compressed; ///< Compressed-Flag, the bit a frame_message sets in @c flags
 } GrpcWebMessageArgs;
 
 /** @brief The trailer-section a trailers frame carries (PROTOCOL-HTTP2.md "Responses"). */
@@ -131,7 +131,7 @@ typedef struct
     GrpcWebMessageArgs msg;       ///< what a data frame carries
     GrpcWebTrailersArgs trailers; ///< what a trailers frame carries
     GrpcWebInArgs in;             ///< what a read consumes
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     GrpcWebFrame parsed;
     int32_t i32;
@@ -175,7 +175,7 @@ static const GrpcWebNs GrpcWeb __attribute__((unused)) = {
     .trailers_message = protocore_grpc_web_trailers_message,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_GRPC_WEB
 

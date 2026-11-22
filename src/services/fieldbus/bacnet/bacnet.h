@@ -29,7 +29,7 @@
 
 #if PROTOCORE_ENABLE_BACNET
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -102,10 +102,10 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     uint8_t control;
-    proto_bool network_message; ///< control & 0x80
-    proto_bool dest_present;
+    embed_bool network_message; ///< control & 0x80
+    embed_bool dest_present;
     uint16_t dnet;
-    proto_bool src_present;
+    embed_bool src_present;
     uint16_t snet;
     uint8_t hop_count; ///< valid when dest_present
     const uint8_t *apdu;
@@ -116,9 +116,9 @@ typedef struct
 typedef struct
 {
     uint8_t pdu_type;            ///< PDU type (BACNET_PDU_*)
-    proto_bool segmented;        ///< SEG flag (confirmed-request / complex-ack)
-    proto_bool more_follows;     ///< MOR flag
-    proto_bool sa;               ///< segmented-response-accepted flag (confirmed-request)
+    embed_bool segmented;        ///< SEG flag (confirmed-request / complex-ack)
+    embed_bool more_follows;     ///< MOR flag
+    embed_bool sa;               ///< segmented-response-accepted flag (confirmed-request)
     uint8_t invoke_id;           ///< invoke id (confirmed-request / simple-ack / complex-ack)
     uint8_t service_choice;      ///< service choice
     const uint8_t *service_data; ///< the service parameters after the header, or nullptr if none
@@ -150,9 +150,9 @@ typedef struct
 {
     uint8_t *buf;
     size_t cap;
-    proto_bool expecting_reply;
+    embed_bool expecting_reply;
     uint8_t priority;
-    proto_bool has_dest;
+    embed_bool has_dest;
     uint16_t dnet;
     const uint8_t *dadr;
     uint8_t dadr_len;
@@ -184,7 +184,7 @@ typedef struct
     size_t cap;
     uint32_t low_limit;
     uint32_t high_limit;
-    proto_bool has_limits;
+    embed_bool has_limits;
 } BacnetApduBuildWhoIsArgs;
 
 /** @brief What apdu_build_i_am takes: buf, cap, device_instance, ... */
@@ -258,7 +258,7 @@ typedef struct
     BacnetApduBuildWhoIsArgs apdu_build_who_is_args;
     BacnetApduBuildIAmArgs apdu_build_i_am_args;
     BacnetApduBuildReadPropertyArgs apdu_build_read_property_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } BacnetVars;
 
@@ -304,7 +304,7 @@ static const BacnetNs Bacnet __attribute__((unused)) = {
     .apdu_build_read_property = protocore_bacnet_apdu_build_read_property,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_BACNET
 

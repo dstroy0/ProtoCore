@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_EDGE_MESH
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -52,22 +52,20 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_EDGE_MESH_REQ_MAX (2 + 1 + 1 + 32 + 2 + PROTOCORE_EDGE_KEY_MAX + 2 + PROTOCORE_MESH_HDRS_MAX)
 
 /** @brief Tri-state parse result for the length-delimited frames (partial reads accumulate to complete). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(EdgeMeshParse,
     EDGE_MESH_PARSE_MALFORMED = -1, ///< bad magic/version/opcode, or a field that cannot fit the destination
     EDGE_MESH_PARSE_INCOMPLETE = 0, ///< a valid prefix so far - need more bytes
     EDGE_MESH_PARSE_MISS = 1,       ///< a complete response with no object
     EDGE_MESH_PARSE_HIT = 2,        ///< a complete request (outputs filled) / a complete response carrying an entry
-} EdgeMeshParse;
+);
 
 /** @brief Peer-query progress. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(EdgeMeshStatus,
     EDGE_MESH_STATUS_PENDING, ///< still connecting / receiving
     EDGE_MESH_STATUS_HIT,     ///< a complete entry frame arrived (entry_off / entry_len valid)
     EDGE_MESH_STATUS_MISS,    ///< the peer does not have (a fresh copy of) the object
     EDGE_MESH_STATUS_FAILED,  ///< connect / send / timeout / closed-before-complete / malformed
-} EdgeMeshStatus;
+);
 
 /**
  * @brief One in-flight peer query (zero-heap). The response accumulates into a caller-owned @c buf (>=
@@ -137,7 +135,7 @@ typedef struct
 /** @brief What build_response takes: hit, entry, entry_len, out, cap. */
 typedef struct
 {
-    proto_bool hit;
+    embed_bool hit;
     const uint8_t *entry;
     size_t entry_len;
     uint8_t *out;
@@ -235,7 +233,7 @@ typedef struct
     EdgeMeshFetchBeginArgs fetch_begin_args;
     EdgeMeshFetchPumpArgs fetch_pump_args;
     EdgeMeshFetchEndArgs fetch_end_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
     EdgeMeshParse parse;
     EdgeMeshStatus status;
@@ -286,7 +284,7 @@ static const EdgeMeshNs EdgeMesh __attribute__((unused)) = {
     .fetch_end = protocore_edge_mesh_fetch_end,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EDGE_MESH
 

@@ -30,7 +30,7 @@
     "ProtoCore: a host build that states PROTOCORE_HAS_HW_BIGNUM 1 reaches the modexp through the RSA/MPI accelerator, so it must also state PROTOCORE_RSA_MODMUL_HW 1 and link test/core_setup/hal/host/host_crypto_hal.c. Set PROTOCORE_HAS_HW_BIGNUM 0 for the portable software Montgomery backend."
 #endif
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The Montgomery constants the accelerator's MODMULT takes, for the one modulus this backend runs
 // against. They are functions of group14_p alone, so one owned instance holds them for the process.
@@ -38,7 +38,7 @@ typedef struct
 {
     protocore_bignum rr; ///< R^2 mod p, R = 2^2048
     uint32_t mprime;     ///< -p^-1 mod 2^32
-    proto_bool ready;    ///< whether the two above are filled
+    embed_bool ready;    ///< whether the two above are filled
 } HostBignumCtx;
 static HostBignumCtx s_bn = {0};
 
@@ -104,7 +104,7 @@ static void bn_init(void)
             sub_p(s_bn.rr.d);
         }
     }
-    s_bn.ready = PROTO_TRUE;
+    s_bn.ready = EMBED_TRUE;
 }
 
 void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, const protocore_bignum *exp)
@@ -153,6 +153,6 @@ void bn_expmod_group14(protocore_bignum *out, const protocore_bignum *base, cons
     protocore_secure_guard()->persistent_buf_release(ws.buf, protocore_secure_owner());
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_HOST && PROTOCORE_HAS_HW_BIGNUM

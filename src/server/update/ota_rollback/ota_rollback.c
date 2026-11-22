@@ -12,7 +12,7 @@
 
 #include "server/update/ota_rollback/ota_rollback.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #if PROTOCORE_HAS_VENDOR_OTA
 #include "server/clock/clock.h" // protocore_millis()
@@ -105,6 +105,6 @@ void protocore_ota_rollback_tick(uint8_t *work)
 /** @brief The operands and the outcome. */
 OtaRollbackVars OtaRollbackV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OTA_ROLLBACK

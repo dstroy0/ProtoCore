@@ -144,7 +144,7 @@ void protocore_phase_machine_auth_done(uint8_t *work)
     {
         return;
     }
-    ssh_sess[i].authed = PROTO_TRUE;
+    ssh_sess[i].authed = EMBED_TRUE;
     phase_set(i, SSH_PHASE_OPEN);
 }
 
@@ -261,6 +261,6 @@ void protocore_phase_machine_is_open(uint8_t *work)
 /** @brief The operands and the outcome. */
 PhaseMachineVars PhaseMachineV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT

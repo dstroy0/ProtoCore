@@ -41,12 +41,12 @@
 /** @brief Every mutable the mock owns: one link state, read back by the protocore_net_* / protocore_phy_* calls. */
 typedef struct
 {
-    proto_bool sta_up;               ///< station associated and holding an IP.
-    proto_bool ap_up;                ///< softAP started.
-    proto_bool eth_up;               ///< wired link up and holding an IP.
-    proto_bool v6_up;                ///< IPv6 enabled and a global address configured.
-    proto_bool radio_up;             ///< PHY started, with or without an association.
-    proto_bool monitor_on;           ///< monitor mode active.
+    embed_bool sta_up;               ///< station associated and holding an IP.
+    embed_bool ap_up;                ///< softAP started.
+    embed_bool eth_up;               ///< wired link up and holding an IP.
+    embed_bool v6_up;                ///< IPv6 enabled and a global address configured.
+    embed_bool radio_up;             ///< PHY started, with or without an association.
+    embed_bool monitor_on;           ///< monitor mode active.
     uint8_t channel;                 ///< current radio channel, 0 when the radio is down.
     int8_t rssi;                     ///< station RSSI in dBm, reported only while associated.
     int8_t tx_dbm;                   ///< transmit power cap last applied.
@@ -62,12 +62,12 @@ typedef struct
 // Locally administered MACs (bit 1 of the first octet), which is what an address that was never
 // assigned by the IEEE is required to set.
 static PhysicalMockCtx s_mock = {
-    .sta_up = PROTO_FALSE,
-    .ap_up = PROTO_FALSE,
-    .eth_up = PROTO_FALSE,
-    .v6_up = PROTO_FALSE,
-    .radio_up = PROTO_FALSE,
-    .monitor_on = PROTO_FALSE,
+    .sta_up = EMBED_FALSE,
+    .ap_up = EMBED_FALSE,
+    .eth_up = EMBED_FALSE,
+    .v6_up = EMBED_FALSE,
+    .radio_up = EMBED_FALSE,
+    .monitor_on = EMBED_FALSE,
     .channel = 0,
     .rssi = 0,
     .tx_dbm = 0,
@@ -95,104 +95,104 @@ static void mock_set_ssid(const char *ssid)
     s_mock.ssid_len = n;
 }
 
-proto_bool init_wifi_physical(const char *ssid, const char *password)
+embed_bool init_wifi_physical(const char *ssid, const char *password)
 {
     (void)password; // nothing authenticates here, so the passphrase is accepted and dropped
     mock_set_ssid(ssid);
-    s_mock.radio_up = PROTO_TRUE;
-    s_mock.sta_up = PROTO_TRUE;
+    s_mock.radio_up = EMBED_TRUE;
+    s_mock.sta_up = EMBED_TRUE;
     if (s_mock.channel == 0)
     {
         s_mock.channel = 1;
     }
     s_mock.rssi = -55; // a plausible mid-strength association
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool wifi_ready(void)
+embed_bool wifi_ready(void)
 {
     return s_mock.sta_up;
 }
 
-proto_bool init_wifi_radio_physical(uint8_t channel)
+embed_bool init_wifi_radio_physical(uint8_t channel)
 {
-    s_mock.radio_up = PROTO_TRUE;
+    s_mock.radio_up = EMBED_TRUE;
     if (channel != 0)
     {
         s_mock.channel = channel; // 0 leaves the channel to whoever captures, per the header
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool init_wifi_ap_physical(const char *ssid, const char *password)
+embed_bool init_wifi_ap_physical(const char *ssid, const char *password)
 {
     (void)ssid;
     (void)password;
-    s_mock.radio_up = PROTO_TRUE;
-    s_mock.ap_up = PROTO_TRUE;
-    return PROTO_TRUE;
+    s_mock.radio_up = EMBED_TRUE;
+    s_mock.ap_up = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
 #if PROTOCORE_ENABLE_ETHERNET
-proto_bool init_eth_physical(void)
+embed_bool init_eth_physical(void)
 {
-    s_mock.eth_up = PROTO_TRUE;
-    return PROTO_TRUE;
+    s_mock.eth_up = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool eth_ready(void)
+embed_bool eth_ready(void)
 {
     return s_mock.eth_up;
 }
 #else
-proto_bool init_eth_physical(void)
+embed_bool init_eth_physical(void)
 {
-    return PROTO_FALSE; // Ethernet compiled out
+    return EMBED_FALSE; // Ethernet compiled out
 }
 
-proto_bool eth_ready(void)
+embed_bool eth_ready(void)
 {
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 #endif // PROTOCORE_ENABLE_ETHERNET
 
 #if PROTOCORE_ENABLE_IPV6
-proto_bool init_ipv6_physical(void)
+embed_bool init_ipv6_physical(void)
 {
-    s_mock.v6_up = PROTO_TRUE;
-    return PROTO_TRUE;
+    s_mock.v6_up = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool net_global_ipv6(protocore_ip *out)
+embed_bool net_global_ipv6(protocore_ip *out)
 {
     if (out == NULL || !s_mock.v6_up)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->family = PROTOCORE_IP_V6;
     memcpy(out->bytes, s_mock.v6, sizeof(s_mock.v6));
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_ipv6_ready(void)
+embed_bool protocore_ipv6_ready(void)
 {
     return s_mock.v6_up;
 }
 #else
-proto_bool init_ipv6_physical(void)
+embed_bool init_ipv6_physical(void)
 {
-    return PROTO_FALSE; // IPv6 compiled out
+    return EMBED_FALSE; // IPv6 compiled out
 }
 
-proto_bool net_global_ipv6(protocore_ip *out)
+embed_bool net_global_ipv6(protocore_ip *out)
 {
     (void)out;
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 
-proto_bool protocore_ipv6_ready(void)
+embed_bool protocore_ipv6_ready(void)
 {
-    return PROTO_FALSE;
+    return EMBED_FALSE;
 }
 #endif // PROTOCORE_ENABLE_IPV6
 
@@ -236,30 +236,30 @@ int8_t protocore_net_rssi(void)
     return s_mock.sta_up ? s_mock.rssi : 0;
 }
 
-proto_bool protocore_net_mac(uint8_t out[6])
+embed_bool protocore_net_mac(uint8_t out[6])
 {
     if (out == NULL)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     memcpy(out, s_mock.sta_mac, sizeof(s_mock.sta_mac));
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_net_egress_mac(uint8_t out[6])
+embed_bool protocore_net_egress_mac(uint8_t out[6])
 {
     // The address of whichever interface carries traffic, so it tracks protocore_net_egress_ip()'s choice.
     if (out == NULL || protocore_net_egress_ip() == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (s_mock.eth_up)
     {
         memcpy(out, s_mock.eth_mac, sizeof(s_mock.eth_mac));
-        return PROTO_TRUE;
+        return EMBED_TRUE;
     }
     memcpy(out, s_mock.sta_mac, sizeof(s_mock.sta_mac));
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_net_ssid(char *out, size_t cap)
@@ -293,10 +293,10 @@ uint8_t protocore_net_channel(void)
  * and a driver call; with neither, the state is the whole implementation.
  */
 
-proto_bool protocore_phy_ps_set(protocore_phy_ps mode)
+embed_bool protocore_phy_ps_set(protocore_phy_ps mode)
 {
     s_mock.ps = mode;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 protocore_phy_ps protocore_phy_ps_get(void)
@@ -304,26 +304,26 @@ protocore_phy_ps protocore_phy_ps_get(void)
     return s_mock.ps;
 }
 
-proto_bool protocore_phy_tx_power_set(int8_t dbm)
+embed_bool protocore_phy_tx_power_set(int8_t dbm)
 {
     s_mock.tx_dbm = dbm;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-proto_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb)
+embed_bool protocore_phy_monitor_begin(uint8_t channel, protocore_phy_frame_fn cb)
 {
     if (cb == NULL)
     {
-        return PROTO_FALSE; // capture with nowhere to deliver is a caller bug, not a mode
+        return EMBED_FALSE; // capture with nowhere to deliver is a caller bug, not a mode
     }
-    s_mock.radio_up = PROTO_TRUE;
-    s_mock.monitor_on = PROTO_TRUE;
+    s_mock.radio_up = EMBED_TRUE;
+    s_mock.monitor_on = EMBED_TRUE;
     s_mock.on_frame = cb;
     if (channel != 0)
     {
         s_mock.channel = channel;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_phy_monitor_set_channel(uint8_t channel)
@@ -336,18 +336,18 @@ void protocore_phy_monitor_set_channel(uint8_t channel)
 
 void protocore_phy_monitor_end(void)
 {
-    s_mock.monitor_on = PROTO_FALSE;
+    s_mock.monitor_on = EMBED_FALSE;
     s_mock.on_frame = NULL;
 }
 
-proto_bool protocore_phy_mock_deliver(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
+embed_bool protocore_phy_mock_deliver(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
 {
     if (!s_mock.monitor_on || s_mock.on_frame == NULL || frame == NULL || len == 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     s_mock.on_frame(frame, len, rssi, channel ? channel : s_mock.channel);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 #endif // PROTOCORE_PHYSICAL_HAS_BACKEND && !PROTOCORE_VENDOR_ESP

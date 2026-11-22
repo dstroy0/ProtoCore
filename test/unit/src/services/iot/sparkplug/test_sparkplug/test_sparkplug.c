@@ -140,7 +140,7 @@ void test_metric_alias_varint(void)
 {
     static const uint8_t WANT[] = {0x10, 0x96, 0x01, 0x20, 0x03, 0x50, 0x00};
     SpbMetric m = {0};
-    m.has_alias = PROTO_TRUE;
+    m.has_alias = EMBED_TRUE;
     m.alias = 150;
     m.datatype = SPB_DT_INT32;
     m.kind = SPB_M_INT;
@@ -197,11 +197,11 @@ void test_metric_boolean_payload(void)
     m.datatype = SPB_DT_BOOLEAN;
     m.kind = SPB_M_BOOL;
 
-    m.bool_value = PROTO_TRUE;
+    m.bool_value = EMBED_TRUE;
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT_T), encode_metric(&m));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_T, g_out, sizeof(WANT_T));
 
-    m.bool_value = PROTO_FALSE;
+    m.bool_value = EMBED_FALSE;
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT_F), encode_metric(&m));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_F, g_out, sizeof(WANT_F));
 }
@@ -242,7 +242,7 @@ void test_payload_round_trip(void)
     list[0].kind = SPB_M_INT;
     list[0].int_value = 7;
     list[1].name = "b";
-    list[1].has_alias = PROTO_TRUE;
+    list[1].has_alias = EMBED_TRUE;
     list[1].alias = 9;
     list[1].datatype = SPB_DT_STRING;
     list[1].kind = SPB_M_STRING;

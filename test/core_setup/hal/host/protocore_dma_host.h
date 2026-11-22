@@ -55,13 +55,13 @@ static_assert(MMGR_RING_POW2(PROTOCORE_DMA_HOST_STAGE),
 typedef struct
 {
     uint8_t buf[PROTOCORE_DMA_HOST_STAGE];
-    _Atomic size_t head;
-    _Atomic size_t tail;
+    embed_atomic_usize head;
+    embed_atomic_usize tail;
 } PcDmaStage;
 
 typedef struct
 {
-    proto_bool open;
+    embed_bool open;
     uint8_t peripheral;
     embed_bool loopback;
     const PraetCallbackCfg *on_complete;
@@ -89,28 +89,28 @@ PROTOCORE_HOST_SHARED PcDmaHostCh g_protocore_dma[PROTOCORE_DMA_CHANNELS];
 
 // A transfer that does not fit is refused whole rather than truncated: a partial one would put
 // bytes on the line no sender ever submitted. This is the ring's own lossless-backpressure rule.
-static inline proto_bool protocore_dma_stage_put(PcDmaStage *s, const uint8_t *src, uint16_t n)
+static inline embed_bool protocore_dma_stage_put(PcDmaStage *s, const uint8_t *src, uint16_t n)
 {
-    const size_t tail = PROTOCORE_ATOMIC_LOAD(&s->tail);
-    size_t h = PROTOCORE_ATOMIC_LOAD(&s->head);
+    const size_t tail = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &s->tail);
+    size_t h = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &s->head);
     const size_t room = (PROTOCORE_DMA_HOST_STAGE - 1u) - MMGR_RING_WRAP(h - tail, PROTOCORE_DMA_HOST_STAGE);
     if (src == NULL || n == 0 || n > room)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     for (uint16_t i = 0; i < n; i++)
     {
         s->buf[h] = src[i];
         h = MMGR_RING_WRAP(h + 1u, PROTOCORE_DMA_HOST_STAGE);
     }
-    PROTOCORE_ATOMIC_STORE(&s->head, h);
-    return PROTO_TRUE;
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &s->head, .value = h);
+    return EMBED_TRUE;
 }
 
 static inline uint16_t protocore_dma_stage_get(PcDmaStage *s, uint8_t *out, uint16_t max)
 {
-    const size_t h = PROTOCORE_ATOMIC_LOAD(&s->head);
-    size_t t = PROTOCORE_ATOMIC_LOAD(&s->tail);
+    const size_t h = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &s->head);
+    size_t t = EMBED_CALL(embed_atomic_usize_table.load, EmbedAtomicUsizeLoadCfg, .word = &s->tail);
     uint16_t n = 0;
     while (n < max && t != h)
     {
@@ -118,7 +118,7 @@ static inline uint16_t protocore_dma_stage_get(PcDmaStage *s, uint8_t *out, uint
         n++;
         t = MMGR_RING_WRAP(t + 1u, PROTOCORE_DMA_HOST_STAGE);
     }
-    PROTOCORE_ATOMIC_STORE(&s->tail, t);
+    EMBED_CALL(embed_atomic_usize_table.store, EmbedAtomicUsizeStoreCfg, .word = &s->tail, .value = t);
     return n;
 }
 
@@ -140,11 +140,11 @@ static inline void protocore_dma_host_complete(PcDmaHostCh *c, uint8_t ch, uint8
 // --- what a test drives it with ---------------------------------------------
 
 /** @brief Inject @p len bytes as if they arrived on @p ch's RX line. */
-static inline proto_bool protocore_dma_host_feed(uint8_t ch, const uint8_t *bytes, uint16_t len)
+static inline embed_bool protocore_dma_host_feed(uint8_t ch, const uint8_t *bytes, uint16_t len)
 {
     if (ch >= PROTOCORE_DMA_CHANNELS || !g_protocore_dma[ch].open)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     return protocore_dma_stage_put(&g_protocore_dma[ch].rx, bytes, len);
 }
@@ -177,15 +177,15 @@ embed_bool mmgr_praet_hw_open(const PraetCfg *args)
 {
     if (args == NULL || args->channel >= PROTOCORE_DMA_CHANNELS || g_protocore_dma[args->channel].open)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     PcDmaHostCh *c = &g_protocore_dma[args->channel];
     memset(c, 0, sizeof(*c));
     c->peripheral = args->peripheral;
     c->loopback = args->loopback;
     c->on_complete = args->on_complete;
-    c->open = PROTO_TRUE;
-    return PROTO_TRUE;
+    c->open = EMBED_TRUE;
+    return EMBED_TRUE;
 }
 
 embed_bool mmgr_praet_hw_tx_submit(const PraetTransferCfg *args)
@@ -193,21 +193,21 @@ embed_bool mmgr_praet_hw_tx_submit(const PraetTransferCfg *args)
     const uint8_t ch = args->channel;
     if (ch >= PROTOCORE_DMA_CHANNELS || !g_protocore_dma[ch].open)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     PcDmaHostCh *c = &g_protocore_dma[ch];
     // One transfer in flight per channel: a descriptor still loaded takes no second submit, and
     // the caller waits for the TX-complete event.
     if (c->tx_pending > 0)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (!protocore_dma_stage_put(&c->tx, args->buf, args->bytes))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     c->tx_pending = args->bytes;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void mmgr_praet_hw_close(const PraetTransferCfg *args)

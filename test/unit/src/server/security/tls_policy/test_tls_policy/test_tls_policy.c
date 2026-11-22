@@ -309,8 +309,8 @@ void test_a_selected_suite_was_always_both_pinned_and_offered(void)
                 TEST_ASSERT_EQUAL_UINT(0u, (unsigned)(cm & sm)); // nothing was in both lists
                 continue;
             }
-            proto_bool in_client = PROTO_FALSE;
-            proto_bool in_server = PROTO_FALSE;
+            embed_bool in_client = EMBED_FALSE;
+            embed_bool in_server = EMBED_FALSE;
             for (size_t i = 0; i < nc; i++)
             {
                 in_client = in_client || (client[i] == got);

@@ -31,7 +31,7 @@
 
 #if PROTOCORE_ENABLE_DIFFSERV
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // Common RFC 2474 / RFC 4594 code points for convenience; any 0-63 value is accepted.
 #define PROTOCORE_DSCP_CS0 0   ///< default / best effort
@@ -117,7 +117,7 @@ uint8_t protocore_diffserv_default_dscp(void);
 /** @brief The default DSCP outbound UDP datagrams are stamped with. */
 uint8_t protocore_diffserv_udp_dscp(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DIFFSERV
 

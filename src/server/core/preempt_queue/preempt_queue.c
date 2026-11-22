@@ -19,7 +19,7 @@
 
 #include "config/platform/platform.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The lanes' compile-time storage: what each does with an item, and the queue behind it.
@@ -41,7 +41,7 @@ typedef struct
     uint8_t q_storage[(size_t)PROTOCORE_PQ_LANE_COUNT][PROTOCORE_PQ_DEPTH * PROTOCORE_PQ_ITEM_SIZE];
     protocore_platform_queue q[(size_t)PROTOCORE_PQ_LANE_COUNT];
     protocore_platform_task task[(size_t)PROTOCORE_PQ_LANE_COUNT];
-    volatile proto_bool run[(size_t)PROTOCORE_PQ_LANE_COUNT];
+    volatile embed_bool run[(size_t)PROTOCORE_PQ_LANE_COUNT];
 } PqQueueCtx;
 
 struct PreemptQueueStorage
@@ -96,7 +96,7 @@ static const char *lane_name(protocore_pq_lane lane)
     }
 }
 
-static proto_bool lane_ok(protocore_pq_lane lane)
+static embed_bool lane_ok(protocore_pq_lane lane)
 {
     return (unsigned)lane < (unsigned)PROTOCORE_PQ_LANE_COUNT;
 }
@@ -158,7 +158,7 @@ void protocore_preempt_queue_start(uint8_t *work)
     const protocore_pq_lane lane = PreemptQueueV.lane;
     const protocore_pq_config *cfg = PreemptQueueV.cfg;
 
-    PreemptQueueV.ok = PROTO_FALSE;
+    PreemptQueueV.ok = EMBED_FALSE;
     if (!lane_ok(lane) || PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] || !cfg || !cfg->handler)
     {
         return;
@@ -176,24 +176,24 @@ void protocore_preempt_queue_start(uint8_t *work)
     {
         return;
     }
-    PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = PROTO_TRUE;
+    PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = EMBED_TRUE;
     uint8_t prio = cfg->priority ? cfg->priority : lane_priority(lane);
     int core = cfg->core % PROTOCORE_PLATFORM_CORES;
     if (protocore_platform_task_start(pq_task, cfg->name ? cfg->name : lane_name(lane), PROTOCORE_PQ_STACK,
                                       (void *)(uintptr_t)lane, prio, &PREEMPT_QUEUE_CTX(work)->qq.task[(size_t)lane],
                                       core) != PROTOCORE_PLATFORM_PASS)
     {
-        PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = PROTO_FALSE;
+        PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = EMBED_FALSE;
         return;
     }
-    PreemptQueueV.ok = PROTO_TRUE;
+    PreemptQueueV.ok = EMBED_TRUE;
 }
 
 void protocore_preempt_queue_post(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
 
-    PreemptQueueV.ok = PROTO_FALSE;
+    PreemptQueueV.ok = EMBED_FALSE;
     if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueueV.post_args.item)
     {
         return;
@@ -205,14 +205,14 @@ void protocore_preempt_queue_post(uint8_t *work)
         return;
     }
     note_depth(work, lane, protocore_platform_queue_waiting(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
-    PreemptQueueV.ok = PROTO_TRUE;
+    PreemptQueueV.ok = EMBED_TRUE;
 }
 
 void protocore_preempt_queue_post_urgent(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
 
-    PreemptQueueV.ok = PROTO_FALSE;
+    PreemptQueueV.ok = EMBED_FALSE;
     if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueueV.post_args.item)
     {
         return;
@@ -224,14 +224,14 @@ void protocore_preempt_queue_post_urgent(uint8_t *work)
         return;
     }
     note_depth(work, lane, protocore_platform_queue_waiting(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
-    PreemptQueueV.ok = PROTO_TRUE;
+    PreemptQueueV.ok = EMBED_TRUE;
 }
 
 void protocore_preempt_queue_post_from_isr(uint8_t *work)
 {
     const protocore_pq_lane lane = PreemptQueueV.lane;
 
-    PreemptQueueV.ok = PROTO_FALSE;
+    PreemptQueueV.ok = EMBED_FALSE;
     if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueueV.post_args.item)
     {
         return;
@@ -244,7 +244,7 @@ void protocore_preempt_queue_post_from_isr(uint8_t *work)
     }
     note_depth(work, lane, protocore_platform_queue_waiting_isr(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
     protocore_platform_task_yield_from_isr(woke); // switch to the processing task now if it outranks us
-    PreemptQueueV.ok = PROTO_TRUE;
+    PreemptQueueV.ok = EMBED_TRUE;
 }
 
 void protocore_preempt_queue_drain(uint8_t *work)
@@ -262,7 +262,7 @@ void protocore_preempt_queue_stop(uint8_t *work)
     {
         return;
     }
-    PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = PROTO_FALSE;
+    PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = EMBED_FALSE;
     if (PREEMPT_QUEUE_CTX(work)->qq.task[(size_t)lane]) // the task blocks on the queue forever, so stop it directly
     {
         protocore_platform_task_stop(PREEMPT_QUEUE_CTX(work)->qq.task[(size_t)lane]);
@@ -291,6 +291,6 @@ void protocore_preempt_queue_priority(uint8_t *work)
 /** @brief The operands and the outcome. */
 PreemptQueueVars PreemptQueueV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PREEMPT_QUEUE

@@ -18,7 +18,7 @@
 #include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/poly1305/poly1305.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The one definition, private to this TU. It sits at CHACHAPOLY_OFF_CTX in the caller's borrow, so its size
 // never leaves this file and no consumer can name it.
@@ -88,7 +88,7 @@ static void seq_nonce(uint32_t seqnr, uint8_t iv[8])
 
 void protocore_chacha_poly_get_length(uint8_t *work)
 {
-    ChachaPolyV.ok = PROTO_FALSE;
+    ChachaPolyV.ok = EMBED_FALSE;
     if (!ChachaPolyV.length_args.key || !ChachaPolyV.length_args.enc_len)
     {
         return;
@@ -100,12 +100,12 @@ void protocore_chacha_poly_get_length(uint8_t *work)
     cp_chacha(work, key + 32, ctx->iv, 0, ChachaPolyV.length_args.enc_len, ctx->len, 4);
     ChachaPolyV.length =
         ((uint32_t)ctx->len[0] << 24) | ((uint32_t)ctx->len[1] << 16) | ((uint32_t)ctx->len[2] << 8) | ctx->len[3];
-    ChachaPolyV.ok = PROTO_TRUE;
+    ChachaPolyV.ok = EMBED_TRUE;
 }
 
 void protocore_chacha_poly_encrypt(uint8_t *work)
 {
-    ChachaPolyV.ok = PROTO_FALSE;
+    ChachaPolyV.ok = EMBED_FALSE;
     if (!ChachaPolyV.encrypt_args.key || !ChachaPolyV.encrypt_args.src || !ChachaPolyV.encrypt_args.dest)
     {
         return;
@@ -120,12 +120,12 @@ void protocore_chacha_poly_encrypt(uint8_t *work)
     cp_chacha(work, key + 32, ctx->iv, 0, src, dest, 4);              // length field: K_header, counter 0
     cp_chacha(work, key, ctx->iv, 1, src + 4, dest + 4, payload_len); // payload: K_main, counter 1
     cp_poly(work, ctx->poly_key, dest, 4 + payload_len, dest + 4 + payload_len);
-    ChachaPolyV.ok = PROTO_TRUE;
+    ChachaPolyV.ok = EMBED_TRUE;
 }
 
 void protocore_chacha_poly_decrypt(uint8_t *work)
 {
-    ChachaPolyV.ok = PROTO_FALSE;
+    ChachaPolyV.ok = EMBED_FALSE;
     if (!ChachaPolyV.decrypt_args.key || !ChachaPolyV.decrypt_args.src || !ChachaPolyV.decrypt_args.dest)
     {
         return;
@@ -144,12 +144,12 @@ void protocore_chacha_poly_decrypt(uint8_t *work)
     }
     cp_chacha(work, key + 32, ctx->iv, 0, src, dest, 4);
     cp_chacha(work, key, ctx->iv, 1, src + 4, dest + 4, payload_len);
-    ChachaPolyV.ok = PROTO_TRUE;
+    ChachaPolyV.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 ChachaPolyVars ChachaPolyV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CHACHAPOLY

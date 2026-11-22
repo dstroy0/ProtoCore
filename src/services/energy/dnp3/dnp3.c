@@ -15,7 +15,7 @@
 
 static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 uint16_t protocore_dnp3_crc(const uint8_t *data, size_t len)
 {
@@ -78,21 +78,21 @@ size_t protocore_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uin
     return total;
 }
 
-proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
+embed_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame *out, uint8_t *out_user, size_t out_cap,
                                       size_t *out_user_len)
 {
     if (!buf || !out || len < DNP3_HEADER_BLOCK_LEN)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     if (buf[0] != DNP3_START0 || buf[1] != DNP3_START1)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t length = buf[2];
     if (length < DNP3_LEN_OVERHEAD) // LEN must at least cover CTRL + DEST + SRC
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t user_len = (size_t)length - DNP3_LEN_OVERHEAD;
     if (user_len > DNP3_MAX_USER_DATA)
@@ -102,26 +102,26 @@ proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame 
     // confined to [0, 250] = [0, DNP3_MAX_USER_DATA]; the true arm has no
     // reachable value of length to take it with
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
         // DNP3_MAX_USER_DATA given length's uint8_t domain plus the line-76 lower-bound guard
     }
 
     uint16_t hcrc = protocore_dnp3_crc(buf, DNP3_HEADER_LEN);
     if ((uint16_t)(buf[DNP3_HEADER_LEN] | (buf[DNP3_HEADER_LEN + 1] << 8)) != hcrc)
     {
-        return PROTO_FALSE; // header CRC mismatch
+        return EMBED_FALSE; // header CRC mismatch
     }
 
     size_t nblocks = (user_len + DNP3_BLOCK_LEN - 1) / DNP3_BLOCK_LEN;
     size_t total = DNP3_HEADER_BLOCK_LEN + user_len + nblocks * DNP3_CRC_LEN;
     if (total > len)
     {
-        return PROTO_FALSE; // frame not fully buffered
+        return EMBED_FALSE; // frame not fully buffered
     }
 
     if (user_len && (!out_user || user_len > out_cap))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
 
     size_t p = DNP3_HEADER_BLOCK_LEN;
@@ -136,7 +136,7 @@ proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame 
         uint16_t bcrc = protocore_dnp3_crc(buf + p, blk);
         if ((uint16_t)(buf[p + blk] | (buf[p + blk + 1] << 8)) != bcrc)
         {
-            return PROTO_FALSE; // block CRC mismatch
+            return EMBED_FALSE; // block CRC mismatch
         }
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out_user + off, .src = buf + p, .bytes = blk);
         p += blk + DNP3_CRC_LEN;
@@ -151,17 +151,17 @@ proto_bool protocore_dnp3_parse_frame(const uint8_t *buf, size_t len, Dnp3Frame 
     {
         *out_user_len = user_len;
     }
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // --- transport function (IEEE 1815 §8.2) ---
 
-uint8_t protocore_dnp3_transport_header(proto_bool fir, proto_bool fin, uint8_t seq)
+uint8_t protocore_dnp3_transport_header(embed_bool fir, embed_bool fin, uint8_t seq)
 {
     return (uint8_t)((fin ? DNP3_TR_FIN : 0u) | (fir ? DNP3_TR_FIR : 0u) | (seq & DNP3_TR_SEQ_MASK));
 }
 
-size_t protocore_dnp3_build_transport_segment(uint8_t *out, size_t cap, proto_bool fir, proto_bool fin, uint8_t seq,
+size_t protocore_dnp3_build_transport_segment(uint8_t *out, size_t cap, embed_bool fir, embed_bool fin, uint8_t seq,
                                               const uint8_t *app_data, size_t app_len)
 {
     if (!out || (app_len && !app_data) || app_len > DNP3_TR_MAX_APP)
@@ -190,8 +190,8 @@ void protocore_dnp3_transport_rx_init(Dnp3TransportRx *r, uint8_t *buf, size_t c
     r->cap = cap;
     r->len = 0;
     r->expect_seq = 0;
-    r->active = PROTO_FALSE;
-    r->done = PROTO_FALSE;
+    r->active = EMBED_FALSE;
+    r->done = EMBED_FALSE;
 }
 
 int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_t user_len)
@@ -201,8 +201,8 @@ int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_
         return DNP3_TR_IGNORED;
     }
     uint8_t hdr = user[0];
-    proto_bool fir = (hdr & DNP3_TR_FIR) != 0;
-    proto_bool fin = (hdr & DNP3_TR_FIN) != 0;
+    embed_bool fir = (hdr & DNP3_TR_FIR) != 0;
+    embed_bool fin = (hdr & DNP3_TR_FIN) != 0;
     uint8_t seq = (uint8_t)(hdr & DNP3_TR_SEQ_MASK);
     const uint8_t *app = user + 1;
     size_t app_len = user_len - 1;
@@ -210,8 +210,8 @@ int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_
     if (fir) // a first segment starts (or restarts) the fragment
     {
         r->len = 0;
-        r->active = PROTO_TRUE;
-        r->done = PROTO_FALSE;
+        r->active = EMBED_TRUE;
+        r->done = EMBED_FALSE;
         r->expect_seq = seq;
     }
     else
@@ -222,14 +222,14 @@ int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_
         }
         if (seq != r->expect_seq) // out of sequence: abandon and discard
         {
-            r->active = PROTO_FALSE;
+            r->active = EMBED_FALSE;
             return DNP3_TR_IGNORED;
         }
     }
 
     if (app_len > r->cap - r->len) // would overflow the fragment buffer
     {
-        r->active = PROTO_FALSE;
+        r->active = EMBED_FALSE;
         return DNP3_TR_ERROR;
     }
     if (app_len)
@@ -240,14 +240,14 @@ int protocore_dnp3_transport_feed(Dnp3TransportRx *r, const uint8_t *user, size_
     r->expect_seq = (uint8_t)((r->expect_seq + 1) & DNP3_TR_SEQ_MASK);
     if (fin)
     {
-        r->active = PROTO_FALSE;
-        r->done = PROTO_TRUE;
+        r->active = EMBED_FALSE;
+        r->done = EMBED_TRUE;
         return DNP3_TR_COMPLETE;
     }
     return DNP3_TR_PROGRESS;
 }
 
-uint8_t protocore_dnp3_app_control(proto_bool fir, proto_bool fin, proto_bool con, proto_bool uns, uint8_t seq)
+uint8_t protocore_dnp3_app_control(embed_bool fir, embed_bool fin, embed_bool con, embed_bool uns, uint8_t seq)
 {
     return (uint8_t)((fir ? DNP3_AC_FIR : 0u) | (fin ? DNP3_AC_FIN : 0u) | (con ? DNP3_AC_CON : 0u) |
                      (uns ? DNP3_AC_UNS : 0u) | (seq & DNP3_AC_SEQ_MASK));
@@ -287,19 +287,19 @@ size_t protocore_dnp3_build_app_response(uint8_t *out, size_t cap, uint8_t app_c
     return 4 + obj_len;
 }
 
-proto_bool protocore_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out)
+embed_bool protocore_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3AppHeader *out)
 {
     if (!frag || !out || len < 2)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t ac = frag[0];
     uint8_t fc = frag[1];
-    proto_bool is_response = (fc == DNP3_FC_RESPONSE || fc == DNP3_FC_UNSOLICITED_RESPONSE);
+    embed_bool is_response = (fc == DNP3_FC_RESPONSE || fc == DNP3_FC_UNSOLICITED_RESPONSE);
     size_t hdr_len = is_response ? 4u : 2u;
     if (len < hdr_len) // a response needs the two IIN octets
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     out->app_control = ac;
     out->fir = (ac & DNP3_AC_FIR) != 0;
@@ -312,7 +312,7 @@ proto_bool protocore_dnp3_parse_app_header(const uint8_t *frag, size_t len, Dnp3
     out->iin = is_response ? (uint16_t)(frag[2] | (frag[3] << 8)) : 0u;
     out->obj_len = len - hdr_len;
     out->objects = out->obj_len ? frag + hdr_len : NULL;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 size_t protocore_dnp3_build_object_header_range(uint8_t *buf, size_t cap, uint8_t group, uint8_t variation,
@@ -377,7 +377,7 @@ size_t protocore_dnp3_build_object_header_all(uint8_t *buf, size_t cap, uint8_t 
     return 3;
 }
 
-size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, proto_bool clear,
+size_t protocore_dnp3_build_crob(uint8_t *buf, size_t cap, uint8_t op_type, uint8_t tcc, embed_bool clear,
                                  uint8_t count, uint32_t on_time_ms, uint32_t off_time_ms)
 {
     if (!buf || op_type > 0x0Fu || tcc > 0x03u || cap < DNP3_CROB_LEN)
@@ -419,24 +419,24 @@ size_t protocore_dnp3_build_aob_float(uint8_t *buf, size_t cap, float value)
     return DNP3_AOB_LEN;
 }
 
-proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out)
+embed_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dnp3ObjectHeader *out)
 {
     if (!buf || !out || len < 3) // group + variation + qualifier
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     uint8_t range_code = (uint8_t)(buf[2] & DNP3_QUAL_RANGE_MASK);
     size_t p = 3;
     uint32_t start = 0;
     uint32_t stop = 0;
     uint32_t count = 0;
-    proto_bool is_count = PROTO_FALSE;
+    embed_bool is_count = EMBED_FALSE;
     switch (range_code)
     {
     case DNP3_RANGE_START_STOP_1:
         if (len < p + 2)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         start = buf[p];
         stop = buf[p + 1];
@@ -446,7 +446,7 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
     case DNP3_RANGE_START_STOP_2:
         if (len < p + 4)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         start = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_16);
         stop = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p + 2, .width = MMGR_ENDIAN_16);
@@ -456,7 +456,7 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
     case DNP3_RANGE_START_STOP_4:
         if (len < p + 8)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         start = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_32);
         stop = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p + 4, .width = MMGR_ENDIAN_32);
@@ -468,32 +468,32 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
     case DNP3_RANGE_COUNT_1:
         if (len < p + 1)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         count = buf[p];
         p += 1;
-        is_count = PROTO_TRUE;
+        is_count = EMBED_TRUE;
         break;
     case DNP3_RANGE_COUNT_2:
         if (len < p + 2)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         count = (uint16_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_16);
         p += 2;
-        is_count = PROTO_TRUE;
+        is_count = EMBED_TRUE;
         break;
     case DNP3_RANGE_COUNT_4:
         if (len < p + 4)
         {
-            return PROTO_FALSE;
+            return EMBED_FALSE;
         }
         count = (uint32_t)EMBED_CALL(parva_extremitas.rd, EndianCfg, .src = buf + p, .width = MMGR_ENDIAN_32);
         p += 4;
-        is_count = PROTO_TRUE;
+        is_count = EMBED_TRUE;
         break;
     default:
-        return PROTO_FALSE; // an unsupported qualifier range form
+        return EMBED_FALSE; // an unsupported qualifier range form
     }
     out->group = buf[0];
     out->variation = buf[1];
@@ -506,9 +506,9 @@ proto_bool protocore_dnp3_parse_object_header(const uint8_t *buf, size_t len, Dn
     out->count = count;
     out->objects = (p < len) ? buf + p : NULL;
     out->objects_len = len - p;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNP3

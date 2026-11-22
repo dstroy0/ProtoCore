@@ -21,7 +21,7 @@
 #include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/ina219/ina219.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // The entries this file calls before reaching their definitions.
 
@@ -150,7 +150,7 @@ static uint32_t dev_lsb_ua(uint8_t *work)
 }
 
 // One transaction: the register byte then its value, big-endian.
-static proto_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
+static embed_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
 {
     INA219_CTX(work)->frame[0] = reg;
     (void)EMBED_CALL(magna_extremitas.wr, EndianCfg, .dst = &INA219_CTX(work)->frame[1], .val = v,
@@ -159,14 +159,14 @@ static proto_bool wr16(uint8_t *work, uint8_t reg, uint16_t v)
 }
 
 // Name the register, then turn the bus around without releasing it (repeated start).
-static proto_bool rd16(uint8_t *work, uint8_t reg, uint16_t *v)
+static embed_bool rd16(uint8_t *work, uint8_t reg, uint16_t *v)
 {
     if (!protocore_i2c_write_read(dev_addr(work), &reg, 1, INA219_CTX(work)->frame, 2))
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *v = (uint16_t)EMBED_CALL(magna_extremitas.rd, EndianCfg, .src = INA219_CTX(work)->frame, .width = MMGR_ENDIAN_16);
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 void protocore_ina219_begin(uint8_t *work)
@@ -178,7 +178,7 @@ void protocore_ina219_begin(uint8_t *work)
     INA219_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_INA219_I2C_ADDR;
     INA219_CTX(work)->lsb_ua = current_lsb_ua ? current_lsb_ua : (uint32_t)PROTOCORE_INA219_CURRENT_LSB_UA;
     protocore_i2c_begin();
-    proto_bool ok = PROTO_TRUE;
+    embed_bool ok = EMBED_TRUE;
     Ina219V.calibration_args.current_lsb_ua = dev_lsb_ua(work);
     Ina219V.calibration_args.shunt_mohm = shunt_mohm ? shunt_mohm : (uint32_t)PROTOCORE_INA219_SHUNT_MOHM;
     protocore_ina219_calibration(work);
@@ -194,7 +194,7 @@ void protocore_ina219_read_bus_mv(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_BUS, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (millivolts)
@@ -203,7 +203,7 @@ void protocore_ina219_read_bus_mv(uint8_t *work)
         protocore_ina219_bus_mv(work);
         *millivolts = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 void protocore_ina219_read_shunt_uv(uint8_t *work)
@@ -213,7 +213,7 @@ void protocore_ina219_read_shunt_uv(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_SHUNT, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (microvolts)
@@ -222,7 +222,7 @@ void protocore_ina219_read_shunt_uv(uint8_t *work)
         protocore_ina219_shunt_uv(work);
         *microvolts = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 void protocore_ina219_read_current_ua(uint8_t *work)
@@ -232,7 +232,7 @@ void protocore_ina219_read_current_ua(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_CURRENT, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (microamps)
@@ -242,7 +242,7 @@ void protocore_ina219_read_current_ua(uint8_t *work)
         protocore_ina219_current_ua(work);
         *microamps = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 void protocore_ina219_read_power_uw(uint8_t *work)
@@ -252,7 +252,7 @@ void protocore_ina219_read_power_uw(uint8_t *work)
     uint16_t v = 0;
     if (!rd16(work, INA219_REG_POWER, &v))
     {
-        Ina219V.ok = PROTO_FALSE;
+        Ina219V.ok = EMBED_FALSE;
         return;
     }
     if (microwatts)
@@ -262,12 +262,12 @@ void protocore_ina219_read_power_uw(uint8_t *work)
         protocore_ina219_power_uw(work);
         *microwatts = Ina219V.value;
     }
-    Ina219V.ok = PROTO_TRUE;
+    Ina219V.ok = EMBED_TRUE;
 }
 
 /** @brief The operands and the outcome. */
 Ina219Vars Ina219V;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_INA219

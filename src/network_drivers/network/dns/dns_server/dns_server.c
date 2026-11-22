@@ -17,7 +17,7 @@
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves read and write
 #include "network_drivers/transport/udp/server/server.h"   // UdpListener: the port 53 bind and the reply
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The name table's compile-time storage: the A records and the response stage.
@@ -54,32 +54,32 @@ static_assert(DNS_SERVER_OFF_CTX + sizeof(struct DnsServerStorage) <= PROTOCORE_
 // *qtype to QTYPE and *qend to the offset just past QTYPE and QCLASS. Returns false on a malformed
 // or over-long question. The name is decoded with pointers refused: a question carries the first
 // name in its message, so one has nothing earlier to point at (sec 4.1.4).
-static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, uint16_t *qtype,
+static embed_bool parse_question(const uint8_t *q, size_t qlen, char *name, size_t name_cap, uint16_t *qtype,
                                  size_t *qend)
 {
     if (qlen < 12)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     DnsWireV.msg.pkt = q;
     DnsWireV.msg.len = qlen;
     DnsWireV.msg.off = 12;
     DnsWireV.msg.out = name;
     DnsWireV.msg.out_cap = name_cap;
-    DnsWireV.msg.allow_ptr = PROTO_FALSE;
+    DnsWireV.msg.allow_ptr = EMBED_FALSE;
     DnsWire.decode(protocore_dns_server_span());
     if (!DnsWireV.ok)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     size_t i = DnsWireV.next;
     if (i + 4 > qlen)
     {
-        return PROTO_FALSE;
+        return EMBED_FALSE;
     }
     *qtype = (uint16_t)((q[i] << 8) | q[i + 1]);
     *qend = i + 4;
-    return PROTO_TRUE;
+    return EMBED_TRUE;
 }
 
 // The ADDRESS recorded for @p name, host order, 0 when absent. Names compare ignoring ASCII case
@@ -220,7 +220,7 @@ void protocore_dns_server_add(uint8_t *work)
 {
     const char *name = DnsServerV.rec.name;
 
-    DnsServerV.ok = PROTO_FALSE;
+    DnsServerV.ok = EMBED_FALSE;
     if (!name || !name[0])
     {
         return;
@@ -240,7 +240,7 @@ void protocore_dns_server_add(uint8_t *work)
         ((uint32_t)DnsServerV.rec.a << 24) | ((uint32_t)DnsServerV.rec.b << 16) | ((uint32_t)DnsServerV.rec.c << 8) |
         (uint32_t)DnsServerV.rec.d;
     DNS_SERVER_CTX(work)->count++;
-    DnsServerV.ok = PROTO_TRUE;
+    DnsServerV.ok = EMBED_TRUE;
 }
 
 void protocore_dns_server_lookup(uint8_t *work)
@@ -296,6 +296,6 @@ void protocore_dns_server_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 DnsServerVars DnsServerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNS_SERVER

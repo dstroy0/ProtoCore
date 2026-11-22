@@ -17,6 +17,45 @@
 #ifndef PROTOCORE_STACK_PROFILE_H
 #define PROTOCORE_STACK_PROFILE_H
 
+// sdkconfig.h names the die, and it holds only definitions. Its absence on the host leaves each count below at
+// its default.
+#if defined(__has_include)
+#if __has_include("sdkconfig.h")
+#include "sdkconfig.h" // CONFIG_IDF_TARGET_ESP32: the classic die
+#endif
+#endif
+
+// The classic ESP32 has the smallest ceiling of static data in the ESP family. It carries 2 TCP connections. It
+// takes 8 receive buffers and 2 transmit buffers, and a pin budget of 7 below the receive count: 2 IPv4
+// fragments, 1 IPv6 fragment, 1 segment out of order on each of the 2 TCP connections, 1 frame that waits on ARP
+// and 1 that waits on ND.
+#if defined(CONFIG_IDF_TARGET_ESP32)
+#ifndef IDEMIP_TCP_PCBS
+#define IDEMIP_TCP_PCBS 2u
+#endif
+#ifndef PROTOCORE_RX_BUFFERS
+#define PROTOCORE_RX_BUFFERS 8u
+#endif
+#ifndef IDEMIP_TX_DESCRIPTORS
+#define IDEMIP_TX_DESCRIPTORS 2u
+#endif
+#ifndef IDEMIP_IP4_REASS_FRAGS
+#define IDEMIP_IP4_REASS_FRAGS 2u
+#endif
+#ifndef IDEMIP_IP6_REASS_FRAGS
+#define IDEMIP_IP6_REASS_FRAGS 1u
+#endif
+#ifndef IDEMIP_TCP_OOSEQ_SEGS
+#define IDEMIP_TCP_OOSEQ_SEGS 1u
+#endif
+#ifndef IDEMIP_ARP_PENDING
+#define IDEMIP_ARP_PENDING 1u
+#endif
+#ifndef IDEMIP_ND6_PENDING
+#define IDEMIP_ND6_PENDING 1u
+#endif
+#endif
+
 /**
  * @brief The receive buffers of each interface, each one frame of IDEMIP_DMA_BUF_STRIDE bytes. A power of two.
  *

@@ -15,7 +15,7 @@
 #include "server/core/worker/worker.h" // the persistent end this module's state is taken from
 
 #include "endian/endian.h"
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // memset, memcpy
 
@@ -191,6 +191,6 @@ void protocore_ntp_server_begin(uint8_t *work)
 /** @brief The operands and the outcome. */
 NtpServerVars NtpServerV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTP_SERVER

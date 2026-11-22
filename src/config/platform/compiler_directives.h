@@ -12,20 +12,6 @@
 #ifndef PROTOCORE_COMPILER_DIRECTIVES_H
 #define PROTOCORE_COMPILER_DIRECTIVES_H
 
-/**
- * @brief Linkage for a leaf primitive whose body is cheaper than the call that reaches it.
- *
- * Stated here rather than in protocore_config.h because that header reaches this one through
- * board_profile.h before it defines anything of its own, so this is the earliest point the
- * linkage can be settled. protocore_config.h keeps the same definition behind #ifndef, which
- * covers a translation unit that arrives without this header.
- */
-#ifndef PROTOCORE_INLINE
-#if defined(__GNUC__)
-#define PROTOCORE_INLINE static inline __attribute__((always_inline))
-#else
-#define PROTOCORE_INLINE static inline
-#endif
-#endif
+#include "embed_compiler_directives.h" // EMBED_INLINE and the other directives of embedded_types
 
 #endif // PROTOCORE_COMPILER_DIRECTIVES_H

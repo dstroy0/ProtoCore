@@ -12,7 +12,7 @@
 #include "idemIP/endian.h"
 #include "idemIP/ethernet/ethernet.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief Hardware address space (ar$hrd). RFC 826 names ares_hrd$Ethernet; IANA assigns it 1.
@@ -26,11 +26,10 @@ PROTOCORE_BEGIN_DECLS
 #define IDEMIP_ARP_PRO_IPV4 IDEMIP_ETHERTYPE_IPV4
 
 /** @brief Opcode (ar$op). RFC 826: ares_op$REQUEST | ares_op$REPLY. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(IdemIpArpOp,
     IDEMIP_ARP_OP_REQUEST = 1,
     IDEMIP_ARP_OP_REPLY = 2,
-} IdemIpArpOp;
+);
 
 /** @brief Length of an IPv4 protocol address (ar$pln), in bytes. */
 #define IDEMIP_ARP_PLN_IPV4 4u
@@ -65,6 +64,6 @@ static_assert(IDEMIP_ARP_OFF_TPA + IDEMIP_ARP_PLN_IPV4 == IDEMIP_ARP_LEN,
 static_assert(IDEMIP_ARP_LEN < IDEMIP_ETH_MIN_PAYLOAD,
               "an ARP payload is shorter than the RFC 894 minimum data field and is padded to it");
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_IDEMIP_ARP_H

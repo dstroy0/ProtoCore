@@ -29,12 +29,12 @@
 void setUp(void)
 {
     protocore_hw_reg_host_reset();
-    protocore_hw_reg_host_bus(32u, PROTO_FALSE); // the setting a native build takes
+    protocore_hw_reg_host_bus(32u, EMBED_FALSE); // the setting a native build takes
 }
 
 void tearDown(void)
 {
-    protocore_hw_reg_host_bus(32u, PROTO_FALSE);
+    protocore_hw_reg_host_bus(32u, EMBED_FALSE);
 }
 
 void test_unseen_address_reads_zero(void)
@@ -57,7 +57,7 @@ void test_round_trip_at_every_setting(void)
         for (unsigned be = 0; be < 2u; be++)
         {
             protocore_hw_reg_host_reset();
-            protocore_hw_reg_host_bus(BITS[i], be ? PROTO_TRUE : PROTO_FALSE);
+            protocore_hw_reg_host_bus(BITS[i], be ? EMBED_TRUE : EMBED_FALSE);
             protocore_hw_reg_host_write(A0, 0xdeadbeefu);
             TEST_ASSERT_EQUAL_HEX32(0xdeadbeefu, protocore_hw_reg_host_read(A0));
         }
@@ -68,9 +68,9 @@ void test_round_trip_at_every_setting(void)
 // one. This is the case that would catch a driver assuming one order.
 void test_order_is_observable_at_32(void)
 {
-    protocore_hw_reg_host_bus(32u, PROTO_TRUE);
+    protocore_hw_reg_host_bus(32u, EMBED_TRUE);
     protocore_hw_reg_host_write(A0, 0x11223344u);
-    protocore_hw_reg_host_bus(32u, PROTO_FALSE);
+    protocore_hw_reg_host_bus(32u, EMBED_FALSE);
     TEST_ASSERT_EQUAL_HEX32(0x44332211u, protocore_hw_reg_host_read(A0));
 }
 
@@ -78,9 +78,9 @@ void test_order_is_observable_at_32(void)
 // little-endian reader is per unit. That is what separates it from the 32-bit case above.
 void test_narrow_bus_reverses_within_its_unit(void)
 {
-    protocore_hw_reg_host_bus(16u, PROTO_TRUE);
+    protocore_hw_reg_host_bus(16u, EMBED_TRUE);
     protocore_hw_reg_host_write(A0, 0x11223344u);
-    protocore_hw_reg_host_bus(32u, PROTO_FALSE);
+    protocore_hw_reg_host_bus(32u, EMBED_FALSE);
     TEST_ASSERT_EQUAL_HEX32(0x22114433u, protocore_hw_reg_host_read(A0));
 }
 
@@ -88,14 +88,14 @@ void test_narrow_bus_reverses_within_its_unit(void)
 // way. A driver cannot tell them apart from one register, which is the honest answer.
 void test_wide_bus_matches_32(void)
 {
-    protocore_hw_reg_host_bus(64u, PROTO_TRUE);
+    protocore_hw_reg_host_bus(64u, EMBED_TRUE);
     protocore_hw_reg_host_write(A0, 0x11223344u);
-    protocore_hw_reg_host_bus(32u, PROTO_FALSE);
+    protocore_hw_reg_host_bus(32u, EMBED_FALSE);
     uint32_t wide = protocore_hw_reg_host_read(A0);
     protocore_hw_reg_host_reset();
-    protocore_hw_reg_host_bus(32u, PROTO_TRUE);
+    protocore_hw_reg_host_bus(32u, EMBED_TRUE);
     protocore_hw_reg_host_write(A0, 0x11223344u);
-    protocore_hw_reg_host_bus(32u, PROTO_FALSE);
+    protocore_hw_reg_host_bus(32u, EMBED_FALSE);
     TEST_ASSERT_EQUAL_HEX32(protocore_hw_reg_host_read(A0), wide);
 }
 
@@ -106,12 +106,12 @@ void test_double_reversal_is_identity(void)
     for (unsigned i = 0; i < 3u; i++)
     {
         protocore_hw_reg_host_reset();
-        protocore_hw_reg_host_bus(BITS[i], PROTO_TRUE);
+        protocore_hw_reg_host_bus(BITS[i], EMBED_TRUE);
         protocore_hw_reg_host_write(A0, 0x0f1e2d3cu);
-        protocore_hw_reg_host_bus(BITS[i], PROTO_FALSE);
+        protocore_hw_reg_host_bus(BITS[i], EMBED_FALSE);
         uint32_t once = protocore_hw_reg_host_read(A0);
         protocore_hw_reg_host_write(A1, once);
-        protocore_hw_reg_host_bus(BITS[i], PROTO_TRUE);
+        protocore_hw_reg_host_bus(BITS[i], EMBED_TRUE);
         TEST_ASSERT_EQUAL_HEX32(0x0f1e2d3cu, protocore_hw_reg_host_read(A1));
     }
 }
@@ -139,8 +139,8 @@ void test_reset_drops_every_slot(void)
 // arbitrary, so a caller's typo cannot silently change what every later access means.
 void test_bad_width_leaves_the_setting_standing(void)
 {
-    protocore_hw_reg_host_bus(32u, PROTO_FALSE);
-    protocore_hw_reg_host_bus(24u, PROTO_FALSE); // not a width this models
+    protocore_hw_reg_host_bus(32u, EMBED_FALSE);
+    protocore_hw_reg_host_bus(24u, EMBED_FALSE); // not a width this models
     protocore_hw_reg_host_write(A0, 0x11223344u);
     TEST_ASSERT_EQUAL_HEX32(0x11223344u, protocore_hw_reg_host_read(A0));
 }

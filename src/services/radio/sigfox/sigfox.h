@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file sigfox.h
@@ -33,12 +33,11 @@ PROTOCORE_BEGIN_DECLS
 // combination that does not fit fails to compile rather than overrunning at run time.
 
 /** @brief Classification of a Sigfox modem response line. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_sigfox_result,
     SIGFOX_PENDING = 0, ///< nothing conclusive yet (echo / partial); keep reading
     SIGFOX_OK = 1,      ///< the modem accepted / completed the command
     SIGFOX_ERROR = 2,   ///< the modem reported an error
-} protocore_sigfox_result;
+);
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
@@ -71,6 +70,6 @@ protocore_sigfox_result protocore_sigfox_parse_response(uint8_t *work, const cha
 PROTOCORE_NS SigfoxNs Sigfox PROTOCORE_UNUSED = {.build_uplink = protocore_sigfox_build_uplink,
                                                  .parse_response = protocore_sigfox_parse_response};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_SIGFOX_H

@@ -6,7 +6,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @file edge_cache_proxy.h
@@ -34,12 +34,12 @@ struct EdgeCacheStats;
 typedef struct
 {
     void (*enable)(uint8_t *);
-    proto_bool (*map)(uint8_t *, const char *, const char *);
+    embed_bool (*map)(uint8_t *, const char *, const char *);
     void (*bind_sd)(uint8_t *, struct protocore_dbm *);
-    proto_bool (*add_peer)(uint8_t *, const char *, uint16_t);
+    embed_bool (*add_peer)(uint8_t *, const char *, uint16_t);
     void (*mesh_serve)(uint8_t *);
     void (*reset)(uint8_t *);
-    proto_bool (*purge)(uint8_t *, const char *);
+    embed_bool (*purge)(uint8_t *, const char *);
     uint32_t (*purge_prefix)(uint8_t *, const char *);
     void (*stats)(uint8_t *, struct EdgeCacheStats *);
 } EdgeProxyNs;
@@ -55,9 +55,9 @@ void protocore_edge_proxy_enable(uint8_t *work);
  * @param work PROTOCORE_EDGE_PROXY_BORROW bytes the caller took. Not held past the call.
  * @param path_prefix Path prefix
  * @param origin_base_url Origin base url
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, const char *origin_base_url);
+embed_bool protocore_edge_proxy_map(uint8_t *work, const char *path_prefix, const char *origin_base_url);
 /**
  * @brief Bind an L2 persistent tier: an opened dbm handle (on a mounted WAL .
  * @param work PROTOCORE_EDGE_PROXY_BORROW bytes the caller took. Not held past the call.
@@ -69,9 +69,9 @@ void protocore_edge_proxy_bind_sd(uint8_t *work, struct protocore_dbm *dbm);
  * @param work PROTOCORE_EDGE_PROXY_BORROW bytes the caller took. Not held past the call.
  * @param host Host
  * @param port Port
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16_t port);
+embed_bool protocore_edge_proxy_add_peer(uint8_t *work, const char *host, uint16_t port);
 /**
  * @brief Serve sibling queries: register the PROTO_MESH handler so this node .
  * @param work PROTOCORE_EDGE_PROXY_BORROW bytes the caller took. Not held past the call.
@@ -86,9 +86,9 @@ void protocore_edge_proxy_reset(uint8_t *work);
  * @brief Invalidate a single canonical key. true if an entry was purged.
  * @param work PROTOCORE_EDGE_PROXY_BORROW bytes the caller took. Not held past the call.
  * @param canonical_key Canonical key
- * @return PROTO_TRUE on success.
+ * @return EMBED_TRUE on success.
  */
-proto_bool protocore_edge_proxy_purge(uint8_t *work, const char *canonical_key);
+embed_bool protocore_edge_proxy_purge(uint8_t *work, const char *canonical_key);
 /**
  * @brief Invalidate every entry whose request path begins with prefix. the .
  * @param work PROTOCORE_EDGE_PROXY_BORROW bytes the caller took. Not held past the call.
@@ -125,6 +125,6 @@ PROTOCORE_NS EdgeProxyNs EdgeProxy PROTOCORE_UNUSED = {.enable = protocore_edge_
                                                        .purge_prefix = protocore_edge_proxy_purge_prefix,
                                                        .stats = protocore_edge_proxy_stats};
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_EDGE_CACHE_PROXY_H

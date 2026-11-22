@@ -44,7 +44,7 @@
 
 #if PROTOCORE_ENABLE_OIDC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /** @brief RSA modulus and signature size in bytes; RFC 7518 sec 3.3 requires at least 2048 bits. */
 #define PROTOCORE_OIDC_RSA_BYTES 256
@@ -64,8 +64,7 @@ PROTOCORE_BEGIN_DECLS
     (PROTOCORE_OIDC_HDR_LEN + PROTOCORE_OIDC_RSA_BYTES + PROTOCORE_OIDC_MAX_LEN + PROTOCORE_OIDC_ISS_LEN)
 
 /** @brief Validation result codes (0 = the ID Token passes every step of OIDC Core sec 3.1.3.7). */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(protocore_oidc_result,
     PROTOCORE_OIDC_OK = 0,             ///< Signature and Claims all pass.
     PROTOCORE_OIDC_ERR_FORMAT = -1,    ///< Not a 3-part Compact Serialization / bad base64url / oversized.
     PROTOCORE_OIDC_ERR_ALG = -2,       ///< JOSE Header `alg` is not RS256 (RFC 7515 sec 4.1.1).
@@ -75,14 +74,14 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_OIDC_ERR_AUD = -6,       ///< `aud` does not contain the client_id (sec 3.1.3.7 step 3).
     PROTOCORE_OIDC_ERR_EXPIRED = -7,   ///< `exp` is missing or not after now (sec 3.1.3.7 step 9).
     PROTOCORE_OIDC_ERR_NOT_YET = -8,   ///< `nbf` is in the future (RFC 7519 sec 4.1.5).
-} protocore_oidc_result;
+);
 
 /** @brief An RSA public key from one JWK (RFC 7518 sec 6.3.1). */
 typedef struct
 {
     uint8_t n[PROTOCORE_OIDC_RSA_BYTES]; ///< `n` (Modulus), big-endian, right-aligned (RFC 7518 sec 6.3.1.1).
     uint8_t e[4];                        ///< `e` (Exponent), big-endian, right-aligned (RFC 7518 sec 6.3.1.2).
-    proto_bool loaded;                   ///< True once `n` and `e` are populated.
+    embed_bool loaded;                   ///< True once `n` and `e` are populated.
 } protocore_oidc_key;
 
 /** @brief The Claims a validated ID Token carries (OIDC Core sec 2). */
@@ -136,7 +135,7 @@ typedef struct
     size_t token_len;      ///< how many characters of it there are
     OidcKeyArgs key;       ///< the JWK Set and the key it yields (RFC 7517 sec 5)
     OidcExpectArgs expect; ///< what the Claims are checked against (OIDC Core sec 3.1.3.7)
-    proto_bool ok;
+    embed_bool ok;
     protocore_oidc_result result;
     char text[PROTOCORE_OIDC_KID_LEN];
     protocore_oidc_claims claims;
@@ -172,7 +171,7 @@ static const OidcNs Oidc __attribute__((unused)) = {
     .verify = protocore_oidc_verify,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_OIDC
 

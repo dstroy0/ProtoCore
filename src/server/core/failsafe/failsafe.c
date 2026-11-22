@@ -13,7 +13,7 @@
 #include "server/core/failsafe/failsafe.h"
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /**
  * @brief The lifelines' compile-time storage: the table, and what a breach fires.
@@ -97,8 +97,8 @@ void protocore_failsafe_add(uint8_t *work)
             FAILSAFE_CTX(work)->lines[i].name = name;
             FAILSAFE_CTX(work)->lines[i].deadline_ms = deadline_ms;
             FAILSAFE_CTX(work)->lines[i].last_feed_ms = now; // starts fed, so it is not instantly overdue
-            FAILSAFE_CTX(work)->lines[i].armed = PROTO_TRUE;
-            FAILSAFE_CTX(work)->lines[i].breached = PROTO_FALSE;
+            FAILSAFE_CTX(work)->lines[i].armed = EMBED_TRUE;
+            FAILSAFE_CTX(work)->lines[i].breached = EMBED_FALSE;
             FailsafeV.i32 = i;
             return;
         }
@@ -113,13 +113,13 @@ void protocore_failsafe_feed(uint8_t *work)
 
     if (id < 0 || id >= PROTOCORE_FAILSAFE_MAX_LIFELINES || !FAILSAFE_CTX(work)->lines[id].armed)
     {
-        FailsafeV.ok = PROTO_FALSE;
+        FailsafeV.ok = EMBED_FALSE;
         return;
     }
     FAILSAFE_CTX(work)->lines[id].last_feed_ms = now;
     FAILSAFE_CTX(work)->lines[id].breached =
-        PROTO_FALSE; // a fresh check-in clears the breach so it can fire again next time
-    FailsafeV.ok = PROTO_TRUE;
+        EMBED_FALSE; // a fresh check-in clears the breach so it can fire again next time
+    FailsafeV.ok = EMBED_TRUE;
 }
 
 void protocore_failsafe_on_breach(uint8_t *work)
@@ -149,7 +149,7 @@ void protocore_failsafe_check(uint8_t *work)
         {
             continue;
         }
-        l->breached = PROTO_TRUE;
+        l->breached = EMBED_TRUE;
         if (FAILSAFE_CTX(work)->cb)
         {
             FAILSAFE_CTX(work)->cb(i, l->name, FAILSAFE_CTX(work)->cb_arg);
@@ -191,7 +191,7 @@ void protocore_failsafe_json(uint8_t *work)
     }
     size_t n = 0;
     fs_put(out, cap, &n, "{\"lifelines\":[");
-    proto_bool first = PROTO_TRUE;
+    embed_bool first = EMBED_TRUE;
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
         const protocore_lifeline *l = &FAILSAFE_CTX(work)->lines[i];
@@ -203,7 +203,7 @@ void protocore_failsafe_json(uint8_t *work)
         {
             fs_put(out, cap, &n, ",");
         }
-        first = PROTO_FALSE;
+        first = EMBED_FALSE;
         fs_put(out, cap, &n, "{\"name\":\"");
         fs_put(out, cap, &n, l->name ? l->name : "");
         fs_put(out, cap, &n, "\",\"overdue\":");
@@ -225,6 +225,6 @@ void protocore_failsafe_json(uint8_t *work)
 /** @brief The operands and the outcome. */
 FailsafeVars FailsafeV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_FAILSAFE

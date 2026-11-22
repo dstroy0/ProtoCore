@@ -52,7 +52,7 @@
 
 #if PROTOCORE_ENABLE_EUROMAP77
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // PROTOCORE_EUROMAP77_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
 // it into its arena. A caller takes them once and passes the pointer to every call. How they
@@ -68,22 +68,20 @@ PROTOCORE_BEGIN_DECLS
  * @brief Machine mode (EUROMAP 83 MachineModeEnumeration, em83 i=3011). Exposed as Int32; the numeric
  *        values are the companion-spec enumeration.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(EmMachineMode,
     EM_MODE_OTHER = 0,          ///< a mode outside the ones below.
     EM_MODE_AUTOMATIC = 1,      ///< automatic production.
     EM_MODE_SEMI_AUTOMATIC = 2, ///< semi-automatic (operator-triggered cycles).
     EM_MODE_MANUAL = 3,         ///< manual / hand operation.
     EM_MODE_SETUP = 4,          ///< set-up / preparation.
     EM_MODE_SLEEP = 5,          ///< energy-saving sleep.
-} EmMachineMode;
+);
 
 /**
  * @brief Active-job status (EUROMAP 83 JobStatusEnumeration, em83 i=3017). Exposed as Int32; the numeric
  *        values are the companion-spec enumeration.
  */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(EmJobStatus,
     EM_JOB_OTHER = 0,                  ///< a status outside the ones below.
     EM_JOB_TRANSFERRED_ASSIGNED = 1,   ///< transferred / assigned to the machine.
     EM_JOB_SET_UP_ACTIVE = 2,          ///< set-up in progress.
@@ -96,7 +94,7 @@ typedef enum PROTO_ENUM_PACKED
     EM_JOB_TEAR_DOWN_ACTIVE = 9,       ///< tear-down in progress.
     EM_JOB_TEAR_DOWN_INTERRUPTED = 10, ///< tear-down interrupted.
     EM_JOB_TEAR_DOWN_FINISHED = 11,    ///< tear-down finished.
-} EmJobStatus;
+);
 
 /** @brief IMM identity (EUROMAP 77 MachineInformation, common subset; all String). */
 typedef struct
@@ -114,7 +112,7 @@ typedef struct
 /** @brief IMM live status (EUROMAP 77 MachineStatus, common subset). */
 typedef struct
 {
-    proto_bool is_present;      ///< IsPresent.
+    embed_bool is_present;      ///< IsPresent.
     EmMachineMode machine_mode; ///< MachineMode.
 } EmMachineStatus;
 
@@ -194,7 +192,7 @@ typedef struct
 {
     Euromap77BindArgs bind_args;
     Euromap77InstallArgs install_args;
-    proto_bool ok;
+    embed_bool ok;
     uint16_t ns;
 } Euromap77Vars;
 
@@ -233,7 +231,7 @@ static const Euromap77Ns Euromap77 __attribute__((unused)) = {
  */
 uint8_t *protocore_euromap77_span(void);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_EUROMAP77
 

@@ -24,7 +24,7 @@ void tearDown(void)
 {
 }
 
-static proto_bool parse(const uint8_t *der, size_t len)
+static embed_bool parse(const uint8_t *der, size_t len)
 {
     X509V.parse_args.der = der;
     X509V.parse_args.len = len;
@@ -32,7 +32,7 @@ static proto_bool parse(const uint8_t *der, size_t len)
     return X509V.ok;
 }
 
-static proto_bool matches(const char *host)
+static embed_bool matches(const char *host)
 {
     X509V.match_args.cert = &X509V.cert;
     X509V.match_args.host = host;

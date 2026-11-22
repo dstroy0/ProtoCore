@@ -43,7 +43,7 @@
 
 #if PROTOCORE_ENABLE_ADS
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 // This module holds nothing between calls, so it carves no borrow and states none. An entry
 // takes one all the same, and never reads it, so every namespace in the tree is invoked the
@@ -82,8 +82,7 @@ PROTOCORE_BEGIN_DECLS
 #define ADS_IGRP_PLC_RW_M 0x4020       ///< %M flag memory, byte offset
 #define ADS_IGRP_PLC_RW_RB 0x4030      ///< retain memory
 
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(AdsCommand,
     ADS_COMMAND_INVALID = 0x0000,
     ADS_COMMAND_READ_DEVICE_INFO = 0x0001,
     ADS_COMMAND_READ = 0x0002,
@@ -94,10 +93,9 @@ typedef enum PROTO_ENUM_PACKED
     ADS_COMMAND_DEL_NOTIFICATION = 0x0007,
     ADS_COMMAND_NOTIFICATION = 0x0008,
     ADS_COMMAND_READ_WRITE = 0x0009,
-} AdsCommand;
+);
 
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(AdsState,
     ADS_STATE_INVALID = 0,
     ADS_STATE_IDLE = 1,
     ADS_STATE_RESET = 2,
@@ -115,16 +113,15 @@ typedef enum PROTO_ENUM_PACKED
     ADS_STATE_RESUME = 14,
     ADS_STATE_CONFIG = 15,
     ADS_STATE_RECONFIG = 16,
-} AdsState;
+);
 
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(AdsTransMode,
     ADS_TRANS_MODE_NO_TRANS = 0,
     ADS_TRANS_MODE_CLIENT_CYCLE = 1,
     ADS_TRANS_MODE_CLIENT_ON_CHANGE = 2,
     ADS_TRANS_MODE_SERVER_CYCLE = 3,     ///< server sends every CycleTime
     ADS_TRANS_MODE_SERVER_ON_CHANGE = 4, ///< server sends when the value changes
-} AdsTransMode;
+);
 
 typedef struct
 {
@@ -389,7 +386,7 @@ typedef struct
     AdsParseReadDeviceInfoArgs parse_read_device_info_args;
     AdsParseAddNotificationArgs parse_add_notification_args;
     AdsParseNotificationArgs parse_notification_args;
-    proto_bool ok;
+    embed_bool ok;
     size_t n;
 } AdsVars;
 
@@ -456,7 +453,7 @@ static const AdsNs Ads __attribute__((unused)) = {
     .parse_notification = protocore_ads_parse_notification,
 };
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ADS
 

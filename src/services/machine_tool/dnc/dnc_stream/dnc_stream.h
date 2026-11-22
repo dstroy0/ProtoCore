@@ -24,18 +24,17 @@
 
 #if PROTOCORE_ENABLE_DNC
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 #include "services/machine_tool/dnc/dnc/dnc.h"
 
 /** @brief Result of a drip-feed. 0 is success; each failure is a distinct code. */
-typedef enum PROTO_ENUM_PACKED
-{
+EMBED_ENUM_BYTE(DncStreamResult,
     DNC_STREAM_OK = 0,
     DNC_STREAM_ERR_ARG = -1,    ///< a required argument was null
     DNC_STREAM_ERR_IO = -2,     ///< a send/recv failed, or XOFF never cleared (see PROTOCORE_DNC_XOFF_MAX_POLLS)
     DNC_STREAM_ERR_ENCODE = -3, ///< a source line had no representation in the tape code, or overran a block
-} DncStreamResult;
+);
 
 /**
  * @brief Transport seam: the engine moves bytes only through these, so it runs over TCP, a UART, or
@@ -61,7 +60,7 @@ typedef int (*DncRecvFn)(void *ctx, uint8_t *buf, size_t cap);
 DncStreamResult dnc_stream(const DncCfg *cfg, const char *program, size_t prog_len, DncSendFn send, DncRecvFn recv,
                            void *ctx);
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_DNC
 

@@ -10,7 +10,7 @@
 #include "server/net/iface_bridge/iface_bridge/iface_bridge.h"
 #include "shared/ip/ip.h"
 
-PROTOCORE_BEGIN_DECLS
+EMBED_BEGIN_DECLS
 
 /// The one owned mutable: the address:port -> bus rule table.
 typedef struct
@@ -66,7 +66,7 @@ void protocore_iface_bridge_clear(uint8_t *work)
 
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
-        IFACE_BRIDGE_CTX(work)->rules[i].used = PROTO_FALSE;
+        IFACE_BRIDGE_CTX(work)->rules[i].used = EMBED_FALSE;
     }
     IFACE_BRIDGE_CTX(work)->count = 0;
 }
@@ -77,7 +77,7 @@ void protocore_iface_bridge_add(uint8_t *work)
 
     if (!rule)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridgeV.ok = EMBED_FALSE;
         return;
     }
     IfaceBridgeV.find_args.port = rule->listen_port;
@@ -85,7 +85,7 @@ void protocore_iface_bridge_add(uint8_t *work)
     protocore_iface_bridge_find(work);
     if (IfaceBridgeV.rule)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridgeV.ok = EMBED_FALSE;
         return; // a rule already binds this port+proto
     }
     for (uint8_t i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
@@ -93,13 +93,13 @@ void protocore_iface_bridge_add(uint8_t *work)
         if (!IFACE_BRIDGE_CTX(work)->rules[i].used)
         {
             IFACE_BRIDGE_CTX(work)->rules[i] = *rule;
-            IFACE_BRIDGE_CTX(work)->rules[i].used = PROTO_TRUE;
+            IFACE_BRIDGE_CTX(work)->rules[i].used = EMBED_TRUE;
             IFACE_BRIDGE_CTX(work)->count++;
-            IfaceBridgeV.ok = PROTO_TRUE;
+            IfaceBridgeV.ok = EMBED_TRUE;
             return;
         }
     }
-    IfaceBridgeV.ok = PROTO_FALSE;
+    IfaceBridgeV.ok = EMBED_FALSE;
     return; // table full
 }
 
@@ -113,7 +113,7 @@ void protocore_iface_bridge_map(uint8_t *work)
 
     if (!target)
     {
-        IfaceBridgeV.ok = PROTO_FALSE;
+        IfaceBridgeV.ok = EMBED_FALSE;
         return;
     }
     BridgeRule r;
@@ -126,7 +126,7 @@ void protocore_iface_bridge_map(uint8_t *work)
         Ip.parse(work);
         if (!IpV.ok)
         {
-            IfaceBridgeV.ok = PROTO_FALSE;
+            IfaceBridgeV.ok = EMBED_FALSE;
             return; // malformed bind address
         }
     }
@@ -225,6 +225,6 @@ void protocore_iface_bridge_txn_build(uint8_t *work)
 /** @brief The operands and the outcome. */
 IfaceBridgeVars IfaceBridgeV;
 
-PROTOCORE_END_DECLS
+EMBED_END_DECLS
 
 #endif // PROTOCORE_ENABLE_IFACE_BRIDGE
