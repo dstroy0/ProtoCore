@@ -120,10 +120,15 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+<<<<<<< Updated upstream
+=======
+- bump github/codeql-action from 4.38.2 to 4.39.3 ([`80d8e81`](https://github.com/dstroy0/ProtoCore/commit/80d8e812fc975d0e5354473ed596feea9e4a45a5))
+>>>>>>> Stashed changes
 - bump cspell from 10.3.3 to 10.5.1 ([`fdaef1a`](https://github.com/dstroy0/ProtoCore/commit/fdaef1a2901be185886cf85187ee74578d775feb))
 - update CHANGELOG.md [skip ci] ([`35263b4`](https://github.com/dstroy0/ProtoCore/commit/35263b4932994e929232b02a0c848d1332f97599))
 - update CHANGELOG.md [skip ci] ([`04f72dc`](https://github.com/dstroy0/ProtoCore/commit/04f72dc0413f0a65674e66000725e15eef5525ba))
 - update CHANGELOG.md [skip ci] ([`885a62a`](https://github.com/dstroy0/ProtoCore/commit/885a62a4cf8167030e2c879f20ec795ef9d922c1))
+- bump prettier from 3.9.9 to 3.10.1 ([`6e4bd55`](https://github.com/dstroy0/ProtoCore/commit/6e4bd55d960474cb82565a5c57e2c6d72a5da076))
 - update CHANGELOG.md [skip ci] ([`3342c52`](https://github.com/dstroy0/ProtoCore/commit/3342c52c4d6146a90950638e5f9c514066e931e3))
 - update CHANGELOG.md [skip ci] ([`2e6ebf2`](https://github.com/dstroy0/ProtoCore/commit/2e6ebf27d7283b4d88c646b64ef4b7700cd676cd))
 - update CHANGELOG.md [skip ci] ([`5fd58a8`](https://github.com/dstroy0/ProtoCore/commit/5fd58a8effd3c4255c91c1dc4893b5e7bdb74407))
@@ -474,6 +479,12 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+<<<<<<< Updated upstream
+=======
+- Merge pull request #50 from dstroy0/dependabot/github_actions/github/codeql-action-4.39.3 ([`fc7623e`](https://github.com/dstroy0/ProtoCore/commit/fc7623e5d638aa0a90402564292212da0e8aaaf1))
+- Merge pull request #52 from dstroy0/dependabot/npm_and_yarn/prettier-3.10.1 ([`a9eebd1`](https://github.com/dstroy0/ProtoCore/commit/a9eebd1169419b36e91f6ff000f767a6db6dce95))
+- Merge branch 'main' into dependabot/npm_and_yarn/prettier-3.10.1 ([`f1b8562`](https://github.com/dstroy0/ProtoCore/commit/f1b8562069593dacca9f273ee1b50da766c192a2))
+>>>>>>> Stashed changes
 - Merge pull request #53 from dstroy0/dependabot/npm_and_yarn/cspell-10.5.1 ([`4391a84`](https://github.com/dstroy0/ProtoCore/commit/4391a84631f523e20aeaa3f2319a8f443433833b))
 - Every read-only borrow is const down to its context, the operand records drop each dead pointer, and the prose and ASD-STE100 ratchets gate each commit over a list of common engineering words. ([`2de01bf`](https://github.com/dstroy0/ProtoCore/commit/2de01bf050aa96104a189abdebaddffeef51de1a))
 - CI scans a coverage report fitted to the checkout, the core keeps the TCP transport and the HTTP parser, and the tree passes clang-format and Prettier. ([`e47bf0c`](https://github.com/dstroy0/ProtoCore/commit/e47bf0c4ae638c823a79fea3ca0df4d89737ac8a))
