@@ -120,6 +120,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- bump cspell from 10.3.3 to 10.5.1 ([`fdaef1a`](https://github.com/dstroy0/ProtoCore/commit/fdaef1a2901be185886cf85187ee74578d775feb))
+- update CHANGELOG.md [skip ci] ([`35263b4`](https://github.com/dstroy0/ProtoCore/commit/35263b4932994e929232b02a0c848d1332f97599))
 - update CHANGELOG.md [skip ci] ([`04f72dc`](https://github.com/dstroy0/ProtoCore/commit/04f72dc0413f0a65674e66000725e15eef5525ba))
 - update CHANGELOG.md [skip ci] ([`885a62a`](https://github.com/dstroy0/ProtoCore/commit/885a62a4cf8167030e2c879f20ec795ef9d922c1))
 - update CHANGELOG.md [skip ci] ([`3342c52`](https://github.com/dstroy0/ProtoCore/commit/3342c52c4d6146a90950638e5f9c514066e931e3))
@@ -472,6 +474,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge pull request #53 from dstroy0/dependabot/npm_and_yarn/cspell-10.5.1 ([`4391a84`](https://github.com/dstroy0/ProtoCore/commit/4391a84631f523e20aeaa3f2319a8f443433833b))
 - Every read-only borrow is const down to its context, the operand records drop each dead pointer, and the prose and ASD-STE100 ratchets gate each commit over a list of common engineering words. ([`2de01bf`](https://github.com/dstroy0/ProtoCore/commit/2de01bf050aa96104a189abdebaddffeef51de1a))
 - CI scans a coverage report fitted to the checkout, the core keeps the TCP transport and the HTTP parser, and the tree passes clang-format and Prettier. ([`e47bf0c`](https://github.com/dstroy0/ProtoCore/commit/e47bf0c4ae638c823a79fea3ca0df4d89737ac8a))
 - ProtoCore runs on embedded_types, MMgr and idemIP in place of its own types, libc and lwIP, and the classic ESP32 profile turns each feature off that a build does not ask for. ([`92c7e6e`](https://github.com/dstroy0/ProtoCore/commit/92c7e6e319051766f5e6f83bf926f1c08b38d9a9))
@@ -909,6 +912,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`8c25c25`](https://github.com/dstroy0/ProtoCore/commit/8c25c253fb3e611efd3bc7e2ce784410a1eb080e))
 - update ESP32 build footprints [skip ci] ([`ea27317`](https://github.com/dstroy0/ProtoCore/commit/ea27317591cae922993fcb2c8fba8c86b79ea9f3))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`17bea8d`](https://github.com/dstroy0/ProtoCore/commit/17bea8d69f30db5e7679b58d590fbcb99dcda13e))
 - update ESP32 build footprints [skip ci] ([`c4421fd`](https://github.com/dstroy0/ProtoCore/commit/c4421fdd849b5175bb4a77b2966c6ffc518f896d))
