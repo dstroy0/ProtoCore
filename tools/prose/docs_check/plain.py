@@ -50,7 +50,7 @@ DISPLAY = (
     re.compile(r"\$\$.*?\$\$", re.DOTALL),
     re.compile(r"\\\[.*?\\\]", re.DOTALL),
     re.compile(
-        r"\\begin\{(equation|align|gather|multline|tabular|array|matrix|verbatim|lstlisting)" r"\*?\}.*?\\end\{\1\*?\}",
+        r"\\begin\{(equation|align|gather|multline|tabular|array|matrix|verbatim|lstlisting)\*?\}.*?\\end\{\1\*?\}",
         re.DOTALL,
     ),
 )

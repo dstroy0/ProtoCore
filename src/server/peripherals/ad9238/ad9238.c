@@ -99,7 +99,7 @@ void protocore_ad9238_build_read(const uint8_t *work)
     Ad9238V.n = 2;
 }
 
-void protocore_ad9238_build_transfer(uint8_t *work)
+void protocore_ad9238_build_transfer(const uint8_t *work)
 {
     (void)work;
     uint8_t *out = Ad9238V.build_transfer_args.out;

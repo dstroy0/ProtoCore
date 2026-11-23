@@ -386,6 +386,7 @@ static embed_bool protocore_msgpack_read_int(mmgr_cspan *r, int64_t *out)
         *out = (int64_t)v;
         return EMBED_TRUE;
     case 0xcf: // uint64 (may exceed int64 range; wraps as two's-complement)
+    case 0xd3: // int64
         if (!take_be(r, 8, &v))
         {
             return EMBED_FALSE;
@@ -412,13 +413,6 @@ static embed_bool protocore_msgpack_read_int(mmgr_cspan *r, int64_t *out)
             return EMBED_FALSE;
         }
         *out = (int32_t)(uint32_t)v;
-        return EMBED_TRUE;
-    case 0xd3: // int64
-        if (!take_be(r, 8, &v))
-        {
-            return EMBED_FALSE;
-        }
-        *out = (int64_t)v;
         return EMBED_TRUE;
     default:
         r->err = EMBED_TRUE;

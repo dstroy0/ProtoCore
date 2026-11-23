@@ -72,7 +72,7 @@ embed_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t
  * @brief Fetch @p key's value into @p buf (up to @p cap).
  * @return the value length on success, or -1 if the key is absent or the value is larger than @p cap.
  */
-long protocore_dbm_get(struct protocore_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap);
+long protocore_dbm_get(const struct protocore_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap);
 
 /**
  * @brief Delete @p key (appends a tombstone record and drops it from the index).

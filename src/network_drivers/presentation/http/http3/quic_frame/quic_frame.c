@@ -33,7 +33,7 @@ static embed_bool rd(const uint8_t *work, const uint8_t *buf, size_t len, size_t
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicFrameHeader *out)
+size_t protocore_quic_frame_parse(const uint8_t *work, const uint8_t *buf, size_t len, QuicFrameHeader *out)
 {
     size_t n = 0;
 
@@ -98,12 +98,9 @@ size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len,
             return 0;
         }
         out->stream.offset = 0;
-        if (type & QUIC_STREAM_OFF)
+        if ((type & QUIC_STREAM_OFF) && !rd(work, buf, len, &pos, &out->stream.offset))
         {
-            if (!rd(work, buf, len, &pos, &out->stream.offset))
-            {
-                return 0;
-            }
+            return 0;
         }
         if (type & QUIC_STREAM_LEN)
         {
@@ -143,12 +140,10 @@ size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len,
         {
             return 0;
         }
-        if (type == QUIC_FT_CONNECTION_CLOSE) // the transport variant carries the triggering frame type
+        // the transport variant carries the triggering frame type
+        if (type == QUIC_FT_CONNECTION_CLOSE && !rd(work, buf, len, &pos, &out->close.frame_type))
         {
-            if (!rd(work, buf, len, &pos, &out->close.frame_type))
-            {
-                return 0;
-            }
+            return 0;
         }
         if (!rd(work, buf, len, &pos, &out->close.reason_len))
         {
@@ -274,7 +269,7 @@ size_t protocore_quic_frame_build_handshake_done(const uint8_t *work, uint8_t *o
 }
 
 // Append a varint; returns false on overflow.
-static embed_bool wr(uint8_t *work, uint8_t *out, size_t cap, size_t *pos, uint64_t v)
+static embed_bool wr(const uint8_t *work, uint8_t *out, size_t cap, size_t *pos, uint64_t v)
 {
     size_t quic_varint_n = QuicVarint.encode(work, out + *pos, cap - *pos, v);
     size_t c = quic_varint_n;

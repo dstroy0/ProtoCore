@@ -154,7 +154,7 @@ typedef struct
     void (*const build_sd1)(const uint8_t *work);
     void (*const build_sd2)(const uint8_t *work);
     void (*const build_sd3)(const uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
 } ProfibusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -163,7 +163,7 @@ void protocore_profibus_fcs(const uint8_t *work);
 void protocore_profibus_build_sd1(const uint8_t *work);
 void protocore_profibus_build_sd2(const uint8_t *work);
 void protocore_profibus_build_sd3(const uint8_t *work);
-void protocore_profibus_parse(uint8_t *work);
+void protocore_profibus_parse(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

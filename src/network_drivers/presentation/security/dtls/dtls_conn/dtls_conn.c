@@ -238,8 +238,8 @@ static void flight_disarm(DtlsConn *c)
 // X25519 key_share, binding a stateless return-routability cookie to the peer address. Per RFC 8446
 // §4.4.1 the transcript is restarted as the synthetic message_hash(ClientHello1) before the HRR is
 // folded in, so the eventual transcript is message_hash || HRR || ClientHello2 || ServerHello || ...
-static int send_hello_retry(uint8_t *work, DtlsConn *c, const Tls13ClientHello *ch, const uint8_t *ch1, size_t ch1_len,
-                            uint8_t *out, size_t out_cap, size_t *out_len)
+static int send_hello_retry(const uint8_t *work, DtlsConn *c, const Tls13ClientHello *ch, const uint8_t *ch1,
+                            size_t ch1_len, uint8_t *out, size_t out_cap, size_t *out_len)
 {
     uint8_t ch1_hash[TLS13_SECRET_MAX];
     uint8_t *h;
@@ -644,8 +644,7 @@ static int drive_handshake(uint8_t *work, DtlsConn *c, const uint8_t *payload, s
             break;
         }
         p += used;
-        dtls_handshake_n = DtlsHandshake.reasm_add(work, &c->reasm, &hh);
-        int r = dtls_handshake_n; // ignores fragments for other message_seqs
+        const int r = DtlsHandshake.reasm_add(work, &c->reasm, &hh); // ignores fragments for other message_seqs
         if (r < 0)
         {
             return fail(c, ALERT_DECODE_ERROR);
@@ -901,7 +900,7 @@ void protocore_dtls_server_timeout_ms(const uint8_t *work)
     DtlsServerV.n = remaining > 0 ? remaining : 0;
 }
 
-void protocore_dtls_server_on_timeout(uint8_t *work)
+void protocore_dtls_server_on_timeout(const uint8_t *work)
 {
     (void)work;
     DtlsConn *c = DtlsServerV.on_timeout_args.c;
@@ -1047,7 +1046,8 @@ void protocore_dtls_server_seal_app(const uint8_t *work)
     size_t dtls_record_n =
         DtlsRecord.protect(work, &c->ep3_srv, c->tx_seq_ep3++, PROTOCORE_DTLS_CT_APPLICATION_DATA, data, len, out,
                            out_cap, c->cid_negotiated ? c->peer_cid : NULL, c->cid_negotiated ? c->peer_cid_len : 0);
-    DtlsServerV.n = dtls_record_n;
+    // Explicit cast narrows the record length, which protect holds at out_cap, as the handshake path does
+    DtlsServerV.n = (int)dtls_record_n;
 }
 
 /** @brief The operands and the outcome. */

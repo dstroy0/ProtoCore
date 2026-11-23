@@ -266,12 +266,12 @@ typedef struct
     void (*const recv_ident)(const uint8_t *work);
     void (*const send_ident)(const uint8_t *work);
     void (*const kexinit_build)(const uint8_t *work);
-    void (*const kexinit_parse)(uint8_t *work);
+    void (*const kexinit_parse)(const uint8_t *work);
     void (*const kex_generate)(const uint8_t *work);
     void (*const exchange_hash)(const uint8_t *work);
     void (*const kexdh_reply)(const uint8_t *work);
     void (*const newkeys_sent)(const uint8_t *work);
-    void (*const newkeys_complete)(uint8_t *work);
+    void (*const newkeys_complete)(const uint8_t *work);
     void (*const rekey_due)(const uint8_t *work);
     void (*const begin_rekey)(const uint8_t *work);
 } SshTransportNs;
@@ -281,12 +281,12 @@ typedef struct
 void protocore_ssh_transport_recv_ident(const uint8_t *work);
 void protocore_ssh_transport_send_ident(const uint8_t *work);
 void protocore_ssh_transport_kexinit_build(const uint8_t *work);
-void protocore_ssh_transport_kexinit_parse(uint8_t *work);
+void protocore_ssh_transport_kexinit_parse(const uint8_t *work);
 void protocore_ssh_transport_kex_generate(const uint8_t *work);
 void protocore_ssh_transport_exchange_hash(const uint8_t *work);
 void protocore_ssh_transport_kexdh_reply(const uint8_t *work);
 void protocore_ssh_transport_newkeys_sent(const uint8_t *work);
-void protocore_ssh_transport_newkeys_complete(uint8_t *work);
+void protocore_ssh_transport_newkeys_complete(const uint8_t *work);
 void protocore_ssh_transport_rekey_due(const uint8_t *work);
 void protocore_ssh_transport_begin_rekey(const uint8_t *work);
 

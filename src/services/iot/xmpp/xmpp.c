@@ -96,8 +96,9 @@ static void finish(const uint8_t *work)
 }
 
 // Append one octet, keeping room for the terminator.
-static void put_char(uint8_t *work, char c)
+static void put_char(const uint8_t *work, char c)
 {
+    (void)work;
     if (!XmppV.ok)
     {
         return;
@@ -112,8 +113,9 @@ static void put_char(uint8_t *work, char c)
 }
 
 // Append a NUL-terminated run, keeping room for the terminator.
-static void put(uint8_t *work, const char *s)
+static void put(const uint8_t *work, const char *s)
 {
+    (void)work;
     if (!XmppV.ok)
     {
         return;

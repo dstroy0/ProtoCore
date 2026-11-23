@@ -98,7 +98,7 @@ typedef struct
     CsrfIssueArgs issue_args;
     CsrfVerifyArgs verify_args;
     embed_bool ok;
-    int n;
+    size_t n;
     embed_bool valid;
 } CsrfVars;
 

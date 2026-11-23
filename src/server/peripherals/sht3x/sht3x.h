@@ -142,7 +142,7 @@ typedef struct
     void (*const crc8)(const uint8_t *work);
     void (*const temp_mc)(const uint8_t *work);
     void (*const rh_mpct)(const uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const parse)(const uint8_t *work);
     void (*const begin)(uint8_t *work);
     void (*const read)(uint8_t *work);
 } Sht3xNs;
@@ -152,7 +152,7 @@ typedef struct
 void protocore_sht3x_crc8(const uint8_t *work);
 void protocore_sht3x_temp_mc(const uint8_t *work);
 void protocore_sht3x_rh_mpct(const uint8_t *work);
-void protocore_sht3x_parse(uint8_t *work);
+void protocore_sht3x_parse(const uint8_t *work);
 void protocore_sht3x_begin(uint8_t *work);
 void protocore_sht3x_read(uint8_t *work);
 

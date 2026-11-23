@@ -1,6 +1,5 @@
-# repotools-stamp: lib/numerics/precision.py d1df1b5cc862b55f
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Arbitrary-precision transform, for when float64 is the thing being measured.
 
 A double carries 53 bits of mantissa. That puts the arithmetic's own noise floor around 300 dB
@@ -140,7 +139,7 @@ def cos_sin(angle, prec, pi):
             x = pi - x
             flip_cos = Decimal(-1)
         if x > quarter:
-            # cos(x) = sin(pi/2 - x), sin(x) = cos(pi/2 - x)
+            # Past a quarter turn, the cosine is the sine of the complement, and the sine is its cosine.
             y = half - x
             c = _sin_small(y, prec)
             s = _cos_small(y, prec)

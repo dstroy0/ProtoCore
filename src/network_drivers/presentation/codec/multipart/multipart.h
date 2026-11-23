@@ -67,8 +67,6 @@ typedef struct
     int part_count;                           ///< Number of valid entries in parts[].
 } MultipartBody;
 
-#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the type a parameter points at
-
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {

@@ -190,13 +190,11 @@ static const SnmpMibEntry *mib_find_next(uint8_t *work, const uint32_t *oid, siz
     const SnmpMibEntry *best = NULL;
     for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
     {
-        if (oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, SNMP_AGENT_CTX(work)->mib[i].oid_len, oid, n) > 0)
+        if (oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, SNMP_AGENT_CTX(work)->mib[i].oid_len, oid, n) > 0 &&
+            (!best || oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, SNMP_AGENT_CTX(work)->mib[i].oid_len, best->oid,
+                              best->oid_len) < 0))
         {
-            if (!best || oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, SNMP_AGENT_CTX(work)->mib[i].oid_len, best->oid,
-                                 best->oid_len) < 0)
-            {
-                best = &SNMP_AGENT_CTX(work)->mib[i];
-            }
+            best = &SNMP_AGENT_CTX(work)->mib[i];
         }
     }
     return best;
@@ -543,11 +541,11 @@ static void apply_set_all(uint8_t *work, size_t nvb, embed_bool v2c, long *err_s
         }
         else if (!en->setter)
         {
-            e = (!v2c) ? (int)SNMP_ERR_READ_ONLY : SNMP_ERR_NOT_WRITABLE;
+            e = (!v2c) ? SNMP_ERR_READ_ONLY : SNMP_ERR_NOT_WRITABLE;
         }
         else if (!en->setter(&SNMP_AGENT_CTX(work)->in[i].val))
         {
-            e = (!v2c) ? (int)SNMP_ERR_BAD_VALUE : SNMP_ERR_WRONG_TYPE;
+            e = (!v2c) ? SNMP_ERR_BAD_VALUE : SNMP_ERR_WRONG_TYPE;
         }
         if (!e)
         {
@@ -872,7 +870,7 @@ void protocore_snmp_agent_dispatch_pdu(uint8_t *work)
         echo_varbinds(work, nvb);
         if (!allow_write)
         {
-            err_status = (!v2c) ? (int)SNMP_ERR_NO_SUCH_NAME : SNMP_ERR_NO_ACCESS;
+            err_status = (!v2c) ? SNMP_ERR_NO_SUCH_NAME : SNMP_ERR_NO_ACCESS;
             err_index = 1;
         }
         else
@@ -939,7 +937,7 @@ void protocore_snmp_agent_process(uint8_t *work)
 #endif
         return; // without the USM layer a v3 message is answered with nothing
     }
-    if (version != (int)SNMP_V1 && version != SNMP_V2C)
+    if (version != SNMP_V1 && version != SNMP_V2C)
     {
         return;
     }

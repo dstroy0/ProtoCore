@@ -57,15 +57,13 @@ typedef struct
     size_t cap;
 } WisunFan;
 
-#include "shared/ip/ip.h" // protocore_ip: the type a parameter points at
-
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
     size_t (*build_coap)(const uint8_t *, uint8_t, uint8_t, uint16_t, const uint8_t *, uint8_t, const char *,
                          const uint8_t *, size_t, uint8_t *, size_t);
     void (*init)(const uint8_t *, WisunFan *, const protocore_ip *, WisunNode *, size_t);
-    int (*node_register)(uint8_t *, WisunFan *, const protocore_ip *, uint32_t);
+    int (*node_register)(const uint8_t *, WisunFan *, const protocore_ip *, uint32_t);
     embed_bool (*node_find)(const uint8_t *, const WisunFan *, const protocore_ip *, size_t *);
     size_t (*joined_count)(const uint8_t *, const WisunFan *);
     size_t (*nodes_json)(const uint8_t *, const WisunFan *, char *, size_t);
@@ -108,7 +106,7 @@ void protocore_wisun_init(const uint8_t *work, WisunFan *fan, const protocore_ip
  * @param now Now
  * @return The int.
  */
-int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_ip *addr, uint32_t now);
+int protocore_wisun_node_register(const uint8_t *work, WisunFan *fan, const protocore_ip *addr, uint32_t now);
 /**
  * @brief Find a node by address. idx (may be null) receives the index. found.
  * @param work PROTOCORE_WISUN_BORROW bytes the caller took. Not held past the call.

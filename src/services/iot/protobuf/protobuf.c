@@ -349,7 +349,7 @@ void protocore_protobuf_write_string(uint8_t *work)
 // Report the encoded octet count in ns->n, or 0 when any append overflowed.
 void protocore_protobuf_writer_finish(uint8_t *work)
 {
-    ProtobufWriterRow *w = writer_row(work);
+    const ProtobufWriterRow *w = writer_row(work);
     ProtobufV.ok = (w != NULL) && !w->error;
     ProtobufV.n = ProtobufV.ok ? w->pos : 0;
 }
@@ -377,7 +377,7 @@ void protocore_protobuf_read_varint(uint8_t *work)
     uint64_t v = 0;
     ProtobufV.ok = reader_varint(work, &v);
     ProtobufV.u64 = ProtobufV.ok ? v : 0;
-    ProtobufReaderRow *r = reader_row(work);
+    const ProtobufReaderRow *r = reader_row(work);
     ProtobufV.n = r ? r->pos : 0;
 }
 

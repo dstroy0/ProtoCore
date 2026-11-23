@@ -157,34 +157,34 @@ extern WampVars WampV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const build_hello)(uint8_t *work);
-    void (*const build_goodbye)(uint8_t *work);
-    void (*const build_subscribe)(uint8_t *work);
-    void (*const build_unsubscribe)(uint8_t *work);
-    void (*const build_publish)(uint8_t *work);
-    void (*const build_call)(uint8_t *work);
-    void (*const build_register)(uint8_t *work);
-    void (*const build_unregister)(uint8_t *work);
-    void (*const build_yield)(uint8_t *work);
+    void (*const build_hello)(const uint8_t *work);
+    void (*const build_goodbye)(const uint8_t *work);
+    void (*const build_subscribe)(const uint8_t *work);
+    void (*const build_unsubscribe)(const uint8_t *work);
+    void (*const build_publish)(const uint8_t *work);
+    void (*const build_call)(const uint8_t *work);
+    void (*const build_register)(const uint8_t *work);
+    void (*const build_unregister)(const uint8_t *work);
+    void (*const build_yield)(const uint8_t *work);
     void (*const element)(const uint8_t *work);
-    void (*const get_type)(uint8_t *work);
+    void (*const get_type)(const uint8_t *work);
     void (*const get_id)(const uint8_t *work);
     void (*const get_uri)(const uint8_t *work);
 } WampNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in WampV or a region of the borrow at a fixed offset.
-void protocore_wamp_build_hello(uint8_t *work);
-void protocore_wamp_build_goodbye(uint8_t *work);
-void protocore_wamp_build_subscribe(uint8_t *work);
-void protocore_wamp_build_unsubscribe(uint8_t *work);
-void protocore_wamp_build_publish(uint8_t *work);
-void protocore_wamp_build_call(uint8_t *work);
-void protocore_wamp_build_register(uint8_t *work);
-void protocore_wamp_build_unregister(uint8_t *work);
-void protocore_wamp_build_yield(uint8_t *work);
+void protocore_wamp_build_hello(const uint8_t *work);
+void protocore_wamp_build_goodbye(const uint8_t *work);
+void protocore_wamp_build_subscribe(const uint8_t *work);
+void protocore_wamp_build_unsubscribe(const uint8_t *work);
+void protocore_wamp_build_publish(const uint8_t *work);
+void protocore_wamp_build_call(const uint8_t *work);
+void protocore_wamp_build_register(const uint8_t *work);
+void protocore_wamp_build_unregister(const uint8_t *work);
+void protocore_wamp_build_yield(const uint8_t *work);
 void protocore_wamp_element(const uint8_t *work);
-void protocore_wamp_get_type(uint8_t *work);
+void protocore_wamp_get_type(const uint8_t *work);
 void protocore_wamp_get_id(const uint8_t *work);
 void protocore_wamp_get_uri(const uint8_t *work);
 

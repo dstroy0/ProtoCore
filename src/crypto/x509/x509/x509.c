@@ -58,7 +58,8 @@ static embed_bool at(const uint8_t *work, const uint8_t *der, size_t len, size_t
 }
 
 // Whether the OID value at @p pos is @p oid.
-static embed_bool oid_is(uint8_t *work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid, size_t oid_len)
+static embed_bool oid_is(const uint8_t *work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid,
+                         size_t oid_len)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;
@@ -615,7 +616,7 @@ static embed_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     return EMBED_TRUE;
 }
 
-void protocore_x509_name_match(uint8_t *work)
+void protocore_x509_name_match(const uint8_t *work)
 {
     (void)work;
     X509V.ok = EMBED_FALSE;

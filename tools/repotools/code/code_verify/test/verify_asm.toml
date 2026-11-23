@@ -1,6 +1,5 @@
-# repotools-stamp: code/code_verify/test/verify_asm.toml 503d21f3f2b0cc27
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The fixture manifest for verify_asm, which is how the checker gets checked.
 #
@@ -32,8 +31,7 @@ require  = ["vpcmpeqd", "ymm"]
 #
 # That is the whole reason this tool exists. Nothing in a build log says it, every test still
 # passes because scalar code computes the same answer, and the only way to find it is to read the
-# object. The first version of this fixture required ymm here and failed, and the expectation was
-# wrong rather than the code, which is the second time today that has been the answer.
+# object. When a row fails, check the expectation as closely as the code: either one can be wrong.
 #
 # If a future gcc starts vectorizing at -O2 this row fires. That is information and not a false
 # alarm: it means the flag advice in the row above has changed.

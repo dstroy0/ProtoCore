@@ -184,22 +184,22 @@ extern BignumVars BignumV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const from_bytes)(uint8_t *work);
-    void (*const to_bytes)(uint8_t *work);
+    void (*const from_bytes)(const uint8_t *work);
+    void (*const to_bytes)(const uint8_t *work);
     void (*const cmp)(uint8_t *work);
     void (*const cmp_raw)(uint8_t *work);
-    void (*const is_zero)(uint8_t *work);
+    void (*const is_zero)(const uint8_t *work);
     void (*const expmod_group14)(uint8_t *work);
     void (*const dh_validate)(uint8_t *work);
 } BignumNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in BignumV or a region of the borrow at a fixed offset.
-void protocore_bignum_from_bytes(uint8_t *work);
-void protocore_bignum_to_bytes(uint8_t *work);
+void protocore_bignum_from_bytes(const uint8_t *work);
+void protocore_bignum_to_bytes(const uint8_t *work);
 void protocore_bignum_cmp(uint8_t *work);
 void protocore_bignum_cmp_raw(uint8_t *work);
-void protocore_bignum_is_zero(uint8_t *work);
+void protocore_bignum_is_zero(const uint8_t *work);
 void protocore_bignum_expmod_group14(uint8_t *work);
 void protocore_bignum_dh_validate(uint8_t *work);
 

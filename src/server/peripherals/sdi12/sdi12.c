@@ -417,7 +417,7 @@ void protocore_sdi12_crc_encode(const uint8_t *work)
     out[2] = (char)(0x40u | (crc & 0x3Fu));
 }
 
-void protocore_sdi12_check_crc(uint8_t *work)
+void protocore_sdi12_check_crc(const uint8_t *work)
 {
     (void)work;
     const char *resp = Sdi12V.check_crc_args.resp;

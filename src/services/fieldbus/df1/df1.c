@@ -69,7 +69,7 @@ void protocore_df1_crc(const uint8_t *work)
     Df1V.u16 = (uint16_t)CrcV.value;
 }
 
-void protocore_df1_build_frame(uint8_t *work)
+void protocore_df1_build_frame(const uint8_t *work)
 {
     uint8_t *buf = Df1V.build_frame_args.buf;
     size_t cap = Df1V.build_frame_args.cap;
@@ -128,7 +128,7 @@ void protocore_df1_build_frame(uint8_t *work)
     Df1V.n = p;
 }
 
-void protocore_df1_parse_frame(uint8_t *work)
+void protocore_df1_parse_frame(const uint8_t *work)
 {
     const uint8_t *buf = Df1V.parse_frame_args.buf;
     size_t len = Df1V.parse_frame_args.len;

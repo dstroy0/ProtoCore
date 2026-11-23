@@ -83,7 +83,7 @@ void protocore_ssh_kex_hash_init(uint8_t *work)
 void protocore_ssh_kex_hash_update(uint8_t *work)
 {
     SshKexHashV.ok = EMBED_FALSE;
-    SshKexHashCtx *ctx = KEXHASH_CTX(work);
+    const SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {
         Sha512.update(KEXHASH_HASH(work), SshKexHashV.update_args.data, SshKexHashV.update_args.len);
@@ -102,7 +102,7 @@ void protocore_ssh_kex_hash_final(uint8_t *work)
     {
         return;
     }
-    SshKexHashCtx *ctx = KEXHASH_CTX(work);
+    const SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {
         Sha512.final(KEXHASH_HASH(work), SshKexHashV.final_args.out);

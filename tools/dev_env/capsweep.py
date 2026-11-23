@@ -36,6 +36,8 @@ import re
 import subprocess
 import sys
 
+ERROR_LABEL = "error:"
+
 R = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INCLUDES = [
     "test/core_setup/hal/host",
@@ -130,9 +132,9 @@ def classify(rel, cap, flags):
     base = ["_POSIX_C_SOURCE=200809L"] + [f for f in flags if not f.startswith(cap + "=")]
     on, on_log = compile_with(rel, base + ["%s=1" % cap])
     if on != 0 and not any("#error" in ln for ln in on_log.splitlines()):
-        first = [ln for ln in on_log.splitlines() if "error:" in ln]
+        first = [ln for ln in on_log.splitlines() if ERROR_LABEL in ln]
         return "n/a", "does not build with the capability ON either: %s" % (
-            first[0].split("error:", 1)[-1].strip() if first else ""
+            first[0].split(ERROR_LABEL, 1)[-1].strip() if first else ""
         )
 
     # The capability goes on LAST so it wins over anything the env states about it.
@@ -144,10 +146,10 @@ def classify(rel, cap, flags):
     # not: it reports the #error and carries on through a file the directive just said should not be
     # compiled, so pmbus - which refuses correctly - also reported three undefined statics from the
     # arm its own refusal skipped. Reading those as the verdict called a correct module broken.
-    errs = [ln for ln in log.splitlines() if "error:" in ln]
+    errs = [ln for ln in log.splitlines() if ERROR_LABEL in ln]
     if any("#error" in e for e in errs):
         return "refuses", ""
-    first = errs[0].split("error:", 1)[-1].strip() if errs else ""
+    first = errs[0].split(ERROR_LABEL, 1)[-1].strip() if errs else ""
     return "BROKEN", first
 
 

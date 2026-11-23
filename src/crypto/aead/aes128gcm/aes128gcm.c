@@ -50,7 +50,7 @@ static inline void blk_init(Aes128Blk *b, const uint8_t key[16])
 {
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = b->key, .src = key, .bytes = 16);
 }
-static inline void blk_enc(Aes128Blk *b, const uint8_t in[16], uint8_t out[16])
+static inline void blk_enc(const Aes128Blk *b, const uint8_t in[16], uint8_t out[16])
 {
     protocore_aes_hw_acquire();
     protocore_aes_hw_setkey(b->key, 16);
@@ -148,7 +148,7 @@ static_assert(AES128GCM_OFF_BLOCK % _Alignof(Aes128Blk) == 0,
 // --- the GCM construction: software AES-128 + table GHASH on both arms ------
 
 // AES-128 single-block primitive (operates on the block context inside Aes128GcmWork).
-static inline void aes128_ecb(Aes128GcmWork *w, const uint8_t in[16], uint8_t out[16])
+static inline void aes128_ecb(const Aes128GcmWork *w, const uint8_t in[16], uint8_t out[16])
 {
     blk_enc(&w->blk, in, out);
 }

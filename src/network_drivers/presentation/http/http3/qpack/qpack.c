@@ -140,11 +140,9 @@ size_t protocore_qpack_encode_prefix(const uint8_t *work, uint8_t *out, size_t c
     return 2;
 }
 
-size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
+size_t protocore_qpack_encode_header(const uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
                                      const char *value, size_t value_len)
 {
-    size_t n = 0;
-
     int name_idx = -1;
     int full_idx = -1;
     for (int i = 0; i < 99; i++)
@@ -227,8 +225,8 @@ size_t protocore_qpack_encode_header(uint8_t *work, uint8_t *out, size_t cap, co
     return o + vs;
 }
 
-embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t len, char *scratch, size_t scratch_cap,
-                                  QpackEmitFn emit, void *ctx)
+embed_bool protocore_qpack_decode(const uint8_t *work, const uint8_t *block, size_t len, char *scratch,
+                                  size_t scratch_cap, QpackEmitFn emit, void *ctx)
 {
     size_t pos = 0;
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.
@@ -262,7 +260,7 @@ embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
                 return EMBED_FALSE;
             }
             uint32_t idx = 0;
-            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 6, &c, &idx);
+            hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 6, &c, &idx);
             if (!hpack_prim_ok || idx >= 99)
             {
                 return EMBED_FALSE;
@@ -280,7 +278,7 @@ embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
         { // Literal Field Line with Name Reference (sec 4.5.4): 01 N T i(4)
             embed_bool is_static = (b & 0x10) != 0;
             uint32_t idx = 0;
-            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 4, &c, &idx);
+            hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 4, &c, &idx);
             if (!hpack_prim_ok)
             {
                 return EMBED_FALSE;
@@ -298,8 +296,7 @@ embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
             }
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = scratch, .src = nm, .bytes = nlen);
             size_t vlen = 0;
-            embed_bool hpack_prim_ok2 =
-                HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
+            hpack_prim_ok2 = HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
             if (!hpack_prim_ok2)
             {
                 return EMBED_FALSE;
@@ -313,7 +310,7 @@ embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
         { // Literal Field Line with Literal Name (sec 4.5.6): 001 N H NameLen(3)
             embed_bool huff = (b & 0x08) != 0;
             uint32_t nlen32 = 0;
-            embed_bool hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 3, &c, &nlen32);
+            hpack_prim_ok = HpackPrim.decode_int(work, block + pos, len - pos, 3, &c, &nlen32);
             if (!hpack_prim_ok)
             {
                 return EMBED_FALSE;
@@ -326,8 +323,7 @@ embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
             size_t nlen = 0;
             if (huff)
             {
-                embed_bool hpack_prim_ok =
-                    HpackPrim.huff_decode(work, block + pos, nlen32, scratch, scratch_cap, &nlen);
+                hpack_prim_ok = HpackPrim.huff_decode(work, block + pos, nlen32, scratch, scratch_cap, &nlen);
                 if (!hpack_prim_ok)
                 {
                     return EMBED_FALSE;
@@ -344,8 +340,7 @@ embed_bool protocore_qpack_decode(uint8_t *work, const uint8_t *block, size_t le
             }
             pos += nlen32;
             size_t vlen = 0;
-            embed_bool hpack_prim_ok2 =
-                HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
+            hpack_prim_ok2 = HpackPrim.decode_str(work, block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen);
             if (!hpack_prim_ok2)
             {
                 return EMBED_FALSE;

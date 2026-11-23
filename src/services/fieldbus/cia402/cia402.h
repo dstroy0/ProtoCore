@@ -313,8 +313,8 @@ typedef struct
     void (*const sdo_set_target_velocity)(const uint8_t *work);
     void (*const sdo_set_target_torque)(const uint8_t *work);
     void (*const sdo_read)(const uint8_t *work);
-    void (*const sdo_get_u16)(uint8_t *work);
-    void (*const sdo_get_i32)(uint8_t *work);
+    void (*const sdo_get_u16)(const uint8_t *work);
+    void (*const sdo_get_i32)(const uint8_t *work);
     void (*const pack_command)(const uint8_t *work);
     void (*const unpack_status)(const uint8_t *work);
 } Cia402Ns;
@@ -330,8 +330,8 @@ void protocore_cia402_sdo_set_target_position(const uint8_t *work);
 void protocore_cia402_sdo_set_target_velocity(const uint8_t *work);
 void protocore_cia402_sdo_set_target_torque(const uint8_t *work);
 void protocore_cia402_sdo_read(const uint8_t *work);
-void protocore_cia402_sdo_get_u16(uint8_t *work);
-void protocore_cia402_sdo_get_i32(uint8_t *work);
+void protocore_cia402_sdo_get_u16(const uint8_t *work);
+void protocore_cia402_sdo_get_i32(const uint8_t *work);
 void protocore_cia402_pack_command(const uint8_t *work);
 void protocore_cia402_unpack_status(const uint8_t *work);
 

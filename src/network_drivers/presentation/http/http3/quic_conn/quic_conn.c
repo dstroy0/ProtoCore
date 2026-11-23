@@ -10,16 +10,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-static uint8_t quic_tls_work[16]; // the borrow an entry takes; QuicTlsServer never reads it
-
-static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
-
-static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
-
-static uint8_t quic_frame_work[16]; // the borrow an entry takes; QuicFrame never reads it
-
-static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
-
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "crypto/aead/aes128gcm/aes128gcm.h" // PROTOCORE_AES128GCM_TAG_LEN
@@ -31,6 +21,14 @@ static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint ne
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 #include "server/core/worker/worker.h" // the context span is key material
+
+static uint8_t quic_tls_work[16];    // the borrow an entry takes; QuicTlsServer never reads it
+static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
+
+static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
+
+static uint8_t quic_frame_work[16];  // the borrow an entry takes; QuicFrame never reads it
+static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
 
 EMBED_BEGIN_DECLS
 
@@ -244,7 +242,7 @@ static QuicStream *stream_get(QuicConnCtx *qc, uint64_t id, embed_bool create)
     return free_slot;
 }
 
-static void quic_conn_open(uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid,
+static void quic_conn_open(const uint8_t *work, QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint8_t *odcid,
                            uint8_t odcid_len, const uint8_t *peer_scid, uint8_t peer_scid_len, const uint8_t *our_scid,
                            uint8_t our_scid_len, const QuicConnCallbacks *cb)
 {
@@ -1239,7 +1237,7 @@ void protocore_quic_conn_stream_send(uint8_t *work)
 // so the match is asked here rather than read off it.
 void protocore_quic_conn_owns(uint8_t *work)
 {
-    QuicConnCtx *qc = qc_bound(work);
+    const QuicConnCtx *qc = qc_bound(work);
     QuicConnV.ok = EMBED_FALSE;
     const uint8_t *dcid = QuicConnV.owns_args.dcid;
     const uint8_t len = QuicConnV.owns_args.dcid_len;
@@ -1284,7 +1282,7 @@ void protocore_quic_conn_close_app(uint8_t *work)
 
 void protocore_quic_conn_is_established(uint8_t *work)
 {
-    QuicConnCtx *qc = qc_bound(work);
+    const QuicConnCtx *qc = qc_bound(work);
     QuicConnV.established = EMBED_FALSE;
     QuicConnV.ok = (qc != NULL);
     if (qc)
@@ -1295,7 +1293,7 @@ void protocore_quic_conn_is_established(uint8_t *work)
 
 void protocore_quic_conn_is_closed(uint8_t *work)
 {
-    QuicConnCtx *qc = qc_bound(work);
+    const QuicConnCtx *qc = qc_bound(work);
     QuicConnV.closed = EMBED_TRUE; // an unbound connection answers nothing, which is closed
     QuicConnV.ok = (qc != NULL);
     if (qc)

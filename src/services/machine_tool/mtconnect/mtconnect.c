@@ -653,7 +653,7 @@ void protocore_mt_connect_ring_add(uint8_t *work)
 
 void protocore_mt_connect_ring_query(uint8_t *work)
 {
-    MtConnectCtx *c = MTC_CTX(work);
+    const MtConnectCtx *c = MTC_CTX(work);
     const uint64_t first = c->first_seq;
     const uint64_t next = c->next_seq; // one past the newest retained observation
     const uint64_t last = next - 1u;   // newest sequence; when empty this is first-1

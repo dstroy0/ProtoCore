@@ -196,8 +196,8 @@ typedef struct
     void (*const init)(uint8_t *work);
     void (*const start)(uint8_t *work);
     void (*const process)(uint8_t *work);
-    void (*const established)(uint8_t *work);
-    void (*const alert)(uint8_t *work);
+    void (*const established)(const uint8_t *work);
+    void (*const alert)(const uint8_t *work);
     void (*const seal_app)(uint8_t *work);
     void (*const open_app)(uint8_t *work);
 } TlsConnNs;
@@ -207,8 +207,8 @@ typedef struct
 void protocore_tls_connection_init(uint8_t *work);
 void protocore_tls_connection_start(uint8_t *work);
 void protocore_tls_connection_process(uint8_t *work);
-void protocore_tls_connection_established(uint8_t *work);
-void protocore_tls_connection_alert(uint8_t *work);
+void protocore_tls_connection_established(const uint8_t *work);
+void protocore_tls_connection_alert(const uint8_t *work);
 void protocore_tls_connection_seal_app(uint8_t *work);
 void protocore_tls_connection_open_app(uint8_t *work);
 

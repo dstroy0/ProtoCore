@@ -131,7 +131,7 @@ typedef struct
 {
     void (*const defaults)(const uint8_t *work);
     void (*const decide)(const uint8_t *work);
-    void (*const json)(uint8_t *work);
+    void (*const json)(const uint8_t *work);
     void (*const brownout)(uint8_t *work);
     void (*const die_temp)(const uint8_t *work);
     void (*const cpu_mhz)(const uint8_t *work);
@@ -143,7 +143,7 @@ typedef struct
 // else an entry needs is an operand in PowerV or a region of the borrow at a fixed offset.
 void protocore_power_defaults(const uint8_t *work);
 void protocore_power_decide(const uint8_t *work);
-void protocore_power_json(uint8_t *work);
+void protocore_power_json(const uint8_t *work);
 #if PROTOCORE_HAS_VENDOR_PM
 void protocore_power_brownout(uint8_t *work);
 void protocore_power_die_temp(const uint8_t *work);

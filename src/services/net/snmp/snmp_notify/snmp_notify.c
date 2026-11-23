@@ -193,7 +193,7 @@ uint8_t *protocore_snmp_notify_span(void)
     return s_own.span;
 }
 
-void protocore_snmp_notify_build_pdu(uint8_t *work)
+void protocore_snmp_notify_build_pdu(const uint8_t *work)
 {
     if (SnmpNotifyV.buf.enc == NULL || SnmpNotifyV.pdu.trap_oid == NULL)
     {
@@ -207,7 +207,7 @@ void protocore_snmp_notify_build_pdu(uint8_t *work)
 
 // SEQUENCE { version 1, community, notification PDU }: the RFC 1157 sec 4 message wrapper carrying
 // an SNMPv2c version field.
-void protocore_snmp_notify_build_v2c(uint8_t *work)
+void protocore_snmp_notify_build_v2c(const uint8_t *work)
 {
     SnmpNotifyV.n = 0;
     SnmpNotifyV.ok = EMBED_FALSE;

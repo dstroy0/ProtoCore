@@ -371,7 +371,7 @@ static SmbResult smb_negotiate(uint8_t *work, SmbSendFn send, SmbRecvFn recv, vo
     if (neg.dialect == (uint16_t)SMB2_DIALECT_0311)
     {
         Smb2NegotiateContexts nc;
-        embed_bool smb2_ok = Smb2.parse_negotiate_contexts(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &nc);
+        smb2_ok = Smb2.parse_negotiate_contexts(work, SMB_CLIENT_CTX(work)->rx, (size_t)rl, &nc);
         if (smb2_ok && nc.have_encryption)
         {
             *cipher = nc.cipher;
@@ -574,8 +574,8 @@ static SmbResult smb_session_setup(uint8_t *work, const SmbConfig *cfg, const ch
     if (cipher_key_len != 0 && dialect >= (uint16_t)SMB2_DIALECT_0300 && !guest_or_null)
     {
         const embed_bool is_311 = dialect == (uint16_t)SMB2_DIALECT_0311;
-        embed_bool smb2_ok = Smb2.derive_encryption_keys(work, skey, dialect, is_311 ? preauth->hash : NULL,
-                                                         cipher_key_len, crypt->c2s, crypt->s2c);
+        smb2_ok = Smb2.derive_encryption_keys(work, skey, dialect, is_311 ? preauth->hash : NULL, cipher_key_len,
+                                              crypt->c2s, crypt->s2c);
         crypt->available = smb2_ok;
         if (crypt->available)
         {

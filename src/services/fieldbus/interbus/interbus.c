@@ -38,7 +38,7 @@ void protocore_interbus_fcs(const uint8_t *work)
     InterbusV.value = (uint16_t)CrcV.value;
 }
 
-void protocore_interbus_build(uint8_t *work)
+void protocore_interbus_build(const uint8_t *work)
 {
     const uint16_t *words = InterbusV.build_args.words;
     size_t word_count = InterbusV.build_args.word_count;
@@ -73,7 +73,7 @@ void protocore_interbus_build(uint8_t *work)
     InterbusV.n = i;
 }
 
-void protocore_interbus_parse(uint8_t *work)
+void protocore_interbus_parse(const uint8_t *work)
 {
     const uint8_t *frame = InterbusV.parse_args.frame;
     size_t len = InterbusV.parse_args.len;

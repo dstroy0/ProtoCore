@@ -91,6 +91,8 @@ struct StackTcpStorage
     const StackUnits *units;
     uint32_t window;
     embed_bool started;
+    uint8_t connect_local_ip[IDEMIP_TCP_PCB_ADDR_BYTES];  ///< the local address of an active open, zero past octet 4
+    uint8_t connect_remote_ip[IDEMIP_TCP_PCB_ADDR_BYTES]; ///< the remote address of an active open, zero past octet 4
 };
 
 static_assert(sizeof(struct StackTcpStorage) <= PROTOCORE_STACK_TCP_BORROW,
@@ -1520,8 +1522,10 @@ uint8_t protocore_stack_tcp_connect(const StackTcpConnectArgs *args)
         return PROTOCORE_STACK_TCP_SLOT_NONE;
     }
     const uint16_t tcb = tcb_io->index;
-    uint8_t local_ip[IDEMIP_TCP_PCB_ADDR_BYTES] = {0};
-    uint8_t remote_ip[IDEMIP_TCP_PCB_ADDR_BYTES] = {0};
+    uint8_t *const local_ip = context->connect_local_ip;
+    uint8_t *const remote_ip = context->connect_remote_ip;
+    mmgr_zero_buf(local_ip, IDEMIP_TCP_PCB_ADDR_BYTES);
+    mmgr_zero_buf(remote_ip, IDEMIP_TCP_PCB_ADDR_BYTES);
     EMBED_CALL(proxim.read, ProximusCfg, .dst = local_ip, .at = args->local_ip, .size = 4u);
     EMBED_CALL(proxim.read, ProximusCfg, .dst = remote_ip, .at = args->remote_ip, .size = 4u);
     tcb_io->bind_args = (TcpPcbAddrArgs){0};
@@ -1553,7 +1557,7 @@ uint8_t protocore_stack_tcp_connect(const StackTcpConnectArgs *args)
         TcpIsn.generate(context->units->transport.tcp_isn);
     }
     const embed_bool opened = bound && tcb_io->status == IDEMIP_OK && isn_io->status == IDEMIP_OK;
-    // The two address buffers end with this call. The operands thus keep no pointer to them.
+    // The next active open writes the two address buffers again. The operands thus keep no pointer to them.
     tcb_io->bind_args.ip = NULL;
     tcb_io->connect_args.ip = NULL;
     isn_io->gen_args.local_ip = NULL;

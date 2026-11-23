@@ -50,7 +50,7 @@ GROUPS = [
         "Peripherals",
         "Peripherals",
         "HW",
-        "On-chip and add-on interface hardware - Ethernet (internal + W5500), CAN, Wi-Fi " "capture, and DMA ingest:",
+        "On-chip and add-on interface hardware - Ethernet (internal + W5500), CAN, Wi-Fi capture, and DMA ingest:",
     ),
     (
         "Drivers",

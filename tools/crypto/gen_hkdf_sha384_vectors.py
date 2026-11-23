@@ -20,6 +20,8 @@ import os
 import subprocess
 import sys
 
+HEXKEY_LABEL = "hexkey:"
+
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT_DIR = os.path.join(ROOT, "test", "vectors")
 
@@ -99,7 +101,7 @@ def hkdf(mode, digest, keylen, key, salt="", info=""):
         "-kdfopt",
         "digest:" + digest,
         "-kdfopt",
-        "hexkey:" + key,
+        HEXKEY_LABEL + key,
     ]
     if mode != "EXPAND_ONLY":
         args += ["-kdfopt", "hexsalt:" + salt]
@@ -122,7 +124,7 @@ def expand_label(digest, keylen, secret, label, context):
             "-kdfopt",
             "label:" + label,
             "-kdfopt",
-            "hexkey:" + secret,
+            HEXKEY_LABEL + secret,
             "-kdfopt",
             "hexdata:" + context,
             "TLS13-KDF",
@@ -144,7 +146,7 @@ def digest(digest_name, hexmsg):
 def hmac(digest_name, hexkey, hexmsg):
     """One openssl HMAC over hex input under a hex key, as lowercase hex."""
     p = subprocess.run(
-        ["openssl", "dgst", "-" + digest_name, "-mac", "HMAC", "-macopt", "hexkey:" + hexkey, "-r"],
+        ["openssl", "dgst", "-" + digest_name, "-mac", "HMAC", "-macopt", HEXKEY_LABEL + hexkey, "-r"],
         input=bytes.fromhex(hexmsg),
         capture_output=True,
         check=True,

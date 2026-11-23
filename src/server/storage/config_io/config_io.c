@@ -49,8 +49,8 @@ static embed_bool field_type(const protocore_cfg_field *fields, size_t n, const 
 // Append "<key>=<val>\n" to out at *pos, overflow-safe. Returns false on overflow.
 static embed_bool append_kv(char *out, size_t cap, size_t *pos, const char *key, const char *val)
 {
-    size_t kn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = cap + 1),
-           vn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = val, .cap = cap + 1);
+    size_t kn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = key, .cap = cap + 1);
+    size_t vn = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = val, .cap = cap + 1);
     size_t need = kn + 1 + vn + 1; // key '=' val '\n'
     if (*pos + need >= cap)        // keep room for the null terminator
     {

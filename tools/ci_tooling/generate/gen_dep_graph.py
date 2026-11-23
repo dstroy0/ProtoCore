@@ -158,7 +158,8 @@ def main():
         with open(args.out, encoding="utf-8") as fh:
             base = {f: set(v) for f, v in json.load(fh).items()}
         targets = set(per_env)
-        for f in list(base):  # the recomputed envs own their membership afresh
+        # The recomputed envs own their membership afresh. The loop walks a copy of the keys, because it deletes keys.
+        for f in list(base):  # NOSONAR - the loop deletes keys from base
             base[f] -= targets
             if not base[f]:
                 del base[f]

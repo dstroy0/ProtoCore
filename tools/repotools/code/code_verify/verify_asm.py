@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-# repotools-stamp: code/code_verify/verify_asm.py 0913ec01f75d22c0
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Compile a source for a target, disassemble the object, and read what the assembler actually emitted.
 
   verify_asm.py                  every case in the manifest
@@ -38,13 +37,11 @@ This tool issues `emits` and nothing stronger. A target with no hardware anywher
 and stops there, and the convention is that such a build carries its grade in its own name, so a
 table of results cannot show an unrun arm beside a run one with the difference invisible.
 
-THE ANECDOTE THAT IS THE REASON TO TRUST IT
+A FAILURE CAN BE IN THE EXPECTATION
 
-The first SVE case written against this reported "did not emit whilelt". The code was right and the
-expectation was wrong: `svwhilelt_b32` on unsigned operands emits WHILELO, because WHILELT is the
-signed form. The check caught a wrong belief rather than wrong code, which is the case it is least
-likely to be trusted on and the one worth writing down. A check that only ever confirms what you
-already believed is not doing anything.
+`svwhilelt_b32` on unsigned operands emits WHILELO, because WHILELT is the signed form. A case that
+requires whilelt there fails on correct code. When a case fails, check the expectation as closely
+as the code: the check tests a belief about the code, and the belief can be the wrong part.
 
 THE MANIFEST
 
@@ -120,10 +117,11 @@ def disassemble(case, where, work, report):
         report.breaking(case["source"], 0, "%s: no source at that path" % case["label"])
         return None
 
-    stem = re.sub(r"[^A-Za-z0-9_]", "_", case["label"])
+    stem = re.sub(r"\W", "_", case["label"])
     obj = os.path.join(work, stem + ".o")
-    built = subprocess.run([compiler] + list(case.get("flags", [])) + ["-c", source, "-o", obj],
-                           capture_output=True, text=True)
+    built = subprocess.run(
+        [compiler] + list(case.get("flags", [])) + ["-c", source, "-o", obj], capture_output=True, text=True
+    )
     if built.returncode != 0:
         first = (built.stderr.strip().splitlines() or ["no message"])[0]
         report.breaking(case["source"], 0, "%s: did not compile: %s" % (case["label"], first[:120]))
@@ -138,8 +136,7 @@ def disassemble(case, where, work, report):
     # over a flag: a wider disassembly can only make `forbid` stricter, never looser.
     wanted = ["-d"]
     if case.get("symbol"):
-        narrowed = subprocess.run([dumper, "--disassemble=" + case["symbol"], obj],
-                                  capture_output=True, text=True)
+        narrowed = subprocess.run([dumper, "--disassemble=" + case["symbol"], obj], capture_output=True, text=True)
         if narrowed.returncode == 0:
             return narrowed.stdout
     read = subprocess.run([dumper] + wanted + [obj], capture_output=True, text=True)
@@ -191,9 +188,11 @@ def main():
 
         grade = case.get("grade", "emits")
         if grade not in ISSUABLE:
-            report.breaking(root.rel(where, path), 0,
-                            "%s asks for grade %r, which this tool cannot issue: it runs nothing"
-                            % (label, grade))
+            report.breaking(
+                root.rel(where, path),
+                0,
+                "%s asks for grade %r, which this tool cannot issue: it runs nothing" % (label, grade),
+            )
             continue
 
         text = disassemble(case, where, work, report)
@@ -210,17 +209,13 @@ def main():
             print(text)
             continue
 
-        missing = [one for one in case.get("require", [])
-                   if not re.search(one, text, re.IGNORECASE)]
-        present = [one for one in case.get("forbid", [])
-                   if re.search(one, text, re.IGNORECASE)]
+        missing = [one for one in case.get("require", []) if not re.search(one, text, re.IGNORECASE)]
+        present = [one for one in case.get("forbid", []) if re.search(one, text, re.IGNORECASE)]
 
         if missing:
-            report.breaking(case["source"], 0,
-                            "%s did not emit: %s" % (label, " ".join(missing)))
+            report.breaking(case["source"], 0, "%s did not emit: %s" % (label, " ".join(missing)))
         if present:
-            report.breaking(case["source"], 0,
-                            "%s emitted what it must not: %s" % (label, " ".join(present)))
+            report.breaking(case["source"], 0, "%s emitted what it must not: %s" % (label, " ".join(present)))
         if missing or present:
             print("  %-24s FAILED" % label)
         else:

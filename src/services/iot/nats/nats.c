@@ -132,6 +132,7 @@ static void put_uint(Buf *b, uint64_t v)
 // reports 0 octets and a false outcome.
 static void finish(const uint8_t *work, Buf *b)
 {
+    (void)work;
     if (!b->ok)
     {
         NatsV.n = 0;
@@ -388,8 +389,14 @@ void protocore_nats_parse(const uint8_t *work)
     size_t line_len = crlf;
     size_t after_line = crlf + NATS_CRLF_LEN;
 
-    out->subject = out->sid = out->reply_to = out->arg = NULL;
-    out->subject_len = out->sid_len = out->reply_to_len = out->arg_len = 0;
+    out->subject = NULL;
+    out->sid = NULL;
+    out->reply_to = NULL;
+    out->arg = NULL;
+    out->subject_len = 0;
+    out->sid_len = 0;
+    out->reply_to_len = 0;
+    out->arg_len = 0;
     out->payload = NULL;
     out->payload_len = 0;
     out->headers = NULL;

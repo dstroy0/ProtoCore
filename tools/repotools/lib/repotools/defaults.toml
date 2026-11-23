@@ -1,9 +1,8 @@
-# repotools-stamp: lib/repotools/defaults.toml 057e94c6cce6a211
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# The toolkit defaults. A repository's own repotools.toml is merged over this table by table, so a
-# repository states what differs and stays short enough to read in one screen.
+# The defaults of the tools under tools/repotools. The repotools.toml at the root merges over this table by
+# table, so the repository states what differs, and that file stays short enough to read on one screen.
 #
 # A key belongs here when a second repository would answer the question differently. A key only one
 # repository will ever set stays in that repository.
@@ -28,11 +27,9 @@ tests = ["test"]
 # two want opposite treatment: a tests root should be collected and a collection of zero from it is a
 # defect, while a fixtures root should never be collected at all.
 #
-# One key carrying both meanings made a guard impossible to write. A directory holding only a .c file
-# and a .toml manifest sat under `tests`, so a run of pytest over that list collected nothing, exited
-# 5, and would have reported success forever: nothing was missing and nothing was malformed, so the
-# absent-root refusal and the discoverability fix both slid past it. Splitting the key is what makes
-# a zero collection unambiguous.
+# Under one key, no guard can tell them apart. A directory that holds only a .c file and a .toml
+# manifest under `tests` collects nothing and exits 5, and nothing in it is missing or wrong. Two keys
+# make a zero collection mean one thing.
 fixtures = []
 tools = "tools"
 # The throwaway directory. Anything a tool generates and nobody edits goes under here, so a tool
@@ -77,8 +74,8 @@ exclude = [
 
 [prose]
 extensions = [".md"]
-# Prose roots default to empty so a repository states them. The one repository that guessed read
-# four roots that had moved and reported success on every commit for a week.
+# Prose roots default to empty, so a repository states them. A guess reads roots that do not exist, and
+# a check over them reports success.
 roots = []
 strict = false
 
@@ -87,9 +84,3 @@ strict = false
 # gate by naming it, because a gate nobody chose is a gate somebody turns off.
 gates = []
 
-[fetch]
-# Which tool sets this repository pulls from the toolkit. A set is a directory under the toolkit
-# root, and pulling one pulls all of it.
-sets = []
-# Where the fetched tree lands, under [layout] tools.
-into = "repotools"

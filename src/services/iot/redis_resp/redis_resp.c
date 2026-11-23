@@ -242,9 +242,10 @@ static embed_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
 
 // The length-prefixed bodies: Bulk strings ($), Bulk errors (!), Verbatim strings (=). Checks the
 // declared length and its trailing CRLF against the buffered octets; `$-1` is the Null bulk string.
-static embed_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
+static embed_bool parse_bulk_body(const uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
+    (void)work;
     const uint8_t *buf = RespV.wire.buf;
     const size_t len = RespV.wire.len;
     int64_t blen;
@@ -294,9 +295,10 @@ static embed_bool parse_bulk_body(uint8_t *work, uint8_t first_byte, size_t head
 
 // The aggregate headers whose children follow: Arrays (*), Sets (~), Pushes (>). Only the count is
 // read here, and the caller parses each element next; `*-1` is the Null array.
-static embed_bool parse_aggregate(uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
+static embed_bool parse_aggregate(const uint8_t *work, uint8_t first_byte, size_t header_from, size_t header_to,
                                   size_t after_header)
 {
+    (void)work;
     const uint8_t *buf = RespV.wire.buf;
     int64_t elements;
     if (!parse_int(buf, header_from, header_to, &elements))

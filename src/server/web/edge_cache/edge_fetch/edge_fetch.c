@@ -208,7 +208,8 @@ void protocore_edge_fetcher_begin(const uint8_t *work, EdgeFetch *f, const EdgeF
     f->req_len = (uint32_t)req_len;
 }
 
-EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now_ms)
+EdgeFetchStatus protocore_edge_fetcher_pump(const uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t,
+                                            uint32_t now_ms)
 {
     if (f->st != EDGE_FETCH_STATUS_PENDING)
     {

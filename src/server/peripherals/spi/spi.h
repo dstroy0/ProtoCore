@@ -75,8 +75,8 @@ EMBED_INLINE embed_bool protocore_spi_begin_on(uint8_t host, int mosi, int miso,
 /** @brief Bring up the shared SPI bus on the PROTOCORE_SPI_*_PIN pins (-1 = default). */
 EMBED_INLINE embed_bool protocore_spi_begin(void)
 {
-    return protocore_spi_begin_on((uint8_t)PROTOCORE_SPI_HOST, (int)PROTOCORE_SPI_MOSI_PIN, PROTOCORE_SPI_MISO_PIN,
-                                  (int)PROTOCORE_SPI_SCLK_PIN, PROTOCORE_SPI_QUADWP_PIN, PROTOCORE_SPI_QUADHD_PIN);
+    return protocore_spi_begin_on((uint8_t)PROTOCORE_SPI_HOST, PROTOCORE_SPI_MOSI_PIN, PROTOCORE_SPI_MISO_PIN,
+                                  PROTOCORE_SPI_SCLK_PIN, PROTOCORE_SPI_QUADWP_PIN, PROTOCORE_SPI_QUADHD_PIN);
 }
 
 /**

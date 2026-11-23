@@ -2389,8 +2389,10 @@ void protocore_ike_initiator_on_auth_psk(const uint8_t *work)
     uint8_t buf[PROTOCORE_IKE_MSG_MAX];
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = resp, .bytes = resp_len);
     IkeInnerRef opened;
-    const uint8_t *idr_body = NULL, *authdata = NULL;
-    size_t idr_body_len = 0, authdata_len = 0;
+    const uint8_t *idr_body = NULL;
+    const uint8_t *authdata = NULL;
+    size_t idr_body_len = 0;
+    size_t authdata_len = 0;
     if (!ike_auth_msg_open(buf, resp_len, hs->sa.keys.sk_er, hs->sa.keys.sk_er + PROTOCORE_IKE_AEAD_KEY_LEN, &opened) ||
         !ike_find_id_auth(opened.first_inner_type, opened.inner, opened.inner_len, IKE_PL_IDR, &idr_body, &idr_body_len,
                           &authdata, &authdata_len))
@@ -2518,8 +2520,10 @@ void protocore_ike_responder_on_auth_psk(const uint8_t *work)
     uint8_t buf[PROTOCORE_IKE_MSG_MAX];
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = buf, .src = req, .bytes = req_len);
     IkeInnerRef opened;
-    const uint8_t *idi_body = NULL, *authdata = NULL;
-    size_t idi_body_len = 0, authdata_len = 0;
+    const uint8_t *idi_body = NULL;
+    const uint8_t *authdata = NULL;
+    size_t idi_body_len = 0;
+    size_t authdata_len = 0;
     if (!ike_auth_msg_open(buf, req_len, hs->sa.keys.sk_ei, hs->sa.keys.sk_ei + PROTOCORE_IKE_AEAD_KEY_LEN, &opened) ||
         !ike_find_id_auth(opened.first_inner_type, opened.inner, opened.inner_len, IKE_PL_IDI, &idi_body, &idi_body_len,
                           &authdata, &authdata_len))

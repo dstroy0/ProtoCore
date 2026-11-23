@@ -33,6 +33,10 @@ from goldenize import (  # noqa: E402
     shape_text,
 )
 
+DEFINE_A_1 = "#define A 1"
+IF_X_INT_A = "#if X\nint a;\n#endif\n"
+STRUCT_PROTOHANDLER = "struct ProtoHandler;\n"
+
 FAIL = 0
 
 
@@ -175,12 +179,12 @@ check(
 check(
     "a block that documents something else does not travel to the define below it",
     module_macros("/** a type. */\ntypedef int T;\n\n#define A 1\n", ""),
-    ["#define A 1"],
+    [DEFINE_A_1],
 )
 check(
     "the include guard is still skipped, doc block or not",
     module_macros("/** the guard. */\n#define PROTOCORE_X_H\n#define A 1\n", "PROTOCORE_X_H"),
-    ["#define A 1"],
+    [DEFINE_A_1],
 )
 check(
     "a run whose comment opened a doxygen group carries the group's closer",
@@ -225,7 +229,7 @@ check(
 check(
     "a // comment for something else does not travel",
     module_macros("// about the type.\ntypedef int T;\n\n#define A 1\n", ""),
-    ["#define A 1"],
+    [DEFINE_A_1],
 )
 
 # A vtable module is matched on the spelling the conversion emits, and a successful rewrite
@@ -397,17 +401,17 @@ check(
 # the tag survives in the new header as a pointer member's type - declared at member scope.
 check(
     "a dropped forward declaration the new header still names is reported",
-    dropped_tag_decls("struct ProtoHandler;\n", "    const struct ProtoHandler *ptr;\n"),
+    dropped_tag_decls(STRUCT_PROTOHANDLER, "    const struct ProtoHandler *ptr;\n"),
     ["ProtoHandler"],
 )
 check(
     "one the new header carries across is not reported",
-    dropped_tag_decls("struct ProtoHandler;\n", "struct ProtoHandler;\n    const struct ProtoHandler *ptr;\n"),
+    dropped_tag_decls(STRUCT_PROTOHANDLER, "struct ProtoHandler;\n    const struct ProtoHandler *ptr;\n"),
     [],
 )
 check(
     "one the new header no longer names at all is not reported",
-    dropped_tag_decls("struct ProtoHandler;\n", "    size_t n;\n"),
+    dropped_tag_decls(STRUCT_PROTOHANDLER, "    size_t n;\n"),
     [],
 )
 check(
@@ -501,17 +505,17 @@ print("\ndrop_empty_else: a branch the conversion emptied")
 check(
     "an #else with nothing under it goes",
     drop_empty_else("#if X\nint a;\n#else\n#endif\n"),
-    "#if X\nint a;\n#endif\n",
+    IF_X_INT_A,
 )
 check(
     "so does one holding only blank lines",
     drop_empty_else("#if X\nint a;\n#else\n\n   \n#endif\n"),
-    "#if X\nint a;\n#endif\n",
+    IF_X_INT_A,
 )
 check(
     "a comment on the #else line does not make the branch non-empty",
     drop_empty_else("#if X\nint a;\n#else // no state on this arm\n#endif\n"),
-    "#if X\nint a;\n#endif\n",
+    IF_X_INT_A,
 )
 check(
     "a branch that still emits code is left alone",
@@ -560,7 +564,7 @@ check(
         "/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n#define PROTOCORE_HOLD_MS 2000\n#endif\n",
         "PROTOCORE_X_H",
     ),
-    ["/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n" "#define PROTOCORE_HOLD_MS 2000\n#endif"],
+    ["/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n#define PROTOCORE_HOLD_MS 2000\n#endif"],
 )
 check(
     "a bare define is still taken bare",

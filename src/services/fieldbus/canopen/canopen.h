@@ -27,6 +27,7 @@
 #define PROTOCORE_CANOPEN_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "shared/can/can.h"   // CanFrame: the type a parameter points at
 
 #if PROTOCORE_ENABLE_CANOPEN
 
@@ -135,8 +136,6 @@ typedef struct
     embed_bool expect_toggle; ///< the toggle the next segment must carry (starts false)
     embed_bool done;          ///< set once the last segment is accepted
 } CanopenSdoReasm;
-
-#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
 /** @brief What build_nmt takes: out, command, node_id. */
 typedef struct

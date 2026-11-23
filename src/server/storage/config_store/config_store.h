@@ -106,7 +106,7 @@ typedef struct
     ConfigStoreGetBlobArgs get_blob_args;
     ConfigStoreEraseArgs erase_args;
     embed_bool ok;
-    int n;
+    size_t n;
     uint32_t ms;
 } ConfigStoreVars;
 

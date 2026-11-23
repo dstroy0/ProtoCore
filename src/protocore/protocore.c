@@ -53,10 +53,6 @@
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
 #include "verba_scribo/verba_scribo.h" // Sb: the frame builder
-static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
-
-static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
-
 #if PROTOCORE_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server/h2_server.h"
 #endif
@@ -77,6 +73,10 @@ static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
 #endif
+
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
+static uint8_t mnt_work[16];           // the borrow an entry takes; Mnt never reads it
+
 // No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through
 // cellularum_laboro/cellularum_laboro.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX rather
 // than ISO C, so they are absent under -std=c11 on a conforming libc.

@@ -465,7 +465,7 @@ void protocore_http_client_parse_response(const uint8_t *work)
     }
 
     // The empty line that ends the field section (RFC 9112 sec 2.1).
-    uint8_t *hdr_end = NULL;
+    const uint8_t *hdr_end = NULL;
     for (size_t i = 0; i + 3 < len; i++)
     {
         if (buf[i] == '\r' && buf[i + 1] == '\n' && buf[i + 2] == '\r' && buf[i + 3] == '\n')

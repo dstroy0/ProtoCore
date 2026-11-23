@@ -1064,7 +1064,7 @@
     },
     
     "native_der": {
-      "desc": "ASN.1 DER reader (shared/der): the X.690 canonical subset X.509 is parsed with. The accepting cases are RFC 5280 sec 4.1's Certificate SEQUENCE and the sec 4.1.2.5 times; the refusing ones are each a BER spelling DER forbids - indefinite length (sec 8.1.3.6), a long form that fits the short one or carries a leading zero (sec 10.1), a redundant leading zero on an INTEGER (sec 8.3.2), a negative INTEGER read as unsigned (sec 8.3.3), a BIT STRING with unused bits (sec 8.6.2.2), and a multi-octet tag (sec 8.1.2.4). Accepting a second encoding of a certificate is accepting one the signature does not cover.",
+      "desc": "ASN.1 DER reader (shared/der): the X.690 canonical subset X.509 is parsed with. The accepting cases are RFC 5280 sec 4.1's Certificate SEQUENCE and the sec 4.1.2.5 times; the refusing ones are each a BER spelling DER forbids - indefinite length (sec 8.1.3.6), a long form that fits the short one or carries a leading zero (sec 10.1), a redundant leading zero on an INTEGER (sec 8.3.2), a negative INTEGER read as unsigned (sec 8.3.3), a BIT STRING with unused bits (sec 8.6.2.2), and a multi-octet tag (sec 8.1.2.4). Accepting a second encoding of a certificate accepts one the signature does not cover.",
       "flags": [],
       "src": [
         "-<*>",
@@ -1269,7 +1269,7 @@
     },
     
     "native_sha384_kat_hw": {
-      "desc": "The same SHA-384 vectors over the accelerator arm: PROTOCORE_HAS_HW_SHA=1 routes the block compression through protocore_sha_hw_block, which the host SHA HAL answers. SHA-384's rounds are SHA-512's, so the accelerator runs in its 512 mode over the SHA-384 seed; the seed, the padding and the six-word digest stay this module's either way.",
+      "desc": "The same SHA-384 vectors over the accelerator arm: PROTOCORE_HAS_HW_SHA=1 routes the block compression through protocore_sha_hw_block, which the host SHA HAL answers. SHA-384's rounds are SHA-512's, so the accelerator runs in its 512 mode over the SHA-384 seed. The seed, the padding and the six-word digest stay this module's either way.",
       "flags": [
         "-DPROTOCORE_ENABLE_SHA384=1",
         "-DPROTOCORE_HAS_HW_SHA=1"
@@ -2555,7 +2555,7 @@
     },
     
     "native_hmmd_nobus": {
-      "desc": "The HMMD codec with PROTOCORE_HAS_BUS at 0: the same suite as native_hmmd against the no-bus arm of hmmd.c. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so that arm had never been compiled by anything - it defined the pre-namespace flat API while the table bound entries nothing defined, and it did not build. The suite touches only the codec (framing, the resyncing reassembler, the command builders), which is identical in both arms; what this env proves is that the seam half still compiles and still answers.",
+      "desc": "The HMMD codec with PROTOCORE_HAS_BUS at 0: the same suite as native_hmmd against the no-bus arm of hmmd.c. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so that arm had never been compiled by anything - it defined the pre-namespace flat API while the table bound entries nothing defined, and it did not build. The suite touches only the codec (framing, the resyncing reassembler, the command builders), which is identical in both arms. What this env proves is that the seam half still compiles and still answers.",
       "flags": [
         "-DPROTOCORE_ENABLE_HMMD=1",
         "-DPROTOCORE_HAS_BUS=0"
@@ -7802,7 +7802,7 @@
       ]
     },
     "native_wave_wsmp": {
-      "desc": "IEEE 1609 WAVE codec (services/transportation/wave): the PSID P-encoding at both ends of all four length classes, the 1609.3 WSMP header build and parse, and the 1609.2 secured-message envelope. IEEE 1609 is not obtainable, so the vectors are derived from the documented P-encoding rule with the derivation written beside them; the load-bearing case is the round-trip property that every PSID the encoder accepts must decode back to itself. Pure host tests.",
+      "desc": "IEEE 1609 WAVE codec (services/transportation/wave): the PSID P-encoding at both ends of all four length classes, the 1609.3 WSMP header build and parse, and the 1609.2 secured-message envelope. IEEE 1609 is not obtainable, so the vectors are derived from the documented P-encoding rule with the derivation written beside them. The load-bearing case is the round-trip property that every PSID the encoder accepts must decode back to itself. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_WAVE=1"],
       "src": [
         "+<services/transportation/wave/wave.c>"

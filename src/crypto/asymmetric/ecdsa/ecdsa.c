@@ -729,8 +729,9 @@ static embed_bool ecdsa_sign_core(uint8_t *work, uint8_t sig[64], const uint8_t 
 
 // --- the entries -----------------------------------------------------------
 
-embed_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub)
+embed_bool protocore_ecdsa_pubkey(const uint8_t *work, const uint8_t *priv, uint8_t *pub)
 {
+    (void)work;
     if (!pub || !priv)
     {
         return EMBED_FALSE;
@@ -854,8 +855,9 @@ embed_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8
     return ok;
 }
 
-embed_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x)
+embed_bool protocore_ecdsa_ecdh(const uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x)
 {
+    (void)work;
     if (!shared_x || !peer_pub || !priv)
     {
         return EMBED_FALSE;

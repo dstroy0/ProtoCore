@@ -1,6 +1,5 @@
-# repotools-stamp: media_tools/dataviz/build_sweep_view.py 59f2c5cc158fff1c
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Sweeps the analysis and draws every setting at once, so an artifact of the analysis is visible.
 
 A spectrogram is a picture of a signal and a picture of the window that made it, and nothing in the
@@ -33,6 +32,7 @@ The axis is Hz for all of them, since Hz is what they share.
 """
 
 import os, sys
+
 _at = os.path.dirname(os.path.abspath(__file__))
 while _at != os.path.dirname(_at) and not os.path.isdir(os.path.join(_at, "lib", "repotools")):
     _at = os.path.dirname(_at)
@@ -82,7 +82,7 @@ def average_spectrum(values, size, pad_to, kind, count):
         starts = [0]
     total = None
     for start in starts:
-        chunk = values[start:start + size]
+        chunk = values[start : start + size]
         if len(chunk) < size:
             chunk = chunk + [0.0] * (size - len(chunk))
         one = dsp.spectrum(chunk, win, pad_to)
@@ -168,8 +168,7 @@ def main():
     level = []
     linear = []
     for row in rows:
-        level.append([round(max(-120.0, 20.0 * math.log10(one / loudest)) if one > 0 else -120.0, 3)
-                      for one in row])
+        level.append([round(max(-120.0, 20.0 * math.log10(one / loudest)) if one > 0 else -120.0, 3) for one in row])
         linear.append([round(one / loudest, 6) for one in row])
 
     # The consensus at each frequency, and how far each setting departs from it. This is the field
@@ -179,8 +178,7 @@ def main():
     for at in range(grid_n):
         column = sorted(row[at] for row in level)
         middle = len(column) // 2
-        consensus.append(column[middle] if len(column) % 2
-                         else (column[middle - 1] + column[middle]) / 2.0)
+        consensus.append(column[middle] if len(column) % 2 else (column[middle - 1] + column[middle]) / 2.0)
     departure = [[round(row[at] - consensus[at], 3) for at in range(grid_n)] for row in level]
 
     fields = [
@@ -194,6 +192,7 @@ def main():
         # Extended precision on the smallest setting only. The point is not to sweep at this cost
         # but to establish that the floor being looked at is the signal's and not the arithmetic's.
         from numerics import precision as extended
+
         prec = extended.digits_for(exact_bits)
         size = min(256, min(swept) if which == "fft" else fft_size)
         size = dsp.next_power(size)
@@ -215,11 +214,13 @@ def main():
         others = [one for where, one in enumerate(mags) if where not in (at_bin, size - at_bin)]
         worst = max(others)
         floor = float(20 * (worst / top).log10()) if worst > 0 else float("-inf")
-        exact_note = (" Measured rather than claimed: a %d-point transform of a tone on a bin, at "
-                      "%d bits, puts every other bin %.0f dB down, which is %.0f effective bits "
-                      "against 51 for float64. Anything above that floor in the other fields is the "
-                      "signal or the window and not the arithmetic. That measurement took %.1f s."
-                      % (size, exact_bits, floor, -floor / 6.02, time.time() - began_exact))
+        exact_note = (
+            " Measured rather than claimed: a %d-point transform of a tone on a bin, at "
+            "%d bits, puts every other bin %.0f dB down, which is %.0f effective bits "
+            "against 51 for float64. Anything above that floor in the other fields is the "
+            "signal or the window and not the arithmetic. That measurement took %.1f s."
+            % (size, exact_bits, floor, -floor / 6.02, time.time() - began_exact)
+        )
 
     took = time.time() - began
     payload = {
@@ -228,16 +229,19 @@ def main():
         "valueLabel": "level",
         "eyebrow": "Analysis sweep - rendered as a solid",
         "title": "%s swept by %s" % (name, which),
-        "blurb": ("%s analyzed at %d settings of %s, every one resampled onto the same %d point "
-                  "frequency axis from 0 to %d Hz. Depth runs left to right as frequency; the other "
-                  "horizontal axis is the setting. Settings do not share a bin spacing, so they are "
-                  "put on a common axis in Hz before anything is compared."
-                  % (name, len(swept), which, grid_n, top_hz)),
+        "blurb": (
+            "%s analyzed at %d settings of %s, every one resampled onto the same %d point "
+            "frequency axis from 0 to %d Hz. Depth runs left to right as frequency; the other "
+            "horizontal axis is the setting. Settings do not share a bin spacing, so they are "
+            "put on a common axis in Hz before anything is compared." % (name, len(swept), which, grid_n, top_hz)
+        ),
         "noteTitle": "What moves with the setting is the setting",
-        "note": ("A feature standing in the same place at every setting is in the signal. One that "
-                 "moves, or appears at one setting and not the next, is the analysis describing "
-                 "itself. The third field is each setting minus the median of all of them, so it is "
-                 "zero where they agree and shows only the disagreement." + exact_note),
+        "note": (
+            "A feature standing in the same place at every setting is in the signal. One that "
+            "moves, or appears at one setting and not the next, is the analysis describing "
+            "itself. The third field is each setting minus the median of all of them, so it is "
+            "zero where they agree and shows only the disagreement." + exact_note
+        ),
         "settings": settings.collect(sys.argv[1:]),
         "fields": fields,
         "swept": [label_of(one) for one in swept],

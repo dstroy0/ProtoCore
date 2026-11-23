@@ -109,15 +109,17 @@ static uint32_t hotp_value(const uint8_t *key, size_t keylen, uint64_t counter, 
 }
 
 // Digit, with 0 taking the RFC 4226 sec 5.3 minimum.
-static uint8_t otp_digit(uint8_t *work)
+static uint8_t otp_digit(const uint8_t *work)
 {
+    (void)work;
     return TotpV.digit ? TotpV.digit : (uint8_t)PROTOCORE_TOTP_DIGIT_MIN;
 }
 
 // RFC 6238 sec 4.2 T = (Current Unix time - T0) / X, floored. X of 0 takes the default; a clock
 // behind T0 gives step 0.
-static uint64_t time_step(uint8_t *work)
+static uint64_t time_step(const uint8_t *work)
 {
+    (void)work;
     uint32_t x = TotpV.step.x;
     if (x == 0)
     {

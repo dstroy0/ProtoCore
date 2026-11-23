@@ -181,7 +181,6 @@ static void cbc_mac(CcmWork *w, const uint8_t *nonce, size_t nonce_len, const ui
             }
             EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->blk + fill, .src = aad + off, .bytes = take);
             off += take;
-            fill += take;
             for (int i = 0; i < 16; i++)
             {
                 w->X[i] ^= w->blk[i];

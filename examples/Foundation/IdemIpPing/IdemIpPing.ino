@@ -7,7 +7,7 @@
 // Set the four values below for your network. Then flash, and ping STATION_ADDRESS from a host on the
 // same network. The serial monitor shows the frames that each second of ticks drained and sent.
 
-#include <protocore.h>
+#include "protocore.h"
 
 #include "network_drivers/network/stack/stack.h"
 #include "network_drivers/physical/wifi_link/wifi_link.h"

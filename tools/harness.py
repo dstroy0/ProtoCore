@@ -141,6 +141,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools import findroot  # noqa: E402
 
+CORE_HOOKSPATH = "core.hooksPath"
+
 ROOT = findroot.root()
 DOC = findroot.at("tools", "TOOLS.md")
 
@@ -163,14 +165,14 @@ class Tool(object):
         self.fn = None
 
 
-def T(path, usage, hint, argv=()):
+def tool_entry(path, usage, hint, argv=()):
     return Tool(path, usage, hint, argv)
 
 
 GOLDENIZE = "tools/dev_env/goldenize.py"
 
 CONVERT = {
-    "ns": T(
+    "ns": tool_entry(
         GOLDENIZE,
         "ns <module.h> [--dry]",
         "MMGR'S SHAPE, which is where this tree is going: an entry carries its REAL signature and "
@@ -189,7 +191,7 @@ CONVERT = {
         "a reason.",
         ("ns",),
     ),
-    "scan": T(
+    "scan": tool_entry(
         GOLDENIZE,
         "scan <module.h>",
         "READ src/crypto/hash/sha256/sha256.h AND sha256.c FIRST. They are the target, and reading "
@@ -209,7 +211,7 @@ CONVERT = {
         "instead.",
         ["scan"],
     ),
-    "gen": T(
+    "gen": tool_entry(
         GOLDENIZE,
         "gen <spec.json> [--dry]",
         "Writes the header, restructures the .c, rewrites the call sites, runs the shape pass and "
@@ -219,7 +221,7 @@ CONVERT = {
         "without summing it is the defect five converted modules carried.",
         ["gen"],
     ),
-    "handle": T(
+    "handle": tool_entry(
         GOLDENIZE,
         "handle [module.h ...] [--batch=N] [--skip=N] [--dry]",
         "extern <X>Ns <X>; becomes a `static const` table with the operands in <X>V. An extern "
@@ -254,7 +256,7 @@ CONVERT = {
         "calling through the pointer still works.",
         ("handle",),
     ),
-    "unnull": T(
+    "unnull": tool_entry(
         GOLDENIZE,
         "unnull [file.c ...] [--dry]",
         "Removes the `!work` DISJUNCT from every `if` that tests the borrow for null. A BORROW IS "
@@ -272,7 +274,7 @@ CONVERT = {
         "With no paths it sweeps src/. Dry until you drop --dry.",
         ["unnull"],
     ),
-    "align": T(
+    "align": tool_entry(
         GOLDENIZE,
         "align [module.h ...] [--dry]",
         "States, per region reached through a CAST, that its offset is a multiple of the alignment "
@@ -292,7 +294,7 @@ CONVERT = {
         "With no paths it sweeps src/. Dry until you drop --dry, like every writing verb here.",
         ["align"],
     ),
-    "shape": T(
+    "shape": tool_entry(
         GOLDENIZE,
         "shape <file.c|file.h> ... [--dry]",
         "The golden's file shape only: the config include above the enable gate, everything else "
@@ -311,7 +313,7 @@ CONVERT = {
         "named the types and never the gate. Check what would move before running it on a header.",
         ["shape"],
     ),
-    "pimpl": T(
+    "pimpl": tool_entry(
         GOLDENIZE,
         "pimpl <module.h> [--dry]",
         "For a module that is already a namespace but reaches its state through a "
@@ -319,7 +321,7 @@ CONVERT = {
         "compile-time offset in the borrow. Prints the borrow name to state next.",
         ["pimpl"],
     ),
-    "funnel": T(
+    "funnel": tool_entry(
         GOLDENIZE,
         "funnel <module.c> [PROTOCORE_<MOD>_BORROW] [--dry]",
         "Moves a file-static context into the borrow, for a module converted before the funnel "
@@ -335,7 +337,7 @@ CONVERT = {
         "are neither a span holder nor a nominal <mod>_work[N].",
         ["funnel"],
     ),
-    "audit": T(
+    "audit": tool_entry(
         "tools/dev_env/shapeaudit.py",
         "audit [families|check|diff|design|selfcheck] [path ...]",
         "WHICH modules are not the golden, and WHICH question each one answers no to. The golden is "
@@ -360,7 +362,7 @@ CONVERT = {
         "an implementation, and a module naming no borrow has no subject for the three questions "
         "about how the borrow is carved. Read the n/a column - it is not a pass.",
     ),
-    "nsmap": T(
+    "nsmap": tool_entry(
         "tools/dev_env/nsmap.py",
         "nsmap <map.json> [--dry] [path ...]",
         "Rewrites the leftover FLAT call sites of an already-golden module onto its namespace, "
@@ -382,7 +384,7 @@ CONVERT = {
 }
 
 EDIT = {
-    "move": T(
+    "move": tool_entry(
         "tools/dev_env/move_code.py",
         "move --src A --dst B --range N-M [--anchor-before RE|--anchor-after RE|--append] [--dry-run]",
         "Ranges are 1-indexed, inclusive, and read from the ORIGINAL numbering, so several "
@@ -393,7 +395,7 @@ EDIT = {
         "spliced into the original independently, the last write wins, and nothing is reported. "
         "Move a function within one file by hand.",
     ),
-    "yank": T(
+    "yank": tool_entry(
         "tools/dev_env/yank_includes.py",
         "yank PATH [PATH ...] [--conditional] [--orphan] [--go]",
         "Takes the #include lines out of a header and records, per consumer, what that header no "
@@ -402,7 +404,7 @@ EDIT = {
         "so the dependency moves into the build instead of being handed to every consumer. Skips "
         "the entry-point chain, conditional includes, and a header nothing reaches.",
     ),
-    "comments": T(
+    "comments": tool_entry(
         "tools/dev_env/strip_comments.py",
         "comments PATH [PATH ...] [--ext .c,.h] [--exclude PAT] [--no-header] [--go]",
         "Dry run by default; --go rewrites in place. The licence header and every string literal "
@@ -413,7 +415,7 @@ EDIT = {
 }
 
 VIEW = {
-    "read": T(
+    "read": tool_entry(
         "tools/dev_env/readclean.py",
         "read code|blind|claims PATH [PATH ...]   [--legend FILE] [--keep NAME,...]",
         "READ EVERY MODULE THROUGH THIS BEFORE JUDGING IT. Three passes, none of which writes. "
@@ -427,19 +429,19 @@ VIEW = {
         "being read as if it were true. Assume nothing: a doc block states what the code is MEANT "
         "to do, and reading it first is how a conformity pass ends up confirming the prose.",
     ),
-    "png": T(
+    "png": tool_entry(
         "tools/dev_env/src2png.py",
         "png <file> <out_stem> [lines_per_page] [pt] [start] [end]   |   png <dir> <dest> [kb_per_page] [pt]",
         "Renders source to numbered PNG pages, for reading a whole file at image density. Pages "
         "break on whole lines, so a line never splits across two.",
     ),
-    "nodeset": T(
+    "nodeset": tool_entry(
         "tools/dev_env/nodeset.py",
         "nodeset <NodeSet2.xml> [BrowseName ...]",
         "What one NodeSet2 file publishes for each node. Flat read of the file - it does NOT "
         "follow instance-of or subtype-of, so use `conform` to compare a module against a model.",
     ),
-    "tree": T(
+    "tree": tool_entry(
         "tools/dev_env/uatree.py",
         "tree <root BrowseName> <depth> <NodeSet2.xml> [more.xml ...]",
         "The address space as a tree, with instance-of and subtype-of followed. A NodeSet declares "
@@ -447,7 +449,7 @@ VIEW = {
         "reading a file without following those two links makes almost every real edge look "
         "missing.",
     ),
-    "conform": T(
+    "conform": tool_entry(
         "tools/dev_env/opcua_conform.py",
         "conform <module.c> <NodeSet2.xml> [more.xml ...]",
         "Checks a hand-built companion-model address space against the NodeSets that publish it. "
@@ -457,25 +459,25 @@ VIEW = {
 }
 
 MEASURE = {
-    "includes": T(
+    "includes": tool_entry(
         "tools/include_footprint.py",
         "includes [--check] [--issues] [--json] [--per-file] [--src PATH]",
         "The std/Arduino header dependency surface of src/. --check is the CI form.",
     ),
-    "pid": T(
+    "pid": tool_entry(
         "tools/pid_tune.py",
         "pid [--autotune] [--sweep] [--kp K --ki K --kd K] [--out-min N --out-max N] [--png PATH]",
         "Offline tuner and plotter for services/control, fitted from a run log. Nothing is on the "
         "target here - it produces gains to state, not gains it installed.",
     ),
-    "queue-probe": T(
+    "queue-probe": tool_entry(
         "tools/dev_env/listener_queue/run.sh",
         "queue-probe",
         "Standing probe: is the TCP listener queue unguarded, or guarded to WORKER_COUNT == 1. "
         "A static count of the sites that reach it, plus a runtime probe. Does not build the "
         "library.",
     ),
-    "cap-sweep": T(
+    "cap-sweep": tool_entry(
         "tools/dev_env/capsweep.py",
         "cap-sweep [PROTOCORE_HAS_...] [--quiet]",
         "Compiles every capability-gated module with the capability OFF, which nothing else does: "
@@ -489,14 +491,14 @@ MEASURE = {
         "`compiles` wants an env building it that way, or the arm goes back to being uncompiled "
         "text - see native_hmmd_nobus.",
     ),
-    "pimpl-sweep": T(
+    "pimpl-sweep": tool_entry(
         "tools/dev_env/pimpl_bench/sweep.sh",
         "pimpl-sweep",
         "Does an opaque cross-TU accessor get inlined, and at what setting. Builds the whole "
         "program per (compiler, -O level, lto), disassembles the consumer's hot loop and counts "
         "call instructions against total instructions. Answers whether the call survives.",
     ),
-    "pimpl-bench": T(
+    "pimpl-bench": tool_entry(
         "tools/dev_env/pimpl_bench/bench.sh",
         "pimpl-bench",
         "What that accessor costs in time, across the same flag matrix. Minimum over trials, so "
@@ -506,30 +508,30 @@ MEASURE = {
 }
 
 CRYPTO = {
-    "kat": T(
+    "kat": tool_entry(
         "tools/crypto/gen_crypto_vectors.py",
         "kat",
         "Rewrites the MAC/AEAD known-answer data the crypto KAT suite compiles in "
         "(test/unit/src/crypto/mac/test_crypto_kat/kat_data.inc).",
     ),
-    "curate": T(
+    "curate": tool_entry(
         "tools/crypto/curate_crypto_vectors.py",
         "curate [checkout]",
         "Pulls vectors out of a pinned upstream checkout into test/vectors/. With no argument it "
         "clones the pin itself, so the set is reproducible rather than whatever was on disk.",
     ),
-    "ed25519": T(
+    "ed25519": tool_entry(
         "tools/crypto/gen_ed25519_comb.py",
         "ed25519",
         "Generates AND verifies the fixed-base comb table for the Ed25519 fe layer against an "
         "affine reference. Python is the oracle before any C is written.",
     ),
-    "mlkem": T(
+    "mlkem": tool_entry(
         "tools/crypto/gen_mlkem_kat.py",
         "mlkem",
         "A deterministic ML-KEM-768 Encaps known-answer vector, as a C header for test_pqc_mlkem.",
     ),
-    "pss": T(
+    "pss": tool_entry(
         "tools/crypto/gen_rsa_pss_vectors.py",
         "pss",
         "RSASSA-PSS signatures over the key openssl_rsa_2048_sign.json already publishes, signed by "
@@ -537,7 +539,7 @@ CRYPTO = {
         "verifier can check one, which is why the signer has to be outside this tree. Needs openssl "
         "on PATH. Run `crypto kat` after it to recompile the .inc the suite reads.",
     ),
-    "hkdf384": T(
+    "hkdf384": tool_entry(
         "tools/crypto/gen_hkdf_sha384_vectors.py",
         "hkdf384 [--check]",
         "HKDF-SHA384 and TLS 1.3 HKDF-Expand-Label answers from openssl, over the RFC 5869 Appendix A "
@@ -547,31 +549,31 @@ CRYPTO = {
         "writes nothing if either disagrees. Needs openssl on PATH. Run `crypto kat` after it to "
         "recompile the .inc the suite reads.",
     ),
-    "tls": T(
+    "tls": tool_entry(
         "tools/crypto/gen_tls_record_kat.py",
         "tls",
         "A TLS 1.3 record-layer known-answer vector, as C arrays for test_tls_record.",
     ),
-    "sshkeys": T(
+    "sshkeys": tool_entry(
         "tools/crypto/gen_ssh_test_keys.py",
         "sshkeys [--if-absent]",
         "Mints the SSH test keys into the fixture header. --if-absent is the form a build hook "
         "wants: it leaves an existing header alone rather than churning the tree on every run. "
         "Needs openssl on PATH.",
     ),
-    "sshhost": T(
+    "sshhost": tool_entry(
         "tools/crypto/gen_ssh_host_key.py",
         "sshhost [--type ed25519] [--name N] [--symbol S] [--out-dir D] [--header H]",
         "One SSH host key as a C header. Needs openssl and ssh on PATH.",
     ),
-    "sshinflate": T(
+    "sshinflate": tool_entry(
         "tools/crypto/gen_ssh_inflate_vectors.py",
         "sshinflate",
         "SSH c2s compression golden vectors, produced the way OpenSSH does it: one zlib stream "
         "with context takeover, Z_PARTIAL_FLUSH per packet. The cross-packet back-references are "
         "the point - a per-packet stream would pass a test that proves nothing.",
     ),
-    "x509": T(
+    "x509": tool_entry(
         "tools/dev_env/gen_x509_fixture.sh",
         "x509",
         "Makes real certificates with OpenSSL and turns them into the X.509 suite's fixture "
@@ -582,26 +584,26 @@ CRYPTO = {
 }
 
 ASSETS = {
-    "diagrams": T(
+    "diagrams": tool_entry(
         "tools/ci_tooling/assets/render_diagrams.sh",
         "diagrams",
         "Renders each docs/diagrams/ source to a light AND a dark PNG, which the docs embed "
         "through <picture>. A live mermaid fence is not an option: the GitHub mobile app and "
         "Doxygen do not render mermaid. Needs mmdc.",
     ),
-    "themes": T(
+    "themes": tool_entry(
         "tools/ci_tooling/assets/render_theme_previews.cjs",
         "themes",
         "Screenshots every theme in src/web_assets/themes/ onto one sample page, into "
         "docs/theme_preview/. Needs node with puppeteer-core and a Chromium.",
     ),
-    "favicons": T(
+    "favicons": tool_entry(
         "tools/ci_tooling/assets/pack_favicons.sh",
         "favicons <name>",
         "Packs one generated favicon SVG into a drop-in tarball under docs/favicons/dist/. Needs "
         "ImageMagick's convert.",
     ),
-    "tooltips": T(
+    "tooltips": tool_entry(
         "tools/ci_tooling/assets/svg_tooltips.py",
         "tooltips <file.svg> ...",
         "Turns mermaid's click tooltips into real SVG tooltips, which is the only form that "
@@ -610,14 +612,14 @@ ASSETS = {
 }
 
 BUILD = {
-    "cmake": T(
+    "cmake": tool_entry(
         "tools/ci_tooling/build/gen_cmake.py",
         "cmake [--check]",
         "Writes test/CMakeLists.txt from test/test_matrix.json: one executable target and one ctest "
         "per env, compiled the way test/harness.py compiles it. The matrix stays the one statement "
         "of what an env builds; this renders it. --check fails on a stale file and writes nothing.",
     ),
-    "split": T(
+    "split": tool_entry(
         "tools/ci_tooling/build/split_modules.py",
         "split [--list] [--go]",
         "Gives every .c/.h pair its own directory, so a module is a directory and a per-module "
@@ -626,7 +628,7 @@ BUILD = {
         "sibling, dotted from a child - and every build_src_filter entry moves with it. Dry run "
         "by default.",
     ),
-    "modules": T(
+    "modules": tool_entry(
         "tools/ci_tooling/build/gen_modules.py",
         "modules [--check|--graph|--unowned|--cycles]",
         "AUDITS the module declarations; it does not write them. Every CMakeLists.txt stating a "
@@ -642,7 +644,7 @@ BUILD = {
         "--graph prints the dependency graph, --cycles the loops in it, --unowned the headers no "
         "module claims.",
     ),
-    "suites": T(
+    "suites": tool_entry(
         "tools/ci_tooling/build/gen_suites.py",
         "suites [--check] [--write]",
         "The same for the 376 suite directories under test/unit and test/env. A SUITE IS A "
@@ -655,21 +657,21 @@ BUILD = {
         "one env and the matrix holds 296 distinct define sets, so a suite has to be compiled AS "
         "each env that runs it rather than once for all of them.",
     ),
-    "envs": T(
+    "envs": tool_entry(
         "tools/dev_env/build_envs.sh",
         "envs <env> [env ...]",
         "Builds each named pio env in the WSL clone and prints one verdict per env. WSL sshd does "
         "not survive a cold start - `sudo systemctl start ssh` first if this is reaching WSL over "
         "ssh.",
     ),
-    "ccache": T(
+    "ccache": tool_entry(
         "tools/ci_tooling/build/ccache_wrap.sh",
         "ccache",
         "Replaces the cross-toolchain's gcc/g++ with a ccache wrapper in place. PlatformIO and "
         "arduino-cli invoke the ESP32 compiler by ABSOLUTE path, so a PATH masquerade is bypassed "
         "and only replacing the tool works.",
     ),
-    "psram": T(
+    "psram": tool_entry(
         "tools/psram/rebuild_arduino_core_psram.sh",
         "psram",
         "Rebuilds the arduino-esp32 core for ESP32-S3 with "
@@ -679,7 +681,7 @@ BUILD = {
 }
 
 HOOKS = {
-    "commit": T(
+    "commit": tool_entry(
         "tools/dev_env/commit.py",
         'commit "subject" "para" ["para" ...] [--amend] [--no-signoff] [--dry] [-- <git args>]',
         "QUOTE EACH PARAGRAPH WITH SINGLE QUOTES. A message is prose about code, so it carries "
@@ -700,25 +702,25 @@ HOOKS = {
         "does not become two broken halves. --dry prints the message and the git command and "
         "commits nothing.",
     ),
-    "install": T(
+    "install": tool_entry(
         None,
         "install",
         "Points git at tools/git-hooks by setting core.hooksPath, so the hooks are the tracked "
         "ones rather than copies that drift. Idempotent.",
     ),
-    "status": T(
+    "status": tool_entry(
         None,
         "status",
         "What core.hooksPath is set to now, and which hook files that path actually holds.",
     ),
-    "cspell": T(
+    "cspell": tool_entry(
         "tools/git-hooks/add_cspell_words.py",
         "cspell <word> [word ...]",
         "Adds words to cspell.json with case-insensitive dedup, keeping the list sorted and the "
         "file's 2-space indentation. The pre-commit hook calls this so an unknown technical term "
         "in committed docs never fails the CI spellcheck.",
     ),
-    "dependabot": T(
+    "dependabot": tool_entry(
         "tools/git-hooks/merge_dependabot.sh",
         "dependabot",
         "Merges open, mergeable Dependabot PRs into the current branch. Best-effort and strictly "
@@ -754,7 +756,7 @@ GROUPS = [
     ("build", BUILD, "build environments and toolchain wrappers"),
 ]
 
-TABLES = dict((name, table) for name, table, _blurb in GROUPS)
+TABLES = {name: table for name, table, _blurb in GROUPS}
 
 
 # ---------------------------------------------------------------------------
@@ -777,7 +779,9 @@ def run_py(path, argv):
     try:
         runpy.run_path(path, run_name="__main__")
         return 0
-    except SystemExit as e:
+    except (
+        SystemExit
+    ) as e:  # NOSONAR - an in-process runner turns the exit of the tool it runs into its own return code
         if e.code is None:
             return 0
         if isinstance(e.code, int):
@@ -852,11 +856,11 @@ def git(*args):
 
 def cmd_hooks_install(rest):
     """Point git at the tracked hooks."""
-    now = git("config", "core.hooksPath").stdout.strip()
+    now = git("config", CORE_HOOKSPATH).stdout.strip()
     if now == HOOKS_PATH:
         print("core.hooksPath is already %s" % HOOKS_PATH)
         return 0
-    r = git("config", "core.hooksPath", HOOKS_PATH)
+    r = git("config", CORE_HOOKSPATH, HOOKS_PATH)
     if r.returncode:
         print(r.stderr.strip(), file=sys.stderr)
         return r.returncode
@@ -866,7 +870,7 @@ def cmd_hooks_install(rest):
 
 def cmd_hooks_status(rest):
     """What git is pointed at, and what is there."""
-    now = git("config", "core.hooksPath").stdout.strip()
+    now = git("config", CORE_HOOKSPATH).stdout.strip()
     print("core.hooksPath = %s" % (now or "(unset - git uses .git/hooks)"))
     d = findroot.at(*HOOKS_PATH.split("/"))
     for name in sorted(os.listdir(d)):
@@ -902,7 +906,7 @@ PY_FLAG = re.compile(
     r"""|(?:not\s+in|in|==|!=)\s*["'](--[a-z0-9][a-z0-9-]*)["']"""
     r"""|argv\.(?:remove|count|index)\(\s*["'](--[a-z0-9][a-z0-9-]*)["']"""
 )
-SH_FLAG = re.compile(r"(?m)(?:^\s*(--[a-z0-9][a-z0-9-]*)\))|(?:\[\s*\"\$\w+\"\s*=\s*\"?(--[a-z0-9][a-z0-9-]*))")
+SH_FLAG = re.compile(r"(?m)^\s*(--[a-z0-9][a-z0-9-]*)\)|\[\s*\"\$\w+\"\s*=\s*\"?(--[a-z0-9][a-z0-9-]*)")
 
 # Commands a Python file hands to the OS.
 PY_EXEC = re.compile(
@@ -1059,7 +1063,7 @@ DIRS = [
     (
         "tools",
         "Top level",
-        "The entry point, the root finder, and the two measurements that " "belong to no family.",
+        "The entry point, the root finder, and the two measurements that belong to no family.",
         "",
     ),
     (
@@ -1191,9 +1195,7 @@ def table_help(table):
     """One tool per entry: how it is called, then the hint."""
     out = []
     for name, tool in table.items():
-        out.append("  %s" % tool.usage)
-        out.append(wrap(tool.hint, 6))
-        out.append("")
+        out.extend(["  %s" % tool.usage, wrap(tool.hint, 6), ""])
     return "\n".join(out)
 
 

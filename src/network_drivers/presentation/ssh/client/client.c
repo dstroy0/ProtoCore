@@ -146,7 +146,7 @@ uint8_t *protocore_ssh_client_span(void)
 static void cli_send(const uint8_t *work);
 static void cli_crypto_work(const uint8_t *work);
 static void protocore_ssh_client_begin(const uint8_t *work);
-static void protocore_ssh_client_poll(uint8_t *work);
+static void protocore_ssh_client_poll(const uint8_t *work);
 static void protocore_ssh_client_end(const uint8_t *work);
 static void cli_fail(const char *why);
 static embed_bool build_kexinit(void);
@@ -418,7 +418,9 @@ static embed_bool build_kex_public(void)
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
-        protocore_bignum g, x, e;
+        protocore_bignum g;
+        protocore_bignum x;
+        protocore_bignum e;
         uint8_t two = 2;
         BignumV.from_bytes_args.out = &g;
         BignumV.from_bytes_args.bytes = &two;
@@ -1077,7 +1079,7 @@ static void protocore_ssh_client_begin(const uint8_t *work)
     return;
 }
 
-static void protocore_ssh_client_poll(uint8_t *work)
+static void protocore_ssh_client_poll(const uint8_t *work)
 {
     (void)work;
     if (SSH_CLIENT_CTX(protocore_ssh_client_span())->cid < 0 ||
@@ -1129,12 +1131,10 @@ static void protocore_ssh_client_poll(uint8_t *work)
                 return;
             }
         }
-        if (off < got && SSH_CLIENT_CTX(protocore_ssh_client_span())->state != PROTOCORE_SSH_CLIENT_FAILED)
+        if (off < got && SSH_CLIENT_CTX(protocore_ssh_client_span())->state != PROTOCORE_SSH_CLIENT_FAILED &&
+            ssh_pkt_recv(SSH_CLI_SLOT, buf + off, got - off, cli_msg_handler, &ssh_sess[SSH_CLI_SLOT].in) != 0)
         {
-            if (ssh_pkt_recv(SSH_CLI_SLOT, buf + off, got - off, cli_msg_handler, &ssh_sess[SSH_CLI_SLOT].in) != 0)
-            {
-                cli_fail("packet error (MAC / framing)");
-            }
+            cli_fail("packet error (MAC / framing)");
         }
     }
 

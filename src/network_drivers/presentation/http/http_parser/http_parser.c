@@ -202,7 +202,7 @@ static void parse_query_params(HttpReq *req)
     }
 }
 
-void protocore_http_parser_reset(uint8_t *work, HttpReq *req)
+void protocore_http_parser_reset(const uint8_t *work, HttpReq *req)
 {
 
     uint8_t id = req->slot_id;
@@ -223,7 +223,7 @@ void protocore_http_parser_reset(uint8_t *work, HttpReq *req)
     req->_version_hash = PROTOCORE_FNV_OFFSET; // seed the FNV-1a accumulator
 }
 
-void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte)
+void protocore_http_parser_feed(const uint8_t *work, HttpReq *req, uint8_t byte)
 {
     HttpReq *p = req;
 
@@ -937,7 +937,7 @@ embed_bool protocore_http_parser_forwarded_client(const uint8_t *work, const Htt
     // De-facto X-Forwarded-For (comma list; leftmost = original client) + X-Forwarded-Proto.
     if (is_https)
     {
-        const char *http_parser_text = HttpParser.get_header(work, req, "X-Forwarded-Proto");
+        http_parser_text = HttpParser.get_header(work, req, "X-Forwarded-Proto");
         const char *xfp = http_parser_text;
         if (xfp && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = xfp, .other = "https", .cap = 5, .ci = EMBED_TRUE))
         {

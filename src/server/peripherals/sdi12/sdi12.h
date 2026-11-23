@@ -309,7 +309,7 @@ typedef struct
     void (*const parse_identify)(const uint8_t *work);
     void (*const crc16)(const uint8_t *work);
     void (*const crc_encode)(const uint8_t *work);
-    void (*const check_crc)(uint8_t *work);
+    void (*const check_crc)(const uint8_t *work);
 } Sdi12Ns;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
@@ -331,7 +331,7 @@ void protocore_sdi12_parse_values(const uint8_t *work);
 void protocore_sdi12_parse_identify(const uint8_t *work);
 void protocore_sdi12_crc16(const uint8_t *work);
 void protocore_sdi12_crc_encode(const uint8_t *work);
-void protocore_sdi12_check_crc(uint8_t *work);
+void protocore_sdi12_check_crc(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
 // const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so

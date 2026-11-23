@@ -205,7 +205,7 @@ static size_t build_ts_msg(const uint8_t *work, uint8_t *buf, size_t cap, const 
     return PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN;
 }
 
-void protocore_ptp_build_sync(uint8_t *work)
+void protocore_ptp_build_sync(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = PtpV.build_sync_args.buf;
@@ -216,7 +216,7 @@ void protocore_ptp_build_sync(uint8_t *work)
     PtpV.n = build_ts_msg(work, buf, cap, h, origin, PROTOCORE_PTP_SYNC, 0x00);
 }
 
-void protocore_ptp_build_delay_req(uint8_t *work)
+void protocore_ptp_build_delay_req(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = PtpV.build_delay_req_args.buf;
@@ -227,7 +227,7 @@ void protocore_ptp_build_delay_req(uint8_t *work)
     PtpV.n = build_ts_msg(work, buf, cap, h, origin, PROTOCORE_PTP_DELAY_REQ, 0x01);
 }
 
-void protocore_ptp_build_follow_up(uint8_t *work)
+void protocore_ptp_build_follow_up(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = PtpV.build_follow_up_args.buf;
@@ -343,7 +343,7 @@ static size_t build_pdelay_resp_msg(const uint8_t *work, uint8_t *buf, size_t ca
     return PROTOCORE_PTP_HEADER_LEN + body;
 }
 
-void protocore_ptp_build_pdelay_resp(uint8_t *work)
+void protocore_ptp_build_pdelay_resp(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = PtpV.build_pdelay_resp_args.buf;
@@ -356,7 +356,7 @@ void protocore_ptp_build_pdelay_resp(uint8_t *work)
     PtpV.n = build_pdelay_resp_msg(work, buf, cap, h, recv, req_clock_id, req_port, PROTOCORE_PTP_PDELAY_RESP);
 }
 
-void protocore_ptp_build_pdelay_resp_follow_up(uint8_t *work)
+void protocore_ptp_build_pdelay_resp_follow_up(const uint8_t *work)
 {
     (void)work;
     uint8_t *buf = PtpV.build_pdelay_resp_follow_up_args.buf;
@@ -570,7 +570,7 @@ static embed_bool parse_pdelay_resp_msg(const uint8_t *work, const uint8_t *s, s
     return EMBED_TRUE;
 }
 
-void protocore_ptp_parse_pdelay_resp(uint8_t *work)
+void protocore_ptp_parse_pdelay_resp(const uint8_t *work)
 {
     (void)work;
     const uint8_t *s = PtpV.parse_pdelay_resp_args.s;
@@ -581,7 +581,7 @@ void protocore_ptp_parse_pdelay_resp(uint8_t *work)
     PtpV.ok = parse_pdelay_resp_msg(work, s, len, h, out, PROTOCORE_PTP_PDELAY_RESP);
 }
 
-void protocore_ptp_parse_pdelay_resp_follow_up(uint8_t *work)
+void protocore_ptp_parse_pdelay_resp_follow_up(const uint8_t *work)
 {
     (void)work;
     const uint8_t *s = PtpV.parse_pdelay_resp_follow_up_args.s;

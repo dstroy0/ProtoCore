@@ -11,10 +11,10 @@
 
 #if PROTOCORE_ENABLE_C37118
 
-static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
-
 #include "endian/endian.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
+
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 EMBED_BEGIN_DECLS
 

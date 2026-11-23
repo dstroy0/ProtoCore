@@ -124,8 +124,9 @@ static int16_t fwd_iface_at(uint8_t i)
 }
 
 // Hand the held frame to layer 1 for interface @p id.
-static embed_bool fwd_iface_send(uint8_t *work, uint8_t id)
+static embed_bool fwd_iface_send(const uint8_t *work, uint8_t id)
 {
+    (void)work;
     PhysicalV.iface.id = id;
     PhysicalV.iface.data = ForwardV.frame.data;
     PhysicalV.iface.len = ForwardV.frame.len;

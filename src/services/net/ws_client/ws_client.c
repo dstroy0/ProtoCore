@@ -328,9 +328,9 @@ void protocore_ws_client_build_frame(const uint8_t *work)
     const uint8_t opcode = WsClientV.frame.opcode;
     const uint8_t *payload = WsClientV.frame.payload;
     const size_t len = WsClientV.frame.payload_len;
-    const uint8_t *mask = WsClientV.frame.masking_key;
+    const uint8_t *masking_key = WsClientV.frame.masking_key;
     WsClientV.n = 0;
-    if (!out || !mask)
+    if (!out || !masking_key)
     {
         return;
     }
@@ -368,11 +368,11 @@ void protocore_ws_client_build_frame(const uint8_t *work)
             out[i++] = (uint8_t)((uint64_t)len >> s);
         }
     }
-    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = mask, .bytes = 4);
+    EMBED_CALL(memor.cpy, MemoriaCfg, .dst = out + i, .src = masking_key, .bytes = 4);
     i += 4;
     for (size_t j = 0; j < len; j++)
     {
-        out[i + j] = (uint8_t)(payload[j] ^ mask[j & 3]);
+        out[i + j] = (uint8_t)(payload[j] ^ masking_key[j & 3]);
     }
     WsClientV.n = i + len;
 }

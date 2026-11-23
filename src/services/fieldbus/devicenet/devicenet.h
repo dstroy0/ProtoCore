@@ -34,6 +34,7 @@
 #define PROTOCORE_DEVICENET_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "shared/can/can.h"   // CanFrame: the type a parameter points at
 
 #if PROTOCORE_ENABLE_DEVICENET
 
@@ -92,8 +93,6 @@ typedef struct
     uint16_t len;                             ///< octets stored so far
     uint8_t buf[PROTOCORE_DEVICENET_MSG_MAX]; ///< reassembled body (excludes the fragmentation octets)
 } DeviceNetFragRx;
-
-#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
 /** @brief What encode_id takes: id, group, msg_id, mac_id. */
 typedef struct

@@ -180,7 +180,7 @@ typedef struct
 {
     void (*const has_extension)(const uint8_t *work);
     void (*const route)(const uint8_t *work);
-    void (*const route_ex)(uint8_t *work);
+    void (*const route_ex)(const uint8_t *work);
     void (*const ui_stream_begin)(const uint8_t *work);
     void (*const ui_stream_next)(const uint8_t *work);
     void (*const ui_stream_done)(const uint8_t *work);
@@ -190,7 +190,7 @@ typedef struct
 // else an entry needs is an operand in SpaRouterV or a region of the borrow at a fixed offset.
 void protocore_spa_router_has_extension(const uint8_t *work);
 void protocore_spa_router_route(const uint8_t *work);
-void protocore_spa_router_route_ex(uint8_t *work);
+void protocore_spa_router_route_ex(const uint8_t *work);
 void protocore_spa_router_ui_stream_begin(const uint8_t *work);
 void protocore_spa_router_ui_stream_next(const uint8_t *work);
 void protocore_spa_router_ui_stream_done(const uint8_t *work);

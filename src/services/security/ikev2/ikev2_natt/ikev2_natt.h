@@ -140,8 +140,8 @@ extern IkeNattVars IkeNattV;
 typedef struct
 {
     void (*const hash)(const uint8_t *work);
-    void (*const source_build)(uint8_t *work);
-    void (*const dest_build)(uint8_t *work);
+    void (*const source_build)(const uint8_t *work);
+    void (*const dest_build)(const uint8_t *work);
     void (*const match)(const uint8_t *work);
     void (*const peer_behind_nat)(const uint8_t *work);
     void (*const self_behind_nat)(const uint8_t *work);
@@ -152,8 +152,8 @@ typedef struct
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in IkeNattV or a region of the borrow at a fixed offset.
 void protocore_ike_natt_hash(const uint8_t *work);
-void protocore_ike_natt_source_build(uint8_t *work);
-void protocore_ike_natt_dest_build(uint8_t *work);
+void protocore_ike_natt_source_build(const uint8_t *work);
+void protocore_ike_natt_dest_build(const uint8_t *work);
 void protocore_ike_natt_match(const uint8_t *work);
 void protocore_ike_natt_peer_behind_nat(const uint8_t *work);
 void protocore_ike_natt_self_behind_nat(const uint8_t *work);

@@ -34,8 +34,10 @@ import sys
 
 from tools.ci_tooling.lib import doc_region as dr
 
+README_MD = "README.md"
+
 ROOT = dr.repo_root(__file__)
-README = os.path.join(ROOT, "README.md")
+README = os.path.join(ROOT, README_MD)
 SKETCH = os.path.join(ROOT, "examples/Foundation/Basic/Basic.ino")
 COVERAGE = os.path.join(ROOT, "test/coverage.xml")
 REPORT = os.path.join(ROOT, "test/TEST_REPORT.md")
@@ -89,7 +91,7 @@ def render_quick_start():
         "\n"
         "```cpp\n" + src + "\n```\n"
         "\n"
-        f"Set `SSID` / `PASSWORD`, flash, and open Serial at 115200 for the IP. "
+        "Set `SSID` / `PASSWORD`, flash, and open Serial at 115200 for the IP. "
         "Full walkthrough: [`examples/Foundation/Basic`](examples/Foundation/Basic/README.md)."
     )
 
@@ -161,8 +163,8 @@ def render_status():
 
 TOOL = dr.tool_id(__file__)
 REGIONS = {
-    dr.Region("README.md", "QUICK START", TOOL): render_quick_start,
-    dr.Region("README.md", "PROJECT STATUS", TOOL): render_status,
+    dr.Region(README_MD, "QUICK START", TOOL): render_quick_start,
+    dr.Region(README_MD, "PROJECT STATUS", TOOL): render_status,
 }
 
 

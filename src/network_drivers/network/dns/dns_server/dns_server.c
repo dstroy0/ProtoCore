@@ -130,8 +130,9 @@ uint8_t *protocore_dns_server_span(void)
     return s_own.span;
 }
 
-void protocore_dns_server_build_response(uint8_t *work)
+void protocore_dns_server_build_response(const uint8_t *work)
 {
+    (void)work;
     const uint8_t *query = DnsServerV.msg.query;
     const size_t qlen = DnsServerV.msg.qlen;
     uint8_t *out = DnsServerV.msg.out;
@@ -155,8 +156,12 @@ void protocore_dns_server_build_response(uint8_t *work)
         EMBED_CALL(proxim.read, ProximusCfg, .dst = out, .at = query, .size = 12);
         out[2] = (uint8_t)(0x84 | (query[2] & 0x01)); // QR=1, AA=1, RD copied
         out[3] = 0x04;                                // RCODE = 4 Not Implemented
-        out[6] = out[7] = 0;                          // ANCOUNT 0
-        out[8] = out[9] = out[10] = out[11] = 0;      // NSCOUNT / ARCOUNT 0
+        out[6] = 0;                                   // ANCOUNT 0
+        out[7] = 0;
+        out[8] = 0; // NSCOUNT / ARCOUNT 0
+        out[9] = 0;
+        out[10] = 0;
+        out[11] = 0;
         DnsServerV.n = 12;
         return;
     }
@@ -178,8 +183,11 @@ void protocore_dns_server_build_response(uint8_t *work)
     out[2] = (uint8_t)(0x84 | (query[2] & 0x01)); // QR=1, OPCODE=0, AA=1, RD copied
     out[3] = 0x00;                                // RA=0, RCODE=0 No Error
     out[4] = 0x00;
-    out[5] = 0x01;                           // QDCOUNT = 1
-    out[8] = out[9] = out[10] = out[11] = 0; // NSCOUNT / ARCOUNT = 0
+    out[5] = 0x01; // QDCOUNT = 1
+    out[8] = 0;    // NSCOUNT / ARCOUNT = 0
+    out[9] = 0;
+    out[10] = 0;
+    out[11] = 0;
 
     uint32_t ip = (qtype == 1) ? DnsServerV.ans.resolve(name) : 0; // QTYPE 1 = A (RFC 1035 sec 3.2.2)
     if (!ip)
@@ -286,8 +294,9 @@ static void dns_udp_handler(const uint8_t *data, size_t len, const struct protoc
 }
 
 // Bind UDP port 53, the port a DNS message is carried to (RFC 1035 sec 4.2.1).
-void protocore_dns_server_begin(uint8_t *work)
+void protocore_dns_server_begin(const uint8_t *work)
 {
+    (void)work;
     UdpListenerV.port = 53;
     UdpListenerV.bind.handler = dns_udp_handler;
     UdpListenerV.bind.handler_ctx = NULL;

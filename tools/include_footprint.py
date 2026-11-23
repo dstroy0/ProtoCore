@@ -36,6 +36,13 @@ from pathlib import Path
 
 from tools import findroot
 
+ARDUINO_H = "Arduino.h"
+STDDEF_H = "stddef.h"
+STDINT_H = "stdint.h"
+STDIO_H = "stdio.h"
+STRING_H = "string.h"
+TIME_H = "time.h"
+
 # Portable headers and the specific symbols this library uses from each. A
 # symbol may be provided by several headers (size_t lives in stddef.h but also
 # string.h / stdio.h / time.h). The first header listed is the canonical/primary
@@ -45,17 +52,17 @@ SYMBOL_PROVIDERS = [
     # Types match as bare words; functions require a following call "(" and a
     # non-member, non-identifier prefix, so a struct field named `exp`, an AES
     # "round" counter, or `Serial.printf` do not get counted as libc calls.
-    (r"\b(?:u?int(?:8|16|32|64)_t|u?int_(?:least|fast)(?:8|16|32|64)_t|u?intptr_t|u?intmax_t)\b", ["stdint.h"]),
-    (r"\bsize_t\b", ["stddef.h", "string.h", "stdio.h", "time.h"]),
-    (r"\bptrdiff_t\b", ["stddef.h"]),
-    (r"\bNULL\b", ["stddef.h", "string.h", "stdio.h", "time.h"]),
+    (r"\b(?:u?int(?:8|16|32|64)_t|u?int_(?:least|fast)(?:8|16|32|64)_t|u?intptr_t|u?intmax_t)\b", [STDINT_H]),
+    (r"\bsize_t\b", [STDDEF_H, STRING_H, STDIO_H, TIME_H]),
+    (r"\bptrdiff_t\b", [STDDEF_H]),
+    (r"\bNULL\b", [STDDEF_H, STRING_H, STDIO_H, TIME_H]),
     (
         r"(?<![.\w])(?:memcpy|memmove|memset|memcmp|memchr|strlen|strnlen|strcmp|strncmp"
         r"|strcasecmp|strncasecmp|strchr|strrchr|strstr|strncpy|strcpy|strncat"
         r"|strcat|strtok|strdup)\s*\(",
-        ["string.h"],
+        [STRING_H],
     ),
-    (r"(?<![.\w])(?:snprintf|vsnprintf|sscanf|vsscanf|sprintf|printf|vprintf|fprintf|puts)\s*\(", ["stdio.h"]),
+    (r"(?<![.\w])(?:snprintf|vsnprintf|sscanf|vsscanf|sprintf|printf|vprintf|fprintf|puts)\s*\(", [STDIO_H]),
     (r"\bva_list\b|(?<![.\w])(?:va_start|va_end|va_arg|va_copy)\s*\(", ["stdarg.h"]),
     (
         r"(?<![.\w])(?:sqrtf|sqrt|powf|pow|fabsf|fabs|roundf|round|floorf|floor|ceilf|ceil"
@@ -63,12 +70,12 @@ SYMBOL_PROVIDERS = [
         ["math.h"],
     ),
     (r"(?<![.\w])assert\s*\(", ["assert.h"]),
-    (r"\btime_t\b|\bstruct\s+tm\b" r"|(?<![.\w])(?:gmtime_r|localtime_r|strftime|mktime)\s*\(", ["time.h"]),
+    (r"\btime_t\b|\bstruct\s+tm\b|(?<![.\w])(?:gmtime_r|localtime_r|strftime|mktime)\s*\(", [TIME_H]),
     # Arduino.h - guarded by ARDUINO in the sources; still part of the footprint.
     (
         r"\bSerial\b|\bString\b|(?<![.\w])(?:millis|micros|delayMicroseconds|delay"
         r"|pinMode|digitalWrite|digitalRead|analogRead|analogWrite)\s*\(",
-        ["Arduino.h"],
+        [ARDUINO_H],
     ),
 ]
 SYMBOL_PROVIDERS = [(re.compile(pat), heads) for pat, heads in SYMBOL_PROVIDERS]
@@ -76,15 +83,15 @@ SYMBOL_PROVIDERS = [(re.compile(pat), heads) for pat, heads in SYMBOL_PROVIDERS]
 # Every header this tool reasons about (used to classify "unused system include"
 # vs. a header we simply do not model, e.g. a layer header like lwip/tcp.h).
 KNOWN_STD_HEADERS = {
-    "stddef.h",
-    "stdint.h",
-    "string.h",
-    "stdio.h",
+    STDDEF_H,
+    STDINT_H,
+    STRING_H,
+    STDIO_H,
     "stdarg.h",
     "math.h",
     "assert.h",
-    "time.h",
-    "Arduino.h",
+    TIME_H,
+    ARDUINO_H,
 }
 
 # Platform umbrella headers that transitively pull in the C std headers below.
@@ -94,7 +101,7 @@ KNOWN_STD_HEADERS = {
 # "missing include" (it still shows up as an unused direct std include if the
 # file over-declares one).
 PLATFORM_UMBRELLAS = {
-    "Arduino.h": {"stddef.h", "stdint.h", "string.h", "stdio.h"},
+    ARDUINO_H: {STDDEF_H, STDINT_H, STRING_H, STDIO_H},
 }
 
 SRC_EXTS = {".h", ".hpp", ".c", ".cpp", ".cc", ".ino"}
@@ -277,7 +284,7 @@ def main(argv=None):
             if args.issues:
                 for h in r["unused_system"]:
                     print(f"    unused   {h}")
-        print(f"\n{n_missing} file(s) with a missing include, " f"{n_unused} with an unused std include.")
+        print(f"\n{n_missing} file(s) with a missing include, {n_unused} with an unused std include.")
         return 1 if n_missing else 0
 
     if args.per_file:
@@ -295,7 +302,7 @@ def main(argv=None):
     print(f"{'header':<12} {'used-by':>8} {'included':>9}")
     for h in sorted(KNOWN_STD_HEADERS):
         print(f"{h:<12} {use_count.get(h, 0):>8} {inc_count.get(h, 0):>9}")
-    print(f"\nfiles scanned: {len(rows)}   " f"missing-include: {n_missing}   unused-std-include: {n_unused}")
+    print(f"\nfiles scanned: {len(rows)}   missing-include: {n_missing}   unused-std-include: {n_unused}")
     if n_missing:
         print("run with --issues to see the missing includes.")
     return 0

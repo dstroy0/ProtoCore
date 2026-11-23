@@ -124,7 +124,7 @@ static int file_root(uint8_t *work)
 
 // The entries this file calls before reaching their definitions.
 void protocore_file_serving_file_send_pump(const uint8_t *work);
-void protocore_file_serving_http_rfc1123(uint8_t *work);
+void protocore_file_serving_http_rfc1123(const uint8_t *work);
 void protocore_file_serving_serve_file_internal(uint8_t *work);
 
 void protocore_file_serving_holds_slot(const uint8_t *work)
@@ -139,7 +139,7 @@ void protocore_file_serving_holds_slot(const uint8_t *work)
 // WebDAV's getlastmodified / creationdate). WEBDAV requires FILE_SERVING, so this is
 // the single home for both. Format a time_t as an RFC 1123 GMT date; leaves @p out
 // empty when the timestamp is zero/unavailable.
-void protocore_file_serving_http_rfc1123(uint8_t *work)
+void protocore_file_serving_http_rfc1123(const uint8_t *work)
 {
     (void)work;
     int64_t epoch = FileServingV.http_rfc1123_args.epoch;
@@ -374,7 +374,6 @@ void protocore_file_serving_serve_file_internal(uint8_t *work)
 {
     uint8_t slot_id = FileServingV.serve_file_internal_args.slot_id;
     embed_bool head = FileServingV.serve_file_internal_args.head;
-    const protocore_mnt_backend *file_sys = FileServingV.serve_file_internal_args.file_sys;
     const char *fs_path = FileServingV.serve_file_internal_args.fs_path;
     const char *content_type = FileServingV.serve_file_internal_args.content_type;
     const char *content_encoding = FileServingV.serve_file_internal_args.content_encoding;
@@ -864,7 +863,7 @@ void protocore_file_serving_serve_static(const uint8_t *work)
 void protocore_file_serving_serve_static_request(uint8_t *work)
 {
     uint8_t slot_id = FileServingV.serve_static_request_args.slot_id;
-    HttpReq *req = FileServingV.serve_static_request_args.req;
+    const HttpReq *req = FileServingV.serve_static_request_args.req;
     const HttpRoute *r = FileServingV.serve_static_request_args.r;
 
     // No null-check on the backend: storage is reached by layer, through the accessor, so a null

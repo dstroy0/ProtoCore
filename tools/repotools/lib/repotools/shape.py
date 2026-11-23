@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# repotools-stamp: lib/repotools/shape.py dffd5839b6ab3b7f
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Reducing a file to its shape, so two copies of one tool match after they have drifted apart.
 
-An exact hash finds nothing across repositories. The eight copies of `codemask.py` on this machine
-differ in the header line, in a project name inside a docstring, in where a formatter broke a line,
-and in one identifier. Every one of those is invisible to the reader and fatal to a byte comparison.
+An exact hash finds no match between two copies that differ in the header line, in a project name
+inside a docstring, in where a formatter breaks a line, or in one identifier. A reader does not see
+those differences, and a byte comparison fails on each of them.
 
     from repotools import shape
 
@@ -15,8 +14,8 @@ and in one identifier. Every one of those is invisible to the reader and fatal t
 `exact` is the SHA-256 of the file with line endings normalized. `shaped` is the hash of what
 remains after four reductions:
 
-  1. Comments and docstrings come off. The measured drift is almost entirely prose: one copy said
-     "rather than" where a later sweep had written "instead of".
+  1. Comments and docstrings come off. Most drift between copies is in prose, such as "rather than"
+     in one copy and "instead of" in the other.
   2. String literals fold to one token. A project name inside a message is that project's, and the
      code around it is everybody's.
   3. Numbers keep their value. A bound is part of the algorithm and two tools that differ in one are
@@ -31,19 +30,16 @@ cannot read is the same defect as a prose root that no longer exists.
 
 SAME SHAPE NEVER MEANS SAME BEHAVIOR. THIS IS THE INSTRUMENT'S LIMIT.
 
-Identifiers renumber by first appearance, which is what lets two copies match after they drift. It
-also means a misspelled identifier is invisible here. Measured on this machine: ProtoCore's
-`move_code.py` reads `args.anchor_before` and MMgr's reads `args.ancorae_before`, so the MMgr copy
-raises AttributeError on every anchored move. Both hash to cb2b60bdb26d6c01. One works, one is
-broken, and this reports them as one shape held twice.
+Identifiers renumber by first appearance, which lets two copies match after they drift. A misspelled
+identifier is thus invisible here. A copy that reads `args.anchor_before` and a copy that reads
+`args.ancorae_before` have one shape, and the second one raises AttributeError.
 
-A second way it misleads: two generations of a tool that share a command surface and an opening
-docstring land in one bucket while sharing no API at all. Three trees held a `readclean.py` that way,
-and the test promoted with one of them could not import against another.
+Two tools with one command surface and one opening docstring also land in one group, and they can
+share no API at all.
 
-So a group here is a claim that two files are the same SHAPE. Deciding which text survives a
-promotion means reading both in full. A survey narrows a thousand files to a list a person can read;
-the reading is the part it does not do, and skipping it promoted a broken tool.
+So a group here claims that two files have the same SHAPE. To choose which text to keep, read both
+in full. A survey narrows a thousand files to a list that a person can read. The reading is the part
+that it does not do.
 """
 
 import hashlib
@@ -57,23 +53,19 @@ PY_LIKE = (".py",)
 SHELL_LIKE = (".sh", ".bash", ".ps1")
 
 # Structure never renames. `while` colliding with `for` would put every loop in one bucket.
-C_KEYWORDS = set(
-    """auto break case char const continue default do double else enum extern float for goto if
+C_KEYWORDS = set("""auto break case char const continue default do double else enum extern float for goto if
     inline int long register restrict return short signed sizeof static struct switch typedef union
     unsigned void volatile while _Alignas _Alignof _Atomic _Bool _Complex _Generic _Imaginary
     _Noreturn _Static_assert _Thread_local static_assert alignas alignof bool true false NULL
-    defined include define ifndef ifdef endif elif pragma error undef line""".split()
-)
+    defined include define ifndef ifdef endif elif pragma error undef line""".split())
 
-PY_KEYWORDS = set(
-    """False None True and as assert async await break class continue def del elif else except
+PY_KEYWORDS = set("""False None True and as assert async await break class continue def del elif else except
     finally for from global if import in is lambda nonlocal not or pass raise return try while with
-    yield match case self""".split()
-)
+    yield match case self""".split())
 
 C_TOKEN = re.compile(
     r"""
-      (?P<id>[A-Za-z_][A-Za-z_0-9]*)
+      (?P<id>[A-Za-z_]\w*)
     | (?P<num>0[xX][0-9A-Fa-f]+[uUlL]*|\d+\.?\d*([eE][-+]?\d+)?[uUlLfF]*)
     | (?P<str>"(\\.|[^"\\])*"|'(\\.|[^'\\])*')
     | (?P<op><<=|>>=|\.\.\.|->|\+\+|--|<<|>>|&&|\|\||[-+*/%&|^!<>=]=|\#\#|[-+*/%&|^~!<>=?:;,.(){}\[\]\#])
@@ -212,7 +204,7 @@ def _py_pairs(text):
                 out.append(("op", value))
             prev = value
         return out
-    except (pytokenize.TokenError, IndentationError, SyntaxError):
+    except (pytokenize.TokenError, SyntaxError):
         return None
 
 

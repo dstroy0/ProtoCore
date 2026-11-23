@@ -314,7 +314,7 @@ typedef struct
     void (*const build_block_3964r)(const uint8_t *work);
     void (*const parse_block_3964r)(uint8_t *work);
     void (*const init_3964r)(const uint8_t *work);
-    void (*const send_3964r)(uint8_t *work);
+    void (*const send_3964r)(const uint8_t *work);
     void (*const rx_byte_3964r)(uint8_t *work);
     void (*const tick_3964r)(const uint8_t *work);
     void (*const idle_3964r)(const uint8_t *work);
@@ -331,7 +331,7 @@ void protocore_simatic_bcc_3964r(const uint8_t *work);
 void protocore_simatic_build_block_3964r(const uint8_t *work);
 void protocore_simatic_parse_block_3964r(uint8_t *work);
 void protocore_simatic_init_3964r(const uint8_t *work);
-void protocore_simatic_send_3964r(uint8_t *work);
+void protocore_simatic_send_3964r(const uint8_t *work);
 void protocore_simatic_rx_byte_3964r(uint8_t *work);
 void protocore_simatic_tick_3964r(const uint8_t *work);
 void protocore_simatic_idle_3964r(const uint8_t *work);

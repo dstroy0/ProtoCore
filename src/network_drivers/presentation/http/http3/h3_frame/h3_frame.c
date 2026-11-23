@@ -42,7 +42,7 @@ embed_bool protocore_h3_frame_parse_header(const uint8_t *work, const uint8_t *b
     return EMBED_TRUE;
 }
 
-size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, uint64_t type, uint64_t length)
+size_t protocore_h3_frame_write_header(const uint8_t *work, uint8_t *out, size_t cap, uint64_t type, uint64_t length)
 {
     size_t quic_varint_n = QuicVarint.encode(work, out, cap, type);
     size_t n = quic_varint_n;

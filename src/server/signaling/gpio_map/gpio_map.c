@@ -249,7 +249,7 @@ void protocore_gpio_map_sample(const uint8_t *work)
     }
     for (uint8_t i = 0; i < count; i++)
     {
-        pins[i].level = (uint8_t)(protocore_platform_gpio_read((pins[i].pin)) ? 1 : 0);
+        pins[i].level = (uint8_t)(protocore_platform_gpio_read(pins[i].pin) ? 1 : 0);
     }
 }
 
@@ -262,7 +262,7 @@ void protocore_gpio_map_write(const uint8_t *work)
     const uint8_t pin = GpioMapV.args.pin;
     const uint8_t level = GpioMapV.args.level;
 
-    protocore_platform_gpio_write((pin), PROTOCORE_GPIO_LEVEL[!!level]);
+    protocore_platform_gpio_write(pin, PROTOCORE_GPIO_LEVEL[!!level]);
 }
 
 #else // no pin seam
@@ -305,6 +305,7 @@ void protocore_gpio_map_write(const uint8_t *work)
 // and gpio_map_routes.c overrides this the moment it is in the build.
 __attribute__((weak)) void protocore_gpio_map_begin(const uint8_t *work)
 {
+    (void)work;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

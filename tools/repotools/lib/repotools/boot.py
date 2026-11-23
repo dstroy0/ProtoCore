@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-# repotools-stamp: lib/repotools/boot.py 413320f955250bcb
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
-"""Finding the toolkit from inside it, and the preamble every tool copies to get here.
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""How a tool under tools/repotools finds this package, and the preamble each tool holds to get here.
 
 THE PREAMBLE
 
-Every runnable script under this toolkit opens with these four lines, before any repotools import:
+Each runnable script under tools/repotools opens with these lines, before any repotools import:
 
     import os, sys
     _at = os.path.dirname(os.path.abspath(__file__))
@@ -14,39 +13,38 @@ Every runnable script under this toolkit opens with these four lines, before any
         _at = os.path.dirname(_at)
     sys.path.insert(0, os.path.join(_at, "lib"))
 
-This is the single duplicated fragment in the toolkit, and it is duplicated because it is the code
-that finds the shared code. Everything after it is imported once.
+Each script holds its own copy, because this fragment is the code that finds the shared code. All code
+after it comes from one import.
 
 WHY IT WALKS
 
-The alternative is counting:
+The other way counts directories:
 
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "lib"))
 
-Counting fixes a script's distance from the root, so the script breaks the day it moves one level.
-Thirty nine scripts in the anchor_sift tree computed their root by counting, and sorting that tree
-into categories moved every one of them and broke all thirty nine at once.
+A count fixes the distance of a script from the root, so the script stops working when it moves one
+level. The walk finds the root from any depth.
 
 THE LOOP GUARD
 
-`_at != os.path.dirname(_at)` stops the walk at the filesystem root. Without it, a script launched
-from outside any checkout walks to `C:\\` or `/` and then loops on a directory that is its own
-parent. The guard turns that into a clean import failure at a known line.
+`_at != os.path.dirname(_at)` stops the walk at the filesystem root. Without it, a script outside the
+tree walks to `C:\\` or `/`, and then loops on a directory that is its own parent. The guard makes that
+an import failure at a known line.
 """
 
 import os
 
-# A directory is the toolkit root when it holds all of these. Three markers instead of one, because
-# `lib` alone matches most Python projects and `code` alone matches half the trees on this machine.
-TOOLKIT_MARKERS = ("lib/repotools", "repo/repo_template", "code")
+# A directory is the root of tools/repotools when it holds both of these. `lib` alone matches most Python
+# projects, and `code` alone matches many trees, so the root needs both.
+TOOLKIT_MARKERS = ("lib/repotools", "code")
 
 
 def toolkit_root(start=None):
-    """Absolute path to the repo_tools checkout holding this package.
+    """Absolute path to the tools/repotools directory that holds this package.
 
-    Walks up from this file, or from `start` when one is given, until a directory carries every
-    entry in TOOLKIT_MARKERS. Raises when the walk reaches the filesystem root, because a toolkit
-    that cannot find itself has to fail at import and not at the first template read.
+    The walk goes up from this file, or from `start` when one is given, to a directory that holds each
+    entry in TOOLKIT_MARKERS. It raises when it reaches the filesystem root, so a tree that cannot find
+    itself fails at import, and not at the first read of a template.
     """
     at = os.path.dirname(os.path.abspath(start or __file__))
     while True:

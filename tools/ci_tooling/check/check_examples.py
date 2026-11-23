@@ -175,7 +175,7 @@ def main():
 
     if findings:
         print(
-            f"check_examples: {len(findings)} problem(s) in " f"{len({f[0] for f in findings})} file(s)\n",
+            f"check_examples: {len(findings)} problem(s) in {len({f[0] for f in findings})} file(s)\n",
             file=sys.stderr,
         )
         for rel, n, why, src in findings[: (len(findings) if verbose else 40)]:
@@ -187,7 +187,7 @@ def main():
         return 1
 
     n_files = sum(1 for _ in os.walk(EXAMPLES))
-    print(f"check_examples: OK - example code uses the library API " f"({n_files} dirs scanned).")
+    print(f"check_examples: OK - example code uses the library API ({n_files} dirs scanned).")
     return 0
 
 

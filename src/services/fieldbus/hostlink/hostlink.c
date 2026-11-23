@@ -185,7 +185,7 @@ void protocore_hostlink_end_code(const uint8_t *work)
     HostlinkV.ok = EMBED_TRUE;
 }
 
-void protocore_hostlink_build_read(uint8_t *work)
+void protocore_hostlink_build_read(const uint8_t *work)
 {
     char *buf = HostlinkV.build_read_args.buf;
     size_t cap = HostlinkV.build_read_args.cap;
@@ -236,8 +236,10 @@ void protocore_hostlink_read_word(const uint8_t *work)
         HostlinkV.ok = EMBED_FALSE;
         return;
     }
-    int a = hex_val(f->text[pos]), b = hex_val(f->text[pos + 1]);
-    int c = hex_val(f->text[pos + 2]), d = hex_val(f->text[pos + 3]);
+    int a = hex_val(f->text[pos]);
+    int b = hex_val(f->text[pos + 1]);
+    int c = hex_val(f->text[pos + 2]);
+    int d = hex_val(f->text[pos + 3]);
     if (a < 0 || b < 0 || c < 0 || d < 0)
     {
         HostlinkV.ok = EMBED_FALSE;

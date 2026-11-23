@@ -99,7 +99,7 @@ GROUPS = [
 # Filenames carry a numeric prefix because Doxygen orders root pages by the order it
 # reads them, which is filename order - without it "Start here" sorted fifth.
 def render(group):
-    slug, title, blurb, pages = group
+    _, title, blurb, pages = group
     body = [f"# {title}", "", blurb, ""]
     body += [f'- @subpage {pid} "{label}"' for pid, label in pages]
     body.append("")

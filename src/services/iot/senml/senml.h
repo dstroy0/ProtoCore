@@ -157,14 +157,14 @@ extern SenmlVars SenmlV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const json_build)(uint8_t *work);
+    void (*const json_build)(const uint8_t *work);
     void (*const binary_build)(const uint8_t *work);
     void (*const resolve)(const uint8_t *work);
 } SenmlNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SenmlV or a region of the borrow at a fixed offset.
-void protocore_senml_json_build(uint8_t *work);
+void protocore_senml_json_build(const uint8_t *work);
 void protocore_senml_binary_build(const uint8_t *work);
 void protocore_senml_resolve(const uint8_t *work);
 

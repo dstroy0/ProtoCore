@@ -88,7 +88,11 @@ def gcovr_python() -> str:
         if p.returncode == 0:
             _GCOVR_PY = cand
             return cand
-    raise SystemExit(f"no interpreter with gcovr installed (tried: {seen}); " f"run `<python> -m pip install gcovr`")
+    raise SystemExit(f"no interpreter with gcovr installed (tried: {seen}); run `<python> -m pip install gcovr`")
+
+
+class GcovrFailed(RuntimeError):
+    """gcovr wrote no report for an env."""
 
 
 def gcovr(env: str) -> None:
@@ -120,7 +124,7 @@ def gcovr(env: str) -> None:
     )
     if p.returncode != 0 or not os.path.exists(out):
         sys.stdout.write(p.stdout[-2000:] + p.stderr[-2000:])
-        raise SystemExit(f"gcovr produced no report for {env}")
+        raise GcovrFailed(f"gcovr produced no report for {env}")
 
 
 def main() -> int:
@@ -156,7 +160,10 @@ def main() -> int:
         print(f"[{i}/{len(envs)}] {'ok  ' if ok else 'FAIL'} {e}", flush=True)
         if not ok:
             failed.append(e)
-        gcovr(e)
+        try:
+            gcovr(e)
+        except GcovrFailed as err:
+            raise SystemExit(str(err)) from err
 
     if failed:
         # A failing env produces truncated .gcda (the run aborted partway), so merging it would

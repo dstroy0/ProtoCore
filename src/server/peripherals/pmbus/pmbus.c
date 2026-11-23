@@ -286,7 +286,7 @@ static void pmbus_read_vout_mode(const uint8_t *work)
     Pmbus.ok = smbus_ok;
 }
 
-static void pmbus_read_linear11(uint8_t *work)
+static void pmbus_read_linear11(const uint8_t *work)
 {
     (void)work;
     uint8_t addr = Pmbus.read_linear11_args.addr;

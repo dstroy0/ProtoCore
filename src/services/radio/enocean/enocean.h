@@ -78,8 +78,8 @@ typedef struct
 typedef struct
 {
     uint8_t (*esp3_crc8)(const uint8_t *, const uint8_t *, uint16_t);
-    int (*esp3_parse)(uint8_t *, const uint8_t *, uint16_t, protocore_esp3_packet *);
-    uint16_t (*esp3_build)(uint8_t *, protocore_esp3_type, const uint8_t *, uint16_t, const uint8_t *, uint8_t,
+    int (*esp3_parse)(const uint8_t *, const uint8_t *, uint16_t, protocore_esp3_packet *);
+    uint16_t (*esp3_build)(const uint8_t *, protocore_esp3_type, const uint8_t *, uint16_t, const uint8_t *, uint8_t,
                            uint8_t *, uint16_t);
     embed_bool (*erp1_parse)(const uint8_t *, const uint8_t *, uint16_t, protocore_erp1 *);
     uint16_t (*erp1_build)(const uint8_t *, uint8_t *, uint16_t, uint8_t, const uint8_t *, uint8_t, uint32_t, uint8_t);
@@ -102,7 +102,7 @@ uint8_t protocore_enocean_esp3_crc8(const uint8_t *work, const uint8_t *buf, uin
  * @param out Out
  * @return The int.
  */
-int protocore_enocean_esp3_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out);
+int protocore_enocean_esp3_parse(const uint8_t *work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out);
 /**
  * @brief Assemble an ESP3 telegram into out.
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.
@@ -115,8 +115,9 @@ int protocore_enocean_esp3_parse(uint8_t *work, const uint8_t *raw, uint16_t len
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_enocean_esp3_build(uint8_t *work, protocore_esp3_type type, const uint8_t *data, uint16_t data_len,
-                                      const uint8_t *opt, uint8_t opt_len, uint8_t *out, uint16_t cap);
+uint16_t protocore_enocean_esp3_build(const uint8_t *work, protocore_esp3_type type, const uint8_t *data,
+                                      uint16_t data_len, const uint8_t *opt, uint8_t opt_len, uint8_t *out,
+                                      uint16_t cap);
 /**
  * @brief Decode an ERP1 radio telegram: RORG + payload + 4-octet sender id + .
  * @param work PROTOCORE_ENOCEAN_BORROW bytes the caller took. Not held past the call.

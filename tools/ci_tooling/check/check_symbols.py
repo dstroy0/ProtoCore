@@ -260,7 +260,7 @@ def check():
             "collision",
             types_seen[name],
             1,
-            f"type and function both normalize to `{name}` " f"(function declared in {funcs_seen[name]})",
+            f"type and function both normalize to `{name}` (function declared in {funcs_seen[name]})",
         )
 
     return findings
@@ -290,7 +290,7 @@ def main():
             return 1
         new, still, fixed = bl.filter_new(findings, key, BASELINE)
         if new:
-            print(f"check_symbols: {len(new)} NEW naming-law violation(s) " f"(see docs/SYMBOLS.md)", file=sys.stderr)
+            print(f"check_symbols: {len(new)} NEW naming-law violation(s) (see docs/SYMBOLS.md)", file=sys.stderr)
             for f in new[:40]:
                 print(f"  {f['file']}:{f['line']}: [{f['kind']}] {f['msg']}", file=sys.stderr)
             return 1

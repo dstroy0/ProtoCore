@@ -481,7 +481,7 @@ void protocore_http_allow_append(const uint8_t *work)
 // teardown; HEAD omits the body. One owner for the error-and-close path.
 static void send_error_close(uint8_t slot_id, const char *status, const char *extra_hdr, const char *body)
 {
-    TcpConn *conn = &conn_pool[slot_id];
+    const TcpConn *conn = &conn_pool[slot_id];
     if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
         conn->pcb == NULL)
     {
@@ -692,7 +692,7 @@ static embed_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 #endif // PROTOCORE_ENABLE_CSRF
 
 #if PROTOCORE_ENABLE_WEBSOCKET
-static void handle_ws_route(uint8_t *work, uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
+static void handle_ws_route(uint8_t *work, uint8_t slot_id, const HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
     const char *http_parser_text = HttpParser.get_header(protocore_http_parser_span(), req, "Upgrade");
     const char *upgrade_hdr = http_parser_text;
@@ -967,8 +967,8 @@ void protocore_http_match_and_execute(uint8_t *work)
     uint8_t http_routes_value = HttpRoutes.count(protocore_http_route_span());
     for (uint8_t i = 0; i < http_routes_value; i++)
     {
-        HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), i);
-        HttpRoute *r = http_routes_ptr;
+        const HttpRoute *http_routes_ptr = HttpRoutes.at(protocore_http_route_span(), i);
+        const HttpRoute *r = http_routes_ptr;
         if (!route_admits(r, slot_id, req))
         {
             continue;

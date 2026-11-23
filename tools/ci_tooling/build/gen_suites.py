@@ -32,6 +32,8 @@ import os
 import re
 import sys
 
+CMAKELISTS_TXT = "CMakeLists.txt"
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 TEST = os.path.join(ROOT, "test")
@@ -147,9 +149,9 @@ def declared():
         if not os.path.isdir(base):
             continue
         for dirpath, _dn, files in os.walk(base):
-            if "CMakeLists.txt" not in files:
+            if CMAKELISTS_TXT not in files:
                 continue
-            text = read(os.path.join(dirpath, "CMakeLists.txt"))
+            text = read(os.path.join(dirpath, CMAKELISTS_TXT))
             for m in DECL.finditer(text):
                 body = m.group("body")
                 s = re.search(r"\bSOURCES\b((?:\s+[\w./-]+)+)", body)
@@ -239,7 +241,7 @@ def write():
     want = wanted(suites, leads)
     n = 0
     for path in sorted(want):
-        p = os.path.join(TEST, *path.split("/"), "CMakeLists.txt")
+        p = os.path.join(TEST, *path.split("/"), CMAKELISTS_TXT)
         cur = read(p) if os.path.isfile(p) else None
         if cur == want[path]:
             continue

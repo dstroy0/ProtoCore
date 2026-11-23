@@ -118,20 +118,21 @@ static void finished_hmac(embed_bool is384, uint8_t *work, const uint8_t *key, c
     HmacSha256.mac(work, key, len, data, len, out);
 }
 
-void protocore_tls13_ks_expand_label(uint8_t *work)
+void protocore_tls13_ks_expand_label(const uint8_t *work)
 {
     expand(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
            Tls13KsV.derive_args.label, Tls13KsV.derive_args.out, Tls13KsV.derive_args.out_len);
 }
 
-void protocore_tls13_ks_derive_secret(uint8_t *work)
+void protocore_tls13_ks_derive_secret(const uint8_t *work)
 {
     derive(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
            Tls13KsV.derive_args.label, Tls13KsV.derive_args.transcript_hash, Tls13KsV.derive_args.out);
 }
 
-void protocore_tls13_ks_early(uint8_t *work)
+void protocore_tls13_ks_early(const uint8_t *work)
 {
+    (void)work;
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     ks->kdf = Tls13KsV.bind.kdf;
     ks->s = Tls13KsV.bind.s;
@@ -150,8 +151,9 @@ void protocore_tls13_ks_early(uint8_t *work)
     Tls13KsV.ok = EMBED_TRUE;
 }
 
-void protocore_tls13_ks_handshake(uint8_t *work)
+void protocore_tls13_ks_handshake(const uint8_t *work)
 {
+    (void)work;
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
@@ -171,8 +173,9 @@ void protocore_tls13_ks_handshake(uint8_t *work)
            ks->s + TLS13_KS_SERVER_HS);
 }
 
-void protocore_tls13_ks_master(uint8_t *work)
+void protocore_tls13_ks_master(const uint8_t *work)
 {
+    (void)work;
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
@@ -192,8 +195,9 @@ void protocore_tls13_ks_master(uint8_t *work)
            ks->s + TLS13_KS_SERVER_AP);
 }
 
-void protocore_tls13_ks_finished_mac(uint8_t *work)
+void protocore_tls13_ks_finished_mac(const uint8_t *work)
 {
+    (void)work;
     Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {

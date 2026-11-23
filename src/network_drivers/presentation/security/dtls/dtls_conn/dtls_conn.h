@@ -342,7 +342,7 @@ typedef struct
     void (*const init)(const uint8_t *work);
     void (*const process)(uint8_t *work);
     void (*const timeout_ms)(const uint8_t *work);
-    void (*const on_timeout)(uint8_t *work);
+    void (*const on_timeout)(const uint8_t *work);
     void (*const established)(const uint8_t *work);
     void (*const alert)(const uint8_t *work);
     void (*const app_write_keys)(const uint8_t *work);
@@ -357,7 +357,7 @@ typedef struct
 void protocore_dtls_server_init(const uint8_t *work);
 void protocore_dtls_server_process(uint8_t *work);
 void protocore_dtls_server_timeout_ms(const uint8_t *work);
-void protocore_dtls_server_on_timeout(uint8_t *work);
+void protocore_dtls_server_on_timeout(const uint8_t *work);
 void protocore_dtls_server_established(const uint8_t *work);
 void protocore_dtls_server_alert(const uint8_t *work);
 void protocore_dtls_server_app_write_keys(const uint8_t *work);

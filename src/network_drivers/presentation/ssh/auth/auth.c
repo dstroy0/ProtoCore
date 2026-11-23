@@ -120,7 +120,12 @@ uint8_t *protocore_ssh_auth_span(void)
 // RFC 4250 sec 4.2.2 assigns to an exhausted authentication.
 static embed_bool auth_failure_over_threshold(uint8_t i, mmgr_span out)
 {
-    if (i >= MAX_SSH_CONNS || ++SSH_AUTH_CTX(protocore_ssh_auth_span())->failures[i] < SSH_MAX_AUTH_ATTEMPTS)
+    if (i >= MAX_SSH_CONNS)
+    {
+        return EMBED_FALSE;
+    }
+    SSH_AUTH_CTX(protocore_ssh_auth_span())->failures[i]++;
+    if (SSH_AUTH_CTX(protocore_ssh_auth_span())->failures[i] < SSH_MAX_AUTH_ATTEMPTS)
     {
         return EMBED_FALSE;
     }
@@ -883,9 +888,8 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
     }
     size_t n = 0;
 
-    switch (msg_type)
+    if (msg_type == SSH_MSG_USERAUTH_REQUEST)
     {
-    case SSH_MSG_USERAUTH_REQUEST:
         // RFC 4252 sec 5.1: a request that arrives after SUCCESS is silently ignored, not an error.
         PhaseMachineV.auth_complete_args.i = i;
         PhaseMachine.auth_complete(work);
@@ -939,9 +943,11 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshAuthV.i32 = 0;
         return;
+    }
 
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-    case SSH_MSG_USERAUTH_INFO_RESPONSE:
+    if (msg_type == SSH_MSG_USERAUTH_INFO_RESPONSE)
+    {
         // RFC 4256 §3.4: the client's answer to our keyboard-interactive prompt. Only valid mid-auth,
         // and only when an exchange was armed (the handler enforces the latter). Same SUCCESS/FAILURE
         // accounting as a USERAUTH_REQUEST: SUCCESS starts s2c compression and advances the phase; a
@@ -997,11 +1003,8 @@ void protocore_ssh_auth_dispatch(uint8_t *work)
         protocore_plain_guard()->persistent_buf_release(reply.buf, protocore_plain_owner());
         SshAuthV.i32 = 0;
         return;
-#endif
-
-    default:
-        break;
     }
+#endif
 
     // sec 6: 80 and above belong to the service that runs after this one. "Receiving one of them
     // before authentication is complete is an error, to which the server MUST respond by

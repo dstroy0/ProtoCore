@@ -48,7 +48,7 @@ uint8_t *protocore_sht3x_span(void)
 }
 
 void protocore_sht3x_crc8(const uint8_t *work);
-void protocore_sht3x_parse(uint8_t *work);
+void protocore_sht3x_parse(const uint8_t *work);
 void protocore_sht3x_rh_mpct(const uint8_t *work);
 void protocore_sht3x_temp_mc(const uint8_t *work);
 
@@ -84,7 +84,7 @@ void protocore_sht3x_rh_mpct(const uint8_t *work)
     Sht3xV.milli = v > 100000 ? 100000 : v;
 }
 
-void protocore_sht3x_parse(uint8_t *work)
+void protocore_sht3x_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t *resp = Sht3xV.parse_args.resp;

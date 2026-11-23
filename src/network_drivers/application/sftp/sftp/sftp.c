@@ -132,7 +132,7 @@ void protocore_sftp_rd_string(const uint8_t *work)
     SftpV.ok = EMBED_TRUE;
 }
 
-void protocore_sftp_rd_attrs(uint8_t *work)
+void protocore_sftp_rd_attrs(const uint8_t *work)
 {
     SftpReader *r = SftpV.rd_attrs_args.r;
     SftpAttrs *a = SftpV.rd_attrs_args.a;
@@ -284,6 +284,10 @@ void protocore_sftp_wr_string(const uint8_t *work)
     SftpV.wr_bytes_args.b = s;
     SftpV.wr_bytes_args.n = n;
     protocore_sftp_wr_bytes(work);
+    // The writer belongs to the caller. The operands thus keep no pointer to it after this call.
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_bytes_args.w = NULL;
+    SftpV.wr_bytes_args.b = NULL;
 }
 
 void protocore_sftp_wr_attrs(const uint8_t *work)
@@ -324,6 +328,9 @@ void protocore_sftp_wr_attrs(const uint8_t *work)
         SftpV.wr_u32_args.v = a->mtime;
         protocore_sftp_wr_u32(work);
     }
+    // The writer belongs to the caller. The operands thus keep no pointer to it after this call.
+    SftpV.wr_u32_args.w = NULL;
+    SftpV.wr_u64_args.w = NULL;
 }
 
 void protocore_sftp_wr_finish(const uint8_t *work)
@@ -419,7 +426,7 @@ void protocore_sftp_build_version(const uint8_t *work)
     SftpV.wr_u8_args.w = NULL;
 }
 
-void protocore_sftp_build_status(uint8_t *work)
+void protocore_sftp_build_status(const uint8_t *work)
 {
     uint32_t id = SftpV.build_status_args.id;
     uint32_t code = SftpV.build_status_args.code;
@@ -459,7 +466,7 @@ void protocore_sftp_build_status(uint8_t *work)
     SftpV.wr_u8_args.w = NULL;
 }
 
-void protocore_sftp_build_handle(uint8_t *work)
+void protocore_sftp_build_handle(const uint8_t *work)
 {
     uint32_t id = SftpV.build_handle_args.id;
     const void *handle = SftpV.build_handle_args.handle;
@@ -491,7 +498,7 @@ void protocore_sftp_build_handle(uint8_t *work)
     SftpV.wr_u8_args.w = NULL;
 }
 
-void protocore_sftp_build_attrs(uint8_t *work)
+void protocore_sftp_build_attrs(const uint8_t *work)
 {
     uint32_t id = SftpV.build_attrs_args.id;
     const SftpAttrs *a = SftpV.build_attrs_args.a;
@@ -521,7 +528,7 @@ void protocore_sftp_build_attrs(uint8_t *work)
     SftpV.wr_u8_args.w = NULL;
 }
 
-void protocore_sftp_build_data(uint8_t *work)
+void protocore_sftp_build_data(const uint8_t *work)
 {
     uint32_t id = SftpV.build_data_args.id;
     const void *data = SftpV.build_data_args.data;
@@ -553,7 +560,7 @@ void protocore_sftp_build_data(uint8_t *work)
     SftpV.wr_u8_args.w = NULL;
 }
 
-void protocore_sftp_build_name1(uint8_t *work)
+void protocore_sftp_build_name1(const uint8_t *work)
 {
     uint32_t id = SftpV.build_name1_args.id;
     const char *name = SftpV.build_name1_args.name;

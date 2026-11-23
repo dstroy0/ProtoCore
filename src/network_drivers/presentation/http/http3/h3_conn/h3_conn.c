@@ -10,12 +10,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-static uint8_t qpack_work[16]; // the borrow an entry takes; Qpack never reads it
-
-static uint8_t h3_frame_work[16]; // the borrow an entry takes; H3Frame never reads it
-
-static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
-
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "cellularum_laboro/cellularum_laboro.h"
@@ -25,6 +19,12 @@ static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint ne
 #include "network_drivers/presentation/http/http3/qpack/qpack.h"
 #include "network_drivers/presentation/http/http3/quic_conn/quic_conn.h"
 #include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
+
+static uint8_t qpack_work[16]; // the borrow an entry takes; Qpack never reads it
+
+static uint8_t h3_frame_work[16]; // the borrow an entry takes; H3Frame never reads it
+
+static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
 
 EMBED_BEGIN_DECLS
 
@@ -522,7 +522,7 @@ static embed_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id
         // Cap above the largest content-type that can fit this block even at QPACK-Huffman's best
         // 5-bit/char (~PROTOCORE_H3_QPACK_BLOCK * 8/5), so an over-long value trips the encode's reject
         // below instead of being truncated into a fittable length (see the matching protocore_h2_conn note).
-        size_t qpack_n = Qpack.encode_header(
+        qpack_n = Qpack.encode_header(
             work, block + bp, PROTOCORE_H3_QPACK_BLOCK - bp, "content-type", 12, content_type,
             EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = content_type, .cap = (size_t)PROTOCORE_H3_QPACK_BLOCK * 2));
         bp += qpack_n;
@@ -557,7 +557,7 @@ static embed_bool h3_conn_reply(uint8_t *work, H3ConnCtx *h3, uint64_t stream_id
     }
     if (body_len)
     {
-        size_t h3_frame_n = H3Frame.build_data(work, out + op, PROTOCORE_H3_STREAM_BUF - op, body, body_len);
+        h3_frame_n = H3Frame.build_data(work, out + op, PROTOCORE_H3_STREAM_BUF - op, body, body_len);
         size_t dn = h3_frame_n;
         if (!dn)
         {

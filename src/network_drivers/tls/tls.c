@@ -328,7 +328,6 @@ int protocore_tls_write(uint8_t slot, const void *data, size_t len)
 
 void protocore_tls_conn_end(uint8_t slot)
 {
-    uint8_t *work = protocore_tls_span();
     if (slot >= MAX_CONNS)
     {
         return;

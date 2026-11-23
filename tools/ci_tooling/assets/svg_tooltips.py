@@ -18,7 +18,7 @@ import sys
 
 # The tooltip rides on the node's <g class="node ... clickable">, not on the <a> that wraps it, so
 # both are matched rather than guessing which mermaid used this release.
-ANCHOR = re.compile(r"<(a|g)\b([^>]*?)\btitle=\"([^\"]*)\"([^>]*)>")
+ANCHOR = re.compile(r"<([ag])\b([^>]*?)\btitle=\"([^\"]*)\"([^>]*)>")
 
 
 def add_titles(svg):

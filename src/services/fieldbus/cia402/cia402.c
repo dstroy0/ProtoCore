@@ -273,7 +273,7 @@ static embed_bool sdo_upload_bytes(const uint8_t *work, const CanFrame *f, uint1
     return EMBED_TRUE;
 }
 
-void protocore_cia402_sdo_get_u16(uint8_t *work)
+void protocore_cia402_sdo_get_u16(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = Cia402V.sdo_get_u16_args.f;
@@ -290,7 +290,7 @@ void protocore_cia402_sdo_get_u16(uint8_t *work)
     Cia402V.ok = EMBED_TRUE;
 }
 
-void protocore_cia402_sdo_get_i32(uint8_t *work)
+void protocore_cia402_sdo_get_i32(const uint8_t *work)
 {
     (void)work;
     const CanFrame *f = Cia402V.sdo_get_i32_args.f;

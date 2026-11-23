@@ -275,7 +275,7 @@ static void protocore_h3_on_request(void *app, uint8_t * /*h3*/, uint64_t stream
                                     const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
     uint8_t *work = protocore_quic_server_span();
-    QuicSlot *s = (QuicSlot *)app;
+    const QuicSlot *s = (QuicSlot *)app;
     if (QSRV_CTX(work)->on_request)
     {
         QSRV_CTX(work)->on_request(QSRV_CTX(work)->app, s->id, stream_id, method, path, authority, body, body_len);

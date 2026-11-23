@@ -97,8 +97,8 @@ extern HttpReq http_pool[CONN_POOL_SLOTS];
 typedef struct
 {
     void (*set_stream_hooks)(uint8_t *, HttpStreamBeginCb, HttpStreamDataCb, HttpStreamAbortCb);
-    void (*reset)(uint8_t *, HttpReq *);
-    void (*feed)(uint8_t *, HttpReq *, uint8_t);
+    void (*reset)(const uint8_t *, HttpReq *);
+    void (*feed)(const uint8_t *, HttpReq *, uint8_t);
     const char *(*get_header)(const uint8_t *, const HttpReq *, const char *);
     embed_bool (*get_cookie)(const uint8_t *, const HttpReq *, const char *, char *, size_t);
     embed_bool (*forwarded_client)(const uint8_t *, const HttpReq *, char *, size_t, embed_bool *);
@@ -123,14 +123,14 @@ void protocore_http_parser_set_stream_hooks(uint8_t *work, HttpStreamBeginCb beg
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
  * @param req Req
  */
-void protocore_http_parser_reset(uint8_t *work, HttpReq *req);
+void protocore_http_parser_reset(const uint8_t *work, HttpReq *req);
 /**
  * @brief Feed.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.
  * @param req Req
  * @param byte Byte
  */
-void protocore_http_parser_feed(uint8_t *work, HttpReq *req, uint8_t byte);
+void protocore_http_parser_feed(const uint8_t *work, HttpReq *req, uint8_t byte);
 /**
  * @brief Get_header.
  * @param work PROTOCORE_HTTP_PARSER_BORROW bytes the caller took. Not held past the call.

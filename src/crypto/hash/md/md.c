@@ -274,13 +274,13 @@ static void md_finish(struct MdCtx *c, uint8_t out[16], md_compress_fn compress)
 // digest carries it and nothing survives the call here.
 static md_compress_fn md_bound(const uint8_t *work)
 {
-    return MD_STATE(work)->md4 ? protocore_md4_compress : protocore_md5_compress;
+    return MD_STATE(work)->md4 ? &protocore_md4_compress : &protocore_md5_compress;
 }
 
 // Seed the state. Shared by both inits, which differ only in the IV and the compression.
 static void md_begin(uint8_t *work, md_compress_fn compress)
 {
-    if (compress == protocore_md5_compress)
+    if (compress == &protocore_md5_compress)
     {
         md5_state_init(MD_STATE(work));
         MD_STATE(work)->md4 = 0;

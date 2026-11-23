@@ -27,6 +27,8 @@ import sys
 
 from tools.ci_tooling.lib import doc_region as dr
 
+LINE_BREAK_TAG = "<br/>"
+
 ROOT = dr.repo_root(__file__)
 API_H = os.path.join(ROOT, "include", "protocore.h")
 # One module per directory: protocore_builtins.c lives in a directory of its own name.
@@ -182,7 +184,7 @@ def label(title, names, cap=2):
     methods = [f"{n}()" for n in names]
     if cap is None:
         rows = [" / ".join(methods[i : i + 3]) for i in range(0, len(methods), 3)]
-        return title + "<br/>" + ("<br/>".join(rows) if rows else "-")
+        return title + LINE_BREAK_TAG + (LINE_BREAK_TAG.join(rows) if rows else "-")
     body = " / ".join(methods[:cap]) if methods else "-"
     tail = f"<br/>+{len(names) - cap} more" if len(names) > cap else ""
     return f"{title}<br/>{body}{tail}"
@@ -230,46 +232,39 @@ def mermaid(detailed=False):
         "'useMaxWidth':true,'htmlLabels':false}}}%%"
     )
     out = [init, "flowchart TB"]
-    out.append("  %% Auto-generated from the public API, protocore_builtins.c, and presentation/ on disk.")
-    # A single top-to-bottom spine: request flows down to your handler, response flows back to the client.
-    # No per-layer boxes (they stretch to enclose both the incoming and outgoing node of a layer, which
-    # is what made this sprawl) - the layer is shown by color instead, per the key above the diagram.
-    # Setup runs once at boot; keep it as a small reference panel, wired in with one faint dashed edge.
-    out.append('  subgraph SETUP["First, set up your server (once, at boot)"]')
-    out.append("    direction LR")
-    out.append(f'    reg["{label("1 Register routes", api["Register"], cap)}"]')
-    out.append(f'    cfg["{label("2 Set options", api["Configure"], cap)}"]')
-    out.append(f'    run["{label("3 Start it", api["Run"], cap)}"]')
-    out.append("  end")
-    out.append("")
-    # One straight waterfall: a client sends at the top, the request flows down to your handler, the
-    # response flows on down, and a client receives at the bottom - so there are no long back-edges. The
-    # bidirectional UDP socket is drawn as its receive + send directions for the same reason. Node color
-    # is the OSI layer (L4 amber, L5 green seams, L6 blue, L7 indigo), per the key above the diagram.
-    out.append('  cin(["A client sends a request<br/>browser / app / curl"])')
-    out.append('  listen["Accept a connection<br/>listener_accept_cb"]')
-    out.append('  ring[("Hold the bytes<br/>conn_pool + rx ring")]')
-    out.append('  udprx["Receive a datagram<br/>protocore_udp"]')
-    out.append(f'  seam{{{{"Which protocol?<br/>ProtoHandler seam<br/>{proto_short}"}}}}')
-    out.append('  tls["Decrypt + choose version<br/>protocore_tls + ALPN"]')
-    out.append('  parser["Read HTTP/1.1<br/>http_parser"]')
-    out.append('  h2["Decode HTTP/2<br/>h2_conn"]')
-    out.append('  h3["Decode HTTP/3<br/>quic_conn + h3_conn"]')
-    out.append('  mae{{"Find the matching route<br/>match_and_execute"}}')
-    out.append('  mw["Run your middleware"]')
-    out.append('  routes[("Route table")]')
-    # A plain rect, not mermaid's asymmetric `>"..."]`: that shape's notch is cut out of the label's
-    # own width, so the most important node in the picture rendered as "YOUR HANDLER ru". The amber
-    # fill already says this is the part you write; it does not need a second signal that truncates.
-    out.append('  handler["YOUR HANDLER runs"]')
-    out.append(f'  resp["{label("Build the response", api["Respond"], cap)}"]')
-    out.append('  sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}')
-    out.append('  consend["Write bytes back<br/>protocore_conn_send"]')
-    out.append('  udptx["Send a datagram<br/>protocore_udp"]')
-    out.append('  cout(["The client gets the response"])')
+    out.extend(
+        [
+            "  %% Auto-generated from the public API, protocore_builtins.c, and presentation/ on disk.",
+            '  subgraph SETUP["First, set up your server (once, at boot)"]',
+            "    direction LR",
+            f'    reg["{label("1 Register routes", api["Register"], cap)}"]',
+            f'    cfg["{label("2 Set options", api["Configure"], cap)}"]',
+            f'    run["{label("3 Start it", api["Run"], cap)}"]',
+            "  end",
+            "",
+            '  cin(["A client sends a request<br/>browser / app / curl"])',
+            '  listen["Accept a connection<br/>listener_accept_cb"]',
+            '  ring[("Hold the bytes<br/>conn_pool + rx ring")]',
+            '  udprx["Receive a datagram<br/>protocore_udp"]',
+            f'  seam{{{{"Which protocol?<br/>ProtoHandler seam<br/>{proto_short}"}}}}',
+            '  tls["Decrypt + choose version<br/>protocore_tls + ALPN"]',
+            '  parser["Read HTTP/1.1<br/>http_parser"]',
+            '  h2["Decode HTTP/2<br/>h2_conn"]',
+            '  h3["Decode HTTP/3<br/>quic_conn + h3_conn"]',
+            '  mae{{"Find the matching route<br/>match_and_execute"}}',
+            '  mw["Run your middleware"]',
+            '  routes[("Route table")]',
+            '  handler["YOUR HANDLER runs"]',
+            f'  resp["{label("Build the response", api["Respond"], cap)}"]',
+            '  sink{{"Frame the reply per protocol<br/>resp_sink seam<br/>HTTP/1.1 / h2 / h3"}}',
+            '  consend["Write bytes back<br/>protocore_conn_send"]',
+            '  udptx["Send a datagram<br/>protocore_udp"]',
+            '  cout(["The client gets the response"])',
+        ]
+    )
     if detailed:
         # The full L6 module inventory on disk, six per line, hung off the presentation layer.
-        rows = "<br/>".join(" / ".join(pres[i : i + 6]) for i in range(0, len(pres), 6))
+        rows = LINE_BREAK_TAG.join(" / ".join(pres[i : i + 6]) for i in range(0, len(pres), 6))
         out.append(f'  mods["All L6 presentation modules ({len(pres)})<br/>{rows}"]')
     out.append("")
 
@@ -309,31 +304,28 @@ def mermaid(detailed=False):
     if detailed:
         edge("tls -.- mods")  # the module inventory hangs off the presentation layer (association, no arrow)
     out += edges
-    out.append("")
-
-    # Palette: one soft color per OSI layer, an accent for the two seams and the two you-touch parts.
-    out.append("  class cin,cout ext;")  # class statement, not inline :::ext (GitHub rejects inline)
-    out.append("  class reg,cfg,run,routes setup;")
-    out.append("  class listen,ring,udprx,udptx,consend l4;")
-    out.append("  class seam,sink seam;")
-    out.append(f"  class tls,parser,h2,h3{',mods' if detailed else ''} l6;")
-    out.append("  class mae,mw l7;")
-    out.append("  class handler,resp you;")
-    # Translucent fills (8-digit hex = ~15% alpha) + accent stroke + NO fixed text color, so the page
-    # background (light or dark) shows through and the theme's own text color keeps every label readable.
-    # The two seams (green) and the two parts you write (amber) stay solid so they still pop on both.
-    out.append("  classDef ext fill:#64748b33,stroke:#475569,stroke-width:1.5px;")
-    out.append("  classDef setup fill:#94a3b81f,stroke:#94a3b8;")
-    out.append("  classDef l4 fill:#f9731626,stroke:#f97316,stroke-width:1.5px;")
-    out.append("  classDef seam fill:#10b981,stroke:#047857,color:#ffffff;")
-    out.append("  classDef l6 fill:#3b82f626,stroke:#3b82f6,stroke-width:1.5px;")
-    out.append("  classDef l7 fill:#6366f126,stroke:#6366f1,stroke-width:1.5px;")
-    out.append("  classDef you fill:#f59e0b,stroke:#b45309,color:#3b2508;")
-    out.append("  style SETUP fill:#8888880f,stroke:#94a3b8,stroke-width:1px;")
-    # Thicker links first (the default hairline is hard to follow), then tint the response path green so
-    # "reply going out" is visually distinct from "request coming in".
-    out.append("  linkStyle default stroke-width:2.5px;")
-    out.append(f"  linkStyle {','.join(str(i) for i in res)} stroke:#10b981,stroke-width:3px;")
+    out.extend(
+        [
+            "",
+            "  class cin,cout ext;",
+            "  class reg,cfg,run,routes setup;",
+            "  class listen,ring,udprx,udptx,consend l4;",
+            "  class seam,sink seam;",
+            f"  class tls,parser,h2,h3{',mods' if detailed else ''} l6;",
+            "  class mae,mw l7;",
+            "  class handler,resp you;",
+            "  classDef ext fill:#64748b33,stroke:#475569,stroke-width:1.5px;",
+            "  classDef setup fill:#94a3b81f,stroke:#94a3b8;",
+            "  classDef l4 fill:#f9731626,stroke:#f97316,stroke-width:1.5px;",
+            "  classDef seam fill:#10b981,stroke:#047857,color:#ffffff;",
+            "  classDef l6 fill:#3b82f626,stroke:#3b82f6,stroke-width:1.5px;",
+            "  classDef l7 fill:#6366f126,stroke:#6366f1,stroke-width:1.5px;",
+            "  classDef you fill:#f59e0b,stroke:#b45309,color:#3b2508;",
+            "  style SETUP fill:#8888880f,stroke:#94a3b8,stroke-width:1px;",
+            "  linkStyle default stroke-width:2.5px;",
+            f"  linkStyle {','.join(str(i) for i in res)} stroke:#10b981,stroke-width:3px;",
+        ]
+    )
     return "\n".join(out)
 
 

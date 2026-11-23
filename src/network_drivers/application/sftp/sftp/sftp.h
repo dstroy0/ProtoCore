@@ -418,7 +418,7 @@ typedef struct
     void (*const rd_u32)(const uint8_t *work);
     void (*const rd_u64)(const uint8_t *work);
     void (*const rd_string)(const uint8_t *work);
-    void (*const rd_attrs)(uint8_t *work);
+    void (*const rd_attrs)(const uint8_t *work);
     void (*const wr_init)(const uint8_t *work);
     void (*const wr_u8)(const uint8_t *work);
     void (*const wr_u32)(const uint8_t *work);
@@ -431,11 +431,11 @@ typedef struct
     void (*const wr_patch_u32)(const uint8_t *work);
     void (*const frame_len)(const uint8_t *work);
     void (*const build_version)(const uint8_t *work);
-    void (*const build_status)(uint8_t *work);
-    void (*const build_handle)(uint8_t *work);
-    void (*const build_attrs)(uint8_t *work);
-    void (*const build_data)(uint8_t *work);
-    void (*const build_name1)(uint8_t *work);
+    void (*const build_status)(const uint8_t *work);
+    void (*const build_handle)(const uint8_t *work);
+    void (*const build_attrs)(const uint8_t *work);
+    void (*const build_data)(const uint8_t *work);
+    void (*const build_name1)(const uint8_t *work);
     void (*const format_longname)(const uint8_t *work);
 } SftpNs;
 
@@ -446,7 +446,7 @@ void protocore_sftp_rd_u8(const uint8_t *work);
 void protocore_sftp_rd_u32(const uint8_t *work);
 void protocore_sftp_rd_u64(const uint8_t *work);
 void protocore_sftp_rd_string(const uint8_t *work);
-void protocore_sftp_rd_attrs(uint8_t *work);
+void protocore_sftp_rd_attrs(const uint8_t *work);
 void protocore_sftp_wr_init(const uint8_t *work);
 void protocore_sftp_wr_u8(const uint8_t *work);
 void protocore_sftp_wr_u32(const uint8_t *work);
@@ -459,11 +459,11 @@ void protocore_sftp_wr_pos(const uint8_t *work);
 void protocore_sftp_wr_patch_u32(const uint8_t *work);
 void protocore_sftp_frame_len(const uint8_t *work);
 void protocore_sftp_build_version(const uint8_t *work);
-void protocore_sftp_build_status(uint8_t *work);
-void protocore_sftp_build_handle(uint8_t *work);
-void protocore_sftp_build_attrs(uint8_t *work);
-void protocore_sftp_build_data(uint8_t *work);
-void protocore_sftp_build_name1(uint8_t *work);
+void protocore_sftp_build_status(const uint8_t *work);
+void protocore_sftp_build_handle(const uint8_t *work);
+void protocore_sftp_build_attrs(const uint8_t *work);
+void protocore_sftp_build_data(const uint8_t *work);
+void protocore_sftp_build_name1(const uint8_t *work);
 void protocore_sftp_format_longname(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

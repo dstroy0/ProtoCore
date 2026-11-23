@@ -52,7 +52,7 @@ static embed_bool ce_present(const char *s)
 
 // Build the one JSON object of Structured Content Mode into ns->envelope, and report its octet
 // count in ns->n.
-void protocore_cloud_events_build_structured(uint8_t *work)
+void protocore_cloud_events_build_structured(const uint8_t *work)
 {
     (void)work;
     CloudEventsV.ok = EMBED_FALSE;

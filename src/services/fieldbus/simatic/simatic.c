@@ -316,7 +316,7 @@ void protocore_simatic_init_3964r(const uint8_t *work)
     ctx->user = user;
 }
 
-void protocore_simatic_send_3964r(uint8_t *work)
+void protocore_simatic_send_3964r(const uint8_t *work)
 {
     Simatic3964Ctx *ctx = SimaticV.send_3964r_args.ctx;
     const uint8_t *data = SimaticV.send_3964r_args.data;

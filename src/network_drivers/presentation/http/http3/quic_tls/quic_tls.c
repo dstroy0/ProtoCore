@@ -126,7 +126,7 @@ static embed_bool emit(QuicTls *qt, const uint8_t *flight, size_t cap, size_t *p
 // key_share, and restart the transcript per §4.4.1: message_hash(Hash(ClientHello1)) || HRR, so the
 // eventual transcript is message_hash || HRR || ClientHello2 || ServerHello || ... QUIC does its own
 // return-routability (Retry tokens), so the HRR carries no cookie. @p msg is ClientHello1.
-static embed_bool send_hello_retry(uint8_t *work, QuicTls *qt, const uint8_t *msg, size_t msg_len,
+static embed_bool send_hello_retry(const uint8_t *work, QuicTls *qt, const uint8_t *msg, size_t msg_len,
                                    const Tls13ClientHello *ch)
 {
     uint8_t ch1_hash[TLS13_SECRET_MAX];

@@ -24,6 +24,11 @@ import io, json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from codemask import code_mask
 
+CONVERT_FUNNEL = "convert funnel"
+CONVERT_GEN = "convert gen"
+CONVERT_SHAPE = "convert shape"
+WHOLE_WORD_PATTERN = "\\b%s\\b"
+
 R = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GOLDEN = "src/crypto/hash/sha256/sha256.h"
 
@@ -183,7 +188,7 @@ def substitute(text, src, dst):
     pairs += [(src["module"].upper(), dst["module"].upper())]
     for a, b in sorted(pairs, key=lambda p: -len(p[0])):
         if a and b:
-            text = re.sub(r"\b%s\b" % re.escape(a), b, text)
+            text = re.sub(WHOLE_WORD_PATTERN % re.escape(a), b, text)
     return text
 
 
@@ -898,12 +903,14 @@ def _offset_chain(offs, asserts):
     links = []
     for prev, cur in zip(offs, offs[1:]):
         body = cur.get("body", "")
-        links.append(bool(re.search(r"\b%s\b" % re.escape(prev["name"]), body)))
+        links.append(bool(re.search(WHOLE_WORD_PATTERN % re.escape(prev["name"]), body)))
     out["offset_chain_links"] = links
     out["offset_chain_intact"] = all(links) and out["offset_first_is_zero"]
     # The assert has to bound the LAST region, so it is the last offset's name it must carry.
     cite = [a for a in asserts if a.get("cites_borrow")]
-    out["offset_assert_covers_last"] = any(re.search(r"\b%s\b" % re.escape(names[-1]), a.get("text", "")) for a in cite)
+    out["offset_assert_covers_last"] = any(
+        re.search(WHOLE_WORD_PATTERN % re.escape(names[-1]), a.get("text", "")) for a in cite
+    )
     return out
 
 
@@ -1121,7 +1128,7 @@ CHECKS = [
         lambda h, c, gh, gc: len(h["ns_records"]) == len(gh["ns_records"])
         and len(h["externs"]) == len(gh["externs"])
         and len(c["ns_definition"]) == len(gc["ns_definition"]),
-        "convert gen",
+        CONVERT_GEN,
     ),
     (
         # NOT a count against the golden's four. The golden DECLARES four functions - the table
@@ -1131,7 +1138,7 @@ CHECKS = [
         "no flat decls",
         "is every function the header declares one the table binds?",
         lambda h, c, gh, gc: len(h["unbound_prototypes"]) == len(gh["unbound_prototypes"]),
-        "convert gen",
+        CONVERT_GEN,
     ),
     (
         # "Has at least one Args record" is not the same question. A module whose entries take no
@@ -1145,13 +1152,13 @@ CHECKS = [
         "is every operand an args member rather than a parameter?",
         lambda h, c, gh, gc: h["entry_param_shapes"] == gh["entry_param_shapes"]
         or (not h["entry_param_shapes"] and not h["args_records"]),
-        "convert gen",
+        CONVERT_GEN,
     ),
     (
         "entries take borrow",
         "does every entry take exactly the borrow and nothing else?",
         lambda h, c, gh, gc: h["ns_entry_types"] == gh["ns_entry_types"],
-        "convert gen",
+        CONVERT_GEN,
     ),
     (
         "depth one",
@@ -1184,7 +1191,7 @@ CHECKS = [
         "no file statics",
         "is the .c free of file-scope mutable state?",
         lambda h, c, gh, gc: len(c["file_statics"]) == len(gc["file_statics"]),
-        "convert funnel",
+        CONVERT_FUNNEL,
     ),
     (
         "borrow carved",
@@ -1192,7 +1199,7 @@ CHECKS = [
         lambda h, c, gh, gc: bool(c["offset_defines"]) == bool(gc["offset_defines"])
         and c["static_asserts_citing_borrow"] == gc["static_asserts_citing_borrow"]
         and bool(c["region_macros"]) == bool(gc["region_macros"]),
-        "convert funnel",
+        CONVERT_FUNNEL,
     ),
     (
         "no local arrays",
@@ -1202,19 +1209,19 @@ CHECKS = [
         # a literal extent lands in .rodata or is built on the stack per call is the compiler's
         # choice, not the source's.
         lambda h, c, gh, gc: len(c["local_arrays"]) == len(gc["local_arrays"]),
-        "convert funnel",
+        CONVERT_FUNNEL,
     ),
     (
         "offsets chain",
         "does each region offset build on the one before it, starting at zero?",
         lambda h, c, gh, gc: c["offset_chain_intact"] == gc["offset_chain_intact"],
-        "convert funnel",
+        CONVERT_FUNNEL,
     ),
     (
         "assert covers last",
         "does the static_assert size the borrow against the LAST region?",
         lambda h, c, gh, gc: c["offset_assert_covers_last"] == gc["offset_assert_covers_last"],
-        "convert funnel",
+        CONVERT_FUNNEL,
     ),
     (
         "offsets aligned",
@@ -1224,7 +1231,7 @@ CHECKS = [
         # golden earns it rather than being exempted: sha256.c asserts SHA256_OFF_CTX against
         # alignof(Sha256Ctx) and SHA256_OFF_STATE against alignof(uint32_t).
         lambda h, c, gh, gc: len(c["cast_regions_unaligned"]) == len(gc["cast_regions_unaligned"]),
-        "convert funnel",
+        CONVERT_FUNNEL,
     ),
     (
         "no null-borrow test",
@@ -1247,7 +1254,7 @@ CHECKS = [
         "guarded",
         "is the file wrapped in its include guard and its enable gate?",
         lambda h, c, gh, gc: h["gate_present"] == gh["gate_present"] and c["gate_present"] == gc["gate_present"],
-        "convert shape",
+        CONVERT_SHAPE,
     ),
     (
         # The gate exists so a disabled module costs nothing, and an include above it is pulled in
@@ -1267,7 +1274,7 @@ CHECKS = [
         "does only the config include sit above the gate, and everything else below?",
         lambda h, c, gh, gc: (not h["gate_present"] or h["includes_above_gate"] == gh["includes_above_gate"])
         and (not c["gate_present"] or c["includes_above_gate"] == gc["includes_above_gate"]),
-        "convert shape",
+        CONVERT_SHAPE,
     ),
     (
         # Same correction as `no flat decls`, from the other side. The golden's .c defines four
@@ -1280,14 +1287,14 @@ CHECKS = [
         lambda h, c, gh, gc: len(c["unbound_functions"]) == len(gc["unbound_functions"])
         and len(h["nonstatic_functions"]) == len(gh["nonstatic_functions"])
         and c["constructs_above_gate"] == gc["constructs_above_gate"],
-        "convert shape",
+        CONVERT_SHAPE,
     ),
     (
         "decls wrapped",
         "are the declarations inside PROTOCORE_BEGIN_DECLS / END_DECLS?",
         lambda h, c, gh, gc: h["counts"].get("decls_open", 0) == gh["counts"].get("decls_open", 0)
         and c["counts"].get("decls_open", 0) == gc["counts"].get("decls_open", 0),
-        "convert shape",
+        CONVERT_SHAPE,
     ),
 ]
 
@@ -1388,7 +1395,7 @@ def main():
         gid, gh, gc = golden_designs()
         bad = [(n, q) for (n, ans, _), (_, q, _, _) in zip(answers(gh, gc, gh, gc), CHECKS) if ans is not True]
         for name, q, _, _ in CHECKS:
-            ans = dict((n, a) for n, a, _ in answers(gh, gc, gh, gc))[name]
+            ans = {n: a for n, a, _ in answers(gh, gc, gh, gc)}[name]
             print("   %-3s %-22s %s" % ("yes" if ans else "NO", name, q))
         print("\n%s: %d checks, %d the golden itself fails" % (GOLDEN, len(CHECKS), len(bad)))
         return 1 if bad else 0

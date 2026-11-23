@@ -119,13 +119,13 @@ def main():
     pairs = plan()
     if not pairs:
         print("every .c/.h pair already has its own directory")
-        return 0
+        return
 
     if a.list:
         for old in sorted(pairs):
             print("  %-58s -> %s/" % (rel(old + ".c"), rel(os.path.dirname(pairs[old]))))
         print("\n%d pair(s) in %d directory(ies)" % (len(pairs), len({os.path.dirname(p) for p in pairs})))
-        return 0
+        return
 
     subs = rewrites(pairs)
 
@@ -154,7 +154,7 @@ def main():
 
     if not a.go:
         print("\nnothing written - pass --go")
-        return 0
+        return
 
     for old_stem, new_stem in sorted(pairs.items()):
         os.makedirs(os.path.dirname(new_stem), exist_ok=True)
@@ -163,7 +163,6 @@ def main():
                 shutil.move(old_stem + ext, new_stem + ext)
     print("moved %d pair(s)" % len(pairs))
     print("now run: python tools/harness.py build modules && python tools/harness.py build cmake")
-    return 0
 
 
 if __name__ == "__main__":

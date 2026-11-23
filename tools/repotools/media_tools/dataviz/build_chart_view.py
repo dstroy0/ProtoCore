@@ -1,6 +1,5 @@
-# repotools-stamp: media_tools/dataviz/build_chart_view.py 2b0829271be406be
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Turns a table into a flat chart: lines, time series, scatter, steps or bars.
 
 The other viewers here build a solid you turn. This one is the ordinary two-axis chart, and it is
@@ -29,6 +28,7 @@ Writes a self-contained page: no server, no fetch at run time, nothing to instal
 """
 
 import os, sys
+
 _at = os.path.dirname(os.path.abspath(__file__))
 while _at != os.path.dirname(_at) and not os.path.isdir(os.path.join(_at, "lib", "repotools")):
     _at = os.path.dirname(_at)
@@ -71,7 +71,7 @@ def main():
         if name not in argv:
             return []
         out = []
-        for each in argv[argv.index(name) + 1:]:
+        for each in argv[argv.index(name) + 1 :]:
             if each.startswith("-"):
                 break
             out.append(each)
@@ -108,9 +108,11 @@ def main():
 
     y_names = many("--y")
     if not y_names:
-        y_names = [name for name in header
-                   if name != x_at and name != split_at
-                   and any(numeric(row.get(name)) is not None for row in rows[:64])]
+        y_names = [
+            name
+            for name in header
+            if name != x_at and name != split_at and any(numeric(row.get(name)) is not None for row in rows[:64])
+        ]
     if not y_names:
         sys.stderr.write("nothing numeric to draw. Name columns with --y\n")
         return 1
@@ -138,7 +140,7 @@ def main():
         for label in sorted(groups):
             series.append({"name": label, "xs": groups[label]["xs"], "ys": groups[label]["ys"]})
     else:
-        holding = dict((name, {"xs": [], "ys": []}) for name in y_names)
+        holding = {name: {"xs": [], "ys": []} for name in y_names}
         for row in rows:
             x = numeric(row.get(x_at))
             if x is None:
@@ -176,10 +178,11 @@ def main():
         "title": title,
         "xLabel": x_at,
         "kind": kind,
-        "blurb": ("%s, %d series against %s. Hover to read the nearest point, drag across to zoom "
-                  "to a range of %s, double click to go back. Series can be turned off one at a "
-                  "time, and the y axis can be read on a log scale."
-                  % (os.path.basename(source), len(series), x_at, x_at)),
+        "blurb": (
+            "%s, %d series against %s. Hover to read the nearest point, drag across to zoom "
+            "to a range of %s, double click to go back. Series can be turned off one at a "
+            "time, and the y axis can be read on a log scale." % (os.path.basename(source), len(series), x_at, x_at)
+        ),
         "series": series,
     }
 
@@ -191,15 +194,18 @@ def main():
 
     target = one("--out")
     if target is None:
-        target = os.path.join(os.path.dirname(os.path.abspath(source)),
-                              os.path.splitext(os.path.basename(source))[0] + "_chart.html")
+        target = os.path.join(
+            os.path.dirname(os.path.abspath(source)), os.path.splitext(os.path.basename(source))[0] + "_chart.html"
+        )
     with io.open(target, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(page)
 
     print("wrote %s (%.1f KB)" % (target, os.path.getsize(target) / 1024.0))
     print("  x        %s" % x_at)
-    print("  series   %s" % ", ".join(each["name"] for each in series[:8])
-          + ("" if len(series) <= 8 else " and %d more" % (len(series) - 8)))
+    print(
+        "  series   %s" % ", ".join(each["name"] for each in series[:8])
+        + ("" if len(series) <= 8 else " and %d more" % (len(series) - 8))
+    )
     print("  points   %d" % sum(len(each["xs"]) for each in series))
     if dropped:
         print("  dropped  %d row(s) whose %s did not parse" % (dropped, x_at))

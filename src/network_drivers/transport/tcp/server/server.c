@@ -436,7 +436,7 @@ void protocore_tcp_listener_listener_queue(const uint8_t *work)
 }
 #endif // PROTOCORE_WORKER_COUNT > 1
 
-void protocore_tcp_listener_enqueue(uint8_t *work)
+void protocore_tcp_listener_enqueue(const uint8_t *work)
 {
     TcpListenerV.ok = EMBED_FALSE;
     if (TcpListenerV.q.evt == NULL || TcpListenerV.q.evt->slot_id >= CONN_POOL_SLOTS)
@@ -503,7 +503,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     {
         return PROTOCORE_NET_ERR_VAL;
     }
-    Listener *lst = &listener_pool[idx];
+    const Listener *lst = &listener_pool[idx];
 
 #if PROTOCORE_ENABLE_ACCEPT_THROTTLE
     // Connection-flood defense: drop accepts beyond the per-window budget before

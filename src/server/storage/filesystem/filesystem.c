@@ -500,12 +500,12 @@ static void fs_rename(uint8_t *work)
 // at once, and the only reader of FILESYSTEM_CTX(work)->block.
 static embed_bool copy_one(uint8_t *work, const protocore_mnt_backend *b, const char *src, const char *dst)
 {
-    int in = b->open(src, (PROTOCORE_MNT_READ));
+    int in = b->open(src, PROTOCORE_MNT_READ);
     if (in < 0)
     {
         return EMBED_FALSE;
     }
-    int out = b->open(dst, (PROTOCORE_MNT_WRITE));
+    int out = b->open(dst, PROTOCORE_MNT_WRITE);
     if (out < 0)
     {
         b->close(in);
@@ -747,7 +747,7 @@ static void fs_read_file(uint8_t *work)
         Fs.len = -1;
         return;
     }
-    int h = b->open(p, (PROTOCORE_MNT_READ));
+    int h = b->open(p, PROTOCORE_MNT_READ);
     if (h < 0)
     {
         Fs.len = -1;
@@ -783,7 +783,7 @@ static void fs_write_file(uint8_t *work)
         Fs.ok = EMBED_FALSE;
         return;
     }
-    int h = b->open(p, (PROTOCORE_MNT_WRITE));
+    int h = b->open(p, PROTOCORE_MNT_WRITE);
     if (h < 0)
     {
         Fs.ok = EMBED_FALSE;

@@ -315,7 +315,7 @@ void protocore_edge_cache_sd_put(const uint8_t *work)
     EdgeCacheSdV.ok = protocore_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
 }
 
-void protocore_edge_cache_sd_get(uint8_t *work)
+void protocore_edge_cache_sd_get(const uint8_t *work)
 {
     (void)work;
     uint8_t *entry_buf = EdgeCacheSdV.get_args.entry_buf;

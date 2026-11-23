@@ -13,10 +13,10 @@
 
 #if PROTOCORE_ENABLE_PARTITION_MONITOR
 
-static uint8_t partition_monitor_work[16]; // the borrow an entry takes; PartitionMonitor never reads it
-
 #include "protocore.h"
 #include "shared/mime/mime.h"
+
+static uint8_t partition_monitor_work[16]; // the borrow an entry takes; PartitionMonitor never reads it
 
 EMBED_BEGIN_DECLS
 

@@ -35,13 +35,13 @@ OUT = os.path.join(ROOT, "docs", "configurator.html")
 CORE_GROUP = "Core / always-on knobs"
 
 DASH = re.compile(r"^//\s*-{20,}\s*$")
-IFNDEF = re.compile(r"^#ifndef\s+([A-Za-z_][A-Za-z0-9_]*)\s*$")
-DEFINE = re.compile(r"^#define\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+?)\s*$")
-IF_GATE = re.compile(r"^#if\s+PROTOCORE_ENABLE_([A-Za-z0-9_]+)\s*$")
+IFNDEF = re.compile(r"^#ifndef\s+([A-Za-z_]\w*)\s*$")
+DEFINE = re.compile(r"^#define\s+([A-Za-z_]\w*)\s+(.+?)\s*$")
+IF_GATE = re.compile(r"^#if\s+PROTOCORE_ENABLE_(\w+)\s*$")
 ANY_IF = re.compile(r"^#\s*(if|ifdef|ifndef)\b")
 ENDIF = re.compile(r"^#\s*endif\b")
-DEP = re.compile(r"#if\s+PROTOCORE_ENABLE_([A-Za-z0-9_]+)\s*&&\s*!\s*PROTOCORE_ENABLE_([A-Za-z0-9_]+)")
-REQ = re.compile(r"requires\s+PROTOCORE_ENABLE_([A-Za-z0-9_]+)")
+DEP = re.compile(r"#if\s+PROTOCORE_ENABLE_(\w+)\s*&&\s*!\s*PROTOCORE_ENABLE_(\w+)")
+REQ = re.compile(r"requires\s+PROTOCORE_ENABLE_(\w+)")
 TRAILING = re.compile(r"///<\s*(.*)$")
 
 
@@ -67,7 +67,7 @@ def value_kind(raw):
     v = raw.strip().rstrip("uUlL")
     if re.match(r"^0[xX][0-9A-Fa-f]+$", v):
         return "hex"
-    if re.match(r"^-?[0-9]+$", v):
+    if re.match(r"^-?\d+$", v):
         return "int"
     return "other"
 
@@ -264,7 +264,7 @@ def build_model(parsed):
         else:
             core.append(entry)
 
-    have = set(f["label"] for f in features.values())
+    have = {f["label"] for f in features.values()}
     feat_list = []
     for name in parsed["order_feat"]:
         f = features[name]

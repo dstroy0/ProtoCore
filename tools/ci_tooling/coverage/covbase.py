@@ -58,7 +58,7 @@ def main() -> int:
         ok = covrun.run_env(e, 1)
         try:
             covrun.gcovr(e)
-        except SystemExit:
+        except covrun.GcovrFailed:
             ok = False
         if not ok:
             failed.append(e)

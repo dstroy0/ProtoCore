@@ -453,11 +453,11 @@ int32_t protocore_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVari
     uint32_t out_n = 0;
     for (int32_t i = 0; i < cnt; i++)
     {
-        uint8_t mask = protocore_ua_r_u8(&r);
+        uint8_t encoding_mask = protocore_ua_r_u8(&r);
         OpcUaVariant v;
         EMBED_CALL(memor.set, MemoriaCfg, .dst = &v, .val = 0, .bytes = sizeof(v));
         uint32_t st = OPCUA_STATUS_GOOD;
-        if (mask & 0x01) // Value (Variant) present
+        if (encoding_mask & 0x01) // Value (Variant) present
         {
             OpcUaVariantType vt = (OpcUaVariantType)protocore_ua_r_u8(&r);
             v.type = vt;
@@ -493,7 +493,7 @@ int32_t protocore_opcua_client_on_read(const uint8_t *msg, size_t len, OpcUaVari
                 break;
             }
         }
-        if (mask & 0x02) // StatusCode present
+        if (encoding_mask & 0x02) // StatusCode present
         {
             st = protocore_ua_r_u32(&r);
         }

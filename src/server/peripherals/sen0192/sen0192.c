@@ -77,8 +77,7 @@ embed_bool protocore_sen0192_motion_update(const uint8_t *work, Sen0192Motion *m
         }
         return EMBED_FALSE;
     }
-    embed_bool sen0192_ok = Sen0192.motion_tick(work, m, now_ms); // inactive sample: presence may age out
-    sen0192_ok = EMBED_FALSE;
+    (void)Sen0192.motion_tick(work, m, now_ms); // inactive sample: presence may age out
     return ok;
 }
 

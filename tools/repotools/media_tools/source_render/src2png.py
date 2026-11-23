@@ -1,6 +1,5 @@
-# repotools-stamp: media_tools/source_render/src2png.py f0458b7d5b16cda4
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Render source files to numbered PNG pages, for surveying at image density.
 
     src2png.py <file> <out_stem> [lines_per_page] [pt] [start] [end]

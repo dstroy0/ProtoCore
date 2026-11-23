@@ -105,6 +105,9 @@ void protocore_http_conn_reset(const uint8_t *work)
 // dispatch, wedging every later connection that reuses the slot.
 static inline void http_release_upgrade_bindings(uint8_t slot_id)
 {
+#if !PROTOCORE_ENABLE_WEBSOCKET && !PROTOCORE_ENABLE_SSE
+    (void)slot_id; // a build with neither upgrade has no binding to release
+#endif
 #if PROTOCORE_ENABLE_WEBSOCKET
     // The channel's close is the session layer's: it informs the application before the number is
     // released (RFC 9293 sec 3.6 MUST-12), which a bare release does not.

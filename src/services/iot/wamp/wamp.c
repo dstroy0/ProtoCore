@@ -96,7 +96,7 @@ static void emit_args(const uint8_t *work, protocore_json_writer *w)
 // ---- builders ----
 
 // [HELLO, Realm|uri, Details|dict] (WAMP sec 3.4.1.1).
-void protocore_wamp_build_hello(uint8_t *work)
+void protocore_wamp_build_hello(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -116,7 +116,7 @@ void protocore_wamp_build_hello(uint8_t *work)
 }
 
 // [GOODBYE, Details|dict, Reason|uri] (WAMP sec 3.4.1.4).
-void protocore_wamp_build_goodbye(uint8_t *work)
+void protocore_wamp_build_goodbye(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -136,7 +136,7 @@ void protocore_wamp_build_goodbye(uint8_t *work)
 }
 
 // [SUBSCRIBE, Request|id, Options|dict, Topic|uri] (WAMP sec 3.4.2.3).
-void protocore_wamp_build_subscribe(uint8_t *work)
+void protocore_wamp_build_subscribe(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -157,7 +157,7 @@ void protocore_wamp_build_subscribe(uint8_t *work)
 }
 
 // [UNSUBSCRIBE, Request|id, SUBSCRIBED.Subscription|id] (WAMP sec 3.4.2.5).
-void protocore_wamp_build_unsubscribe(uint8_t *work)
+void protocore_wamp_build_unsubscribe(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -173,7 +173,7 @@ void protocore_wamp_build_unsubscribe(uint8_t *work)
 }
 
 // [PUBLISH, Request|id, Options|dict, Topic|uri] and its payload tail (WAMP sec 3.4.2.1).
-void protocore_wamp_build_publish(uint8_t *work)
+void protocore_wamp_build_publish(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -195,7 +195,7 @@ void protocore_wamp_build_publish(uint8_t *work)
 }
 
 // [CALL, Request|id, Options|dict, Procedure|uri] and its payload tail (WAMP sec 3.4.3.1).
-void protocore_wamp_build_call(uint8_t *work)
+void protocore_wamp_build_call(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -217,7 +217,7 @@ void protocore_wamp_build_call(uint8_t *work)
 }
 
 // [REGISTER, Request|id, Options|dict, Procedure|uri] (WAMP sec 3.4.3.3).
-void protocore_wamp_build_register(uint8_t *work)
+void protocore_wamp_build_register(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -238,7 +238,7 @@ void protocore_wamp_build_register(uint8_t *work)
 }
 
 // [UNREGISTER, Request|id, REGISTERED.Registration|id] (WAMP sec 3.4.3.5).
-void protocore_wamp_build_unregister(uint8_t *work)
+void protocore_wamp_build_unregister(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -254,7 +254,7 @@ void protocore_wamp_build_unregister(uint8_t *work)
 }
 
 // [YIELD, INVOCATION.Request|id, Options|dict] and its payload tail (WAMP sec 3.4.3.8).
-void protocore_wamp_build_yield(uint8_t *work)
+void protocore_wamp_build_yield(const uint8_t *work)
 {
     WampV.ok = EMBED_FALSE;
     WampV.n = 0;
@@ -432,7 +432,7 @@ void protocore_wamp_get_id(const uint8_t *work)
 }
 
 // Read the message type code, element 0 of the list (WAMP sec 3.5), into ns->i32.
-void protocore_wamp_get_type(uint8_t *work)
+void protocore_wamp_get_type(const uint8_t *work)
 {
     WampV.i32 = 0;
     WampV.parse.index = 0;

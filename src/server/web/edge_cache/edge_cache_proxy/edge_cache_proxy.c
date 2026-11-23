@@ -460,10 +460,10 @@ static void serve_passthrough(uint8_t *work, uint8_t slot, const EdgeFetch *f)
 }
 
 // Store a cacheable 200 response into a fresh entry and serve it.
-static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpReq *req,
+static void store_response(uint8_t *work, uint8_t slot, const EdgeFetchSlot *fs, HttpReq *req,
                            const protocore_cache_control *cc, const char *vary_hdr, uint32_t now)
 {
-    EdgeFetch *f = &fs->f;
+    const EdgeFetch *f = &fs->f;
     const char *head = (const char *)f->buf;
     size_t head_len = f->head_len;
 
@@ -601,7 +601,7 @@ static void store_response(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, HttpR
 // A completed origin fetch: revalidation 304 / store 200 / pass through anything else.
 static void on_fetch_done(uint8_t *work, uint8_t slot, EdgeFetchSlot *fs, uint32_t now)
 {
-    EdgeFetch *f = &fs->f;
+    const EdgeFetch *f = &fs->f;
     const char *head = (const char *)f->buf;
     size_t head_len = f->head_len;
     HttpReq *req = &http_pool[slot];
@@ -678,7 +678,7 @@ static embed_bool edge_cache_poll(uint8_t slot);
 // transport; a revalidation adds the conditional headers. @return false if no fetch could start (fail open).
 static embed_bool begin_origin_fetch(uint8_t *work, EdgeFetchSlot *fs, uint32_t now)
 {
-    EdgeRouteMap *m = fs->route;
+    const EdgeRouteMap *m = fs->route;
     const EdgeFetchTransport *tport = &EDGE_CACHE_PROXY_CTX(work)->transport;
     char cond[192];
     cond[0] = '\0';

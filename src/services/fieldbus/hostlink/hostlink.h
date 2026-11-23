@@ -165,7 +165,7 @@ typedef struct
     void (*const build)(const uint8_t *work);
     void (*const parse)(const uint8_t *work);
     void (*const end_code)(const uint8_t *work);
-    void (*const build_read)(uint8_t *work);
+    void (*const build_read)(const uint8_t *work);
     void (*const read_word)(const uint8_t *work);
     void (*const build_write)(const uint8_t *work);
 } HostlinkNs;
@@ -176,7 +176,7 @@ void protocore_hostlink_fcs(const uint8_t *work);
 void protocore_hostlink_build(const uint8_t *work);
 void protocore_hostlink_parse(const uint8_t *work);
 void protocore_hostlink_end_code(const uint8_t *work);
-void protocore_hostlink_build_read(uint8_t *work);
+void protocore_hostlink_build_read(const uint8_t *work);
 void protocore_hostlink_read_word(const uint8_t *work);
 void protocore_hostlink_build_write(const uint8_t *work);
 

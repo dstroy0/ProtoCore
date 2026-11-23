@@ -165,7 +165,9 @@ void protocore_mbus_parse(const uint8_t *work)
         return;
     }
     out->type = MBUS_FRAME_NONE;
-    out->c = out->a = out->ci = 0;
+    out->c = 0;
+    out->a = 0;
+    out->ci = 0;
     out->data = NULL;
     out->data_len = 0;
 
@@ -241,62 +243,14 @@ void protocore_mbus_parse(const uint8_t *work)
     MbusV.ok = EMBED_FALSE;
 }
 
+// EN 13757-3: the octets of the data field for each coding of the four low DIF bits. The variable coding
+// carries its length in the LVAR octet. The readout and special codings carry no data.
+static const uint8_t MBUS_DIF_DATA_LEN[16] = {0, 1, 2, 3, 4, 4, 6, 8, 0, 1, 2, 3, 4, 0, 6, 0};
+
 void protocore_mbus_dif_data_len(const uint8_t *work)
 {
     (void)work;
-    uint8_t coding = MbusV.dif_data_len_args.coding;
-
-    switch ((MbusDifCoding)(coding & 0x0Fu))
-    {
-    case MBUS_DIF_NONE:
-        MbusV.value = 0;
-        return;
-    case MBUS_DIF_INT8:
-        MbusV.value = 1;
-        return;
-    case MBUS_DIF_INT16:
-        MbusV.value = 2;
-        return;
-    case MBUS_DIF_INT24:
-        MbusV.value = 3;
-        return;
-    case MBUS_DIF_INT32:
-        MbusV.value = 4;
-        return;
-    case MBUS_DIF_REAL32:
-        MbusV.value = 4;
-        return;
-    case MBUS_DIF_INT48:
-        MbusV.value = 6;
-        return;
-    case MBUS_DIF_INT64:
-        MbusV.value = 8;
-        return;
-    case MBUS_DIF_READOUT:
-        MbusV.value = 0;
-        return;
-    case MBUS_DIF_BCD2:
-        MbusV.value = 1;
-        return;
-    case MBUS_DIF_BCD4:
-        MbusV.value = 2;
-        return;
-    case MBUS_DIF_BCD6:
-        MbusV.value = 3;
-        return;
-    case MBUS_DIF_BCD8:
-        MbusV.value = 4;
-        return;
-    case MBUS_DIF_VARIABLE:
-        MbusV.value = 0; // length carried in the LVAR octet
-        return;
-    case MBUS_DIF_BCD12:
-        MbusV.value = 6;
-        return;
-    default: // MBUS_DIF_SPECIAL
-        MbusV.value = 0;
-        return;
-    }
+    MbusV.value = MBUS_DIF_DATA_LEN[MbusV.dif_data_len_args.coding & 0x0Fu];
 }
 
 void protocore_mbus_record_next(const uint8_t *work)

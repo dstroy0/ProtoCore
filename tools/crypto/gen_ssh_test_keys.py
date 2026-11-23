@@ -92,7 +92,7 @@ def render():
 
 def main(argv):
     if "--if-absent" in argv and os.path.exists(OUT):
-        return 0
+        return
     text = render()
     # Written aside and renamed: a compile that starts mid-write sees the old file or the new one,
     # never half of either.
@@ -101,7 +101,6 @@ def main(argv):
         f.write(text)
     os.replace(tmp, OUT)
     print("wrote %s (baseline + throwaway RSA-2048)" % os.path.relpath(OUT, ROOT))
-    return 0
 
 
 if __name__ == "__main__":

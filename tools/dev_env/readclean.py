@@ -467,9 +467,7 @@ def main():
     i = 0
     while i < len(args):
         a = args[i]
-        if a in ("code", "blind", "claims"):
-            pass
-        elif a == "--legend":
+        if a == "--legend":
             i += 1
             legend = args[i]
         elif a == "--keep":

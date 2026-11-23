@@ -81,6 +81,7 @@ static embed_bool on_stack_thread(const uint8_t *work)
 // is what RAWSEND needs, since it carries no slot.
 static embed_bool pcb_bound(const uint8_t *work)
 {
+    (void)work;
     const protocore_pcb *pcb = TcpLowerV.pcb;
     if (pcb == NULL)
     {

@@ -1,6 +1,5 @@
-# repotools-stamp: media_tools/dataviz/build_field_view.py 1c3a1fca0f733787
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Turns any parametric table into the shape viewer, without knowing what the table is about.
 
 The other generators here each read one measurement this repository produces. This one reads a CSV
@@ -39,6 +38,7 @@ Writes a self-contained page: no server, no fetch at run time, nothing to instal
 """
 
 import os, sys
+
 _at = os.path.dirname(os.path.abspath(__file__))
 while _at != os.path.dirname(_at) and not os.path.isdir(os.path.join(_at, "lib", "repotools")):
     _at = os.path.dirname(_at)
@@ -116,15 +116,13 @@ def main():
         return 1
 
     header = [name for name in rows[0].keys() if name is not None]
-    value_at, depth_at, field_at = pick_columns(
-        header, rows, option("--value"), option("--depth"), option("--field"))
+    value_at, depth_at, field_at = pick_columns(header, rows, option("--value"), option("--depth"), option("--field"))
 
     keys = [name for name in header if name not in (value_at, depth_at, field_at)]
 
     # Depth values are collected as they are and then sorted numerically where they all parse.
     # A column of 1..64 therefore does not come back as 1, 10, 11.
-    seen_depth = sorted({row[depth_at] for row in rows},
-                        key=lambda one: (numeric(one) is None, numeric(one), one))
+    seen_depth = sorted({row[depth_at] for row in rows}, key=lambda one: (numeric(one) is None, numeric(one), one))
     slot = {name: at for at, name in enumerate(seen_depth)}
 
     fields = {}
@@ -137,15 +135,15 @@ def main():
 
     packed = []
     for which in sorted(fields):
-        order = sorted(fields[which],
-                       key=lambda one: [(numeric(part) is None, numeric(part), part)
-                                        for part in one])
-        packed.append({
-            "key": which,
-            "label": which,
-            "axis": " x ".join(keys) if keys else "series",
-            "rows": [[round(cell, 4) for cell in fields[which][series]] for series in order],
-        })
+        order = sorted(fields[which], key=lambda one: [(numeric(part) is None, numeric(part), part) for part in one])
+        packed.append(
+            {
+                "key": which,
+                "label": which,
+                "axis": " x ".join(keys) if keys else "series",
+                "rows": [[round(cell, 4) for cell in fields[which][series]] for series in order],
+            }
+        )
 
     title = option("--title") or os.path.splitext(os.path.basename(source))[0]
     payload = {
@@ -154,12 +152,13 @@ def main():
         "valueLabel": value_at,
         "eyebrow": "Parametric field - rendered as a solid",
         "title": title,
-        "blurb": ("Every series in %s, drawn as a solid. Depth runs left to right as %s; the other "
-                  "horizontal axis is the series, ordered by %s; height and color are %s. The "
-                  "embedding is a choice, not a measurement: structure that appears under one shape "
-                  "and not another belongs to the map rather than to the data."
-                  % (os.path.basename(source), depth_at,
-                     " then ".join(keys) if keys else "row order", value_at)),
+        "blurb": (
+            "Every series in %s, drawn as a solid. Depth runs left to right as %s; the other "
+            "horizontal axis is the series, ordered by %s; height and color are %s. The "
+            "embedding is a choice, not a measurement: structure that appears under one shape "
+            "and not another belongs to the map rather than to the data."
+            % (os.path.basename(source), depth_at, " then ".join(keys) if keys else "row order", value_at)
+        ),
         "note": "",
         "settings": settings.collect(sys.argv[1:]),
         "fields": packed,
@@ -173,16 +172,16 @@ def main():
 
     target = option("--out")
     if target is None:
-        target = os.path.join(os.path.dirname(os.path.abspath(source)),
-                              os.path.splitext(os.path.basename(source))[0] + "_view.html")
+        target = os.path.join(
+            os.path.dirname(os.path.abspath(source)), os.path.splitext(os.path.basename(source))[0] + "_view.html"
+        )
     with io.open(target, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(page)
 
     print("wrote %s (%.1f KB)" % (target, os.path.getsize(target) / 1024.0))
     print("  value  %s" % value_at)
     print("  depth  %s, %d steps" % (depth_at, len(seen_depth)))
-    print("  fields %s" % ", ".join("%s (%d series)" % (one["key"], len(one["rows"]))
-                                    for one in packed))
+    print("  fields %s" % ", ".join("%s (%d series)" % (one["key"], len(one["rows"])) for one in packed))
     if keys:
         print("  series keyed by %s" % ", ".join(keys))
     return 0

@@ -26,8 +26,6 @@
 #include "shared/mime/mime.h"                // PROTOCORE_MIME_*, mime tables
 #include "verba_scribo/verba_scribo.h"       // verba_scribo frame builder (replaces snprintf)
 
-static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
-
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_STATS_JSON / PROTOCORE_METRICS_PROM (generated)
 #include "server/clock/clock.h" // protocore_millis: the library clock, not the platform's
@@ -46,6 +44,8 @@ static void num_field(char *dst, size_t cap, uint32_t v)
     }
 }
 #endif
+
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 // ---------------------------------------------------------------------------
 // Chunked-send state - owned here
@@ -1051,7 +1051,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
         return; // guard the public entry: never index conn_pool out of range
     }
     const char *payload = (const char *)body;
-    TcpConn *conn = &conn_pool[slot_id];
+    const TcpConn *conn = &conn_pool[slot_id];
 #if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
     // A self-framing protocol (HTTP/2, HTTP/3) installed its own response sink at negotiation /
     // dispatch time; route through it and let it own its framing + connection lifecycle. This runs
@@ -1173,7 +1173,7 @@ void send_empty(uint8_t slot_id, int code)
     {
         return;
     }
-    TcpConn *conn = &conn_pool[slot_id];
+    const TcpConn *conn = &conn_pool[slot_id];
 #if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
     if (http_resp_sink[slot_id])
     {
@@ -1224,7 +1224,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     {
         return;
     }
-    TcpConn *conn = &conn_pool[slot_id];
+    const TcpConn *conn = &conn_pool[slot_id];
     if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
         conn->pcb == NULL)
     {

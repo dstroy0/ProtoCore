@@ -397,7 +397,7 @@ void protocore_flow_export_message_finish(uint8_t *work)
 {
     FlowExportV.ok = EMBED_FALSE;
     FlowExportV.n = 0;
-    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
+    const struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->set_start)
     {
         protocore_flow_export_data_set_end(work);

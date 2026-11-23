@@ -753,8 +753,9 @@ void protocore_ssh_connection_channel_open_forwarded(const uint8_t *work)
     }
 
     const char *type = "forwarded-tcpip";
-    size_t tl = 15, ca = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = conn_addr, .cap = cap),
-           oa = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = orig_addr, .cap = cap);
+    size_t tl = 15;
+    size_t ca = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = conn_addr, .cap = cap);
+    size_t oa = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = orig_addr, .cap = cap);
     // byte || string(type) || u32 sender || u32 window || u32 maxpkt || string(conn_addr)
     //   || u32 conn_port || string(orig_addr) || u32 orig_port  (RFC 4254 §7.2)
     size_t need = 1 + (4 + tl) + 12 + (4 + ca) + 4 + (4 + oa) + 4;
@@ -959,17 +960,14 @@ void protocore_ssh_connection_channel_handle_open(const uint8_t *work)
     SshConnectionV.flow.peer_max_pkt = max_pkt;
     protocore_ssh_connection_flow_init(work);
 
-    if (is_dtcpip)
+    if (is_dtcpip && SSH_CONNECTION_CTX(protocore_ssh_connection_span())
+                             ->handlers.forward_open_cb(i, c->local_id, (const char *)fhost, fhost_len, fport) < 0)
     {
         // The owner does the actual TCP connect (no I/O in this codec); on refusal
         // free the channel and fail closed.
-        if (SSH_CONNECTION_CTX(protocore_ssh_connection_span())
-                ->handlers.forward_open_cb(i, c->local_id, (const char *)fhost, fhost_len, fport) < 0)
-        {
-            c->open = EMBED_FALSE;
-            SshConnectionV.i32 = build_open_failure(out, cap, sender, 2u, out_len);
-            return; // connect failed
-        }
+        c->open = EMBED_FALSE;
+        SshConnectionV.i32 = build_open_failure(out, cap, sender, 2u, out_len);
+        return; // connect failed
     }
     SshConnectionV.i32 = build_open_confirm(c, out, cap, out_len);
     return;
@@ -1003,7 +1001,7 @@ void protocore_ssh_connection_req_strings_present(const uint8_t *work)
 }
 
 // RFC 4254 sec 6.2: string TERM, four uint32 dimensions, string encoded terminal modes.
-void protocore_ssh_connection_pty_req_fields_present(uint8_t *work)
+void protocore_ssh_connection_pty_req_fields_present(const uint8_t *work)
 {
     const uint8_t *p = SshConnectionV.pty.p;
     size_t len = SshConnectionV.chan.len;
@@ -1145,7 +1143,7 @@ void protocore_ssh_connection_window_change_parse(const uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_handle_request(uint8_t *work)
+void protocore_ssh_connection_channel_handle_request(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const uint8_t *payload = SshConnectionV.chan.payload;
@@ -1371,35 +1369,39 @@ void protocore_ssh_connection_channel_handle_data(const uint8_t *work)
                     ->handlers.forward_data_cb(i, c->local_id, data, dlen);
             }
             break;
-        default:
-            switch (c->service)
-            {
+        default: {
+            // A service that claims the channel gets its bytes. The application gets the bytes of every
+            // other channel.
+            embed_bool claimed = EMBED_FALSE;
 #if PROTOCORE_ENABLE_SSH_SFTP
-            case SSH_CHAN_SERVICE_SFTP: // SSH_FXP_* bytes -> the SFTP binding
+            if (c->service == SSH_CHAN_SERVICE_SFTP) // SSH_FXP_* bytes -> the SFTP binding
+            {
+                claimed = EMBED_TRUE;
                 if (SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_sftp_data_cb)
                 {
                     SSH_CONNECTION_CTX(protocore_ssh_connection_span())
                         ->handlers.protocore_sftp_data_cb(i, c->local_id, data, dlen);
                 }
-                break;
+            }
 #endif
 #if PROTOCORE_ENABLE_SSH_SCP
-            case SSH_CHAN_SERVICE_SCP: // RCP protocol bytes -> the SCP binding
+            if (c->service == SSH_CHAN_SERVICE_SCP) // RCP protocol bytes -> the SCP binding
+            {
+                claimed = EMBED_TRUE;
                 if (SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.protocore_scp_data_cb)
                 {
                     SSH_CONNECTION_CTX(protocore_ssh_connection_span())
                         ->handlers.protocore_scp_data_cb(i, c->local_id, data, dlen);
                 }
-                break;
+            }
 #endif
-            default: // shell/exec bytes -> the application
-                if (SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.data_cb)
-                {
-                    SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.data_cb(i, c->local_id, data, dlen);
-                }
-                break;
+            if (!claimed && SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.data_cb)
+            {
+                // shell/exec bytes -> the application
+                SSH_CONNECTION_CTX(protocore_ssh_connection_span())->handlers.data_cb(i, c->local_id, data, dlen);
             }
             break;
+        }
         }
     }
 
@@ -1638,7 +1640,7 @@ void protocore_ssh_connection_channel_build_close(const uint8_t *work)
 // CHANNEL_DATA and forwarded-tcpip CHANNEL_OPEN are built straight into the framer's span, so a
 // full-size payload is framed where it was written. EOF and CLOSE are five bytes and go by value.
 
-void protocore_ssh_connection_channel_send_data(uint8_t *work)
+void protocore_ssh_connection_channel_send_data(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1676,7 +1678,7 @@ void protocore_ssh_connection_channel_send_data(uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_send_eof(uint8_t *work)
+void protocore_ssh_connection_channel_send_eof(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1703,7 +1705,7 @@ void protocore_ssh_connection_channel_send_eof(uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_send_close(uint8_t *work)
+void protocore_ssh_connection_channel_send_close(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     uint32_t channel = SshConnectionV.chan.channel;
@@ -1817,7 +1819,7 @@ void protocore_ssh_connection_channel_send_exit_signal(const uint8_t *work)
     return;
 }
 
-void protocore_ssh_connection_channel_send_open_forwarded(uint8_t *work)
+void protocore_ssh_connection_channel_send_open_forwarded(const uint8_t *work)
 {
     uint8_t i = SshConnectionV.chan.slot;
     const char *conn_addr = SshConnectionV.fwd.conn_addr;
@@ -1836,7 +1838,8 @@ void protocore_ssh_connection_channel_send_open_forwarded(uint8_t *work)
         return;
     }
     size_t plen = 0;
-    const int ch = SshConnectionV.chan.slot = i;
+    SshConnectionV.chan.slot = i;
+    const int ch = i;
     SshConnectionV.fwd.conn_addr = conn_addr;
     SshConnectionV.fwd.conn_port = conn_port;
     SshConnectionV.fwd.orig_addr = orig_addr;
@@ -2170,7 +2173,7 @@ void protocore_ssh_connection_forward_begin(const uint8_t *work)
 #endif
 }
 
-void protocore_ssh_connection_forward_pump(uint8_t *work)
+void protocore_ssh_connection_forward_pump(const uint8_t *work)
 {
 #if PROTOCORE_SSH_PORT_FORWARD
     uint8_t ssh_slot = SshConnectionV.fwd.slot;
@@ -2305,7 +2308,7 @@ void protocore_ssh_connection_dispatch(uint8_t *work)
         SshConnectionV.i32 = -1;
         return;
     }
-    SshSession *s = &ssh_sess[i];
+    const SshSession *s = &ssh_sess[i];
 
     // The reply buffer is borrowed for this dispatch, not carried on the worker stack: it is the
     // single largest frame on the SSH path and the handshake below it is the deepest call chain in

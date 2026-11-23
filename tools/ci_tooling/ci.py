@@ -173,7 +173,9 @@ def run_module(suffix, argv):
     try:
         runpy.run_module(mod, run_name="__main__")
         return 0
-    except SystemExit as e:
+    except (
+        SystemExit
+    ) as e:  # NOSONAR - an in-process runner turns the exit of the tool it runs into its own return code
         if e.code is None:
             return 0
         if isinstance(e.code, int):

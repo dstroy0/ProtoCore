@@ -120,7 +120,7 @@ class Region:
 
     def replace_in(self, text, body):
         if self.begin not in text or self.end not in text:
-            raise SystemExit(f"doc_region: {self.doc}: missing markers for {self.key}\n" f"  expected: {self.begin}")
+            raise SystemExit(f"doc_region: {self.doc}: missing markers for {self.key}\n  expected: {self.begin}")
         block = self.wrap(body)
         return re.sub(re.escape(self.begin) + r".*?" + re.escape(self.end), lambda _m: block, text, flags=re.S)
 

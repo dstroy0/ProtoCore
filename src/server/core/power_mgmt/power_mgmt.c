@@ -131,8 +131,9 @@ void protocore_power_decide(const uint8_t *work)
     PowerV.plan = p;
 }
 
-void protocore_power_json(uint8_t *work)
+void protocore_power_json(const uint8_t *work)
 {
+    (void)work;
     const PowerPlan *plan = PowerV.out_args.plan;
     const int16_t temp_c = PowerV.out_args.temp_c;
     char *out = PowerV.out_args.out;

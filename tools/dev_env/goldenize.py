@@ -21,6 +21,33 @@ import nsconv as N
 from codemask import code_mask
 from funnel import find_context, funnel
 
+BRIEF_FORMAT = " * @brief %s"
+CALL_SITES_LABEL = "call sites:"
+CONFIG_INCLUDE_LINE = '#include "protocore_config.h" // the entry point: protocore_types.h for the widths\n'
+DESIGNATED_INIT_FORMAT = "    .%s = %s,"
+HEADER_LABEL = "header:"
+IFNDEF = "#ifndef"
+IFNDEF_PATTERN = "#ifndef (\\w+)"
+INCLUDE_DIRECTIVE = "#include"
+INCLUDE_LINE_FORMAT = "#include %s\n"
+NOTE_MARK = "   NOTE"
+NOTE_PREFIX = "   NOTE "
+NS_TYPEDEF_END_PATTERN = "\\}\\s*(\\w+Ns)\\s*;"
+OPEN_BRACE_PATTERN = "\\s*\\{"
+PROTOCORE_BORROW_FORMAT = "PROTOCORE_%s_BORROW"
+PUBLIC_NAME_FORMAT = "protocore_%s_%s"
+SKIPPED_FORMAT = "   SKIPPED %s:%d  %s"
+SOURCE_LABEL = "source:"
+SPAN_CALL_FORMAT = "protocore_%s_span()"
+STATIC_ENTRY_PATTERN = "^static void %s_\\w+\\(uint8_t \\*(?:restrict )?work\\)"
+STRUCT_KEYWORD = "struct "
+TABLE_INITIALIZER_PATTERN = "\\b%s\\s+%s\\b[^=;]*=\\s*\\{(.*?)\\};"
+TABLE_MEMBER_FORMAT = "    void (*const %s)(uint8_t *work);"
+TYPEDEF_END_FORMAT = "} %s;"
+TYPEDEF_STRUCT = "typedef struct"
+WHOLE_WORD_PATTERN = "(?<![\\w])%s(?![\\w])"
+WORK_NAME_FORMAT = "%s_work"
+
 DECLS_OPEN = "EMBED_BEGIN_DECLS\n\n"
 
 R = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -119,13 +146,13 @@ def resolve_result_collisions(entries, notes):
         # stderr, because scan's stdout is the spec JSON and a caller pipes it.
         if not alt or seen.get(alt, rtype) != rtype:
             notes.append("%s returns %s and cannot share the '%s' member; name it in the spec" % (e["entry"], rtype, r))
-            print("   NOTE " + notes[-1], file=sys.stderr)
+            print(NOTE_PREFIX + notes[-1], file=sys.stderr)
             continue
         notes.append(
             "%s returns %s, so it reports on '%s' rather than sharing '%s' with a %s"
             % (e["entry"], rtype, alt, r, seen[r])
         )
-        print("   NOTE " + notes[-1], file=sys.stderr)
+        print(NOTE_PREFIX + notes[-1], file=sys.stderr)
         e["result"] = alt
         seen[alt] = rtype
     flag_unit_results(entries, notes)
@@ -148,7 +175,7 @@ def flag_unit_results(entries, notes):
                 "%s reports on '%s', which names %s; set it in the spec if it holds something else"
                 % (e["entry"], e["result"], unit)
             )
-            print("   NOTE " + notes[-1], file=sys.stderr)
+            print(NOTE_PREFIX + notes[-1], file=sys.stderr)
 
 
 # a return type -> the namespace member its value lands in
@@ -275,9 +302,8 @@ def entry_arms(spec):
         kind, expr = m.group(1), m.group(2).strip()
         if kind in ("if", "ifdef", "ifndef"):
             stack.append(expr if kind == "if" else ("defined(%s)" % expr))
-        elif kind == "elif":
-            if stack:
-                stack[-1] = expr
+        elif kind == "elif" and stack:
+            stack[-1] = expr
         elif kind == "else":
             if stack:
                 stack[-1] = "!(%s)" % stack[-1]
@@ -345,7 +371,7 @@ def module_types(header_text):
     """
     out, mask = [], code_mask(header_text)
     taken = []  # conditional blocks kept whole, so their other arms are not emitted again
-    guard = re.search(r"#ifndef (\w+)", header_text)
+    guard = re.search(IFNDEF_PATTERN, header_text)
     skip = (guard.group(1) if guard else "\0", "PROTOCORE_ENABLE_")
     # A tagged enum or struct at file scope is the module's vocabulary too, and is not a typedef:
     # ptp.h's `enum protocore_ptp_msg_type { PROTOCORE_PTP_SYNC = 0x0, ... };` was dropped, and the
@@ -643,7 +669,7 @@ def doc_tags(block):
     The prose a module already published is the prose the golden header keeps: a converted header
     that drops it trades a documented surface for an undocumented one.
     """
-    body = re.sub(r"(?:^\s*/\*\*)|(?:\*/\s*$)", "", block)
+    body = re.sub(r"^\s*/\*\*|\*/\s*$", "", block)
     body = "\n".join(re.sub(r"^\s*\*\s?", "", ln).strip() for ln in body.splitlines())
     tags, params, brief, ret = re.split(r"(?m)^@", body)[1:], {}, "", ""
     for t in tags:
@@ -747,7 +773,7 @@ def scan_ns(hpath):
     s = io.open(hpath, encoding="utf-8").read()
     mod = os.path.splitext(os.path.basename(hpath))[0]
     gate = find_gate(s)
-    ns = re.search(r"\}\s*(\w+Ns)\s*;", s)
+    ns = re.search(NS_TYPEDEF_END_PATTERN, s)
     obj = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+(\w+)\s*;", s, re.M)
     cpath = hpath[:-1] + "c"
     csrc = io.open(cpath, encoding="utf-8").read() if os.path.exists(cpath) else ""
@@ -764,11 +790,11 @@ def scan_ns(hpath):
         "gate": gate,
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
-        "borrow": "PROTOCORE_%s_BORROW" % name.upper(),
+        "borrow": PROTOCORE_BORROW_FORMAT % name.upper(),
         "pool": "secure",
         "suites": suites,
         "owns_state": ns_owns_state(csrc),
-        "span": "%s_work" % name,
+        "span": WORK_NAME_FORMAT % name,
         "entries": [{"entry": e} for e in ns_entries(s)],
     }
 
@@ -992,7 +1018,7 @@ def gen_ns(spec):
             return notes
 
     # the entry members take the borrow, and take it const: the table is fixed at build time
-    h2 = NS_ENTRY.sub(lambda m: "    void (*const %s)(uint8_t *work);" % m.group(1), h)
+    h2 = NS_ENTRY.sub(lambda m: TABLE_MEMBER_FORMAT % m.group(1), h)
     # the opaque handle is what the borrow replaces
     h2 = NS_HANDLE.sub("", h2)
     # and the forward declaration of it, with the doc comment that described it, if nothing else
@@ -1005,7 +1031,7 @@ def gen_ns(spec):
             return doc if re.search(r"@var\s+\w+Ns::", doc) else ""
 
         h2 = re.sub(
-            r"((?:^[ \t]*/\*\*(?:(?!\*/).)*?\*/[ \t]*\r?\n)?)" r"^[ \t]*struct\s+\w+Internal\s*;[^\n]*\n",
+            r"((?:^[ \t]*/\*\*(?:(?!\*/).)*?\*/[ \t]*\r?\n)?)^[ \t]*struct\s+\w+Internal\s*;[^\n]*\n",
             _drop_fwd,
             h2,
             flags=re.M | re.S,
@@ -1052,7 +1078,7 @@ def gen_ns(spec):
     # would find the `struct` this function itself injects and take a tagless module for a tagged one.
     storage_tagged = bool(re.search(r"struct\s+\w+Storage\b", c))
     if store:
-        sname = ("struct " if storage_tagged else "") + store.group(1)
+        sname = (STRUCT_KEYWORD if storage_tagged else "") + store.group(1)
         c2 = re.sub(r"sizeof\(%s\.(\w+)\)" % re.escape(store.group(2)), r"sizeof(((%s *)0)->\1)" % sname, c2)
         # Whatever still names the instance reads the region instead. A caller here has no handle -
         # it is a callback with a fixed signature - so it asks the accessor for the borrow.
@@ -1076,7 +1102,7 @@ def gen_ns(spec):
     # state has an accessor to ask; a stateless one has no accessor emitted at all, so it passes the
     # same nominal buffer its external callers pass - naming the accessor there would leave the file
     # calling a function nothing defines.
-    own_borrow = "protocore_%s_span()" % spec["module"] if spec.get("owns_state") else spec["span"]
+    own_borrow = SPAN_CALL_FORMAT % spec["module"] if spec.get("owns_state") else spec["span"]
     if inst:
         c2 = re.sub(
             r"&%s\b(?=\s*[,)])" % re.escape(inst.group(1)),
@@ -1123,7 +1149,7 @@ def gen_ns(spec):
     # so the file named a macro nothing defined - ssh/client is the shape.
     stor = re.search(r"struct\s+(\w+Storage)\b", c) or re.search(r"\}\s*(\w+Storage)\s*;", c)
     if stor and spec.get("owns_state"):
-        ctype = ("struct " if storage_tagged else "") + stor.group(1)
+        ctype = (STRUCT_KEYWORD if storage_tagged else "") + stor.group(1)
         # the storage struct is what the borrow is carved for
         block = (
             "// The caller's borrow, split: the context at its offset. One pointer arrives and every\n"
@@ -1221,14 +1247,14 @@ def gen_ns(spec):
         if carve:
             c2 = c2[: carve.end()] + acc + c2[carve.end() :]
         else:
-            first = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], c2, re.M)
+            first = re.search(STATIC_ENTRY_PATTERN % spec["module"], c2, re.M)
             if not first:
                 first = re.search(r"^static void \w+\(uint8_t \*(?:restrict )?work\)", c2, re.M)
             if first:
                 at = outside_conditionals(c2, comment_start(c2, first.start()), spec.get("gate"))
                 c2 = c2[:at] + acc + c2[at:]
         if pool["include"] not in c2:
-            k = c2.index("#include")
+            k = c2.index(INCLUDE_DIRECTIVE)
             c2 = c2[:k] + pool["include"] + " " + pool["why"] + "\n" + c2[k:]
         notes.append("the span accessor is where the borrow comes from")
 
@@ -1296,7 +1322,7 @@ def scan_vtable(hpath):
     s = io.open(hpath, encoding="utf-8").read()
     mod = os.path.splitext(os.path.basename(hpath))[0]
     gate = find_gate(s)
-    ns = re.search(r"\}\s*(\w+Ns)\s*;", s)
+    ns = re.search(NS_TYPEDEF_END_PATTERN, s)
     # The object is declared either way round: `extern <X>Ns <obj>;` with the definition in the .c,
     # or - rawmemcpy's shape - `static const <X>Ns <obj> = { ... };` defined IN THE HEADER, which
     # gives every translation unit that includes it a private copy. The second spelling was not
@@ -1327,9 +1353,9 @@ def scan_vtable(hpath):
     # The initializer sits beside the definition, so it is looked for in the .c AND in the header:
     # a `static const <X>Ns <obj> = {...}` header table binds its members there, and searching only
     # the .c came back with no bindings at all.
-    init = re.search(
-        r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns_name), re.escape(obj_name)), csrc, re.S
-    ) or re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns_name), re.escape(obj_name)), s, re.S)
+    init = re.search(TABLE_INITIALIZER_PATTERN % (re.escape(ns_name), re.escape(obj_name)), csrc, re.S) or re.search(
+        TABLE_INITIALIZER_PATTERN % (re.escape(ns_name), re.escape(obj_name)), s, re.S
+    )
     if init:
         body = init.group(1)
         if "." in body and VTABLE_BIND.search(body):
@@ -1370,7 +1396,7 @@ def scan_vtable(hpath):
     moved, held = classify_includes(s)
     return {
         "from": "vtable",
-        "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
+        "macros": module_macros(s, re.search(IFNDEF_PATTERN, s).group(1) if re.search(IFNDEF_PATTERN, s) else ""),
         "types": module_types(s),
         "inlines": module_inlines(s),
         "externs": module_externs(s, ns_name),
@@ -1382,12 +1408,12 @@ def scan_vtable(hpath):
         "gate": gate,
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
-        "borrow": "PROTOCORE_%s_BORROW" % name.upper(),
+        "borrow": PROTOCORE_BORROW_FORMAT % name.upper(),
         "pool": "secure",
         "suites": find_suites(hpath, mod),
         "owns_state": bool(find_context(csrc)),
-        "span": "%s_work" % name,
-        "brief": first_sentence(doc_tags(doc_above(s, s.find("#ifndef")))[0]),
+        "span": WORK_NAME_FORMAT % name,
+        "brief": first_sentence(doc_tags(doc_above(s, s.find(IFNDEF)))[0]),
         "entries": resolve_result_collisions(entries, notes),
         "notes": notes,
     }
@@ -1441,7 +1467,7 @@ def scan(hpath):
     cpath = hpath[:-1] + "c"
     csrc = io.open(cpath, encoding="utf-8").read() if os.path.exists(cpath) else ""
     return {
-        "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
+        "macros": module_macros(s, re.search(IFNDEF_PATTERN, s).group(1) if re.search(IFNDEF_PATTERN, s) else ""),
         "types": module_types(s),
         "inlines": module_inlines(s),
         "externs": module_externs(s, camel(mod) + "Ns"),
@@ -1453,11 +1479,11 @@ def scan(hpath):
         "gate": gate,
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
-        "borrow": "PROTOCORE_%s_BORROW" % mod.upper(),
+        "borrow": PROTOCORE_BORROW_FORMAT % mod.upper(),
         "pool": "secure",
         "held_includes": held,
         "owns_state": bool(find_context(csrc)),
-        "brief": first_sentence(doc_tags(doc_above(s, s.find("#ifndef")))[0]),
+        "brief": first_sentence(doc_tags(doc_above(s, s.find(IFNDEF)))[0]),
         "entries": resolve_result_collisions(entries, collide_notes),
     }
 
@@ -1488,7 +1514,7 @@ def ns_doc(spec, args_types, results):
     """
     obj, ns = spec["object"], spec["ns"]
     first = spec["entries"][0] if spec["entries"] else None
-    out = ["/**", " * @brief %s" % sentence(spec.get("brief"), obj), " *"]
+    out = ["/**", BRIEF_FORMAT % sentence(spec.get("brief"), obj), " *"]
     out.append(" * A caller sets the members a call takes, invokes it through ::%s with the bytes it runs" % obj)
     out.append(" * out of, and reads the outcome off the same handle.")
     if first:
@@ -1510,13 +1536,21 @@ def ns_doc(spec, args_types, results):
         out.append(" * @var %s::%s  %s" % (ns, e["entry"], lead_lower(one_line(e.get("brief") or e["entry"], 68))))
     out.append(" *")
     if spec.get("owns_state", True):
-        out.append(" * @c work is %s bytes the CALLER took, at an address it knows. It arrives" % spec["borrow"])
-        out.append(" * is not held past the call, so nothing here aliases it. How those bytes are")
-        out.append(" * carved is this module's and is never named here.")
+        out.extend(
+            [
+                " * @c work is %s bytes the CALLER took, at an address it knows. It arrives" % spec["borrow"],
+                " * is not held past the call, so nothing here aliases it. How those bytes are",
+                " * carved is this module's and is never named here.",
+            ]
+        )
     else:
-        out.append(" * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing")
-        out.append(" * between calls, so there is no state to keep and nothing to wipe. The parameter is there so")
-        out.append(" * a caller drives every namespace the same way.")
+        out.extend(
+            [
+                " * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing",
+                " * between calls, so there is no state to keep and nothing to wipe. The parameter is there so",
+                " * a caller drives every namespace the same way.",
+            ]
+        )
     out.append(" */")
     return out
 
@@ -1556,7 +1590,7 @@ def dropped_names(spec, original, regenerated):
         name = m.group(1) or m.group(2) or m.group(3)
         if not name or name in flat or name in out:
             continue
-        if not re.search(r"(?<![\w])%s(?![\w])" % re.escape(name), regenerated):
+        if not re.search(WHOLE_WORD_PATTERN % re.escape(name), regenerated):
             out.append(name)
     return out
 
@@ -1641,9 +1675,7 @@ def gen_header(spec, original):
             continue
         an = "%s%sArgs" % (obj, camel(e["entry"]))
         args_types.append((e, an))
-        lines.append("/** @brief %s */" % sentence(args_brief(e), "What %s takes" % e["entry"]))
-        lines.append("typedef struct")
-        lines.append("{")
+        lines.extend(["/** @brief %s */" % sentence(args_brief(e), "What %s takes" % e["entry"]), TYPEDEF_STRUCT, "{"])
         fw = foreign_types(spec)
         for p in e["params"]:
             t = p["type"]
@@ -1651,7 +1683,7 @@ def gen_header(spec, original):
             # Only where the declaration above is a struct tag. Where the type came in by include it
             # is already spelled correctly, and prefixing `struct` would name a different type.
             if base in fw and not defining_header(base):
-                t = t.replace(base, "struct " + base)
+                t = t.replace(base, STRUCT_KEYWORD + base)
             # A parameter's array declarator is a pointer - `uint8_t out[2]` is `uint8_t *out`.
             # Copying the bound onto a struct member makes a real array, which cannot be assigned,
             # so every call site fails to compile. The bound goes in the comment, where it belongs.
@@ -1661,7 +1693,7 @@ def gen_header(spec, original):
                 t = t if t.endswith("*") else t + " *"
             doc = " ///< %s" % (p["doc"] + bound if p.get("doc") else bound.strip()) if (p.get("doc") or bound) else ""
             lines.append("    %s%s;%s" % (t if t.endswith("*") else t + " ", p["name"], doc))
-        lines.append("} %s;" % an)
+        lines.append(TYPEDEF_END_FORMAT % an)
         lines.append("")
 
     results = []
@@ -1670,7 +1702,7 @@ def gen_header(spec, original):
             results.append(e["result"])
 
     body = [""] + ns_doc(spec, args_types, results)
-    body += ["typedef struct", "{"]
+    body += [TYPEDEF_STRUCT, "{"]
     for e, an in args_types:
         body.append("    %s %s_args;" % (an, e["entry"]))
     body.append("")
@@ -1681,8 +1713,8 @@ def gen_header(spec, original):
             body.append("    %s %s;" % (t, r))
     body.append("")
     for e in spec["entries"]:
-        body.append("    void (*const %s)(uint8_t *work);" % e["entry"])
-    body.append("} %s;" % ns)
+        body.append(TABLE_MEMBER_FORMAT % e["entry"])
+    body.append(TYPEDEF_END_FORMAT % ns)
     body.append("")
     body.append("/** @brief The one symbol this module exports. */")
     body.append("extern %s %s;" % (ns, obj))
@@ -1712,14 +1744,14 @@ def gen_header(spec, original):
             "// same way.\n\n"
         )
 
-    i = original.find("#ifndef")
+    i = original.find(IFNDEF)
     head = original[:i] if i != -1 else original.split("*/")[0] + "*/\n\n"
     g = re.search(r"#ifndef (\w+)\n#define \1", original)
     guard = g.group(1) if g else "PROTOCORE_%s_H" % spec["module"].upper()
     return (
         head
         + "#ifndef %s\n#define %s\n\n" % (guard, guard)
-        + '#include "protocore_config.h" // the entry point: protocore_types.h for the widths\n'
+        + CONFIG_INCLUDE_LINE
         # An include a kept type needs by value: the header cannot declare that type without it.
         + "".join(
             "#include %s // the complete type a public struct below holds by value\n" % h
@@ -1798,7 +1830,7 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
                     # A `)` followed by `{` is a DEFINITION, not a call. A module whose entry is
                     # defined in a sibling .c has one here, and rewriting it produced staging lines
                     # out of the parameter list and left the body dangling.
-                    if re.match(r"\s*\{", s[end:]):
+                    if re.match(OPEN_BRACE_PATTERN, s[end:]):
                         skipped.append(
                             (rel, s[: m.start()].count("\n") + 1, "definition, not a call - convert it by hand")
                         )
@@ -1836,8 +1868,8 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
                 if n or len(skipped) > before:
                     for inc in spec.get("moved_includes", []):
                         if inc not in s:
-                            k = s.index("#include")
-                            s = s[:k] + "#include %s\n" % inc + s[k:]
+                            k = s.index(INCLUDE_DIRECTIVE)
+                            s = s[:k] + INCLUDE_LINE_FORMAT % inc + s[k:]
                     s = declare_work(s, spec)
                     print("   %-72s %d%s" % (rel, n, "" if n else "  (all skipped; borrow declared)"))
                     emit(p, s)
@@ -1899,7 +1931,7 @@ def rewrite_ns_calls(spec, roots=("src", "test", "examples", "vendor", "include"
     # rewrote every OTHER namespace in the files this pass touched.
     holders = [re.escape(obj)] + [re.escape(a) for a in spec.get("aliases", [])]
     call = re.compile(r"(?<![\w.])(%s)(\.|->)(\w+)\(\s*\1\2internal\s*\)" % "|".join(holders))
-    span = "protocore_%s_span()" % spec["module"]
+    span = SPAN_CALL_FORMAT % spec["module"]
     total, skipped = 0, []
     for root in roots:
         for dp, _d, fns in os.walk(os.path.join(R, root)):
@@ -2058,7 +2090,7 @@ def enclosing_has_work(s, pos):
     prev = s.rfind("\n}", 0, pos)  # a definition ends at a brace in column 1
     head = s[prev + 2 : pos] if prev >= 0 else s[:pos]
     m = None
-    for m in re.finditer(r"^[\w][\w \t\*]*\s[\*]?\w+\s*\(([^;{)]*)\)\s*\{", head, re.M):
+    for m in re.finditer(r"^\w[\w \t\*]*\s\*?\w+\s*\(([^;{)]*)\)\s*\{", head, re.M):
         pass  # the last one that opened is the one this call is inside
     return bool(m) and "work" in m.group(1)
 
@@ -2084,7 +2116,7 @@ def land_returns(body, obj, result):
         value = body[mm.end() : j].strip()
         # A comment after the `;` describes the value, so it travels with it onto the assignment
         # rather than staying behind on a bare `return;` that says nothing.
-        tail = re.match(r"[ \t]*(//[^\n]*?)[ \t]*(?=\n)", body[j + 1 :])
+        tail = re.match(r"[ \t]*(//(?:[^\n]*\S)?)[ \t]*(?=\n)", body[j + 1 :])
         if j < len(body) and value:
             spans.append((mm.start(), j + 1 + (tail.end() if tail else 0), value, tail.group(1) if tail else ""))
     for a, b, value, note in reversed(spans):
@@ -2145,8 +2177,8 @@ def restructure_source(spec):
     # what the header used to include, the .c now includes itself
     for inc in spec.get("moved_includes", []):
         if inc not in s:
-            k = s.index("#include")
-            s = s[:k] + "#include %s\n" % inc + s[k:]
+            k = s.index(INCLUDE_DIRECTIVE)
+            s = s[:k] + INCLUDE_LINE_FORMAT % inc + s[k:]
     mask = code_mask(s)
     notes = []
     for e in spec["entries"]:
@@ -2207,7 +2239,6 @@ def restructure_source(spec):
             done += 1
         if not done:
             notes.append("%s: definition not found" % e["flat"])
-            continue
 
     # the golden prologue: the config include sits ABOVE the enable gate, so the gate can read it,
     # and the declarations are wrapped once.
@@ -2254,7 +2285,7 @@ def restructure_source(spec):
             continue
         e = byname[m.group(1)]
         end = N.close_paren(s, m.end())
-        if re.match(r"\s*\{", s[end:]):
+        if re.match(OPEN_BRACE_PATTERN, s[end:]):
             at = m.end()  # a definition, not a call
             continue
         a = N.split_args(s[m.end() : end - 1])
@@ -2291,7 +2322,7 @@ def restructure_source(spec):
     # the call is an implicit declaration with external linkage, and the `static` definition below
     # then conflicts with it.
     if selfcalls:
-        first = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], s, re.M)
+        first = re.search(STATIC_ENTRY_PATTERN % spec["module"], s, re.M)
         if first:
             protos = "// The entries this file calls before reaching their definitions.\n" + "".join(
                 "static void %s_%s(uint8_t *work);\n" % (spec["module"], n) for n in sorted(selfcalls)
@@ -2302,7 +2333,7 @@ def restructure_source(spec):
     if not spec.get("owns_state", True):
         # No file-static context: the module holds nothing, so there is no span to take and no
         # borrow to carve. tls_policy.c is the shape - the note says so where the context would be.
-        first = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], s, re.M)
+        first = re.search(STATIC_ENTRY_PATTERN % spec["module"], s, re.M)
         if first:
             s = (
                 s[: first.start()]
@@ -2337,7 +2368,7 @@ def restructure_source(spec):
         )
         pending_accessor = accessor
         if pool["include"] not in s:
-            k = s.index("#include")
+            k = s.index(INCLUDE_DIRECTIVE)
             s = s[:k] + pool["include"] + " " + pool["why"] + "\n" + s[k:]
 
     # the point of the shape: the context moves into the borrow, with offsets and an assert
@@ -2347,7 +2378,7 @@ def restructure_source(spec):
     # declared further down and gcc read it as an implicit function.
     if pending_accessor:
         ctx_macro = re.search(r"^#define %s_CTX\(w\)[^\n]*\n" % spec["module"].upper(), s, re.M)
-        anchor = re.search(r"^static void %s_\w+\(uint8_t \*(?:restrict )?work\)" % spec["module"], s, re.M)
+        anchor = re.search(STATIC_ENTRY_PATTERN % spec["module"], s, re.M)
         at = ctx_macro.end() if ctx_macro else (above_capability_split(s, anchor.start()) if anchor else None)
         if at is not None:
             s = s[:at] + pending_accessor + s[at:]
@@ -2395,7 +2426,7 @@ GATE = re.compile(r"^#if\s+\(?PROTOCORE_(?:ENABLE|TLS|HAS)_\w+[^\n]*$", re.M)
 # the source's wording into a header is a citation that does not hold - the gate below a header's
 # config include is the same gate, but the header is not what reads it.
 CONFIG_INC = '#include "protocore_config.h" // the entry point: the enable gate below, and the widths\n'
-CONFIG_INC_H = '#include "protocore_config.h" // the entry point: protocore_types.h for the widths\n'
+CONFIG_INC_H = CONFIG_INCLUDE_LINE
 
 
 ARM = re.compile(r"^#if\s+!?\w+\s*\n(?:[ \t]*#\s*include[^\n]*\n)*#endif[^\n]*\n", re.M)
@@ -2535,7 +2566,7 @@ def classify_includes(s):
         names = set()
         if os.path.exists(inc):
             names = {g for t in PROVIDES.findall(io.open(inc, encoding="utf-8").read()) for g in t if g}
-        if any(re.search(r"(?<![\w])%s(?![\w])" % re.escape(n), kept) for n in names if n):
+        if any(re.search(WHOLE_WORD_PATTERN % re.escape(n), kept) for n in names if n):
             held.append(x)
         else:
             moved.append(x)
@@ -2555,7 +2586,7 @@ def prune_header(p):
             continue
         names = {g for t in PROVIDES.findall(io.open(inc, encoding="utf-8").read()) for g in t if g}
         body = s.replace(m.group(0), "")
-        if any(re.search(r"(?<![\w])%s(?![\w])" % re.escape(n), body) for n in names):
+        if any(re.search(WHOLE_WORD_PATTERN % re.escape(n), body) for n in names):
             continue
         s = body
         dropped.append(os.path.basename(rel))
@@ -2607,7 +2638,7 @@ def drop_null_borrow(src, notes):
     apply in a sweep of 33 files.
     """
     mask = code_mask(src)
-    out, i, changed = [], 0, 0
+    out, changed = [], 0
     pos = 0
     for m in re.finditer(r"\bif\s*\(", src):
         if not mask[m.start()]:
@@ -2788,13 +2819,12 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     a named function and becomes direct - and neither the call nor the symbol reaches the image.
     """
     vars_t, objv = obj + "Vars", obj + "V"
-    impl = ["protocore_%s_%s" % (mod, e) for e in entries]
     # Filled in below once the bindings are read: two entries can share ONE implementation, and then
     # they must share the generated name too.
     entry_name = {}
 
     bind, data_init, entry_order = {}, [], []
-    init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S)
+    init = re.search(TABLE_INITIALIZER_PATTERN % (re.escape(ns), re.escape(obj)), csrc, re.S)
     if init:
         entry_set = set(entries)
         # LINE BY LINE, because an initializer can be conditional. network.c guards `.dns = &Dns`
@@ -2867,11 +2897,11 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
                 "initializer binds %d of %d entries; unbound: %s" % (len(bind), len(entries), ", ".join(unbound))
             )
 
-    block = ["typedef struct", "{"] + data + ["} %s;" % vars_t, ""]
+    block = [TYPEDEF_STRUCT, "{"] + data + [TYPEDEF_END_FORMAT % vars_t, ""]
     block += ["/** @brief The operands and the outcome. */", "extern %s %s;" % (vars_t, objv), ""]
-    block += ["/** @brief The entries. */", "typedef struct", "{"]
-    block += ["    void (*const %s)(uint8_t *work);" % e for e in entries]
-    block += ["} %s;" % ns, ""]
+    block += ["/** @brief The entries. */", TYPEDEF_STRUCT, "{"]
+    block += [TABLE_MEMBER_FORMAT % e for e in entries]
+    block += [TYPEDEF_END_FORMAT % ns, ""]
     block += [
         "// What the table binds, defined once in the .c and taking one parameter each: everything",
         "// else an entry needs is an operand in %s or a region of the borrow at a fixed offset." % objv,
@@ -2883,7 +2913,9 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     seen_impl = {}
     for e in entries:
         old = bind.get(e)
-        entry_name[e] = seen_impl.setdefault(old, "protocore_%s_%s" % (mod, e)) if old else "protocore_%s_%s" % (mod, e)
+        entry_name[e] = (
+            seen_impl.setdefault(old, PUBLIC_NAME_FORMAT % (mod, e)) if old else PUBLIC_NAME_FORMAT % (mod, e)
+        )
     impl = [entry_name[e] for e in entries]
 
     # The declarations carry the guards the bindings had, so a declaration never outlives the
@@ -2894,7 +2926,7 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
             if n is None:
                 block.append(v)
                 continue
-            name = entry_name.get(n, "protocore_%s_%s" % (mod, n))
+            name = entry_name.get(n, PUBLIC_NAME_FORMAT % (mod, n))
             if name in emitted:
                 continue
             emitted.add(name)
@@ -2912,9 +2944,11 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     ]
     if any(n for n, _ in entry_order):
         for n, v in entry_order:
-            block.append(v if n is None else "    .%s = %s," % (n, entry_name.get(n, "protocore_%s_%s" % (mod, n))))
+            block.append(
+                v if n is None else DESIGNATED_INIT_FORMAT % (n, entry_name.get(n, PUBLIC_NAME_FORMAT % (mod, n)))
+            )
     else:
-        block += ["    .%s = %s," % (e, f) for e, f in zip(entries, impl)]
+        block += [DESIGNATED_INIT_FORMAT % (e, f) for e, f in zip(entries, impl)]
     block += ["};"]
 
     span = ns_struct_span(hsrc, ns)
@@ -2967,7 +3001,7 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     # Only one arm compiles, so a definition in each is right.
     # The Vars definition CARRIES the data initializers the table had, or they are lost to zero.
     if data_init:
-        body = "\n".join(v if n is None else "    .%s = %s," % (n, v) for n, v in data_init)
+        body = "\n".join(v if n is None else DESIGNATED_INIT_FORMAT % (n, v) for n, v in data_init)
         vardef = "/** @brief The operands and the outcome. */\n%s %s = {\n%s\n};" % (vars_t, objv, body)
     else:
         vardef = "/** @brief The operands and the outcome. */\n%s %s;" % (vars_t, objv)
@@ -3021,7 +3055,7 @@ def move_alias(text, ns, obj, vars_t, objv):
     return out, len(names), []
 
 
-def move_ptr_operands(text, ns, objv, members, ptr_names):
+def move_ptr_operands(text, objv, members, ptr_names):
     """`p->operand` -> `<X>V.operand`, where p is a pointer to this namespace.
 
     A module can hold another module's table as an injected dependency - session.h declares
@@ -3249,7 +3283,7 @@ def scan_worked(hpath):
     cpath = hpath[:-1] + "c"
     csrc = io.open(cpath, encoding="utf-8").read() if os.path.exists(cpath) else ""
 
-    nsm = re.search(r"\}\s*(\w+Ns)\s*;", s)
+    nsm = re.search(NS_TYPEDEF_END_PATTERN, s)
     varm = re.search(r"\}\s*(\w+Vars)\s*;", s)
     if not nsm:
         return None
@@ -3269,8 +3303,8 @@ def scan_worked(hpath):
 
     # What the .c binds each member to.
     bind = {}
-    init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S) or re.search(
-        r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), s, re.S
+    init = re.search(TABLE_INITIALIZER_PATTERN % (re.escape(ns), re.escape(obj)), csrc, re.S) or re.search(
+        TABLE_INITIALIZER_PATTERN % (re.escape(ns), re.escape(obj)), s, re.S
     )
     if init:
         for m in VTABLE_BIND.finditer(init.group(1)):
@@ -3283,7 +3317,7 @@ def scan_worked(hpath):
     entries = []
     for m in WORK_MEMBER.finditer(s):
         name = m.group("name")
-        flat = bind.get(name, "protocore_%s_%s" % (mod, name))
+        flat = bind.get(name, PUBLIC_NAME_FORMAT % (mod, name))
         # WHICH OPERAND GROUP THIS ENTRY READS, asked of its body rather than guessed from its name.
         # The convention is <Obj><Entry>Args, and it is not universal: aes128gcm's key_init reads
         # Aes128GcmV.key_args, whose type is Aes128GcmKeyArgs, not Aes128GcmKeyInitArgs. Guessing
@@ -3339,7 +3373,7 @@ def scan_worked(hpath):
     moved, held = classify_includes(s)
     return {
         "from": "worked",
-        "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
+        "macros": module_macros(s, re.search(IFNDEF_PATTERN, s).group(1) if re.search(IFNDEF_PATTERN, s) else ""),
         "types": [t for t in module_types(s) if not re.search(r"\}\s*\w+(Args|Vars|Ns)\s*;\s*$", t)],
         "inlines": module_inlines(s),
         "externs": [x for x in module_externs(s, ns) if vars_t not in x],
@@ -3353,16 +3387,16 @@ def scan_worked(hpath):
         "gate": find_gate(s),
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
-        "borrow": "PROTOCORE_%s_BORROW" % snake(obj).upper(),
+        "borrow": PROTOCORE_BORROW_FORMAT % snake(obj).upper(),
         "pool": "secure",
         "suites": find_suites(hpath, mod),
         "owns_state": bool(find_context(csrc)),
-        "brief": first_sentence(doc_tags(doc_above(s, s.find("#ifndef")))[0]),
+        "brief": first_sentence(doc_tags(doc_above(s, s.find(IFNDEF)))[0]),
         "entries": entries,
     }
 
 
-def sig_params(spec, e, names=True):
+def sig_params(e, names=True):
     """The parameter list an entry declares, borrow first where the caller supplies one."""
     # The borrow is the first parameter of EVERY entry. It is not state a module reaches for
     # itself: its size and its offset are each a static_assert, and that pair is what makes an
@@ -3381,7 +3415,7 @@ def entry_doc(spec, e):
     """An entry's doxygen: its brief, a @param per operand, and @return where it returns one."""
     out = ["/**"]
     b = e["brief"] or e["entry"].replace("_", " ")
-    out.append(" * @brief %s" % sentence(b[0].upper() + b[1:] if b else b, "%s." % e["entry"]))
+    out.append(BRIEF_FORMAT % sentence(b[0].upper() + b[1:] if b else b, "%s." % e["entry"]))
     out.append(" * @param work %s bytes the caller took. Not held past the call." % spec["borrow"])
     for p in e["params"]:
         d = p.get("doc") or "%s." % p["name"].replace("_", " ").capitalize()
@@ -3463,7 +3497,7 @@ def split_head(original):
     block. MMgr keeps only the license there, so the block is taken apart here and rebuilt below
     BEGIN_DECLS.
     """
-    i = original.find("#ifndef")
+    i = original.find(IFNDEF)
     head = original[:i] if i != -1 else original
     lic = [l for l in head.splitlines() if l.startswith("//")]
     m = re.search(r"/\*\*((?:[^*]|\*(?!/))*)\*/", head, re.S)
@@ -3513,9 +3547,9 @@ def gen_header_ns(spec, original):
         lines.append("")
 
     # The table. Every member carries the signature its entry really has.
-    lines.append("/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */")
-    lines.append("typedef struct")
-    lines.append("{")
+    lines.extend(
+        ["/** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */", TYPEDEF_STRUCT, "{"]
+    )
     for e in spec["entries"]:
         # WITH PARAMETER NAMES. The table is the module's surface - it is what a reader looks at to
         # find out what an entry takes - and MMgr's spatium writes it that way:
@@ -3526,14 +3560,14 @@ def gen_header_ns(spec, original):
         # against the bare `embed_bool (*update)(uint8_t *, const uint8_t *, size_t);` this
         # used to emit, where the reader has to go and find the prototype to learn what the two
         # pointers are.
-        lines.append("    %s (*%s)(%s);" % (e["ret"], e["entry"], sig_params(spec, e, names=True)))
-    lines.append("} %s;" % ns)
+        lines.append("    %s (*%s)(%s);" % (e["ret"], e["entry"], sig_params(e, names=True)))
+    lines.append(TYPEDEF_END_FORMAT % ns)
     lines.append("PROTOCORE_NS_LAYOUT(%s, %s);" % (ns, ", ".join(e["entry"] for e in spec["entries"])))
     lines.append("")
 
     for e in spec["entries"]:
         lines += entry_doc(spec, e)
-        lines.append("%s %s(%s);" % (e["ret"], e["flat"], sig_params(spec, e)))
+        lines.append("%s %s(%s);" % (e["ret"], e["flat"], sig_params(e)))
     lines.append("")
 
     # What the module published besides its entries. Not part of the table and never was - a span
@@ -3541,8 +3575,7 @@ def gen_header_ns(spec, original):
     # with it before this was here.
     carried = carried_declarations(spec, original)
     if carried:
-        for c in carried:
-            lines.append(c)
+        lines.extend(carried)
         lines.append("")
 
     lines.append("/** @brief Module namespace. */")
@@ -3567,7 +3600,7 @@ def gen_header_ns(spec, original):
     doc = [
         "/**",
         " * @file %s" % os.path.basename(spec["header"]),
-        " * @brief %s" % sentence((brief or spec.get("brief", "")).rstrip("."), "%s." % obj),
+        BRIEF_FORMAT % sentence((brief or spec.get("brief", "")).rstrip("."), "%s." % obj),
     ]
     for para in own_prose + prose:
         doc.append(" *")
@@ -3581,7 +3614,7 @@ def gen_header_ns(spec, original):
     return (
         head
         + "#ifndef %s\n#define %s\n\n" % (guard, guard)
-        + '#include "protocore_config.h" // the entry point: protocore_types.h for the widths\n'
+        + CONFIG_INCLUDE_LINE
         + "".join(
             "#include %s // the complete type a public struct below holds by value\n" % h
             for h in spec.get("held_includes", [])
@@ -3591,7 +3624,9 @@ def gen_header_ns(spec, original):
         # gate, so there is no below to move them to. Dropping them took aes_blocks inline round
         # with it: PROTOCORE_AES_SBOX and mem, undeclared, in a header that had just stopped
         # including what defines them.
-        + "".join("#include %s\n" % h for h in spec.get("moved_includes", []) if h not in spec.get("held_includes", []))
+        + "".join(
+            INCLUDE_LINE_FORMAT % h for h in spec.get("moved_includes", []) if h not in spec.get("held_includes", [])
+        )
         + "\n"
         + ("#if %s\n\n" % gate if gate else "")
         + DECLS_OPEN
@@ -3647,7 +3682,7 @@ def _brace_end(s, ob, mask):
     return len(s) - 1
 
 
-DECLARED_FN = re.compile(r"^\s*(?:[A-Za-z_][\w ]*?[\s*])(\w+)\s*\([^;{]*\)\s*;", re.M)
+DECLARED_FN = re.compile(r"^\s*[A-Za-z_][\w ]*?[\s*](\w+)\s*\([^;{]*\)\s*;", re.M)
 
 
 def dropped_declarations(original, converted, spec):
@@ -3682,7 +3717,6 @@ def undecodable_operands(spec, texts=None):
         text = io.open(p, encoding="utf-8", errors="replace").read()
     mask = code_mask(text)
     results = {e.get("result") for e in spec["entries"] if e.get("result")}
-    entries = {e["entry"] for e in spec["entries"]}
     # Where each entry's body is. An operand is decoded by substituting inside the body of the entry
     # it belongs to, so `Smb2V.sign_args.msg` read from a static helper - or from a DIFFERENT
     # entry - is not decoded by anything, and the module compiles with those names undeclared.
@@ -3955,7 +3989,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                 # staged for one of them survived into a file whose header no longer declares it.
                 if obj + "." not in s and not any(f in s for f in flat):
                     continue
-                n, at, declared, carried = 0, 0, {}, {}
+                n, at, carried = 0, 0, {}
                 mask = code_mask(s)
                 # The comma-expression form first: it is self-contained, so folding it removes the
                 # staging the statement walk below would otherwise fail to reach.
@@ -3971,7 +4005,7 @@ def rewrite_calls_ns(spec, roots=("src", "test", "examples", "vendor", "include"
                         continue
                     e = byname[m.group("e") or m.group("f")]
                     end = N.close_paren(s, m.end())
-                    if re.match(r"\s*\{", s[end:]):
+                    if re.match(OPEN_BRACE_PATTERN, s[end:]):
                         at = m.end()  # a definition, not a call
                         continue
                     args = [a.strip() for a in N.split_args(s[m.end() : end - 1]) if a.strip()]
@@ -4316,7 +4350,7 @@ def unwork_source(spec, write=True, text=None):
         if re.search(r"\bwork\b", re.sub(r"^\s*\(void\)work;[ \t]*\n", "", body, flags=re.M)):
             body = re.sub(r"^\s*\(void\)work;[ \t]*\n", "", body, flags=re.M)
 
-        sig = "%s %s(%s)\n{" % (e["ret"], e["flat"], sig_params(spec, e))
+        sig = "%s %s(%s)\n{" % (e["ret"], e["flat"], sig_params(e))
         s = s[:start] + sig + body + s[end:]
 
     # The operands object is gone with the args it carried.
@@ -4419,13 +4453,13 @@ def main():
         )
         print("entries:")
         for e in spec["entries"]:
-            print("   %-28s %s %s(%s)" % (e["entry"], e["ret"], e["flat"], sig_params(spec, e)))
+            print("   %-28s %s %s(%s)" % (e["entry"], e["ret"], e["flat"], sig_params(e)))
         # THE CALL SITES DECIDE WHETHER THIS MODULE CONVERTS AT ALL, so they are worked out before
         # anything is written. The converted header does not declare <X>V, so a site the rewriter
         # refuses is a translation unit that stops compiling - and a module half-converted is worse
         # than one not converted, because the tree is then in neither shape. Planned first, written
         # only if nothing would be left behind.
-        print("call sites:")
+        print(CALL_SITES_LABEL)
         was_dry = DRY
         globals()["DRY"] = True
         total, skipped, texts = rewrite_calls_ns(spec)
@@ -4435,7 +4469,7 @@ def main():
         if left and not FORCE:
             print("   %sV reads left: %d - NOT CONVERTING" % (spec["object"], left))
             for rel, ln, why in sorted(set(skipped)):
-                print("   SKIPPED %s:%d  %s" % (rel, ln, why))
+                print(SKIPPED_FORMAT % (rel, ln, why))
             print(
                 "\n%s was left alone. Each site above has to be staged in the block directly above\n"
                 "its call, or converted by hand, before this module can move. --force writes anyway." % spec["module"]
@@ -4497,16 +4531,16 @@ def main():
         if not DRY:
             for p_, text in texts.items():
                 io.open(p_, "w", encoding="utf-8", newline="").write(text)
-        print("header:", spec["header"])
+        print(HEADER_LABEL, spec["header"])
         emit(hp, header)
-        print("source:", spec["source"])
+        print(SOURCE_LABEL, spec["source"])
         for n in dict.fromkeys(unwork_source(spec)[0]):
-            print("   NOTE", n)
+            print(NOTE_MARK, n)
         # Every remaining read of <X>V is a compile error once the header stops declaring it, so
         # count them here rather than letting the build be the first to say so.
         print("   %sV reads left: %d" % (spec["object"], left))
         for rel, ln, why in sorted(set(skipped)):
-            print("   SKIPPED %s:%d  %s" % (rel, ln, why))
+            print(SKIPPED_FORMAT % (rel, ln, why))
         return 0
     if cmd == "shape":
         # The golden's file shape. sha256.c states one thing above the enable gate - the config
@@ -4537,9 +4571,9 @@ def main():
         ssrc = io.open(sp, encoding="utf-8").read()
         hout = P.convert_header(hsrc, spec)
         sout = P.convert_source(ssrc, spec)
-        print("header:", spec["header"])
+        print(HEADER_LABEL, spec["header"])
         emit(hp, hout)
-        print("source:", spec["source"])
+        print(SOURCE_LABEL, spec["source"])
         emit(sp, sout)
         total, files = P.convert_calls(spec, ["src", "test", "examples", "vendor", "include"], emit)
         print("call sites: %d" % total)
@@ -4576,7 +4610,7 @@ def main():
             files += 1
         print("%d branch%s in %d file%s" % (total, "es"[: 2 * (total != 1)], files, "s"[: files != 1]))
         for x in notes:
-            print("   NOTE " + x)
+            print(NOTE_PREFIX + x)
         return 0
 
     if cmd == "handle":
@@ -4674,7 +4708,7 @@ def main():
             if not rptrs:
                 continue
             for q in tree:
-                out, n = move_ptr_operands(cache[q], rns.group(1), robj + "V", rmembers, rptrs)
+                out, n = move_ptr_operands(cache[q], robj + "V", rmembers, rptrs)
                 if n:
                     cache[q] = out
                     emit(q, out)
@@ -4722,7 +4756,7 @@ def main():
             # skipped, rather than renamed to something a caller would have to be told about.
             taken = []
             for e in entries:
-                f = "protocore_%s_%s" % (mod, e)
+                f = PUBLIC_NAME_FORMAT % (mod, e)
                 found = declared.get(f)
                 if not found:
                     continue
@@ -4752,10 +4786,10 @@ def main():
             # it; the declaration and the use are in different files.
             ptr_names = ns_pointer_names("\n".join(cache.values()), ns)
             cout, own = move_operands(cout, obj, objv, members)
-            cout, ownp = move_ptr_operands(cout, ns, objv, members, ptr_names)
+            cout, ownp = move_ptr_operands(cout, objv, members, ptr_names)
             own += ownp
             # A local alias of the table has to follow the operands it is used to reach.
-            cout, naliased, refused = move_alias(cout, ns, obj, obj + "Vars", objv)
+            cout, _, refused = move_alias(cout, ns, obj, obj + "Vars", objv)
             for r in refused:
                 print("   NOTE %s: alias `%s` calls an entry AND reads an operand; split it by hand" % (rel, r))
             # The module's OWN header carries operand sites too, outside the Ns struct: log.h sets
@@ -4775,7 +4809,7 @@ def main():
                     continue
                 out, n = move_operands(s, obj, objv, members)
                 # A pointer to this namespace reaches the operands too, and they moved.
-                out, n2 = move_ptr_operands(out, ns, objv, members, ptr_names)
+                out, n2 = move_ptr_operands(out, objv, members, ptr_names)
                 n += n2
                 if n:
                     files.append((p, out))
@@ -4842,7 +4876,7 @@ def main():
         # its file-static context into the borrow without re-running the whole conversion.
         p = os.path.join(R, arg.replace("/", os.sep))
         module = os.path.basename(p)[:-2]
-        borrow = sys.argv[3] if len(sys.argv) > 3 else "PROTOCORE_%s_BORROW" % module.upper()
+        borrow = sys.argv[3] if len(sys.argv) > 3 else PROTOCORE_BORROW_FORMAT % module.upper()
         notes = []
         src = io.open(p, encoding="utf-8").read()
         out = funnel(src, module, borrow, notes)
@@ -4852,7 +4886,7 @@ def main():
             print("funnelled:", arg, "->", borrow)
             emit(p, out)
         for x in dict.fromkeys(notes):  # one line per distinct note: a rescan re-reports each skip
-            print("   NOTE", x)
+            print(NOTE_MARK, x)
         return 0
     if cmd == "scan":
         # A module already on the Ns shape has no flat declarations to read, so it is scanned
@@ -4888,10 +4922,10 @@ def main():
             # every caller passing a borrow to entries that do not take one.
             if any(x.startswith("REFUSED:") for x in notes):
                 return 1
-            print("call sites:")
+            print(CALL_SITES_LABEL)
             total, skipped = rewrite_ns_calls(spec)
             for rel, line, why in skipped:
-                print("   SKIPPED %s:%d  %s" % (rel, line, why))
+                print(SKIPPED_FORMAT % (rel, line, why))
             print("   total:", total)
             if spec.get("owns_state"):
                 print("NEXT: state %s in protocore_config.h and sum it into the arena" % spec["borrow"])
@@ -4941,9 +4975,9 @@ def main():
         # What a call site passes as the borrow. A module that owns state hands out its own span;
         # one that owns none never reads the pointer, so its callers keep a nominal buffer.
         if spec.get("owns_state", True):
-            spec.setdefault("span", "protocore_%s_span()" % spec["module"])
+            spec.setdefault("span", SPAN_CALL_FORMAT % spec["module"])
         else:
-            spec.setdefault("span", "%s_work" % spec["module"])
+            spec.setdefault("span", WORK_NAME_FORMAT % spec["module"])
         hp = os.path.join(R, spec["header"].replace("/", os.sep))
         original = io.open(hp, encoding="utf-8").read()
         require_gate(spec)
@@ -4952,7 +4986,7 @@ def main():
         # answer is a real host arm for the missing one, not a narrower namespace.
         for name, arm in entry_arms(spec).items():
             print("   NOTE %s is defined only under `%s`; give the other arm a real definition" % (name, arm))
-        print("header:", spec["header"])
+        print(HEADER_LABEL, spec["header"])
         regenerated = gen_header(spec, original)
         for name in dropped_names(spec, original, regenerated):
             print("   NOTE dropped from the header: %s" % name)
@@ -4961,17 +4995,17 @@ def main():
         for name in gutted_macros(original, regenerated):
             print("   NOTE `%s` kept its name and lost its body - it now expands to nothing" % name)
         emit(hp, regenerated)
-        print("source:", spec["source"])
+        print(SOURCE_LABEL, spec["source"])
         notes = restructure_source(spec)
         for x in dict.fromkeys(notes):  # one line per distinct note: a rescan re-reports each skip
-            print("   NOTE", x)
-        print("call sites:")
+            print(NOTE_MARK, x)
+        print(CALL_SITES_LABEL)
         total, skipped = rewrite_calls(spec)
         print("   total:", total)
         # A successful rewrite restarts the scan, so a site refused earlier is met again on every
         # pass. Report each one once.
         for rel, ln, why in sorted(set(skipped)):
-            print("   SKIPPED %s:%d  %s" % (rel, ln, why))
+            print(SKIPPED_FORMAT % (rel, ln, why))
         if spec.get("owns_state", True):
             print("NEXT: state %s in protocore_config.h and sum it into the arena, then" % spec["borrow"])
             print(

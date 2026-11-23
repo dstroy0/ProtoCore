@@ -73,7 +73,6 @@ def literal_length(tok_run):
 
 def main(argv):
     fix = "--fix" in argv
-    verbose = "--verbose" in argv
     bad, checked, fixed = [], 0, 0
 
     for tree in TREES:

@@ -188,8 +188,9 @@ static void finish(const uint8_t *work, SmtpResult r)
 }
 
 // Write a whole command line; true only when every octet went out.
-static embed_bool send_line(uint8_t *work, const char *line)
+static embed_bool send_line(const uint8_t *work, const char *line)
 {
+    (void)work;
     size_t n = EMBED_CALL(cellul.len, CatenaFinitaCfg, .src = line, .cap = PROTOCORE_SMTP_LINE_MAX + 1);
     return n == 0 || SmtpV.transport.send(SmtpV.transport.ctx, (const uint8_t *)line, n) == (int)n;
 }

@@ -1,6 +1,5 @@
-# repotools-stamp: media_tools/dataviz/build_sound_view.py 15c7d4b4f710c5c7
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Turns a sound into a solid: frequency against time, as a surface you can turn.
 
     python tools/view/build_sound_view.py take.wav
@@ -32,6 +31,7 @@ and not smeared across the two. Raise --fft to separate tones, raise --pad to pl
 """
 
 import os, sys
+
 _at = os.path.dirname(os.path.abspath(__file__))
 while _at != os.path.dirname(_at) and not os.path.isdir(os.path.join(_at, "lib", "repotools")):
     _at = os.path.dirname(_at)
@@ -46,6 +46,8 @@ import time
 
 from numerics import dsp
 import settings
+
+FREQUENCY_BIN = "frequency bin"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE = os.path.join(HERE, "voxel_view_template.html")
@@ -116,7 +118,7 @@ def main():
     began = time.time()
     columns = []
     for at, start in enumerate(starts):
-        columns.append(dsp.spectrum(values[start:start + fft_size], win, pad_to)[:bins])
+        columns.append(dsp.spectrum(values[start : start + fft_size], win, pad_to)[:bins])
         if at and at % 32 == 0:
             sys.stderr.write("  %d of %d frames\r" % (at, len(starts)))
             sys.stderr.flush()
@@ -156,24 +158,27 @@ def main():
         "valueLabel": "level",
         "eyebrow": "Sound - rendered as a solid",
         "title": name,
-        "blurb": ("%s at %d Hz. %d frames of %d samples, transformed at %d after zero-padding %dx, "
-                  "%s window, hop %d. Depth runs left to right as time; the other horizontal axis "
-                  "is frequency, %d bins up to %d Hz at %.2f Hz each."
-                  % (name, rate, len(columns), fft_size, pad_to, pad, kind, hop,
-                     bins, int(bins * hz_per_bin), hz_per_bin)),
+        "blurb": (
+            "%s at %d Hz. %d frames of %d samples, transformed at %d after zero-padding %dx, "
+            "%s window, hop %d. Depth runs left to right as time; the other horizontal axis "
+            "is frequency, %d bins up to %d Hz at %.2f Hz each."
+            % (name, rate, len(columns), fft_size, pad_to, pad, kind, hop, bins, int(bins * hz_per_bin), hz_per_bin)
+        ),
         "noteTitle": "Padding places a peak, it does not separate two",
-        "note": ("Resolution is set by how many samples a frame holds and nothing else: two tones "
-                 "closer together than the frame can separate stay unseparated at any pad. Padding "
-                 "interpolates onto a finer grid, so a peak falling between bins is drawn at its "
-                 "real height and place instead of smeared across two. Raise fft to separate, "
-                 "raise pad to place. A feature that appears at one window and not another belongs "
-                 "to the window."),
+        "note": (
+            "Resolution is set by how many samples a frame holds and nothing else: two tones "
+            "closer together than the frame can separate stay unseparated at any pad. Padding "
+            "interpolates onto a finer grid, so a peak falling between bins is drawn at its "
+            "real height and place instead of smeared across two. Raise fft to separate, "
+            "raise pad to place. A feature that appears at one window and not another belongs "
+            "to the window."
+        ),
         "settings": settings.collect(sys.argv[1:]),
         "fields": [
-            {"key": "level", "label": "Level dB", "axis": "frequency bin", "rows": level},
-            {"key": "linear", "label": "Linear", "axis": "frequency bin", "rows": linear},
-            {"key": "flux", "label": "Flux", "axis": "frequency bin", "rows": flux},
-            {"key": "slope", "label": "Bin slope", "axis": "frequency bin", "rows": slope},
+            {"key": "level", "label": "Level dB", "axis": FREQUENCY_BIN, "rows": level},
+            {"key": "linear", "label": "Linear", "axis": FREQUENCY_BIN, "rows": linear},
+            {"key": "flux", "label": "Flux", "axis": FREQUENCY_BIN, "rows": flux},
+            {"key": "slope", "label": "Bin slope", "axis": FREQUENCY_BIN, "rows": slope},
         ],
     }
 
@@ -188,8 +193,7 @@ def main():
         handle.write(page)
 
     print("wrote %s (%.1f KB)" % (target, os.path.getsize(target) / 1024.0))
-    print("  %d frames of %d, transform %d (%dx pad), %s window"
-          % (len(columns), fft_size, pad_to, pad, kind))
+    print("  %d frames of %d, transform %d (%dx pad), %s window" % (len(columns), fft_size, pad_to, pad, kind))
     print("  %d bins to %d Hz, %.2f Hz per bin" % (bins, int(bins * hz_per_bin), hz_per_bin))
     print("  %.1f s of transforms" % took)
     return 0

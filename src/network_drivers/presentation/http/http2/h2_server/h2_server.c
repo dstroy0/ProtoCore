@@ -284,14 +284,11 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
                 r->query_idx = set_field(r->query, sizeof r->query, q + 1, vl - plen - 1);
             }
         }
-        else if (bit == H2_PH_AUTHORITY)
+        else if (bit == H2_PH_AUTHORITY && r->header_count < MAX_HEADERS)
         {
-            if (r->header_count < MAX_HEADERS)
-            {
-                Header *h = &r->headers[r->header_count++];
-                set_field(h->key, sizeof h->key, "host", 4);
-                set_field(h->val, sizeof h->val, v, vl);
-            }
+            Header *h = &r->headers[r->header_count++];
+            set_field(h->key, sizeof h->key, "host", 4);
+            set_field(h->val, sizeof h->val, v, vl);
         }
         return; // :scheme and :protocol are recorded in the mask, unused by the dispatcher
     }
@@ -399,8 +396,9 @@ static void data(const uint8_t *work)
     }
 }
 
-static void respond(uint8_t *work)
+static void respond(const uint8_t *work)
 {
+    (void)work;
     const uint8_t slot = H2Server.slot;
     H2ConnV.respond_args.stream_id = http_h2_stream[slot];
     H2ConnV.respond_args.status = H2Server.resp.code;

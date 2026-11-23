@@ -238,7 +238,7 @@ static void pb_parse_sd2(const uint8_t *work)
     ProfibusV.ok = EMBED_TRUE;
 }
 
-void protocore_profibus_parse(uint8_t *work)
+void protocore_profibus_parse(const uint8_t *work)
 {
     const uint8_t *frame = ProfibusV.parse_args.frame;
     size_t len = ProfibusV.parse_args.len;

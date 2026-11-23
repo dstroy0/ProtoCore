@@ -295,7 +295,7 @@ static embed_bool emit_indexed(const HpackDynTable *t, uint32_t idx, char *scrat
 }
 
 // Decode a literal representation (name via index or inline, value inline; optional indexing).
-static embed_bool decode_literal(uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, size_t *pos,
+static embed_bool decode_literal(const uint8_t *work, HpackDynTable *t, const uint8_t *block, size_t len, size_t *pos,
                                  uint8_t prefix_bits, embed_bool do_index, char *scratch, size_t cap, HpackEmitFn emit,
                                  void *ctx)
 {
@@ -310,7 +310,7 @@ static embed_bool decode_literal(uint8_t *work, HpackDynTable *t, const uint8_t 
     size_t name_len = 0;
     if (name_idx == 0)
     {
-        embed_bool hpack_prim_ok = HpackPrim.decode_str(work, block, len, pos, scratch, cap, &name_len);
+        hpack_prim_ok = HpackPrim.decode_str(work, block, len, pos, scratch, cap, &name_len);
         if (!hpack_prim_ok)
         {
             return EMBED_FALSE;
@@ -406,7 +406,7 @@ static embed_bool hpack_decode_run(uint8_t *work, HpackDynTable *t, const uint8_
     return EMBED_TRUE;
 }
 
-static size_t hpack_encode_header_run(uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
+static size_t hpack_encode_header_run(const uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
                                       const char *value, size_t value_len)
 {
     int name_idx = 0;

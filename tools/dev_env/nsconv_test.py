@@ -4,6 +4,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding="utf-8")
 import nsconv as N
 
+NS_ARGS_A_A = "Ns.args.a = a;"
+NS_ENTRY = "Ns.entry(w);"
+NS_OK = "Ns.ok"
+NS_PTR = "Ns.ptr"
+OLD_CALL = "old_call("
+
 fails = 0
 
 
@@ -45,8 +51,8 @@ eq(
 )
 
 # 6. rewriting that call hoists staging ABOVE the assert and leaves the value inside it
-end = N.close_paren(src, pos + len("old_call("))
-out = N.rewrite(src, pos, end, ["Ns.args.a = a;", "Ns.args.b = b;", "Ns.entry(w);"], "Ns.value")
+end = N.close_paren(src, pos + len(OLD_CALL))
+out = N.rewrite(src, pos, end, [NS_ARGS_A_A, "Ns.args.b = b;", NS_ENTRY], "Ns.value")
 eq(
     "hoist above the assert",
     out,
@@ -63,19 +69,19 @@ eq(
 # 7. a call that IS the statement loses its ';' and leaves only staging
 src2 = "void t(void)\n{\n    old_call(a, b);\n}\n"
 pos2 = src2.index("old_call")
-end2 = N.close_paren(src2, pos2 + len("old_call("))
+end2 = N.close_paren(src2, pos2 + len(OLD_CALL))
 eq(
     "bare statement",
-    N.rewrite(src2, pos2, end2, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.value"),
+    N.rewrite(src2, pos2, end2, [NS_ARGS_A_A, NS_ENTRY], "Ns.value"),
     "void t(void)\n{\n    Ns.args.a = a;\n    Ns.entry(w);\n}\n",
 )
 
 # 8. a call used as a loop condition keeps the loop's shape (staging hoisted above the whole 'while')
 src3 = "void t(void)\n{\n    while ((n = old_call(a)) > 0)\n    {\n    }\n}\n"
 pos3 = src3.index("old_call")
-end3 = N.close_paren(src3, pos3 + len("old_call("))
+end3 = N.close_paren(src3, pos3 + len(OLD_CALL))
 try:
-    N.rewrite(src3, pos3, end3, ["Ns.entry(w);"], "Ns.n")
+    N.rewrite(src3, pos3, end3, [NS_ENTRY], "Ns.n")
     eq("loop condition refused", "converted", "refused")
 except ValueError:
     eq("loop condition refused", "refused", "refused")
@@ -84,20 +90,20 @@ except ValueError:
 # line, so the staging does not land above the statement before it
 src4 = "void t(void)\n{\n    fill(1); // the oldest slot\n\n    old_call(a);\n}\n"
 pos4 = src4.index("old_call")
-end4 = N.close_paren(src4, pos4 + len("old_call("))
+end4 = N.close_paren(src4, pos4 + len(OLD_CALL))
 eq(
     "trailing comment does not move the statement start",
-    N.rewrite(src4, pos4, end4, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.ok"),
+    N.rewrite(src4, pos4, end4, [NS_ARGS_A_A, NS_ENTRY], NS_OK),
     "void t(void)\n{\n    fill(1); // the oldest slot\n\n    Ns.args.a = a;\n    Ns.entry(w);\n}\n",
 )
 
 # 10. and neither does a block comment sitting between the two statements
 src5 = "void t(void)\n{\n    fill(1);\n    /* the oldest slot */\n    old_call(a);\n}\n"
 pos5 = src5.index("old_call")
-end5 = N.close_paren(src5, pos5 + len("old_call("))
+end5 = N.close_paren(src5, pos5 + len(OLD_CALL))
 eq(
     "block comment does not move the statement start",
-    N.rewrite(src5, pos5, end5, ["Ns.entry(w);"], "Ns.ok"),
+    N.rewrite(src5, pos5, end5, [NS_ENTRY], NS_OK),
     "void t(void)\n{\n    fill(1);\n    /* the oldest slot */\n    Ns.entry(w);\n}\n",
 )
 
@@ -105,9 +111,9 @@ eq(
 # would time an addition and call the entry once
 src6 = 'void t(void)\n{\n    DBENCH_OP("x", 200000, sink += old_call(a));\n}\n'
 pos6 = src6.index("old_call")
-end6 = N.close_paren(src6, pos6 + len("old_call("))
+end6 = N.close_paren(src6, pos6 + len(OLD_CALL))
 try:
-    N.rewrite(src6, pos6, end6, ["Ns.entry(w);"], "Ns.n")
+    N.rewrite(src6, pos6, end6, [NS_ENTRY], "Ns.n")
     eq("repeating macro refused", "converted", "refused")
 except ValueError:
     eq("repeating macro refused", "refused", "refused")
@@ -116,9 +122,9 @@ except ValueError:
 # left operand and reads it in the right, so a hoisted call sees the value from before the read
 src6a = "void t(void)\n{\n    if (!r8(REG, &irq) || !old_call(irq))\n    {\n        return;\n    }\n}\n"
 pos6a = src6a.index("old_call")
-end6a = N.close_paren(src6a, pos6a + len("old_call("))
+end6a = N.close_paren(src6a, pos6a + len(OLD_CALL))
 try:
-    N.rewrite(src6a, pos6a, end6a, ["Ns.entry(w);"], "Ns.ok")
+    N.rewrite(src6a, pos6a, end6a, [NS_ENTRY], NS_OK)
     eq("short-circuit right operand refused", "converted", "refused")
 except ValueError:
     eq("short-circuit right operand refused", "refused", "refused")
@@ -126,9 +132,9 @@ except ValueError:
 # 11a2. and && the same way
 src6c = "void t(void)\n{\n    if (ready() && old_call(a))\n    {\n        return;\n    }\n}\n"
 pos6c = src6c.index("old_call")
-end6c = N.close_paren(src6c, pos6c + len("old_call("))
+end6c = N.close_paren(src6c, pos6c + len(OLD_CALL))
 try:
-    N.rewrite(src6c, pos6c, end6c, ["Ns.entry(w);"], "Ns.ok")
+    N.rewrite(src6c, pos6c, end6c, [NS_ENTRY], NS_OK)
     eq("short-circuit && right operand refused", "converted", "refused")
 except ValueError:
     eq("short-circuit && right operand refused", "refused", "refused")
@@ -136,10 +142,10 @@ except ValueError:
 # 11a3. but the LEFT operand has nothing before it to be gated by, so it still converts
 src6d = "void t(void)\n{\n    if (old_call(a) || fallback())\n    {\n        return;\n    }\n}\n"
 pos6d = src6d.index("old_call")
-end6d = N.close_paren(src6d, pos6d + len("old_call("))
+end6d = N.close_paren(src6d, pos6d + len(OLD_CALL))
 eq(
     "short-circuit left operand still converts",
-    N.rewrite(src6d, pos6d, end6d, ["Ns.entry(w);"], "Ns.ok"),
+    N.rewrite(src6d, pos6d, end6d, [NS_ENTRY], NS_OK),
     "void t(void)\n{\n    Ns.entry(w);\n    if (Ns.ok || fallback())\n    {\n        return;\n    }\n}\n",
 )
 
@@ -152,9 +158,9 @@ for label, src6e in (
     ("ternary false branch refused", "void t(void)\n{\n    return c ? other(a) : old_call(a);\n}\n"),
 ):
     pos6e = src6e.index("old_call")
-    end6e = N.close_paren(src6e, pos6e + len("old_call("))
+    end6e = N.close_paren(src6e, pos6e + len(OLD_CALL))
     try:
-        N.rewrite(src6e, pos6e, end6e, ["Ns.entry(w);"], "Ns.ok")
+        N.rewrite(src6e, pos6e, end6e, [NS_ENTRY], NS_OK)
         eq(label, "converted", "refused")
     except ValueError:
         eq(label, "refused", "refused")
@@ -162,10 +168,10 @@ for label, src6e in (
 # 11a5. a label's colon is not a conditional's, so a call after one still converts
 src6f = "void t(void)\n{\n    goto done;\ndone:\n    old_call(a);\n}\n"
 pos6f = src6f.index("old_call")
-end6f = N.close_paren(src6f, pos6f + len("old_call("))
+end6f = N.close_paren(src6f, pos6f + len(OLD_CALL))
 eq(
     "a label colon does not refuse the call under it",
-    N.rewrite(src6f, pos6f, end6f, ["Ns.entry(w);"], "Ns.ok"),
+    N.rewrite(src6f, pos6f, end6f, [NS_ENTRY], NS_OK),
     "void t(void)\n{\n    goto done;\ndone:\n    Ns.entry(w);\n}\n",
 )
 
@@ -173,9 +179,9 @@ eq(
 # out with the entry hoisted above it, timing `sink += Ns.n`
 src6b = 'void t(void)\n{\n    DBENCH_BULK("x", 50000, 21, sink += old_call(a));\n}\n'
 pos6b = src6b.index("old_call")
-end6b = N.close_paren(src6b, pos6b + len("old_call("))
+end6b = N.close_paren(src6b, pos6b + len(OLD_CALL))
 try:
-    N.rewrite(src6b, pos6b, end6b, ["Ns.entry(w);"], "Ns.n")
+    N.rewrite(src6b, pos6b, end6b, [NS_ENTRY], "Ns.n")
     eq("DBENCH_BULK refused", "converted", "refused")
 except ValueError:
     eq("DBENCH_BULK refused", "refused", "refused")
@@ -183,33 +189,31 @@ except ValueError:
 # 12. and a TEST_ASSERT, which evaluates its argument once, is still converted
 src7 = "void t(void)\n{\n    TEST_ASSERT_EQUAL_INT(3, old_call(a));\n}\n"
 pos7 = src7.index("old_call")
-end7 = N.close_paren(src7, pos7 + len("old_call("))
+end7 = N.close_paren(src7, pos7 + len(OLD_CALL))
 eq(
     "single-evaluation macro still converts",
-    N.rewrite(src7, pos7, end7, ["Ns.entry(w);"], "Ns.n"),
+    N.rewrite(src7, pos7, end7, [NS_ENTRY], "Ns.n"),
     "void t(void)\n{\n    Ns.entry(w);\n    TEST_ASSERT_EQUAL_INT(3, Ns.n);\n}\n",
 )
 
 # 13. a `#if` / `#endif` bounds the arm. The walk back used to run past both and land the staging in
 # the PREVIOUS arm, so the call ran under another capability's gate and the read ran under none.
-src8 = (
-    "void t(void)\n" "{\n" "#if A\n" "    reg(one());\n" "#endif\n" "#if B\n" "    reg(old_call());\n" "#endif\n" "}\n"
-)
+src8 = "void t(void)\n{\n#if A\n    reg(one());\n#endif\n#if B\n    reg(old_call());\n#endif\n}\n"
 pos8 = src8.index("old_call")
-end8 = N.close_paren(src8, pos8 + len("old_call("))
+end8 = N.close_paren(src8, pos8 + len(OLD_CALL))
 eq(
     "staging stays inside its own #if arm",
-    N.rewrite(src8, pos8, end8, ["Ns.entry(w);"], "Ns.ptr"),
+    N.rewrite(src8, pos8, end8, [NS_ENTRY], NS_PTR),
     "void t(void)\n{\n#if A\n    reg(one());\n#endif\n#if B\n    Ns.entry(w);\n    reg(Ns.ptr);\n#endif\n}\n",
 )
 
 # 13b. the first statement of an arm has the directive directly above it and nothing else
 src8b = "void t(void)\n{\n#if B\n    reg(old_call());\n#endif\n}\n"
 pos8b = src8b.index("old_call")
-end8b = N.close_paren(src8b, pos8b + len("old_call("))
+end8b = N.close_paren(src8b, pos8b + len(OLD_CALL))
 eq(
     "first statement in an arm hoists below the #if",
-    N.rewrite(src8b, pos8b, end8b, ["Ns.entry(w);"], "Ns.ptr"),
+    N.rewrite(src8b, pos8b, end8b, [NS_ENTRY], NS_PTR),
     "void t(void)\n{\n#if B\n    Ns.entry(w);\n    reg(Ns.ptr);\n#endif\n}\n",
 )
 
@@ -217,10 +221,10 @@ eq(
 # not a magnet
 src8c = "void t(void)\n{\n    int a = 1;\n    reg(old_call());\n}\n"
 pos8c = src8c.index("old_call")
-end8c = N.close_paren(src8c, pos8c + len("old_call("))
+end8c = N.close_paren(src8c, pos8c + len(OLD_CALL))
 eq(
     "no directive, no change",
-    N.rewrite(src8c, pos8c, end8c, ["Ns.entry(w);"], "Ns.ptr"),
+    N.rewrite(src8c, pos8c, end8c, [NS_ENTRY], NS_PTR),
     "void t(void)\n{\n    int a = 1;\n    Ns.entry(w);\n    reg(Ns.ptr);\n}\n",
 )
 
@@ -229,10 +233,10 @@ eq(
 # overwrote the RawPublicKey Certificate with the X.509 one.
 src9 = "void t(void)\n{\n    if (rpk)\n    {\n        x = 1;\n    }\n    else\n        n = old_call(a);\n}\n"
 pos9 = src9.index("old_call")
-end9 = N.close_paren(src9, pos9 + len("old_call("))
+end9 = N.close_paren(src9, pos9 + len(OLD_CALL))
 eq(
     "braceless else gains a brace",
-    N.rewrite(src9, pos9, end9, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    N.rewrite(src9, pos9, end9, [NS_ARGS_A_A, NS_ENTRY], "Ns.n"),
     "void t(void)\n{\n    if (rpk)\n    {\n        x = 1;\n    }\n    else\n{\n        Ns.args.a = a;\n"
     "        Ns.entry(w);\n        n = Ns.n;\n        }\n}\n",
 )
@@ -240,10 +244,10 @@ eq(
 # 14a. a `#endif` between the head and its body does not hide the head
 src9a = "void t(void)\n{\n    if (r)\n    {\n        x = 1;\n    }\n    else\n#endif\n        n = old_call(a);\n}\n"
 pos9a = src9a.index("old_call")
-end9a = N.close_paren(src9a, pos9a + len("old_call("))
+end9a = N.close_paren(src9a, pos9a + len(OLD_CALL))
 eq(
     "brace lands past the #endif",
-    N.rewrite(src9a, pos9a, end9a, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    N.rewrite(src9a, pos9a, end9a, [NS_ARGS_A_A, NS_ENTRY], "Ns.n"),
     "void t(void)\n{\n    if (r)\n    {\n        x = 1;\n    }\n    else\n#endif\n{\n        Ns.args.a = a;\n"
     "        Ns.entry(w);\n        n = Ns.n;\n        }\n}\n",
 )
@@ -252,10 +256,10 @@ eq(
 # the head and the call ran whatever the condition said.
 src9b = "void t(void)\n{\n    if (ok)\n        n = old_call(a);\n    next();\n}\n"
 pos9b = src9b.index("old_call")
-end9b = N.close_paren(src9b, pos9b + len("old_call("))
+end9b = N.close_paren(src9b, pos9b + len(OLD_CALL))
 eq(
     "braceless if keeps the call guarded",
-    N.rewrite(src9b, pos9b, end9b, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    N.rewrite(src9b, pos9b, end9b, [NS_ARGS_A_A, NS_ENTRY], "Ns.n"),
     "void t(void)\n{\n    if (ok)\n{\n        Ns.args.a = a;\n        Ns.entry(w);\n"
     "        n = Ns.n;\n        }\n    next();\n}\n",
 )
@@ -263,30 +267,30 @@ eq(
 # 14c. the same with the call's value unused: the whole statement is the body
 src9c = "void t(void)\n{\n    if (ok)\n        old_call(a);\n    next();\n}\n"
 pos9c = src9c.index("old_call")
-end9c = N.close_paren(src9c, pos9c + len("old_call("))
+end9c = N.close_paren(src9c, pos9c + len(OLD_CALL))
 eq(
     "braceless if with an unused result stays guarded",
-    N.rewrite(src9c, pos9c, end9c, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    N.rewrite(src9c, pos9c, end9c, [NS_ARGS_A_A, NS_ENTRY], "Ns.n"),
     "void t(void)\n{\n    if (ok)\n{\n        Ns.args.a = a;\n        Ns.entry(w);\n        }\n    next();\n}\n",
 )
 
 # 14d. a body that already has its brace does not get a second one
 src9d = "void t(void)\n{\n    if (ok)\n    {\n        n = old_call(a);\n    }\n}\n"
 pos9d = src9d.index("old_call")
-end9d = N.close_paren(src9d, pos9d + len("old_call("))
+end9d = N.close_paren(src9d, pos9d + len(OLD_CALL))
 eq(
     "an already braced body is left alone",
-    N.rewrite(src9d, pos9d, end9d, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    N.rewrite(src9d, pos9d, end9d, [NS_ARGS_A_A, NS_ENTRY], "Ns.n"),
     "void t(void)\n{\n    if (ok)\n    {\n        Ns.args.a = a;\n        Ns.entry(w);\n        n = Ns.n;\n    }\n}\n",
 )
 
 # 14e. a call in the head's own condition is not a body, and the plain statement is untouched
 src9e = "void t(void)\n{\n    if (old_call(a))\n    {\n        step();\n    }\n}\n"
 pos9e = src9e.index("old_call")
-end9e = N.close_paren(src9e, pos9e + len("old_call("))
+end9e = N.close_paren(src9e, pos9e + len(OLD_CALL))
 eq(
     "a condition call is not braced as a body",
-    N.rewrite(src9e, pos9e, end9e, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.ok"),
+    N.rewrite(src9e, pos9e, end9e, [NS_ARGS_A_A, NS_ENTRY], NS_OK),
     "void t(void)\n{\n    Ns.args.a = a;\n    Ns.entry(w);\n    if (Ns.ok)\n    {\n        step();\n    }\n}\n",
 )
 

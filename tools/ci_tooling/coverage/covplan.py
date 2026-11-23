@@ -66,8 +66,7 @@ def build_units(cov_path: str):
     for g in groups.values():
         suites = set()
         for e in g["envs"]:
-            for t in envs[e]["tests"]:
-                suites.add(t)
+            suites.update(envs[e]["tests"])
         units.append(
             {
                 "missing": g["missing"],
@@ -96,7 +95,7 @@ def main() -> int:
     print(f"{len(units)} independent units, {total} uncovered branches\n")
     for i, u in enumerate(units):
         noenv = " !! NO ENV" if not u["envs"] else ""
-        print(f"[{i:3d}] {u['missing']:5d} branches  {len(u['srcs']):3d} srcs  " f"{len(u['envs']):3d} envs{noenv}")
+        print(f"[{i:3d}] {u['missing']:5d} branches  {len(u['srcs']):3d} srcs  {len(u['envs']):3d} envs{noenv}")
         for p, m in list(u["per_src"].items())[:6]:
             print(f"        {m:5d}  {p}")
         if len(u["srcs"]) > 6:

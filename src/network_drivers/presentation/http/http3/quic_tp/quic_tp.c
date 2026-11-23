@@ -33,7 +33,7 @@ void protocore_quic_tp_defaults(const uint8_t *work, QuicTransportParams *tp)
 }
 
 // Append one parameter: ID (varint) || Length (varint) || raw value bytes.
-static embed_bool put_param(uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val,
+static embed_bool put_param(const uint8_t *work, uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val,
                             size_t val_len)
 {
     size_t quic_varint_n = QuicVarint.encode(work, out + *p, cap - *p, id);
@@ -159,7 +159,7 @@ static embed_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen
 }
 
 // Apply a varint-valued transport parameter with its RFC 9000 range checks. *handled is set as above.
-static embed_bool quic_tp_apply_varint(uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen,
+static embed_bool quic_tp_apply_varint(const uint8_t *work, uint64_t id, const uint8_t *val, size_t vlen,
                                        QuicTransportParams *tp, embed_bool *handled)
 {
     *handled = EMBED_TRUE;
@@ -180,10 +180,10 @@ static embed_bool quic_tp_apply_varint(uint8_t *work, uint64_t id, const uint8_t
     // RFC 9000 sec 4.6: a count past 2^60 would place a stream id outside the 62-bit varint space.
     case QUIC_TP_INITIAL_MAX_STREAMS_BIDI:
         return value_varint(work, val, vlen, &tp->initial_max_streams_bidi) &&
-               tp->initial_max_streams_bidi <= (1ull << 60);
+               tp->initial_max_streams_bidi <= (1ULL << 60);
     case QUIC_TP_INITIAL_MAX_STREAMS_UNI:
         return value_varint(work, val, vlen, &tp->initial_max_streams_uni) &&
-               tp->initial_max_streams_uni <= (1ull << 60);
+               tp->initial_max_streams_uni <= (1ULL << 60);
     case QUIC_TP_ACK_DELAY_EXPONENT:
         return value_varint(work, val, vlen, &tp->ack_delay_exponent) && tp->ack_delay_exponent <= 20;
     case QUIC_TP_MAX_ACK_DELAY:

@@ -123,16 +123,16 @@ extern MbplusVars MbplusV;
 typedef struct
 {
     void (*const crc)(const uint8_t *work);
-    void (*const build)(uint8_t *work);
-    void (*const parse)(uint8_t *work);
+    void (*const build)(const uint8_t *work);
+    void (*const parse)(const uint8_t *work);
     void (*const next_token)(const uint8_t *work);
 } MbplusNs;
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in MbplusV or a region of the borrow at a fixed offset.
 void protocore_mbplus_crc(const uint8_t *work);
-void protocore_mbplus_build(uint8_t *work);
-void protocore_mbplus_parse(uint8_t *work);
+void protocore_mbplus_build(const uint8_t *work);
+void protocore_mbplus_parse(const uint8_t *work);
 void protocore_mbplus_next_token(const uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a

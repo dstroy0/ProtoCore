@@ -31,8 +31,9 @@ static int8_t hex_value(char c)
     return -1;
 }
 
-void protocore_hex_digit(uint8_t *work)
+void protocore_hex_digit(const uint8_t *work)
 {
+    (void)work;
     const char *digits = HexV.args.upper ? PROTOCORE_HEX.upper : PROTOCORE_HEX.lower;
     HexV.ch = digits[HexV.args.nibble & 0x0Fu];
 }
@@ -43,8 +44,9 @@ void protocore_hex_val(const uint8_t *work)
     HexV.i8 = hex_value(HexV.args.ch);
 }
 
-void protocore_hex_u32(uint8_t *work)
+void protocore_hex_u32(const uint8_t *work)
 {
+    (void)work;
     uint32_t v = HexV.args.v;
     char *out = HexV.io.out;
 
@@ -63,8 +65,9 @@ void protocore_hex_u32(uint8_t *work)
     HexV.u8 = digits;
 }
 
-void protocore_hex_encode(uint8_t *work)
+void protocore_hex_encode(const uint8_t *work)
 {
+    (void)work;
     const uint8_t *in = HexV.io.in;
     const uint32_t n = HexV.io.n;
     char *out = HexV.io.out;

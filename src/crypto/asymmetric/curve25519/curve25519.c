@@ -522,9 +522,12 @@ static void x25519_mult(uint8_t *work, uint8_t out[32], const uint8_t scalar[32]
     for (int i = 0; i < 16; i++)
     {
         b[i] = x[i];
-        a[i] = c[i] = d[i] = 0;
+        a[i] = 0;
+        c[i] = 0;
+        d[i] = 0;
     }
-    a[0] = d[0] = 1;
+    a[0] = 1;
+    d[0] = 1;
 
     // Montgomery ladder over the 255 scalar bits, high to low.
     for (int i = 254; i >= 0; i--)

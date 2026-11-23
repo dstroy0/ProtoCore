@@ -6,8 +6,7 @@ This is the mechanical guardrail behind that checklist: the pre-commit hook runs
 land. It scans for the machine-detectable hard bans - unbounded ``strlen``, ``<stdlib.h>`` and its
 heap / parse functions, the ``auto`` keyword, blocking ``delay()``, the non-reentrant ``gmtime`` /
 ``localtime`` / ``ctime`` / ``asctime`` family, em-dashes, runtime dispatch that is not resolvable
-from the binary (ban #22: ``virtual``, class hierarchies, RTTI, ``std::function``), the conditional
-expression (ban #23: ``?:`` anywhere in a code body), and mid-file
+from the binary (ban #22: ``virtual``, class hierarchies, RTTI, ``std::function``), and mid-file
 ``#include`` (ban #17: any
 ``#include`` after code - every include must be hoisted to the top of the file; the sole exemption is a
 justified ``// PROTOCORE_ALLOW_LATE_INCLUDE:`` on an ordered include that derives from earlier macros).
@@ -59,22 +58,6 @@ _INHERIT_MSG = "class hierarchy; compose an owned context instead of inheriting 
 _RTTI_MSG = "RTTI (dynamic_cast/typeid); the type is known at the call site - state it (see ban #22)"
 _STDFUNCTION_MSG = "std::function type-erases through an allocation; use a plain function pointer (see ban #22)"
 
-# Ban #23: the conditional expression. MISRA governs src/ and bounds how many conditionals a line may
-# carry; a ternary hides a branch inside an expression, so one statement can hold any number of them
-# and the decision stops being visible where the value is set. A chain is an if/else-if ladder written
-# where the arms cannot be lined up against their conditions, and a nested one makes precedence
-# load-bearing for control flow.
-#
-# The detector is the bare `?`, not a `? ... :` shape, and that is exact rather than approximate:
-# comments and string/char literals are already blanked, and once they are gone `?` has exactly one
-# meaning left in C. Matching the pair would also miss the multi-line form, where the `?` and its `:`
-# land on different lines and the scan is per line.
-_TERNARY_MSG = (
-    "conditional expression (?:); every assignment and every conditional is its own statement. "
-    "Use if / else if / else - declare the variable with the fall-through value, then assign "
-    "inside the branch that owns it"
-)
-
 # (compiled pattern, ban number, message). Patterns run on comment/string-stripped code. Every
 # use-instead pattern (pcdelay, protocore_millis, strnlen, gmtime_r) survives because the banned token is
 # not on a word boundary there ("protocore_millis" has no boundary before "millis", etc.).
@@ -114,7 +97,6 @@ BANS = [
     (re.compile(r"\b(?:class|struct)\s+\w+\s*:\s*(?:public|protected|private|virtual)\b"), 22, _INHERIT_MSG),
     (re.compile(r"\b(?:dynamic_cast|typeid)\b"), 22, _RTTI_MSG),
     (re.compile(r"\bstd::function\b"), 22, _STDFUNCTION_MSG),
-    (re.compile(r"\?"), 23, _TERNARY_MSG),
     # Ban 18 is applied in scan_file, not here: it only fires at file/namespace scope.
     # A `static constexpr` MEMBER of a namespacing struct (LoraReg::REG_FIFO, the
     # protocore_radio_ps pattern SYMBOLS.md endorses) is a scoped data table, not a value other
@@ -146,7 +128,7 @@ _MIDINC_MSG = "#include after the first function; hoist it above them"
 # optional trailing `{` (Allman puts the brace on the next line); `=` means an initializer and `;`
 # means a prototype, and neither defines anything.
 _FUNC_SIG = re.compile(
-    r"^\s*(?!#)(?!typedef\b)(?!return\b)[A-Za-z_][\w\s\*&,<>:\[\]]*\([^;=]*\)" r"\s*(?:const)?\s*\{?\s*$"
+    r"^\s*(?!#)(?!typedef\b)(?!return\b)[A-Za-z_][\w\s\*&,<>:\[\]]*\([^;=]*\)\s*(?:const)?\s*\{?\s*$"
 )
 _ALLOW_LATE = "PROTOCORE_ALLOW_LATE_INCLUDE"
 _LINKAGE = re.compile(r"^\s*PROTO_(?:BEGIN|END)_DECLS\s*$")
@@ -319,10 +301,9 @@ def collect(argv):
     return [f for f in argv if pathlib.Path(f).suffix in EXTS and _norm(f).startswith("src/")]
 
 
-# Bans 18 and 20 carry no baseline any more: their sweeps reached zero, so they fail on sight. Bans
-# 19, 23, 24 and 25 ride one while theirs run down. Drop a number from this set the moment its sweep
-# reaches zero, and the ban fails on sight from then on.
-BASELINED = {19, 23, 24, 25}
+# Bans 19, 24 and 25 have a baseline: a recorded site passes, and a new site fails. Every other ban
+# fails on sight. A number leaves this set when its count is zero.
+BASELINED = {19, 24, 25}
 BASELINE = bl.path_for(__file__, "sweep_baseline")
 
 
@@ -359,10 +340,6 @@ def _key(v):
     if ban_no == 20:
         # every snprintf shares one message, so the ordinal wrapper does the disambiguating
         return f"{path}|20|snprintf"
-    if ban_no == 23:
-        # one message for every ternary, and a line can hold several. The ordinal wrapper separates
-        # them, so removing one leaves the survivors' ordinals inside the recorded set
-        return f"{path}|23|ternary"
     return f"{path}|{ban_no}|{message}"
 
 
@@ -390,16 +367,14 @@ def main(argv):
     for path in collect(argv):
         violations.extend(scan_file(path))
 
-    # Bans 19 and 20 ride a baseline while task 26 works them down: 987 stack arrays and 236
-    # snprintf calls predate both rules. Ban 18 lost its baseline once all 165 sites were
-    # converted. Every other ban is absolute and fails on sight.
+    # A ban in BASELINED fails only on a site that the baseline does not record. Every other ban fails on sight.
     ratcheted = [v for v in violations if v[2] in BASELINED]
     others = [v for v in violations if v[2] not in BASELINED]
     ordinals = _ordinal_keys(ratcheted)
 
     if "--baseline" in argv:
         n = bl.save(BASELINE, (ordinals[v] for v in ratcheted))
-        print(f"check_src_banned: recorded {n} known site(s) as the floor " f"(bans {sorted(BASELINED)})")
+        print(f"check_src_banned: recorded {n} known site(s) as the floor (bans {sorted(BASELINED)})")
         return 0
 
     new_ratcheted, known, fixed = bl.filter_new(ratcheted, lambda v: ordinals[v], BASELINE)

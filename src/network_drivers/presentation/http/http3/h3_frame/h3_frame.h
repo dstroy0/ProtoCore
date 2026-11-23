@@ -88,7 +88,7 @@ typedef struct
 typedef struct
 {
     embed_bool (*parse_header)(const uint8_t *, const uint8_t *, size_t, H3FrameHeader *);
-    size_t (*write_header)(uint8_t *, uint8_t *, size_t, uint64_t, uint64_t);
+    size_t (*write_header)(const uint8_t *, uint8_t *, size_t, uint64_t, uint64_t);
     embed_bool (*type_reserved)(const uint8_t *, uint64_t);
     void (*settings_defaults)(const uint8_t *, H3Settings *);
     embed_bool (*parse_settings)(const uint8_t *, const uint8_t *, size_t, H3Settings *);
@@ -118,7 +118,7 @@ embed_bool protocore_h3_frame_parse_header(const uint8_t *work, const uint8_t *b
  * @param length Length
  * @return The size_t.
  */
-size_t protocore_h3_frame_write_header(uint8_t *work, uint8_t *out, size_t cap, uint64_t type, uint64_t length);
+size_t protocore_h3_frame_write_header(const uint8_t *work, uint8_t *out, size_t cap, uint64_t type, uint64_t length);
 /**
  * @brief True if type is a reserved HTTP/2 frame type (0x02/0x06/0x08/0x09) .
  * @param work PROTOCORE_H3_FRAME_BORROW bytes the caller took. Not held past the call.

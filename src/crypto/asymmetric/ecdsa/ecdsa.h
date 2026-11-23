@@ -76,10 +76,10 @@ EMBED_BEGIN_DECLS
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    embed_bool (*pubkey)(uint8_t *, const uint8_t *, uint8_t *);
+    embed_bool (*pubkey)(const uint8_t *, const uint8_t *, uint8_t *);
     embed_bool (*sign)(uint8_t *, const uint8_t *, size_t, const uint8_t *, uint8_t *);
     embed_bool (*verify)(uint8_t *, const uint8_t *, const uint8_t *, size_t, const uint8_t *);
-    embed_bool (*ecdh)(uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
+    embed_bool (*ecdh)(const uint8_t *, const uint8_t *, const uint8_t *, uint8_t *);
 } EcdsaNs;
 PROTOCORE_NS_LAYOUT(EcdsaNs, pubkey, sign, verify, ecdh);
 
@@ -90,7 +90,7 @@ PROTOCORE_NS_LAYOUT(EcdsaNs, pubkey, sign, verify, ecdh);
  * @param pub PROTOCORE_ECDSA_P256_PUB_LEN bytes: 0x04 || X || Y
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_ecdsa_pubkey(uint8_t *work, const uint8_t *priv, uint8_t *pub);
+embed_bool protocore_ecdsa_pubkey(const uint8_t *work, const uint8_t *priv, uint8_t *pub);
 /**
  * @brief Hash the message with SHA-256 and write the raw r || s.
  * @param work PROTOCORE_ECDSA_BORROW bytes the caller took. Not held past the call.
@@ -120,7 +120,7 @@ embed_bool protocore_ecdsa_verify(uint8_t *work, const uint8_t *pub, const uint8
  * @param shared_x PROTOCORE_ECDSA_P256_COORD_LEN big-endian X coordinate of d * Q_peer
  * @return EMBED_TRUE on success.
  */
-embed_bool protocore_ecdsa_ecdh(uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x);
+embed_bool protocore_ecdsa_ecdh(const uint8_t *work, const uint8_t *peer_pub, const uint8_t *priv, uint8_t *shared_x);
 
 /** @brief Module namespace. */
 PROTOCORE_NS EcdsaNs Ecdsa PROTOCORE_UNUSED = {.pubkey = protocore_ecdsa_pubkey,

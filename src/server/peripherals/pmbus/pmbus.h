@@ -358,7 +358,7 @@ typedef struct
     void (*const begin)(const uint8_t *work);
     void (*const set_page)(const uint8_t *work);
     void (*const read_vout_mode)(const uint8_t *work);
-    void (*const read_linear11)(uint8_t *work);
+    void (*const read_linear11)(const uint8_t *work);
     void (*const read_linear16)(const uint8_t *work);
     void (*const write_linear16)(const uint8_t *work);
     void (*const status_byte)(const uint8_t *work);

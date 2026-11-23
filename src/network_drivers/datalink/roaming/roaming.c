@@ -148,8 +148,9 @@ void protocore_roam_decide(const uint8_t *work)
     // 4. Otherwise stay put.
 }
 
-void protocore_roam_parse_neighbor_report(uint8_t *work)
+void protocore_roam_parse_neighbor_report(const uint8_t *work)
 {
+    (void)work;
     const uint8_t *elems = RoamV.nr.elems;
     const size_t len = RoamV.nr.len;
     protocore_roam_neighbor *out = RoamV.nr.out;
@@ -183,8 +184,9 @@ void protocore_roam_parse_neighbor_report(uint8_t *work)
     RoamV.n = count;
 }
 
-void protocore_roam_parse_btm_request(uint8_t *work)
+void protocore_roam_parse_btm_request(const uint8_t *work)
 {
+    (void)work;
     const uint8_t *frame = RoamV.btm.frame;
     const size_t len = RoamV.btm.len;
     protocore_roam_btm *out = &RoamV.hint;

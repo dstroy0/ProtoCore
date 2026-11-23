@@ -73,7 +73,7 @@ EMBED_INLINE embed_bool protocore_i2c_begin_on(uint8_t bus, int sda, int scl, ui
 /** @brief Bring up the shared I2C bus on PROTOCORE_I2C_SDA_PIN / PROTOCORE_I2C_SCL_PIN (-1 = default). */
 EMBED_INLINE embed_bool protocore_i2c_begin(void)
 {
-    return protocore_i2c_begin_on((uint8_t)PROTOCORE_I2C_BUS, (int)PROTOCORE_I2C_SDA_PIN, PROTOCORE_I2C_SCL_PIN,
+    return protocore_i2c_begin_on((uint8_t)PROTOCORE_I2C_BUS, PROTOCORE_I2C_SDA_PIN, PROTOCORE_I2C_SCL_PIN,
                                   PROTOCORE_I2C_HZ);
 }
 
@@ -185,7 +185,7 @@ EMBED_INLINE embed_bool protocore_i2c_recover_on(uint8_t bus, int sda, int scl)
 /** @brief Free the shared bus from a device holding SDA low. @return true if SDA came back high. */
 EMBED_INLINE embed_bool protocore_i2c_recover(void)
 {
-    return protocore_i2c_recover_on((uint8_t)PROTOCORE_I2C_BUS, (int)PROTOCORE_I2C_SDA_PIN, PROTOCORE_I2C_SCL_PIN);
+    return protocore_i2c_recover_on((uint8_t)PROTOCORE_I2C_BUS, PROTOCORE_I2C_SDA_PIN, PROTOCORE_I2C_SCL_PIN);
 }
 
 #else // no bus seam on this build

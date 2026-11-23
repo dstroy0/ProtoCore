@@ -10,8 +10,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never reads it
-
 #if PROTOCORE_ENABLE_HTTP3
 
 #include "cellularum_laboro/cellularum_laboro.h"    // str: the bounded-run walks
@@ -20,6 +18,8 @@ static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never 
 #include "network_drivers/session/session.h"                 // the per-connection tables this reads
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
 #include "proximus_operor/proximus_operor.h"                 // proxim.read: each field moves into the slot
+
+static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never reads it
 
 EMBED_BEGIN_DECLS
 

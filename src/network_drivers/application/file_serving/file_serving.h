@@ -144,7 +144,7 @@ extern FileServingVars FileServingV;
 /** @brief The entries. */
 typedef struct
 {
-    void (*const http_rfc1123)(uint8_t *work);
+    void (*const http_rfc1123)(const uint8_t *work);
     void (*const serve_static_request)(uint8_t *work);
     void (*const serve_file_internal)(uint8_t *work);
     void (*const file_send_pump)(const uint8_t *work);
@@ -155,7 +155,7 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in FileServingV or a region of the borrow at a fixed offset.
-void protocore_file_serving_http_rfc1123(uint8_t *work);
+void protocore_file_serving_http_rfc1123(const uint8_t *work);
 void protocore_file_serving_serve_static_request(uint8_t *work);
 void protocore_file_serving_serve_file_internal(uint8_t *work);
 void protocore_file_serving_file_send_pump(const uint8_t *work);

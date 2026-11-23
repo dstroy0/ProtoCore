@@ -689,7 +689,7 @@ static void execute_selection_set(uint8_t *work, GqlWriter *w, int first, int pa
 static void execute_field(uint8_t *work, GqlWriter *w, int idx, int path_len)
 {
     GqlExecution *ex = &GRAPHQL_CTX(work)->exec;
-    GqlField *field = &GRAPHQL_CTX(work)->doc.fields[idx];
+    const GqlField *field = &GRAPHQL_CTX(work)->doc.fields[idx];
 
     // extend the dotted path: [parent].name
     int plen = path_len;

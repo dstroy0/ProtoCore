@@ -175,7 +175,7 @@ void protocore_wisun_init(const uint8_t *work, WisunFan *fan, const protocore_ip
     fan->count = 0;
 }
 
-int protocore_wisun_node_register(uint8_t *work, WisunFan *fan, const protocore_ip *addr, uint32_t now)
+int protocore_wisun_node_register(const uint8_t *work, WisunFan *fan, const protocore_ip *addr, uint32_t now)
 {
     if (!fan || !fan->nodes || !addr)
     {

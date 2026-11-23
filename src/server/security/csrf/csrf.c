@@ -166,7 +166,7 @@ void protocore_csrf_verify(uint8_t *work)
     {
         return;
     }
-    CsrfCtx *c = CSRF_CTX(work);
+    const CsrfCtx *c = CSRF_CTX(work);
     if (c->secret_len == 0)
     {
         return;

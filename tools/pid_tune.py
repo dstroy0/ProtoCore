@@ -195,7 +195,7 @@ def _load_binary(path):
 
     with open(path, "rb") as f:
         raw = f.read()
-    magic, ver, flags, _resv, dt, kp, ki, kd, kff, omin, omax = struct.unpack_from("<4sBBH7f", raw, 0)
+    _magic, _ver, _flags, _resv, dt, kp, ki, kd, kff, omin, omax = struct.unpack_from("<4sBBH7f", raw, 0)
     meta = {"kp": kp, "ki": ki, "kd": kd, "kff": kff, "out_min": omin, "out_max": omax, "dt": dt}
     recs = raw[36:]
     n = len(recs) // 16

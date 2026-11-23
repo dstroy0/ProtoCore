@@ -178,9 +178,9 @@ void protocore_dtls_handshake_reasm_init(const uint8_t *work, DtlsHsReasm *r, ui
     r->range_count = 0;
 }
 
-size_t protocore_dtls_handshake_reasm_add(const uint8_t *work, DtlsHsReasm *r, const DtlsHsHeader *frag)
+int protocore_dtls_handshake_reasm_add(const uint8_t *work, DtlsHsReasm *r, const DtlsHsHeader *frag)
 {
-    size_t n = 0;
+    int n = 0;
     (void)work;
 
     if (frag->msg_seq != r->msg_seq)

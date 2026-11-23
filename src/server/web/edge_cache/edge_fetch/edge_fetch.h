@@ -72,7 +72,7 @@ typedef struct
 {
     void (*begin)(const uint8_t *, EdgeFetch *, const EdgeFetchTransport *, const char *, uint16_t, const void *,
                   size_t, uint32_t);
-    EdgeFetchStatus (*pump)(uint8_t *, EdgeFetch *, const EdgeFetchTransport *, uint32_t);
+    EdgeFetchStatus (*pump)(const uint8_t *, EdgeFetch *, const EdgeFetchTransport *, uint32_t);
     void (*end)(const uint8_t *, EdgeFetch *, const EdgeFetchTransport *);
     embed_bool (*edge_resp_complete)(const uint8_t *, const uint8_t *, size_t, embed_bool, size_t *);
 } EdgeFetchNs;
@@ -99,7 +99,8 @@ void protocore_edge_fetcher_begin(const uint8_t *work, EdgeFetch *f, const EdgeF
  * @param now_ms Now ms
  * @return The EdgeFetchStatus.
  */
-EdgeFetchStatus protocore_edge_fetcher_pump(uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t, uint32_t now_ms);
+EdgeFetchStatus protocore_edge_fetcher_pump(const uint8_t *work, EdgeFetch *f, const EdgeFetchTransport *t,
+                                            uint32_t now_ms);
 /**
  * @brief Release the transport connection (idempotent).
  * @param work PROTOCORE_EDGE_FETCHER_BORROW bytes the caller took. Not held past the call.

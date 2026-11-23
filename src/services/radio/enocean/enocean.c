@@ -35,7 +35,7 @@ uint8_t protocore_enocean_esp3_crc8(const uint8_t *work, const uint8_t *buf, uin
     return (uint8_t)CrcV.value;
 }
 
-int protocore_enocean_esp3_parse(uint8_t *work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out)
+int protocore_enocean_esp3_parse(const uint8_t *work, const uint8_t *raw, uint16_t len, protocore_esp3_packet *out)
 {
     int n = 0;
     if (!raw || len < 1)
@@ -89,8 +89,9 @@ int protocore_enocean_esp3_parse(uint8_t *work, const uint8_t *raw, uint16_t len
     return (int)total;
 }
 
-uint16_t protocore_enocean_esp3_build(uint8_t *work, protocore_esp3_type type, const uint8_t *data, uint16_t data_len,
-                                      const uint8_t *opt, uint8_t opt_len, uint8_t *out, uint16_t cap)
+uint16_t protocore_enocean_esp3_build(const uint8_t *work, protocore_esp3_type type, const uint8_t *data,
+                                      uint16_t data_len, const uint8_t *opt, uint8_t opt_len, uint8_t *out,
+                                      uint16_t cap)
 {
     if (!out || data_len > PROTOCORE_ENOCEAN_MAX_DATA)
     {

@@ -149,7 +149,7 @@ static void close_conn(uint8_t conn_slot)
 
 static void net_rx(uint8_t conn_slot)
 {
-    TcpConn *conn = &conn_pool[conn_slot];
+    const TcpConn *conn = &conn_pool[conn_slot];
     uint8_t j = conn->proto_slot;
     SshNetworkV.ssh_slot = j;
     SshNetworkV.conn_slot = conn_slot;
@@ -228,7 +228,7 @@ static void net_close(uint8_t conn_slot)
 
 static void net_poll(uint8_t conn_slot)
 {
-    TcpConn *conn = &conn_pool[conn_slot];
+    const TcpConn *conn = &conn_pool[conn_slot];
     ConnPoolV.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPoolV.ok)

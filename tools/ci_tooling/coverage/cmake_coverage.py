@@ -10,7 +10,7 @@ measured build and the tested build were two different builds, and only one of t
 
 This measures the one that works.
 
-    cmake -S test -B build/cov  -DCMAKE_C_FLAGS="--coverage -O0"
+    cmake -S test -B build/cov  -DCMAKE_C_FLAGS="--coverage -O0 -fprofile-update=atomic"
     ctest --test-dir build/cov
     gcovr per env directory -> coverage_reports/<env>.json
     gcovr --add-tracefile   -> test/coverage.xml   (SonarQube generic)
@@ -62,7 +62,8 @@ def configure(cc):
         # -O0 so a line maps to the statement that wrote it. At -O1 the optimiser folds and moves
         # code, and a report against folded lines says a branch was never taken when it no longer
         # exists as a branch.
-        "-DCMAKE_C_FLAGS=--coverage -O0",
+        # An atomic counter update keeps the counts of threaded tests, which gcovr reads as negative otherwise.
+        "-DCMAKE_C_FLAGS=--coverage -O0 -fprofile-update=atomic",
         "-DCMAKE_EXE_LINKER_FLAGS=--coverage",
     ]
     if cc:

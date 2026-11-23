@@ -113,7 +113,7 @@ static inline void aes256_load_key(GcmWork *w, const uint8_t key[32])
 {
     EMBED_CALL(memor.cpy, MemoriaCfg, .dst = w->blk.key, .src = key, .bytes = 32);
 }
-static inline void aes256_free_key(GcmWork *w)
+static inline void aes256_free_key(const GcmWork *w)
 {
     (void)w; // the key bytes are the caller's borrow, released and wiped with it
 }
@@ -253,7 +253,7 @@ static embed_bool aesgcm_key_load(uint8_t *work, const uint8_t *key)
 
 static void aesgcm_key_release(uint8_t *work)
 {
-    GcmWork *w = AESGCM_CTX(work);
+    const GcmWork *w = AESGCM_CTX(work);
     aes256_free_key(w);
 }
 

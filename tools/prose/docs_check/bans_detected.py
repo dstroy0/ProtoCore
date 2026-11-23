@@ -195,7 +195,7 @@ DETECTED = (
     #
     # FOUR SHAPES MUST NOT BE ADDED: `handoff`, `passed off`, `a peer's` and `the specialist`, and
     # neither may bare `this session`. Each of them reaches sentences that credit nobody.
-    r"\b(a|the|one|each|every|another) (later|earlier|previous|next|other|second|third|peer" r"|builder) sessions?\b",
+    r"\b(a|the|one|each|every|another) (later|earlier|previous|next|other|second|third|peer|builder) sessions?\b",
     r"\bpeer sessions?\b",
     r"\b(every|each) session (builds|reads|takes|writes|runs)\b",
     r"\bin (one|a single|the same|an earlier|a later) session\b",

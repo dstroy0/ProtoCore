@@ -79,7 +79,7 @@ def split_flags(flags):
     incs, defs = [], []
     it = iter(flags)
     for f in it:
-        if f.startswith("${") or f.startswith(";"):
+        if f.startswith(("${", ";")):
             continue
         if f.startswith("-I"):
             incs.append((f[2:] if len(f) > 2 else next(it, "")).strip())
@@ -287,7 +287,7 @@ add_subdirectory("${PROTOCORE_ROOT}/include" "${CMAKE_CURRENT_BINARY_DIR}/pc_inc
 add_subdirectory(core_setup)
 add_subdirectory(support)
 
-# The suites. Each directory under these two declares what it is made of; an env below names the
+# The suites. Each directory under these two declares what it is made of. An env below names the
 # one it runs rather than repeating that suite's files and its include path. A suite carries its
 # sources as INTERFACE_SOURCES, so they are compiled AS the env that links them, with that env's
 # defines - which is what lets 59 suites be run by more than one env, and test_connection by five.
@@ -450,10 +450,9 @@ def render(envs, warn, dropped):
                 if reached & set(heads):
                     pkg_srcs += lib_srcs
 
-            out.append("# %s\n" % desc if desc else "")
-            out.append("protocore_env(%s\n" % targets[t])
-            out.append("  SUITE %s\n" % t)
-            out.append("  SOURCES\n")
+            out.extend(
+                ["# %s\n" % desc if desc else "", "protocore_env(%s\n" % targets[t], "  SUITE %s\n" % t, "  SOURCES\n"]
+            )
             for s in srcs + pkg_srcs:
                 out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(s))
             if defs:

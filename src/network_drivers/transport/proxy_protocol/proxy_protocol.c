@@ -151,8 +151,10 @@ static embed_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
     }
     out->version = 1;
     out->has_addr = EMBED_FALSE;
-    out->src_addr = out->dst_addr = 0;
-    out->src_port = out->dst_port = 0;
+    out->src_addr = 0;
+    out->dst_addr = 0;
+    out->src_port = 0;
+    out->dst_port = 0;
     *consumed = crlf + 2;
     // "PROXY TCP4 <src> <dst> <sport> <dport>". TCP4, TCP6 and UNKNOWN are the published family
     // tokens; any other sequence does not match the protocol and is discarded.
@@ -234,8 +236,10 @@ void protocore_proxy_protocol_parse(const uint8_t *work)
         }
         out->version = 2;
         out->has_addr = EMBED_FALSE;
-        out->src_addr = out->dst_addr = 0;
-        out->src_port = out->dst_port = 0;
+        out->src_addr = 0;
+        out->dst_addr = 0;
+        out->src_port = 0;
+        out->dst_port = 0;
         if (ver_cmd == PROXY_V2_VER_CMD_PROXY && fam == PROXY_V2_FAM_TCP4 && addr_len >= 12)
         {
             out->src_addr = rd32(buf + 16);

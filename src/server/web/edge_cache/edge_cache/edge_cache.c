@@ -171,7 +171,7 @@ static embed_bool header_line_value(const char *p, const char *lend, const char 
 void protocore_edge_cache_current_age(const uint8_t *work);
 void protocore_edge_cache_entry_fresh(const uint8_t *work);
 void protocore_edge_cache_entry_has_validator(const uint8_t *work);
-void protocore_edge_cache_entry_set_freshness(uint8_t *work);
+void protocore_edge_cache_entry_set_freshness(const uint8_t *work);
 void protocore_edge_cache_freshness_lifetime(const uint8_t *work);
 void protocore_edge_cache_header_value(const uint8_t *work);
 void protocore_edge_cache_heuristic_lifetime(const uint8_t *work);
@@ -835,7 +835,7 @@ void protocore_edge_cache_store_find(const uint8_t *work)
     EdgeCacheV.entry = NULL;
 }
 
-void protocore_edge_cache_entry_set_freshness(uint8_t *work)
+void protocore_edge_cache_entry_set_freshness(const uint8_t *work)
 {
     (void)work;
     EdgeEntry *e = EdgeCacheV.entry_set_freshness_args.e;
@@ -910,7 +910,7 @@ void protocore_edge_cache_entry_fresh(const uint8_t *work)
     protocore_edge_cache_is_fresh_at(work);
 }
 
-void protocore_edge_cache_store_sweep(uint8_t *work)
+void protocore_edge_cache_store_sweep(const uint8_t *work)
 {
     (void)work;
     EdgeCacheStore *s = EdgeCacheV.store_sweep_args.s;

@@ -181,7 +181,7 @@ embed_bool protocore_multipart_parse(const uint8_t *work, HttpReq *req, Multipar
             if (hlen >= 20 && EMBED_CALL(cellul.starts, CatenaFinitaCfg, .src = pos,
                                          .other = "Content-Disposition:", .cap = 20, .ci = EMBED_TRUE))
             {
-                char *v = pos + 20;
+                const char *v = pos + 20;
                 while (*v == ' ')
                 {
                     v++;

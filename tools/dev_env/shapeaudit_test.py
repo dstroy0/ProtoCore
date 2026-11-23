@@ -10,6 +10,12 @@ import io, os, re, sys
 sys.path.insert(0, __file__.rsplit("shapeaudit_test.py", 1)[0])
 import shapeaudit as S  # noqa: E402
 
+FUNCTIONS_PLACED = "functions placed"
+INCLUDES_PLACED = "includes placed"
+NO_FLAT_DECLS = "no flat decls"
+PROTOCORE_CONFIG_H = "protocore_config.h"
+SHAPEAUDIT_PY = "shapeaudit.py"
+
 FAIL = 0
 
 
@@ -189,7 +195,7 @@ print()
 
 print("a namespace is reached in one hop, and the reader can tell which hop it is")
 gsrc = io.open(
-    S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.c", encoding="utf-8"
+    S.__file__.rsplit(SHAPEAUDIT_PY, 1)[0] + "../../src/crypto/hash/sha256/sha256.c", encoding="utf-8"
 ).read()
 
 
@@ -230,7 +236,7 @@ print()
 
 print("an entry declared in the Ns struct is bound by the table")
 ghsrc = io.open(
-    S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8"
+    S.__file__.rsplit(SHAPEAUDIT_PY, 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8"
 ).read()
 check("the golden leaves none unbound", S.traits(design(ghsrc, ".h"), "header")["unbound_entries"] == [])
 victim = re.search(r"\(\*const (\w+)\)", ghsrc).group(1)
@@ -266,9 +272,9 @@ check(
 print()
 
 print("a check that cannot apply is n/a, never no")
-na = dict((n, a) for n, a, _ in S.answers(gh, None, gh, gc, gid))
+na = {n: a for n, a, _ in S.answers(gh, None, gh, gc, gid)}
 check("a header with no .c answers nothing", all(v is None for v in na.values()))
-na = dict((n, a) for n, a, _ in S.answers(gh, gc, gh, gc, dict(gid, borrow="")))
+na = {n: a for n, a, _ in S.answers(gh, gc, gh, gc, dict(gid, borrow=""))}
 check("no borrow means the borrow questions have no subject", na["borrow carved"] is None)
 check("and the offsets question with it", na["offsets chain"] is None)
 check("but the namespace question still applies", na["namespace"] is True)
@@ -308,7 +314,7 @@ check(
     "the golden's own gate is read",
     S.module_gate(
         io.open(
-            S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8"
+            S.__file__.rsplit(SHAPEAUDIT_PY, 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8"
         ).read()
     )
     == "PROTOCORE_ENABLE_SHA256",
@@ -395,14 +401,14 @@ def sized(names, extra_decl="", extra_def=""):
 
 
 def ask(name, th, tc, ident=None):
-    return dict((n, a) for n, a, _ in S.answers(th, tc, gh, gc, ident or gid)).get(name)
+    return {n: a for n, a, _ in S.answers(th, tc, gh, gc, ident or gid)}.get(name)
 
 
 th, tc = sized(NAMES)
-check("six entries is the same design as four, not a divergence", ask("no flat decls", th, tc) is True)
-check("and the six definitions behind them are placed", ask("functions placed", th, tc) is True)
+check("six entries is the same design as four, not a divergence", ask(NO_FLAT_DECLS, th, tc) is True)
+check("and the six definitions behind them are placed", ask(FUNCTIONS_PLACED, th, tc) is True)
 th, tc = sized(NAMES[:2])
-check("two entries is the same design too", ask("no flat decls", th, tc) is True)
+check("two entries is the same design too", ask(NO_FLAT_DECLS, th, tc) is True)
 
 # What the check is actually for.
 th, tc = sized(
@@ -410,8 +416,8 @@ th, tc = sized(
     "void protocore_p_reset(uint8_t *restrict work);",
     "void protocore_p_reset(uint8_t *restrict work) { (void)work; }",
 )
-check("a declaration no table binds IS flat", ask("no flat decls", th, tc) is False)
-check("and its definition is unplaced", ask("functions placed", th, tc) is False)
+check("a declaration no table binds IS flat", ask(NO_FLAT_DECLS, th, tc) is False)
+check("and its definition is unplaced", ask(FUNCTIONS_PLACED, th, tc) is False)
 print()
 
 print("an accessor for the module's own borrow is not a flat declaration")
@@ -421,8 +427,8 @@ print("an accessor for the module's own borrow is not a flat declaration")
 # `convert gen`, which had nothing it could do with them.
 th, tc = sized(NAMES, "uint8_t *protocore_p_span(void);", "uint8_t *protocore_p_span(void) { return 0; }")
 check("the accessor is recognised", th["borrow_accessors"] == ["protocore_p_span"])
-check("so the header is not flat", ask("no flat decls", th, tc) is True)
-check("and the definition is placed", ask("functions placed", th, tc) is True)
+check("so the header is not flat", ask(NO_FLAT_DECLS, th, tc) is True)
+check("and the definition is placed", ask(FUNCTIONS_PLACED, th, tc) is True)
 # By SIGNATURE, not by name: mmgr's `protocore_span protocore_secure_span(size_t, size_t)` is an
 # arena allocator and shares nothing with a borrow accessor but the word.
 th, tc = sized(
@@ -431,14 +437,14 @@ th, tc = sized(
     "protocore_span protocore_p_span(size_t n, size_t align) { (void)n; (void)align; }",
 )
 check("a function merely NAMED _span is not one", th["borrow_accessors"] == [])
-check("so it is still flat", ask("no flat decls", th, tc) is False)
+check("so it is still flat", ask(NO_FLAT_DECLS, th, tc) is False)
 print()
 
 print("the include placement check reads paths, and reads them from the raw text")
 # The code mask blanks string literals along with comments, so every include recorded its path as
 # "" and the two clauses reading them compared one list of empty strings to another. Both answered
 # yes for every module, which is why nothing looked wrong: what they verified was a count.
-check("the golden's config include has a path", gh["includes_above_gate"] == ["protocore_config.h"])
+check("the golden's config include has a path", gh["includes_above_gate"] == [PROTOCORE_CONFIG_H])
 check("and the trailing comment is not part of it", all("//" not in p for p in gc["includes_below_gate"]))
 
 
@@ -452,23 +458,21 @@ def placed(above, below):
     txt = txt.replace("PROTOCORE_BEGIN_DECLS", "".join('#include "%s"\n' % p for p in below) + "PROTOCORE_BEGIN_DECLS")
     th_ = S.traits(design(txt, ".h"), "header")
     S._cross(th_, gc)
-    return ask("includes placed", th_, gc)
+    return ask(INCLUDES_PLACED, th_, gc)
 
 
 # The gate exists so a disabled module costs nothing. What sits BELOW it is the module's dependency
 # list and its length is the module's own business - the golden's header needs no other header,
 # fe25519's needs ct_eq.h, and that is the same placement. A clause comparing the two below-gate
 # lists for emptiness contradicted the question the check asks, and reported 11 modules for it.
-check(
-    "a dependency below the gate is placed correctly", placed(["protocore_config.h"], ["crypto/ct_eq/ct_eq.h"]) is True
-)
-check("a header hoisted above the gate is not", placed(["shared/ip/ip.h", "protocore_config.h"], []) is False)
+check("a dependency below the gate is placed correctly", placed([PROTOCORE_CONFIG_H], ["crypto/ct_eq/ct_eq.h"]) is True)
+check("a header hoisted above the gate is not", placed(["shared/ip/ip.h", PROTOCORE_CONFIG_H], []) is False)
 check("nor is a different header standing in for the config", placed(["mmgr/span/span.h"], []) is False)
 # With no gate, `above` is the whole file and the question has no subject. `guarded` is the check
 # that reports a missing gate, and reporting it here as well makes one defect look like two.
 ng = dict(gh, gate_present=False)
 ngc = dict(gc, gate_present=False)
-check("no gate at all is n/a, not no", ask("includes placed", ng, ngc) is None)
+check("no gate at all is n/a, not no", ask(INCLUDES_PLACED, ng, ngc) is None)
 check("and `guarded` still says no", ask("guarded", ng, ngc) is False)
 
 # ... but only where a gate is a thing the module could HAVE. `guarded` counted 57 modules, 52 of
@@ -492,7 +496,7 @@ check("gated on someone else's flag is a yes, not n/a", ask("guarded", gh, gc, n
 check("gated in one file only is still a finding", ask("guarded", gh, ngc, no_flag) is False)
 # The other checks do not take the exemption: a module with no flag still answers for its shape.
 check("no flag does not excuse the rest", ask("namespace", gh, gc, no_flag) is True)
-check("nor does it turn a real divergence n/a", ask("includes placed", gh, gc, no_flag) is True)
+check("nor does it turn a real divergence n/a", ask(INCLUDES_PLACED, gh, gc, no_flag) is True)
 
 # The flag lookup itself: read off the config rather than assumed, and loose by choice.
 check("the config's own flags are found", "PROTOCORE_ENABLE_SHA256" in S.enable_flags())

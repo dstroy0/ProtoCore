@@ -205,7 +205,7 @@ def main():
     print("")
     print("%d .tex file(s), %d word(s) of prose graded" % (len(targets), total_words))
     if ".tex" in reads_tex():
-        print("  the gate now reads .tex directly: this tool is a second opinion on the" " stripping")
+        print("  the gate now reads .tex directly: this tool is a second opinion on the stripping")
     else:
         print("  the gate reads %s: none of this would otherwise be checked" % reads_tex())
     return done.returncode

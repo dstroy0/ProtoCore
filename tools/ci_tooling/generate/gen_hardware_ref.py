@@ -28,6 +28,8 @@ import sys
 from tools.ci_tooling.lib import doc_region as dr
 from tools.ci_tooling.lib import feature_taxonomy as tax
 
+SRC_SERVICES = "src/services"
+
 ROOT = dr.repo_root(__file__)
 DOC = os.path.join(ROOT, "docs/HARDWARE_HOOKUP.md")
 REGION = dr.Region(DOC, "HARDWARE TABLE", dr.tool_id(__file__))
@@ -35,10 +37,10 @@ REGION = dr.Region(DOC, "HARDWARE TABLE", dr.tool_id(__file__))
 # (parent dir, group dir). peripherals sits under src/server/, the rest under src/services/.
 HW_GROUPS = [
     ("src/server", "peripherals"),
-    ("src/services", "instrumentation"),
-    ("src/services", "radio"),
-    ("src/services", "fieldbus"),
-    ("src/services", "timing_position"),
+    (SRC_SERVICES, "instrumentation"),
+    (SRC_SERVICES, "radio"),
+    (SRC_SERVICES, "fieldbus"),
+    (SRC_SERVICES, "timing_position"),
 ]
 
 
@@ -150,15 +152,17 @@ def main() -> int:
             print(f"      {path}  ->  {why}", file=sys.stderr)
 
     out = []
-    out.append(
-        f"**{len(rows)} modules** attach to something physical. Every one takes its wiring" " **through the API** -"
+    out.extend(
+        [
+            f"**{len(rows)} modules** attach to something physical. Every one takes its wiring **through the API** -",
+            "an I2C address, explicit pins, or a caller-supplied bus struct - so the library never dictates a",
+            "pinout and none is documented here. Pure codecs have no bring-up call at all: you own the link.",
+            "",
+        ]
     )
-    out.append("an I2C address, explicit pins, or a caller-supplied bus struct - so the library" " never dictates a")
-    out.append("pinout and none is documented here. Pure codecs have no bring-up call at all: you" " own the link.")
-    out.append("")
     # render in the taxonomy's own order, then any directory-fallback groups
     try:
-        order = [g for g in tax.group_order()]
+        order = list(tax.group_order())
     except AttributeError:
         order = []
     seen = {r[0] for r in rows}
@@ -168,10 +172,14 @@ def main() -> int:
         sub = [r for r in rows if r[0] == grp]
         if not sub:
             continue
-        out.append(f"### {grp}")
-        out.append("")
-        out.append("| Module | Attaches via | Bring-up call | Feature flag |")
-        out.append("| ------ | ------------ | ------------- | ------------ |")
+        out.extend(
+            [
+                f"### {grp}",
+                "",
+                "| Module | Attaches via | Bring-up call | Feature flag |",
+                "| ------ | ------------ | ------------- | ------------ |",
+            ]
+        )
         for _, mod, how, sig, flag in sub:
             call = f"`{sig}`" if sig else "_none (pure codec)_"
             out.append(f"| `{mod}` | {how} | {call} | {'`' + flag + '`' if flag else '-'} |")

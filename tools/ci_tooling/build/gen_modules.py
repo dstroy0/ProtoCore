@@ -31,10 +31,12 @@ import os
 import re
 import sys
 
+CMAKELISTS_TXT = "CMakeLists.txt"
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 SRC = os.path.join(ROOT, "src")
-OUT = os.path.join(SRC, "CMakeLists.txt")
+OUT = os.path.join(SRC, CMAKELISTS_TXT)
 
 INC = re.compile(r'^\s*#\s*include\s+"([^"]+)"')
 # The WHOLE condition, not a bare flag. Six modules open with a compound one -
@@ -53,7 +55,7 @@ GATE_PAREN = re.compile(
 
 def cmake_gate(cond):
     """A C preprocessor condition as a CMake one: && is AND, || is OR."""
-    return re.sub(r"\|\|", "OR", re.sub(r"&&", "AND", cond)).strip()
+    return cond.replace("&&", "AND").replace("||", "OR").strip()
 
 
 # Reached by everything and owned by no module: the assembly chain and the primitive types.
@@ -407,7 +409,7 @@ def render_tree(mods):
                 out.append(module_block(mods[name], name, pad))
             if gate:
                 out.append("endif()\n")
-        files[os.path.join(ROOT, d, "CMakeLists.txt")] = "".join(out)
+        files[os.path.join(ROOT, d, CMAKELISTS_TXT)] = "".join(out)
     return files
 
 
@@ -487,9 +489,9 @@ def declared():
     out = {}
     for dirpath, dirnames, files in os.walk(ROOT):
         dirnames[:] = [d for d in dirnames if d not in DECL_SKIP]
-        if "CMakeLists.txt" not in files:
+        if CMAKELISTS_TXT not in files:
             continue
-        text = read(os.path.join(dirpath, "CMakeLists.txt"))
+        text = read(os.path.join(dirpath, CMAKELISTS_TXT))
         for m in DECL.finditer(text):
             body = m.group("body")
             # Several tokens: a compound gate is `GATE A AND B`, and stops at the next keyword.

@@ -122,7 +122,7 @@ One entry point for CI: `harness.py ci` hands off to it unread, so `harness.py c
 | `check_docs.py`              |   | `--all --strict`               |                              |
 | `check_duplicate_symbols.py` |   |                                |                              |
 | `check_examples.py`          |   | `--verbose`                    |                              |
-| `check_frame_specs.py`       | W | `--fix --verbose`              |                              |
+| `check_frame_specs.py`       | W | `--fix`                        |                              |
 | `check_layering.py`          |   | `--baseline --list`            |                              |
 | `check_module_graph.py`      |   |                                |                              |
 | `check_null_ctx.py`          | W | `--baseline`                   |                              |

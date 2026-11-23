@@ -53,7 +53,7 @@ def _doc_brief(cfg, name):
     text = re.sub(r"\s*\((PROTOCORE_[A-Z0-9_]+)\)", "", text)  # drop the "(FLAG)" tag
     text = re.sub(r"\s+", " ", text)
     # first sentence only, keep it terse
-    m2 = re.match(r"(.+?[.!])(?:\s|$)", text)
+    m2 = re.match(r"((?:[^.!]|[.!](?!\s|$))+[.!])(?:\s|$)", text)
     return (m2.group(1) if m2 else text).strip()
 
 
@@ -69,7 +69,7 @@ def parse_config():
         desc = _doc_brief(cfg, name)
         if name.startswith("PROTOCORE_ENABLE_"):
             flags.append((name, val, desc))
-        elif re.fullmatch(r"[0-9]+[uUlL]*", val) or re.fullmatch(r"0x[0-9A-Fa-f]+[uUlL]*", val):
+        elif re.fullmatch(r"\d+[uUlL]*", val) or re.fullmatch(r"0x[0-9A-Fa-f]+[uUlL]*", val):
             consts.append((name, val, desc))
     return flags, consts
 

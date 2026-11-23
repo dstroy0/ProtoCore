@@ -208,7 +208,7 @@ static const char *claim_value(const uint8_t *work, const char *jws, size_t jws_
 
 // The integer claim @p name, or false when the claim is absent or its value is not a number. Both
 // claim reads and the time-claim check go through this one scan.
-static embed_bool claim_num(uint8_t *work, const char *jws, size_t jws_len, const char *name, long *out)
+static embed_bool claim_num(const uint8_t *work, const char *jws, size_t jws_len, const char *name, long *out)
 {
     uint8_t buf[PROTOCORE_JWT_MAX_LEN];
     const char *v = claim_value(work, jws, jws_len, name, buf, sizeof(buf));
@@ -229,7 +229,7 @@ static embed_bool claim_num(uint8_t *work, const char *jws, size_t jws_len, cons
 // RFC 7515 sec 5.2: the JWS Signature is validated against the JWS Signing Input under the
 // algorithm `alg` names. RFC 7518 sec 3.2: that MAC is HMAC-SHA-256 of the signing input under the
 // shared key, and the comparison against the signature is constant time.
-void protocore_jwt_verify_mac(uint8_t *work)
+void protocore_jwt_verify_mac(const uint8_t *work)
 {
     (void)work;
     const char *jws = JwtV.token.jws;
@@ -366,7 +366,7 @@ void protocore_jwt_claim_int(uint8_t *work)
 
 // The claim's value copied out as text: a backslash is dropped and the character after it taken
 // literally.
-void protocore_jwt_claim_str(uint8_t *work)
+void protocore_jwt_claim_str(const uint8_t *work)
 {
     (void)work;
     char *out = JwtV.claim.out;

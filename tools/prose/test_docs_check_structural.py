@@ -108,7 +108,7 @@ class LinksStillChecked(unittest.TestCase):
         # A lambda in example code is not a link.
         lines = [
             'server.on("/diag", HTTP_GET, [](uint8_t slot, HttpReq *req) {',
-            "orior_ssh_auth_set_pubkey_cb([](const char *user, const uint8_t *blob, " "size_t len) {",
+            "orior_ssh_auth_set_pubkey_cb([](const char *user, const uint8_t *blob, size_t len) {",
             "orior_ssh_auth_set_password_cb([](const char *user, const char *pass) {",
         ]
         self.assertEqual(docs_check.dead_links(self.here, lines), [])

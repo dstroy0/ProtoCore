@@ -39,6 +39,8 @@ LIMIT_PROCEDURAL = 20
 LIMIT_DESCRIPTIVE = 25
 LIMIT_PARAGRAPH = 6
 
+# What a code span, a link target or a formula reads as in prose: one word that no rule counts
+CODE_SPAN = " CODE "
 DOCUMENT_NAMES = ("README.md", "CONTRIBUTING.md", "SECURITY.md")
 DOCUMENT_FOLDERS = ("docs",)
 SKIPPED_FOLDERS = ("build", "deps", "node_modules", ".git", ".lake", "third_party", "vendor")
@@ -46,94 +48,15 @@ SKIPPED_FOLDERS = ("build", "deps", "node_modules", ".git", ".lake", "third_part
 BE = {"am", "is", "are", "was", "were", "be", "been", "being"}
 HAVE = {"has", "have", "had"}
 # The irregular past participles a passive or a perfect takes; the regular ones end in -ed
-IRREGULAR = {
-    "been",
-    "begun",
-    "bitten",
-    "blown",
-    "born",
-    "bought",
-    "brought",
-    "built",
-    "caught",
-    "chosen",
-    "come",
-    "cut",
-    "dealt",
-    "done",
-    "drawn",
-    "driven",
-    "eaten",
-    "fallen",
-    "felt",
-    "found",
-    "forgotten",
-    "frozen",
-    "given",
-    "gone",
-    "grown",
-    "held",
-    "hidden",
-    "hit",
-    "retained",
-    "known",
-    "positioned",
-    "led",
-    "left",
-    "lent",
-    "let",
-    "lost",
-    "made",
-    "meant",
-    "met",
-    "paid",
-    "put",
-    "read",
-    "run",
-    "said",
-    "seen",
-    "sent",
-    "set",
-    "displayed",
-    "shut",
-    "sold",
-    "spent",
-    "split",
-    "spoken",
-    "was",
-    "struck",
-    "sung",
-    "taken",
-    "taught",
-    "thought",
-    "thrown",
-    "told",
-    "understood",
-    "won",
-    "worn",
-    "written",
-}
+IRREGULAR = {"been", "begun", "bitten", "blown", "born", "bought", "brought", "built", "caught", "chosen", "come",
+             "cut", "dealt", "done", "drawn", "driven", "eaten", "fallen", "felt", "found", "forgotten", "frozen",
+             "given", "gone", "grown", "held", "hidden", "hit", "retained", "known", "positioned", "led", "left", "lent",
+             "let", "lost", "made", "meant", "met", "paid", "put", "read", "run", "said", "seen", "sent", "set",
+             "displayed", "shut", "sold", "spent", "split", "spoken", "was", "struck", "sung", "taken", "taught",
+             "thought", "thrown", "told", "understood", "won", "worn", "written"}
 # Words that end in -ing and are no verb form
-NOT_VERB_ING = {
-    "anything",
-    "bring",
-    "ceiling",
-    "during",
-    "everything",
-    "king",
-    "nothing",
-    "ring",
-    "sing",
-    "something",
-    "spring",
-    "sting",
-    "string",
-    "swing",
-    "thing",
-    "things",
-    "wing",
-    "ping",
-}
+NOT_VERB_ING = {"anything", "bring", "ceiling", "during", "everything", "king", "nothing", "ring", "sing",
+                "something", "spring", "sting", "string", "swing", "thing", "things", "wing", "ping"}
 WORD = re.compile(r"[A-Za-z][A-Za-z0-9_'-]*")
 # An emphasis mark: a run of stars, or a run of underscores at the edge of a word and never inside one
 EMPHASIS = re.compile(r"\*{1,3}|(?<![A-Za-z0-9])_{1,3}|_{1,3}(?![A-Za-z0-9])")
@@ -148,13 +71,8 @@ def documents(paths):
             continue
         for here, folders, files in os.walk(root):
             # A folder with a .git of its own is another repository, checked against its own ratchet
-            folders[:] = [
-                f
-                for f in folders
-                if f not in SKIPPED_FOLDERS
-                and not f.startswith(".")
-                and not os.path.exists(os.path.join(here, f, ".git"))
-            ]
+            folders[:] = [f for f in folders if f not in SKIPPED_FOLDERS and not f.startswith(".")
+                          and not os.path.exists(os.path.join(here, f, ".git"))]
             rel = os.path.relpath(here, root).replace("\\", "/")
             inside = rel == "." or rel.split("/")[0] in DOCUMENT_FOLDERS
             for name in files:
@@ -172,7 +90,7 @@ def prose_lines(text):
     licence = False
     for number, line in enumerate(text.splitlines(), 1):
         stripped = line.strip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
+        if stripped.startswith(("```", "~~~")):
             fenced = not fenced
             continue
         if fenced:
@@ -195,10 +113,10 @@ def prose_lines(text):
         if licence or stripped.startswith("|") or stripped.startswith("<") or line.startswith("    "):
             out.append((number, ""))
             continue
-        prose = re.sub(r"`[^`]*`", " CODE ", stripped)
+        prose = re.sub(r"`[^`]*`", CODE_SPAN, stripped)
         prose = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", prose)
-        prose = re.sub(r"https?://\S+", " CODE ", prose)
-        prose = re.sub(r"\$[^$]*\$", " CODE ", prose)
+        prose = re.sub(r"https?://\S+", CODE_SPAN, prose)
+        prose = re.sub(r"\$[^$]*\$", CODE_SPAN, prose)
         prose = EMPHASIS.sub("", prose)
         out.append((number, prose))
     return out
@@ -235,12 +153,8 @@ def sentences(block):
 
 def is_name(word):
     """A technical name: capitalized, carrying a digit or an underscore, or the code stand-in."""
-    return (
-        word == "CODE"
-        or any(c.isdigit() or c == "_" for c in word)
-        or (word[0].isupper() and word != word.capitalize())
+    return word == "CODE" or any(c.isdigit() or c == "_" for c in word) or (word[0].isupper() and word != word.capitalize()) \
         or word.isupper()
-    )
 
 
 def participle(word):
@@ -264,20 +178,12 @@ def findings(path, approved, names):
             lower = [w.lower() for w in words]
             for at, word in enumerate(lower):
                 original = words[at]
-                if (
-                    word.endswith("ing")
-                    and len(word) > 4
-                    and word not in NOT_VERB_ING
-                    and word not in names
-                    and not is_name(original)
-                ):
+                if word.endswith("ing") and len(word) > 4 and word not in NOT_VERB_ING and word not in names \
+                        and not is_name(original):
                     found.append((number, "ing", word))
                 if word in BE and at + 1 < len(lower):
-                    after = (
-                        lower[at + 2]
-                        if lower[at + 1] in ("not", "also", "then", "now") and at + 2 < len(lower)
+                    after = lower[at + 2] if lower[at + 1] in ("not", "also", "then", "now") and at + 2 < len(lower) \
                         else lower[at + 1]
-                    )
                     if participle(after) and after not in names:
                         found.append((number, "passive", "%s %s" % (word, after)))
                     elif after.endswith("ing") and after not in NOT_VERB_ING and after not in names:
@@ -320,15 +226,15 @@ def main(argv):
     if "--ratchet" in args:
         at = args.index("--ratchet")
         ratchet = args[at + 1]
-        del args[at : at + 2]
+        del args[at:at + 2]
     if "--ratchet-write" in args:
         at = args.index("--ratchet-write")
         write = args[at + 1]
-        del args[at : at + 2]
+        del args[at:at + 2]
     while "--words" in args:
         at = args.index("--words")
         approved |= word_list(args[at + 1])
-        del args[at : at + 2]
+        del args[at:at + 2]
     paths = args or ["."]
     # The names file sits beside the ratchet, and the ratchet sits beside this file. A run with no ratchet reads
     # the same names: a listed finding is a finding the ratchet counts.
@@ -336,7 +242,6 @@ def main(argv):
     names_file = os.path.join(base, "ste_names.txt")
     names = word_list(names_file) if os.path.isfile(names_file) else set()
     counts = {}
-    displayed = 0
     for path in documents(paths):
         key = os.path.relpath(path).replace("\\", "/")
         rows = findings(path, approved, names)
@@ -344,7 +249,6 @@ def main(argv):
         if ratchet is None and write is None:
             for number, rule, what in rows:
                 print("%s:%d: %s: %s" % (key, number, rule, what))
-                displayed += 1
     if write is not None:
         allowed = ratchet_read(write)
         with open(write, "w", encoding="utf-8", newline="\n") as handle:

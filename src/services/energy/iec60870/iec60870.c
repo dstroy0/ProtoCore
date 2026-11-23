@@ -89,7 +89,8 @@ embed_bool protocore_iec104_parse(const uint8_t *buf, size_t len, Iec104Apci *ou
         return EMBED_FALSE;
     }
     uint8_t c0 = buf[2];
-    out->ns = out->nr = 0;
+    out->ns = 0;
+    out->nr = 0;
     out->u_cmd = 0;
     out->asdu = NULL;
     out->asdu_len = 0;
@@ -529,7 +530,8 @@ embed_bool protocore_iec101_parse(const uint8_t *buf, size_t len, Iec101Frame *o
         return EMBED_FALSE;
     }
     out->fixed = EMBED_FALSE;
-    out->control = out->addr = 0;
+    out->control = 0;
+    out->addr = 0;
     out->asdu = NULL;
     out->asdu_len = 0;
 

@@ -215,7 +215,8 @@ static void send_handle(uint8_t *work, SftpSession *s, uint32_t id, int hi)
                           .width = MMGR_ENDIAN_32);
     SftpV.build_handle_args.id = id;
     SftpV.build_handle_args.handle = SSH_SFTP_CTX(work)->hb;
-    SftpV.build_handle_args.hlen = n;
+    // Explicit cast narrows the width, which MMGR_ENDIAN_32 holds at four octets
+    SftpV.build_handle_args.hlen = (uint32_t)n;
     SftpV.build_handle_args.out = SSH_SFTP_CTX(work)->out;
     SftpV.build_handle_args.cap = PROTOCORE_SFTP_RESP_CAP;
     Sftp.build_handle(work);
@@ -832,7 +833,8 @@ static void handle_packet(uint8_t *work, SftpSession *s, const uint8_t *buf, siz
         a.flags = PROTOCORE_SSH_FILEXFER_ATTR_PERMS;
         a.permissions = PROTOCORE_SFTP_S_IFDIR | 0755;
         a.size = 0;
-        a.atime = a.mtime = 0;
+        a.atime = 0;
+        a.mtime = 0;
         SftpV.format_longname_args.is_dir = EMBED_TRUE;
         SftpV.format_longname_args.perms = a.permissions;
         SftpV.format_longname_args.size = 0;

@@ -325,13 +325,11 @@ size_t protocore_webdav_ms_entry(const uint8_t *work, char *buf, size_t cap, siz
         }
     }
 
-    if (rfc1123_mtime && rfc1123_mtime[0])
+    if (rfc1123_mtime && rfc1123_mtime[0] &&
+        (!app(tmp, sizeof(tmp), &t, "        <D:getlastmodified>") || !app(tmp, sizeof(tmp), &t, rfc1123_mtime) ||
+         !app(tmp, sizeof(tmp), &t, "</D:getlastmodified>\n")))
     {
-        if (!app(tmp, sizeof(tmp), &t, "        <D:getlastmodified>") || !app(tmp, sizeof(tmp), &t, rfc1123_mtime) ||
-            !app(tmp, sizeof(tmp), &t, "</D:getlastmodified>\n"))
-        {
-            return len;
-        }
+        return len;
     }
 
     if (!app(tmp, sizeof(tmp), &t,

@@ -138,7 +138,7 @@ typedef struct
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */
 typedef struct
 {
-    size_t (*parse)(uint8_t *, const uint8_t *, size_t, QuicFrameHeader *);
+    size_t (*parse)(const uint8_t *, const uint8_t *, size_t, QuicFrameHeader *);
     size_t (*build_padding)(const uint8_t *, uint8_t *, size_t, size_t);
     size_t (*build_ping)(const uint8_t *, uint8_t *, size_t);
     size_t (*build_handshake_done)(const uint8_t *, uint8_t *, size_t);
@@ -160,7 +160,7 @@ PROTOCORE_NS_LAYOUT(QuicFrameNs, parse, build_padding, build_ping, build_handsha
  * @param out Out
  * @return The size_t.
  */
-size_t protocore_quic_frame_parse(uint8_t *work, const uint8_t *buf, size_t len, QuicFrameHeader *out);
+size_t protocore_quic_frame_parse(const uint8_t *work, const uint8_t *buf, size_t len, QuicFrameHeader *out);
 /**
  * @brief N PADDING frames (n zero bytes). n, or 0 if it does not fit.
  * @param work PROTOCORE_QUIC_FRAME_BORROW bytes the caller took. Not held past the call.

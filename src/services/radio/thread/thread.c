@@ -838,7 +838,7 @@ uint16_t protocore_thread_spinel_fcs(const uint8_t *work, const uint8_t *buf, ui
     return (uint16_t)CrcV.value;
 }
 
-uint16_t protocore_thread_spinel_frame_encode(uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *out,
+uint16_t protocore_thread_spinel_frame_encode(const uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *out,
                                               uint16_t cap)
 {
     if (!out || len > PROTOCORE_THREAD_MAX_DATA || (payload == NULL && len > 0))
@@ -868,7 +868,7 @@ uint16_t protocore_thread_spinel_frame_encode(uint8_t *work, const uint8_t *payl
     return p;
 }
 
-int protocore_thread_spinel_frame_decode(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *payload,
+int protocore_thread_spinel_frame_decode(const uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *payload,
                                          uint16_t pay_cap, uint16_t *pay_len)
 {
     int n_result = 0;

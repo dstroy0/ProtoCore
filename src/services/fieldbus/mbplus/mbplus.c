@@ -38,7 +38,7 @@ void protocore_mbplus_crc(const uint8_t *work)
     MbplusV.value = (uint16_t)CrcV.value;
 }
 
-void protocore_mbplus_build(uint8_t *work)
+void protocore_mbplus_build(const uint8_t *work)
 {
     uint8_t address = MbplusV.build_args.address;
     uint8_t control = MbplusV.build_args.control;
@@ -78,7 +78,7 @@ void protocore_mbplus_build(uint8_t *work)
     MbplusV.n = i;
 }
 
-void protocore_mbplus_parse(uint8_t *work)
+void protocore_mbplus_parse(const uint8_t *work)
 {
     const uint8_t *frame = MbplusV.parse_args.frame;
     size_t len = MbplusV.parse_args.len;

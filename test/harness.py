@@ -1198,6 +1198,26 @@ def _parse_mm(text):
     return out
 
 
+def cmake_global_defines():
+    """The defines that test/CMakeLists.txt gives every target, with each ${NAME} read from its CACHE default.
+
+    ProtoCore, MMgr and idemIP must read one word and one index. A ProtoCore file gets the word of the board
+    profile through platform.h, and an MMgr file reads only these defines. Without them an MMgr file takes
+    the word of the host, and a struct that holds an embed_word then has two layouts in one program.
+    """
+    with open(os.path.join(ROOT, "test", "CMakeLists.txt"), encoding="utf-8") as f:
+        text = f.read()
+    values = dict(re.findall(r"^set\((\w+) (\S+) CACHE", text, re.M))
+    out = []
+    for block in re.findall(r"^add_compile_definitions\(([^)]*)\)", text, re.M):
+        for token in block.split():
+            out.append("-D" + re.sub(r"\$\{(\w+)\}", lambda name: values[name.group(1)], token))
+    return out
+
+
+CMAKE_GLOBAL_DEFINES = cmake_global_defines()
+
+
 def _flag_split(flags):
     """Split an env's build_flags into include args and define args, dropping ini interpolation."""
     incs, defs = [], []
@@ -1209,6 +1229,9 @@ def _flag_split(flags):
             incs.append(f if len(f) > 2 else "-I" + next(it, ""))
         elif f.startswith("-D"):
             defs.append(f)
+    # The CMake build gives every target these. A define that the env sets itself keeps the env's value.
+    named = {define[2:].split("=", 1)[0] for define in defs}
+    defs.extend(define for define in CMAKE_GLOBAL_DEFINES if define[2:].split("=", 1)[0] not in named)
     # -Iinclude is PlatformIO's implicit include_dir, where protocore.h lives. Nothing here is pio,
     # so every path that compiles or scans a TU names it. The last three are MMgr's roots, the same
     # set as tools/ci_tooling/build/gen_cmake.py BASE_INCLUDES.
@@ -2026,8 +2049,10 @@ def build_and_run(name, e, jobs, keep, verbose, debug=False, coverage=False):
         os.makedirs(os.path.dirname(exe), exist_ok=True)
         opt = ["-g", "-O0"] if debug else ["-O1"]
         # Coverage counters are what is being measured, so the optimizer stays out of the way.
+        # The worker tests run threads, and a plain counter update from two threads loses counts. gcovr then
+        # reads negative hits and ignores the lines. An atomic update keeps every count.
         if coverage:
-            opt = ["-g", "-O0", "--coverage"]
+            opt = ["-g", "-O0", "--coverage", "-fprofile-update=atomic"]
         # -O0 emits every header's unused static dispatch table, and a table names its module's
         # entries whether or not the env gates that module in. Section GC drops the unreferenced
         # tables at link, the way -O1 drops them at compile, so their relocations are never resolved.
@@ -2205,7 +2230,16 @@ def cov_one(gc, name):
     produced = p.returncode == 0 and os.path.isfile(full) and os.path.getsize(full) > 0
     if not produced:
         # The caller names the env and refuses the merge. What gcovr said is the only record of why.
-        print("  gcovr exit %d for %s:\n%s" % (p.returncode, name, p.stderr.strip()[:12000]), file=sys.stderr)
+        # A hit-count warning repeats for each line of a file. A run of them can hide the error. Thus the record
+        # keeps their count and the other lines.
+        lines = p.stderr.strip().split("\n")
+        hits = [line for line in lines if "hits in" in line]
+        rest = "\n".join(line for line in lines if "hits in" not in line)
+        print(
+            "  gcovr exit %d for %s (%d hit-count warnings left out):\n%s"
+            % (p.returncode, name, len(hits), rest[-12000:]),
+            file=sys.stderr,
+        )
     return produced
 
 

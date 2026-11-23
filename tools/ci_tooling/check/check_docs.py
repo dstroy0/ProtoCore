@@ -141,7 +141,7 @@ def main() -> int:
     # THE MATRIX IS THE SOURCE, NOT platformio.ini. 892088df stopped rendering the native envs into
     # the ini, so reading it here matched nothing and every env a document named became an unknown
     # env: 411 of the 602 findings this check reported came from that one lookup.
-    known_envs = set(re.findall(r'"(native[A-Za-z0-9_]*)"\s*:\s*\{', read("test/test_matrix.json")))
+    known_envs = set(re.findall(r'"(native\w*)"\s*:\s*\{', read("test/test_matrix.json")))
 
     bad = []
     for f in mds:
@@ -200,7 +200,7 @@ def main() -> int:
         # the entries never reached the headline number. Both are reported, each named.
         distinct = sum(len(set(v)) for v in by_file.values())
         print(
-            f"\n{distinct} distinct stale citation(s) in {len(by_file)} file(s), " f"{len(bad)} occurrence(s).",
+            f"\n{distinct} distinct stale citation(s) in {len(by_file)} file(s), {len(bad)} occurrence(s).",
             file=sys.stderr,
         )
         return 1

@@ -848,7 +848,8 @@ static int negotiate_kex(const uint8_t *list, uint32_t nlen, SshKexAlg *out, emb
     {
         return -1;
     }
-    *out = tag;
+    // Explicit cast reads the tag as the enumerator it is: each candidate carries one SshKexAlg
+    *out = (SshKexAlg)tag;
     return idx;
 }
 
@@ -886,11 +887,12 @@ static int negotiate_hostkey(const uint8_t *list, uint32_t nlen, SshHostkeyAlg *
     {
         return -1;
     }
-    *out = tag;
+    // Explicit cast reads the tag as the enumerator it is: each candidate carries one SshHostkeyAlg
+    *out = (SshHostkeyAlg)tag;
     return idx;
 }
 
-void protocore_ssh_transport_kexinit_parse(uint8_t *work)
+void protocore_ssh_transport_kexinit_parse(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -1207,7 +1209,7 @@ void protocore_ssh_transport_exchange_hash(const uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    SshSession *s = &ssh_sess[i];
+    const SshSession *s = &ssh_sess[i];
     if (!ssh_pkt_slot_storage(&ssh_pkt[i]))
     {
         SshTransportV.i32 = -1;
@@ -1864,7 +1866,7 @@ void protocore_ssh_transport_kexdh_reply(const uint8_t *work)
         SshTransportV.i32 = -1;
         return;
     }
-    SshSession *s = &ssh_sess[i];
+    const SshSession *s = &ssh_sess[i];
 #ifdef PROTOCORE_SSH_KEX_BENCH
     uint32_t kexreply_t0 = protocore_platform_micros();
 #endif
@@ -1918,7 +1920,8 @@ void protocore_ssh_transport_kexdh_reply(const uint8_t *work)
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = k_be + (256 - 32), .src = kk, .bytes = 32);
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = cpub, .src = qc, .bytes = 32);
         EMBED_CALL(memor.cpy, MemoriaCfg, .dst = spub, .src = s->ecdh_pk, .bytes = 32);
-        cpub_len = spub_len = 32;
+        cpub_len = 32;
+        spub_len = 32;
         pub_is_string = EMBED_TRUE;
         mmgr_zero_buf(kk, sizeof(kk));
     }
@@ -2053,7 +2056,7 @@ void protocore_ssh_transport_kexdh_reply(const uint8_t *work)
     SshTransportV.kexhash.k_is_string = k_is_string;
     SshTransportV.kexhash.is512 = is512;
     protocore_ssh_transport_exchange_hash(work);
-    uint8_t *const H = SshTransportV.kexhash.hash;
+    const uint8_t *const H = SshTransportV.kexhash.hash;
     const size_t h_len = SshTransportV.kexhash.hash_len;
     ssh_session_id_latch(i, H, h_len);
 
@@ -2116,7 +2119,7 @@ void protocore_ssh_transport_newkeys_sent(const uint8_t *work)
 #endif
 }
 
-void protocore_ssh_transport_newkeys_complete(uint8_t *work)
+void protocore_ssh_transport_newkeys_complete(const uint8_t *work)
 {
     (void)work;
     const uint8_t i = SshTransportV.slot;
@@ -3931,7 +3934,9 @@ embed_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
         return EMBED_TRUE;
     }
     case SSH_KEX_DH_GROUP14: {
-        protocore_bignum f, x, K;
+        protocore_bignum f;
+        protocore_bignum x;
+        protocore_bignum K;
         BignumV.from_bytes_args.out = &f;
         BignumV.from_bytes_args.bytes = peer_pub;
         BignumV.from_bytes_args.len = peer_pub_len;
@@ -4249,7 +4254,7 @@ void ssh_transport_key_re_exchange(uint8_t i)
     {
         return;
     }
-    SshSession *s = &ssh_sess[i];
+    const SshSession *s = &ssh_sess[i];
     PhaseMachineV.admits_rekey_args.i = i;
     PhaseMachine.admits_rekey(protocore_ssh_transport_span());
     if (!PhaseMachineV.ok)

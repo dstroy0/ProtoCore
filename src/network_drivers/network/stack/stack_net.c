@@ -70,10 +70,14 @@ typedef struct
     StackNetPbuf pbufs[PROTOCORE_STACK_NET_PBUFS];
     protocore_udp_pcb udp[PROTOCORE_STACK_NET_UDP_PCBS];
     protocore_platform_mutex_ctrl lock_ctrl;
-    protocore_platform_mutex lock;  ///< the lock of the stack, NULL until the first call
-    protocore_platform_task holder; ///< the task that holds the lock
-    uint32_t depth;                 ///< the takes of the lock by its holder
-    embed_bool started;             ///< the TCP of the stack started, and each entry has its rings
+    protocore_platform_mutex lock;            ///< the lock of the stack, NULL until the first call
+    protocore_platform_task holder;           ///< the task that holds the lock
+    uint32_t depth;                           ///< the takes of the lock by its holder
+    embed_bool started;                       ///< the TCP of the stack started, and each entry has its rings
+    uint8_t igmp_mac[IDEMIP_MAC_LEN];         ///< the group hardware address of the IGMP message that goes out
+    uint8_t udp_next_hop[IDEMIP_MAC_LEN];     ///< the next hop of the UDP datagram that goes out
+    uint8_t connect_next_hop[IDEMIP_MAC_LEN]; ///< the next hop of the SYN of an active open
+    uint8_t connect_local_ip[4];              ///< the local address of the active open, first octet first
 } StackNetCtx;
 
 static StackNetCtx s_net;
@@ -156,7 +160,9 @@ int protocore_net_ip_parse(const char *s, protocore_net_ip *out)
     {
         return 0;
     }
-    uint8_t octets[4] = {0};
+    // The four octets go into one word, the first octet in the high byte. Thus the output changes only
+    // after the whole text parses.
+    uint32_t packed = 0u;
     for (uint8_t part = 0u; part < 4u; part++)
     {
         uint32_t value = 0u;
@@ -171,14 +177,15 @@ int protocore_net_ip_parse(const char *s, protocore_net_ip *out)
         {
             return 0;
         }
-        // Explicit cast narrows the octet, which the test above holds at 255 or below
-        octets[part] = (uint8_t)value;
+        packed = (packed << 8) | value; // the test above holds value at 255 or below
         if (part < 3u)
         {
             s++;
         }
     }
-    protocore_net_ip4_set(out, octets[0], octets[1], octets[2], octets[3]);
+    // Explicit casts narrow each octet of the word, which the masks hold in eight bits
+    protocore_net_ip4_set(out, (uint8_t)((packed >> 24) & 0xFFu), (uint8_t)((packed >> 16) & 0xFFu),
+                          (uint8_t)((packed >> 8) & 0xFFu), (uint8_t)(packed & 0xFFu));
     return 1;
 }
 
@@ -192,21 +199,16 @@ char *protocore_net_ip_print(const protocore_net_ip *a, char *buf, int cap)
     for (uint8_t part = 0u; part < 4u && a != NULL; part++)
     {
         const uint8_t octet = a->bytes[part];
-        char digits[3];
-        int count = 0;
-        uint8_t rest = octet;
-        do
+        // The digits go out from the hundreds down. A place above the first digit of the octet does not go out,
+        // and the ones always go out.
+        for (uint8_t place = 100u; place != 0u && at < cap - 1; place /= 10u)
         {
-            // Explicit cast narrows the digit, which the remainder holds below 10
-            digits[count] = (char)('0' + (rest % 10u));
-            count++;
-            rest /= 10u;
-        } while (rest != 0u);
-        while (count > 0 && at < cap - 1)
-        {
-            count--;
-            buf[at] = digits[count];
-            at++;
+            if (octet >= place || place == 1u)
+            {
+                // Explicit cast narrows the digit, which the remainder holds below 10
+                buf[at] = (char)('0' + ((octet / place) % 10u));
+                at++;
+            }
         }
         if (part < 3u && at < cap - 1)
         {
@@ -714,9 +716,8 @@ static void stack_net_igmp_send(const StackUnits *units)
     ip[22] = 0x00u;
     ip[23] = 0x00u;
     idemip_wr16(ip + 10, idemip_cksum(ip, STACK_NET_IP4_ALERT_HDR_LEN));
-    uint8_t mac[IDEMIP_MAC_LEN];
-    stack_net_group_mac(dst, mac);
-    idemip_eth_build(frame, mac, netif_io->hwaddr, IDEMIP_ETHERTYPE_IPV4);
+    stack_net_group_mac(dst, s_net.igmp_mac);
+    idemip_eth_build(frame, s_net.igmp_mac, netif_io->hwaddr, IDEMIP_ETHERTYPE_IPV4);
     StackV.transmit_args.index = STACK_NET_NETIF;
     StackV.transmit_args.len =
         IDEMIP_ETH_HDR_LEN + idemip_eth_pad(frame, STACK_NET_IP4_ALERT_HDR_LEN + IDEMIP_IGMP_MSG_LEN);
@@ -843,8 +844,7 @@ protocore_net_err protocore_net_udp_sendto(const protocore_udp_pcb *p, const pro
         return PROTOCORE_NET_ERR_VAL;
     }
     const uint32_t dst = idemip_rd32(a->bytes);
-    uint8_t mac[IDEMIP_MAC_LEN];
-    if (!stack_net_next_hop(units, dst, mac))
+    if (!stack_net_next_hop(units, dst, s_net.udp_next_hop))
     {
         return PROTOCORE_NET_ERR_MEM; // ARP holds no row yet, and the request went out
     }
@@ -863,13 +863,11 @@ protocore_net_err protocore_net_udp_sendto(const protocore_udp_pcb *p, const pro
     EMBED_CALL(proxim.read, ProximusCfg, .dst = udp + IDEMIP_UDP_HDR_LEN, .at = (const uint8_t *)b->payload,
                .size = b->len);
     // RFC 768: the checksum covers the pseudo header, the header and the data. A sum of zero goes out as ones.
-    uint8_t pseudo_header[12];
-    idemip_wr32(pseudo_header, netif_io->addr);
-    idemip_wr32(pseudo_header + 4, dst);
-    pseudo_header[8] = 0u;
-    pseudo_header[9] = IDEMIP_IP4_PROTO_UDP;
-    idemip_wr16(pseudo_header + 10, udp_len);
-    const uint32_t sum = idemip_cksum_accum(idemip_cksum_accum(0u, pseudo_header, sizeof(pseudo_header)), udp, udp_len);
+    // The pseudo header is six 16-bit words: the two halves of each address, the zero octet with the protocol,
+    // and the UDP length. Their sum is the start value of the accumulator, which adds words in that order.
+    const uint32_t pseudo_sum = (netif_io->addr >> 16) + (netif_io->addr & 0xFFFFu) + (dst >> 16) + (dst & 0xFFFFu) +
+                                (uint32_t)IDEMIP_IP4_PROTO_UDP + (uint32_t)udp_len;
+    const uint32_t sum = idemip_cksum_accum(pseudo_sum, udp, udp_len);
     const uint16_t check = idemip_cksum_final(sum);
     idemip_wr16(udp + 6, (check == 0u) ? 0xFFFFu : check);
     IdemIpIp4Fields fields = {0};
@@ -883,7 +881,7 @@ protocore_net_err protocore_net_udp_sendto(const protocore_udp_pcb *p, const pro
     fields.src = netif_io->addr;
     fields.dst = dst;
     idemip_ip4_build(frame + IDEMIP_ETH_HDR_LEN, &fields);
-    idemip_eth_build(frame, mac, netif_io->hwaddr, IDEMIP_ETHERTYPE_IPV4);
+    idemip_eth_build(frame, s_net.udp_next_hop, netif_io->hwaddr, IDEMIP_ETHERTYPE_IPV4);
     StackV.transmit_args.index = STACK_NET_NETIF;
     StackV.transmit_args.len = IDEMIP_ETH_HDR_LEN + idemip_eth_pad(frame, IDEMIP_IPV4_HDR_LEN + udp_len);
     Stack.transmit_post(protocore_stack_span());
@@ -1007,19 +1005,17 @@ static protocore_net_err stack_net_connect_try(protocore_pcb *pcb, uint32_t now_
         pcb->connect_wait.pending = EMBED_FALSE;
         return PROTOCORE_NET_ERR_CONN;
     }
-    uint8_t mac[IDEMIP_MAC_LEN];
-    if (!stack_net_next_hop(units, idemip_rd32(pcb->remote_ip.bytes), mac))
+    if (!stack_net_next_hop(units, idemip_rd32(pcb->remote_ip.bytes), s_net.connect_next_hop))
     {
         pcb->connect_wait.arp_sent_ms = now_ms;
         return PROTOCORE_NET_OK;
     }
     pcb->connect_wait.pending = EMBED_FALSE;
-    uint8_t local_ip[4];
-    idemip_wr32(local_ip, IDEMIP_NETIF_IO(units->link.netif)->addr);
+    idemip_wr32(s_net.connect_local_ip, IDEMIP_NETIF_IO(units->link.netif)->addr);
     const StackTcpConnectArgs args = {
-        .local_ip = local_ip,
+        .local_ip = s_net.connect_local_ip,
         .remote_ip = pcb->remote_ip.bytes,
-        .next_hop = mac,
+        .next_hop = s_net.connect_next_hop,
         .now_ms = now_ms,
         .random_word = protocore_platform_rand_u32(),
         .remote_port = pcb->remote_port,

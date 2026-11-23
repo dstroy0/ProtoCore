@@ -225,7 +225,7 @@ embed_bool protocore_dbm_put(struct protocore_dbm *db, const char *key, uint16_t
     return EMBED_TRUE;
 }
 
-long protocore_dbm_get(struct protocore_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap)
+long protocore_dbm_get(const struct protocore_dbm *db, const char *key, uint16_t key_len, uint8_t *buf, size_t cap)
 {
     uint64_t h = key_hash(key, key_len);
     int slot = find_live(db, h, key, key_len);

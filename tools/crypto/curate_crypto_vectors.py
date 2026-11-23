@@ -55,7 +55,7 @@ def _rev(checkout):
 def _find(checkout, name):
     hits = glob.glob(os.path.join(checkout, "**", name), recursive=True)
     if not hits:
-        raise SystemExit("cannot find %s under %s" % (name, checkout))
+        raise FileNotFoundError("cannot find %s under %s" % (name, checkout))
     # Prefer the testvectors_v1 schema when both are present.
     hits.sort(key=lambda p: ("testvectors_v1" not in p, len(p)))
     return hits[0]
@@ -280,7 +280,7 @@ def rfc_vectors():
                 "prk": "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5",
                 "info": "f0f1f2f3f4f5f6f7f8f9",
                 "l": 42,
-                "okm": "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf" "34007208d5b887185865",
+                "okm": "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865",
             },
             {  # A.2 longer inputs
                 "tcId": 2,
@@ -312,7 +312,7 @@ def rfc_vectors():
                 "prk": "19ef24a32c717b167f33a91d6f648bdf96596776afdb6377ac434c1c293ccb04",
                 "info": "",
                 "l": 42,
-                "okm": "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d" "9d201395faa4b61a96c8",
+                "okm": "8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8",
             },
         ],
     }
@@ -451,7 +451,7 @@ def main():
     ed_name = "ed25519_test.json"
     try:
         _find(checkout, ed_name)
-    except SystemExit:
+    except FileNotFoundError:
         ed_name = "eddsa_test.json"
     write(
         "wycheproof_ed25519.json",

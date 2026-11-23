@@ -335,8 +335,8 @@ static void sha256_absorb(uint8_t *work, const uint8_t *data, size_t len)
 
 static void sha256_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA256_DIGEST_LEN])
 {
-    Sha256Ctx *ctx = SHA256_CTX(work);
-    uint8_t *rx = SHA256_RX(work);
+    const Sha256Ctx *ctx = SHA256_CTX(work);
+    const uint8_t *rx = SHA256_RX(work);
     uint8_t *tx = SHA256_TX(work);
     uint32_t *fs = SHA256_FS(work);
     uint64_t bitlen = ctx->n << 3;

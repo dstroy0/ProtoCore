@@ -28,6 +28,7 @@
 #define PROTOCORE_J1939_H
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "shared/can/can.h"   // CanFrame: the type a parameter points at
 
 #if PROTOCORE_ENABLE_J1939
 
@@ -211,8 +212,6 @@ typedef struct
     uint8_t protect;       ///< protect lamp
     uint8_t dtc_count;     ///< number of active DTCs decoded into the caller's array
 } J1939Dm1;
-
-#include "shared/can/can.h" // CanFrame: the type a parameter points at
 
 /** @brief What encode_id takes: id, priority, pgn, sa, da. */
 typedef struct

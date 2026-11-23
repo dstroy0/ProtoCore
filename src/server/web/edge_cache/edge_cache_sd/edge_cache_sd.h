@@ -163,7 +163,7 @@ typedef struct
     void (*const serialize)(const uint8_t *work);
     void (*const deserialize)(const uint8_t *work);
     void (*const put)(const uint8_t *work);
-    void (*const get)(uint8_t *work);
+    void (*const get)(const uint8_t *work);
     void (*const del)(const uint8_t *work);
     void (*const purge_prefix)(const uint8_t *work);
     void (*const purge_all)(const uint8_t *work);
@@ -175,7 +175,7 @@ void protocore_edge_cache_sd_serialize(const uint8_t *work);
 void protocore_edge_cache_sd_deserialize(const uint8_t *work);
 #if PROTOCORE_ENABLE_DBM
 void protocore_edge_cache_sd_put(const uint8_t *work);
-void protocore_edge_cache_sd_get(uint8_t *work);
+void protocore_edge_cache_sd_get(const uint8_t *work);
 void protocore_edge_cache_sd_del(const uint8_t *work);
 void protocore_edge_cache_sd_purge_prefix(const uint8_t *work);
 void protocore_edge_cache_sd_purge_all(const uint8_t *work);

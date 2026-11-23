@@ -19,6 +19,9 @@
 #include "memoria_operor/memoria_operor.h"
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/ld2410/ld2410.h"
+#if PROTOCORE_HAS_BUS
+#include "server/peripherals/uart/uart.h" // the shared UART owner
+#endif
 
 EMBED_BEGIN_DECLS
 
@@ -70,9 +73,6 @@ static_assert(LD2410_OFF_CTX % _Alignof(Ld2410Ctx) == 0,
         const uint8_t *: (const Ld2410Ctx *)(const void *)((w) + LD2410_OFF_CTX),                                      \
         default: (Ld2410Ctx *)(void *)((w) + LD2410_OFF_CTX))
 
-#if PROTOCORE_HAS_BUS
-#include "server/peripherals/uart/uart.h" // the shared UART owner
-#endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
 static const uint8_t FTR[4] = {0xF8, 0xF7, 0xF6, 0xF5};
 static const uint8_t CMD_HDR[4] = {0xFD, 0xFC, 0xFB, 0xFA};
@@ -83,7 +83,8 @@ static const uint16_t LEN_ENGINEERING = 35; // ... and for an engineering-mode f
 
 static uint16_t rd16(const uint8_t *p)
 {
-    return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
+    // Explicit cast narrows the sum of two octets, which holds 16 bits
+    return (uint16_t)((uint32_t)p[0] | ((uint32_t)p[1] << 8));
 }
 
 // Build one command frame; returns its length or 0 if @p cap is too small.

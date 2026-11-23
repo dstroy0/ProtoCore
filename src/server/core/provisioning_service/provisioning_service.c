@@ -211,7 +211,10 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     resp[3] = 0x80; // RA=1, RCODE 0
     resp[6] = 0x00;
     resp[7] = 0x01; // ANCOUNT = 1
-    resp[8] = resp[9] = resp[10] = resp[11] = 0x00;
+    resp[8] = 0x00;
+    resp[9] = 0x00;
+    resp[10] = 0x00;
+    resp[11] = 0x00;
 
     size_t n = qend;
     resp[n++] = 0xC0; // name: pointer to the question at offset 0x0C
@@ -279,7 +282,7 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
 {
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
-    uint8_t *work = protocore_provisioning_service_span();
+    const uint8_t *work = protocore_provisioning_service_span();
 
     char ssid[33];
     char psk[64];

@@ -907,16 +907,16 @@ void protocore_ua_w_variant(UaWriter *w, const OpcUaVariant *v)
 void protocore_ua_w_datavalue(UaWriter *w, const OpcUaVariant *v, uint32_t status)
 {
     embed_bool has_value = v && v->type != OPCUA_VAR_NULL;
-    uint8_t mask = 0;
+    uint8_t encoding_mask = 0;
     if (has_value)
     {
-        mask |= 0x01; // Value present
+        encoding_mask |= 0x01; // Value present
     }
     if (status != OPCUA_STATUS_GOOD)
     {
-        mask |= 0x02; // StatusCode present
+        encoding_mask |= 0x02; // StatusCode present
     }
-    protocore_ua_w_u8(w, mask);
+    protocore_ua_w_u8(w, encoding_mask);
     if (has_value)
     {
         protocore_ua_w_variant(w, v);
@@ -991,15 +991,13 @@ embed_bool protocore_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32
     {
         *out_status = OPCUA_STATUS_GOOD;
     }
-    uint8_t mask = protocore_ua_r_u8(r);
-    if (mask & 0x01) // Value (Variant)
+    uint8_t encoding_mask = protocore_ua_r_u8(r);
+    // Value (Variant)
+    if ((encoding_mask & 0x01) && !protocore_ua_r_variant(r, out_value))
     {
-        if (!protocore_ua_r_variant(r, out_value))
-        {
-            return EMBED_FALSE;
-        }
+        return EMBED_FALSE;
     }
-    if (mask & 0x02) // StatusCode
+    if (encoding_mask & 0x02) // StatusCode
     {
         uint32_t st = protocore_ua_r_u32(r);
         if (out_status)
@@ -1007,19 +1005,19 @@ embed_bool protocore_ua_r_datavalue(UaReader *r, OpcUaVariant *out_value, uint32
             *out_status = st;
         }
     }
-    if (mask & 0x04) // SourceTimestamp (DateTime)
+    if (encoding_mask & 0x04) // SourceTimestamp (DateTime)
     {
         (void)protocore_ua_r_u64(r);
     }
-    if (mask & 0x10) // SourcePicoseconds (UInt16)
+    if (encoding_mask & 0x10) // SourcePicoseconds (UInt16)
     {
         (void)protocore_ua_r_u16(r);
     }
-    if (mask & 0x08) // ServerTimestamp (DateTime)
+    if (encoding_mask & 0x08) // ServerTimestamp (DateTime)
     {
         (void)protocore_ua_r_u64(r);
     }
-    if (mask & 0x20) // ServerPicoseconds (UInt16)
+    if (encoding_mask & 0x20) // ServerPicoseconds (UInt16)
     {
         (void)protocore_ua_r_u16(r);
     }
@@ -1188,16 +1186,16 @@ void protocore_ua_w_qualifiedname(UaWriter *w, uint16_t ns, const char *name)
 
 void protocore_ua_w_localizedtext(UaWriter *w, const char *locale, const char *text)
 {
-    uint8_t mask = 0;
+    uint8_t encoding_mask = 0;
     if (locale)
     {
-        mask |= 0x01; // Locale present
+        encoding_mask |= 0x01; // Locale present
     }
     if (text)
     {
-        mask |= 0x02; // Text present
+        encoding_mask |= 0x02; // Text present
     }
-    protocore_ua_w_u8(w, mask);
+    protocore_ua_w_u8(w, encoding_mask);
     if (locale)
     {
         protocore_ua_w_string(w, locale,
@@ -1383,7 +1381,7 @@ void protocore_opcua_rx(uint8_t slot)
     {
         return;
     }
-    TcpConn *c = &conn_pool[slot];
+    const TcpConn *c = &conn_pool[slot];
 
     // Drain every complete UACP message currently in the rx ring (a client may
     // pipeline HEL then OPN; each arrives framed by an 8-byte header + MessageSize).
@@ -1413,9 +1411,12 @@ void protocore_opcua_rx(uint8_t slot)
         if (EMBED_CALL(memor.cmp, MemoriaCfg, .src = h.type, .other = "HEL", .bytes = 3) == 0)
         {
             OpcUaHello hello;
-            size_t n;
-            if (protocore_opcua_parse_hello(s_opcua.msg, h.size, &hello) &&
-                (n = protocore_opcua_build_ack(&hello, s_opcua.resp, sizeof(s_opcua.resp))) > 0)
+            size_t n = 0;
+            if (protocore_opcua_parse_hello(s_opcua.msg, h.size, &hello))
+            {
+                n = protocore_opcua_build_ack(&hello, s_opcua.resp, sizeof(s_opcua.resp));
+            }
+            if (n > 0)
             {
                 raw_send(slot, s_opcua.resp, n);
             }

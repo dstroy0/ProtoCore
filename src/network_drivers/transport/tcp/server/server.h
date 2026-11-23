@@ -142,7 +142,7 @@ typedef struct
     void (*const stop_dynamic)(const uint8_t *work);
     void (*const add)(uint8_t *work);
     void (*const add_dynamic)(uint8_t *work);
-    void (*const enqueue)(uint8_t *work);
+    void (*const enqueue)(const uint8_t *work);
     void (*const set_dscp)(const uint8_t *work);
     void (*const worker_queues_init)(uint8_t *work);
     void (*const worker_queue)(uint8_t *work);
@@ -164,7 +164,7 @@ void protocore_tcp_listener_stop_all(const uint8_t *work);
 void protocore_tcp_listener_stop_dynamic(const uint8_t *work);
 void protocore_tcp_listener_add(uint8_t *work);
 void protocore_tcp_listener_add_dynamic(uint8_t *work);
-void protocore_tcp_listener_enqueue(uint8_t *work);
+void protocore_tcp_listener_enqueue(const uint8_t *work);
 void protocore_tcp_listener_set_dscp(const uint8_t *work);
 #if PROTOCORE_WORKER_COUNT > 1
 void protocore_tcp_listener_worker_queues_init(uint8_t *work);

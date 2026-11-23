@@ -208,8 +208,9 @@ void protocore_tls_record_keys_derive(uint8_t *work)
     protocore_secure_guard()->persistent_buf_release(k.buf, protocore_secure_owner());
 }
 
-void protocore_tls_record_keys_wipe(uint8_t *work)
+void protocore_tls_record_keys_wipe(const uint8_t *work)
 {
+    (void)work;
     TlsRecordKeys *keys = TlsRecordV.key.keys;
     aead_key_wipe(keys->cipher, keys->gcm);
     mmgr_zero_buf(keys->iv, sizeof(keys->iv));
@@ -222,8 +223,9 @@ void protocore_tls_record_keys_wipe(uint8_t *work)
 // TLSPlaintext (RFC 8446 sec 5.1): unencrypted record
 // ---------------------------------------------------------------------------
 
-void protocore_tls_record_plaintext_build(uint8_t *work)
+void protocore_tls_record_plaintext_build(const uint8_t *work)
 {
+    (void)work;
     const size_t frag_len = TlsRecordV.plain.frag_len;
     uint8_t *out = TlsRecordV.out_args.out;
     const size_t total = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + frag_len;
@@ -241,8 +243,9 @@ void protocore_tls_record_plaintext_build(uint8_t *work)
     TlsRecordV.n = total;
 }
 
-void protocore_tls_record_plaintext_parse(uint8_t *work)
+void protocore_tls_record_plaintext_parse(const uint8_t *work)
 {
+    (void)work;
     const uint8_t *rec = TlsRecordV.sealed.rec;
     const size_t rec_len = TlsRecordV.sealed.rec_len;
     TlsRecordV.n = 0;
@@ -267,8 +270,9 @@ void protocore_tls_record_plaintext_parse(uint8_t *work)
 // TLSCiphertext (RFC 8446 sec 5.2): AEAD-protected record
 // ---------------------------------------------------------------------------
 
-void protocore_tls_record_protect(uint8_t *work)
+void protocore_tls_record_protect(const uint8_t *work)
 {
+    (void)work;
     TlsRecordKeys *keys = TlsRecordV.key.keys;
     const uint8_t content_type = TlsRecordV.content_type;
     const uint8_t *pt = TlsRecordV.sealed.pt;
@@ -313,8 +317,9 @@ void protocore_tls_record_protect(uint8_t *work)
     TlsRecordV.n = total;
 }
 
-void protocore_tls_record_unprotect(uint8_t *work)
+void protocore_tls_record_unprotect(const uint8_t *work)
 {
+    (void)work;
     TlsRecordKeys *keys = TlsRecordV.key.keys;
     const uint8_t *rec = TlsRecordV.sealed.rec;
     const size_t rec_len = TlsRecordV.sealed.rec_len;

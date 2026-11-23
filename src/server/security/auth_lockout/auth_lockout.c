@@ -125,7 +125,7 @@ void protocore_auth_lockout_remaining(uint8_t *work)
     }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
     AuthLockoutV.ok = EMBED_TRUE;
-    LockoutBucket *b = find_bucket(s_lock, ip);
+    const LockoutBucket *b = find_bucket(s_lock, ip);
     if (!b || b->lock_ms == 0)
     {
         return;
@@ -166,13 +166,12 @@ void protocore_auth_lockout_fail(uint8_t *work)
                 slot = i;
                 break;
             }
-            if ((uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[lru].last_ms))
+            if ((now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[lru].last_ms))
             {
                 lru = i;
             }
             if (!bucket_locked(&s_lock->buckets[i], now_ms) &&
-                (slot < 0 ||
-                 (uint32_t)(now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[slot].last_ms)))
+                (slot < 0 || (now_ms - s_lock->buckets[i].last_ms) > (now_ms - s_lock->buckets[slot].last_ms)))
             {
                 slot = i;
             }

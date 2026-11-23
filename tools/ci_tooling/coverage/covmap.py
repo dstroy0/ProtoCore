@@ -133,7 +133,7 @@ def src_line(path: str, n: int) -> str:
     return "<unavailable>"
 
 
-def main(argv=None) -> int:
+def main(argv=None) -> None:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -162,7 +162,7 @@ def main(argv=None) -> int:
         for pth in a.paths:
             pth = pth.replace("\\", "/")
             print(f"{pth}: {' '.join(owners(envs, pth)) or '<none>'}")
-        return 0
+        return
 
     if a.cmd == "srcs":
         for name in a.envs:
@@ -173,7 +173,7 @@ def main(argv=None) -> int:
             print(f"{name}:")
             for s in e["src"]:
                 print(f"  src/{s}")
-        return 0
+        return
 
     if a.cmd == "lines":
         lines = load_lines(a.cov)
@@ -205,7 +205,7 @@ def main(argv=None) -> int:
                     print(f"  {pth}:{lo}-{hi}  ({hi - lo + 1} lines) | {src_line(pth, lo)}")
         pct = 100.0 * cov_n / tot if tot else 100.0
         print(f"\nTOTAL {cov_n}/{tot} lines = {pct:.3f}%  ({tot - cov_n} uncovered)")
-        return 0
+        return
 
     cov = load_cov(a.cov)
     sel = [p.replace("\\", "/") for p in a.paths] or sorted(cov)
@@ -237,7 +237,6 @@ def main(argv=None) -> int:
 
     pct = 100.0 * total_c / total_b if total_b else 100.0
     print(f"\nTOTAL {total_c}/{total_b} branches = {pct:.3f}%  ({total_b - total_c} uncovered)")
-    return 0
 
 
 if __name__ == "__main__":

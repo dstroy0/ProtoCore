@@ -347,8 +347,8 @@ static void sha384_absorb(uint8_t *work, const uint8_t *data, size_t len)
 
 static void sha384_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA384_DIGEST_LEN])
 {
-    Sha384Ctx *ctx = SHA384_CTX(work);
-    uint8_t *rx = SHA384_RX(work);
+    const Sha384Ctx *ctx = SHA384_CTX(work);
+    const uint8_t *rx = SHA384_RX(work);
     uint8_t *tx = SHA384_TX(work);
     uint64_t *fs = SHA384_FS(work);
 

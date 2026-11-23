@@ -669,7 +669,7 @@ void protocore_modbus_rx(uint8_t *work)
 {
     uint8_t slot = ModbusV.rx_args.slot;
 
-    TcpConn *conn = &conn_pool[slot];
+    const TcpConn *conn = &conn_pool[slot];
 
     // Frame complete ADUs out of the rx ring; a partial frame stays buffered.
     for (;;)

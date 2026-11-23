@@ -92,7 +92,7 @@ def parse_guards(text):
     lines = text.splitlines()
     for i, raw in enumerate(lines):
         s = raw.strip()
-        if s.startswith("#if ") or s.startswith("#ifdef ") or s.startswith("#ifndef "):
+        if s.startswith(("#if ", "#ifdef ", "#ifndef ")):
             stack.append(s[4:] if s.startswith("#if ") else "")  # ifdef/ifndef hold no ENABLE terms we track
         elif s.startswith("#elif "):
             if stack:

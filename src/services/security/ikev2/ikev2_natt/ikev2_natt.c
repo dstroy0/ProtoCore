@@ -119,7 +119,7 @@ void protocore_ike_natt_hash(const uint8_t *work)
 }
 
 // The digest covers the address and port this packet was sent from (sec 2.23).
-void protocore_ike_natt_source_build(uint8_t *work)
+void protocore_ike_natt_source_build(const uint8_t *work)
 {
     uint8_t h[PROTOCORE_IKE_NATD_HASH_LEN];
     IkeNattV.n = 0;
@@ -132,7 +132,7 @@ void protocore_ike_natt_source_build(uint8_t *work)
 }
 
 // The digest covers the address and port this packet was sent to (sec 2.23).
-void protocore_ike_natt_dest_build(uint8_t *work)
+void protocore_ike_natt_dest_build(const uint8_t *work)
 {
     uint8_t h[PROTOCORE_IKE_NATD_HASH_LEN];
     IkeNattV.n = 0;

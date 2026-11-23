@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-# repotools-stamp: lib/repotools/findings.py bb1158878b9e2ca0
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """One report shape for every check in the toolkit, and one rule about exit codes.
 
 A check yields findings and returns a Report. The Report decides the exit code, so a caller never
@@ -27,8 +26,8 @@ cleanup pass wants and the setting a hook does not.
 READING NOTHING IS A THIRD OUTCOME
 
 A Report that saw zero files exits 2, separately from both other outcomes. A check that reads no
-files and prints success is a failure a hook cannot see. A moved directory then goes unnoticed for
-as long as it takes somebody to wonder why the count never moves.
+files and prints success is a failure a hook cannot see. A directory that moves then stays out of
+the check, and the count is the only sign.
 """
 
 import sys

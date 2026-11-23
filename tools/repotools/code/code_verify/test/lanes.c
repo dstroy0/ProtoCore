@@ -1,12 +1,10 @@
-// repotools-stamp: code/code_verify/test/lanes.c 1cb20bfe7606914b
-/* repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
- * SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+/* ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 /**
  * @file lanes.c
  * @brief A fixture for verify_asm: one function that must vectorize and one that must not call out.
  * @author dstroy0 (Douglas Quigg) <dquigg123@gmail.com>
- * @date 2026-09-09
  *
  * @note This exists to be compiled and disassembled, never to be linked or run. It is the smallest
  *       thing that lets the checker be checked: a case that should pass, a case that should fail on

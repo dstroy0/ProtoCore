@@ -17,6 +17,9 @@
 #include "memoria_operor/memoria_operor.h"
 #include "server/core/worker/worker.h" // the cellblock this module's state is taken from
 #include "server/peripherals/hmmd/hmmd.h"
+#if PROTOCORE_HAS_BUS
+#include "server/peripherals/uart/uart.h" // the shared UART owner
+#endif
 
 EMBED_BEGIN_DECLS
 
@@ -65,10 +68,6 @@ static_assert(HMMD_OFF_CTX % _Alignof(HmmdCtx) == 0,
     _Generic((w),                                                                                                      \
         const uint8_t *: (const HmmdCtx *)(const void *)((w) + HMMD_OFF_CTX),                                          \
         default: (HmmdCtx *)(void *)((w) + HMMD_OFF_CTX))
-
-#if PROTOCORE_HAS_BUS
-#include "server/peripherals/uart/uart.h" // the shared UART owner
-#endif
 
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
 static const uint8_t FTR[4] = {0xF8, 0xF7, 0xF6, 0xF5};

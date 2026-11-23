@@ -52,7 +52,7 @@ typedef struct
 {
     uint16_t (*ash_crc16)(const uint8_t *, const uint8_t *, uint16_t);
     uint16_t (*ash_frame_encode)(const uint8_t *, uint8_t, const uint8_t *, uint16_t, uint8_t *, uint16_t);
-    int (*ash_frame_decode)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint8_t *, uint16_t, uint16_t *);
+    int (*ash_frame_decode)(const uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint8_t *, uint16_t, uint16_t *);
 } ZigbeeNs;
 PROTOCORE_NS_LAYOUT(ZigbeeNs, ash_crc16, ash_frame_encode, ash_frame_decode);
 
@@ -87,7 +87,7 @@ uint16_t protocore_zigbee_ash_frame_encode(const uint8_t *work, uint8_t control,
  * @param pay_len Pay len
  * @return The int.
  */
-int protocore_zigbee_ash_frame_decode(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *control,
+int protocore_zigbee_ash_frame_decode(const uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *control,
                                       uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len);
 
 /** @brief Module namespace. */

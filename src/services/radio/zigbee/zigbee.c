@@ -108,7 +108,7 @@ uint16_t protocore_zigbee_ash_frame_encode(const uint8_t *work, uint8_t control,
     return p;
 }
 
-int protocore_zigbee_ash_frame_decode(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *control,
+int protocore_zigbee_ash_frame_decode(const uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *control,
                                       uint8_t *payload, uint16_t pay_cap, uint16_t *pay_len)
 {
     int n_result = 0;

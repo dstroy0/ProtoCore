@@ -380,7 +380,7 @@ void protocore_oidc_token_kid(const uint8_t *work)
 
 // The RSA JWK the `kid` names, out of the JWK Set (RFC 7517 sec 5.1). Each member of the "keys"
 // array is taken between its braces; an empty `kid` takes the first JWK whose `n` and `e` parse.
-void protocore_oidc_jwks_find(uint8_t *work)
+void protocore_oidc_jwks_find(const uint8_t *work)
 {
     (void)work;
     OidcV.ok = EMBED_FALSE;
@@ -591,14 +591,11 @@ void protocore_oidc_verify_with_key(const uint8_t *work)
     }
     // Step 3: `aud` must contain the client_id.
     const char *want_aud = OidcV.expect.aud;
-    if (want_aud && *want_aud)
+    if (want_aud && *want_aud && !aud_contains(ps, pe, want_aud))
     {
-        if (!aud_contains(ps, pe, want_aud))
-        {
-            protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
-            OidcV.result = PROTOCORE_OIDC_ERR_AUD;
-            return;
-        }
+        protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());
+        OidcV.result = PROTOCORE_OIDC_ERR_AUD;
+        return;
     }
 
     // Step 9: now must be before `exp` (RFC 7519 sec 4.1.4), and at or after `nbf` when the token

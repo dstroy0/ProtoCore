@@ -66,7 +66,7 @@ typedef struct
 
     void (*const open)(uint8_t *work);
     void (*const data)(const uint8_t *work);
-    void (*const respond)(uint8_t *work);
+    void (*const respond)(const uint8_t *work);
     void (*const close)(const uint8_t *work);
 
 } H2ServerNs;

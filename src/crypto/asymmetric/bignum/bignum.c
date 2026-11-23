@@ -125,8 +125,9 @@ static void bignum_expmod(uint8_t *work)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_bignum_from_bytes(uint8_t *work)
+void protocore_bignum_from_bytes(const uint8_t *work)
 {
+    (void)work;
     BignumV.ok = EMBED_FALSE;
     if (!BignumV.from_bytes_args.out || !BignumV.from_bytes_args.bytes)
     {
@@ -147,8 +148,9 @@ void protocore_bignum_from_bytes(uint8_t *work)
     BignumV.ok = EMBED_TRUE;
 }
 
-void protocore_bignum_to_bytes(uint8_t *work)
+void protocore_bignum_to_bytes(const uint8_t *work)
 {
+    (void)work;
     BignumV.ok = EMBED_FALSE;
     if (!BignumV.to_bytes_args.bytes || !BignumV.to_bytes_args.in)
     {
@@ -200,8 +202,9 @@ void protocore_bignum_cmp_raw(uint8_t *work)
     BignumV.ok = EMBED_TRUE;
 }
 
-void protocore_bignum_is_zero(uint8_t *work)
+void protocore_bignum_is_zero(const uint8_t *work)
 {
+    (void)work;
     BignumV.ok = EMBED_FALSE;
     BignumV.zero = EMBED_FALSE;
     if (!BignumV.is_zero_args.a)

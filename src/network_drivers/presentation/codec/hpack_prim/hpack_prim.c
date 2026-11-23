@@ -308,7 +308,7 @@ embed_bool protocore_hpack_prim_decode_str(const uint8_t *work, const uint8_t *b
     }
     if (huff)
     {
-        embed_bool hpack_prim_ok = HpackPrim.huff_decode(work, block + *pos, slen, out, cap, out_len);
+        hpack_prim_ok = HpackPrim.huff_decode(work, block + *pos, slen, out, cap, out_len);
         if (!hpack_prim_ok)
         {
             return EMBED_FALSE;
@@ -333,7 +333,7 @@ size_t protocore_hpack_prim_encode_str(const uint8_t *work, uint8_t *out, size_t
     size_t hl = hpack_prim_n;
     if (hl < n)
     {
-        size_t hpack_prim_n = HpackPrim.encode_int(work, out, cap, 7, 0x80, (uint32_t)hl);
+        hpack_prim_n = HpackPrim.encode_int(work, out, cap, 7, 0x80, (uint32_t)hl);
         size_t hdr = hpack_prim_n;
         if (!hdr)
         {

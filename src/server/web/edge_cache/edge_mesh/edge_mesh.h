@@ -249,7 +249,7 @@ typedef struct
     void (*const build_request)(const uint8_t *work);
     void (*const parse_request)(const uint8_t *work);
     void (*const serialize_entry)(const uint8_t *work);
-    void (*const deserialize_entry)(uint8_t *work);
+    void (*const deserialize_entry)(const uint8_t *work);
     void (*const build_response)(const uint8_t *work);
     void (*const parse_response)(const uint8_t *work);
     void (*const fetch_begin)(const uint8_t *work);
@@ -262,7 +262,7 @@ typedef struct
 void protocore_edge_mesh_build_request(const uint8_t *work);
 void protocore_edge_mesh_parse_request(const uint8_t *work);
 void protocore_edge_mesh_serialize_entry(const uint8_t *work);
-void protocore_edge_mesh_deserialize_entry(uint8_t *work);
+void protocore_edge_mesh_deserialize_entry(const uint8_t *work);
 void protocore_edge_mesh_build_response(const uint8_t *work);
 void protocore_edge_mesh_parse_response(const uint8_t *work);
 void protocore_edge_mesh_fetch_begin(const uint8_t *work);

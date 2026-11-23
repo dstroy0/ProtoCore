@@ -1,6 +1,5 @@
-# repotools-stamp: lib/numerics/dsp.py 6272286875e86cee
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Transforms, windows and signal sources, standard library only.
 
 Shared by build_sound_view.py and build_sweep_view.py.
@@ -71,8 +70,7 @@ def window(kind, n):
     if kind == "hamming":
         return [0.54 - (0.46 * math.cos(TAU * i / last)) for i in range(n)]
     if kind == "blackman":
-        return [0.42 - (0.5 * math.cos(TAU * i / last))
-                + (0.08 * math.cos(2 * TAU * i / last)) for i in range(n)]
+        return [0.42 - (0.5 * math.cos(TAU * i / last)) + (0.08 * math.cos(2 * TAU * i / last)) for i in range(n)]
     if kind == "flattop":
         # Poor resolution, excellent amplitude accuracy. The one to reach for when the height of a
         # peak matters more than telling two peaks apart.
@@ -80,8 +78,13 @@ def window(kind, n):
         out = []
         for i in range(n):
             t = TAU * i / last
-            out.append(a[0] - (a[1] * math.cos(t)) + (a[2] * math.cos(2 * t))
-                       - (a[3] * math.cos(3 * t)) + (a[4] * math.cos(4 * t)))
+            out.append(
+                a[0]
+                - (a[1] * math.cos(t))
+                + (a[2] * math.cos(2 * t))
+                - (a[3] * math.cos(3 * t))
+                + (a[4] * math.cos(4 * t))
+            )
         return out
     raise ValueError("unknown window: %s" % kind)
 
@@ -113,15 +116,14 @@ def read_wave(path, limit):
                 one -= 0x1000000
             values.append(one / 8388608.0)
     elif width == 4:
-        values = [one / 2147483648.0
-                  for one in struct.unpack("<%di" % (len(raw) // 4), raw)]
+        values = [one / 2147483648.0 for one in struct.unpack("<%di" % (len(raw) // 4), raw)]
     else:
         raise ValueError("unsupported sample width: %d bytes" % width)
 
     if channels > 1:
         mixed = []
         for at in range(0, len(values) - channels + 1, channels):
-            mixed.append(sum(values[at:at + channels]) / channels)
+            mixed.append(sum(values[at : at + channels]) / channels)
         values = mixed
     return values, rate
 
@@ -146,7 +148,7 @@ def synth(count, rate, seed=7):
         # White noise from a small linear congruential generator, so the file needs no imports and
         # the same seed gives the same noise.
         state = (1103515245 * state + 12345) & 0x7FFFFFFF
-        value += 0.03 * (((state / 1073741824.0) - 1.0))
+        value += 0.03 * ((state / 1073741824.0) - 1.0)
         out.append(value)
     return out
 

@@ -118,7 +118,7 @@ static size_t record_fields(const SenmlRecord *r)
 
 // Build the JSON representation of ns->pack into ns->json (RFC 8428 sec 5): an array with one
 // object per Record, the labels as member names. Reports the length in ns->n.
-void protocore_senml_json_build(uint8_t *work)
+void protocore_senml_json_build(const uint8_t *work)
 {
     (void)work;
     SenmlV.ok = EMBED_FALSE;

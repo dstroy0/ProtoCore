@@ -58,7 +58,7 @@ void protocore_base64_encode(const uint8_t *work)
         dst[j++] = B64_TABLE[(v >> 18) & 0x3F];
         dst[j++] = B64_TABLE[(v >> 12) & 0x3F];
         dst[j++] = B64_TABLE[(v >> 6) & 0x3F];
-        dst[j++] = B64_TABLE[(v) & 0x3F];
+        dst[j++] = B64_TABLE[v & 0x3F];
         i += 3;
     }
 
@@ -201,9 +201,9 @@ void protocore_base64_decode(const uint8_t *work)
         }
         // A padded final quad: swap each '=' for 'A' (value 0, always valid) so the lane classifies, then
         // drop the matching output byte. Position is public length info, so this branch leaks no secret.
-        uint32_t word = c0 | (c1 << 8) | ((p2 ? (uint32_t)'A' : c2) << 16) | ((p3 ? (uint32_t)'A' : c3) << 24);
+        uint32_t quad_chars = c0 | (c1 << 8) | ((p2 ? (uint32_t)'A' : c2) << 16) | ((p3 ? (uint32_t)'A' : c3) << 24);
         uint32_t ok;
-        uint32_t val = swar_quad(word, &ok);
+        uint32_t val = swar_quad(quad_chars, &ok);
         bad |= ~ok; // any invalid lane sets high bits here
         uint32_t a = val & 0xFF;
         uint32_t b = (val >> 8) & 0xFF;

@@ -578,7 +578,7 @@ void protocore_conn_pool_enqueue(const uint8_t *work)
     }
 }
 
-static void protocore_conn_enqueue(TcpConn *slot, const TcpEvt *evt)
+static void protocore_conn_enqueue(const TcpConn *slot, const TcpEvt *evt)
 {
     ConnPoolV.slot = slot->id;
     ConnPoolV.evt = evt;
@@ -757,7 +757,7 @@ void protocore_conn_pool_remote_ip(const uint8_t *work)
     {
         return;
     }
-    TcpConn *conn = &conn_pool[ConnPoolV.slot];
+    const TcpConn *conn = &conn_pool[ConnPoolV.slot];
     if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) == CONN_ACTIVE &&
         conn->pcb != NULL)
     {
@@ -777,7 +777,7 @@ void protocore_conn_pool_remote_addr(const uint8_t *work)
         ConnPoolV.ok = EMBED_FALSE;
         return;
     }
-    TcpConn *conn = &conn_pool[ConnPoolV.slot];
+    const TcpConn *conn = &conn_pool[ConnPoolV.slot];
     if (EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &conn->state) != CONN_ACTIVE ||
         conn->pcb == NULL)
     {

@@ -130,7 +130,7 @@ void protocore_rng_fill(uint8_t *work)
     }
     RngCtx *ctx = RNG_CTX(work);
     uint8_t *key = RNG_KEY(work);
-    uint8_t *iv = RNG_IV(work);
+    const uint8_t *iv = RNG_IV(work);
     uint8_t *next = RNG_NEXT(work);
     const size_t len = RngV.fill_args.len;
     if (!ctx->seeded || ctx->drawn >= PROTOCORE_RAND_RESEED_BYTES || len >= PROTOCORE_RAND_RESEED_BYTES - ctx->drawn)

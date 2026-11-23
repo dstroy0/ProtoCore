@@ -68,7 +68,7 @@ NAMED_STANDARD = re.compile(r"\b(?:RFC|STD|BCP|IEEE|ISO|IEC|ANSI|FIPS|NIST(?:\s+
 # error and only that: a line carrying one is never rewritten, because reflowing a requirement is
 # how a requirement stops being the one that was agreed.
 RFC_2119 = re.compile(
-    r"\b(?:MUST NOT|MUST|SHALL NOT|SHALL|SHOULD NOT|SHOULD|NOT RECOMMENDED|RECOMMENDED" r"|REQUIRED|MAY|OPTIONAL)\b"
+    r"\b(?:MUST NOT|MUST|SHALL NOT|SHALL|SHOULD NOT|SHOULD|NOT RECOMMENDED|RECOMMENDED|REQUIRED|MAY|OPTIONAL)\b"
 )
 
 

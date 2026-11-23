@@ -135,7 +135,7 @@ def _line_is_directive(s, nl):
     while True:
         b = s.rfind("\n", 0, nl) + 1
         line = s[b:nl].rstrip("\r")
-        if b == 0 or not s[b - 2 : b - 1] == "\\":
+        if b == 0 or s[b - 2 : b - 1] != "\\":
             return line.lstrip().startswith("#")
         nl = b - 1
 
@@ -344,15 +344,12 @@ def _skip_fluff(s, i):
     while i < len(s):
         if s[i] in " \t\r\n":
             i += 1
-        elif s[i : i + 2] == "//":
+        elif s[i : i + 2] == "//" or (s[i] == "#" and s[line_start(s, i) : i].strip() == ""):
             j = s.find("\n", i)
             i = len(s) if j == -1 else j
         elif s[i : i + 2] == "/*":
             j = s.find("*/", i + 2)
             i = len(s) if j == -1 else j + 2
-        elif s[i] == "#" and s[line_start(s, i) : i].strip() == "":
-            j = s.find("\n", i)
-            i = len(s) if j == -1 else j
         else:
             break
     return i

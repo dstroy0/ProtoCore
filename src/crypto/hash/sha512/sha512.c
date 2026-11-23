@@ -341,8 +341,8 @@ static void sha512_absorb(uint8_t *work, const uint8_t *data, size_t len)
 
 static void sha512_finish(uint8_t *work, uint8_t digest[PROTOCORE_SHA512_DIGEST_LEN])
 {
-    Sha512Ctx *ctx = SHA512_CTX(work);
-    uint8_t *rx = SHA512_RX(work);
+    const Sha512Ctx *ctx = SHA512_CTX(work);
+    const uint8_t *rx = SHA512_RX(work);
     uint8_t *tx = SHA512_TX(work);
     uint64_t *fs = SHA512_FS(work);
 

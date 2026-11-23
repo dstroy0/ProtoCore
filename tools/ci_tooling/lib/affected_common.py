@@ -52,7 +52,7 @@ def file_at(ref, path):
 # src/protocore_config.h - an additive gate change is inert for every existing env.
 # --------------------------------------------------------------------------
 
-_DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)")
+_DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)")
 # Preprocessor directives whose insertion cannot change an existing TU's compilation
 # (they only guard / default / diagnose). #include and #undef are deliberately absent.
 _INERT_DIRECTIVES = {"ifndef", "ifdef", "if", "elif", "else", "endif", "error", "warning", "pragma"}
@@ -151,7 +151,7 @@ def matrix_changed_envs(old_text, new_text):
 # platformio.ini - which [env:native_*] sections changed (comments ignored).
 # --------------------------------------------------------------------------
 
-_ENV_HDR = re.compile(r"^\[env:(native[A-Za-z0-9_]*)\]$")
+_ENV_HDR = re.compile(r"^\[env:(native\w*)\]$")
 
 
 def _ini_split(text):

@@ -151,13 +151,13 @@ def _take_span(src, name, module, mask, notes):
     return src[:at] + lead + src[at:]
 
 
-def _drop_void_work(src, PRE, mask):
+def _drop_void_work(src, prefix, mask):
     """`(void)work;` marks a borrow the body never reads. The funnel just gave it one."""
     out, cut = src, []
     for f in _funcs(src, mask):
         a, b = _body(src, f, mask)
         body = src[a:b]
-        if ("%s_CTX(work)" % PRE) not in body:
+        if ("%s_CTX(work)" % prefix) not in body:
             continue
         m = re.search(r"[ \t]*\(void\)work;[ \t]*\r?\n", body)
         if m:

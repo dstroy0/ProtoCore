@@ -36,8 +36,10 @@ from tools.ci_tooling.lib.feature_taxonomy import (
 
 from tools.ci_tooling.lib import doc_region as dr
 
+FEATURES_MD_NAME = "FEATURES.md"
+
 ROOT = dr.repo_root(__file__)
-FEATURES_MD = os.path.join(ROOT, "docs", "FEATURES.md")
+FEATURES_MD = os.path.join(ROOT, "docs", FEATURES_MD_NAME)
 CONFIG_H = os.path.join(ROOT, "src", "protocore_config.h")
 
 # Internal derived flags: auto-set from other flags, not user-facing opt-ins, so they
@@ -54,7 +56,7 @@ COLUMNS = 5
 # Where each target file's links to FEATURES.md point.
 TARGETS = {
     os.path.join(ROOT, "README.md"): "docs/FEATURES.md",
-    os.path.join(ROOT, "docs", "README.md"): "FEATURES.md",
+    os.path.join(ROOT, "docs", "README.md"): FEATURES_MD_NAME,
 }
 
 
@@ -121,7 +123,7 @@ def build_block(link_prefix):
     # link_prefix is the path TO FEATURES.md ("docs/FEATURES.md" from the repo root, "FEATURES.md"
     # from inside docs/), so the directory the diagrams sit in has to come off it rather than being
     # assumed - the two targets are at different depths.
-    docs_dir = link_prefix[: -len("FEATURES.md")]
+    docs_dir = link_prefix[: -len(FEATURES_MD_NAME)]
     rows = []
     for layer in LAYER_ORDER:
         names = sorted(by_layer[layer], key=lambda e: e[0].lower())

@@ -1,6 +1,5 @@
-# repotools-stamp: media_tools/dataviz/settings.py 772ce8526654b193
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Opening state for a viewer page, as parameters instead of edits to a template.
 
 Every generator here takes --set key=value, repeatable, and passes the result through to the page.
@@ -26,7 +25,6 @@ KNOWN = {
     "overlay": ("str", "", "step key whose values drive color, or empty for off"),
     "order": ("int", 0, "sides, petals or winding, 3 to 4096"),
     "wrap": ("int", 0, "how many times the data is laid around the shape"),
-
     # how it is drawn
     "height": ("int", 0, "relief, 1 to 60"),
     "floor": ("int", 0, "hides cells quieter than this, 0 to 90"),
@@ -37,14 +35,12 @@ KNOWN = {
     "mid": ("str", "", "ramp color at zero"),
     "high": ("str", "", "ramp color for the high end"),
     "opacity": ("int", 0, "how present the control boxes are, 15 to 100"),
-
     # where the observer is, and whether anything moves
     "yaw": ("float", 0.0, "observer angle around the object, in radians"),
     "pitch": ("float", 0.0, "observer angle above the object, in radians"),
     "distance": ("float", 0.0, "observer distance, 60 to 1400"),
     "spin": ("float", 0.0, "turns per minute the object rotates on its own, 0 for still"),
     "spinaxis": ("str", "", "up or right, the axis the spin turns about"),
-
     # what is already selected
     "select_from": ("float", 0.0, "low end of a value range selected on opening"),
     "select_to": ("float", 0.0, "high end of that range"),

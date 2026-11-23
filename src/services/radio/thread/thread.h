@@ -212,8 +212,8 @@ typedef struct
     const SpinelPropInfo *(*spinel_prop_lookup)(const uint8_t *, uint32_t);
     const char *(*spinel_prop_name)(const uint8_t *, uint32_t);
     const char *(*spinel_status_name)(const uint8_t *, uint32_t);
-    uint16_t (*spinel_frame_encode)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint16_t);
-    int (*spinel_frame_decode)(uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint16_t, uint16_t *);
+    uint16_t (*spinel_frame_encode)(const uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint16_t);
+    int (*spinel_frame_decode)(const uint8_t *, const uint8_t *, uint16_t, uint8_t *, uint16_t, uint16_t *);
 } ThreadNs;
 PROTOCORE_NS_LAYOUT(ThreadNs, spinel_fcs, spinel_pack_uint, spinel_unpack_uint, spinel_command_build,
                     spinel_command_parse, spinel_reader_init, spinel_get_bool, spinel_get_u8, spinel_get_i8,
@@ -550,7 +550,7 @@ const char *protocore_thread_spinel_status_name(const uint8_t *work, uint32_t st
  * @param cap Cap
  * @return The uint16_t.
  */
-uint16_t protocore_thread_spinel_frame_encode(uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *out,
+uint16_t protocore_thread_spinel_frame_encode(const uint8_t *work, const uint8_t *payload, uint16_t len, uint8_t *out,
                                               uint16_t cap);
 /**
  * @brief Decode one HDLC-lite frame from the front of raw: find the flag, .
@@ -562,7 +562,7 @@ uint16_t protocore_thread_spinel_frame_encode(uint8_t *work, const uint8_t *payl
  * @param pay_len Pay len
  * @return The int.
  */
-int protocore_thread_spinel_frame_decode(uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *payload,
+int protocore_thread_spinel_frame_decode(const uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *payload,
                                          uint16_t pay_cap, uint16_t *pay_len);
 
 /** @brief Module namespace. */

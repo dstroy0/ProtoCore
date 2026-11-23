@@ -260,7 +260,7 @@ void protocore_edge_mesh_serialize_entry(const uint8_t *work)
     EdgeMeshV.n = PROTOCORE_EDGE_MESH_TRAILER + n;
 }
 
-void protocore_edge_mesh_deserialize_entry(uint8_t *work)
+void protocore_edge_mesh_deserialize_entry(const uint8_t *work)
 {
     (void)work;
     uint8_t *entry_buf = EdgeMeshV.deserialize_entry_args.entry_buf;

@@ -13,11 +13,11 @@
 
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
 
-static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
-
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_SERVICE_WORKER
 #include "protocore.h"
 #include "shared/mime/mime.h"
+
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
 
 EMBED_BEGIN_DECLS
 

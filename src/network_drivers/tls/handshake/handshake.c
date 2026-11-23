@@ -513,8 +513,9 @@ static void server_on_finished(uint8_t *work, const uint8_t *msg, size_t len)
 // The connection's persistent storage, split by offset. One borrow from the secure pool's
 // persistent end on first use, kept for the connection's life, so a connection that is initialised
 // again reuses the bytes it already holds.
-static embed_bool slot_storage(uint8_t *work)
+static embed_bool slot_storage(const uint8_t *work)
 {
+    (void)work;
     TlsConn *c = TlsConnectionV.conn;
     if (c->tx != NULL)
     {
@@ -1063,13 +1064,15 @@ void protocore_tls_connection_process(uint8_t *work)
     fail(TLS_ALERT_UNEXPECTED_MESSAGE);
 }
 
-void protocore_tls_connection_established(uint8_t *work)
+void protocore_tls_connection_established(const uint8_t *work)
 {
+    (void)work;
     TlsConnectionV.ok = (TlsConnectionV.conn->state == TLS_CONN_DONE);
 }
 
-void protocore_tls_connection_alert(uint8_t *work)
+void protocore_tls_connection_alert(const uint8_t *work)
 {
+    (void)work;
     TlsConnectionV.u8 = TlsConnectionV.conn->alert;
 }
 

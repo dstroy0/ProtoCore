@@ -105,7 +105,7 @@ typedef struct
     size_t (*frag_build)(const uint8_t *, uint8_t, uint16_t, uint32_t, uint32_t, const uint8_t *, uint32_t, uint8_t *,
                          size_t);
     void (*reasm_init)(const uint8_t *, DtlsHsReasm *, uint16_t, uint8_t *, size_t);
-    size_t (*reasm_add)(const uint8_t *, DtlsHsReasm *, const DtlsHsHeader *);
+    int (*reasm_add)(const uint8_t *, DtlsHsReasm *, const DtlsHsHeader *);
     size_t (*ack_build)(const uint8_t *, const DtlsRecordNumber *, size_t, uint8_t *, size_t);
     embed_bool (*ack_parse)(const uint8_t *, const uint8_t *, size_t, DtlsRecordNumber *, size_t, size_t *);
     size_t (*cookie_make)(const uint8_t *, uint8_t *, const uint8_t *, uint64_t, const uint8_t *, size_t,
@@ -156,9 +156,9 @@ void protocore_dtls_handshake_reasm_init(const uint8_t *work, DtlsHsReasm *r, ui
  * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.
  * @param r R
  * @param frag Frag
- * @return The size_t.
+ * @return 1 when the message is whole, 0 when it is not yet whole, and -1 when it refuses the fragment.
  */
-size_t protocore_dtls_handshake_reasm_add(const uint8_t *work, DtlsHsReasm *r, const DtlsHsHeader *frag);
+int protocore_dtls_handshake_reasm_add(const uint8_t *work, DtlsHsReasm *r, const DtlsHsHeader *frag);
 /**
  * @brief An ACK body (RFC 9147 sec 7) over count record numbers.
  * @param work PROTOCORE_DTLS_HANDSHAKE_BORROW bytes the caller took. Not held past the call.

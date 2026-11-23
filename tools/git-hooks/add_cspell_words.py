@@ -9,10 +9,10 @@ import sys
 CFG = "cspell.json"
 
 
-def main() -> int:
+def main() -> None:
     words_in = [w for w in sys.argv[1:] if w]
     if not words_in:
-        return 0
+        return
     with open(CFG, encoding="utf-8") as f:
         cfg = json.load(f)
     words = cfg.get("words", [])
@@ -25,7 +25,7 @@ def main() -> int:
             have.add(w.lower())
             added.append(w)
     if not added:
-        return 0
+        return
     if was_sorted:
         words.sort(key=str.lower)
     cfg["words"] = words
@@ -33,7 +33,6 @@ def main() -> int:
         json.dump(cfg, f, indent=2, ensure_ascii=False)
         f.write("\n")
     print("cspell: added %d word(s): %s" % (len(added), ", ".join(added)))
-    return 0
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
-# repotools-stamp: media_tools/dataviz/build_blob_view.py fddd7815c676b410
-# repo_tools - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Turns a raw binary file into the shape viewer, with no idea what the file is.
 
 A blob has no columns and no header. Only one structure is available, the one every binary
@@ -36,6 +35,7 @@ Writes a self-contained page: no server, no fetch at run time, nothing to instal
 """
 
 import os, sys
+
 _at = os.path.dirname(os.path.abspath(__file__))
 while _at != os.path.dirname(_at) and not os.path.isdir(os.path.join(_at, "lib", "repotools")):
     _at = os.path.dirname(_at)
@@ -86,7 +86,7 @@ def window_readings(data, window):
         entropy = 0.0
         start = at - live + 1
         # At most `window` values are present, so this walks the window once and not all 256.
-        for each in set(data[start:at + 1]):
+        for each in set(data[start : at + 1]):
             share = counts[each] / total
             entropy -= share * math.log(share, 2)
 
@@ -162,14 +162,13 @@ def main():
 
     for r in range(rows):
         base = r * width
-        chunk = padded[base:base + width]
+        chunk = padded[base : base + width]
         byte_rows.append([float(one) for one in chunk])
         ones_rows.append([float(bin(one).count("1")) for one in chunk])
-        delta_rows.append([float(chunk[c] - padded[base + c - 1]) if base + c > 0 else 0.0
-                           for c in range(width)])
-        ent_rows.append([round(one, 3) for one in bits[base:base + width]])
-        kind_rows.append(list(kinds[base:base + width]))
-        run_rows.append(list(runs[base:base + width]))
+        delta_rows.append([float(chunk[c] - padded[base + c - 1]) if base + c > 0 else 0.0 for c in range(width)])
+        ent_rows.append([round(one, 3) for one in bits[base : base + width]])
+        kind_rows.append(list(kinds[base : base + width]))
+        run_rows.append(list(runs[base : base + width]))
         high_rows.append([float(one >> 4) for one in chunk])
         low_rows.append([float(one & 15) for one in chunk])
 
@@ -180,16 +179,19 @@ def main():
         "valueLabel": "value",
         "eyebrow": "Raw binary - rendered as a solid",
         "title": title,
-        "blurb": ("%s read as a grid %d bytes wide, %d rows from offset %d of %d bytes. Depth runs "
-                  "left to right as position within the row; the other horizontal axis is the row, "
-                  "which is the file in order. Repeating structure whose period divides the width "
-                  "stands up as columns; anything else shears diagonally, and the shear angle is "
-                  "the real period."
-                  % (os.path.basename(source), width, rows, offset, size)),
+        "blurb": (
+            "%s read as a grid %d bytes wide, %d rows from offset %d of %d bytes. Depth runs "
+            "left to right as position within the row; the other horizontal axis is the row, "
+            "which is the file in order. Repeating structure whose period divides the width "
+            "stands up as columns; anything else shears diagonally, and the shear angle is "
+            "the real period." % (os.path.basename(source), width, rows, offset, size)
+        ),
         "noteTitle": "Width is the only assumption",
-        "note": ("Nothing in a blob says how wide it is, so structure that appears at one width and "
-                 "vanishes at another belongs to the choice of width rather than to the file. "
-                 "Change it and keep what survives."),
+        "note": (
+            "Nothing in a blob says how wide it is, so structure that appears at one width and "
+            "vanishes at another belongs to the choice of width rather than to the file. "
+            "Change it and keep what survives."
+        ),
         "settings": settings.collect(sys.argv[1:]),
         "fields": [
             {"key": "byte", "label": "Byte", "axis": "row", "rows": byte_rows},
@@ -211,8 +213,9 @@ def main():
 
     target = text("--out")
     if target is None:
-        target = os.path.join(os.path.dirname(os.path.abspath(source)),
-                              os.path.splitext(os.path.basename(source))[0] + "_view.html")
+        target = os.path.join(
+            os.path.dirname(os.path.abspath(source)), os.path.splitext(os.path.basename(source))[0] + "_view.html"
+        )
     with io.open(target, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(page)
 
@@ -225,8 +228,7 @@ def main():
     # opens or hangs. Said as a warning and not a limit: a large blob is a legitimate thing to
     # look at, and the floor slider is there to make one tractable once it is loaded.
     if rows * width > 200000:
-        print("  note: %d cells per field is a heavy page. Raise the Floor slider once it opens,"
-              % (rows * width))
+        print("  note: %d cells per field is a heavy page. Raise the Floor slider once it opens," % (rows * width))
         print("        or narrow it with --rows / --offset to walk the file in pieces.")
     return 0
 

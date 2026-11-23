@@ -158,13 +158,11 @@ void protocore_grpc_web_frame_trailers(const uint8_t *work)
         return;
     }
     const char *message = GrpcWebV.trailers.message;
-    if (message && message[0])
+    if (message && message[0] &&
+        (!put_str(buf, cap, &pos, "grpc-message:") || !put_str(buf, cap, &pos, message) ||
+         !put_str(buf, cap, &pos, "\r\n")))
     {
-        if (!put_str(buf, cap, &pos, "grpc-message:") || !put_str(buf, cap, &pos, message) ||
-            !put_str(buf, cap, &pos, "\r\n"))
-        {
-            return;
-        }
+        return;
     }
     buf[0] = PROTOCORE_GRPCWEB_TRAILERS;
     put_be32(buf + 1, (uint32_t)(pos - PROTOCORE_GRPCWEB_PREFIX_LEN));

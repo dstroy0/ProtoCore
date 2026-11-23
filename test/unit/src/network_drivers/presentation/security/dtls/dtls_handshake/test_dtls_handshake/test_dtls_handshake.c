@@ -87,8 +87,7 @@ static int feed(DtlsHsReasm *r, uint8_t msg_type, uint16_t msg_seq, uint32_t ful
     DtlsHsHeader h;
     dtls_handshake_n = DtlsHandshake.header_parse(dtls_handshake_work, rec, n, &h);
     TEST_ASSERT_EQUAL_size_t(n, dtls_handshake_n);
-    dtls_handshake_n = DtlsHandshake.reasm_add(dtls_handshake_work, r, &h);
-    return dtls_handshake_n;
+    return DtlsHandshake.reasm_add(dtls_handshake_work, r, &h);
 }
 
 static void fill(uint8_t *b, size_t n)
@@ -212,7 +211,7 @@ void test_hs_reasm_rejects(void)
         DtlsHandshake.reasm_init(dtls_handshake_work, &r, 0, buf, sizeof(buf));
         TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 0, 100, 0, body, 40));
         DtlsHsHeader h = {1, 90, 0, 40, 10, body + 40};
-        size_t dtls_handshake_n = DtlsHandshake.reasm_add(dtls_handshake_work, &r, &h);
+        int dtls_handshake_n = DtlsHandshake.reasm_add(dtls_handshake_work, &r, &h);
         TEST_ASSERT_EQUAL_INT(-1, dtls_handshake_n);
     }
 
@@ -415,7 +414,7 @@ void test_hs_reasm_header_guards(void)
         DtlsHsReasm r;
         DtlsHandshake.reasm_init(dtls_handshake_work, &r, 0, buf, sizeof(buf));
         DtlsHsHeader h = {1, 40, 0, 30, 20, body};
-        size_t dtls_handshake_n = DtlsHandshake.reasm_add(dtls_handshake_work, &r, &h);
+        int dtls_handshake_n = DtlsHandshake.reasm_add(dtls_handshake_work, &r, &h);
         TEST_ASSERT_EQUAL_INT(-1, dtls_handshake_n);
     }
 

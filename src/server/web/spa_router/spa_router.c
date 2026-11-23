@@ -93,7 +93,7 @@ void protocore_spa_router_route(const uint8_t *work)
     SpaRouterV.action = SpaRouterV.ok ? PROTOCORE_SPA_SERVE_FILE : PROTOCORE_SPA_SERVE_SHELL;
 }
 
-void protocore_spa_router_route_ex(uint8_t *work)
+void protocore_spa_router_route_ex(const uint8_t *work)
 {
     (void)work;
     const char *path = SpaRouterV.route_ex_args.path;
