@@ -263,7 +263,7 @@
     "flags": "-DPROTOCORE_ENABLE_IDEMIP=1",
     "board": "esp32dev",
     "flash_bytes": 863396,
-    "ram_bytes": 119592
+    "ram_bytes": 119624
   },
   "IFACE_BRIDGE": {
     "example": "L7-Application/InterfaceBridge",
@@ -318,14 +318,14 @@
     "example": "L4-Transport/KeepAlive",
     "flags": "-DPROTOCORE_ENABLE_KEEPALIVE=1",
     "board": "esp32dev",
-    "flash_bytes": 963268,
+    "flash_bytes": 963284,
     "ram_bytes": 72960
   },
   "LD2410": {
     "example": "Drivers/Ld2410",
     "flags": "-DPROTOCORE_ENABLE_LD2410=1",
     "board": "esp32dev",
-    "flash_bytes": 385680,
+    "flash_bytes": 385676,
     "ram_bytes": 46540
   },
   "LOGBUF": {
@@ -402,7 +402,7 @@
     "example": "L6-Presentation/MsgPack",
     "flags": "-DPROTOCORE_ENABLE_MSGPACK=1",
     "board": "esp32dev",
-    "flash_bytes": 966784,
+    "flash_bytes": 966768,
     "ram_bytes": 73032
   },
   "MULTIPART": {
