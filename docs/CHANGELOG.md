@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`af6a471`](https://github.com/dstroy0/ProtoCore/commit/af6a471294572a6fade88cab10bcf28b9c7fcb8a))
 - update CHANGELOG.md [skip ci] ([`d095ac3`](https://github.com/dstroy0/ProtoCore/commit/d095ac31fff825a7374753b0f4cadab0a6bee878))
 - update CHANGELOG.md [skip ci] ([`f52e327`](https://github.com/dstroy0/ProtoCore/commit/f52e327c237107055f8839b8d4fa3b7a7bb32970))
 - bump `github/codeql-action` from `4.38.2` to `4.39.3` ([`80d8e81`](https://github.com/dstroy0/ProtoCore/commit/80d8e812fc975d0e5354473ed596feea9e4a45a5))
@@ -478,6 +479,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- The harness builds each file at the CMake word, ProtoCore owns `tools/repotools`, the gate permits the conditional operator, and the code fixes most SonarCloud findings. ([`6295582`](https://github.com/dstroy0/ProtoCore/commit/62955824a7570cc10e02835ddb7f21c69e7eb254))
 - The const borrow reaches each caller that only reads it, each operand pointer goes back to NULL, and the bot stops on a conflict. ([`71047f8`](https://github.com/dstroy0/ProtoCore/commit/71047f8d65a2aa9c0884da5f6d44c29107f830eb))
 - Merge pull request #50 from `dstroy0/dependabot/github_actions/github/codeql-action-4.39.3` ([`fc7623e`](https://github.com/dstroy0/ProtoCore/commit/fc7623e5d638aa0a90402564292212da0e8aaaf1))
 - Merge pull request #52 from `dstroy0/dependabot/npm_and_yarn/prettier-3.10.1` ([`a9eebd1`](https://github.com/dstroy0/ProtoCore/commit/a9eebd1169419b36e91f6ff000f767a6db6dce95))
@@ -920,6 +922,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`b9c9698`](https://github.com/dstroy0/ProtoCore/commit/b9c9698614fcdea4ba3c438086c0845b7b8cc0b0))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`27a03db`](https://github.com/dstroy0/ProtoCore/commit/27a03db00ba47cba0c981767ea37cb624b82eea6))
 - update ESP32 build footprints [skip ci] ([`163eea3`](https://github.com/dstroy0/ProtoCore/commit/163eea3bc5bba7c621983a12205d5e5fba0cc62d))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`8c25c25`](https://github.com/dstroy0/ProtoCore/commit/8c25c253fb3e611efd3bc7e2ce784410a1eb080e))
 - update ESP32 build footprints [skip ci] ([`ea27317`](https://github.com/dstroy0/ProtoCore/commit/ea27317591cae922993fcb2c8fba8c86b79ea9f3))
