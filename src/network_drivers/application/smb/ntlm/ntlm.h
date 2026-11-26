@@ -58,7 +58,7 @@ PROTOCORE_NS_LAYOUT(NtlmNs, nt_hash, ntowfv2, v2_response, set_mic_flag, mic);
  */
 void protocore_ntlm_nt_hash(const uint8_t *work, const char *password, uint8_t *nt_hash);
 /**
- * @brief NTOWFv2 = HMAC-MD5(NThash, UTF-16LE(Uppercase(user) + domain)). .
+ * @brief NTOWFv2 = HMAC-MD5(NThash, UTF-16LE(Uppercase(user) + domain)).
  * @param work PROTOCORE_NTLM_BORROW bytes the caller took. Not held past the call.
  * @param nt_hash 16 bytes
  * @param user User
@@ -69,7 +69,7 @@ void protocore_ntlm_nt_hash(const uint8_t *work, const char *password, uint8_t *
 embed_bool protocore_ntlm_ntowfv2(const uint8_t *work, const uint8_t *nt_hash, const char *user, const char *domain,
                                   uint8_t *owf);
 /**
- * @brief Compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the .
+ * @brief Compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the session base key.
  * @param work PROTOCORE_NTLM_BORROW bytes the caller took. Not held past the call.
  * @param owf NTOWFv2 (from protocore_ntlm_ntowfv2) 16 bytes
  * @param server_challenge the 8-byte challenge from the server's CHALLENGE_MESSAGE 8 bytes
@@ -80,7 +80,7 @@ embed_bool protocore_ntlm_ntowfv2(const uint8_t *work, const uint8_t *nt_hash, c
  * @param out Out
  * @param out_cap Out cap
  * @param session_key receives the 16-byte SessionBaseKey (may be null) 16 bytes
- * @return The size_t.
+ * @return the NtChallengeResponse length written to @p out (48 + @p ti_len), or 0 on overflow.
  */
 size_t protocore_ntlm_v2_response(const uint8_t *work, const uint8_t *owf, const uint8_t *server_challenge,
                                   const uint8_t *client_challenge, const uint8_t *timestamp, const uint8_t *target_info,
@@ -92,12 +92,15 @@ size_t protocore_ntlm_v2_response(const uint8_t *work, const uint8_t *owf, const
  * @param ti_len Ti len
  * @param out Out
  * @param out_cap Out cap
- * @return The size_t.
+ * @return the new target-info length in @p out (@p ti_len, or @p ti_len + 8 when a pair was inserted),
+ *         or 0 on a null pointer / overflow / a malformed (unterminated) list.
  */
 size_t protocore_ntlm_set_mic_flag(const uint8_t *work, const uint8_t *target_info, size_t ti_len, uint8_t *out,
                                    size_t out_cap);
 /**
- * @brief The NTLMSSP AUTHENTICATE MIC (MS-NLMP §3.1.5.1.2): HMAC-MD5 over .
+ * @brief The NTLMSSP AUTHENTICATE MIC (MS-NLMP §3.1.5.1.2): HMAC-MD5 over the concatenation of the
+ *        three NTLM messages, keyed by the ExportedSessionKey (= the NTLMv2 SessionBaseKey when no key
+ *        exchange is negotiated).
  * @param work PROTOCORE_NTLM_BORROW bytes the caller took. Not held past the call.
  * @param session_key 16 bytes
  * @param neg Neg

@@ -26,8 +26,8 @@ EMBED_BEGIN_DECLS
  * randomness through protocore_rand_fill() (crypto/rng).
  *
  * @ref Sntrup761Ns::dec is implicit-rejection (FO): a ciphertext that fails the re-encrypt check
- * yields a deterministic pseudo-random secret rather than an error, so @ref Sntrup761Ns::ok is true
- * for any well-formed call.
+ * yields a deterministic pseudo-random secret rather than an error, so a well-formed call comes back
+ * true.
  *
  * @c work is PROTOCORE_SNTRUP761_BORROW secure bytes the CALLER took, at an address it knows. It
  * is not held past the call, so nothing here aliases it. The caller releases

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The ASD-STE100 rules over a source file's comments. The rules are the ones ste_check.py applies to
 # the technical documents. This module reads them through that file. The tree holds one rule set.

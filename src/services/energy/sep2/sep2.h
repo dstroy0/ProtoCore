@@ -30,6 +30,10 @@ EMBED_BEGIN_DECLS
 /**
  * @brief Build a DeviceCapability document with hrefs to the EndDeviceList and the DER-program list.
  * @param poll_rate the recommended pollRate (seconds).
+ * @param edev_list_href the href of the EndDeviceList (the EndDeviceListLink).
+ * @param derp_list_href the href of the DER program list (the DERProgramListLink).
+ * @param out       the destination buffer.
+ * @param cap       the capacity of @p out, in bytes.
  * @return length written, or 0 on overflow.
  */
 size_t protocore_sep2_device_capability(uint32_t poll_rate, const char *edev_list_href, const char *derp_list_href,
@@ -40,6 +44,8 @@ size_t protocore_sep2_device_capability(uint32_t poll_rate, const char *edev_lis
  * @param sfdi  the short-form device identifier (a 36-bit-ish decimal id).
  * @param lfdi  the long-form device identifier (hex string; borrowed).
  * @param href  the resource href (borrowed).
+ * @param out   the destination buffer.
+ * @param cap   the capacity of @p out, in bytes.
  * @return length written, or 0 on overflow.
  */
 size_t protocore_sep2_end_device(uint64_t sfdi, const char *lfdi, const char *href, char *out, size_t cap);
@@ -50,6 +56,8 @@ size_t protocore_sep2_end_device(uint64_t sfdi, const char *lfdi, const char *hr
  * @param start         interval start (epoch seconds).
  * @param duration      interval duration (seconds).
  * @param opmod_target_w the real-power setpoint (opModFixedW), in watts (may be negative to absorb).
+ * @param out           the destination buffer.
+ * @param cap           the capacity of @p out, in bytes.
  * @return length written, or 0 on overflow.
  */
 size_t protocore_sep2_der_control(const char *mrid, uint32_t start, uint32_t duration, int32_t opmod_target_w,

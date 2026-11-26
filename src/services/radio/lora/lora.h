@@ -97,8 +97,8 @@ PROTOCORE_NS_LAYOUT(LoraNs, frame_parse, frame_build, init, send, tx_done, set_r
  * @param raw Raw
  * @param len Len
  * @param hdr Hdr
- * @param payload Payload
- * @param payload_len Payload len
+ * @param[out] payload set to the first payload byte (points into @p raw).
+ * @param[out] payload_len set to the payload length.
  * @return EMBED_TRUE on success.
  */
 embed_bool protocore_lora_frame_parse(const uint8_t *work, const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
@@ -111,12 +111,12 @@ embed_bool protocore_lora_frame_parse(const uint8_t *work, const uint8_t *raw, u
  * @param len Len
  * @param out Out
  * @param cap Cap
- * @return The uint16_t.
+ * @return the total frame length, or 0 if it would not fit @p cap or exceeds the payload max.
  */
 uint16_t protocore_lora_frame_build(const uint8_t *work, const protocore_lora_header *hdr, const uint8_t *payload,
                                     uint16_t len, uint8_t *out, uint16_t cap);
 /**
- * @brief Initialize the SX127x: verify the chip, switch to LoRa mode, and .
+ * @brief Initialize the SX127x: verify the chip, switch to LoRa mode, and apply @p cfg.
  * @param work PROTOCORE_LORA_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param cfg Cfg
@@ -140,7 +140,7 @@ embed_bool protocore_lora_send(const uint8_t *work, const protocore_lora_bus *bu
  */
 embed_bool protocore_lora_tx_done(const uint8_t *work, const protocore_lora_bus *bus);
 /**
- * @brief Put the radio in continuous-receive mode (call once, then poll .
+ * @brief Put the radio in continuous-receive mode (call once, then poll protocore_lora_recv()).
  * @param work PROTOCORE_LORA_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  */
@@ -151,8 +151,8 @@ void protocore_lora_set_rx(const uint8_t *work, const protocore_lora_bus *bus);
  * @param bus Bus
  * @param buf Buf
  * @param cap Cap
- * @param rssi Rssi
- * @return The int.
+ * @param[out] rssi set to the packet RSSI in dBm (may be null).
+ * @return the frame length (>=0), or -1 if no frame is ready or the CRC failed.
  */
 int protocore_lora_recv(const uint8_t *work, const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi);
 

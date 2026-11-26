@@ -63,28 +63,48 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Http, and reads the outcome off the
  * same handle.
  *
- * @var HttpNs::slot        the connection a call acts on
- * @var HttpNs::code        the status code a lookup names
- * @var HttpNs::method_args a method, as an enum or as a token
- * @var HttpNs::route_args  the target a route is matched against
- * @var HttpNs::allow       the Allow list an append builds
- * @var HttpNs::cb          the handler a request runs when no route matched
- * @var HttpNs::edge_poll   the edge-cache origin fetch that owns a slot while it is in flight
- * @var HttpNs::ok          a call's true/false outcome
- * @var HttpNs::text        the reason phrase or method token a lookup reports
- * @var HttpNs::method_of   the enum a token parses to
- * @var HttpNs::status_text        the reason phrase for @c code; "Unknown" for one it has none for
- * @var HttpNs::parse_method       the enum for @c method_args.token, HTTP_METHOD_UNKNOWN for an unimplemented one
- * @var HttpNs::method_name        the canonical token for @c method_args.method, empty for HTTP_METHOD_UNKNOWN
- * @var HttpNs::path_matches       whether @c route_args.route matches @c route_args.path, exact or trailing star
- * @var HttpNs::match_path_params  whether a `:name` route matches, capturing each segment into @c route_args.req
- * @var HttpNs::req_is_head        whether the request on @c slot used HEAD
- * @var HttpNs::allow_append       add @c method_args.token to a comma-separated Allow list, skipping a repeat
- * @var HttpNs::match_and_execute  run a completed request on @c slot through the route table
- * @var HttpNs::set_not_found      install the handler a request runs when no route matched
- * @var HttpNs::poll_slot          the ProtoHandler on_poll for an HTTP slot: pumps, drains, dispatches
- * @var HttpNs::reset              drop every handler registered here, back to the built-in answers
- * @var HttpNs::set_edge_poll      install the edge-cache origin fetch
+ * @var HttpVars::slot
+ *                            the connection a call acts on
+ * @var HttpVars::code
+ *                            the status code a lookup names
+ * @var HttpVars::method_args
+ *                            a method, as an enum or as a token
+ * @var HttpVars::route_args
+ *                            the target a route is matched against
+ * @var HttpVars::allow
+ *                            the Allow list an append builds
+ * @var HttpVars::cb
+ *                            the handler a request runs when no route matched
+ * @var HttpVars::ok
+ *                            a call's true/false outcome
+ * @var HttpVars::text
+ *                            the reason phrase or method token a lookup reports
+ * @var HttpVars::method_of
+ *                            the enum a token parses to
+ * @var HttpNs::status_text
+ *                                 the reason phrase for @c code; "Unknown" for one it has none for
+ * @var HttpNs::parse_method
+ *                                 the enum for @c method_args.token, HTTP_METHOD_UNKNOWN for an unimplemented one
+ * @var HttpNs::method_name
+ *                                 the canonical token for @c method_args.method, empty for HTTP_METHOD_UNKNOWN
+ * @var HttpNs::path_matches
+ *                                 whether @c route_args.route matches @c route_args.path, exact or trailing star
+ * @var HttpNs::match_path_params
+ *                                 whether a `:name` route matches, capturing each segment into @c route_args.req
+ * @var HttpNs::req_is_head
+ *                                 whether the request on @c slot used HEAD
+ * @var HttpNs::allow_append
+ *                                 add @c method_args.token to a comma-separated Allow list, skipping a repeat
+ * @var HttpNs::match_and_execute
+ *                                 run a completed request on @c slot through the route table
+ * @var HttpNs::set_not_found
+ *                                 install the handler a request runs when no route matched
+ * @var HttpNs::poll_slot
+ *                                 the ProtoHandler on_poll for an HTTP slot: pumps, drains, dispatches
+ * @var HttpNs::reset
+ *                                 drop every handler registered here, back to the built-in answers
+ * @var HttpNs::set_edge_poll
+ *                                 install the edge-cache origin fetch
  */
 
 typedef struct
@@ -96,7 +116,7 @@ typedef struct
     HttpRouteArgs route_args;   ///< the target a route is matched against
     HttpAllowArgs allow;        ///< the Allow list an append builds
 #if PROTOCORE_ENABLE_EDGE_CACHE
-    embed_bool (*edge_poll)(uint8_t slot);
+    embed_bool (*edge_poll)(uint8_t slot); ///< the edge-cache origin fetch that owns a slot while it is in flight
 #endif
     embed_bool ok;
     const char *text;

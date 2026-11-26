@@ -33,16 +33,14 @@ EMBED_BEGIN_DECLS
 /**
  * @brief The internet layer (RFC 1122 sec 3), and the modules it carries.
  *
- * A caller invokes a call through ::network, passing the handle's own @ref internal, and reaches a
- * carried module by its member: `network.ip->parse(network.ip->internal)`.
+ * A caller invokes a call through ::network, passing its borrow, and reaches a
+ * carried module by its member of ::networkV: `networkV.ip->parse(work)`.
  *
- * @var NetworkNs::dns       name resolution: the RESOLVER and the NAME SERVER (RFC 1034 sec 2.4
- *                           "Elements of the DNS", the messages between them RFC 1035 sec 4)
- * @var NetworkNs::forward   the forwarding plane: the ingress ACL, the policy routes, the fan-out
- *                           (RFC 1812 sec 5.2.1 "Forwarding Algorithm")
- * @var NetworkNs::ip        an internet address as a value: parse, format, classify, compare
+ * @var networkVars::ip
+ *                           an internet address as a value: parse, format, classify, compare
  *                           (RFC 791 sec 1.4 addressing, RFC 8200 for v6)
- * @var NetworkNs::init      bring the layer up. It runs no work: the platform stack holds the route
+ * @var NetworkNs::init
+ *                           bring the layer up. It runs no work: the platform stack holds the route
  *                           table and selects the path (RFC 791 sec 1.4 "Operation")
  *
  * Each carried module is named by pointer. One behind a feature flag is declared under that flag,
@@ -54,10 +52,18 @@ EMBED_BEGIN_DECLS
 typedef struct
 {
 #if PROTOCORE_ENABLE_DNS
-    DnsNs *dns; ///< the RESOLVER and the NAME SERVER (RFC 1034 sec 2.4)
+    /**
+     * name resolution: the RESOLVER and the NAME SERVER (RFC 1034 sec 2.4 "Elements of the DNS", the
+     * messages between them RFC 1035 sec 4)
+     */
+    DnsNs *dns;
 #endif
 #if PROTOCORE_ENABLE_FORWARD
-    ForwardNs *forward; ///< the forwarding plane (RFC 1812 sec 5)
+    /**
+     * the forwarding plane: the ingress ACL, the policy routes, the fan-out (RFC 1812 sec 5.2.1
+     * "Forwarding Algorithm")
+     */
+    ForwardNs *forward;
 #endif
     const IpNs *ip; ///< an internet address as a value (RFC 791, RFC 8200)
 } networkVars;

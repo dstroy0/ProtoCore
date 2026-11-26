@@ -60,15 +60,24 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::OtaRollback, and reads the outcome
  * off the same handle. The decision is pure; the commit and the rollback reach the platform seam.
  *
- * @var OtaRollbackNs::decide_args  what the pure decision reads
- * @var OtaRollbackNs::self_test_ok what a tick reports about the application's own health
- * @var OtaRollbackNs::action       the action a decide or a tick chose
- * @var OtaRollbackNs::img_state    the running image's state a lookup reports
- * @var OtaRollbackNs::decide       choose an action, reading nothing outside decide_args
- * @var OtaRollbackNs::state        the running image's state, from the platform seam
- * @var OtaRollbackNs::commit       mark the running image valid and cancel the pending rollback
- * @var OtaRollbackNs::rollback     mark it invalid and reboot into the previous one
- * @var OtaRollbackNs::tick         decide against the clock, then carry the decision out
+ * @var OtaRollbackVars::decide_args
+ *                                    what the pure decision reads
+ * @var OtaRollbackVars::self_test_ok
+ *                                    what a tick reports about the application's own health
+ * @var OtaRollbackVars::action
+ *                                    the action a decide or a tick chose
+ * @var OtaRollbackVars::img_state
+ *                                    the running image's state a lookup reports
+ * @var OtaRollbackNs::decide
+ *                                  choose an action, reading nothing outside decide_args
+ * @var OtaRollbackNs::state
+ *                                  the running image's state, from the platform seam
+ * @var OtaRollbackNs::commit
+ *                                  mark the running image valid and cancel the pending rollback
+ * @var OtaRollbackNs::rollback
+ *                                  mark it invalid and reboot into the previous one
+ * @var OtaRollbackNs::tick
+ *                                  decide against the clock, then carry the decision out
  *
  * No storage member: the policy holds nothing between calls; the image state lives in the part.
  */

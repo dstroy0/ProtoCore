@@ -190,47 +190,84 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::WifiSniffer with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   WifiSniffer.parse_args.frame = ...;
  *   WifiSniffer.parse_args.len = ...;
  *   WifiSniffer.parse_args.out = ...;
  *   WifiSniffer.parse(work);
  *   // WifiSniffer.ok is what the call reports
+ * @endcode
  *
- * @var WifiSnifferNs::parse_args  what parse takes: frame, len, out
- * @var WifiSnifferNs::stats_reset_args  what stats_reset takes: s
- * @var WifiSnifferNs::stats_add_args  what stats_add takes: s, f
- * @var WifiSnifferNs::should_roam_args  what should_roam takes: cur_rssi, cand_rssi, hysteresis_db
- * @var WifiSnifferNs::scan_init_args  what scan_init takes: s, first, last, dwell_ms, now_ms
- * @var WifiSnifferNs::scan_due_args  what scan_due takes: s, now_ms
- * @var WifiSnifferNs::scan_next_args  what scan_next takes: s, now_ms
- * @var WifiSnifferNs::survey_reset_args  what survey_reset takes: s, first, count
- * @var WifiSnifferNs::survey_add_args  what survey_add takes: s, channel, rssi, f
- * @var WifiSnifferNs::survey_get_args  what survey_get takes: s, channel
- * @var WifiSnifferNs::survey_best_args  what survey_best takes: s, exclude_channel, out_channel,
- * @var WifiSnifferNs::begin_args  what begin takes: first_chan, last_chan, dwell_ms
- * @var WifiSnifferNs::ok  true if len >= 10 and frame is non-null; false otherwise
- * @var WifiSnifferNs::value  the new channel, or 0 if s is null
- * @var WifiSnifferNs::ptr  the pointer a call reports
- * @var WifiSnifferNs::stats_out   the running per-type tally the sniff fills
- * @var WifiSnifferNs::survey_out  the per-channel survey the sniff fills
- * @var WifiSnifferNs::scan_out    the channel-hop schedule the sniff is running
- * @var WifiSnifferNs::parse  decode the 802.11 MAC header of a captured frame. Requires at least ...
- * @var WifiSnifferNs::stats_reset  zero a tally
- * @var WifiSnifferNs::stats_add  fold one decoded frame into the tally
- * @var WifiSnifferNs::should_roam  channel-agility roaming decision
- * @var WifiSnifferNs::scan_init  start a sweep at first, dwelling dwell_ms per channel. Clamps to ...
- * @var WifiSnifferNs::scan_due  true once the current channel's dwell elapsed (wrap-safe ...
- * @var WifiSnifferNs::scan_next  advance to the next channel (wrapping to chan_first and counting a ...
- * @var WifiSnifferNs::survey_reset  clear the survey to track count channels starting at first
- * @var WifiSnifferNs::survey_add  fold one captured frame (on channel, at rssi) into the survey. ...
- * @var WifiSnifferNs::survey_get  the survey entry for channel, or nullptr if it is outside the ...
- * @var WifiSnifferNs::survey_best  find the strongest channel heard, ignoring exclude_channel (pass 0 ...
- * @var WifiSnifferNs::begin  start a live channel-hopping sniff across [first_chan, last_chan]. ...
- * @var WifiSnifferNs::tick  hop to the next channel when the dwell elapsed. Cheap to call ...
- * @var WifiSnifferNs::end  stop capture
- * @var WifiSnifferNs::stats  the running traffic tally (never null)
- * @var WifiSnifferNs::survey  the per-channel survey (never null)
- * @var WifiSnifferNs::scan  the live scan schedule (never null) - current channel, sweeps ...
+ * @var WifiSnifferVars::parse_args
+ *                                   what parse takes: frame, len, out
+ * @var WifiSnifferVars::stats_reset_args
+ *                                         what stats_reset takes: s
+ * @var WifiSnifferVars::stats_add_args
+ *                                       what stats_add takes: s, f
+ * @var WifiSnifferVars::should_roam_args
+ *                                         what should_roam takes: cur_rssi, cand_rssi, hysteresis_db
+ * @var WifiSnifferVars::scan_init_args
+ *                                       what scan_init takes: s, first, last, dwell_ms, now_ms
+ * @var WifiSnifferVars::scan_due_args
+ *                                      what scan_due takes: s, now_ms
+ * @var WifiSnifferVars::scan_next_args
+ *                                       what scan_next takes: s, now_ms
+ * @var WifiSnifferVars::survey_reset_args
+ *                                          what survey_reset takes: s, first, count
+ * @var WifiSnifferVars::survey_add_args
+ *                                        what survey_add takes: s, channel, rssi, f
+ * @var WifiSnifferVars::survey_get_args
+ *                                        what survey_get takes: s, channel
+ * @var WifiSnifferVars::survey_best_args
+ *                                         what survey_best takes: s, exclude_channel, out_channel,
+ * @var WifiSnifferVars::begin_args
+ *                                   what begin takes: first_chan, last_chan, dwell_ms
+ * @var WifiSnifferVars::ok
+ *                           true if len >= 10 and frame is non-null; false otherwise
+ * @var WifiSnifferVars::value
+ *                              the new channel, or 0 if s is null
+ * @var WifiSnifferVars::ptr
+ *                            the pointer a call reports
+ * @var WifiSnifferVars::stats_out
+ *                                   the running per-type tally the sniff fills
+ * @var WifiSnifferVars::survey_out
+ *                                   the per-channel survey the sniff fills
+ * @var WifiSnifferVars::scan_out
+ *                                   the channel-hop schedule the sniff is running
+ * @var WifiSnifferNs::parse
+ *                            decode the 802.11 MAC header of a captured frame. Requires at least ...
+ * @var WifiSnifferNs::stats_reset
+ *                                  zero a tally
+ * @var WifiSnifferNs::stats_add
+ *                                fold one decoded frame into the tally
+ * @var WifiSnifferNs::should_roam
+ *                                  channel-agility roaming decision
+ * @var WifiSnifferNs::scan_init
+ *                                start a sweep at first, dwelling dwell_ms per channel. Clamps to ...
+ * @var WifiSnifferNs::scan_due
+ *                               true once the current channel's dwell elapsed (wrap-safe ...
+ * @var WifiSnifferNs::scan_next
+ *                                advance to the next channel (wrapping to chan_first and counting a ...
+ * @var WifiSnifferNs::survey_reset
+ *                                   clear the survey to track count channels starting at first
+ * @var WifiSnifferNs::survey_add
+ *                                 fold one captured frame (on channel, at rssi) into the survey. ...
+ * @var WifiSnifferNs::survey_get
+ *                                 the survey entry for channel, or nullptr if it is outside the ...
+ * @var WifiSnifferNs::survey_best
+ *                                  find the strongest channel heard, ignoring exclude_channel (pass 0 ...
+ * @var WifiSnifferNs::begin
+ *                            start a live channel-hopping sniff across [first_chan, last_chan]. ...
+ * @var WifiSnifferNs::tick
+ *                           hop to the next channel when the dwell elapsed. Cheap to call ...
+ * @var WifiSnifferNs::end
+ *                          stop capture
+ * @var WifiSnifferNs::stats
+ *                            the running traffic tally (never null)
+ * @var WifiSnifferNs::survey
+ *                             the per-channel survey (never null)
+ * @var WifiSnifferNs::scan
+ *                           the live scan schedule (never null) - current channel, sweeps ...
  *
  * @c work is PROTOCORE_WIFI_SNIFFER_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

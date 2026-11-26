@@ -11901,8 +11901,8 @@ protocore_env(native_stack
     "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
     "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp/stack_tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net/stack_net.c"
   DEFINES
     "PROTOCORE_ENABLE_IDEMIP=1"
   LIBS
@@ -11920,7 +11920,7 @@ protocore_env(native_stack
     "${PROTOCORE_ROOT}/.pio/libdeps/host/littlefs/include"
 )
 
-# The TCP and UDP transport, the DNS resolver and the TCP client over the idemIP arm of the protocore_net_* seam (network_drivers/network/stack/stack_net.c).
+# The TCP and UDP transport, the DNS resolver and the TCP client over the idemIP arm of the protocore_net_* seam (network_drivers/network/stack/stack_net/stack_net.c).
 protocore_env(native_stack_transport
   SUITE unit/src/network_drivers/network/stack/test_stack
   SOURCES
@@ -11943,8 +11943,8 @@ protocore_env(native_stack_transport
     "${PROTOCORE_ROOT}/src/network_drivers/transport/udp/client/client.c"
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp/stack_tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net/stack_net.c"
   DEFINES
     "PROTOCORE_ENABLE_IDEMIP=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
@@ -13533,8 +13533,8 @@ protocore_env(native_wifi_link
     "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack.c"
     "${PROTOCORE_ROOT}/src/network_drivers/physical/wifi_link/wifi_link.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp.c"
-    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_tcp/stack_tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/network/stack/stack_net/stack_net.c"
   DEFINES
     "PROTOCORE_ENABLE_IDEMIP=1"
   LIBS

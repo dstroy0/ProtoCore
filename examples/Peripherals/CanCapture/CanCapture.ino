@@ -26,6 +26,7 @@ static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
 
 
 static const char *COLLECTOR_IP = "192.168.1.50";
+static protocore_ip g_collector; // COLLECTOR_IP, parsed once in setup()
 static const uint16_t COLLECTOR_PORT = 5556;
 static const int CAN_TX_PIN = 5;
 static const int CAN_RX_PIN = 4;
@@ -54,7 +55,7 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
     PcapV.rec.origlen = len;
     Pcap.record_header(pcap_work);
     memcpy(buf + PROTOCORE_PCAP_REC_HDR_LEN, frame, len);
-    UdpClientV.dst = COLLECTOR_IP;
+    UdpClientV.dst = &g_collector;
     UdpClientV.dst_port = COLLECTOR_PORT;
     UdpClientV.data = buf;
     UdpClientV.len = PROTOCORE_PCAP_REC_HDR_LEN + len;
@@ -72,7 +73,11 @@ static bool can_send(uint8_t, const uint8_t *, uint16_t, void *)
 static void on_can(const CanFrame *f)
 {
     uint8_t sc[PROTOCORE_SOCKETCAN_FRAME_LEN];
-    if (can_to_socketcan(f, sc, sizeof(sc)))
+    BusCaptureV.can_to_socketcan_args.f = f;
+    BusCaptureV.can_to_socketcan_args.out = sc;
+    BusCaptureV.can_to_socketcan_args.cap = sizeof(sc);
+    BusCapture.can_to_socketcan(protocore_bus_capture_span());
+    if (BusCaptureV.n != 0u)
     {
         ForwardV.src_if = IF_CAN;
         ForwardV.frame.data = sc;
@@ -83,6 +88,9 @@ static void on_can(const CanFrame *f)
 
 void setup()
 {
+    IpV.args.text = COLLECTOR_IP; // the tag becomes an address once, here
+    IpV.args.out = &g_collector;
+    Ip.parse(pcap_work);
     Serial.begin(115200);
 
     // Wired uplink to the collector.
@@ -115,7 +123,12 @@ void setup()
     ForwardV.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span()); // CAN tops out ~a few k frames/s
 
-    if (!bus_capture_begin(CAN_TX_PIN, CAN_RX_PIN, CAN_BITRATE, on_can))
+    BusCaptureV.begin_args.tx_pin = CAN_TX_PIN;
+    BusCaptureV.begin_args.rx_pin = CAN_RX_PIN;
+    BusCaptureV.begin_args.bitrate = CAN_BITRATE;
+    BusCaptureV.begin_args.sink = on_can;
+    BusCapture.begin(protocore_bus_capture_span());
+    if (!BusCaptureV.ok)
     {
         Serial.println("TWAI (CAN) listen-only start failed - check pins / bit rate / transceiver");
         return;
@@ -126,7 +139,7 @@ void setup()
 
 void loop()
 {
-    bus_capture_poll(); // drain received CAN frames into the forwarding plane
+    BusCapture.poll(protocore_bus_capture_span()); // drain received CAN frames into the forwarding plane
 
     static uint32_t last = 0;
     if (millis() - last > 5000)

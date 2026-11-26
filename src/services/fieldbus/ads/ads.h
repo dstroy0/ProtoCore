@@ -303,44 +303,78 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ads with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ads.build_read_device_info_args.buf = ...;
  *   Ads.build_read_device_info_args.cap = ...;
  *   Ads.build_read_device_info_args.r = ...;
  *   Ads.build_read_device_info(work);
  *   // Ads.n is what the call reports
+ * @endcode
  *
- * @var AdsNs::build_read_device_info_args  what build_read_device_info takes: buf, cap, r
- * @var AdsNs::build_read_state_args  what build_read_state takes: buf, cap, r
- * @var AdsNs::build_read_args  what build_read takes: buf, cap, r, index_group,
- * @var AdsNs::build_write_args  what build_write takes: buf, cap, r, index_group,
- * @var AdsNs::build_read_write_args  what build_read_write takes: buf, cap, r, index_group,
- * @var AdsNs::build_write_control_args  what build_write_control takes: buf, cap, r,
- * @var AdsNs::build_add_notification_args  what build_add_notification takes: buf, cap, r,
- * @var AdsNs::build_del_notification_args  what build_del_notification takes: buf, cap, r,
- * @var AdsNs::parse_ams_header_args  what parse_ams_header takes: buf, len, out
- * @var AdsNs::parse_read_args  what parse_read takes: data, data_len, out
- * @var AdsNs::parse_result_args  what parse_result takes: data, data_len, result
- * @var AdsNs::parse_read_state_args  what parse_read_state takes: data, data_len, out
- * @var AdsNs::parse_read_device_info_args  what parse_read_device_info takes: data, data_len, out
- * @var AdsNs::parse_add_notification_args  what parse_add_notification takes: data, data_len, result,
- * @var AdsNs::parse_notification_args  what parse_notification takes: data, data_len, on_sample,
- * @var AdsNs::ok  a call's true/false outcome
- * @var AdsNs::n  the count a call reports
- * @var AdsNs::build_read_device_info  build_read_device_info
- * @var AdsNs::build_read_state  build_read_state
- * @var AdsNs::build_read  build_read
- * @var AdsNs::build_write  build_write
- * @var AdsNs::build_read_write  build_read_write
- * @var AdsNs::build_write_control  build_write_control
- * @var AdsNs::build_add_notification  build_add_notification
- * @var AdsNs::build_del_notification  build_del_notification
- * @var AdsNs::parse_ams_header  parse_ams_header
- * @var AdsNs::parse_read  parse_read
- * @var AdsNs::parse_result  parse_result
- * @var AdsNs::parse_read_state  parse_read_state
- * @var AdsNs::parse_read_device_info  parse_read_device_info
- * @var AdsNs::parse_add_notification  parse_add_notification
- * @var AdsNs::parse_notification  parse_notification
+ * @var AdsVars::build_read_device_info_args
+ *                                            what build_read_device_info takes: buf, cap, r
+ * @var AdsVars::build_read_state_args
+ *                                      what build_read_state takes: buf, cap, r
+ * @var AdsVars::build_read_args
+ *                                what build_read takes: buf, cap, r, index_group,
+ * @var AdsVars::build_write_args
+ *                                 what build_write takes: buf, cap, r, index_group,
+ * @var AdsVars::build_read_write_args
+ *                                      what build_read_write takes: buf, cap, r, index_group,
+ * @var AdsVars::build_write_control_args
+ *                                         what build_write_control takes: buf, cap, r,
+ * @var AdsVars::build_add_notification_args
+ *                                            what build_add_notification takes: buf, cap, r,
+ * @var AdsVars::build_del_notification_args
+ *                                            what build_del_notification takes: buf, cap, r,
+ * @var AdsVars::parse_ams_header_args
+ *                                      what parse_ams_header takes: buf, len, out
+ * @var AdsVars::parse_read_args
+ *                                what parse_read takes: data, data_len, out
+ * @var AdsVars::parse_result_args
+ *                                  what parse_result takes: data, data_len, result
+ * @var AdsVars::parse_read_state_args
+ *                                      what parse_read_state takes: data, data_len, out
+ * @var AdsVars::parse_read_device_info_args
+ *                                            what parse_read_device_info takes: data, data_len, out
+ * @var AdsVars::parse_add_notification_args
+ *                                            what parse_add_notification takes: data, data_len, result,
+ * @var AdsVars::parse_notification_args
+ *                                        what parse_notification takes: data, data_len, on_sample,
+ * @var AdsVars::ok
+ *                   a call's true/false outcome
+ * @var AdsVars::n
+ *                  the count a call reports
+ * @var AdsNs::build_read_device_info
+ *                                     build_read_device_info
+ * @var AdsNs::build_read_state
+ *                               build_read_state
+ * @var AdsNs::build_read
+ *                         build_read
+ * @var AdsNs::build_write
+ *                          build_write
+ * @var AdsNs::build_read_write
+ *                               build_read_write
+ * @var AdsNs::build_write_control
+ *                                  build_write_control
+ * @var AdsNs::build_add_notification
+ *                                     build_add_notification
+ * @var AdsNs::build_del_notification
+ *                                     build_del_notification
+ * @var AdsNs::parse_ams_header
+ *                               parse_ams_header
+ * @var AdsNs::parse_read
+ *                         parse_read
+ * @var AdsNs::parse_result
+ *                           parse_result
+ * @var AdsNs::parse_read_state
+ *                               parse_read_state
+ * @var AdsNs::parse_read_device_info
+ *                                     parse_read_device_info
+ * @var AdsNs::parse_add_notification
+ *                                     parse_add_notification
+ * @var AdsNs::parse_notification
+ *                                 parse_notification
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

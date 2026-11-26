@@ -304,45 +304,79 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Tls13Msg with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Tls13Msg.parse_client_hello_args.msg = ...;
  *   Tls13Msg.parse_client_hello_args.len = ...;
  *   Tls13Msg.parse_client_hello_args.out = ...;
  *   Tls13Msg.parse_client_hello_args.dtls = ...;
  *   Tls13Msg.parse_client_hello(work);
  *   // Tls13Msg.ok is what the call reports
+ * @endcode
  *
- * @var Tls13MsgNs::parse_client_hello_args  what parse_client_hello takes: msg, len, out, dtls
- * @var Tls13MsgNs::parse_server_hello_args  what parse_server_hello takes: msg, len, out, dtls
- * @var Tls13MsgNs::build_client_hello_args  what build_client_hello takes: out, cap, random,
- * @var Tls13MsgNs::parse_certificate_args  what parse_certificate takes: msg, len, cert, cert_len
- * @var Tls13MsgNs::parse_cert_verify_args  what parse_cert_verify takes: msg, len, scheme, sig, sig_len
- * @var Tls13MsgNs::parse_finished_args  what parse_finished takes: msg, len, vd, verify_len
- * @var Tls13MsgNs::build_server_hello_args  what build_server_hello takes: out, cap, random,
- * @var Tls13MsgNs::build_encrypted_extensions_args  what build_encrypted_extensions takes: out, cap, quic_tp,
- * @var Tls13MsgNs::build_certificate_args  what build_certificate takes: out, cap, cert_der, cert_len
- * @var Tls13MsgNs::build_cert_verify_args  what build_cert_verify takes: sign_work, out, cap,
- * @var Tls13MsgNs::build_finished_args  what build_finished takes: out, cap, verify_data, verify_len
- * @var Tls13MsgNs::cert_verify_content_args  what cert_verify_content takes: out, cap, transcript_hash,
- * @var Tls13MsgNs::build_hello_retry_request_args  what build_hello_retry_request takes: out, cap, session_id,
- * @var Tls13MsgNs::build_encrypted_extensions_empty_args  what build_encrypted_extensions_empty takes: out, cap,
- * @var Tls13MsgNs::build_message_hash_args  what build_message_hash takes: out, cap, ch1_hash
- * @var Tls13MsgNs::ok  false if it is not a well-formed ClientHello. Missing/!supported ...
- * @var Tls13MsgNs::n  bytes written, or 0 on overflow
- * @var Tls13MsgNs::parse_client_hello  parse a ClientHello handshake message (msg includes the 4-byte ...
- * @var Tls13MsgNs::parse_server_hello  parse a ServerHello handshake message (msg includes the 4-byte ...
- * @var Tls13MsgNs::build_client_hello  build a ClientHello (RFC 8446 sec 4.1.2) offering TLS 1.3, suite, ...
- * @var Tls13MsgNs::parse_certificate  the first CertificateEntry's cert_data in a Certificate message ...
- * @var Tls13MsgNs::parse_cert_verify  the algorithm and signature of a CertificateVerify (RFC 8446 sec ...
- * @var Tls13MsgNs::parse_finished  the verify_data of a Finished (RFC 8446 sec 4.4.4). vd points into ...
- * @var Tls13MsgNs::build_server_hello  build a ServerHello (RFC 8446 sec 4.1.3) selecting TLS 1.3 / ...
- * @var Tls13MsgNs::build_encrypted_extensions  build EncryptedExtensions (RFC 8446 sec 4.3.1) carrying ALPN "h3" ...
- * @var Tls13MsgNs::build_certificate  build a Certificate message (RFC 8446 sec 4.4.2) with an empty ...
- * @var Tls13MsgNs::build_cert_verify  build a CertificateVerify (RFC 8446 sec 4.4.3) with an Ed25519 ...
- * @var Tls13MsgNs::build_finished  build a Finished message (RFC 8446 sec 4.4.4) carrying verify_data ...
- * @var Tls13MsgNs::cert_verify_content  assemble the sec 4.4.3 signed content into out (64*0x20 || context ...
- * @var Tls13MsgNs::build_hello_retry_request  build a HelloRetryRequest (RFC 8446 §4.1.4): a ServerHello whose ...
- * @var Tls13MsgNs::build_encrypted_extensions_empty  build an EncryptedExtensions (RFC 8446 §4.3.1) for the DTLS ...
- * @var Tls13MsgNs::build_message_hash  write the synthetic message_hash handshake message that replaces ...
+ * @var Tls13MsgVars::parse_client_hello_args
+ *                                             what parse_client_hello takes: msg, len, out, dtls
+ * @var Tls13MsgVars::parse_server_hello_args
+ *                                             what parse_server_hello takes: msg, len, out, dtls
+ * @var Tls13MsgVars::build_client_hello_args
+ *                                             what build_client_hello takes: out, cap, random,
+ * @var Tls13MsgVars::parse_certificate_args
+ *                                            what parse_certificate takes: msg, len, cert, cert_len
+ * @var Tls13MsgVars::parse_cert_verify_args
+ *                                            what parse_cert_verify takes: msg, len, scheme, sig, sig_len
+ * @var Tls13MsgVars::parse_finished_args
+ *                                         what parse_finished takes: msg, len, vd, verify_len
+ * @var Tls13MsgVars::build_server_hello_args
+ *                                             what build_server_hello takes: out, cap, random,
+ * @var Tls13MsgVars::build_encrypted_extensions_args
+ *                                                     what build_encrypted_extensions takes: out, cap, quic_tp,
+ * @var Tls13MsgVars::build_certificate_args
+ *                                            what build_certificate takes: out, cap, cert_der, cert_len
+ * @var Tls13MsgVars::build_cert_verify_args
+ *                                            what build_cert_verify takes: sign_work, out, cap,
+ * @var Tls13MsgVars::build_finished_args
+ *                                         what build_finished takes: out, cap, verify_data, verify_len
+ * @var Tls13MsgVars::cert_verify_content_args
+ *                                              what cert_verify_content takes: out, cap, transcript_hash,
+ * @var Tls13MsgVars::build_hello_retry_request_args
+ *                                                    what build_hello_retry_request takes: out, cap, session_id,
+ * @var Tls13MsgVars::build_encrypted_extensions_empty_args
+ *                                                           what build_encrypted_extensions_empty takes: out, cap,
+ * @var Tls13MsgVars::build_message_hash_args
+ *                                             what build_message_hash takes: out, cap, ch1_hash
+ * @var Tls13MsgVars::ok
+ *                        false if it is not a well-formed ClientHello. Missing/!supported ...
+ * @var Tls13MsgVars::n
+ *                       bytes written, or 0 on overflow
+ * @var Tls13MsgNs::parse_client_hello
+ *                                      parse a ClientHello handshake message (msg includes the 4-byte ...
+ * @var Tls13MsgNs::parse_server_hello
+ *                                      parse a ServerHello handshake message (msg includes the 4-byte ...
+ * @var Tls13MsgNs::build_client_hello
+ *                                      build a ClientHello (RFC 8446 sec 4.1.2) offering TLS 1.3, suite, ...
+ * @var Tls13MsgNs::parse_certificate
+ *                                     the first CertificateEntry's cert_data in a Certificate message ...
+ * @var Tls13MsgNs::parse_cert_verify
+ *                                     the algorithm and signature of a CertificateVerify (RFC 8446 sec ...
+ * @var Tls13MsgNs::parse_finished
+ *                                  the verify_data of a Finished (RFC 8446 sec 4.4.4). vd points into ...
+ * @var Tls13MsgNs::build_server_hello
+ *                                      build a ServerHello (RFC 8446 sec 4.1.3) selecting TLS 1.3 / ...
+ * @var Tls13MsgNs::build_encrypted_extensions
+ *                                              build EncryptedExtensions (RFC 8446 sec 4.3.1) carrying ALPN "h3" ...
+ * @var Tls13MsgNs::build_certificate
+ *                                     build a Certificate message (RFC 8446 sec 4.4.2) with an empty ...
+ * @var Tls13MsgNs::build_cert_verify
+ *                                     build a CertificateVerify (RFC 8446 sec 4.4.3) with an Ed25519 ...
+ * @var Tls13MsgNs::build_finished
+ *                                  build a Finished message (RFC 8446 sec 4.4.4) carrying verify_data ...
+ * @var Tls13MsgNs::cert_verify_content
+ *                                       assemble the sec 4.4.3 signed content into out (64*0x20 || context ...
+ * @var Tls13MsgNs::build_hello_retry_request
+ *                                             build a HelloRetryRequest (RFC 8446 §4.1.4): a ServerHello whose ...
+ * @var Tls13MsgNs::build_encrypted_extensions_empty
+ *                                                    build an EncryptedExtensions (RFC 8446 §4.3.1) for the DTLS ...
+ * @var Tls13MsgNs::build_message_hash
+ *                                      write the synthetic message_hash handshake message that replaces ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

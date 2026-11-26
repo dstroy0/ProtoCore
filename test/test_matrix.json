@@ -2004,8 +2004,8 @@
         "+<server/core/worker/worker.c>",
         "+<network_drivers/network/stack/stack.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>",
-        "+<network_drivers/network/stack/stack_tcp.c>",
-        "+<network_drivers/network/stack/stack_net.c>"
+        "+<network_drivers/network/stack/stack_tcp/stack_tcp.c>",
+        "+<network_drivers/network/stack/stack_net/stack_net.c>"
       ],
       "tests": [
         "unit/src/network_drivers/network/stack/test_stack"
@@ -2013,7 +2013,7 @@
     },
     
     "native_stack_transport": {
-      "desc": "The TCP and UDP transport, the DNS resolver and the TCP client over the idemIP arm of the protocore_net_* seam (network_drivers/network/stack/stack_net.c).",
+      "desc": "The TCP and UDP transport, the DNS resolver and the TCP client over the idemIP arm of the protocore_net_* seam (network_drivers/network/stack/stack_net/stack_net.c).",
       "flags": [
         "-DPROTOCORE_ENABLE_IDEMIP=1",
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
@@ -2045,8 +2045,8 @@
         "+<src/network_drivers/transport/udp/client/client.c>",
         "+<src/shared/hex/hex.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>",
-        "+<src/network_drivers/network/stack/stack_tcp.c>",
-        "+<src/network_drivers/network/stack/stack_net.c>"
+        "+<src/network_drivers/network/stack/stack_tcp/stack_tcp.c>",
+        "+<src/network_drivers/network/stack/stack_net/stack_net.c>"
       ],
       "tests": [
         "unit/src/network_drivers/network/stack/test_stack"
@@ -2062,8 +2062,8 @@
         "+<network_drivers/network/stack/stack.c>",
         "+<network_drivers/physical/wifi_link/wifi_link.c>",
         "+<test/core_setup/hal/portable/portable_platform.c>",
-        "+<network_drivers/network/stack/stack_tcp.c>",
-        "+<network_drivers/network/stack/stack_net.c>"
+        "+<network_drivers/network/stack/stack_tcp/stack_tcp.c>",
+        "+<network_drivers/network/stack/stack_net/stack_net.c>"
       ],
       "tests": [
         "unit/src/network_drivers/physical/test_wifi_link"

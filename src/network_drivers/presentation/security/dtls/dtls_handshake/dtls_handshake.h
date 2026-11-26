@@ -20,12 +20,14 @@ EMBED_BEGIN_DECLS
  * TCP retransmission.
  *
  * This file is pure framing - no crypto state, no sockets. It provides:
- * - the 12-byte handshake header (@ref protocore_dtls_hs_header_parse / @ref protocore_dtls_hs_frag_build);
+ * - the 12-byte handshake header (@ref protocore_dtls_handshake_header_parse / @ref
+ * protocore_dtls_handshake_frag_build);
  * - overlap-tolerant message reassembly (@ref DtlsHsReasm), modelled on the QUIC CRYPTO-stream
  * reassembler - a fragment may arrive split, duplicated, or overlapping (§5.4);
- * - the ACK message (@ref protocore_dtls_ack_build / @ref protocore_dtls_ack_parse, content type 26, §7);
- * - the stateless HelloRetryRequest cookie (@ref protocore_dtls_cookie_make / @ref protocore_dtls_cookie_verify,
- * the §5.1 return-routability / anti-amplification defense).
+ * - the ACK message (@ref protocore_dtls_handshake_ack_build / @ref protocore_dtls_handshake_ack_parse, content type
+ * 26, §7);
+ * - the stateless HelloRetryRequest cookie (@ref protocore_dtls_handshake_cookie_make / @ref
+ * protocore_dtls_handshake_cookie_verify, the §5.1 return-routability / anti-amplification defense).
  *
  * The handshake state machine that drives these (flights, epochs, PTO) is protocore_dtls_conn. The TLS 1.3
  * message bodies and key schedule are reused verbatim from the HTTP/3 stack (protocore_tls13_msg, protocore_tls13_kdf).

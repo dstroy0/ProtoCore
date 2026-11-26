@@ -18,13 +18,13 @@
 
 #if PROTOCORE_ENABLE_IDEMIP
 
-#include "network_drivers/network/stack/stack_net.h"
+#include "network_drivers/network/stack/stack_net/stack_net.h"
 
-#include "memoria_anularis/memoria_anularis.h"       // the rings of each entry
-#include "network_drivers/network/stack/stack.h"     // Stack.tick, and the borrow of the stack
-#include "network_drivers/network/stack/stack_tcp.h" // the entries, their events and their rings
-#include "proximus_operor/proximus_operor.h"         // proxim.read
-#include "src/idemip.h"                              // the units of idemIP that the UDP, ARP and IGMP paths call
+#include "memoria_anularis/memoria_anularis.h"                 // the rings of each entry
+#include "network_drivers/network/stack/stack.h"               // Stack.tick, and the borrow of the stack
+#include "network_drivers/network/stack/stack_tcp/stack_tcp.h" // the entries, their events and their rings
+#include "proximus_operor/proximus_operor.h"                   // proxim.read
+#include "src/idemip.h" // the units of idemIP that the UDP, ARP and IGMP paths call
 
 EMBED_BEGIN_DECLS
 

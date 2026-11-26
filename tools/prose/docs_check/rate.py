@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Does this prose sound like a person wrote it? Answered as a rate against a drawn bar.
 #
-#   Usage:  python utils/maint/prose/docs_check --rate PATH [PATH ...]
+#   Usage:  python tools/prose/docs_check --rate PATH [PATH ...]
 #
 # docs_check answers a different question. It reports every banned token it finds. A file with
 # no findings passes, and passing a ban list is not the same as reading human: a writer who avoids

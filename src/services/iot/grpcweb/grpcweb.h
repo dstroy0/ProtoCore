@@ -108,22 +108,38 @@ typedef struct
  *
  * No slot member: the codec owns no rows, so no call names one.
  *
- * @var GrpcWebNs::out              where a builder writes the frame
- * @var GrpcWebNs::msg              the frame byte and the Message a data frame carries
- * @var GrpcWebNs::trailers         the Status and Status-Message a trailers frame carries
- * @var GrpcWebNs::in               the octets a parse decodes or a Trailers read scans
- * @var GrpcWebNs::ok               a call's true/false outcome
- * @var GrpcWebNs::n                octets a builder wrote, or a parse consumed; 0 when a call failed
- * @var GrpcWebNs::parsed           the Length-Prefixed-Message a parse decoded
- * @var GrpcWebNs::i32              the Status a trailers_status read
- * @var GrpcWebNs::text             the Status-Message slice, pointing into @c in.data
- * @var GrpcWebNs::text_len         its length in octets
- * @var GrpcWebNs::frame            frame @c msg.body under the frame byte in @c msg.flags
- * @var GrpcWebNs::frame_message    frame @c msg.body with @c msg.compressed as the Compressed-Flag
- * @var GrpcWebNs::frame_trailers   frame @c trailers as a trailer-section under the MSB
- * @var GrpcWebNs::parse            decode the frame at the head of @c in
- * @var GrpcWebNs::trailers_status  read Status ("grpc-status") out of the trailer-section in @c in
- * @var GrpcWebNs::trailers_message read Status-Message ("grpc-message") out of that same section
+ * @var GrpcWebVars::out
+ *                                    where a builder writes the frame
+ * @var GrpcWebVars::msg
+ *                                    the frame byte and the Message a data frame carries
+ * @var GrpcWebVars::trailers
+ *                                    the Status and Status-Message a trailers frame carries
+ * @var GrpcWebVars::in
+ *                                    the octets a parse decodes or a Trailers read scans
+ * @var GrpcWebVars::ok
+ *                                    a call's true/false outcome
+ * @var GrpcWebVars::n
+ *                                    octets a builder wrote, or a parse consumed; 0 when a call failed
+ * @var GrpcWebVars::parsed
+ *                                    the Length-Prefixed-Message a parse decoded
+ * @var GrpcWebVars::i32
+ *                                    the Status a trailers_status read
+ * @var GrpcWebVars::text
+ *                                    the Status-Message slice, pointing into @c in.data
+ * @var GrpcWebVars::text_len
+ *                                    its length in octets
+ * @var GrpcWebNs::frame
+ *                                  frame @c msg.body under the frame byte in @c msg.flags
+ * @var GrpcWebNs::frame_message
+ *                                  frame @c msg.body with @c msg.compressed as the Compressed-Flag
+ * @var GrpcWebNs::frame_trailers
+ *                                  frame @c trailers as a trailer-section under the MSB
+ * @var GrpcWebNs::parse
+ *                                  decode the frame at the head of @c in
+ * @var GrpcWebNs::trailers_status
+ *                                  read Status ("grpc-status") out of the trailer-section in @c in
+ * @var GrpcWebNs::trailers_message
+ *                                  read Status-Message ("grpc-message") out of that same section
  */
 typedef struct
 {

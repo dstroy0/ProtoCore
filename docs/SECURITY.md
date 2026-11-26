@@ -103,7 +103,7 @@ The remaining sections document each property in depth.
   - [7.9 Secure Wipe](#ssh-wipe)
   - [7.10 Random Number Generation](#ssh-rng)
 - [8. Diagnostic Endpoint](#diagnostic-endpoint)
-- [9. Known Limitations and Non-Goals](#known-limitations)
+- [9. Known Limitations and Non-Goals](#security-known-limitations)
 - [10. SNMP Agent Security](#snmp-security)
 - [11. Hardening Checklist](#hardening-checklist)
   - [General](#general-hardening)
@@ -154,8 +154,8 @@ The remaining sections document each property in depth.
 
 ## 2. Memory Safety - HTTP / Core Stack {#memory-safety}
 
-**Files:** [src/network_drivers/transport/tcp/tcp.c](@ref tcp.c),
-[src/network_drivers/presentation/presentation.c](@ref presentation.c),
+**Files:** `src/network_drivers/transport/tcp/tcp.c`,
+`src/network_drivers/presentation/presentation.c`,
 [src/protocore_config.h](@ref protocore_config.h)
 
 ### Static Allocation {#core-static}
@@ -215,7 +215,7 @@ has buffered data that was never written.
 
 ## 3. Input Validation - RFC 7230 Parser {#input-validation}
 
-**Files:** [src/network_drivers/presentation/http/http_parser/http_parser.c](@ref http_parser.c),
+**Files:** `src/network_drivers/presentation/http/http_parser/http_parser.c`,
 [src/network_drivers/presentation/http/http_parser/http_parser.h](@ref http_parser.h)
 
 ### Character-Class Validation {#parser-validation}
@@ -227,7 +227,7 @@ or control characters before they enter any buffer.
 
 | Field              | Allowed characters                                      | RFC reference   | Violation response |
 | ------------------ | ------------------------------------------------------- | --------------- | ------------------ |
-| Method             | `tchar` (`ALPHA DIGIT ! # $ % & ' * + - . ^ _ \` \| ~`) | RFC 7230 §3.1.1 | 400                |
+| Method             | `tchar` (`` ALPHA DIGIT ! # $ % & ' * + - . ^ _ ` \| ~ ``) | RFC 7230 §3.1.1 | 400                |
 | Path               | `VCHAR` (%x21–7E)                                       | RFC 3986 §3.3   | 400                |
 | Query              | `VCHAR` (%x21–7E)                                       | RFC 3986 §3.4   | 400                |
 | Header field-name  | `tchar`                                                 | RFC 7230 §3.2   | 400                |
@@ -262,7 +262,7 @@ the server side.
 
 ## 4. WebSocket Security {#websocket-security}
 
-**Files:** [src/network_drivers/presentation/http/websocket/websocket.c](@ref websocket.c),
+**Files:** `src/network_drivers/presentation/http/websocket/websocket.c`,
 [src/network_drivers/presentation/http/websocket/websocket.h](@ref websocket.h)
 
 ### Handshake Verification {#ws-handshake}
@@ -299,7 +299,7 @@ in the WebSocket route handler and reject origins that are not in an allowlist.
 
 ## 5. Authentication (HTTP Basic Auth) {#auth-security}
 
-**Files:** [src/network_drivers/presentation/presentation.c](@ref presentation.c),
+**Files:** `src/network_drivers/presentation/presentation.c`,
 [src/protocore_config.h](@ref protocore_config.h)
 
 ### Implementation {#auth-implementation}
@@ -398,13 +398,13 @@ records) is ~41.5 KB; the default arena is 48 KB.
 
 **Files:**
 
-- [src/network_drivers/presentation/ssh/transport/transport.h](@ref transport.h) / [.c](@ref transport.c) - key-material types and wipe helpers, DH-group14-SHA256 KEX, binary packet protocol
-- [src/crypto/asymmetric/bignum.h](@ref bignum.h) / [.c](@ref bignum.c) - 2048-bit Montgomery arithmetic (shared library primitive)
-- [src/crypto/hash/sha256/sha256.h](@ref sha256.h) / [.c](@ref sha256.c) - SHA-256 (shared library primitive)
-- [src/crypto/mac/hmac_sha256/hmac_sha256.h](@ref hmac_sha256.h) / [.c](@ref hmac_sha256.c) - HMAC-SHA2-256 (shared library primitive)
-- [src/crypto/cipher/aes256ctr.h](@ref aes256ctr.h) / [.c](@ref aes256ctr.c) - AES-256-CTR (shared library primitive)
-- [src/crypto/asymmetric/rsa.h](@ref rsa.h) / [.c](@ref rsa.c) - RSA-2048 PKCS#1 v1.5 verify + software sign (shared primitive)
-- [src/network_drivers/presentation/ssh/transport/ssh_rsa.h](@ref ssh_rsa.h) / [.c](@ref ssh_rsa.c) - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
+- [src/network_drivers/presentation/ssh/transport/transport.h](@ref transport.h) / .c - key-material types and wipe helpers, DH-group14-SHA256 KEX, binary packet protocol
+- [src/crypto/asymmetric/bignum.h](@ref bignum.h) / .c - 2048-bit Montgomery arithmetic (shared library primitive)
+- [src/crypto/hash/sha256/sha256.h](@ref sha256.h) / .c - SHA-256 (shared library primitive)
+- [src/crypto/mac/hmac_sha256/hmac_sha256.h](@ref hmac_sha256.h) / .c - HMAC-SHA2-256 (shared library primitive)
+- [src/crypto/cipher/aes256ctr.h](@ref aes256ctr.h) / .c - AES-256-CTR (shared library primitive)
+- [src/crypto/asymmetric/rsa.h](@ref rsa.h) / .c - RSA-2048 PKCS#1 v1.5 verify + software sign (shared primitive)
+- [src/network_drivers/presentation/ssh/transport/ssh_rsa.h](@ref ssh_rsa.h) / .c - SSH RSA host-key layer (NVS key, signing, "ssh-rsa" blob)
 
 ---
 
@@ -444,7 +444,7 @@ SSH_MSG_KEXDH_INIT ──── e ──────►  (1) y = esp_fill_random
 **Client value validation**
 
 The received client public value `e` is checked against 1 and p-1 by
-[`bn_dh_validate()`](@ref bn_dh_validate) before any computation. A value of 1 leaks the server
+`bn_dh_validate()` before any computation. A value of 1 leaks the server
 scalar y directly (K = 1^y = 1, fixed). A value of p-1 causes K to be either
 1 or p-1 (depending on y parity), which is also a fixed value. Both are
 well-known small-subgroup attacks specified in RFC 4253 §8.
@@ -503,7 +503,7 @@ counter never repeats within a connection because:
   MixColumns polynomial (FIPS 197). NOT constant-time; test-only.
 
 The platform is selected by `#ifdef ARDUINO` in
-[aes256ctr.c](@ref aes256ctr.c).
+aes256ctr.c.
 No guessed buffer sizes are used: the Arduino path embeds `mbedtls_aes_context`
 directly (by `#include <mbedtls/aes.h>`), so the compiler enforces the exact
 size. The "opaque buffer of guessed size" anti-pattern is explicitly rejected.
@@ -634,8 +634,8 @@ optional `0x00` prefix byte (required if the MSB of K is set, to indicate a
 positive integer), followed by the 256-byte big-endian value of K.
 
 After derivation, all stack temporaries (`key_c2s`, `key_s2c`, `iv_c2s`,
-`iv_s2c`, the SHA-256 context) are zeroed via `protocore_secure_wipe()` before
-[`ssh_dh_derive_keys()`](@ref ssh_dh_derive_keys) returns.
+`iv_s2c`, the SHA-256 context) are zeroed via `mmgr_zero_buf()` before
+`ssh_dh_derive_keys()` returns.
 
 </details>
 
@@ -680,7 +680,7 @@ local SshRsaPrivKey on the stack   ← only location the private key exists in R
 private key loaded into local struct
     │
     ▼  sign operation completes
-protocore_secure_wipe(&priv, sizeof(priv))  ← volatile loop, not elided by compiler
+mmgr_zero_buf(&priv, sizeof(priv))  ← volatile loop, not elided by compiler
     │
     ▼  ssh_rsa_sign() returns
 stack frame deallocated - no key bytes remain anywhere in RAM
@@ -746,7 +746,7 @@ symbol layout eliminates that risk.
 <summary><b>Expand 7.8 Sequence Number Overflow Guard Details</b></summary>
 
 **Source:** [transport.h](@ref transport.h),
-[transport.c](@ref transport.c)
+transport.c
 
 SSH sequence numbers are 32-bit unsigned integers (RFC 4253 §6.4). They wrap
 at 2^32. Two problems arise at wrap:
@@ -781,34 +781,20 @@ limitation and is noted in [docs/CHANGELOG.md](CHANGELOG.md).
 <details>
 <summary><b>Expand 7.9 Secure Wipe Details</b></summary>
 
-**Source:** [src/mmgr/secure.h](@ref secure.h)
+**Source:** `include/MMgr/src/locus_carcerum/locus_carcerum.h`
 
 ```c
-static inline void protocore_secure_wipe(void *ptr, size_t len)
-{
-    // Machine-width stores, with byte head/tail only for unaligned edges. Both edges are normally
-    // empty - pool borrows are aligned and their lengths rounded up - so this is the word loop.
-    // volatile is per-access. A volatile word store is exactly as un-elidable as a volatile byte
-    // store; the guarantee is unchanged and the store count drops by the width.
-    volatile uint8_t *b = (volatile uint8_t *)ptr;
-    while (len != 0 && (((uintptr_t)b & (sizeof(uintptr_t) - 1)) != 0))
-    {
-        *b++ = 0;
-        len--;
-    }
-    volatile uintptr_t *w = (volatile uintptr_t *)b;
-    while (len >= sizeof(uintptr_t))
-    {
-        *w++ = 0;
-        len -= sizeof(uintptr_t);
-    }
-    b = (volatile uint8_t *)w;
-    while (len != 0)
-    {
-        *b++ = 0;
-        len--;
-    }
-}
+/**
+ * @brief Zeroes size bytes at prisoner and releases nothing.
+ *
+ * @param[in,out] prisoner First byte to clear [BORROWS].
+ * @param[in]     size     Bytes to clear.
+ * @note The stores are volatile: the compiler cannot drop a clear of bytes nothing reads afterwards
+ *       as dead work. The middle goes a word at a time, the two edges a byte at a time.
+ * @note The extent is the caller's to state. A release that zeroes takes it from the cell's own word.
+ * @warning prisoner must be writable for size bytes.
+ */
+void mmgr_zero_buf(void *prisoner, size_t size);
 ```
 
 **Why not `memset`?**
@@ -826,12 +812,12 @@ The `volatile` pointer cast forces every store to actually reach SRAM because
 `volatile` reads/writes are not subject to the "as-if rule" and cannot be
 removed.
 
-**Where protocore_secure_wipe is used**
+**Where mmgr_zero_buf is used**
 
 | What is wiped                                 | When                                                             | File             |
 | --------------------------------------------- | ---------------------------------------------------------------- | ---------------- |
 | `crypto_work[1536]`                           | After every [`bn_expmod_group14()`](@ref bn_expmod_group14) call | `crypto/asymmetric/bignum.c` |
-| `SshDhState.y`, `.K`                          | After key derivation in [`ssh_dh_finish()`](@ref ssh_dh_finish)  | `network_drivers/presentation/ssh/transport/transport.c` |
+| `SshDhState.y`, `.K`                          | After key derivation in `ssh_dh_finish()`  | `network_drivers/presentation/ssh/transport/transport.c` |
 | [`SshKeyMat`](@ref SshKeyMat)                 | On connection close / error                                      | `network_drivers/presentation/ssh/transport/transport.h` |
 | [`SshDhState`](@ref SshDhState) (full struct) | On connection close / error                                      | `network_drivers/presentation/ssh/transport/transport.h` |
 | DER private key stack copy                    | After `mbedtls_pk_parse_key()` in `protocore_ssh_rsa_load_pubkey()`    | `ssh_rsa.c`    |
@@ -899,7 +885,7 @@ resolves `Arduino.h` to the vendor SDK header instead.
 
 ## 8. Diagnostic Endpoint {#diagnostic-endpoint}
 
-**File:** [protocore.c](@ref protocore.c)
+**File:** protocore.c
 
 The optional `PROTOCORE_ENABLE_DIAG` build flag enables a JSON endpoint at `/diag`
 that returns all active feature flags and configuration constants.
@@ -918,7 +904,7 @@ server.on("/diag", HTTP_GET, [](uint8_t slot, HttpReq *req) {
 
 ---
 
-## 9. Known Limitations and Non-Goals {#known-limitations}
+## 9. Known Limitations and Non-Goals {#security-known-limitations}
 
 | Limitation                                      | Impact                                                | Workaround                                                              |
 | ----------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
@@ -1025,6 +1011,6 @@ Use this checklist before deploying to a production environment.
 
 ### Build Hardening {#build-hardening}
 
-- [ ] Build with `-Os` (default in ESP-IDF) - do not disable optimization, as it is not needed for security and `protocore_secure_wipe` is already volatile-correct
+- [ ] Build with `-Os` (default in ESP-IDF) - do not disable optimization, as it is not needed for security and `mmgr_zero_buf` is already volatile-correct
 - [ ] Confirm the final binary does not include the native test PRNG mock (it is excluded by the `#ifdef ARDUINO` guard in production builds)
 - [ ] Run `python test/harness.py run native_ssh` to verify all SSH crypto test vectors pass before deployment

@@ -73,12 +73,18 @@ typedef struct
  * No storage member: both transforms read their inputs and write the caller's destination, so the
  * module holds no key and no state between calls.
  *
- * @var SnmpCryptoNs::work          the caller's scratch region the hash borrows
- * @var SnmpCryptoNs::key           what a password-to-key derivation reads, and where its key lands
- * @var SnmpCryptoNs::priv          what the privacy transform reads and where it writes
- * @var SnmpCryptoNs::ok            a call's true/false outcome
- * @var SnmpCryptoNs::localize_key  derive the engine-localized key from a password
- * @var SnmpCryptoNs::aes_cfb128    run CFB128-AES-128 over @c priv.in into @c priv.out
+ * @var SnmpCryptoVars::work
+ *                                    the caller's scratch region the hash borrows
+ * @var SnmpCryptoVars::key
+ *                                    what a password-to-key derivation reads, and where its key lands
+ * @var SnmpCryptoVars::priv
+ *                                    what the privacy transform reads and where it writes
+ * @var SnmpCryptoVars::ok
+ *                                    a call's true/false outcome
+ * @var SnmpCryptoNs::localize_key
+ *                                  derive the engine-localized key from a password
+ * @var SnmpCryptoNs::aes_cfb128
+ *                                  run CFB128-AES-128 over @c priv.in into @c priv.out
  */
 typedef struct
 {

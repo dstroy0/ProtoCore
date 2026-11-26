@@ -226,6 +226,8 @@ size_t protocore_ubx_build_cfg_msg(uint8_t *buf, size_t cap, uint8_t cls, uint8_
 
 /**
  * @brief Build a CFG-RATE that sets the measurement + navigation rate.
+ * @param buf           the destination buffer.
+ * @param cap           the capacity of @p buf, in bytes.
  * @param meas_rate_ms  the measurement period in ms (e.g. 200 for 5 Hz).
  * @param nav_rate      navigation solutions per measurement cycle (usually 1).
  * @param time_ref      the reference the measurements align to (@ref PROTOCORE_UBX_TIME_REF_UTC / _GPS).

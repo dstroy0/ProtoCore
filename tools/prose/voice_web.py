@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Build the voice alphabet and the two voice webs from the voice corpus.
 #
 #   build/tessera_host/tessera_run --processors 1 --name voice_web -- \
-#       python utils/maint/prose/voice_web.py
+#       python tools/prose/voice_web.py
 #
 # Reads the text voice_pdftotext.sh wrote to build/voice/text/ and the words voice_count.py retained in
-# voice.tsv, and writes three tables to utils/maint/prose/. Each holds counts only.
+# voice.tsv, and writes three tables to tools/prose/. Each holds counts only.
 #
 #   voice_alphabet.tsv         every character the voice uses, with its count, commonest first.
 #                              The rank is the position the engine's web gives it.

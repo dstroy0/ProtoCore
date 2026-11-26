@@ -169,6 +169,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Enip with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Enip.build_args.buf = ...;
  *   Enip.build_args.cap = ...;
  *   Enip.build_args.h = ...;
@@ -176,25 +177,44 @@ typedef struct
  *   Enip.build_args.data_len = ...;
  *   Enip.build(work);
  *   // Enip.n is what the call reports
+ * @endcode
  *
- * @var EnipNs::build_args  what build takes: buf, cap, h, data, data_len
- * @var EnipNs::parse_args  what parse takes: buf, len, out, data, data_len
- * @var EnipNs::build_register_session_args  what build_register_session takes: buf, cap, sender_context
- * @var EnipNs::build_unregister_session_args  what build_unregister_session takes: buf, cap,
- * @var EnipNs::build_send_rr_data_args  what build_send_rr_data takes: buf, cap, session_handle,
- * @var EnipNs::parse_send_rr_data_args  what parse_send_rr_data takes: data, data_len, cip, cip_len
- * @var EnipNs::build_list_identity_args  what build_list_identity takes: buf, cap, sender_context
- * @var EnipNs::parse_list_identity_args  what parse_list_identity takes: data, data_len, out
- * @var EnipNs::ok  true iff a well-formed List Identity item is present and its ...
- * @var EnipNs::n  the count a call reports
- * @var EnipNs::build  build the encapsulation header + command data. Returns total ...
- * @var EnipNs::parse  parse the encapsulation header and slice the command data
- * @var EnipNs::build_register_session  build a RegisterSession request (protocol version 1). ...
- * @var EnipNs::build_unregister_session  build an UnRegisterSession request that closes session_handle (no ...
- * @var EnipNs::build_send_rr_data  build a SendRRData request wrapping cip as an unconnected message ...
- * @var EnipNs::parse_send_rr_data  from a SendRRData command-data block, extract the Unconnected Data ...
- * @var EnipNs::build_list_identity  build a ListIdentity request (command 0x0063, no command-specific ...
- * @var EnipNs::parse_list_identity  parse a ListIdentity response command-data block (the octets after ...
+ * @var EnipVars::build_args
+ *                            what build takes: buf, cap, h, data, data_len
+ * @var EnipVars::parse_args
+ *                            what parse takes: buf, len, out, data, data_len
+ * @var EnipVars::build_register_session_args
+ *                                             what build_register_session takes: buf, cap, sender_context
+ * @var EnipVars::build_unregister_session_args
+ *                                               what build_unregister_session takes: buf, cap,
+ * @var EnipVars::build_send_rr_data_args
+ *                                         what build_send_rr_data takes: buf, cap, session_handle,
+ * @var EnipVars::parse_send_rr_data_args
+ *                                         what parse_send_rr_data takes: data, data_len, cip, cip_len
+ * @var EnipVars::build_list_identity_args
+ *                                          what build_list_identity takes: buf, cap, sender_context
+ * @var EnipVars::parse_list_identity_args
+ *                                          what parse_list_identity takes: data, data_len, out
+ * @var EnipVars::ok
+ *                    true iff a well-formed List Identity item is present and its ...
+ * @var EnipVars::n
+ *                   the count a call reports
+ * @var EnipNs::build
+ *                     build the encapsulation header + command data. Returns total ...
+ * @var EnipNs::parse
+ *                     parse the encapsulation header and slice the command data
+ * @var EnipNs::build_register_session
+ *                                      build a RegisterSession request (protocol version 1). ...
+ * @var EnipNs::build_unregister_session
+ *                                        build an UnRegisterSession request that closes session_handle (no ...
+ * @var EnipNs::build_send_rr_data
+ *                                  build a SendRRData request wrapping cip as an unconnected message ...
+ * @var EnipNs::parse_send_rr_data
+ *                                  from a SendRRData command-data block, extract the Unconnected Data ...
+ * @var EnipNs::build_list_identity
+ *                                   build a ListIdentity request (command 0x0063, no command-specific ...
+ * @var EnipNs::parse_list_identity
+ *                                   parse a ListIdentity response command-data block (the octets after ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

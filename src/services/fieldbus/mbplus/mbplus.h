@@ -84,22 +84,35 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Mbplus with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Mbplus.crc_args.bytes = ...;
  *   Mbplus.crc_args.len = ...;
  *   Mbplus.crc(work);
  *   // Mbplus.value is what the call reports
+ * @endcode
  *
- * @var MbplusNs::crc_args  what crc takes: bytes, len
- * @var MbplusNs::build_args  what build takes: address, control, payload, payload_len,
- * @var MbplusNs::parse_args  what parse takes: frame, len, out
- * @var MbplusNs::next_token_args  what next_token takes: current, max_station
- * @var MbplusNs::ok  a call's true/false outcome
- * @var MbplusNs::value  the next station address, wrapping from max_station back to 1
- * @var MbplusNs::n  the frame length (1 + 1 + 1 + payload_len + 2 + 1), or 0 on ...
- * @var MbplusNs::crc  CRC-16/X-25 (the Modbus Plus HDLC FCS) over len bytes
- * @var MbplusNs::build  build a Modbus Plus HDLC frame: 7E addr ctrl [payload] CRClo CRChi ...
- * @var MbplusNs::parse  validate the flags + CRC and parse a Modbus Plus frame. true if ...
- * @var MbplusNs::next_token  compute the next token holder in the logical ring
+ * @var MbplusVars::crc_args
+ *                            what crc takes: bytes, len
+ * @var MbplusVars::build_args
+ *                              what build takes: address, control, payload, payload_len,
+ * @var MbplusVars::parse_args
+ *                              what parse takes: frame, len, out
+ * @var MbplusVars::next_token_args
+ *                                   what next_token takes: current, max_station
+ * @var MbplusVars::ok
+ *                      a call's true/false outcome
+ * @var MbplusVars::value
+ *                         the next station address, wrapping from max_station back to 1
+ * @var MbplusVars::n
+ *                     the frame length (1 + 1 + 1 + payload_len + 2 + 1), or 0 on ...
+ * @var MbplusNs::crc
+ *                     CRC-16/X-25 (the Modbus Plus HDLC FCS) over len bytes
+ * @var MbplusNs::build
+ *                       build a Modbus Plus HDLC frame: 7E addr ctrl [payload] CRClo CRChi ...
+ * @var MbplusNs::parse
+ *                       validate the flags + CRC and parse a Modbus Plus frame. true if ...
+ * @var MbplusNs::next_token
+ *                            compute the next token holder in the logical ring
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

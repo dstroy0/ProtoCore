@@ -157,38 +157,70 @@ struct ProtoHandler;
  * A caller sets the members a call takes, invokes it through ::Modbus with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Modbus.server_init(work);
+ * @endcode
  *
- * @var ModbusNs::on_write_args  what on_write takes: cb
- * @var ModbusNs::get_coil_args  what get_coil takes: addr
- * @var ModbusNs::set_coil_args  what set_coil takes: addr, on
- * @var ModbusNs::get_discrete_input_args  what get_discrete_input takes: addr
- * @var ModbusNs::set_discrete_input_args  what set_discrete_input takes: addr, on
- * @var ModbusNs::get_holding_reg_args  what get_holding_reg takes: addr
- * @var ModbusNs::set_holding_reg_args  what set_holding_reg takes: addr, value
- * @var ModbusNs::get_input_reg_args  what get_input_reg takes: addr
- * @var ModbusNs::set_input_reg_args  what set_input_reg takes: addr, value
- * @var ModbusNs::process_adu_args  what process_adu takes: req, req_len, resp,
- * @var ModbusNs::rtu_process_adu_args  what rtu_process_adu takes: req, req_len, resp,
- * @var ModbusNs::rx_args  what rx takes: slot
- * @var ModbusNs::ok  a call's true/false outcome
- * @var ModbusNs::value  the value a call reports
- * @var ModbusNs::n  number of response bytes written, or 0 to send nothing
- * @var ModbusNs::ptr  the pointer a call reports
- * @var ModbusNs::server_init  zero the entire data model and clear the write callback
- * @var ModbusNs::on_write  register a callback invoked after each client write (nullable)
- * @var ModbusNs::get_coil  get_coil
- * @var ModbusNs::set_coil  set_coil
- * @var ModbusNs::get_discrete_input  get_discrete_input
- * @var ModbusNs::set_discrete_input  set_discrete_input
- * @var ModbusNs::get_holding_reg  get_holding_reg
- * @var ModbusNs::set_holding_reg  set_holding_reg
- * @var ModbusNs::get_input_reg  get_input_reg
- * @var ModbusNs::set_input_reg  set_input_reg
- * @var ModbusNs::process_adu  process one Modbus TCP ADU and build the response ADU. Parses the ...
- * @var ModbusNs::rtu_process_adu  process one complete Modbus RTU ADU (`[addr][PDU][CRC16]`) for slave
- * @var ModbusNs::rx  frame and process received Modbus ADUs for the connection on slot
- * @var ModbusNs::handler  handler
+ * @var ModbusVars::on_write_args
+ *                                 what on_write takes: cb
+ * @var ModbusVars::get_coil_args
+ *                                 what get_coil takes: addr
+ * @var ModbusVars::set_coil_args
+ *                                 what set_coil takes: addr, on
+ * @var ModbusVars::get_discrete_input_args
+ *                                           what get_discrete_input takes: addr
+ * @var ModbusVars::set_discrete_input_args
+ *                                           what set_discrete_input takes: addr, on
+ * @var ModbusVars::get_holding_reg_args
+ *                                        what get_holding_reg takes: addr
+ * @var ModbusVars::set_holding_reg_args
+ *                                        what set_holding_reg takes: addr, value
+ * @var ModbusVars::get_input_reg_args
+ *                                      what get_input_reg takes: addr
+ * @var ModbusVars::set_input_reg_args
+ *                                      what set_input_reg takes: addr, value
+ * @var ModbusVars::process_adu_args
+ *                                    what process_adu takes: req, req_len, resp,
+ * @var ModbusVars::rtu_process_adu_args
+ *                                        what rtu_process_adu takes: req, req_len, resp,
+ * @var ModbusVars::rx_args
+ *                           what rx takes: slot
+ * @var ModbusVars::ok
+ *                      a call's true/false outcome
+ * @var ModbusVars::value
+ *                         the value a call reports
+ * @var ModbusVars::n
+ *                     number of response bytes written, or 0 to send nothing
+ * @var ModbusVars::ptr
+ *                       the pointer a call reports
+ * @var ModbusNs::server_init
+ *                             zero the entire data model and clear the write callback
+ * @var ModbusNs::on_write
+ *                          register a callback invoked after each client write (nullable)
+ * @var ModbusNs::get_coil
+ *                          get_coil
+ * @var ModbusNs::set_coil
+ *                          set_coil
+ * @var ModbusNs::get_discrete_input
+ *                                    get_discrete_input
+ * @var ModbusNs::set_discrete_input
+ *                                    set_discrete_input
+ * @var ModbusNs::get_holding_reg
+ *                                 get_holding_reg
+ * @var ModbusNs::set_holding_reg
+ *                                 set_holding_reg
+ * @var ModbusNs::get_input_reg
+ *                               get_input_reg
+ * @var ModbusNs::set_input_reg
+ *                               set_input_reg
+ * @var ModbusNs::process_adu
+ *                             process one Modbus TCP ADU and build the response ADU. Parses the ...
+ * @var ModbusNs::rtu_process_adu
+ *                                 process one complete Modbus RTU ADU (`[addr][PDU][CRC16]`) for slave
+ * @var ModbusNs::rx
+ *                    frame and process received Modbus ADUs for the connection on slot
+ * @var ModbusNs::handler
+ *                         handler
  *
  * @c work is PROTOCORE_MODBUS_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

@@ -73,16 +73,26 @@ typedef struct
  *
  * No storage member: the instance every call acts on is the caller's, named by @c ctx.
  *
- * @var SbModbusNs::ctx      the driver instance an init fills and a driver call binds
- * @var SbModbusNs::txn      the transport seam an init takes; a null one is rejected
- * @var SbModbusNs::io       the opaque context handed to @c txn on each request; may be null
- * @var SbModbusNs::fc       MODBUS_FC_READ_HOLDING_REGS or MODBUS_FC_READ_INPUT_REGS
- * @var SbModbusNs::unit     the Modbus unit / slave id an init takes
- * @var SbModbusNs::drv_out  the driver vtable a driver call fills (borrowed by the registry)
- * @var SbModbusNs::name     the unique registry name a driver call binds (borrowed)
- * @var SbModbusNs::i32      SB_OK, or SB_ERR_ARG on a null / out-of-range argument
- * @var SbModbusNs::init     fill @c ctx from @c txn, @c io, @c fc and @c unit
- * @var SbModbusNs::driver   fill @c drv_out with a SouthboundDriver bound to @c ctx
+ * @var SbModbusVars::ctx
+ *                             the driver instance an init fills and a driver call binds
+ * @var SbModbusVars::txn
+ *                             the transport seam an init takes; a null one is rejected
+ * @var SbModbusVars::io
+ *                             the opaque context handed to @c txn on each request; may be null
+ * @var SbModbusVars::fc
+ *                             MODBUS_FC_READ_HOLDING_REGS or MODBUS_FC_READ_INPUT_REGS
+ * @var SbModbusVars::unit
+ *                             the Modbus unit / slave id an init takes
+ * @var SbModbusVars::drv_out
+ *                             the driver vtable a driver call fills (borrowed by the registry)
+ * @var SbModbusVars::name
+ *                             the unique registry name a driver call binds (borrowed)
+ * @var SbModbusVars::i32
+ *                             SB_OK, or SB_ERR_ARG on a null / out-of-range argument
+ * @var SbModbusNs::init
+ *                           fill @c ctx from @c txn, @c io, @c fc and @c unit
+ * @var SbModbusNs::driver
+ *                           fill @c drv_out with a SouthboundDriver bound to @c ctx
  */
 typedef struct
 {

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Pull the readable prose out of a document and leave the mathematics behind.
 #
-#   Usage:  python utils/maint/prose/docs_check --plain [--out FILE] [--min-words N] path [path ...]
+#   Usage:  python tools/prose/docs_check --plain [--out FILE] [--min-words N] path [path ...]
 #
 # WHY THE MATHEMATICS HAS TO COME OUT
 #

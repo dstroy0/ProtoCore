@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # What a construction costs a human writer, where that has been measured.
 #
@@ -11,7 +11,7 @@ from .locale import LOCALE
 # ====================================================================
 # THE THREE STAGES, AND WHAT MEASURED THEM
 # ====================================================================
-# The list above is one flat table and it was built by noticing. utils/maint/prose/ban_evidence.py
+# The list above is one flat table and it was built by noticing. tools/prose/ban_evidence.py
 # scored every pattern in it against 1,108,054 words of human research papers under build/papers,
 # and against the 403,111 words of prose in this tree. That run split the table into three stages
 # that filter at different widths, and the stages behave nothing alike.
@@ -40,7 +40,7 @@ from .locale import LOCALE
 #
 # MEASURED AGAINST THE MACHINE'S OWN PROSE, WHICH SETTLED IT
 #
-# utils/maint/prose/session_prose.py takes the machine's messages out of a session transcript. That
+# tools/prose/session_prose.py takes the machine's messages out of a session transcript. That
 # corpus needs no label to be trusted, and it is the only one here whose author is not in question.
 # 38,702 gated English words of it, against 759,815 of the papers, per hundred thousand words:
 #
@@ -77,7 +77,7 @@ from .locale import LOCALE
 # the interlinear glosses and the IPA that fill these pages. Dividing by the raw count puts every
 # rate here about 40 percent low: rather reads 40.4 against 57.6, in order to 26.6 against 44.4.
 # docs-check: end quoting
-# Regenerate with utils/maint/prose/ban_evidence.py after any change to the table above.
+# Regenerate with tools/prose/ban_evidence.py after any change to the table above.
 HUMAN_RATE = {
     r"\brather\b": 57.6,
     r"\bin (order to|terms of)\b": 44.4,

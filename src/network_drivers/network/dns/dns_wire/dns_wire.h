@@ -73,15 +73,24 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::DnsWire, and reads the outcome off
  * the same handle.
  *
- * @var DnsWireNs::msg       the message a decode reads, and where its dotted text lands
- * @var DnsWireNs::text      the dotted name an encode writes, and where its labels land
- * @var DnsWireNs::cmp       the pair a compare judges
- * @var DnsWireNs::ok        a decode's or a compare's true/false outcome
- * @var DnsWireNs::next      offset just past the name as it sits at @c msg.off, 0 on a failed decode
- * @var DnsWireNs::n         octets an encode wrote, 0 when it wrote none
- * @var DnsWireNs::decode    read the name at @c msg.off into @c msg.out as a dotted string
- * @var DnsWireNs::encode    write @c text.dotted into @c text.out as labels plus the root octet
- * @var DnsWireNs::eq        compare two dotted names ignoring ASCII case (RFC 1035 sec 2.3.3)
+ * @var DnsWireVars::msg
+ *                             the message a decode reads, and where its dotted text lands
+ * @var DnsWireVars::text
+ *                             the dotted name an encode writes, and where its labels land
+ * @var DnsWireVars::cmp
+ *                             the pair a compare judges
+ * @var DnsWireVars::ok
+ *                             a decode's or a compare's true/false outcome
+ * @var DnsWireVars::next
+ *                             offset just past the name as it sits at @c msg.off, 0 on a failed decode
+ * @var DnsWireVars::n
+ *                             octets an encode wrote, 0 when it wrote none
+ * @var DnsWireNs::decode
+ *                           read the name at @c msg.off into @c msg.out as a dotted string
+ * @var DnsWireNs::encode
+ *                           write @c text.dotted into @c text.out as labels plus the root octet
+ * @var DnsWireNs::eq
+ *                           compare two dotted names ignoring ASCII case (RFC 1035 sec 2.3.3)
  *
  * decode follows pointers only with @c msg.allow_ptr, at most ::PROTOCORE_DNS_PTR_HOPS of them, so a
  * message that points at itself terminates. The first name in a message has nothing earlier to point

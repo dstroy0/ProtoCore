@@ -1,4 +1,4 @@
-# Prose rewrites for utils/maint/prose/fix_prose.py. Three tab separated fields: file, exact text to find,
+# Prose rewrites for tools/prose/fix_prose.py. Three tab separated fields: file, exact text to find,
 # replacement. Use \n for a line break inside a field.
 #
 # This file quotes banned phrases by necessity, since that is what it matches on. The gate does not
@@ -50,17 +50,17 @@ examples/00_blob_viz_tools/build_orrery_view.py	never sees, so a recovery	never 
 examples/00_blob_viz_tools/build_orrery_view.py	makes neighbouring bins copies of one another, so a window	makes neighboring bins copies of one another, and a window
 examples/00_blob_viz_tools/build_orrery_view.py	was tried and is worse than not filtering	was tried and made the answer worse
 examples/00_blob_viz_tools/build_orrery_view.py	close to the centre has	close to the center has
-utils/maint/prose/build_fixes.py	impossible rather than unlikely.	impossible instead of unlikely.
-utils/maint/prose/build_fixes.py	is reported rather than replaced at the wrong site.	is reported instead of replaced at the wrong site.
-utils/maint/prose/grade_unread.py	rather than graded twice.	instead of graded twice.
-utils/maint/prose/plan_fixes.py	it reports `rather` where the text says `rather than`. A swap	it reports the bare contrast word where the text carries its two-word form. A swap
-utils/maint/prose/plan_fixes.py	Swap a connective for one that carries the same relation. `rather than` and `and not` both mark a	Swap a connective for one that carries the same relation. The two forms in the table below mark a
-utils/maint/prose/plan_fixes.py	and that is why every proposal goes through the	and for that reason every proposal goes through the
-utils/maint/prose/plan_fixes.py	Replacing a bare `which is the` with `, the` where the	Replacing a bare explainer with its comma-led form where the
-utils/maint/prose/plan_fixes.py	# `rather than` takes two shapes. Before a noun or a participle the contrast survives as	# The contrast phrase takes two shapes. Before a noun or a participle it survives as
-utils/maint/prose/plan_fixes.py	# `and not`: "exact rather than fitted" becomes "exact and not fitted". Before a gerund it	# the paired form, where a null described one way becomes one described the other. Before a gerund
-utils/maint/prose/plan_fixes.py	# does not, because the verb needs a preposition to hang from: "defers rather than	# it does not, because the verb needs a preposition to hang from. A deferral located before
-utils/maint/prose/plan_fixes.py	# inventing" becomes "defers instead of inventing", never "defers and not inventing".	# a gerund takes the preposition form, and the paired form reads wrong in that position.
+tools/prose/build_fixes.py	impossible rather than unlikely.	impossible instead of unlikely.
+tools/prose/build_fixes.py	is reported rather than replaced at the wrong site.	is reported instead of replaced at the wrong site.
+tools/prose/grade_unread.py	rather than graded twice.	instead of graded twice.
+tools/prose/plan_fixes.py	it reports `rather` where the text says `rather than`. A swap	it reports the bare contrast word where the text carries its two-word form. A swap
+tools/prose/plan_fixes.py	Swap a connective for one that carries the same relation. `rather than` and `and not` both mark a	Swap a connective for one that carries the same relation. The two forms in the table below mark a
+tools/prose/plan_fixes.py	and that is why every proposal goes through the	and for that reason every proposal goes through the
+tools/prose/plan_fixes.py	Replacing a bare `which is the` with `, the` where the	Replacing a bare explainer with its comma-led form where the
+tools/prose/plan_fixes.py	# `rather than` takes two shapes. Before a noun or a participle the contrast survives as	# The contrast phrase takes two shapes. Before a noun or a participle it survives as
+tools/prose/plan_fixes.py	# `and not`: "exact rather than fitted" becomes "exact and not fitted". Before a gerund it	# the paired form, where a null described one way becomes one described the other. Before a gerund
+tools/prose/plan_fixes.py	# does not, because the verb needs a preposition to hang from: "defers rather than	# it does not, because the verb needs a preposition to hang from. A deferral located before
+tools/prose/plan_fixes.py	# inventing" becomes "defers instead of inventing", never "defers and not inventing".	# a gerund takes the preposition form, and the paired form reads wrong in that position.
 examples/00_blob_viz_tools/build_room_view.py	falling with energy rather than a wall becoming a window.	falling with energy and not a wall becoming a window.
 examples/00_blob_viz_tools/build_room_view.py	WHY THE SHELL SHAPE IS A CONTROL AND NOT A SETTING	WHY THE SHELL SHAPE IS A CONTROL
 examples/00_blob_viz_tools/build_room_view.py	drawn evenly over the directions rather than evenly over the angles.	drawn evenly over the directions and not evenly over the angles.
@@ -1652,12 +1652,12 @@ utils/maint/engine/order_check.py	precepts held    cost	precepts met     cost
 utils/maint/engine/order_check.py	trade a held precept against cost	trade a met precept against cost
 utils/maint/engine/order_check.py	Counting precepts held then weights one	Counting precepts met then weights one
 utils/maint/engine/order_check.py	A foundation that held up three stories	A foundation that supported three stories
-utils/maint/prose/dependence_decay.py	IT HAS TO BE HELD FIXED.	IT HAS TO BE RETAINED FIXED.
-utils/maint/prose/english_gate.py	built once and held.	built once and retained.
-utils/maint/prose/fix_prose.py	Held inside this module,	Retained inside this module,
-utils/maint/prose/machine_distance.py	are all held fixed and	are all retained fixed and
-utils/maint/prose/machine_distance.py	Half the papers held out as the reference pole	Half the papers withheld as the reference pole
-utils/maint/prose/machine_distance.py	The reference pole has to be held out of the blocks	The reference pole has to be excluded from the blocks
+tools/prose/dependence_decay.py	IT HAS TO BE HELD FIXED.	IT HAS TO BE RETAINED FIXED.
+tools/prose/english_gate.py	built once and held.	built once and retained.
+tools/prose/fix_prose.py	Held inside this module,	Retained inside this module,
+tools/prose/machine_distance.py	are all held fixed and	are all retained fixed and
+tools/prose/machine_distance.py	Half the papers held out as the reference pole	Half the papers withheld as the reference pole
+tools/prose/machine_distance.py	The reference pole has to be held out of the blocks	The reference pole has to be excluded from the blocks
 utils/maint/repotools/docs/docs_maint/quotes.py	for when you want it held.	for when you want it enforced.
 utils/maint/texbuild/navier_stokes_sets_figure.py	modes held, outside two boxes	modes retained, outside two boxes
 utils/maint/texbuild/navier_stokes_sets_figure.py	modes held:	modes retained:

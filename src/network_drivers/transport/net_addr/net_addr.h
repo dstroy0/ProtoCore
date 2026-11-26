@@ -53,11 +53,16 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::NetAddr, and reads the outcome off
  * the same handle.
  *
- * @var NetAddrNs::in       what a read carries across
- * @var NetAddrNs::out      what a write carries across
- * @var NetAddrNs::ok        whether the address could be represented
- * @var NetAddrNs::to_ip     read @c in.addr into @c in.out_ip, network-order bytes preserved
- * @var NetAddrNs::from_ip   write @c out.ip into @c out.out_addr, ready to hand to a send; false when the
+ * @var NetAddrNs::in
+ *                          what a read carries across
+ * @var NetAddrNs::out
+ *                          what a write carries across
+ * @var NetAddrNs::ok
+ *                           whether the address could be represented
+ * @var NetAddrNs::to_ip
+ *                           read @c in.addr into @c in.out_ip, network-order bytes preserved
+ * @var NetAddrNs::from_ip
+ *                           write @c out.ip into @c out.out_addr, ready to hand to a send. False when the
  *                           address names a family this stack cannot send to
  *
  * Both families cross both ways. IPv6 is carried where the stack has it (::PROTOCORE_NET_HAS_IPV6); where

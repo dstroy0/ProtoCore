@@ -71,7 +71,7 @@ typedef struct
 PROTOCORE_NS_LAYOUT(WisunNs, build_coap, init, node_register, node_find, joined_count, nodes_json);
 
 /**
- * @brief Build a CoAP client request: header + Uri-Path options (one per `/` .
+ * @brief Build a CoAP client request: header + Uri-Path options (one per `/` segment) + optional payload.
  * @param work PROTOCORE_WISUN_BORROW bytes the caller took. Not held past the call.
  * @param type WISUN_COAP_CON / WISUN_COAP_NON
  * @param code method code (WISUN_COAP_GET / WISUN_COAP_PUT)
@@ -83,7 +83,7 @@ PROTOCORE_NS_LAYOUT(WisunNs, build_coap, init, node_register, node_find, joined_
  * @param plen payload length
  * @param out Out
  * @param cap Cap
- * @return The size_t.
+ * @return the PDU length, or 0 on overflow / bad args (tkl > 8).
  */
 size_t protocore_wisun_build_coap(const uint8_t *work, uint8_t type, uint8_t code, uint16_t msg_id,
                                   const uint8_t *token, uint8_t tkl, const char *uri_path, const uint8_t *payload,
@@ -104,7 +104,7 @@ void protocore_wisun_init(const uint8_t *work, WisunFan *fan, const protocore_ip
  * @param fan Fan
  * @param addr Addr
  * @param now Now
- * @return The int.
+ * @return the node index, or -1 if the table is full / bad args.
  */
 int protocore_wisun_node_register(const uint8_t *work, WisunFan *fan, const protocore_ip *addr, uint32_t now);
 /**
@@ -124,12 +124,12 @@ embed_bool protocore_wisun_node_find(const uint8_t *work, const WisunFan *fan, c
  */
 size_t protocore_wisun_joined_count(const uint8_t *work, const WisunFan *fan);
 /**
- * @brief Serialize the node table as `[{"addr":"..","joined":bool},...]` for .
+ * @brief Serialize the node table as `[{"addr":"..","joined":bool},...]` for the web.
  * @param work PROTOCORE_WISUN_BORROW bytes the caller took. Not held past the call.
  * @param fan Fan
  * @param out Out
  * @param cap Cap
- * @return The size_t.
+ * @return length written (excl NUL), or 0 on overflow / bad args.
  */
 size_t protocore_wisun_nodes_json(const uint8_t *work, const WisunFan *fan, char *out, size_t cap);
 

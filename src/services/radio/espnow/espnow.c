@@ -288,9 +288,9 @@ static embed_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
     return esp_now_add_peer(&p) == ESP_OK;
 }
 
-void protocore_espnow_begin(const uint8_t *work)
+void protocore_espnow_begin(uint8_t *work)
 {
-    nel = EspnowV.begin_args.channel;
+    uint8_t channel = EspnowV.begin_args.channel;
     protocore_espnow_recv_fn cb = EspnowV.begin_args.cb;
 
     ESPNOW_CTX(work)->channel = channel;
@@ -357,7 +357,7 @@ void protocore_espnow_broadcast(const uint8_t *work)
 
 #else // host build - no radio
 
-void protocore_espnow_begin(const uint8_t *work)
+void protocore_espnow_begin(uint8_t *work)
 {
     (void)work;
     uint8_t channel = EspnowV.begin_args.channel;

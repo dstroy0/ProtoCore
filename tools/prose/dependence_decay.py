@@ -86,11 +86,11 @@ argues against the mechanism directly. Every word of the machine pole comes unde
 suppresses its register in the direction that works against a separation. A null on the shape is therefore ambiguous
 about unsuppressed prose, though the spread argument does not depend on the suppression.
 
-    `python utils/maint/prose/dependence_decay.py --control`
-    `python utils/maint/prose/dependence_decay.py --band`
-    `python utils/maint/prose/dependence_decay.py --twoband --length 200000`
-    `python utils/maint/prose/dependence_decay.py --scramble`
-    `python utils/maint/prose/dependence_decay.py --file theory/workbooks/orior/aiming-the-engine.md`
+    `python tools/prose/dependence_decay.py --control`
+    `python tools/prose/dependence_decay.py --band`
+    `python tools/prose/dependence_decay.py --twoband --length 200000`
+    `python tools/prose/dependence_decay.py --scramble`
+    `python tools/prose/dependence_decay.py --file theory/workbooks/orior/aiming-the-engine.md`
 """
 
 import argparse

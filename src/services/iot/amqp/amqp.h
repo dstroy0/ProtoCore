@@ -125,23 +125,39 @@ typedef struct
  *
  * No slot member: the codec holds no rows, so no call names one.
  *
- * @var AmqpNs::out       the buffer a build writes its frame into
- * @var AmqpNs::in        the octets a parse reads a frame from
- * @var AmqpNs::frame     the type and channel of the frame (sec 4.2.3)
- * @var AmqpNs::payload   the payload octets the size field counts (sec 4.2.3)
- * @var AmqpNs::method    the class-id, method-id and arguments of a method payload (sec 4.2.4)
- * @var AmqpNs::content   the class-id, body size, property flags and property list of a content
+ * @var AmqpVars::out
+ *                          the buffer a build writes its frame into
+ * @var AmqpVars::in
+ *                          the octets a parse reads a frame from
+ * @var AmqpVars::frame
+ *                          the type and channel of the frame (sec 4.2.3)
+ * @var AmqpVars::payload
+ *                          the payload octets the size field counts (sec 4.2.3)
+ * @var AmqpVars::method
+ *                          the class-id, method-id and arguments of a method payload (sec 4.2.4)
+ * @var AmqpVars::content
+ *                          the class-id, body size, property flags and property list of a content
  *                        header payload (sec 4.2.6.1)
- * @var AmqpNs::ok        a call's true/false outcome
- * @var AmqpNs::n         the octets a build wrote, 0 when it wrote none
- * @var AmqpNs::consumed  the whole frame length a parse read, for advancing over it
- * @var AmqpNs::protocol_header      write the 8 octet protocol-header "AMQP" 0 0 9 1 (sec 4.2.2)
- * @var AmqpNs::build_frame          frame @c payload under @c frame.type and @c frame.channel
- * @var AmqpNs::build_method         frame a METHOD payload from @c method (sec 4.2.4)
- * @var AmqpNs::build_content_header frame a HEADER payload from @c content, weight 0 (sec 4.2.6.1)
- * @var AmqpNs::build_heartbeat      frame a heartbeat, channel 0, empty payload (sec 4.2.7)
- * @var AmqpNs::parse_frame          split one frame off @c in, the %xCE frame-end checked first
- * @var AmqpNs::parse_method         split @c payload into class-id, method-id and arguments
+ * @var AmqpVars::ok
+ *                          a call's true/false outcome
+ * @var AmqpVars::n
+ *                          the octets a build wrote, 0 when it wrote none
+ * @var AmqpVars::consumed
+ *                          the whole frame length a parse read, for advancing over it
+ * @var AmqpNs::protocol_header
+ *                                   write the 8 octet protocol-header "AMQP" 0 0 9 1 (sec 4.2.2)
+ * @var AmqpNs::build_frame
+ *                                   frame @c payload under @c frame.type and @c frame.channel
+ * @var AmqpNs::build_method
+ *                                   frame a METHOD payload from @c method (sec 4.2.4)
+ * @var AmqpNs::build_content_header
+ *                                   frame a HEADER payload from @c content, weight 0 (sec 4.2.6.1)
+ * @var AmqpNs::build_heartbeat
+ *                                   frame a heartbeat, channel 0, empty payload (sec 4.2.7)
+ * @var AmqpNs::parse_frame
+ *                                   split one frame off @c in, the %xCE frame-end checked first
+ * @var AmqpNs::parse_method
+ *                                   split @c payload into class-id, method-id and arguments
  */
 typedef struct
 {

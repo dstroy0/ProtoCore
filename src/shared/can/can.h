@@ -34,11 +34,16 @@
 /**
  * @brief One classic CAN 2.0 frame.
  *
- * @var CanFrame::id        11-bit (standard) or 29-bit (extended) identifier, right-aligned.
- * @var CanFrame::extended  true => the id is a 29-bit extended identifier.
- * @var CanFrame::rtr       true => remote-transmission-request frame (carries no data).
- * @var CanFrame::dlc       data length, 0..8.
- * @var CanFrame::data      payload octets; only the first @ref CanFrame::dlc are valid.
+ * @var CanFrame::id
+ *                          11-bit (standard) or 29-bit (extended) identifier, right-aligned.
+ * @var CanFrame::extended
+ *                          true => the id is a 29-bit extended identifier.
+ * @var CanFrame::rtr
+ *                          true => remote-transmission-request frame (carries no data).
+ * @var CanFrame::dlc
+ *                          data length, 0..8.
+ * @var CanFrame::data
+ *                          payload octets; only the first @ref CanFrame::dlc are valid.
  */
 typedef struct
 {

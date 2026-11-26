@@ -25,6 +25,7 @@ static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
 
 // Where to stream the captured frames on the wired side.
 static const char *COLLECTOR_IP = "192.168.1.50";
+static protocore_ip g_collector; // COLLECTOR_IP, parsed once in setup()
 static const uint16_t COLLECTOR_PORT = 5555;
 static const uint8_t CAPTURE_CHANNEL = 6;
 
@@ -53,7 +54,7 @@ static bool eth_send(uint8_t, const uint8_t *frame, uint16_t len, void *)
     PcapV.rec.origlen = len;
     Pcap.record_header(pcap_work);
     memcpy(buf + PROTOCORE_PCAP_REC_HDR_LEN, frame, len);
-    UdpClientV.dst = COLLECTOR_IP;
+    UdpClientV.dst = &g_collector;
     UdpClientV.dst_port = COLLECTOR_PORT;
     UdpClientV.data = buf;
     UdpClientV.len = PROTOCORE_PCAP_REC_HDR_LEN + len;
@@ -79,6 +80,9 @@ static void on_frame(const uint8_t *frame, uint16_t len, int8_t, uint8_t)
 
 void setup()
 {
+    IpV.args.text = COLLECTOR_IP; // the tag becomes an address once, here
+    IpV.args.out = &g_collector;
+    Ip.parse(pcap_work);
     Serial.begin(115200);
 
     // Wired uplink to the collector.

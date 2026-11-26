@@ -355,13 +355,14 @@ PROTOCORE_NS_LAYOUT(Smb2Ns, transport_frame, transport_len, build_header, parse_
                     verify_cmac, derive_signing_key, derive_encryption_keys, encrypt, decrypt);
 
 /**
- * @brief Prefix an SMB2 message with the 4-byte Direct-TCP transport header .
+ * @brief Prefix an SMB2 message with the 4-byte Direct-TCP transport header (`0x00` + a 24-bit
+ *        big-endian length) into @p out.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param out Out
  * @param cap Cap
  * @param msg Msg
  * @param msg_len Msg len
- * @return The size_t.
+ * @return total bytes written (4 + @p msg_len), or 0 on overflow / a length that does not fit 24 bits.
  */
 size_t protocore_smb2_transport_frame(const uint8_t *work, uint8_t *out, size_t cap, const uint8_t *msg,
                                       size_t msg_len);
@@ -370,7 +371,8 @@ size_t protocore_smb2_transport_frame(const uint8_t *work, uint8_t *out, size_t 
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param len Len
- * @return The uint32_t.
+ * @return the SMB2 message length that follows the 4-byte prefix, or 0 if @p len < 4 or the first
+ *         byte is non-zero (an invalid Direct-TCP frame).
  */
 uint32_t protocore_smb2_transport_len(const uint8_t *work, const uint8_t *buf, size_t len);
 /**
@@ -383,12 +385,12 @@ uint32_t protocore_smb2_transport_len(const uint8_t *work, const uint8_t *buf, s
  * @param message_id Message id
  * @param tree_id Tree id
  * @param session_id Session id
- * @return The size_t.
+ * @return PROTOCORE_SMB2_HEADER_SIZE, or 0 if @p cap < 64.
  */
 size_t protocore_smb2_build_header(const uint8_t *work, uint8_t *buf, size_t cap, Smb2Command command,
                                    uint16_t credit_request, uint64_t message_id, uint32_t tree_id, uint64_t session_id);
 /**
- * @brief Parse a 64-byte SMB2 sync header (validates ProtocolId + .
+ * @brief Parse a 64-byte SMB2 sync header (validates ProtocolId + StructureSize).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param len Len
@@ -397,13 +399,13 @@ size_t protocore_smb2_build_header(const uint8_t *work, uint8_t *buf, size_t cap
  */
 embed_bool protocore_smb2_parse_header(const uint8_t *work, const uint8_t *buf, size_t len, Smb2Header *out);
 /**
- * @brief Build a NEGOTIATE request (header + body) offering SMB 2.0.2 / 2.1 .
+ * @brief Build a NEGOTIATE request (header + body) offering SMB 2.0.2 / 2.1 / 3.0 / 3.0.2.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
  * @param client_guid the 16-byte client GUID 16 bytes
  * @param security_mode SMB2_NEGOTIATE_SIGNING_ENABLED and/or _REQUIRED
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow.
  */
 size_t protocore_smb2_build_negotiate(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
                                       uint16_t security_mode);
@@ -418,7 +420,9 @@ size_t protocore_smb2_build_negotiate(const uint8_t *work, uint8_t *buf, size_t 
 embed_bool protocore_smb2_parse_negotiate_response(const uint8_t *work, const uint8_t *msg, size_t len,
                                                    Smb2NegotiateResp *out);
 /**
- * @brief Build an SMB 3.1.1 NEGOTIATE request: the dialect list SMB 2.0.2 .. .
+ * @brief Build an SMB 3.1.1 NEGOTIATE request: the dialect list SMB 2.0.2 .. 3.1.1 followed by the
+ *        mandatory PREAUTH_INTEGRITY_CAPABILITIES negotiate context (SHA-512 + @p salt), a
+ *        SIGNING_CAPABILITIES context advertising AES-CMAC, and an ENCRYPTION_CAPABILITIES context listing
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
@@ -428,13 +432,15 @@ embed_bool protocore_smb2_parse_negotiate_response(const uint8_t *work, const ui
  * @param salt_len salt length in bytes (>= 1); a common choice is 32
  * @param ciphers cipher ids to offer, most-preferred first (a server picks the first it supports, in this
  * @param cipher_count number of entries in ciphers (0 .. PROTOCORE_SMB2_MAX_OFFER_CIPHERS)
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow / bad args.
  */
 size_t protocore_smb2_build_negotiate_311(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *client_guid,
                                           uint16_t security_mode, const uint8_t *salt, size_t salt_len,
                                           const uint16_t *ciphers, size_t cipher_count);
 /**
- * @brief Walk the negotiate-context list of a 3.1.1 NEGOTIATE response .
+ * @brief Walk the negotiate-context list of a 3.1.1 NEGOTIATE response (located by NegotiateContextOffset
+ *        / NegotiateContextCount in the §2.2.4 body) and extract the preauth hash + salt, the signing
+ *        algorithm, and the cipher. Every context header and its data are bounds-checked against @p len.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
@@ -460,7 +466,7 @@ void protocore_smb2_preauth_init(const uint8_t *work, SmbPreauth *p);
 void protocore_smb2_preauth_update(const uint8_t *work, uint8_t *crypto_work, SmbPreauth *p, const uint8_t *msg,
                                    size_t len);
 /**
- * @brief Build a SESSION_SETUP request (header + §2.2.5 body) carrying a .
+ * @brief Build a SESSION_SETUP request (header + §2.2.5 body) carrying a security token.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
@@ -469,13 +475,13 @@ void protocore_smb2_preauth_update(const uint8_t *work, uint8_t *crypto_work, Sm
  * @param security_mode SMB2_NEGOTIATE_SIGNING_ENABLED and/or _REQUIRED (one byte on the wire)
  * @param sec_buf Sec buf
  * @param sec_len Sec len
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow / empty token.
  */
 size_t protocore_smb2_build_session_setup(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                           uint64_t session_id, uint8_t security_mode, const uint8_t *sec_buf,
                                           size_t sec_len);
 /**
- * @brief Parse a SESSION_SETUP response message (the SMB2 header + §2.2.6 .
+ * @brief Parse a SESSION_SETUP response message (the SMB2 header + §2.2.6 body).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param msg the SMB2 message (starting at the sync header, transport prefix already stripped)
  * @param len Len
@@ -493,12 +499,12 @@ embed_bool protocore_smb2_parse_session_setup_response(const uint8_t *work, cons
  * @param session_id Session id
  * @param path_utf16 the UNC path `\\server\share` in UTF-16LE (no NUL); path_len its byte length
  * @param path_len Path len
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow / empty path.
  */
 size_t protocore_smb2_build_tree_connect(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                          uint64_t session_id, const uint8_t *path_utf16, size_t path_len);
 /**
- * @brief Parse a TREE_CONNECT response message (validates command + .
+ * @brief Parse a TREE_CONNECT response message (validates command + StructureSize 16).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
@@ -508,7 +514,7 @@ size_t protocore_smb2_build_tree_connect(const uint8_t *work, uint8_t *buf, size
 embed_bool protocore_smb2_parse_tree_connect_response(const uint8_t *work, const uint8_t *msg, size_t len,
                                                       Smb2TreeConnectResp *out);
 /**
- * @brief Build a CREATE request (header + §2.2.13 body) to open/create a .
+ * @brief Build a CREATE request (header + §2.2.13 body) to open/create a file on the tree.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
@@ -521,14 +527,14 @@ embed_bool protocore_smb2_parse_tree_connect_response(const uint8_t *work, const
  * @param create_options SMB2_FILE_NON_DIRECTORY_FILE for a regular file
  * @param name_utf16 the file name relative to the share root in UTF-16LE (no leading backslash, no NUL);
  * @param name_len Name len
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow.
  */
 size_t protocore_smb2_build_create(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                    uint64_t session_id, uint32_t tree_id, uint32_t desired_access,
                                    uint32_t share_access, uint32_t create_disposition, uint32_t create_options,
                                    const uint8_t *name_utf16, size_t name_len);
 /**
- * @brief Parse a CREATE response message (validates command + StructureSize .
+ * @brief Parse a CREATE response message (validates command + StructureSize 89, FileId in bounds).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
@@ -546,12 +552,12 @@ embed_bool protocore_smb2_parse_create_response(const uint8_t *work, const uint8
  * @param session_id Session id
  * @param tree_id Tree id
  * @param file_id 16 bytes
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow.
  */
 size_t protocore_smb2_build_close(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                   uint64_t session_id, uint32_t tree_id, const uint8_t *file_id);
 /**
- * @brief Parse a CLOSE response message (validates command + StructureSize .
+ * @brief Parse a CLOSE response message (validates command + StructureSize 60).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
@@ -570,13 +576,13 @@ embed_bool protocore_smb2_parse_close_response(const uint8_t *work, const uint8_
  * @param file_id 16 bytes
  * @param length Length
  * @param offset Offset
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow.
  */
 size_t protocore_smb2_build_read(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                  uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, uint32_t length,
                                  uint64_t offset);
 /**
- * @brief Parse a READ response message (validates command + StructureSize .
+ * @brief Parse a READ response message (validates command + StructureSize 17, data within bounds).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
@@ -596,13 +602,13 @@ embed_bool protocore_smb2_parse_read_response(const uint8_t *work, const uint8_t
  * @param data Data
  * @param data_len Data len
  * @param offset Offset
- * @return The size_t.
+ * @return total message bytes (no transport prefix), or 0 on overflow / empty data.
  */
 size_t protocore_smb2_build_write(const uint8_t *work, uint8_t *buf, size_t cap, uint64_t message_id,
                                   uint64_t session_id, uint32_t tree_id, const uint8_t *file_id, const uint8_t *data,
                                   size_t data_len, uint64_t offset);
 /**
- * @brief Parse a WRITE response message (validates command + StructureSize .
+ * @brief Parse a WRITE response message (validates command + StructureSize 17).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
@@ -611,7 +617,9 @@ size_t protocore_smb2_build_write(const uint8_t *work, uint8_t *buf, size_t cap,
  */
 embed_bool protocore_smb2_parse_write_response(const uint8_t *work, const uint8_t *msg, size_t len, Smb2WriteResp *out);
 /**
- * @brief Sign an SMB2 message in place (MS-SMB2 §3.1.4.1, SMB 2.x). Sets .
+ * @brief Sign an SMB2 message in place (MS-SMB2 §3.1.4.1, SMB 2.x). Sets SMB2_FLAGS_SIGNED in the Flags
+ *        field, zeroes the 16-byte Signature, HMAC-SHA256s the whole message under the 16-byte session
+ *        signing @p key, and writes the MAC's first 16 octets into the Signature field.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param crypto_work Crypto work
  * @param key the session signing key (16 octets; the NTLMv2 session key for SMB 2.x) 16 bytes
@@ -620,7 +628,9 @@ embed_bool protocore_smb2_parse_write_response(const uint8_t *work, const uint8_
  */
 void protocore_smb2_sign(const uint8_t *work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg, size_t msg_len);
 /**
- * @brief Verify an SMB2 message's signature (MS-SMB2 §3.1.5.1). Recomputes .
+ * @brief Verify an SMB2 message's signature (MS-SMB2 §3.1.5.1). Recomputes the HMAC-SHA256 over @p msg
+ *        with the Signature field zeroed and constant-time-compares the first 16 octets to the received
+ *        Signature. @p msg is restored unchanged before returning.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param crypto_work Crypto work
  * @param key 16 bytes
@@ -631,7 +641,10 @@ void protocore_smb2_sign(const uint8_t *work, uint8_t *crypto_work, const uint8_
 embed_bool protocore_smb2_verify(const uint8_t *work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
                                  size_t msg_len);
 /**
- * @brief Sign an SMB2 message in place with AES-128-CMAC (MS-SMB2 §3.1.4.1, .
+ * @brief Sign an SMB2 message in place with AES-128-CMAC (MS-SMB2 §3.1.4.1, SMB 3.x). Identical framing
+ *        to ::protocore_smb2_sign - sets SMB2_FLAGS_SIGNED, zeroes the Signature, MACs the whole message under
+ *        the 16-byte SMB 3.x signing @p key - but the MAC is AES-CMAC, whose full 16-octet tag is the
+ *        Signature. @p msg shorter than a 64-byte header is left untouched.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param crypto_work Crypto work
  * @param key 16 bytes
@@ -641,7 +654,9 @@ embed_bool protocore_smb2_verify(const uint8_t *work, uint8_t *crypto_work, cons
 void protocore_smb2_sign_cmac(const uint8_t *work, uint8_t *crypto_work, const uint8_t *key, uint8_t *msg,
                               size_t msg_len);
 /**
- * @brief Verify an AES-128-CMAC-signed SMB2 message (MS-SMB2 §3.1.5.1, SMB .
+ * @brief Verify an AES-128-CMAC-signed SMB2 message (MS-SMB2 §3.1.5.1, SMB 3.x). Recomputes the CMAC
+ *        with the Signature zeroed and constant-time-compares to the received Signature; @p msg is
+ *        restored unchanged.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param crypto_work Crypto work
  * @param key 16 bytes
@@ -677,7 +692,10 @@ embed_bool protocore_smb2_derive_encryption_keys(const uint8_t *work, const uint
                                                  const uint8_t *preauth, size_t key_len, uint8_t *out_c2s,
                                                  uint8_t *out_s2c);
 /**
- * @brief Encrypt one SMB2 message into a TRANSFORM_HEADER-wrapped blob .
+ * @brief Encrypt one SMB2 message into a TRANSFORM_HEADER-wrapped blob (MS-SMB2 §3.1.4.3): a 52-byte header
+ *        (ProtocolId, the AEAD tag in Signature, @p nonce, OriginalMessageSize, Flags=Encrypted, @p
+ *        session_id) followed by the ciphertext. AAD is the header from the Nonce field to its end. The
+ *        codec dispatches on @p cipher (AES-128/256-GCM or AES-128/256-CCM).
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param cipher one of Smb2Cipher; selects the key length and AEAD nonce length
  * @param key cipher key (protocore_smb2_cipher_key_len(cipher) bytes, i.e. the C2S key)
@@ -687,12 +705,13 @@ embed_bool protocore_smb2_derive_encryption_keys(const uint8_t *work, const uint
  * @param msg_len Msg len
  * @param out Out
  * @param out_cap Out cap
- * @return The size_t.
+ * @return total encrypted length (52 + msg_len), or 0 on a bad cipher / null pointer / insufficient @p out_cap.
  */
 size_t protocore_smb2_encrypt(const uint8_t *work, uint16_t cipher, const uint8_t *key, const uint8_t *nonce,
                               uint64_t session_id, const uint8_t *msg, size_t msg_len, uint8_t *out, size_t out_cap);
 /**
- * @brief Decrypt a TRANSFORM_HEADER-wrapped SMB2 message (MS-SMB2 §3.1.4.4): .
+ * @brief Decrypt a TRANSFORM_HEADER-wrapped SMB2 message (MS-SMB2 §3.1.4.4): validates the ProtocolId and
+ *        verifies the AEAD tag (constant time) before exposing any plaintext, dispatching on @p cipher.
  * @param work PROTOCORE_SMB2_BORROW bytes the caller took. Not held past the call.
  * @param cipher one of Smb2Cipher; key the S2C cipher key; out needs >= OriginalMessageSize
  * @param key Key
@@ -700,7 +719,7 @@ size_t protocore_smb2_encrypt(const uint8_t *work, uint16_t cipher, const uint8_
  * @param in_len In len
  * @param out Out
  * @param out_cap Out cap
- * @return The size_t.
+ * @return the plaintext length, or 0 on a short/invalid header, tag mismatch, or insufficient @p out_cap.
  */
 size_t protocore_smb2_decrypt(const uint8_t *work, uint16_t cipher, const uint8_t *key, const uint8_t *in,
                               size_t in_len, uint8_t *out, size_t out_cap);

@@ -108,19 +108,31 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Oauth2, and reads the outcome off the
  * same handle.
  *
- * @var Oauth2Ns::client       the client identity a request carries (RFC 6749 sec 3.2.1)
- * @var Oauth2Ns::code_grant   the authorization_code grant's parameters (sec 4.1.3, RFC 7636 sec 4.5)
- * @var Oauth2Ns::refresh_grant  the refresh token a sec 6 request presents
- * @var Oauth2Ns::request      the token endpoint (sec 3.2) and the buffer a build encodes into
- * @var Oauth2Ns::response     the reply text a parse reads and the tokens it fills (sec 5.1)
- * @var Oauth2Ns::ok           the parse found an access_token, so the reply is a sec 5.1 response
- * @var Oauth2Ns::i32          bytes a build wrote excluding the NUL and 0 when it did not fit, or a
+ * @var Oauth2Vars::client
+ *                               the client identity a request carries (RFC 6749 sec 3.2.1)
+ * @var Oauth2Vars::code_grant
+ *                               the authorization_code grant's parameters (sec 4.1.3, RFC 7636 sec 4.5)
+ * @var Oauth2Vars::refresh_grant
+ *                                 the refresh token a sec 6 request presents
+ * @var Oauth2Vars::request
+ *                               the token endpoint (sec 3.2) and the buffer a build encodes into
+ * @var Oauth2Vars::response
+ *                               the reply text a parse reads and the tokens it fills (sec 5.1)
+ * @var Oauth2Vars::ok
+ *                               the parse found an access_token, so the reply is a sec 5.1 response
+ * @var Oauth2Vars::i32
+ *                               bytes a build wrote excluding the NUL and 0 when it did not fit, or a
  *                             transport call's HTTP status and a negative ::Oauth2Result below it
- * @var Oauth2Ns::build_code_request     encode the sec 4.1.3 Access Token Request body
- * @var Oauth2Ns::build_refresh_request  encode the sec 6 refresh request body
- * @var Oauth2Ns::parse_token_response   read the sec 5.1 parameters out of @c response.json
- * @var Oauth2Ns::exchange_code  post the sec 4.1.3 body to the endpoint and parse the sec 4.1.4 reply
- * @var Oauth2Ns::refresh        post the sec 6 body to the endpoint and parse the reply
+ * @var Oauth2Ns::build_code_request
+ *                                       encode the sec 4.1.3 Access Token Request body
+ * @var Oauth2Ns::build_refresh_request
+ *                                       encode the sec 6 refresh request body
+ * @var Oauth2Ns::parse_token_response
+ *                                       read the sec 5.1 parameters out of @c response.json
+ * @var Oauth2Ns::exchange_code
+ *                               post the sec 4.1.3 body to the endpoint and parse the sec 4.1.4 reply
+ * @var Oauth2Ns::refresh
+ *                               post the sec 6 body to the endpoint and parse the reply
  *
  * A transport call points @c request.out and @c request.cap at the module's own body buffer and
  * @c response.json at its own response buffer, so a caller sets only @c request.token_endpoint and

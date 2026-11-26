@@ -105,23 +105,36 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Dshot with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Dshot.encode_args.value11 = ...;
  *   Dshot.encode_args.telemetry = ...;
  *   Dshot.encode_args.bidirectional = ...;
  *   Dshot.encode(work);
  *   // Dshot.frame is what the call reports
+ * @endcode
  *
- * @var DshotNs::encode_args  what encode takes: value11, telemetry, bidirectional
- * @var DshotNs::decode_args  what decode takes: frame, value11, telemetry, bidirectional
- * @var DshotNs::bit_ns_args  what bit_ns takes: rate_kbit, bit
- * @var DshotNs::esc_pwm_ns_args  what esc_pwm_ns takes: throttle_1000, mode
- * @var DshotNs::ok  true if the CRC is valid
- * @var DshotNs::frame  the 16-bit frame `(value<<5) | (telemetry<<4) | crc`, ready to ...
- * @var DshotNs::ns  the high time in nanoseconds, or 0 for an unknown rate
- * @var DshotNs::encode  build a 16-bit DShot frame
- * @var DshotNs::decode  validate + unpack a 16-bit DShot frame
- * @var DshotNs::bit_ns  high-time (ns) of a bit at a DShot rate. A DShot bit is one pulse ...
- * @var DshotNs::esc_pwm_ns  pulse width (ns) for an analog-PWM ESC protocol at a given throttle
+ * @var DshotVars::encode_args
+ *                              what encode takes: value11, telemetry, bidirectional
+ * @var DshotVars::decode_args
+ *                              what decode takes: frame, value11, telemetry, bidirectional
+ * @var DshotVars::bit_ns_args
+ *                              what bit_ns takes: rate_kbit, bit
+ * @var DshotVars::esc_pwm_ns_args
+ *                                  what esc_pwm_ns takes: throttle_1000, mode
+ * @var DshotVars::ok
+ *                     true if the CRC is valid
+ * @var DshotVars::frame
+ *                        the 16-bit frame `(value<<5) | (telemetry<<4) | crc`, ready to ...
+ * @var DshotVars::ns
+ *                     the high time in nanoseconds, or 0 for an unknown rate
+ * @var DshotNs::encode
+ *                       build a 16-bit DShot frame
+ * @var DshotNs::decode
+ *                       validate + unpack a 16-bit DShot frame
+ * @var DshotNs::bit_ns
+ *                       high-time (ns) of a bit at a DShot rate. A DShot bit is one pulse ...
+ * @var DshotNs::esc_pwm_ns
+ *                           pulse width (ns) for an analog-PWM ESC protocol at a given throttle
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

@@ -202,6 +202,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Dmx with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Dmx.build_args.buf = ...;
  *   Dmx.build_args.cap = ...;
  *   Dmx.build_args.start_code = ...;
@@ -209,32 +210,58 @@ typedef struct
  *   Dmx.build_args.n = ...;
  *   Dmx.build(work);
  *   // Dmx.n is what the call reports
+ * @endcode
  *
- * @var DmxNs::build_args  what build takes: buf, cap, start_code, channels, n
- * @var DmxNs::get_channel_args  what get_channel takes: buf, len, ch
- * @var DmxNs::rdm_uid_args  what rdm_uid takes: manufacturer, device
- * @var DmxNs::rdm_checksum_args  what rdm_checksum takes: buf, len
- * @var DmxNs::rdm_build_args  what rdm_build takes: buf, cap, p, pdata, pdl
- * @var DmxNs::rdm_parse_args  what rdm_parse takes: buf, len, out, consumed
- * @var DmxNs::rdm_decode_disc_response_args  what rdm_decode_disc_response takes: buf, len, uid
- * @var DmxNs::rdm_build_disc_response_args  what rdm_build_disc_response takes: buf, cap, uid,
- * @var DmxNs::rdm_build_device_info_args  what rdm_build_device_info takes: pdata, cap, info
- * @var DmxNs::rdm_parse_device_info_args  what rdm_parse_device_info takes: pdata, pdl, out
- * @var DmxNs::ok  true iff the separator is present, the 16 encoded octets fit, and ...
- * @var DmxNs::n  octets written (preamble_len + 17), or 0 on a null buffer, ...
- * @var DmxNs::u8  what a call reports
- * @var DmxNs::uid  what a call reports
- * @var DmxNs::checksum  what a call reports
- * @var DmxNs::build  assemble a DMX512 packet body: [start code][channel slots]. n <= ...
- * @var DmxNs::get_channel  read channel ch (1-based, per DMX convention) from a received ...
- * @var DmxNs::rdm_uid  compose a 48-bit RDM UID from a manufacturer id and a device id
- * @var DmxNs::rdm_checksum  16-bit additive checksum over len octets (RDM message block)
- * @var DmxNs::rdm_build  build a full RDM packet (incl. the trailing 16-bit checksum) from p ...
- * @var DmxNs::rdm_parse  parse an RDM packet: validates the start codes, the message length ...
- * @var DmxNs::rdm_decode_disc_response  decode a DISC_UNIQUE_BRANCH discovery response into the responder's ...
- * @var DmxNs::rdm_build_disc_response  build the DISC_UNIQUE_BRANCH discovery response a responder sends ...
- * @var DmxNs::rdm_build_device_info  pack a DEVICE_INFO (PID 0x0060) GET-response parameter block from ...
- * @var DmxNs::rdm_parse_device_info  decode a DEVICE_INFO (PID 0x0060) GET-response parameter block into ...
+ * @var DmxVars::build_args
+ *                           what build takes: buf, cap, start_code, channels, n
+ * @var DmxVars::get_channel_args
+ *                                 what get_channel takes: buf, len, ch
+ * @var DmxVars::rdm_uid_args
+ *                             what rdm_uid takes: manufacturer, device
+ * @var DmxVars::rdm_checksum_args
+ *                                  what rdm_checksum takes: buf, len
+ * @var DmxVars::rdm_build_args
+ *                               what rdm_build takes: buf, cap, p, pdata, pdl
+ * @var DmxVars::rdm_parse_args
+ *                               what rdm_parse takes: buf, len, out, consumed
+ * @var DmxVars::rdm_decode_disc_response_args
+ *                                              what rdm_decode_disc_response takes: buf, len, uid
+ * @var DmxVars::rdm_build_disc_response_args
+ *                                             what rdm_build_disc_response takes: buf, cap, uid,
+ * @var DmxVars::rdm_build_device_info_args
+ *                                           what rdm_build_device_info takes: pdata, cap, info
+ * @var DmxVars::rdm_parse_device_info_args
+ *                                           what rdm_parse_device_info takes: pdata, pdl, out
+ * @var DmxVars::ok
+ *                   true iff the separator is present, the 16 encoded octets fit, and ...
+ * @var DmxVars::n
+ *                  octets written (preamble_len + 17), or 0 on a null buffer, ...
+ * @var DmxVars::u8
+ *                   what a call reports
+ * @var DmxVars::uid
+ *                    what a call reports
+ * @var DmxVars::checksum
+ *                         what a call reports
+ * @var DmxNs::build
+ *                    assemble a DMX512 packet body: [start code][channel slots]. n <= ...
+ * @var DmxNs::get_channel
+ *                          read channel ch (1-based, per DMX convention) from a received ...
+ * @var DmxNs::rdm_uid
+ *                      compose a 48-bit RDM UID from a manufacturer id and a device id
+ * @var DmxNs::rdm_checksum
+ *                           16-bit additive checksum over len octets (RDM message block)
+ * @var DmxNs::rdm_build
+ *                        build a full RDM packet (incl. the trailing 16-bit checksum) from p ...
+ * @var DmxNs::rdm_parse
+ *                        parse an RDM packet: validates the start codes, the message length ...
+ * @var DmxNs::rdm_decode_disc_response
+ *                                       decode a DISC_UNIQUE_BRANCH discovery response into the responder's ...
+ * @var DmxNs::rdm_build_disc_response
+ *                                      build the DISC_UNIQUE_BRANCH discovery response a responder sends ...
+ * @var DmxNs::rdm_build_device_info
+ *                                    pack a DEVICE_INFO (PID 0x0060) GET-response parameter block from ...
+ * @var DmxNs::rdm_parse_device_info
+ *                                    decode a DEVICE_INFO (PID 0x0060) GET-response parameter block into ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

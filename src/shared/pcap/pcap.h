@@ -53,11 +53,16 @@ typedef struct
 /**
  * @brief The two libpcap headers a capture file is built from.
  *
- * @var PcapNs::args           where a header is written, and the link type the file declares
- * @var PcapNs::rec            what one captured frame's record header states
- * @var PcapNs::n              octets written, or 0 when the buffer is too small
- * @var PcapNs::global_header  the 24-byte file header (little-endian, microsecond timestamps)
- * @var PcapNs::record_header  the 16-byte per-frame header
+ * @var PcapVars::args
+ *                               where a header is written, and the link type the file declares
+ * @var PcapVars::rec
+ *                               what one captured frame's record header states
+ * @var PcapVars::n
+ *                               octets written, or 0 when the buffer is too small
+ * @var PcapNs::global_header
+ *                             the 24-byte file header (little-endian, microsecond timestamps)
+ * @var PcapNs::record_header
+ *                             the 16-byte per-frame header
  *
  * No storage member: both headers are written into the caller's buffer.
  */

@@ -204,48 +204,86 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Hmmd with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Hmmd.parse_report_args.frame = ...;
  *   Hmmd.parse_report_args.len = ...;
  *   Hmmd.parse_report_args.out = ...;
  *   Hmmd.parse_report(work);
  *   // Hmmd.ok is what the call reports
+ * @endcode
  *
- * @var HmmdNs::parse_report_args  what parse_report takes: frame, len, out
- * @var HmmdNs::stream_reset_args  what stream_reset takes: s
- * @var HmmdNs::stream_push_args  what stream_push takes: s, byte, out
- * @var HmmdNs::present_args  what present takes: r
- * @var HmmdNs::distance_cm_args  what distance_cm takes: r
- * @var HmmdNs::cmd_build_args  what cmd_build takes: buf, cap, word, value, vlen
- * @var HmmdNs::cmd_open_args  what cmd_open takes: buf, cap
- * @var HmmdNs::cmd_close_args  what cmd_close takes: buf, cap
- * @var HmmdNs::cmd_read_firmware_args  what cmd_read_firmware takes: buf, cap
- * @var HmmdNs::cmd_read_serial_args  what cmd_read_serial takes: buf, cap
- * @var HmmdNs::cmd_read_config_args  what cmd_read_config takes: buf, cap
- * @var HmmdNs::cmd_read_register_args  what cmd_read_register takes: buf, cap, value, vlen
- * @var HmmdNs::parse_ack_args  what parse_ack takes: frame, len, out
- * @var HmmdNs::ack_matches_args  what ack_matches takes: ack, word
- * @var HmmdNs::begin_args  what begin takes: rx_pin, tx_pin
- * @var HmmdNs::ok  true on a valid frame; false on any mismatch or a short buffer
- * @var HmmdNs::cm  what a call reports
- * @var HmmdNs::n  the count a call reports
- * @var HmmdNs::report  what a call reports
- * @var HmmdNs::parse_report  decode one whole HMMD report frame (header `F4 F3 F2 F1` .. footer ...
- * @var HmmdNs::stream_reset  reset a stream to the syncing state
- * @var HmmdNs::stream_push  feed one received octet. When it completes a valid report frame, ...
- * @var HmmdNs::present  true if r shows a target
- * @var HmmdNs::distance_cm  target distance (cm), or 0 when nothing is detected
- * @var HmmdNs::cmd_build  build an arbitrary command frame: word plus vlen octets of value. ...
- * @var HmmdNs::cmd_open  "Open command mode" (word 0x00FF, value 0x0001)
- * @var HmmdNs::cmd_close  "Close command mode" (word 0x00FE, no value)
- * @var HmmdNs::cmd_read_firmware  read the radar firmware version (word 0x0000)
- * @var HmmdNs::cmd_read_serial  read the module serial number (word 0x0011)
- * @var HmmdNs::cmd_read_config  read the parameter configuration (word 0x0008)
- * @var HmmdNs::cmd_read_register  read a register (word 0x0002), with vlen octets of caller-supplied ...
- * @var HmmdNs::parse_ack  decode one command-ACK frame (header, intra-frame length, footer ...
- * @var HmmdNs::ack_matches  true if ack is the reply to request word. Matches on the low octet, ...
- * @var HmmdNs::begin  open PROTOCORE_HMMD_UART at PROTOCORE_HMMD_BAUD on rx_pin / tx_pin. ...
- * @var HmmdNs::poll  pump the UART through the stream. true if a fresh report was decoded
- * @var HmmdNs::last  the most recently decoded report, or NULL before the first one ...
+ * @var HmmdNs::parse_report_args
+ *                                 what parse_report takes: frame, len, out
+ * @var HmmdNs::stream_reset_args
+ *                                 what stream_reset takes: s
+ * @var HmmdNs::stream_push_args
+ *                                what stream_push takes: s, byte, out
+ * @var HmmdNs::present_args
+ *                            what present takes: r
+ * @var HmmdNs::distance_cm_args
+ *                                what distance_cm takes: r
+ * @var HmmdNs::cmd_build_args
+ *                              what cmd_build takes: buf, cap, word, value, vlen
+ * @var HmmdNs::cmd_open_args
+ *                             what cmd_open takes: buf, cap
+ * @var HmmdNs::cmd_close_args
+ *                              what cmd_close takes: buf, cap
+ * @var HmmdNs::cmd_read_firmware_args
+ *                                      what cmd_read_firmware takes: buf, cap
+ * @var HmmdNs::cmd_read_serial_args
+ *                                    what cmd_read_serial takes: buf, cap
+ * @var HmmdNs::cmd_read_config_args
+ *                                    what cmd_read_config takes: buf, cap
+ * @var HmmdNs::cmd_read_register_args
+ *                                      what cmd_read_register takes: buf, cap, value, vlen
+ * @var HmmdNs::parse_ack_args
+ *                              what parse_ack takes: frame, len, out
+ * @var HmmdNs::ack_matches_args
+ *                                what ack_matches takes: ack, word
+ * @var HmmdNs::begin_args
+ *                          what begin takes: rx_pin, tx_pin
+ * @var HmmdNs::ok
+ *                  true on a valid frame; false on any mismatch or a short buffer
+ * @var HmmdNs::cm
+ *                  what a call reports
+ * @var HmmdNs::n
+ *                 the count a call reports
+ * @var HmmdNs::report
+ *                      what a call reports
+ * @var HmmdNs::parse_report
+ *                            decode one whole HMMD report frame (header `F4 F3 F2 F1` .. footer ...
+ * @var HmmdNs::stream_reset
+ *                            reset a stream to the syncing state
+ * @var HmmdNs::stream_push
+ *                           feed one received octet. When it completes a valid report frame, ...
+ * @var HmmdNs::present
+ *                       true if r shows a target
+ * @var HmmdNs::distance_cm
+ *                           target distance (cm), or 0 when nothing is detected
+ * @var HmmdNs::cmd_build
+ *                         build an arbitrary command frame: word plus vlen octets of value. ...
+ * @var HmmdNs::cmd_open
+ *                        "Open command mode" (word 0x00FF, value 0x0001)
+ * @var HmmdNs::cmd_close
+ *                         "Close command mode" (word 0x00FE, no value)
+ * @var HmmdNs::cmd_read_firmware
+ *                                 read the radar firmware version (word 0x0000)
+ * @var HmmdNs::cmd_read_serial
+ *                               read the module serial number (word 0x0011)
+ * @var HmmdNs::cmd_read_config
+ *                               read the parameter configuration (word 0x0008)
+ * @var HmmdNs::cmd_read_register
+ *                                 read a register (word 0x0002), with vlen octets of caller-supplied ...
+ * @var HmmdNs::parse_ack
+ *                         decode one command-ACK frame (header, intra-frame length, footer ...
+ * @var HmmdNs::ack_matches
+ *                           true if ack is the reply to request word. Matches on the low octet, ...
+ * @var HmmdNs::begin
+ *                     open PROTOCORE_HMMD_UART at PROTOCORE_HMMD_BAUD on rx_pin / tx_pin. ...
+ * @var HmmdNs::poll
+ *                    pump the UART through the stream. true if a fresh report was decoded
+ * @var HmmdNs::last
+ *                    the most recently decoded report, or NULL before the first one ...
  *
  * @c work is PROTOCORE_HMMD_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

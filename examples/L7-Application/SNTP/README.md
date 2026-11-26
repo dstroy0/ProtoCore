@@ -34,7 +34,7 @@ formatted time can be local.
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_NTP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_NTP=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/SNTP/SNTP.ino
 ```
 

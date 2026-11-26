@@ -105,26 +105,43 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Sockpool with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Sockpool.init_args.p = ...;
  *   Sockpool.init_args.slots = ...;
  *   Sockpool.init_args.n = ...;
  *   Sockpool.init(work);
+ * @endcode
  *
- * @var SockpoolNs::init_args  what init takes: p, slots, n
- * @var SockpoolNs::acquire_args  what acquire takes: p, id, now, idx, evicted_id
- * @var SockpoolNs::touch_args  what touch takes: p, idx, now
- * @var SockpoolNs::release_args  what release takes: p, idx
- * @var SockpoolNs::find_args  what find takes: p, id, idx
- * @var SockpoolNs::in_use_args  what in_use takes: p
- * @var SockpoolNs::ok  a call's true/false outcome
- * @var SockpoolNs::acq  SOCK_ACQ_FREE / SOCK_ACQ_RECYCLED / SOCK_ACQ_FAIL
- * @var SockpoolNs::n  the count a call reports
- * @var SockpoolNs::init  initialize a pool over caller storage; all slots start free
- * @var SockpoolNs::acquire  acquire a slot for connection id at tick now. Uses a free slot if ...
- * @var SockpoolNs::touch  mark slot idx active at tick now (refreshes its LRU position)
- * @var SockpoolNs::release  free slot idx. true if it was a valid, in-use slot
- * @var SockpoolNs::find  find the slot holding connection id. idx (may be null) gets the ...
- * @var SockpoolNs::in_use  count of in-use slots
+ * @var SockpoolVars::init_args
+ *                               what init takes: p, slots, n
+ * @var SockpoolVars::acquire_args
+ *                                  what acquire takes: p, id, now, idx, evicted_id
+ * @var SockpoolVars::touch_args
+ *                                what touch takes: p, idx, now
+ * @var SockpoolVars::release_args
+ *                                  what release takes: p, idx
+ * @var SockpoolVars::find_args
+ *                               what find takes: p, id, idx
+ * @var SockpoolVars::in_use_args
+ *                                 what in_use takes: p
+ * @var SockpoolVars::ok
+ *                        a call's true/false outcome
+ * @var SockpoolVars::acq
+ *                         SOCK_ACQ_FREE / SOCK_ACQ_RECYCLED / SOCK_ACQ_FAIL
+ * @var SockpoolVars::n
+ *                       the count a call reports
+ * @var SockpoolNs::init
+ *                        initialize a pool over caller storage; all slots start free
+ * @var SockpoolNs::acquire
+ *                           acquire a slot for connection id at tick now. Uses a free slot if ...
+ * @var SockpoolNs::touch
+ *                         mark slot idx active at tick now (refreshes its LRU position)
+ * @var SockpoolNs::release
+ *                           free slot idx. true if it was a valid, in-use slot
+ * @var SockpoolNs::find
+ *                        find the slot holding connection id. idx (may be null) gets the ...
+ * @var SockpoolNs::in_use
+ *                          count of in-use slots
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

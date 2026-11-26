@@ -82,6 +82,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Pn532 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Pn532.build_frame_args.tfi = ...;
  *   Pn532.build_frame_args.data = ...;
  *   Pn532.build_frame_args.len = ...;
@@ -89,18 +90,30 @@ typedef struct
  *   Pn532.build_frame_args.cap = ...;
  *   Pn532.build_frame(work);
  *   // Pn532.len is what the call reports
+ * @endcode
  *
- * @var Pn532Ns::build_frame_args  what build_frame takes: tfi, data, len, out, cap
- * @var Pn532Ns::parse_frame_args  what parse_frame takes: raw, len, tfi, pdata, pdata_len
- * @var Pn532Ns::is_ack_args  what is_ack takes: raw, len
- * @var Pn532Ns::build_ack_args  what build_ack takes: out, cap
- * @var Pn532Ns::ok  a call's true/false outcome
- * @var Pn532Ns::len  the total frame length, or 0 if it would not fit cap or len exceeds ...
- * @var Pn532Ns::n  the frame length consumed (> 0), 0 if more bytes are needed, or -1 ...
- * @var Pn532Ns::build_frame  assemble a normal information frame carrying tfi + data into out
- * @var Pn532Ns::parse_frame  frame one normal information frame from the front of raw and verify ...
- * @var Pn532Ns::is_ack  true if raw starts with a PN532 ACK frame (00 00 FF 00 FF 00)
- * @var Pn532Ns::build_ack  write the 6-byte ACK frame into out. 6, or 0 if cap < 6
+ * @var Pn532Vars::build_frame_args
+ *                                   what build_frame takes: tfi, data, len, out, cap
+ * @var Pn532Vars::parse_frame_args
+ *                                   what parse_frame takes: raw, len, tfi, pdata, pdata_len
+ * @var Pn532Vars::is_ack_args
+ *                              what is_ack takes: raw, len
+ * @var Pn532Vars::build_ack_args
+ *                                 what build_ack takes: out, cap
+ * @var Pn532Vars::ok
+ *                     a call's true/false outcome
+ * @var Pn532Vars::len
+ *                      the total frame length, or 0 if it would not fit cap or len exceeds ...
+ * @var Pn532Vars::n
+ *                    the frame length consumed (> 0), 0 if more bytes are needed, or -1 ...
+ * @var Pn532Ns::build_frame
+ *                            assemble a normal information frame carrying tfi + data into out
+ * @var Pn532Ns::parse_frame
+ *                            frame one normal information frame from the front of raw and verify ...
+ * @var Pn532Ns::is_ack
+ *                       true if raw starts with a PN532 ACK frame (00 00 FF 00 FF 00)
+ * @var Pn532Ns::build_ack
+ *                          write the 6-byte ACK frame into out. 6, or 0 if cap < 6
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

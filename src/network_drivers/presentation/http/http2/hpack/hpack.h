@@ -66,14 +66,22 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Hpack, and reads the outcome off the
  * same handle.
  *
- * @var HpackNs::init_args    the size a table is initialised to
- * @var HpackNs::decode_args  the block a decode walks
- * @var HpackNs::encode_args  the field an encode emits
- * @var HpackNs::ok           whether the whole block decoded cleanly
- * @var HpackNs::n            bytes an encode wrote, or 0 on overflow
- * @var HpackNs::dyn_init      empty the table and set its maximum
- * @var HpackNs::decode        decode a block, emitting each field
- * @var HpackNs::encode_header encode one field
+ * @var HpackVars::init_args
+ *                              the size a table is initialised to
+ * @var HpackVars::decode_args
+ *                              the block a decode walks
+ * @var HpackVars::encode_args
+ *                              the field an encode emits
+ * @var HpackVars::ok
+ *                              whether the whole block decoded cleanly
+ * @var HpackVars::n
+ *                              bytes an encode wrote, or 0 on overflow
+ * @var HpackNs::dyn_init
+ *                             empty the table and set its maximum
+ * @var HpackNs::decode
+ *                             decode a block, emitting each field
+ * @var HpackNs::encode_header
+ *                             encode one field
  *
  * Every entry takes the borrow the table lives in; ::PROTOCORE_HPACK_BORROW is how many bytes that
  * is. The encode reads no table, so it takes the borrow and ignores it.

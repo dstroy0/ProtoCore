@@ -108,29 +108,48 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::EdgeCacheSd with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   EdgeCacheSd.serialize_args.e = ...;
  *   EdgeCacheSd.serialize_args.out = ...;
  *   EdgeCacheSd.serialize_args.cap = ...;
  *   EdgeCacheSd.serialize(work);
  *   // EdgeCacheSd.n is what the call reports
+ * @endcode
  *
- * @var EdgeCacheSdNs::serialize_args  what serialize takes: e, out, cap
- * @var EdgeCacheSdNs::deserialize_args  what deserialize takes: entry_buf, buf, len, e
- * @var EdgeCacheSdNs::put_args  what put takes: db, e, scratch, scratch_cap
- * @var EdgeCacheSdNs::get_args  what get takes: entry_buf, db, digest, e, scratch, scratch_cap
- * @var EdgeCacheSdNs::del_args  what del takes: db, digest
- * @var EdgeCacheSdNs::purge_prefix_args  what purge_prefix takes: db, path_prefix, scratch,
- * @var EdgeCacheSdNs::purge_all_args  what purge_all takes: db
- * @var EdgeCacheSdNs::ok  false on a short/corrupt/oversized buffer or a version mismatch ...
- * @var EdgeCacheSdNs::n  the byte length written, or 0 if it would not fit cap. ...
- * @var EdgeCacheSdNs::count  what a call reports
- * @var EdgeCacheSdNs::serialize  serialize e's response metadata + body into out (little-endian, ...
- * @var EdgeCacheSdNs::deserialize  rehydrate an entry from buf (as produced by ::edge_sd_serialize) ...
- * @var EdgeCacheSdNs::put  write e back to the L2 store (keyed by its digest), using scratch ...
- * @var EdgeCacheSdNs::get  promote the entry stored under digest from L2 into e (via scratch)
- * @var EdgeCacheSdNs::del  drop the L2 entry stored under digest. true if one existed
- * @var EdgeCacheSdNs::purge_prefix  drop every L2 entry whose stored request path begins with prefix ...
- * @var EdgeCacheSdNs::purge_all  drop every L2 entry. the number purged
+ * @var EdgeCacheSdVars::serialize_args
+ *                                       what serialize takes: e, out, cap
+ * @var EdgeCacheSdVars::deserialize_args
+ *                                         what deserialize takes: entry_buf, buf, len, e
+ * @var EdgeCacheSdVars::put_args
+ *                                 what put takes: db, e, scratch, scratch_cap
+ * @var EdgeCacheSdVars::get_args
+ *                                 what get takes: entry_buf, db, digest, e, scratch, scratch_cap
+ * @var EdgeCacheSdVars::del_args
+ *                                 what del takes: db, digest
+ * @var EdgeCacheSdVars::purge_prefix_args
+ *                                          what purge_prefix takes: db, path_prefix, scratch,
+ * @var EdgeCacheSdVars::purge_all_args
+ *                                       what purge_all takes: db
+ * @var EdgeCacheSdVars::ok
+ *                           false on a short/corrupt/oversized buffer or a version mismatch ...
+ * @var EdgeCacheSdVars::n
+ *                          the byte length written, or 0 if it would not fit cap. ...
+ * @var EdgeCacheSdVars::count
+ *                              what a call reports
+ * @var EdgeCacheSdNs::serialize
+ *                                serialize e's response metadata + body into out (little-endian, ...
+ * @var EdgeCacheSdNs::deserialize
+ *                                  rehydrate an entry from buf (as produced by ::edge_sd_serialize) ...
+ * @var EdgeCacheSdNs::put
+ *                          write e back to the L2 store (keyed by its digest), using scratch ...
+ * @var EdgeCacheSdNs::get
+ *                          promote the entry stored under digest from L2 into e (via scratch)
+ * @var EdgeCacheSdNs::del
+ *                          drop the L2 entry stored under digest. true if one existed
+ * @var EdgeCacheSdNs::purge_prefix
+ *                                   drop every L2 entry whose stored request path begins with prefix ...
+ * @var EdgeCacheSdNs::purge_all
+ *                                drop every L2 entry. the number purged
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
@@ -194,6 +213,12 @@ static const EdgeCacheSdNs EdgeCacheSd __attribute__((unused)) = {
     .del = protocore_edge_cache_sd_del,
     .purge_prefix = protocore_edge_cache_sd_purge_prefix,
     .purge_all = protocore_edge_cache_sd_purge_all,
+#else
+    .put = NULL,
+    .get = NULL,
+    .del = NULL,
+    .purge_prefix = NULL,
+    .purge_all = NULL,
 #endif
 };
 

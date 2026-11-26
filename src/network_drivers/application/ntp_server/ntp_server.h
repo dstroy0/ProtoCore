@@ -60,6 +60,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::NtpServer with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   NtpServer.build_response_args.req = ...;
  *   NtpServer.build_response_args.req_len = ...;
  *   NtpServer.build_response_args.stratum = ...;
@@ -70,13 +71,20 @@ typedef struct
  *   NtpServer.build_response_args.out_cap = ...;
  *   NtpServer.build_response(work);
  *   // NtpServer.n is what the call reports
+ * @endcode
  *
- * @var NtpServerNs::build_response_args  what build_response takes: req, req_len, stratum, refid,
- * @var NtpServerNs::begin_args  what begin takes: stratum, refid
- * @var NtpServerNs::ok  true if the UDP listener bound; false on a host build or if the ...
- * @var NtpServerNs::n  PROTOCORE_NTP_PACKET_LEN on success, or 0 if a length is too small
- * @var NtpServerNs::build_response  build a server (mode 4) reply to a client NTP request. Pure - no ...
- * @var NtpServerNs::begin  start answering NTP requests on UDP/123 from the device's own ...
+ * @var NtpServerVars::build_response_args
+ *                                          what build_response takes: req, req_len, stratum, refid,
+ * @var NtpServerVars::begin_args
+ *                                 what begin takes: stratum, refid
+ * @var NtpServerVars::ok
+ *                         true if the UDP listener bound; false on a host build or if the ...
+ * @var NtpServerVars::n
+ *                        PROTOCORE_NTP_PACKET_LEN on success, or 0 if a length is too small
+ * @var NtpServerNs::build_response
+ *                                   build a server (mode 4) reply to a client NTP request. Pure - no ...
+ * @var NtpServerNs::begin
+ *                          start answering NTP requests on UDP/123 from the device's own ...
  *
  * @c work is PROTOCORE_NTP_SERVER_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

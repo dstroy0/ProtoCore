@@ -58,8 +58,10 @@ typedef int8_t protocore_net_err;
 /**
  * @brief One address of the stack.
  *
- * @var protocore_net_ip::type  PROTOCORE_NET_TYPE_V4, or PROTOCORE_NET_TYPE_ANY for the any address
- * @var protocore_net_ip::bytes the address in network order, IPv4 in the first four octets
+ * @var protocore_net_ip::type
+ *                              PROTOCORE_NET_TYPE_V4, or PROTOCORE_NET_TYPE_ANY for the any address
+ * @var protocore_net_ip::bytes
+ *                              the address in network order, IPv4 in the first four octets
  */
 typedef struct
 {
@@ -73,13 +75,47 @@ extern const protocore_net_ip protocore_stack_net_any;
 #define PROTOCORE_NET_ADDR_ANY4 (&protocore_stack_net_any)
 #define PROTOCORE_NET_ADDR_ANY4_P (&protocore_stack_net_any)
 
-#define protocore_net_ip_is_v4(a) ((a) != NULL && (a)->type == PROTOCORE_NET_TYPE_V4)
-#define protocore_net_ip_is_v6(a) ((a) != NULL && (a)->type == PROTOCORE_NET_TYPE_V6)
-#define protocore_net_ip_as_v4(a) (a)
-#define protocore_net_ip_as_v6(a) (a)
-#define protocore_net_ip6_bytes(a) ((const uint8_t *)(a)->bytes)
-#define protocore_net_ip6_wbytes(a) ((uint8_t *)(a)->bytes)
-#define protocore_net_ip6_mark(a) ((a)->type = PROTOCORE_NET_TYPE_V6)
+/** @brief EMBED_TRUE when @p a is an IPv4 address. */
+EMBED_INLINE embed_bool protocore_net_ip_is_v4(const protocore_net_ip *a)
+{
+    return a != NULL && a->type == PROTOCORE_NET_TYPE_V4;
+}
+
+/** @brief EMBED_TRUE when @p a is an IPv6 address. */
+EMBED_INLINE embed_bool protocore_net_ip_is_v6(const protocore_net_ip *a)
+{
+    return a != NULL && a->type == PROTOCORE_NET_TYPE_V6;
+}
+
+/** @brief @p a as an IPv4 address. One type holds both families, so this gives @p a back. */
+EMBED_INLINE const protocore_net_ip *protocore_net_ip_as_v4(const protocore_net_ip *a)
+{
+    return a;
+}
+
+/** @brief @p a as an IPv6 address. One type holds both families, so this gives @p a back. */
+EMBED_INLINE const protocore_net_ip *protocore_net_ip_as_v6(const protocore_net_ip *a)
+{
+    return a;
+}
+
+/** @brief The sixteen octets of the IPv6 address @p a, in network order. */
+EMBED_INLINE const uint8_t *protocore_net_ip6_bytes(const protocore_net_ip *a)
+{
+    return a->bytes;
+}
+
+/** @brief The sixteen octets of the IPv6 address @p a, in network order, to write. */
+EMBED_INLINE uint8_t *protocore_net_ip6_wbytes(protocore_net_ip *a)
+{
+    return a->bytes;
+}
+
+/** @brief Marks @p a as an IPv6 address. */
+EMBED_INLINE void protocore_net_ip6_mark(protocore_net_ip *a)
+{
+    a->type = PROTOCORE_NET_TYPE_V6;
+}
 
 /** @brief The IPv4 address of @p a as the word that lwIP keeps: the four octets in network order in memory. */
 uint32_t protocore_net_ip4_u32(const protocore_net_ip *a);
@@ -100,10 +136,14 @@ char *protocore_net_ip_print(const protocore_net_ip *a, char *buf, int cap);
 /**
  * @brief One packet buffer, a chain of one link.
  *
- * @var protocore_pbuf::next    the next link, NULL here
- * @var protocore_pbuf::payload the octets
- * @var protocore_pbuf::tot_len the octets of the chain
- * @var protocore_pbuf::len     the octets of this link
+ * @var protocore_pbuf::next
+ *                              the next link, NULL here
+ * @var protocore_pbuf::payload
+ *                              the octets
+ * @var protocore_pbuf::tot_len
+ *                              the octets of the chain
+ * @var protocore_pbuf::len
+ *                              the octets of this link
  */
 typedef struct protocore_pbuf
 {
@@ -138,9 +178,12 @@ typedef void (*protocore_net_udp_recv_fn)(void *, protocore_udp_pcb *, protocore
 /**
  * @brief An active open that waits for the ARP row of its next hop.
  *
- * @var StackNetConnectWait::deadline_ms the millisecond that the wait ends at
- * @var StackNetConnectWait::arp_sent_ms the millisecond that the last ARP request went out
- * @var StackNetConnectWait::pending     the wait runs
+ * @var StackNetConnectWait::deadline_ms
+ *                                       the millisecond that the wait ends at
+ * @var StackNetConnectWait::arp_sent_ms
+ *                                       the millisecond that the last ARP request went out
+ * @var StackNetConnectWait::pending
+ *                                       the wait runs
  */
 typedef struct
 {
@@ -152,26 +195,46 @@ typedef struct
 /**
  * @brief One TCP control block of the stack.
  *
- * @var protocore_pcb::tos          RFC 791 Type of Service of each segment
- * @var protocore_pcb::ttl          RFC 791 Time to Live of each segment
- * @var protocore_pcb::state        nonzero while the control block is open
- * @var protocore_pcb::local_port   the local port
- * @var protocore_pcb::remote_port  the port of the peer
- * @var protocore_pcb::local_ip     the local address
- * @var protocore_pcb::remote_ip    the address of the peer
- * @var protocore_pcb::so_options   the options that protocore_net_opt_set set
- * @var protocore_pcb::snd_queuelen the segments of the connection that the peer did not acknowledge yet
- * @var protocore_pcb::flags        the flags of lwIP, which this stack does not read
- * @var protocore_pcb::arg          the argument of each callback
- * @var protocore_pcb::on_recv      the callback of text, and of the FIN with a NULL buffer
- * @var protocore_pcb::on_sent      the callback of octets that the peer acknowledged
- * @var protocore_pcb::on_accept    the callback of a connection that a listener took
- * @var protocore_pcb::on_connect   the callback of an active open that completed
- * @var protocore_pcb::on_err       the callback of a connection that a reset or a timeout ended
- * @var protocore_pcb::connect_wait the active open that waits for the ARP row of its next hop
- * @var protocore_pcb::entry        the entry of the TCP of the stack, PROTOCORE_STACK_NET_NONE for none
- * @var protocore_pcb::listen       the control block listens
- * @var protocore_pcb::in_use       the control block is taken
+ * @var protocore_pcb::tos
+ *                                  RFC 791 Type of Service of each segment
+ * @var protocore_pcb::ttl
+ *                                  RFC 791 Time to Live of each segment
+ * @var protocore_pcb::state
+ *                                  nonzero while the control block is open
+ * @var protocore_pcb::local_port
+ *                                  the local port
+ * @var protocore_pcb::remote_port
+ *                                  the port of the peer
+ * @var protocore_pcb::local_ip
+ *                                  the local address
+ * @var protocore_pcb::remote_ip
+ *                                  the address of the peer
+ * @var protocore_pcb::so_options
+ *                                  the options that protocore_net_opt_set set
+ * @var protocore_pcb::snd_queuelen
+ *                                  the segments of the connection that the peer did not acknowledge yet
+ * @var protocore_pcb::flags
+ *                                  the flags of lwIP, which this stack does not read
+ * @var protocore_pcb::arg
+ *                                  the argument of each callback
+ * @var protocore_pcb::on_recv
+ *                                  the callback of text, and of the FIN with a NULL buffer
+ * @var protocore_pcb::on_sent
+ *                                  the callback of octets that the peer acknowledged
+ * @var protocore_pcb::on_accept
+ *                                  the callback of a connection that a listener took
+ * @var protocore_pcb::on_connect
+ *                                  the callback of an active open that completed
+ * @var protocore_pcb::on_err
+ *                                  the callback of a connection that a reset or a timeout ended
+ * @var protocore_pcb::connect_wait
+ *                                  the active open that waits for the ARP row of its next hop
+ * @var protocore_pcb::entry
+ *                                  the entry of the TCP of the stack, PROTOCORE_STACK_NET_NONE for none
+ * @var protocore_pcb::listen
+ *                                  the control block listens
+ * @var protocore_pcb::in_use
+ *                                  the control block is taken
  */
 struct protocore_pcb
 {
@@ -225,14 +288,22 @@ void protocore_net_opt_set(void *p, uint32_t opt);
 /**
  * @brief One UDP control block of the stack.
  *
- * @var protocore_udp_pcb::tos        RFC 791 Type of Service of each datagram
- * @var protocore_udp_pcb::local_port the bound port
- * @var protocore_udp_pcb::arg        the argument of the callback
- * @var protocore_udp_pcb::on_recv    the callback of each datagram
- * @var protocore_udp_pcb::so_options the options that protocore_net_opt_set set
- * @var protocore_udp_pcb::entry      the entry of the UdpPcb unit of idemIP
- * @var protocore_udp_pcb::opened     the entry is open
- * @var protocore_udp_pcb::in_use     the control block is taken
+ * @var protocore_udp_pcb::tos
+ *                                    RFC 791 Type of Service of each datagram
+ * @var protocore_udp_pcb::local_port
+ *                                    the bound port
+ * @var protocore_udp_pcb::arg
+ *                                    the argument of the callback
+ * @var protocore_udp_pcb::on_recv
+ *                                    the callback of each datagram
+ * @var protocore_udp_pcb::so_options
+ *                                    the options that protocore_net_opt_set set
+ * @var protocore_udp_pcb::entry
+ *                                    the entry of the UdpPcb unit of idemIP
+ * @var protocore_udp_pcb::opened
+ *                                    the entry is open
+ * @var protocore_udp_pcb::in_use
+ *                                    the control block is taken
  */
 struct protocore_udp_pcb
 {

@@ -217,6 +217,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Bacnet with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Bacnet.bvlc_build_args.buf = ...;
  *   Bacnet.bvlc_build_args.cap = ...;
  *   Bacnet.bvlc_build_args.function = ...;
@@ -224,25 +225,44 @@ typedef struct
  *   Bacnet.bvlc_build_args.npdu_len = ...;
  *   Bacnet.bvlc_build(work);
  *   // Bacnet.n is what the call reports
+ * @endcode
  *
- * @var BacnetNs::bvlc_build_args  what bvlc_build takes: buf, cap, function, npdu, npdu_len
- * @var BacnetNs::bvlc_parse_args  what bvlc_parse takes: buf, len, function, npdu, npdu_len
- * @var BacnetNs::npdu_build_args  what npdu_build takes: buf, cap, expecting_reply, priority,
- * @var BacnetNs::npdu_parse_args  what npdu_parse takes: buf, len, out
- * @var BacnetNs::apdu_parse_args  what apdu_parse takes: apdu, len, out
- * @var BacnetNs::apdu_build_who_is_args  what apdu_build_who_is takes: buf, cap, low_limit,
- * @var BacnetNs::apdu_build_i_am_args  what apdu_build_i_am takes: buf, cap, device_instance,
- * @var BacnetNs::apdu_build_read_property_args  what apdu_build_read_property takes: buf, cap, invoke_id,
- * @var BacnetNs::ok  true iff len covers the header for a supported PDU type (confirmed ...
- * @var BacnetNs::n  the APDU length, or 0 on overflow, a limit above ...
- * @var BacnetNs::bvlc_build  wrap an NPDU in a BVLC envelope. Returns total octets, or 0 on ...
- * @var BacnetNs::bvlc_parse  parse a BVLC envelope; reports the function and the NPDU slice
- * @var BacnetNs::npdu_build  build an NPDU carrying apdu. With has_dest, the destination ...
- * @var BacnetNs::npdu_parse  parse + validate an NPDU (version, control, optional addressing) ...
- * @var BacnetNs::apdu_parse  decode an APDU header (PDU type, flags, invoke id, service choice) ...
- * @var BacnetNs::apdu_build_who_is  build a Who-Is unconfirmed-request APDU (service choice 8). With ...
- * @var BacnetNs::apdu_build_i_am  build an I-Am unconfirmed-request APDU (service choice 0) - a ...
- * @var BacnetNs::apdu_build_read_property  build a ReadProperty confirmed-request APDU (service choice 12) - ...
+ * @var BacnetVars::bvlc_build_args
+ *                                   what bvlc_build takes: buf, cap, function, npdu, npdu_len
+ * @var BacnetVars::bvlc_parse_args
+ *                                   what bvlc_parse takes: buf, len, function, npdu, npdu_len
+ * @var BacnetVars::npdu_build_args
+ *                                   what npdu_build takes: buf, cap, expecting_reply, priority,
+ * @var BacnetVars::npdu_parse_args
+ *                                   what npdu_parse takes: buf, len, out
+ * @var BacnetVars::apdu_parse_args
+ *                                   what apdu_parse takes: apdu, len, out
+ * @var BacnetVars::apdu_build_who_is_args
+ *                                          what apdu_build_who_is takes: buf, cap, low_limit,
+ * @var BacnetVars::apdu_build_i_am_args
+ *                                        what apdu_build_i_am takes: buf, cap, device_instance,
+ * @var BacnetVars::apdu_build_read_property_args
+ *                                                 what apdu_build_read_property takes: buf, cap, invoke_id,
+ * @var BacnetVars::ok
+ *                      true iff len covers the header for a supported PDU type (confirmed ...
+ * @var BacnetVars::n
+ *                     the APDU length, or 0 on overflow, a limit above ...
+ * @var BacnetNs::bvlc_build
+ *                            wrap an NPDU in a BVLC envelope. Returns total octets, or 0 on ...
+ * @var BacnetNs::bvlc_parse
+ *                            parse a BVLC envelope; reports the function and the NPDU slice
+ * @var BacnetNs::npdu_build
+ *                            build an NPDU carrying apdu. With has_dest, the destination ...
+ * @var BacnetNs::npdu_parse
+ *                            parse + validate an NPDU (version, control, optional addressing) ...
+ * @var BacnetNs::apdu_parse
+ *                            decode an APDU header (PDU type, flags, invoke id, service choice) ...
+ * @var BacnetNs::apdu_build_who_is
+ *                                   build a Who-Is unconfirmed-request APDU (service choice 8). With ...
+ * @var BacnetNs::apdu_build_i_am
+ *                                 build an I-Am unconfirmed-request APDU (service choice 0) - a ...
+ * @var BacnetNs::apdu_build_read_property
+ *                                          build a ReadProperty confirmed-request APDU (service choice 12) - ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

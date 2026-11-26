@@ -156,39 +156,68 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Hotswap with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Hotswap.core_init_args.c = ...;
  *   Hotswap.core_init_args.fail_threshold = ...;
  *   Hotswap.core_init_args.probe_interval_ms = ...;
  *   Hotswap.core_init_args.now = ...;
  *   Hotswap.core_init(work);
+ * @endcode
  *
- * @var HotswapNs::core_init_args  what core_init takes: c, fail_threshold, probe_interval_ms,
- * @var HotswapNs::core_io_args  what core_io takes: c, ok
- * @var HotswapNs::core_due_args  what core_due takes: c, now
- * @var HotswapNs::core_probe_args  what core_probe takes: c, present, mounted, now
- * @var HotswapNs::begin_args  what begin takes: mount, unmount, present, ctx
- * @var HotswapNs::set_event_cb_args  what set_event_cb takes: cb
- * @var HotswapNs::poll_at_args  what poll_at takes: now
- * @var HotswapNs::io_args  what io takes: ok
- * @var HotswapNs::state_name_args  what state_name takes: s
- * @var HotswapNs::json_args  what json takes: out, cap
- * @var HotswapNs::ok  true if the state changed (so the binding knows to unmount + notify)
- * @var HotswapNs::value  the value a call reports
- * @var HotswapNs::text  the string a call reports
- * @var HotswapNs::n  length written (excl NUL), or 0 on overflow
- * @var HotswapNs::core_init  initialize to ABSENT at now
- * @var HotswapNs::core_io  report one filesystem outcome. A success while READY clears the ...
- * @var HotswapNs::core_due  is a (re)mount probe due at now? Only while not READY, and only ...
- * @var HotswapNs::core_probe  report what a probe found
- * @var HotswapNs::begin  install the callbacks and reset to ABSENT. A first poll will ...
- * @var HotswapNs::set_event_cb  install (or clear, with nullptr) the state-change callback
- * @var HotswapNs::poll  run the state machine: probe when due, unmount on a fresh fault. ...
- * @var HotswapNs::poll_at  poll_at
- * @var HotswapNs::ready  is it safe to touch the filesystem right now? The gate every caller ...
- * @var HotswapNs::io  report a filesystem outcome; unmounts and notifies if this is the ...
- * @var HotswapNs::state  current state
- * @var HotswapNs::state_name  short name for s ("absent" / "ready" / "faulted"), for logs and JSON
- * @var HotswapNs::json  serialize as `{"storage":"ready","mounts":N,"faults":N}` for a ...
+ * @var HotswapVars::core_init_args
+ *                                   what core_init takes: c, fail_threshold, probe_interval_ms,
+ * @var HotswapVars::core_io_args
+ *                                 what core_io takes: c, ok
+ * @var HotswapVars::core_due_args
+ *                                  what core_due takes: c, now
+ * @var HotswapVars::core_probe_args
+ *                                    what core_probe takes: c, present, mounted, now
+ * @var HotswapVars::begin_args
+ *                               what begin takes: mount, unmount, present, ctx
+ * @var HotswapVars::set_event_cb_args
+ *                                      what set_event_cb takes: cb
+ * @var HotswapVars::poll_at_args
+ *                                 what poll_at takes: now
+ * @var HotswapVars::io_args
+ *                            what io takes: ok
+ * @var HotswapVars::state_name_args
+ *                                    what state_name takes: s
+ * @var HotswapVars::json_args
+ *                              what json takes: out, cap
+ * @var HotswapVars::ok
+ *                       true if the state changed (so the binding knows to unmount + notify)
+ * @var HotswapVars::value
+ *                          the value a call reports
+ * @var HotswapVars::text
+ *                         the string a call reports
+ * @var HotswapVars::n
+ *                      length written (excl NUL), or 0 on overflow
+ * @var HotswapNs::core_init
+ *                            initialize to ABSENT at now
+ * @var HotswapNs::core_io
+ *                          report one filesystem outcome. A success while READY clears the ...
+ * @var HotswapNs::core_due
+ *                           is a (re)mount probe due at now? Only while not READY, and only ...
+ * @var HotswapNs::core_probe
+ *                             report what a probe found
+ * @var HotswapNs::begin
+ *                        install the callbacks and reset to ABSENT. A first poll will ...
+ * @var HotswapNs::set_event_cb
+ *                               install (or clear, with nullptr) the state-change callback
+ * @var HotswapNs::poll
+ *                       run the state machine: probe when due, unmount on a fresh fault. ...
+ * @var HotswapNs::poll_at
+ *                          poll_at
+ * @var HotswapNs::ready
+ *                        is it safe to touch the filesystem right now? The gate every caller ...
+ * @var HotswapNs::io
+ *                     report a filesystem outcome; unmounts and notifies if this is the ...
+ * @var HotswapNs::state
+ *                        current state
+ * @var HotswapNs::state_name
+ *                             short name for s ("absent" / "ready" / "faulted"), for logs and JSON
+ * @var HotswapNs::json
+ *                       serialize as `{"storage":"ready","mounts":N,"faults":N}` for a ...
  *
  * @c work is PROTOCORE_HOTSWAP_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

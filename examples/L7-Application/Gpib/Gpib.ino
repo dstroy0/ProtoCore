@@ -97,7 +97,7 @@ static void run_session(const char *host)
     TcpClient.send(protocore_tcp_client_span());
     TcpClientV.cid = cid;
     TcpClientV.io.data = c_cmd;
-    TcpClientV.io.len = protocore_gpib_eos(c_cmd, sizeof(c_cmd), GpibEos::LF);
+    TcpClientV.io.len = protocore_gpib_eos(c_cmd, sizeof(c_cmd), GPIB_EOS_LF);
     TcpClient.send(protocore_tcp_client_span());
     TcpClientV.cid = cid;
     TcpClientV.io.data = c_cmd;

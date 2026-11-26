@@ -90,20 +90,34 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::GpioMap, and reads the outcome off
  * the same handle. The pin table is the caller's.
  *
- * @var GpioMapNs::args        the pin table a call walks, and the pin it names
- * @var GpioMapNs::parse_args  the request body a set parses, and where its fields land
- * @var GpioMapNs::out_args    where a report is written
- * @var GpioMapNs::ok          a call's true/false outcome
- * @var GpioMapNs::text        the direction name a lookup reports
- * @var GpioMapNs::n           bytes a report wrote, or < 0 when it did not fit
- * @var GpioMapNs::dir_name    the wire name for a direction
- * @var GpioMapNs::json        serialize the pin table
- * @var GpioMapNs::parse_set   parse a set request into its pin and level
- * @var GpioMapNs::is_output   whether the named pin is configured as an output
- * @var GpioMapNs::begin_pins  drive every pin in the table to its configured direction
- * @var GpioMapNs::sample      read every input pin's level back into the table
- * @var GpioMapNs::write       drive one output pin
- * @var GpioMapNs::begin       install the map's route and arm its pins
+ * @var GpioMapVars::args
+ *                               the pin table a call walks, and the pin it names
+ * @var GpioMapVars::parse_args
+ *                               the request body a set parses, and where its fields land
+ * @var GpioMapVars::out_args
+ *                               where a report is written
+ * @var GpioMapVars::ok
+ *                               a call's true/false outcome
+ * @var GpioMapVars::text
+ *                               the direction name a lookup reports
+ * @var GpioMapVars::n
+ *                               bytes a report wrote, or < 0 when it did not fit
+ * @var GpioMapNs::dir_name
+ *                             the wire name for a direction
+ * @var GpioMapNs::json
+ *                             serialize the pin table
+ * @var GpioMapNs::parse_set
+ *                             parse a set request into its pin and level
+ * @var GpioMapNs::is_output
+ *                             whether the named pin is configured as an output
+ * @var GpioMapNs::begin_pins
+ *                             drive every pin in the table to its configured direction
+ * @var GpioMapNs::sample
+ *                             read every input pin's level back into the table
+ * @var GpioMapNs::write
+ *                             drive one output pin
+ * @var GpioMapNs::begin
+ *                             install the map's route and arm its pins
  *
  * No storage member: the pin table is the caller's and the pins themselves live in the part.
  */

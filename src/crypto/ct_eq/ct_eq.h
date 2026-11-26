@@ -65,24 +65,30 @@ typedef struct
  * A caller sets the members the call takes, invokes it through ::CtEq, and reads the outcome off the
  * same handle.
  *
+ * @code{.c}
  *   CtEq.eq_args.a = computed_tag;
  *   CtEq.eq_args.b = received_tag;
  *   CtEq.eq_args.n = 16;
  *   CtEq.eq(work);
  *   if (CtEq.equal) { ... }
+ * @endcode
  *
- * @var CtEqNs::eq_args  the two buffers a compare runs over
- * @var CtEqNs::ok       a call's true/false outcome; false on a null pointer
- * @var CtEqNs::equal    true when all n bytes matched; false on a null pointer
- * @var CtEqNs::eq       compare the two buffers in time independent of where they first differ
+ * @var CtEqVars::eq_args
+ *                         the two buffers a compare runs over
+ * @var CtEqVars::ok
+ *                         a call's true/false outcome; false on a null pointer
+ * @var CtEqVars::equal
+ *                         true when all n bytes matched; false on a null pointer
+ * @var CtEqNs::eq
+ *                       compare the two buffers in time independent of where they first differ
  *
- * @ref CtEqNs::equal carries the answer and @ref CtEqNs::ok carries whether the call ran, so a null
+ * @ref CtEqVars::equal carries the answer and @ref CtEqVars::ok carries whether the call ran, so a null
  * pointer reads as not equal rather than as a match.
  *
  * @c work goes unread: the compare runs over the caller's two buffers and needs none of its own, so
  * this module takes no borrow, holds no context, and reaches the same answer whatever is passed.
  *
- * No storage member and no context: a caller sets operands and reads @ref CtEqNs::equal, and that is
+ * No storage member and no context: a caller sets operands and reads @ref CtEqVars::equal, and that is
  * all the surface there is.
  */
 typedef struct

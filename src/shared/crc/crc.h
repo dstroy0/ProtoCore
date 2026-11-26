@@ -13,7 +13,9 @@
  * It is the standard Rocksoft / Williams model, so any published CRC is expressible as six numbers
  * and needs no new code:
  *
+ * @code{.c}
  *   - @ref protocore_crc_params::width   register width in bits (8..32)
+ * @endcode
  *   - @ref protocore_crc_params::poly    generator polynomial, normal form, implicit top bit dropped
  *   - @ref protocore_crc_params::init    initial register value
  *   - @ref protocore_crc_params::refin   reflect each input octet
@@ -62,14 +64,20 @@ typedef struct
  *
  * A caller sets the members a call takes, invokes it through ::Crc, and reads the register off the
  * same handle. Nothing is held between calls: the running value is the caller's, carried in
- * @ref CrcArgs::crc and reported in @ref CrcNs::value.
+ * @ref CrcArgs::crc and reported in @ref CrcVars::value.
  *
- * @var CrcNs::args      the definition, the running register, and the octets
- * @var CrcNs::value     the register a step produced
- * @var CrcNs::begin     the initial register value
- * @var CrcNs::update    fold args.len octets at args.data into args.crc
- * @var CrcNs::final     apply the output reflection and the final XOR to args.crc
- * @var CrcNs::compute   one-shot: begin, update and final over args.data
+ * @var CrcVars::args
+ *                         the definition, the running register, and the octets
+ * @var CrcVars::value
+ *                         the register a step produced
+ * @var CrcNs::begin
+ *                       the initial register value
+ * @var CrcNs::update
+ *                       fold args.len octets at args.data into args.crc
+ * @var CrcNs::final
+ *                       apply the output reflection and the final XOR to args.crc
+ * @var CrcNs::compute
+ *                       one-shot: begin, update and final over args.data
  *
  * The three steps are split so a caller can checksum a frame that is not contiguous in memory (a
  * header struct then a payload buffer) without copying it together first. Input reflection is

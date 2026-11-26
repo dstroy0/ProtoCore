@@ -68,19 +68,27 @@ typedef struct
  * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
  * never named here.
  *
+ * @code{.c}
  *   Aes256Ctr.crypt_args.key = key;
  *   Aes256Ctr.crypt_args.counter = ctr;
  *   Aes256Ctr.crypt_args.in = pkt;
  *   Aes256Ctr.crypt_args.out = pkt;
  *   Aes256Ctr.crypt_args.len = pkt_len;
  *   Aes256Ctr.crypt(work);
+ * @endcode
  *
- * @var Aes256CtrNs::crypt_args       the key, the counter and the buffers one CTR call runs over
- * @var Aes256CtrNs::get_length_args  the key, the counter and the four encrypted length bytes a peek reads
- * @var Aes256CtrNs::ok               a call's true/false outcome
- * @var Aes256CtrNs::length           the SSH packet_length the last peek recovered
- * @var Aes256CtrNs::crypt            XOR the CTR keystream over the buffer, advancing the counter
- * @var Aes256CtrNs::get_length       decrypt the 4-byte packet_length prefix without advancing the counter
+ * @var Aes256CtrVars::crypt_args
+ *                                      the key, the counter and the buffers one CTR call runs over
+ * @var Aes256CtrVars::get_length_args
+ *                                      the key, the counter and the four encrypted length bytes a peek reads
+ * @var Aes256CtrVars::ok
+ *                                      a call's true/false outcome
+ * @var Aes256CtrVars::length
+ *                                      the SSH packet_length the last peek recovered
+ * @var Aes256CtrNs::crypt
+ *                                    XOR the CTR keystream over the buffer, advancing the counter
+ * @var Aes256CtrNs::get_length
+ *                                    decrypt the 4-byte packet_length prefix without advancing the counter
  *
  * @ref Aes256CtrNs::crypt encrypts and decrypts with the same body, and @c crypt_args.in and
  * @c crypt_args.out may alias, which is the in-place form the SSH packet layer uses.
@@ -95,7 +103,7 @@ typedef struct
  * it. The expanded key schedule lives in those bytes and nowhere else, so it never reaches BSS or the
  * stack. Two ciphers running at once are two borrows and never collide.
  *
- * No storage member and no context: a caller sets operands and reads @ref Aes256CtrNs::ok, and that is
+ * No storage member and no context: a caller sets operands and reads @ref Aes256CtrVars::ok, and that is
  * all the surface there is.
  */
 typedef struct

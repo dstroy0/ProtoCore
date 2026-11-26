@@ -7,8 +7,10 @@
  *        zero-heap codec for the legacy LXI instrument transport that predates HiSLIP.
  *
  * VXI-11 rides on ONC RPC (Sun RPC, RFC 5531) with XDR (RFC 4506) over TCP. A session:
+ * @code{.c}
  *   portmap GETPORT(0x0607AF, 1, TCP) -> the DEVICE_CORE port ; connect there ;
  *   create_link("inst0") -> a link id ; device_write("*IDN?\n") ; device_read() -> the reply ;
+ * @endcode
  *   destroy_link().
  *
  * This codec provides the reusable ONC-RPC framing (the TCP record-marking header + the CALL /
@@ -84,6 +86,8 @@ size_t protocore_rpc_record_mark(uint8_t *buf, size_t cap, uint32_t payload_len)
 
 /**
  * @brief Parse a 4-byte record-marking header.
+ * @param buf      the destination buffer.
+ * @param len      the number of bytes in @p buf.
  * @param last     receives the last-fragment flag.
  * @param frag_len receives the fragment payload byte length (excludes the 4 RM bytes).
  * @return true if @p len >= 4; false otherwise.
@@ -93,6 +97,8 @@ embed_bool protocore_rpc_parse_record_mark(const uint8_t *buf, size_t len, embed
 /**
  * @brief Parse an accepted ONC-RPC reply header (the bytes AFTER the record mark): xid, REPLY,
  *        MSG_ACCEPTED, verf, accept_stat.
+ * @param rpc         the ONC RPC reply message, after the record mark (RFC 5531).
+ * @param len         the number of bytes in @p rpc.
  * @param xid         receives the transaction id (echoes the call).
  * @param accept_stat receives the accept_stat (0 = SUCCESS; the caller checks before reading results).
  * @param result_off  receives the offset (into @p rpc) where the procedure results begin.
@@ -208,6 +214,8 @@ size_t protocore_vxi11_build_destroy_link(uint8_t *buf, size_t cap, uint32_t xid
 
 /**
  * @brief Parse a bare Device_Error result (destroy_link / device_trigger / device_clear / ...).
+ * @param rpc   the ONC RPC reply message, after the record mark (RFC 5531).
+ * @param len   the number of bytes in @p rpc.
  * @param error receives the Device_ErrorCode.
  * @return true on a well-formed successful reply; false otherwise.
  */

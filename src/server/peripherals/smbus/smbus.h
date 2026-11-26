@@ -65,7 +65,7 @@ PROTOCORE_NS_LAYOUT(SmbusNs, addr_byte, pec_write, pec_read, set_pec, pec_enable
                     block_process_call);
 
 /**
- * @brief The address byte as it goes on the wire: the 7-bit address shifted .
+ * @brief The address byte as it goes on the wire: the 7-bit address shifted up, @p rw in bit 0.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param rw Rw
@@ -82,7 +82,7 @@ uint8_t protocore_smbus_addr_byte(const uint8_t *work, uint8_t addr, uint8_t rw)
  */
 uint8_t protocore_smbus_pec_write(const uint8_t *work, uint8_t addr, const uint8_t *payload, size_t len);
 /**
- * @brief PEC over a read transaction, which covers both halves and the .
+ * @brief PEC over a read transaction, which covers both halves and the repeated-start address.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param sent Sent
@@ -94,7 +94,7 @@ uint8_t protocore_smbus_pec_write(const uint8_t *work, uint8_t addr, const uint8
 uint8_t protocore_smbus_pec_read(const uint8_t *work, uint8_t addr, const uint8_t *sent, size_t slen,
                                  const uint8_t *got, size_t glen);
 /**
- * @brief Turn the Packet Error Code on or off for every transaction that .
+ * @brief Turn the Packet Error Code on or off for every transaction that follows.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param on On
  */
@@ -128,7 +128,7 @@ embed_bool protocore_smbus_quick(uint8_t *work, uint8_t addr, uint8_t rw);
  */
 embed_bool protocore_smbus_send_byte(uint8_t *work, uint8_t addr, uint8_t value);
 /**
- * @brief Receive byte: one byte with no command code, from whatever the part .
+ * @brief Receive byte: one byte with no command code, from whatever the part last pointed at.
  * @param work PROTOCORE_SMBUS_BORROW bytes the caller took. Not held past the call.
  * @param addr Addr
  * @param out Out

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_gnss_survey.h
+ * @file gnss_survey.h
  * @brief GNSS survey-in: WGS84 geodetic <-> ECEF + fixed-position averaging (PROTOCORE_ENABLE_NTRIP_CASTER).
  *
  * An RTK / DGPS base must advertise its own antenna position precisely. A stationary receiver's

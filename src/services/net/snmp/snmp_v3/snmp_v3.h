@@ -98,20 +98,34 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::SnmpV3, and reads the outcome off
  * the same handle.
  *
- * @var SnmpV3Ns::engine     the authoritative engine identity and its boot count
- * @var SnmpV3Ns::user       the USM user and its passwords
- * @var SnmpV3Ns::msg        the message read and the one written back
- * @var SnmpV3Ns::notify     what an outgoing notification carries and where it goes
- * @var SnmpV3Ns::ok         a call's true/false outcome
- * @var SnmpV3Ns::n          response octets written, 0 to send nothing
- * @var SnmpV3Ns::u32        msgAuthoritativeEngineBoots, as a read reports it
- * @var SnmpV3Ns::init       take the authoritative snmpEngineID and forget the configured user
- * @var SnmpV3Ns::set_user   take the USM user and derive its localized keys
- * @var SnmpV3Ns::set_boots  take the persisted msgAuthoritativeEngineBoots
- * @var SnmpV3Ns::get_boots  report msgAuthoritativeEngineBoots, for persisting it back
- * @var SnmpV3Ns::process    answer one SNMPv3Message: discovery, timeliness, auth, privacy, dispatch
- * @var SnmpV3Ns::trap       send an authenticated SNMPv2-Trap-PDU in a v3 message
- * @var SnmpV3Ns::inform     send an authenticated InformRequest-PDU in a v3 message
+ * @var SnmpV3Vars::engine
+ *                             the authoritative engine identity and its boot count
+ * @var SnmpV3Vars::user
+ *                             the USM user and its passwords
+ * @var SnmpV3Vars::msg
+ *                             the message read and the one written back
+ * @var SnmpV3Vars::notify
+ *                             what an outgoing notification carries and where it goes
+ * @var SnmpV3Vars::ok
+ *                             a call's true/false outcome
+ * @var SnmpV3Vars::n
+ *                             response octets written, 0 to send nothing
+ * @var SnmpV3Vars::u32
+ *                             msgAuthoritativeEngineBoots, as a read reports it
+ * @var SnmpV3Ns::init
+ *                           take the authoritative snmpEngineID and forget the configured user
+ * @var SnmpV3Ns::set_user
+ *                           take the USM user and derive its localized keys
+ * @var SnmpV3Ns::set_boots
+ *                           take the persisted msgAuthoritativeEngineBoots
+ * @var SnmpV3Ns::get_boots
+ *                           report msgAuthoritativeEngineBoots, for persisting it back
+ * @var SnmpV3Ns::process
+ *                           answer one SNMPv3Message: discovery, timeliness, auth, privacy, dispatch
+ * @var SnmpV3Ns::trap
+ *                           send an authenticated SNMPv2-Trap-PDU in a v3 message
+ * @var SnmpV3Ns::inform
+ *                           send an authenticated InformRequest-PDU in a v3 message
  */
 typedef struct
 {

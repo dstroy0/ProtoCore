@@ -129,38 +129,47 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Roam, and reads the outcome off the same
  * handle.
  *
- * @var RoamNs::link   the serving BSS a decision measures against
- * @var RoamNs::cand   the BSS Transition Candidate List a decision picks from
- * @var RoamNs::rules  the BTM Request to honor and the thresholds to apply
- * @var RoamNs::nr     the Neighbor Report element list to decode, and where its candidates land
- * @var RoamNs::btm    the BSS Transition Management Request frame to decode
- * @var RoamNs::decision  the verdict a decide reports
- * @var RoamNs::hint      the BTM Request a decode reports, cleared when @ref ok is false
- * @var RoamNs::n         candidates a Neighbor Report decode wrote
- * @var RoamNs::ok        true only for a well-formed BTM Request
+ * @var RoamVars::link
+ *                       the serving BSS a decision measures against
+ * @var RoamVars::cand
+ *                       the BSS Transition Candidate List a decision picks from
+ * @var RoamVars::rules
+ *                       the BTM Request to honor and the thresholds to apply
+ * @var RoamVars::nr
+ *                       the Neighbor Report element list to decode, and where its candidates land
+ * @var RoamVars::btm
+ *                       the BSS Transition Management Request frame to decode
+ * @var RoamVars::decision
+ *                          the verdict a decide reports
+ * @var RoamVars::hint
+ *                          the BTM Request a decode reports, cleared when @ref ok is false
+ * @var RoamVars::n
+ *                          candidates a Neighbor Report decode wrote
+ * @var RoamVars::ok
+ *                          true only for a well-formed BTM Request
  *
  * @var RoamNs::decide
- * Read @ref link, @ref cand and @ref rules and write @ref decision. Rules in order: a BTM Request with
- * Request Mode bit 2 (Disassociation Imminent) transitions to the preferred candidate when the list holds
- * it, else to the strongest; a BTM Request naming a preferred candidate that is not weaker than the
+ * Read @ref RoamVars::link, @ref RoamVars::cand and @ref RoamVars::rules and write @ref RoamVars::decision. Rules in
+ * order: a BTM Request with Request Mode bit 2 (Disassociation Imminent) transitions to the preferred candidate when
+ * the list holds it, else to the strongest; a BTM Request naming a preferred candidate that is not weaker than the
  * serving BSS transitions to it; a serving signal at or below the policy threshold with a strongest
  * candidate beating it by at least the hysteresis margin transitions to that candidate; otherwise stay.
  * The serving BSSID is excluded from the candidates. A null @c rules.request skips the first two rules, a
  * null @c rules.policy takes the built-in default thresholds, and a null @c link.bssid stays.
  *
  * @var RoamNs::parse_neighbor_report
- * Decode @c nr.elems into up to @c nr.max entries at @c nr.out and report the count in @ref n. Each
+ * Decode @c nr.elems into up to @c nr.max entries at @c nr.out and report the count in @ref RoamVars::n. Each
  * Neighbor Report element (Element ID 52) supplies BSSID and Channel Number; every other Element ID is
  * skipped, and a truncated element ends the walk. The report carries no signal reading, so each
  * candidate's @c rssi_dbm comes back as @ref PROTOCORE_ROAM_RSSI_UNKNOWN for the caller to fill before
  * @ref RoamNs::decide reads the list.
  *
  * @var RoamNs::parse_btm_request
- * Decode @c btm.frame into @ref hint and set @ref ok. @c btm.frame starts at the Category octet (WNM
- * category 10, BTM Request action 7), followed by Dialog Token, Request Mode, Disassociation Timer and
- * Validity Interval. Request Mode bit 2 sets @c disassoc_imminent; with bit 0 set, the first Neighbor
- * Report element of the Preferred Candidate List supplies @c preferred_bssid, read past the optional BSS
- * Termination Duration and Session Information URL.
+ * Decode @c btm.frame into @ref RoamVars::hint and set @ref RoamVars::ok. @c btm.frame starts at the Category octet
+ * (WNM category 10, BTM Request action 7), followed by Dialog Token, Request Mode, Disassociation Timer and Validity
+ * Interval. Request Mode bit 2 sets @c disassoc_imminent; with bit 0 set, the first Neighbor Report element of the
+ * Preferred Candidate List supplies @c preferred_bssid, read past the optional BSS Termination Duration and Session
+ * Information URL.
  *
  *
  * No storage member: every call reads its inputs off this handle and writes its result back, so the

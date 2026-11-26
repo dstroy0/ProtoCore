@@ -102,27 +102,47 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Sse, and reads the outcome off the
  * same handle.
  *
- * @var SseNs::slot        the TCP slot a call acts on
- * @var SseNs::id          the route id a lookup names
- * @var SseNs::route       what one subscribe route records
- * @var SseNs::stream      the stream a write goes to
- * @var SseNs::event_args  the fields of one event record
- * @var SseNs::out         where a format writes
- * @var SseNs::ok          a call's true/false outcome
- * @var SseNs::u8          the route id an add reports, or ::PROTOCORE_SSE_NONE when full
- * @var SseNs::n           bytes format wrote, excluding the terminator
- * @var SseNs::conn        the stream an alloc or a find reports, or NULL
- * @var SseNs::handler     the subscribe handler a lookup reports, or NULL
- * @var SseNs::route_add       record one route's subscribe handler
- * @var SseNs::route_reset     empty the handler table; a route holds the id an add returned, so
+ * @var SseVars::slot
+ *                           the TCP slot a call acts on
+ * @var SseVars::id
+ *                           the route id a lookup names
+ * @var SseVars::route
+ *                           what one subscribe route records
+ * @var SseVars::stream
+ *                           the stream a write goes to
+ * @var SseVars::event_args
+ *                           the fields of one event record
+ * @var SseVars::out
+ *                           where a format writes
+ * @var SseVars::ok
+ *                           a call's true/false outcome
+ * @var SseVars::u8
+ *                           the route id an add reports, or ::PROTOCORE_SSE_NONE when full
+ * @var SseVars::n
+ *                           bytes format wrote, excluding the terminator
+ * @var SseVars::conn
+ *                           the stream an alloc or a find reports, or NULL
+ * @var SseVars::handler
+ *                           the subscribe handler a lookup reports, or NULL
+ * @var SseNs::route_add
+ *                             record one route's subscribe handler
+ * @var SseNs::route_reset
+ *                             empty the handler table; a route holds the id an add returned, so
  *                            this empties with the routes
- * @var SseNs::route_connect   the subscribe handler an id names
- * @var SseNs::init            set every pool slot inactive; called once from begin()
- * @var SseNs::alloc           take a stream and bind it to a TCP slot
- * @var SseNs::find            the stream bound to a TCP slot
- * @var SseNs::free            release the stream bound to a TCP slot
- * @var SseNs::format          format one event record into out.buf, no transport
- * @var SseNs::write           format one event record and send it to the stream
+ * @var SseNs::route_connect
+ *                             the subscribe handler an id names
+ * @var SseNs::init
+ *                             set every pool slot inactive; called once from begin()
+ * @var SseNs::alloc
+ *                             take a stream and bind it to a TCP slot
+ * @var SseNs::find
+ *                             the stream bound to a TCP slot
+ * @var SseNs::free
+ *                             release the stream bound to a TCP slot
+ * @var SseNs::format
+ *                             format one event record into out.buf, no transport
+ * @var SseNs::write
+ *                             format one event record and send it to the stream
  *
  * Every entry takes the module's borrow. How those bytes are carved is sse.c's and is never named
  * here. ::protocore_sse_span is where a caller gets one.

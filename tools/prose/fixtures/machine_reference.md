@@ -8,7 +8,7 @@
 > human English. A detector with only a negative pole can say a text is unlike a human. It cannot
 > say what the text is like instead. This file is the other pole.
 >
-> `utils/maint/prose/machine_distance.py` reads it. `docs_check` skips the directory it sits in.
+> `tools/prose/machine_distance.py` reads it. `docs_check` skips the directory it sits in.
 > If you "fix" this file you destroy the instrument.
 
 Let's dive into what we're really doing here.

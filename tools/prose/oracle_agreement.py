@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Ask whether the label on a fetched corpus carries any information.
 #
-#   python utils/maint/prose/oracle_agreement.py           the verdict and the numbers behind it
-#   python utils/maint/prose/oracle_agreement.py --quiet   the verdict alone
+#   python tools/prose/oracle_agreement.py           the verdict and the numbers behind it
+#   python tools/prose/oracle_agreement.py --quiet   the verdict alone
 #
 # WHAT THE QUESTION IS
 #

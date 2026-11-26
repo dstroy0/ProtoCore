@@ -109,22 +109,38 @@ typedef struct
  * the same handle. @c hdr and @c val are what a write emits and what a read fills, so an entry
  * decoded from one buffer is re-emitted into another with no field moved by hand.
  *
- * @var Lwm2mTlvNs::sink           the buffer a writer emits into, taken by an open
- * @var Lwm2mTlvNs::source         the buffer a reader walks, taken by a parse
- * @var Lwm2mTlvNs::hdr            the Type and Identifier fields: set for a write, filled by a next
- * @var Lwm2mTlvNs::val            the Value field: set for a write, filled by a next
- * @var Lwm2mTlvNs::ok             a call's true/false outcome
- * @var Lwm2mTlvNs::n              the octets a finish counts, 0 if any write did not fit
- * @var Lwm2mTlvNs::open           bind @c sink and clear the writer cursor
- * @var Lwm2mTlvNs::write          emit one entry carrying @c val.opaque for @c val.len octets
- * @var Lwm2mTlvNs::write_integer  stage @c val.integer_value as 1/2/4/8 octets and emit it
- * @var Lwm2mTlvNs::write_boolean  stage @c val.boolean_value as one octet and emit it
- * @var Lwm2mTlvNs::write_string   measure @c val.string_value and emit its UTF-8 octets
- * @var Lwm2mTlvNs::write_float    stage @c val.float_value as binary64 and emit it
- * @var Lwm2mTlvNs::finish         count the octets emitted into @c n
- * @var Lwm2mTlvNs::parse          bind @c source and clear the reader cursor
- * @var Lwm2mTlvNs::next           decode the entry at the cursor into @c hdr and @c val, and advance past it
- * @var Lwm2mTlvNs::value_integer  decode @c val.opaque for @c val.len octets into @c val.integer_value
+ * @var Lwm2mTlvVars::sink
+ *                                   the buffer a writer emits into, taken by an open
+ * @var Lwm2mTlvVars::source
+ *                                   the buffer a reader walks, taken by a parse
+ * @var Lwm2mTlvVars::hdr
+ *                                   the Type and Identifier fields: set for a write, filled by a next
+ * @var Lwm2mTlvVars::val
+ *                                   the Value field: set for a write, filled by a next
+ * @var Lwm2mTlvVars::ok
+ *                                   a call's true/false outcome
+ * @var Lwm2mTlvVars::n
+ *                                   the octets a finish counts, 0 if any write did not fit
+ * @var Lwm2mTlvNs::open
+ *                                 bind @c sink and clear the writer cursor
+ * @var Lwm2mTlvNs::write
+ *                                 emit one entry carrying @c val.opaque for @c val.len octets
+ * @var Lwm2mTlvNs::write_integer
+ *                                 stage @c val.integer_value as 1/2/4/8 octets and emit it
+ * @var Lwm2mTlvNs::write_boolean
+ *                                 stage @c val.boolean_value as one octet and emit it
+ * @var Lwm2mTlvNs::write_string
+ *                                 measure @c val.string_value and emit its UTF-8 octets
+ * @var Lwm2mTlvNs::write_float
+ *                                 stage @c val.float_value as binary64 and emit it
+ * @var Lwm2mTlvNs::finish
+ *                                 count the octets emitted into @c n
+ * @var Lwm2mTlvNs::parse
+ *                                 bind @c source and clear the reader cursor
+ * @var Lwm2mTlvNs::next
+ *                                 decode the entry at the cursor into @c hdr and @c val, and advance past it
+ * @var Lwm2mTlvNs::value_integer
+ *                                 decode @c val.opaque for @c val.len octets into @c val.integer_value
  */
 typedef struct
 {

@@ -527,13 +527,14 @@ void protocore_oidc_verify_with_key(const uint8_t *work)
     }
 
     // Step 6: check the signature over the JWS Signing Input, the header and payload parts with
-    // their '.' (RFC 7515 sec 2). Rsa.verify hashes it; RS256 is SHA-256. One borrow for
-    // that digest, returned either way before the Claims are read.
+    // their '.' (RFC 7515 sec 2). Rsa.verify hashes it; RS256 is SHA-256. Rsa.verify runs the digest
+    // and the modular arithmetic out of one borrow of PROTOCORE_RSA_BORROW bytes. The borrow goes back
+    // either way before the Claims are read.
     size_t signing_input_len = (size_t)(seg[OIDC_SEG_PAYLOAD] + seglen[OIDC_SEG_PAYLOAD] - token);
-    mmgr_span vws = EMBED_CALL(spat.from, SpatiumCfg,
-                               .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(
-                                   PROTOCORE_SHA256_BORROW, protocore_secure_owner()),
-                               .cap = PROTOCORE_SHA256_BORROW);
+    mmgr_span vws = EMBED_CALL(
+        spat.from, SpatiumCfg,
+        .buf = (uint8_t *)protocore_secure_guard()->temporary_buf_alloc(PROTOCORE_RSA_BORROW, protocore_secure_owner()),
+        .cap = PROTOCORE_RSA_BORROW);
     if (!EMBED_CALL(spat.ok, SpatiumCfg, .span = vws))
     {
         protocore_plain_guard()->persistent_buf_release(decode, protocore_plain_owner());

@@ -18,8 +18,8 @@
  *     carries its key / salt, its outbound sequence counter, and its inbound anti-replay window.
  *
  * Selectors are value types (addresses stored inline, big-endian) so the databases persist independently
- * of any wire buffer. @ref protocore_ipsec_selector_from_ts bridges an IKEv2-negotiated TSi/TSr pair (the
- * traffic selectors carried in ikev2.h) into an SPD selector, per RFC 4301 §4.4.1.
+ * of any wire buffer. @ref protocore_ipsec_db_protocore_ipsec_selector_from_ts bridges an IKEv2-negotiated TSi/TSr pair
+ * (the traffic selectors carried in ikev2.h) into an SPD selector, per RFC 4301 §4.4.1.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -206,33 +206,58 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::IpsecDb with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   IpsecDb.protocore_ipsec_spd_init_args.spd = ...;
  *   IpsecDb.protocore_ipsec_spd_init(work);
+ * @endcode
  *
- * @var IpsecDbNs::protocore_ipsec_spd_init_args  what protocore_ipsec_spd_init takes: spd
- * @var IpsecDbNs::protocore_ipsec_spd_add_args  what protocore_ipsec_spd_add takes: spd, sel, action, sa_spi
- * @var IpsecDbNs::protocore_ipsec_spd_lookup_args  what protocore_ipsec_spd_lookup takes: spd, flow
- * @var IpsecDbNs::protocore_ipsec_selector_match_args  what protocore_ipsec_selector_match takes: sel, flow
- * @var IpsecDbNs::protocore_ipsec_selector_from_ts_args  what protocore_ipsec_selector_from_ts takes: out, ts_src,
- * @var IpsecDbNs::protocore_ipsec_sad_init_args  what protocore_ipsec_sad_init takes: sad
- * @var IpsecDbNs::protocore_ipsec_sad_add_args  what protocore_ipsec_sad_add takes: sad, spi, dst,
- * @var IpsecDbNs::protocore_ipsec_sad_find_args  what protocore_ipsec_sad_find takes: sad, spi
- * @var IpsecDbNs::protocore_ipsec_sad_remove_args  what protocore_ipsec_sad_remove takes: sad, spi
- * @var IpsecDbNs::protocore_ipsec_sad_next_seq_args  what protocore_ipsec_sad_next_seq takes: sa, seq_out
- * @var IpsecDbNs::ok  true on success, false if spd is full or an argument is null
- * @var IpsecDbNs::ptr  the matching policy, or nullptr if none matches (the caller drops, ...
- * @var IpsecDbNs::sa  the SAD slot a find matched or an add filled, or nullptr
- * @var IpsecDbNs::protocore_ipsec_spd_init  empty an SPD (no policies)
- * @var IpsecDbNs::protocore_ipsec_spd_add  append a policy to the SPD (order is significant - first match wins ...
- * @var IpsecDbNs::protocore_ipsec_spd_lookup  find the first SPD policy whose selector matches flow (RFC 4301 ...
- * @var IpsecDbNs::protocore_ipsec_selector_match  true iff flow falls inside sel (family, protocol, address ranges, ...
- * @var IpsecDbNs::protocore_ipsec_selector_from_ts  fill out from an IKEv2-negotiated TSi / TSr pair (RFC 4301 §4.4.1
+ * @var IpsecDbVars::protocore_ipsec_spd_init_args
+ *                                                  what protocore_ipsec_spd_init takes: spd
+ * @var IpsecDbVars::protocore_ipsec_spd_add_args
+ *                                                 what protocore_ipsec_spd_add takes: spd, sel, action, sa_spi
+ * @var IpsecDbVars::protocore_ipsec_spd_lookup_args
+ *                                                    what protocore_ipsec_spd_lookup takes: spd, flow
+ * @var IpsecDbVars::protocore_ipsec_selector_match_args
+ *                                                        what protocore_ipsec_selector_match takes: sel, flow
+ * @var IpsecDbVars::protocore_ipsec_selector_from_ts_args
+ *                                                          what protocore_ipsec_selector_from_ts takes: out, ts_src,
+ * @var IpsecDbVars::protocore_ipsec_sad_init_args
+ *                                                  what protocore_ipsec_sad_init takes: sad
+ * @var IpsecDbVars::protocore_ipsec_sad_add_args
+ *                                                 what protocore_ipsec_sad_add takes: sad, spi, dst,
+ * @var IpsecDbVars::protocore_ipsec_sad_find_args
+ *                                                  what protocore_ipsec_sad_find takes: sad, spi
+ * @var IpsecDbVars::protocore_ipsec_sad_remove_args
+ *                                                    what protocore_ipsec_sad_remove takes: sad, spi
+ * @var IpsecDbVars::protocore_ipsec_sad_next_seq_args
+ *                                                      what protocore_ipsec_sad_next_seq takes: sa, seq_out
+ * @var IpsecDbVars::ok
+ *                       true on success, false if spd is full or an argument is null
+ * @var IpsecDbVars::ptr
+ *                        the matching policy, or nullptr if none matches (the caller drops, ...
+ * @var IpsecDbVars::sa
+ *                       the SAD slot a find matched or an add filled, or nullptr
+ * @var IpsecDbNs::protocore_ipsec_spd_init
+ *                                           empty an SPD (no policies)
+ * @var IpsecDbNs::protocore_ipsec_spd_add
+ *                                          append a policy to the SPD (order is significant - first match wins ...
+ * @var IpsecDbNs::protocore_ipsec_spd_lookup
+ *                                             find the first SPD policy whose selector matches flow (RFC 4301 ...
+ * @var IpsecDbNs::protocore_ipsec_selector_match
+ *                                                 true iff flow falls inside sel (family, protocol, address ranges, ...
+ * @var IpsecDbNs::protocore_ipsec_selector_from_ts
+ *                                                   fill out from an IKEv2-negotiated TSi / TSr pair (RFC 4301 §4.4.1
  * ...
- * @var IpsecDbNs::protocore_ipsec_sad_init  empty a SAD (no SAs)
- * @var IpsecDbNs::protocore_ipsec_sad_add  install a Security Association keyed by spi. An inbound SA's ...
- * @var IpsecDbNs::protocore_ipsec_sad_find  look up a valid SA by SPI (inbound ESP demux, RFC 4301 §4.1). ...
- * @var IpsecDbNs::protocore_ipsec_sad_remove  remove the SA with spi (e.g. on an IKE DELETE). true if one was ...
- * @var IpsecDbNs::protocore_ipsec_sad_next_seq  allocate the next outbound sequence number for sa (RFC 4303 §3.3.3, ...
+ * @var IpsecDbNs::protocore_ipsec_sad_init
+ *                                           empty a SAD (no SAs)
+ * @var IpsecDbNs::protocore_ipsec_sad_add
+ *                                          install a Security Association keyed by spi. An inbound SA's ...
+ * @var IpsecDbNs::protocore_ipsec_sad_find
+ *                                           look up a valid SA by SPI (inbound ESP demux, RFC 4301 §4.1). ...
+ * @var IpsecDbNs::protocore_ipsec_sad_remove
+ *                                             remove the SA with spi (e.g. on an IKE DELETE). true if one was ...
+ * @var IpsecDbNs::protocore_ipsec_sad_next_seq
+ *                                               allocate the next outbound sequence number for sa (RFC 4303 §3.3.3, ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

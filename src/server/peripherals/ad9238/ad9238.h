@@ -127,23 +127,35 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ad9238 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ad9238.build_instruction_args.read = ...;
  *   Ad9238.build_instruction_args.reg_addr = ...;
  *   Ad9238.build_instruction_args.nbytes = ...;
  *   Ad9238.build_instruction_args.out2 = ...;
  *   Ad9238.build_instruction(work);
  *   // Ad9238.ok is what the call reports
+ * @endcode
  *
- * @var Ad9238Ns::build_instruction_args  what build_instruction takes: read, reg_addr, nbytes, out2
- * @var Ad9238Ns::build_write_args  what build_write takes: reg_addr, value, out, cap
- * @var Ad9238Ns::build_read_args  what build_read takes: reg_addr, out, cap
- * @var Ad9238Ns::build_transfer_args  what build_transfer takes: out, cap
- * @var Ad9238Ns::ok  true; false only if out2 is null or nbytes is 0 or > 4
- * @var Ad9238Ns::n  3 (bytes written to out), or 0 if out is null / cap < 3
- * @var Ad9238Ns::build_instruction  build the 16-bit SPI instruction word (MSB first on the wire: high ...
- * @var Ad9238Ns::build_write  build a complete single-register write transaction (instruction ...
- * @var Ad9238Ns::build_read  build a single-register read instruction (the 2-byte header; the ...
- * @var Ad9238Ns::build_transfer  build the "device update" transfer transaction (write 0x01 to ...
+ * @var Ad9238Vars::build_instruction_args
+ *                                          what build_instruction takes: read, reg_addr, nbytes, out2
+ * @var Ad9238Vars::build_write_args
+ *                                    what build_write takes: reg_addr, value, out, cap
+ * @var Ad9238Vars::build_read_args
+ *                                   what build_read takes: reg_addr, out, cap
+ * @var Ad9238Vars::build_transfer_args
+ *                                       what build_transfer takes: out, cap
+ * @var Ad9238Vars::ok
+ *                      true; false only if out2 is null or nbytes is 0 or > 4
+ * @var Ad9238Vars::n
+ *                     3 (bytes written to out), or 0 if out is null / cap < 3
+ * @var Ad9238Ns::build_instruction
+ *                                   build the 16-bit SPI instruction word (MSB first on the wire: high ...
+ * @var Ad9238Ns::build_write
+ *                             build a complete single-register write transaction (instruction ...
+ * @var Ad9238Ns::build_read
+ *                            build a single-register read instruction (the 2-byte header; the ...
+ * @var Ad9238Ns::build_transfer
+ *                                build the "device update" transfer transaction (write 0x01 to ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

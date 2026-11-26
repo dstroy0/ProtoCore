@@ -42,9 +42,12 @@ typedef struct
 /**
  * @brief The IMF-fixdate an HTTP Date header carries.
  *
- * @var HttpDateNs::args      the instant a format renders, and where it lands
- * @var HttpDateNs::n         characters written, excluding the NUL, or 0 on any rejection
- * @var HttpDateNs::format    render the instant in GMT
+ * @var HttpDateVars::args
+ *                              the instant a format renders, and where it lands
+ * @var HttpDateVars::n
+ *                              characters written, excluding the NUL, or 0 on any rejection
+ * @var HttpDateNs::format
+ *                            render the instant in GMT
  *
  * A buffer smaller than ::PROTOCORE_HTTP_DATE_MAX truncates to empty rather than to a partial date,
  * because the formatter writes nothing and reports 0 when the result does not fit.

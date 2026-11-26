@@ -114,28 +114,47 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Hostlink with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Hostlink.fcs_args.data = ...;
  *   Hostlink.fcs_args.len = ...;
  *   Hostlink.fcs(work);
  *   // Hostlink.value is what the call reports
+ * @endcode
  *
- * @var HostlinkNs::fcs_args  what fcs takes: data, len
- * @var HostlinkNs::build_args  what build takes: buf, cap, node, header_code, text,
- * @var HostlinkNs::parse_args  what parse takes: buf, len, out
- * @var HostlinkNs::end_code_args  what end_code takes: f, code
- * @var HostlinkNs::build_read_args  what build_read takes: buf, cap, node, address, count
- * @var HostlinkNs::read_word_args  what read_word takes: f, index, out
- * @var HostlinkNs::build_write_args  what build_write takes: buf, cap, node, address, words,
- * @var HostlinkNs::ok  true on a complete, FCS-valid `@...*CR` frame; false otherwise
- * @var HostlinkNs::value  the value a call reports
- * @var HostlinkNs::n  total characters written (NOT counting the NUL), or 0 on overflow / ...
- * @var HostlinkNs::fcs  FCS: 8-bit XOR of [data, data+len)
- * @var HostlinkNs::build  build a frame: `@UU` + header_code(2) + text + FCS(2 hex) + `*` + CR
- * @var HostlinkNs::parse  parse + FCS-validate a frame (command or response)
- * @var HostlinkNs::end_code  read a response's 2-char end code (the first two text characters) ...
- * @var HostlinkNs::build_read  build an RD (DM-area read) command: `@UU` + `RD` + a 4-digit ...
- * @var HostlinkNs::read_word  extract word index (0-based) from an RD response's text: a ...
- * @var HostlinkNs::build_write  build a WR (DM-area write) command: `@UU` + `WR` + a 4-digit ...
+ * @var HostlinkVars::fcs_args
+ *                              what fcs takes: data, len
+ * @var HostlinkVars::build_args
+ *                                what build takes: buf, cap, node, header_code, text,
+ * @var HostlinkVars::parse_args
+ *                                what parse takes: buf, len, out
+ * @var HostlinkVars::end_code_args
+ *                                   what end_code takes: f, code
+ * @var HostlinkVars::build_read_args
+ *                                     what build_read takes: buf, cap, node, address, count
+ * @var HostlinkVars::read_word_args
+ *                                    what read_word takes: f, index, out
+ * @var HostlinkVars::build_write_args
+ *                                      what build_write takes: buf, cap, node, address, words,
+ * @var HostlinkVars::ok
+ *                        true on a complete, FCS-valid `@...*CR` frame; false otherwise
+ * @var HostlinkVars::value
+ *                           the value a call reports
+ * @var HostlinkVars::n
+ *                       total characters written (NOT counting the NUL), or 0 on overflow / ...
+ * @var HostlinkNs::fcs
+ *                       FCS: 8-bit XOR of [data, data+len)
+ * @var HostlinkNs::build
+ *                         build a frame: `@UU` + header_code(2) + text + FCS(2 hex) + `*` + CR
+ * @var HostlinkNs::parse
+ *                         parse + FCS-validate a frame (command or response)
+ * @var HostlinkNs::end_code
+ *                            read a response's 2-char end code (the first two text characters) ...
+ * @var HostlinkNs::build_read
+ *                              build an RD (DM-area read) command: `@UU` + `RD` + a 4-digit ...
+ * @var HostlinkNs::read_word
+ *                             extract word index (0-based) from an RD response's text: a ...
+ * @var HostlinkNs::build_write
+ *                               build a WR (DM-area write) command: `@UU` + `WR` + a 4-digit ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

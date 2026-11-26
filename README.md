@@ -2,7 +2,7 @@
   <img src="docs/banner.svg" alt="ProtoCore" width="100%">
 </p>
 
-# ProtoCore (@dstroy0)
+# ProtoCore (\@dstroy0)
 
 [![Version](https://img.shields.io/badge/version-v1.0.16-blue)](docs/CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-4c1)](LICENSE)

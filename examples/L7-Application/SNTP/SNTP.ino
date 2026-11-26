@@ -12,7 +12,7 @@
  * NOTE: this service is compiled into the library only when PROTOCORE_ENABLE_NTP
  * is set for the whole build (a .ino #define does not reach the separately
  * compiled library). In platformio.ini:
- *     build_flags = -DPROTOCORE_ENABLE_NTP=1
+ *     build_flags = -DPROTOCORE_ENABLE_NTP=1 -DPROTOCORE_ENABLE_UDP=1
  * (Arduino IDE: it is already set for you in the build_opt.h beside this sketch, so it builds as-is.)
  *
  * Flash, open Serial @ 115200 for the IP, then GET http://<ip>/time.

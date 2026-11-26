@@ -36,12 +36,18 @@ EMBED_BEGIN_DECLS
  * the destination port and address. A caller sets the members the call takes, invokes it through
  * ::UdpClient, and reads the outcome off the same handle.
  *
- * @var UdpClientNs::dst       where the datagram goes
- * @var UdpClientNs::dst_port  its port
- * @var UdpClientNs::data      the octets to send
- * @var UdpClientNs::len       how many
- * @var UdpClientNs::ok        whether the stack took them
- * @var UdpClientNs::sendto    send a datagram to an address and port
+ * @var UdpClientVars::dst
+ *                               where the datagram goes
+ * @var UdpClientVars::dst_port
+ *                               its port
+ * @var UdpClientVars::data
+ *                               the octets to send
+ * @var UdpClientVars::len
+ *                               how many
+ * @var UdpClientVars::ok
+ *                               whether the stack took them
+ * @var UdpClientNs::sendto
+ *                             send a datagram to an address and port
  *
  * sendto() sends the caller's bytes from where they already are, and reports whether the stack took
  * them. There is nothing between the caller and the wire: a refusal means the datagram did not

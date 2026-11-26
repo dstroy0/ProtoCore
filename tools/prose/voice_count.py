@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Count every word of the voice corpus and write utils/maint/prose/voice.tsv and voice_review.tsv.
+# Count every word of the voice corpus and write tools/prose/voice.tsv and voice_review.tsv.
 #
 #   build/tessera_host/tessera_run --processors 1 --name voice_count -- \
-#       python utils/maint/prose/voice_count.py
+#       python tools/prose/voice_count.py
 #
 # Reads the text voice_pdftotext.sh wrote to build/voice/text/. Each file holds one row per distinct
 # word, the word and how many times it occurs. Neither carries a sentence or an order of words, only

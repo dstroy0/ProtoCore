@@ -96,26 +96,43 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Sht3x with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Sht3x.crc8_args.data = ...;
  *   Sht3x.crc8_args.len = ...;
  *   Sht3x.crc8(work);
  *   // Sht3x.crc is what the call reports
+ * @endcode
  *
- * @var Sht3xNs::crc8_args  what crc8 takes: data, len
- * @var Sht3xNs::temp_mc_args  what temp_mc takes: raw
- * @var Sht3xNs::rh_mpct_args  what rh_mpct takes: raw
- * @var Sht3xNs::parse_args  what parse takes: resp, temp_mc, rh_mpct
- * @var Sht3xNs::begin_args  what begin takes: addr
- * @var Sht3xNs::read_args  what read takes: temp_mc, rh_mpct
- * @var Sht3xNs::ok  false if a CRC does not match (a corrupt read)
- * @var Sht3xNs::crc  what a call reports
- * @var Sht3xNs::milli  what a call reports
- * @var Sht3xNs::crc8  sensirion CRC-8 (poly 0x31, init 0xFF) over len bytes
- * @var Sht3xNs::temp_mc  convert a raw 16-bit temperature tick to milli-degrees Celsius
- * @var Sht3xNs::rh_mpct  convert a raw 16-bit humidity tick to milli-percent relative ...
- * @var Sht3xNs::parse  decode a six-byte single-shot response (T msb/lsb/crc, RH ...
- * @var Sht3xNs::begin  soft-reset the SHT3x at addr over I2C. true if it acknowledged
- * @var Sht3xNs::read  trigger a single-shot high-repeatability measurement, read + verify ...
+ * @var Sht3xVars::crc8_args
+ *                            what crc8 takes: data, len
+ * @var Sht3xVars::temp_mc_args
+ *                               what temp_mc takes: raw
+ * @var Sht3xVars::rh_mpct_args
+ *                               what rh_mpct takes: raw
+ * @var Sht3xVars::parse_args
+ *                             what parse takes: resp, temp_mc, rh_mpct
+ * @var Sht3xVars::begin_args
+ *                             what begin takes: addr
+ * @var Sht3xVars::read_args
+ *                            what read takes: temp_mc, rh_mpct
+ * @var Sht3xVars::ok
+ *                     false if a CRC does not match (a corrupt read)
+ * @var Sht3xVars::crc
+ *                      what a call reports
+ * @var Sht3xVars::milli
+ *                        what a call reports
+ * @var Sht3xNs::crc8
+ *                     sensirion CRC-8 (poly 0x31, init 0xFF) over len bytes
+ * @var Sht3xNs::temp_mc
+ *                        convert a raw 16-bit temperature tick to milli-degrees Celsius
+ * @var Sht3xNs::rh_mpct
+ *                        convert a raw 16-bit humidity tick to milli-percent relative ...
+ * @var Sht3xNs::parse
+ *                      decode a six-byte single-shot response (T msb/lsb/crc, RH ...
+ * @var Sht3xNs::begin
+ *                      soft-reset the SHT3x at addr over I2C. true if it acknowledged
+ * @var Sht3xNs::read
+ *                     trigger a single-shot high-repeatability measurement, read + verify ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

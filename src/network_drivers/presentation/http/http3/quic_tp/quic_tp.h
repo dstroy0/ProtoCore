@@ -105,7 +105,7 @@ void protocore_quic_tp_defaults(const uint8_t *work, QuicTransportParams *tp);
  */
 size_t protocore_quic_tp_encode(uint8_t *work, const QuicTransportParams *tp, uint8_t *out, size_t cap);
 /**
- * @brief Parse a peer's transport parameters (starting from the spec .
+ * @brief Parse a peer's transport parameters (starting from the spec defaults).
  * @param work PROTOCORE_QUIC_TP_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param len Len

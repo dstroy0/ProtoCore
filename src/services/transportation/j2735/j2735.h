@@ -118,6 +118,8 @@ typedef struct
  * @brief UPER-encode a SPaT MovementState list into @p out.
  * @param states  the movement states.
  * @param count   number of states (0..31; encoded as a 5-bit count).
+ * @param out     the destination buffer.
+ * @param cap     the capacity of @p out, in bytes.
  * @return octets written, or 0 on overflow.
  *
  * Encodes count [0..31] then, per state: signalGroup [0..255], eventState [0..9], minEndTime [0..36000],
@@ -127,6 +129,8 @@ size_t protocore_j2735_spat_encode(const J2735MovementState *states, size_t coun
 
 /**
  * @brief UPER-decode a SPaT MovementState list.
+ * @param in          the UPER-encoded bytes.
+ * @param len         the number of bytes in @p in.
  * @param out_states  buffer for the decoded states.
  * @param max_states  capacity of @p out_states.
  * @param out_count   set to the number decoded.
@@ -155,7 +159,11 @@ typedef struct
 /**
  * @brief UPER-encode a MAP intersection: id + refLat + refLon, then a 5-bit lane count and each lane
  *        (laneID [0..255], directionalUse bit, nodeX [-2048..2047], nodeY [-2048..2047]).
+ * @param isect the intersection: its id, and its reference latitude and longitude.
+ * @param lanes the lanes of the intersection, @p count of them.
  * @param count number of lanes (0..31).
+ * @param out   the destination buffer.
+ * @param cap   the capacity of @p out, in bytes.
  * @return octets written, or 0 on overflow.
  */
 size_t protocore_j2735_map_encode(const J2735MapIntersection *isect, const J2735Lane *lanes, size_t count, uint8_t *out,

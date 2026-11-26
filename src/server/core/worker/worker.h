@@ -175,16 +175,26 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Workers, and reads the outcome off
  * the same handle.
  *
- * @var WorkerNs::worker_id     whose queue or task a call names
- * @var WorkerNs::pump          what each worker task runs each iteration
- * @var WorkerNs::defer_args   the call a defer hands to a worker; the arg must outlive it
- * @var WorkerNs::ok            a call's true/false outcome
- * @var WorkerNs::run_deferred  run every callback queued for worker_id, in its own context
- * @var WorkerNs::running       whether the worker tasks are up
- * @var WorkerNs::start         spawn the tasks and bind the pump
- * @var WorkerNs::stop          ask them to exit
- * @var WorkerNs::wake          nudge one so it services now rather than on the idle timeout
- * @var WorkerNs::defer         hand fn+arg to worker_id's queue and wake it
+ * @var WorkersVars::worker_id
+ *                              whose queue or task a call names
+ * @var WorkersVars::pump
+ *                              what each worker task runs each iteration
+ * @var WorkersVars::defer_args
+ *                             the call a defer hands to a worker; the arg must outlive it
+ * @var WorkersVars::ok
+ *                              a call's true/false outcome
+ * @var WorkerNs::run_deferred
+ *                              run every callback queued for worker_id, in its own context
+ * @var WorkerNs::running
+ *                              whether the worker tasks are up
+ * @var WorkerNs::start
+ *                              spawn the tasks and bind the pump
+ * @var WorkerNs::stop
+ *                              ask them to exit
+ * @var WorkerNs::wake
+ *                              nudge one so it services now rather than on the idle timeout
+ * @var WorkerNs::defer
+ *                              hand fn+arg to worker_id's queue and wake it
  */
 typedef struct
 {

@@ -205,6 +205,11 @@ void protocore_ssh_connection_flow_send_cap(const uint8_t *work)
     {
         cap = f->peer_max_pkt;
     }
+    // The bound this end advertises is also the bound it sends: a larger payload does not fit the wire.
+    if (cap > SSH_CHAN_MAX_PACKET)
+    {
+        cap = SSH_CHAN_MAX_PACKET;
+    }
     SshConnectionV.u32 = cap;
     return;
 }

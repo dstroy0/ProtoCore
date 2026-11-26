@@ -69,28 +69,49 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::SshNetwork, and reads the outcome off
  * the same handle.
  *
- * @var SshNetworkNs::claim    bind an SSH slot to a stream: the handle and which pool it indexes
- * @var SshNetworkNs::release  mark an SSH slot unowned
- * @var SshNetworkNs::slot_free  lowest unowned SSH slot, or 0xFF when the pool is full
- * @var SshNetworkNs::owns     true when @c ssh_slot is bound to @c conn_slot
- * @var SshNetworkNs::tx_drain put the packet the codec flagged on the wire, as the window allows
- * @var SshNetworkNs::emit     frame one SSH message and hand it to the slot's worker
- * @var SshNetworkNs::write_msg      frame one built SSH message and write it now
- * @var SshNetworkNs::payload_region the span a message may be built in for a frame without a copy
- * @var SshNetworkNs::write_msg_at   frame what is already in that span and write it
+ * @var SshNetworkNs::claim
+ *                             bind an SSH slot to a stream: the handle and which pool it indexes
+ * @var SshNetworkNs::release
+ *                             mark an SSH slot unowned
+ * @var SshNetworkNs::slot_free
+ *                               lowest unowned SSH slot, or 0xFF when the pool is full
+ * @var SshNetworkNs::owns
+ *                             true when @c ssh_slot is bound to @c conn_slot
+ * @var SshNetworkNs::tx_drain
+ *                             put the packet the codec flagged on the wire, as the window allows
+ * @var SshNetworkNs::emit
+ *                             frame one SSH message and hand it to the slot's worker
+ * @var SshNetworkNs::write_msg
+ *                                   frame one built SSH message and write it now
+ * @var SshNetworkNs::payload_region
+ *                                   the span a message may be built in for a frame without a copy
+ * @var SshNetworkNs::write_msg_at
+ *                                   frame what is already in that span and write it
  *
- * @var SshNetworkNs::ssh_slot    the SSH slot a call acts on
- * @var SshNetworkNs::conn_slot   the stream slot it is bound to
- * @var SshNetworkNs::handle      the stream handle a claim binds
- * @var SshNetworkNs::stream      which pool that handle indexes, and the channel it carries
- * @var SshNetworkNs::msg         the message bytes an emit or a write carries
- * @var SshNetworkNs::dial        where a bridged channel dials
- * @var SshNetworkNs::read_args   where a channel read writes
- * @var SshNetworkNs::ok          a call's true/false outcome
- * @var SshNetworkNs::i32         a call's signed outcome
- * @var SshNetworkNs::u8          the lowest unowned slot, or 0xFF when the pool is full
- * @var SshNetworkNs::n           a byte count a call reports
- * @var SshNetworkNs::region      the span a message may be built in for a frame without a copy
+ * @var SshNetworkVars::ssh_slot
+ *                                  the SSH slot a call acts on
+ * @var SshNetworkVars::conn_slot
+ *                                  the stream slot it is bound to
+ * @var SshNetworkVars::handle
+ *                                  the stream handle a claim binds
+ * @var SshNetworkVars::stream
+ *                                  which pool that handle indexes, and the channel it carries
+ * @var SshNetworkVars::msg
+ *                                  the message bytes an emit or a write carries
+ * @var SshNetworkVars::dial
+ *                                  where a bridged channel dials
+ * @var SshNetworkVars::read_args
+ *                                  where a channel read writes
+ * @var SshNetworkVars::ok
+ *                                  a call's true/false outcome
+ * @var SshNetworkVars::i32
+ *                                  a call's signed outcome
+ * @var SshNetworkVars::u8
+ *                                  the lowest unowned slot, or 0xFF when the pool is full
+ * @var SshNetworkVars::n
+ *                                  a byte count a call reports
+ * @var SshNetworkVars::region
+ *                                  the span a message may be built in for a frame without a copy
  */
 
 typedef struct

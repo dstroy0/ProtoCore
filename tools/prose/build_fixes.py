@@ -11,8 +11,8 @@ So no replacement is typed here. A caller names a file, a line, the phrase to re
 to put in its place. Everything around the phrase is read out of the file and copied verbatim into
 both sides of the row, and that makes losing the tail of a line impossible instead of unlikely.
 
-    python utils/maint/prose/build_fixes.py plan.tsv        # report the rows it would add
-    python utils/maint/prose/build_fixes.py plan.tsv --write
+    python tools/prose/build_fixes.py plan.tsv        # report the rows it would add
+    python tools/prose/build_fixes.py plan.tsv --write
 
 A plan row is four fields: file, line number, exact phrase to remove, phrase to put in its place.
 The phrase must appear on that line. The window taken around it grows until it is unique in the

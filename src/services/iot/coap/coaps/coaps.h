@@ -53,11 +53,15 @@ typedef struct
  * No storage member: the connection is the caller's @ref DtlsConn and the plaintext scratch lives for
  * one call, so the bridge holds nothing between calls.
  *
- * @var CoapsNs::conn      the DTLS connection every call acts on
- * @var CoapsNs::dgram     the datagram a call reads and the buffer it writes
- * @var CoapsNs::i32       octets written to @c dgram.out, 0 when there is nothing to send, or -1 when
+ * @var CoapsVars::conn
+ *                           the DTLS connection every call acts on
+ * @var CoapsVars::dgram
+ *                           the datagram a call reads and the buffer it writes
+ * @var CoapsVars::i32
+ *                           octets written to @c dgram.out, 0 when there is nothing to send, or -1 when
  *                         the handshake failed and @c conn is FAILED
- * @var CoapsNs::process   turn one received datagram: drive the handshake, or answer the CoAP message
+ * @var CoapsNs::process
+ *                         turn one received datagram: drive the handshake, or answer the CoAP message
  *                         inside an epoch-3 application record and seal the response
  */
 typedef struct

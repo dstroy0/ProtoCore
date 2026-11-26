@@ -14,7 +14,7 @@
  * the 6-octet hardware address ARP resolves to (RFC 826 sec "Packet format", ar$hln = 6).
  *
  * Bring-up runs in the backend the PROTOCORE_VENDOR_* selector compiled
- * (test/core_setup/physical/<vendor>/), reached through the seam declared below. Failover between
+ * (`test/core_setup/physical/<vendor>/`), reached through the seam declared below. Failover between
  * interfaces belongs to the stack, which reselects the default route when a link drops, so this
  * layer adds no manager and no tick. It reads the live default route each time it is asked which
  * interface carries outbound traffic (RFC 1122 sec 3.3.1.2 gateway selection).
@@ -172,7 +172,7 @@ protocore_if_kind protocore_net_classify_ip(uint32_t egress_ip, uint32_t sta_ip,
  * the radio. These names carry no platform vocabulary; the flavoring happens at the edge, in
  * test/core_setup/physical/<vendor>/. Each one reports failure when the selected backend has no radio
  * (PROTOCORE_PHYSICAL_HAS_BACKEND == 0), so callers build and run headless on any target. They are
- * reached through PhysicalNs::radio, which is radio_power.h's handle.
+ * reached through ::Radio, which is radio_power.h's handle.
  * ------------------------------------------------------------------------------------------ */
 
 /** @brief Radio power-save mode, in the library's own vocabulary (IEEE 802.11 power management). */
@@ -288,45 +288,80 @@ typedef struct
  *
  * A caller sets the members a call takes, invokes it through ::Physical, and reads the outcome off
  * the same handle. Bring-up and readout run in the compiled backend; the registry rows and the
- * egress classifier are this module's own, held behind @ref internal.
+ * egress classifier are this module's own.
  *
- * @var PhysicalNs::wifi        what an 802.11 bring-up takes
- * @var PhysicalNs::read        where a readout copies to
- * @var PhysicalNs::route       what the egress classifier judges (RFC 1122 sec 3.3.1)
- * @var PhysicalNs::iface       what names an interface, and the frame a send puts on it
- * @var PhysicalNs::ok          a call's true/false outcome
- * @var PhysicalNs::if_kind     the interface kind a call reports
- * @var PhysicalNs::u32         an IPv4 a call reports, network byte order
- * @var PhysicalNs::n           the SSID length a readout wrote
- * @var PhysicalNs::u8          a channel or a registry count
- * @var PhysicalNs::i8          the RSSI a readout reports, dBm
- * @var PhysicalNs::i16         the interface id a registry row holds, or PROTOCORE_IF_NONE
- * @var PhysicalNs::wifi_init       start the station join to the named AP
- * @var PhysicalNs::wifi_ready      whether the station link is associated with an address
- * @var PhysicalNs::wifi_radio_init start the radio with no IP link, pinned to a channel
- * @var PhysicalNs::wifi_ap_init    start the softAP alongside the station
- * @var PhysicalNs::wifi_ssid       the associated SSID
- * @var PhysicalNs::wifi_channel    the station channel
- * @var PhysicalNs::wifi_rssi       the station RSSI
- * @var PhysicalNs::wifi_ap_ip      the softAP IPv4
- * @var PhysicalNs::wifi_mac        the station hardware address (RFC 826 ar$hln = 6)
- * @var PhysicalNs::eth_init        start the wired link (RFC 894)
- * @var PhysicalNs::eth_ready       whether the wired link is up with an address
- * @var PhysicalNs::ip6_init        enable dual IP layer operation (RFC 4213 sec 2)
- * @var PhysicalNs::ip6_global      the global unicast IPv6 address (RFC 4291 sec 2.5.4)
- * @var PhysicalNs::ip6_ready       whether a global unicast address is configured (RFC 4862)
- * @var PhysicalNs::egress          which interface carries outbound traffic (RFC 1122 sec 3.3.1.2)
- * @var PhysicalNs::egress_ip       that interface's IPv4
- * @var PhysicalNs::egress_mac      that interface's hardware address
- * @var PhysicalNs::classify_ip     map a route's IPv4 to the interface it belongs to
- * @var PhysicalNs::iface_add       register an interface and how to send on it
- * @var PhysicalNs::iface_reset     forget every interface
- * @var PhysicalNs::iface_present   whether the named id is registered
- * @var PhysicalNs::iface_kind      what the named id is
- * @var PhysicalNs::iface_at        the id held in a registry row
- * @var PhysicalNs::iface_count     registered interfaces
- * @var PhysicalNs::iface_send      put the held frame on the named id
- * @var PhysicalNs::radio           the radio handle, radio_power.h's
+ * @var PhysicalVars::wifi
+ *                                what an 802.11 bring-up takes
+ * @var PhysicalVars::read
+ *                                where a readout copies to
+ * @var PhysicalVars::route
+ *                                what the egress classifier judges (RFC 1122 sec 3.3.1)
+ * @var PhysicalVars::iface
+ *                                what names an interface, and the frame a send puts on it
+ * @var PhysicalVars::ok
+ *                                a call's true/false outcome
+ * @var PhysicalVars::if_kind
+ *                                the interface kind a call reports
+ * @var PhysicalVars::u32
+ *                                an IPv4 a call reports, network byte order
+ * @var PhysicalVars::n
+ *                                the SSID length a readout wrote
+ * @var PhysicalVars::u8
+ *                                a channel or a registry count
+ * @var PhysicalVars::i8
+ *                                the RSSI a readout reports, dBm
+ * @var PhysicalVars::i16
+ *                                the interface id a registry row holds, or PROTOCORE_IF_NONE
+ * @var PhysicalNs::wifi_init
+ *                                  start the station join to the named AP
+ * @var PhysicalNs::wifi_ready
+ *                                  whether the station link is associated with an address
+ * @var PhysicalNs::wifi_radio_init
+ *                                  start the radio with no IP link, pinned to a channel
+ * @var PhysicalNs::wifi_ap_init
+ *                                  start the softAP alongside the station
+ * @var PhysicalNs::wifi_ssid
+ *                                  the associated SSID
+ * @var PhysicalNs::wifi_channel
+ *                                  the station channel
+ * @var PhysicalNs::wifi_rssi
+ *                                  the station RSSI
+ * @var PhysicalNs::wifi_ap_ip
+ *                                  the softAP IPv4
+ * @var PhysicalNs::wifi_mac
+ *                                  the station hardware address (RFC 826 ar$hln = 6)
+ * @var PhysicalNs::eth_init
+ *                                  start the wired link (RFC 894)
+ * @var PhysicalNs::eth_ready
+ *                                  whether the wired link is up with an address
+ * @var PhysicalNs::ip6_init
+ *                                  enable dual IP layer operation (RFC 4213 sec 2)
+ * @var PhysicalNs::ip6_global
+ *                                  the global unicast IPv6 address (RFC 4291 sec 2.5.4)
+ * @var PhysicalNs::ip6_ready
+ *                                  whether a global unicast address is configured (RFC 4862)
+ * @var PhysicalNs::egress
+ *                                  which interface carries outbound traffic (RFC 1122 sec 3.3.1.2)
+ * @var PhysicalNs::egress_ip
+ *                                  that interface's IPv4
+ * @var PhysicalNs::egress_mac
+ *                                  that interface's hardware address
+ * @var PhysicalNs::classify_ip
+ *                                  map a route's IPv4 to the interface it belongs to
+ * @var PhysicalNs::iface_add
+ *                                  register an interface and how to send on it
+ * @var PhysicalNs::iface_reset
+ *                                  forget every interface
+ * @var PhysicalNs::iface_present
+ *                                  whether the named id is registered
+ * @var PhysicalNs::iface_kind
+ *                                  what the named id is
+ * @var PhysicalNs::iface_at
+ *                                  the id held in a registry row
+ * @var PhysicalNs::iface_count
+ *                                  registered interfaces
+ * @var PhysicalNs::iface_send
+ *                                  put the held frame on the named id
  */
 typedef struct
 {

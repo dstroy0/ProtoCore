@@ -88,18 +88,22 @@ typedef struct
 /**
  * @brief Initialize a connection to @ref SCL_STATE_INIT at @p now.
  *
+ * @param c             the state of the safety connection.
  * @param first_counter the monitoring counter value the first frame is required to carry.
  * @param counter_mod   counter wrap modulus; 0 for the full 32-bit range.
  * @param watchdog_ms   maximum gap between accepted frames; 0 disables the watchdog.
+ * @param now           the current time, in milliseconds.
  */
 void protocore_scl_init(SclConn *c, uint32_t first_counter, uint32_t counter_mod, uint32_t watchdog_ms, uint32_t now);
 
 /**
  * @brief Offer one received frame to the connection.
  *
+ * @param c            the state of the safety connection.
  * @param signature_ok the profile's CRC verdict for this frame - see the file comment on why this
  *                     module does not compute it.
  * @param counter      the monitoring counter carried by the frame.
+ * @param now          the current time, in milliseconds.
  *
  * A frame is accepted only when the signature is good AND the counter is exactly the expected next
  * value. Every way the black channel can misbehave shows up here: a lost frame or an inserted one
@@ -118,7 +122,7 @@ embed_bool protocore_scl_on_frame(SclConn *c, embed_bool signature_ok, uint32_t 
  * @brief Check the receive watchdog at @p now. Call it every cycle, including cycles with no frame -
  *        a silent channel is exactly what this detects.
  *
- * The watchdog only runs once a connection is @ref SCL_STATE_RUNNING: a connection that has not yet
+ * The watchdog only runs once a connection is @ref SCL_STATE_RUNNING "SCL_STATE_RUNNING": a connection that has not yet
  * received its first frame is not yet timing out, it is still starting up.
  *
  * @return true if the connection is still usable (not fail-safe).

@@ -251,7 +251,8 @@ uint8_t protocore_thread_spinel_pack_uint(const uint8_t *work, uint32_t value, u
  */
 int protocore_thread_spinel_unpack_uint(const uint8_t *work, const uint8_t *raw, uint8_t len, uint32_t *value);
 /**
- * @brief Build a spinel property-command payload (`header | CMD | PROP | .
+ * @brief Build a spinel property-command payload (`header | CMD | PROP | value`) - the
+ *        content of an HDLC frame - into @p out. CMD and PROP are packed integers.
  * @param work PROTOCORE_THREAD_BORROW bytes the caller took. Not held past the call.
  * @param header Header
  * @param cmd Cmd
@@ -260,7 +261,7 @@ int protocore_thread_spinel_unpack_uint(const uint8_t *work, const uint8_t *raw,
  * @param value_len Value len
  * @param out Out
  * @param cap Cap
- * @return The uint16_t.
+ * @return the payload length, or 0 if it would not fit @p cap.
  */
 uint16_t protocore_thread_spinel_command_build(const uint8_t *work, uint8_t header, uint32_t cmd, uint32_t prop,
                                                const uint8_t *value, uint16_t value_len, uint8_t *out, uint16_t cap);

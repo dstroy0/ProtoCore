@@ -25,7 +25,7 @@ EMBED_BEGIN_DECLS
  *
  * Host-tested against reference AES-CCM vectors (nonce 11, tag 16, AES-128 and AES-256).
  *
- * @ref AesCcmNs::open fails closed: on a tag mismatch it zeroes @c out and @ref AesCcmNs::ok comes back
+ * @ref AesCcmNs::open fails closed: on a tag mismatch it zeroes @c out and the call comes back
  * false, so no unauthenticated plaintext reaches the caller.
  *
  * @c work is PROTOCORE_AESCCM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the

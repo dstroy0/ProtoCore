@@ -81,14 +81,21 @@ typedef struct
  * nothing else. No storage member: nothing survives a call, so every buffer is a local of the call
  * that fills it.
  *
- * @var JwtNs::token  how the token arrives: the compact serialization, or the Bearer credentials
+ * @var JwtVars::token
+ *                      how the token arrives: the compact serialization, or the Bearer credentials
  *                    carrying it
- * @var JwtNs::key    the HS256 shared key (RFC 7518 sec 3.2)
- * @var JwtNs::time   the NumericDate an `_at` call judges the time claims against
- * @var JwtNs::claim  the claim a read names and the buffer a string claim is copied into
- * @var JwtNs::scope  the `scope` claim value and the scope a check demands
- * @var JwtNs::ok     a call's true/false outcome
- * @var JwtNs::num    the integer a claim read returns; a NumericDate for `exp` / `nbf` / `iat`
+ * @var JwtVars::key
+ *                      the HS256 shared key (RFC 7518 sec 3.2)
+ * @var JwtVars::time
+ *                      the NumericDate an `_at` call judges the time claims against
+ * @var JwtVars::claim
+ *                      the claim a read names and the buffer a string claim is copied into
+ * @var JwtVars::scope
+ *                      the `scope` claim value and the scope a check demands
+ * @var JwtVars::ok
+ *                      a call's true/false outcome
+ * @var JwtVars::num
+ *                      the integer a claim read returns; a NumericDate for `exp` / `nbf` / `iat`
  *
  * @var JwtNs::verify_mac
  * Validate the JWS Signature over the JWS Signing Input (RFC 7515 sec 5.2). The JOSE header's `alg`

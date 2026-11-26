@@ -61,9 +61,12 @@ typedef struct
 /**
  * @brief The client engine's operations, for the layers that frame messages on its connection.
  *
- * @var SshClientNs::send        frame one payload as a binary packet and write it to the relay
- * @var SshClientNs::crypto_work the client slot's handshake scratch, or null when the pool is short
- * @var SshClientNs::state       the forward's lifecycle phase
+ * @var SshClientNs::send
+ *                               frame one payload as a binary packet and write it to the relay
+ * @var SshClientNs::crypto_work
+ *                               the client slot's handshake scratch, or null when the pool is short
+ * @var SshClientNs::state
+ *                               the forward's lifecycle phase
  */
 /** @brief The message bytes one send frames as a binary packet. */
 typedef struct

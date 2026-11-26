@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_h2_frame.h
+ * @file h2_frame.h
  * @brief HTTP/2 binary framing (RFC 9113 sec 4 + sec 6).
  *
  * Every HTTP/2 frame is a 9-byte header (24-bit length, 8-bit type, 8-bit flags, 1 reserved bit
@@ -199,32 +199,58 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::H2Frame, and reads the outcome off
  * the same handle.
  *
- * @var H2FrameNs::parse_args      the bytes a header parse reads
- * @var H2FrameNs::write_args      what a header write emits
- * @var H2FrameNs::settings_args   the block a defaults fill or a settings parse writes
- * @var H2FrameNs::build_settings_args  the pairs a SETTINGS frame carries
- * @var H2FrameNs::ack_args        where a frame carrying nothing else is written
- * @var H2FrameNs::window_args     the increment a WINDOW_UPDATE carries
- * @var H2FrameNs::rst_args        the error a RST_STREAM carries
- * @var H2FrameNs::goaway_args     what a GOAWAY reports
- * @var H2FrameNs::ping_args       the opaque data a PING ACK echoes
- * @var H2FrameNs::headers_args    the HPACK block a HEADERS frame carries
- * @var H2FrameNs::data_args       the payload a DATA frame carries
- * @var H2FrameNs::ok              whether a parse read a well-formed frame
- * @var H2FrameNs::n               bytes a build wrote, or 0 on overflow
- * @var H2FrameNs::header          the header a parse read
- * @var H2FrameNs::parse_header       read the 9-octet header
- * @var H2FrameNs::write_header       write the 9-octet header
- * @var H2FrameNs::settings_defaults  fill a block with the RFC defaults
- * @var H2FrameNs::parse_settings     apply a SETTINGS payload to a block
- * @var H2FrameNs::build_settings     a SETTINGS frame from (id, value) pairs
- * @var H2FrameNs::build_settings_ack an empty SETTINGS with the ACK flag
- * @var H2FrameNs::build_window_update a WINDOW_UPDATE
- * @var H2FrameNs::build_rst_stream   a RST_STREAM
- * @var H2FrameNs::build_goaway       a GOAWAY
- * @var H2FrameNs::build_ping_ack     a PING with the ACK flag
- * @var H2FrameNs::build_headers      a HEADERS frame
- * @var H2FrameNs::build_data         a DATA frame
+ * @var H2FrameVars::parse_args
+ *                                   the bytes a header parse reads
+ * @var H2FrameVars::write_args
+ *                                   what a header write emits
+ * @var H2FrameVars::settings_args
+ *                                   the block a defaults fill or a settings parse writes
+ * @var H2FrameVars::build_settings_args
+ *                                        the pairs a SETTINGS frame carries
+ * @var H2FrameVars::ack_args
+ *                                   where a frame carrying nothing else is written
+ * @var H2FrameVars::window_args
+ *                                   the increment a WINDOW_UPDATE carries
+ * @var H2FrameVars::rst_args
+ *                                   the error a RST_STREAM carries
+ * @var H2FrameVars::goaway_args
+ *                                   what a GOAWAY reports
+ * @var H2FrameVars::ping_args
+ *                                   the opaque data a PING ACK echoes
+ * @var H2FrameVars::headers_args
+ *                                   the HPACK block a HEADERS frame carries
+ * @var H2FrameVars::data_args
+ *                                   the payload a DATA frame carries
+ * @var H2FrameVars::ok
+ *                                   whether a parse read a well-formed frame
+ * @var H2FrameVars::n
+ *                                   bytes a build wrote, or 0 on overflow
+ * @var H2FrameVars::header
+ *                                   the header a parse read
+ * @var H2FrameNs::parse_header
+ *                                    read the 9-octet header
+ * @var H2FrameNs::write_header
+ *                                    write the 9-octet header
+ * @var H2FrameNs::settings_defaults
+ *                                    fill a block with the RFC defaults
+ * @var H2FrameNs::parse_settings
+ *                                    apply a SETTINGS payload to a block
+ * @var H2FrameNs::build_settings
+ *                                    a SETTINGS frame from (id, value) pairs
+ * @var H2FrameNs::build_settings_ack
+ *                                    an empty SETTINGS with the ACK flag
+ * @var H2FrameNs::build_window_update
+ *                                     a WINDOW_UPDATE
+ * @var H2FrameNs::build_rst_stream
+ *                                    a RST_STREAM
+ * @var H2FrameNs::build_goaway
+ *                                    a GOAWAY
+ * @var H2FrameNs::build_ping_ack
+ *                                    a PING with the ACK flag
+ * @var H2FrameNs::build_headers
+ *                                    a HEADERS frame
+ * @var H2FrameNs::build_data
+ *                                    a DATA frame
  *
  * Every entry takes a borrow to keep one calling convention across the tree. This module reads and
  * writes only the caller's buffers, so nothing is read through it.

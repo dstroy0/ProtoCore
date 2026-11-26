@@ -394,13 +394,17 @@ src/
 │   │   │   ├── forward.c
 │   │   │   └── forward.h
 │   │   ├── stack/
+│   │   │   ├── stack_net/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   ├── stack_net.c
+│   │   │   │   └── stack_net.h
+│   │   │   ├── stack_tcp/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   ├── stack_tcp.c
+│   │   │   │   └── stack_tcp.h
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── stack.c
-│   │   │   ├── stack.h
-│   │   │   ├── stack_net.c
-│   │   │   ├── stack_net.h
-│   │   │   ├── stack_tcp.c
-│   │   │   └── stack_tcp.h
+│   │   │   └── stack.h
 │   │   ├── CMakeLists.txt
 │   │   ├── network.c
 │   │   └── network.h
@@ -1824,7 +1828,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `ZIGBEE+GATEWAY` | `Drivers/ZigbeeGateway` | 384,252 | 46,868 |
 | `DMA+PREEMPT_QUEUE+GATEWAY+DMA_SIMULATE` | `Drivers/RadioGateway` | 384,968 | 54,412 |
 | `DMA+PREEMPT_QUEUE+FORWARD+DMA_SIMULATE` | `Foundation/InterfaceForward` | 385,636 | 55,220 |
-| `LD2410` | `Drivers/Ld2410` | 385,680 | 46,540 |
+| `LD2410` | `Drivers/Ld2410` | 385,676 | 46,540 |
 | `THREAD+GATEWAY` | `Drivers/ThreadGateway` | 386,840 | 47,380 |
 | `NRF24+GATEWAY` | `Drivers/Nrf24Gateway` | 387,376 | 46,332 |
 | `LORA+GATEWAY` | `Drivers/LoRaGateway` | 387,632 | 46,332 |
@@ -1838,7 +1842,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `PN532+GATEWAY` | `Drivers/NfcGateway` | 414,608 | 47,788 |
 | `ETHERNET` | `Peripherals/Ethernet` | 552,596 | 57,484 |
 | `ETHERNET+ETH_W5500+ETH_W5500_CS+ETH_W5500_RST+ETH_W5500_INT+ETH_W5500_SCK+ETH_W5500_MISO+ETH_W5500_MOSI` | `Peripherals/EthernetW5500` | 588,762 | 58,128 |
-| `IDEMIP` | `Foundation/IdemIpPing` | 863,396 | 119,592 |
+| `IDEMIP` | `Foundation/IdemIpPing` | 863,396 | 119,624 |
 | `WIFI_SNIFFER+PROMISC` | `Peripherals/WifiSniffer` | 921,964 | 63,984 |
 | `STATSD+UDP` | `L7-Application/StatsdMetrics` | 922,868 | 71,016 |
 | `SNMP+SNMP_TRAP+UDP` | `L7-Application/SnmpTrap` | 923,520 | 85,488 |
@@ -1870,7 +1874,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `LOGBUF` | `L7-Application/LogBuffer` | 963,096 | 76,584 |
 | `PER_IP_THROTTLE` | `L4-Transport/PerIpThrottle` | 963,152 | 73,000 |
 | `core/ChunkedResponse` | `L7-Application/ChunkedResponse` | 963,240 | 72,976 |
-| `KEEPALIVE` | `L4-Transport/KeepAlive` | 963,268 | 72,960 |
+| `KEEPALIVE` | `L4-Transport/KeepAlive` | 963,284 | 72,960 |
 | `GUARDRAILS` | `L7-Application/Guardrails` | 963,352 | 73,016 |
 | `core/Templating` | `L7-Application/Templating` | 963,756 | 73,000 |
 | `PARTITION_MONITOR` | `L7-Application/PartitionMonitor` | 963,764 | 73,040 |
@@ -1895,7 +1899,7 @@ Feature Tables workflow from `docs/footprints.json`.
 | `CBOR` | `L6-Presentation/Cbor` | 965,840 | 73,032 |
 | `STATS+METRICS+WEB_ASSETS` | `L7-Application/PrometheusMetrics` | 966,288 | 73,088 |
 | `GRAPHQL` | `L7-Application/GraphQL` | 966,464 | 78,232 |
-| `MSGPACK` | `L6-Presentation/MsgPack` | 966,784 | 73,032 |
+| `MSGPACK` | `L6-Presentation/MsgPack` | 966,768 | 73,032 |
 | `CONFIG_STORE+CONFIG_IO` | `L7-Application/ConfigExport` | 966,824 | 73,176 |
 | `JSON` | `L6-Presentation/Json` | 966,888 | 73,168 |
 | `SYSLOG+UDP` | `L7-Application/Syslog` | 967,468 | 80,480 |
@@ -2565,7 +2569,7 @@ guards at compile time.
 | `PROTOCORE_SSH_PW_CHANGE_COOLDOWN_MS` | `60000u` |  |
 | `PROTOCORE_SSH_RFWD_BRIDGE_MAX` | `2` | Maximum concurrent bridged connections across all remote forwards. |
 | `PROTOCORE_SSH_RFWD_MAX` | `1` | Maximum concurrent remote-forward listeners (`ssh -R` / `tcpip-forward`). |
-| `PROTOCORE_SSH_SLOT_BYTES` | `183616u` | One connection's whole span: the wire, the session, the exchange, the packet and the rx regions end to end, which ssh.c hands out one slot at a time. |
+| `PROTOCORE_SSH_SLOT_BYTES` | `20096u` | One connection's whole span: the wire, the session, the exchange, the packet and the rx regions end to end, which ssh.c hands out one slot at a time. |
 | `PROTOCORE_SSH_ZLIB_ACK_DRAM` | `0` | Acknowledge placing the SSH compressor in internal DRAM (no PSRAM). |
 | `PROTOCORE_SSH_ZLIB_IN_PSRAM` | `0` | Place the per-connection SSH compression state in external PSRAM (ESP32). |
 | `PROTOCORE_SSH_ZLIB_MAX_IN` | `2048` | Largest uncompressed payload the s2c compressor accepts in one call (bytes). |

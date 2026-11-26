@@ -60,31 +60,44 @@ typedef struct
  * handle, with the bytes it runs out of. How those bytes are carved is this module's and is never
  * named here.
  *
+ * @code{.c}
  *   Md.md4_init(work);
  *   Md.update_args.data = pw;
  *   Md.update_args.len = pw_len;
  *   Md.update(work);
  *   Md.final_args.out = nt_hash;
  *   Md.final(work);
+ * @endcode
  *
- * @var MdNs::update_args  one chunk fed to a running digest
- * @var MdNs::final_args   where a finished digest lands
- * @var MdNs::hmac_args    the key and message an HMAC-MD5 is taken over
- * @var MdNs::ok           a call's true/false outcome
- * @var MdNs::md5_init     start an MD5
- * @var MdNs::md4_init     start an MD4
- * @var MdNs::update       feed the running digest a chunk
- * @var MdNs::final        pad, compress the last block, write the 16 bytes out
- * @var MdNs::md5          init, update and final in one call
- * @var MdNs::md4          the same for MD4, the NT-hash primitive
- * @var MdNs::hmac_md5     HMAC-MD5 (RFC 2104), the NTLMv2 MAC primitive
+ * @var MdVars::update_args
+ *                           one chunk fed to a running digest
+ * @var MdVars::final_args
+ *                           where a finished digest lands
+ * @var MdVars::hmac_args
+ *                           the key and message an HMAC-MD5 is taken over
+ * @var MdVars::ok
+ *                           a call's true/false outcome
+ * @var MdNs::md5_init
+ *                         start an MD5
+ * @var MdNs::md4_init
+ *                         start an MD4
+ * @var MdNs::update
+ *                         feed the running digest a chunk
+ * @var MdNs::final
+ *                         pad, compress the last block, write the 16 bytes out
+ * @var MdNs::md5
+ *                         init, update and final in one call
+ * @var MdNs::md4
+ *                         the same for MD4, the NT-hash primitive
+ * @var MdNs::hmac_md5
+ *                         HMAC-MD5 (RFC 2104), the NTLMv2 MAC primitive
  *
  * @c work is PROTOCORE_MD_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it, holds
  * it, releases it, nor wipes it. That is what keeps the NTLM password and session-key material in it from outliving the
  * caller. The borrow IS the digest, so two running digests are two borrows and never collide.
  *
- * No storage member and no context: a caller sets operands and reads @ref MdNs::ok, and that is all
+ * No storage member and no context: a caller sets operands and reads @ref MdVars::ok, and that is all
  * the surface there is.
  */
 typedef struct

@@ -108,7 +108,7 @@ WebDavMethod protocore_webdav_method(const uint8_t *work, const char *m);
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
  * @param depth_hdr Depth hdr
  * @param dflt Dflt
- * @return The int.
+ * @return 0, 1, or PROTOCORE_DAV_DEPTH_INFINITY; @p dflt when @p depth_hdr is null/empty.
  */
 int protocore_webdav_depth(const uint8_t *work, const char *depth_hdr, int dflt);
 /**
@@ -117,11 +117,11 @@ int protocore_webdav_depth(const uint8_t *work, const char *depth_hdr, int dflt)
  * @param dst Dst
  * @param cap Cap
  * @param src Src
- * @return The size_t.
+ * @return length written (NUL-terminated; truncated to fit @p cap).
  */
 size_t protocore_webdav_xml_escape(const uint8_t *work, char *dst, size_t cap, const char *src);
 /**
- * @brief Extract and percent-decode the path of a Destination header. .
+ * @brief Extract and percent-decode the path of a Destination header.
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
  * @param destination Destination
  * @param out Out
@@ -130,7 +130,7 @@ size_t protocore_webdav_xml_escape(const uint8_t *work, char *dst, size_t cap, c
  */
 embed_bool protocore_webdav_dest_path(const uint8_t *work, const char *destination, char *out, size_t cap);
 /**
- * @brief Write the XML prolog and the open <multistatus> element.
+ * @brief Write the XML prolog and the open `<multistatus>` element.
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
@@ -139,13 +139,13 @@ embed_bool protocore_webdav_dest_path(const uint8_t *work, const char *destinati
  */
 size_t protocore_webdav_ms_begin(const uint8_t *work, char *buf, size_t cap, size_t len);
 /**
- * @brief Append one <response> describing a resource.
+ * @brief Append one `<response>` describing a resource.
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
  * @param len Len
  * @param href the resource's URL path (XML-escaped here)
- * @param is_collection true for a directory (emits <collection/>)
+ * @param is_collection true for a directory (emits `<collection/>`)
  * @param size content length (files only)
  * @param rfc1123_mtime Last-Modified string, or "" to omit
  * @param content_type MIME type (files only), or "" to omit
@@ -155,7 +155,7 @@ size_t protocore_webdav_ms_entry(const uint8_t *work, char *buf, size_t cap, siz
                                  embed_bool is_collection, uint32_t size, const char *rfc1123_mtime,
                                  const char *content_type);
 /**
- * @brief Close the <multistatus> element.
+ * @brief Close the `<multistatus>` element.
  * @param work PROTOCORE_WEBDAV_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
@@ -171,7 +171,7 @@ size_t protocore_webdav_ms_end(const uint8_t *work, char *buf, size_t cap, size_
  * @param href the resource path (XML-escaped here)
  * @param body the PROPPATCH request body (not required to be NUL-terminated)
  * @param body_len length of body
- * @return The size_t.
+ * @return bytes written, or 0 if the document did not fit @p cap.
  */
 size_t protocore_webdav_proppatch_ms(const uint8_t *work, char *buf, size_t cap, const char *href, const char *body,
                                      size_t body_len);

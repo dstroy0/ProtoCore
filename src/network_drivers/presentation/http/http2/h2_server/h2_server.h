@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_h2_server.h
+ * @file h2_server.h
  * @brief Bridge between the HTTP/2 engine (protocore_h2_conn) and the server's request pipeline.
  *
  * When a TLS connection negotiates ALPN "h2", the session layer hands its decrypted bytes to
@@ -43,15 +43,22 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::H2Server, and reads the outcome off
  * the same handle.
  *
- * @var H2ServerNs::slot          the connection a call acts on
- * @var H2ServerNs::resp          what a serialized response carries
- * @var H2ServerNs::ok            a call's true/false outcome
- * @var H2ServerNs::open     start the engine after ALPN "h2"; sends our initial SETTINGS
- * @var H2ServerNs::data     feed the slot's decrypted inbound bytes in; drives requests via HttpReq
- * @var H2ServerNs::respond  serialize a response for the slot's current stream (HEADERS + DATA),
+ * @var H2ServerNs::slot
+ *                                the connection a call acts on
+ * @var H2ServerNs::resp
+ *                                what a serialized response carries
+ * @var H2ServerNs::ok
+ *                                a call's true/false outcome
+ * @var H2ServerNs::open
+ *                           start the engine after ALPN "h2"; sends our initial SETTINGS
+ * @var H2ServerNs::data
+ *                           feed the slot's decrypted inbound bytes in; drives requests via HttpReq
+ * @var H2ServerNs::respond
+ *                           serialize a response for the slot's current stream (HEADERS + DATA),
  *                           then ready the slot's HttpReq for the next stream. The connection stays
  *                           open
- * @var H2ServerNs::close    release per-slot state on connection close
+ * @var H2ServerNs::close
+ *                           release per-slot state on connection close
  *
  * Every entry takes the module's borrow. How those bytes are carved is h2_server.c's and is
  * never named here. ::protocore_h2_server_span is where a caller gets one.

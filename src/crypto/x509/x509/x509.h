@@ -54,13 +54,19 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::X509, and reads the outcome off the
  * same handle.
  *
- * @var X509Ns::parse_args  the encoding a parse reads
- * @var X509Ns::match_args  the certificate and the name a match judges
- * @var X509Ns::cert        what a parse found
- * @var X509Ns::ok          a call's true/false outcome
- * @var X509Ns::parse       read one Certificate (sec 4.1). Refuses anything it cannot represent
+ * @var X509Vars::parse_args
+ *                            the encoding a parse reads
+ * @var X509Vars::match_args
+ *                            the certificate and the name a match judges
+ * @var X509Vars::cert
+ *                            what a parse found
+ * @var X509Vars::ok
+ *                            a call's true/false outcome
+ * @var X509Ns::parse
+ *                          read one Certificate (sec 4.1). Refuses anything it cannot represent
  *                          rather than reporting a partial view
- * @var X509Ns::name_match  whether the certificate speaks for @c match_args.host, by RFC 6125
+ * @var X509Ns::name_match
+ *                          whether the certificate speaks for @c match_args.host, by RFC 6125
  *                          sec 6.4: the subjectAltName dNSName entries only, never the subject
  *                          common name
  *

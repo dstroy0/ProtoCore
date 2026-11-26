@@ -88,26 +88,43 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Vl53l0x with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Vl53l0x.range_mm_args.hi = ...;
  *   Vl53l0x.range_mm_args.lo = ...;
  *   Vl53l0x.range_mm(work);
  *   // Vl53l0x.mm is what the call reports
+ * @endcode
  *
- * @var Vl53l0xNs::range_mm_args  what range_mm takes: hi, lo
- * @var Vl53l0xNs::data_ready_args  what data_ready takes: interrupt_status
- * @var Vl53l0xNs::range_status_args  what range_status takes: range_status_reg
- * @var Vl53l0xNs::range_valid_args  what range_valid takes: range_status_reg
- * @var Vl53l0xNs::begin_args  what begin takes: addr
- * @var Vl53l0xNs::read_mm_args  what read_mm takes: mm
- * @var Vl53l0xNs::ok  true on a fresh, valid reading; false if not ready / invalid / I2C ...
- * @var Vl53l0xNs::mm  what a call reports
- * @var Vl53l0xNs::status  what a call reports
- * @var Vl53l0xNs::range_mm  combine the range high/low bytes (RESULT_RANGE_STATUS+10 / +11) ...
- * @var Vl53l0xNs::data_ready  true if a new measurement is ready (any of the low 3 ...
- * @var Vl53l0xNs::range_status  the DeviceRangeStatus field (bits 6:3) of the RESULT_RANGE_STATUS ...
- * @var Vl53l0xNs::range_valid  true if the range-status field reports a valid measurement (== ...
- * @var Vl53l0xNs::begin  verify the model id and start continuous back-to-back ranging at ...
- * @var Vl53l0xNs::read_mm  if a measurement is ready, read the distance into mm and clear the ...
+ * @var Vl53l0xVars::range_mm_args
+ *                                  what range_mm takes: hi, lo
+ * @var Vl53l0xVars::data_ready_args
+ *                                    what data_ready takes: interrupt_status
+ * @var Vl53l0xVars::range_status_args
+ *                                      what range_status takes: range_status_reg
+ * @var Vl53l0xVars::range_valid_args
+ *                                     what range_valid takes: range_status_reg
+ * @var Vl53l0xVars::begin_args
+ *                               what begin takes: addr
+ * @var Vl53l0xVars::read_mm_args
+ *                                 what read_mm takes: mm
+ * @var Vl53l0xVars::ok
+ *                       true on a fresh, valid reading; false if not ready / invalid / I2C ...
+ * @var Vl53l0xVars::mm
+ *                       what a call reports
+ * @var Vl53l0xVars::status
+ *                           what a call reports
+ * @var Vl53l0xNs::range_mm
+ *                           combine the range high/low bytes (RESULT_RANGE_STATUS+10 / +11) ...
+ * @var Vl53l0xNs::data_ready
+ *                             true if a new measurement is ready (any of the low 3 ...
+ * @var Vl53l0xNs::range_status
+ *                               the DeviceRangeStatus field (bits 6:3) of the RESULT_RANGE_STATUS ...
+ * @var Vl53l0xNs::range_valid
+ *                              true if the range-status field reports a valid measurement (== ...
+ * @var Vl53l0xNs::begin
+ *                        verify the model id and start continuous back-to-back ranging at ...
+ * @var Vl53l0xNs::read_mm
+ *                          if a measurement is ready, read the distance into mm and clear the ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

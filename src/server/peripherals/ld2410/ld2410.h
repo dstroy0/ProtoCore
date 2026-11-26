@@ -213,53 +213,96 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ld2410 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ld2410.parse_report_args.frame = ...;
  *   Ld2410.parse_report_args.len = ...;
  *   Ld2410.parse_report_args.out = ...;
  *   Ld2410.parse_report(work);
  *   // Ld2410.ok is what the call reports
+ * @endcode
  *
- * @var Ld2410Ns::parse_report_args  what parse_report takes: frame, len, out
- * @var Ld2410Ns::stream_reset_args  what stream_reset takes: s
- * @var Ld2410Ns::stream_push_args  what stream_push takes: s, byte, out
- * @var Ld2410Ns::present_args  what present takes: r
- * @var Ld2410Ns::distance_cm_args  what distance_cm takes: r
- * @var Ld2410Ns::cmd_config_enable_args  what cmd_config_enable takes: buf, cap
- * @var Ld2410Ns::cmd_config_end_args  what cmd_config_end takes: buf, cap
- * @var Ld2410Ns::cmd_engineering_args  what cmd_engineering takes: buf, cap, on
- * @var Ld2410Ns::cmd_restart_args  what cmd_restart takes: buf, cap
- * @var Ld2410Ns::cmd_bluetooth_args  what cmd_bluetooth takes: buf, cap, on
- * @var Ld2410Ns::cmd_get_mac_args  what cmd_get_mac takes: buf, cap
- * @var Ld2410Ns::cmd_set_bt_password_args  what cmd_set_bt_password takes: buf, cap, password
- * @var Ld2410Ns::parse_ack_args  what parse_ack takes: frame, len, out
- * @var Ld2410Ns::ack_ok_args  what ack_ok takes: ack
- * @var Ld2410Ns::ack_mac_args  what ack_mac takes: ack, mac
- * @var Ld2410Ns::begin_args  what begin takes: rx_pin, tx_pin
- * @var Ld2410Ns::set_engineering_args  what set_engineering takes: on
- * @var Ld2410Ns::ok  true on a valid frame; false on any mismatch or a short buffer
- * @var Ld2410Ns::cm  what a call reports
- * @var Ld2410Ns::n  the count a call reports
- * @var Ld2410Ns::report  what a call reports
- * @var Ld2410Ns::parse_report  decode one whole LD2410 report frame (header `F4 F3 F2 F1` .. ...
- * @var Ld2410Ns::stream_reset  reset a stream to the syncing state
- * @var Ld2410Ns::stream_push  feed one received byte. When it completes a valid report frame, ...
- * @var Ld2410Ns::present  true if r shows any target (moving or stationary)
- * @var Ld2410Ns::distance_cm  best available target distance (cm): the moving distance if moving, ...
- * @var Ld2410Ns::cmd_config_enable  "Enable configuration" (word 0x00FF, value 0x0001)
- * @var Ld2410Ns::cmd_config_end  "End configuration" (word 0x00FE)
- * @var Ld2410Ns::cmd_engineering  enable (0x0062) or disable (0x0063) engineering mode
- * @var Ld2410Ns::cmd_restart  restart the module (word 0x00A3)
- * @var Ld2410Ns::cmd_bluetooth  LD2410B: turn the Bluetooth radio on (value 0x0001) or off ...
- * @var Ld2410Ns::cmd_get_mac  LD2410B: query the module's Bluetooth MAC address (word 0x00A5, ...
- * @var Ld2410Ns::cmd_set_bt_password  LD2410B: set the 6-octet Bluetooth control password (word 0x00A9). ...
- * @var Ld2410Ns::parse_ack  decode one command-ACK frame (header, intra-frame length, footer ...
- * @var Ld2410Ns::ack_ok  true if ack reports success (Ld2410Ack::status == 0)
- * @var Ld2410Ns::ack_mac  extract the 6-octet MAC from a get-MAC ACK (word 0x01A5) into mac, ...
- * @var Ld2410Ns::begin  open PROTOCORE_LD2410_UART at PROTOCORE_LD2410_BAUD on rx_pin / ...
- * @var Ld2410Ns::poll  pump the UART through the stream. true if a fresh report was decoded
- * @var Ld2410Ns::last  the most recently decoded report, or NULL before the first one ...
- * @var Ld2410Ns::set_engineering  enable/disable engineering mode (brackets the command with ...
- * @var Ld2410Ns::restart  restart the module (brackets the command with enable/end)
+ * @var Ld2410Ns::parse_report_args
+ *                                   what parse_report takes: frame, len, out
+ * @var Ld2410Ns::stream_reset_args
+ *                                   what stream_reset takes: s
+ * @var Ld2410Ns::stream_push_args
+ *                                  what stream_push takes: s, byte, out
+ * @var Ld2410Ns::present_args
+ *                              what present takes: r
+ * @var Ld2410Ns::distance_cm_args
+ *                                  what distance_cm takes: r
+ * @var Ld2410Ns::cmd_config_enable_args
+ *                                        what cmd_config_enable takes: buf, cap
+ * @var Ld2410Ns::cmd_config_end_args
+ *                                     what cmd_config_end takes: buf, cap
+ * @var Ld2410Ns::cmd_engineering_args
+ *                                      what cmd_engineering takes: buf, cap, on
+ * @var Ld2410Ns::cmd_restart_args
+ *                                  what cmd_restart takes: buf, cap
+ * @var Ld2410Ns::cmd_bluetooth_args
+ *                                    what cmd_bluetooth takes: buf, cap, on
+ * @var Ld2410Ns::cmd_get_mac_args
+ *                                  what cmd_get_mac takes: buf, cap
+ * @var Ld2410Ns::cmd_set_bt_password_args
+ *                                          what cmd_set_bt_password takes: buf, cap, password
+ * @var Ld2410Ns::parse_ack_args
+ *                                what parse_ack takes: frame, len, out
+ * @var Ld2410Ns::ack_ok_args
+ *                             what ack_ok takes: ack
+ * @var Ld2410Ns::ack_mac_args
+ *                              what ack_mac takes: ack, mac
+ * @var Ld2410Ns::begin_args
+ *                            what begin takes: rx_pin, tx_pin
+ * @var Ld2410Ns::set_engineering_args
+ *                                      what set_engineering takes: on
+ * @var Ld2410Ns::ok
+ *                    true on a valid frame; false on any mismatch or a short buffer
+ * @var Ld2410Ns::cm
+ *                    what a call reports
+ * @var Ld2410Ns::n
+ *                   the count a call reports
+ * @var Ld2410Ns::report
+ *                        what a call reports
+ * @var Ld2410Ns::parse_report
+ *                              decode one whole LD2410 report frame (header `F4 F3 F2 F1` .. ...
+ * @var Ld2410Ns::stream_reset
+ *                              reset a stream to the syncing state
+ * @var Ld2410Ns::stream_push
+ *                             feed one received byte. When it completes a valid report frame, ...
+ * @var Ld2410Ns::present
+ *                         true if r shows any target (moving or stationary)
+ * @var Ld2410Ns::distance_cm
+ *                             best available target distance (cm): the moving distance if moving, ...
+ * @var Ld2410Ns::cmd_config_enable
+ *                                   "Enable configuration" (word 0x00FF, value 0x0001)
+ * @var Ld2410Ns::cmd_config_end
+ *                                "End configuration" (word 0x00FE)
+ * @var Ld2410Ns::cmd_engineering
+ *                                 enable (0x0062) or disable (0x0063) engineering mode
+ * @var Ld2410Ns::cmd_restart
+ *                             restart the module (word 0x00A3)
+ * @var Ld2410Ns::cmd_bluetooth
+ *                               LD2410B: turn the Bluetooth radio on (value 0x0001) or off ...
+ * @var Ld2410Ns::cmd_get_mac
+ *                             LD2410B: query the module's Bluetooth MAC address (word 0x00A5, ...
+ * @var Ld2410Ns::cmd_set_bt_password
+ *                                     LD2410B: set the 6-octet Bluetooth control password (word 0x00A9). ...
+ * @var Ld2410Ns::parse_ack
+ *                           decode one command-ACK frame (header, intra-frame length, footer ...
+ * @var Ld2410Ns::ack_ok
+ *                        true if ack reports success (Ld2410Ack::status == 0)
+ * @var Ld2410Ns::ack_mac
+ *                         extract the 6-octet MAC from a get-MAC ACK (word 0x01A5) into mac, ...
+ * @var Ld2410Ns::begin
+ *                       open PROTOCORE_LD2410_UART at PROTOCORE_LD2410_BAUD on rx_pin / ...
+ * @var Ld2410Ns::poll
+ *                      pump the UART through the stream. true if a fresh report was decoded
+ * @var Ld2410Ns::last
+ *                      the most recently decoded report, or NULL before the first one ...
+ * @var Ld2410Ns::set_engineering
+ *                                 enable/disable engineering mode (brackets the command with ...
+ * @var Ld2410Ns::restart
+ *                         restart the module (brackets the command with enable/end)
  *
  * @c work is PROTOCORE_LD2410_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

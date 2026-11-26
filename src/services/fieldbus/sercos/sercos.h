@@ -90,23 +90,36 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Sercos with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Sercos.idn_args.is_product = ...;
  *   Sercos.idn_args.param_set = ...;
  *   Sercos.idn_args.data_block = ...;
  *   Sercos.idn(work);
  *   // Sercos.value is what the call reports
+ * @endcode
  *
- * @var SercosNs::idn_args  what idn takes: is_product, param_set, data_block
- * @var SercosNs::idn_parse_args  what idn_parse takes: idn, is_product, param_set, data_block
- * @var SercosNs::build_args  what build takes: type, phase, cycle, data, data_len, out,
- * @var SercosNs::parse_args  what parse takes: frame, len, out
- * @var SercosNs::ok  a call's true/false outcome
- * @var SercosNs::value  the 16-bit IDN: bit15 = S/P, bits14..12 = set, bits11..0 = block
- * @var SercosNs::n  the telegram length (4 + data_len), or 0 on overflow
- * @var SercosNs::idn  encode a SERCOS IDN (16-bit) from its parts
- * @var SercosNs::idn_parse  decode a SERCOS IDN into its parts (any out-pointer may be null)
- * @var SercosNs::build  build a SERCOS telegram: [type][phase][cycle:2 LE][data...]
- * @var SercosNs::parse  parse a SERCOS telegram. true if len >= 4 and the type is MDT/AT
+ * @var SercosVars::idn_args
+ *                            what idn takes: is_product, param_set, data_block
+ * @var SercosVars::idn_parse_args
+ *                                  what idn_parse takes: idn, is_product, param_set, data_block
+ * @var SercosVars::build_args
+ *                              what build takes: type, phase, cycle, data, data_len, out,
+ * @var SercosVars::parse_args
+ *                              what parse takes: frame, len, out
+ * @var SercosVars::ok
+ *                      a call's true/false outcome
+ * @var SercosVars::value
+ *                         the 16-bit IDN: bit15 = S/P, bits14..12 = set, bits11..0 = block
+ * @var SercosVars::n
+ *                     the telegram length (4 + data_len), or 0 on overflow
+ * @var SercosNs::idn
+ *                     encode a SERCOS IDN (16-bit) from its parts
+ * @var SercosNs::idn_parse
+ *                           decode a SERCOS IDN into its parts (any out-pointer may be null)
+ * @var SercosNs::build
+ *                       build a SERCOS telegram: [type][phase][cycle:2 LE][data...]
+ * @var SercosNs::parse
+ *                       parse a SERCOS telegram. true if len >= 4 and the type is MDT/AT
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

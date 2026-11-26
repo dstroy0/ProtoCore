@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_sqlite_format.h
+ * @file sqlite_format.h
  * @brief Reader for the SQLite3 on-disk file format (PROTOCORE_ENABLE_SQLITE).
  *
  * This is **file-format access**, not the SQLite library: the documented database file structure
@@ -88,7 +88,10 @@ typedef struct
 
 /**
  * @brief Parse a b-tree page header located at @p page + @p offset (@p offset is 100 for page 1, else 0).
+ * @param page     the bytes of the page.
  * @param page_len bounds the read. @return false if the page type byte is not a valid b-tree type or the
+ * @param offset   the offset of the b-tree page header in @p page: 100 for page 1, else 0.
+ * @param out      the destination buffer.
  * header runs past @p page_len.
  */
 embed_bool protocore_sqlite_parse_btree_header(const uint8_t *page, size_t page_len, size_t offset,
@@ -167,6 +170,7 @@ typedef embed_bool (*SqlitePageReader)(void *ctx, uint32_t pgno, uint8_t *page, 
  *
  * @param read/ctx    page source (the same reader the table cursor uses).
  * @param page_size   page size in bytes; @p reserved the per-page reserved tail (usable = page_size - reserved).
+ * @param reserved the number of reserved bytes at the end of each page (the database header, offset 20).
  * @param leaf_page   the leaf page the cell was parsed from (holds the local prefix + the overflow pointer).
  * @param cell        the parsed leaf cell.
  * @param out         destination for the full payload; must hold at least @c payload_len bytes.
@@ -282,7 +286,9 @@ typedef struct
  * @param table_name  the table's name (stored as `protocore_sqlite_schema.name` and `.tbl_name`).
  * @param create_sql  the exact `CREATE TABLE ...` text stored in `protocore_sqlite_schema.sql`.
  * @param rows        the table rows, rowid-ascending; @p nrows may be 0 (empty table).
+ * @param nrows       the number of rows in @p rows.
  * @param out         destination image buffer; @p out_cap must be at least 2 * @p page_size bytes.
+ * @param out_cap     the capacity of @p out, in bytes.
  * @return the image length (2 * @p page_size), or 0 if a row would overflow a page, the rows do not fit one
  * leaf page (the bounded writer fails closed), or on bad input.
  */

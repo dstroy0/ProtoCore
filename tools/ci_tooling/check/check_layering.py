@@ -79,6 +79,10 @@ ORPHAN_ALLOW = {
     "server/storage/mnt_ram/mnt_ram.h": (
         "a mnt backend the application registers itself (mnt.h); nothing in src/ mounts one by design"
     ),
+    "network_drivers/network/stack/stack_net/stack_net.h": (
+        "the protocore_net_* calls over idemIP; the platform answers include it: vendor/esp/esp_answers.h and"
+        " test/core_setup/hal/host/protocore_net_host.h"
+    ),
 }
 
 INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"')

@@ -77,8 +77,8 @@
 #include "lwip/tcp.h"             // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #include "lwip/udp.h"             // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #else
-#include "network_drivers/network/stack/stack_net.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - the protocore_net_* calls over idemIP
-#endif                                               // PROTOCORE_ENABLE_IDEMIP
+#include "network_drivers/network/stack/stack_net/stack_net.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - the protocore_net_* calls over idemIP
+#endif                                                         // PROTOCORE_ENABLE_IDEMIP
 
 typedef QueueHandle_t protocore_platform_queue;
 typedef StaticQueue_t protocore_platform_queue_ctrl; ///< a caller-owned queue control block
@@ -141,7 +141,11 @@ EMBED_INLINE int protocore_platform_uart_begin(uint8_t unit, uint32_t baud, int 
     {
         return 0;
     }
+#ifdef __cplusplus
+    uart_config_t c = {}; // every member zero, with no member named
+#else
     uart_config_t c = {0};
+#endif
     c.baud_rate = (int)baud;
     c.data_bits = UART_DATA_8_BITS;
     c.parity = UART_PARITY_DISABLE;

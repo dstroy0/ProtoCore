@@ -137,7 +137,7 @@ static void run_session(const char *host)
     TcpClientV.io.len = n;
     TcpClient.send(protocore_tcp_client_span());
     msg_id = protocore_hislip_next_message_id(msg_id);
-    if (hislip_recv(sync_cid, &h) && (h.type == HislipMsg::DATA_END || h.type == HislipMsg::DATA))
+    if (hislip_recv(sync_cid, &h) && (h.type == HISLIP_MSG_DATA_END || h.type == HISLIP_MSG_DATA))
     {
         Serial.printf("[hislip] *IDN? -> %.*s\n", (int)h.payload_len, (const char *)(c_resp + PROTOCORE_HISLIP_HEADER_LEN));
     }

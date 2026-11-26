@@ -100,24 +100,24 @@ embed_bool protocore_cc1101_send(const uint8_t *work, const protocore_cc1101_bus
  */
 embed_bool protocore_cc1101_tx_done(const uint8_t *work, const protocore_cc1101_bus *bus);
 /**
- * @brief Flush RX and enter receive mode (strobe RX). Then poll .
+ * @brief Flush RX and enter receive mode (strobe RX). Then poll protocore_cc1101_recv().
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  */
 void protocore_cc1101_set_rx(const uint8_t *work, const protocore_cc1101_bus *bus);
 /**
- * @brief If a packet is waiting, read it (length byte + payload + appended .
+ * @brief If a packet is waiting, read it (length byte + payload + appended RSSI/LQI status).
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
  * @param bus Bus
  * @param buf Buf
  * @param cap Cap
- * @param rssi_dbm Rssi dbm
- * @return The int.
+ * @param[out] rssi_dbm set to the decoded RSSI in dBm (may be null).
+ * @return the payload length (capped at @p cap), or -1 if the RX FIFO is empty.
  */
 int protocore_cc1101_recv(const uint8_t *work, const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap,
                           int16_t *rssi_dbm);
 /**
- * @brief Convert a raw CC1101 RSSI register value to dBm (TI datasheet .
+ * @brief Convert a raw CC1101 RSSI register value to dBm (TI datasheet formula). Pure.
  * @param work PROTOCORE_CC1101_BORROW bytes the caller took. Not held past the call.
  * @param raw Raw
  * @return The int16_t.

@@ -128,17 +128,26 @@ typedef struct
  *
  * No slot member: a Pack is the whole unit every call names, so no call names a row.
  *
- * @var SenmlNs::pack          the Records a build encodes or a resolve reads (RFC 8428 sec 3)
- * @var SenmlNs::json          where the JSON representation lands (RFC 8428 sec 5)
- * @var SenmlNs::binary        the encoding a Pack takes and where it lands (RFC 8428 sec 6)
- * @var SenmlNs::resolved      where the resolved Records land (RFC 8428 sec 4.6)
- * @var SenmlNs::ok            a call's true/false outcome
- * @var SenmlNs::n             the bytes a build wrote, excluding the NUL, or the Records a resolve
+ * @var SenmlVars::pack
+ *                               the Records a build encodes or a resolve reads (RFC 8428 sec 3)
+ * @var SenmlVars::json
+ *                               where the JSON representation lands (RFC 8428 sec 5)
+ * @var SenmlVars::binary
+ *                               the encoding a Pack takes and where it lands (RFC 8428 sec 6)
+ * @var SenmlVars::resolved
+ *                               where the resolved Records land (RFC 8428 sec 4.6)
+ * @var SenmlVars::ok
+ *                               a call's true/false outcome
+ * @var SenmlVars::n
+ *                               the bytes a build wrote, excluding the NUL, or the Records a resolve
  *                             produced; 0 when the call failed
- * @var SenmlNs::json_build    encode @c pack into @c json as application/senml+json (sec 5)
- * @var SenmlNs::binary_build  encode @c pack into @c binary through its codec, with the sec 6
+ * @var SenmlNs::json_build
+ *                             encode @c pack into @c json as application/senml+json (sec 5)
+ * @var SenmlNs::binary_build
+ *                             encode @c pack into @c binary through its codec, with the sec 6
  *                             Table 4 integer labels
- * @var SenmlNs::resolve       carry the Base Name and Base Time across @c pack and fold them into
+ * @var SenmlNs::resolve
+ *                             carry the Base Name and Base Time across @c pack and fold them into
  *                             each Record, into @c resolved (sec 4.6)
  */
 typedef struct

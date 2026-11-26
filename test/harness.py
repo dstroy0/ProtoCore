@@ -1932,7 +1932,7 @@ COV_BUILD = ".pio_cov"  # per-env .gcno/.gcda from the instrumented build
 # Objects an env compiles uninstrumented, because gcov aborts reading their counters from that env
 # (`*** buffer overflow detected ***`) though the suite passes, under AddressSanitizer and UBSan
 # too. The other envs that build the file still measure it, so the merge still covers it.
-COV_SKIP = {"native_oidc_rfc7515": {"src/crypto/cipher/chacha20/chacha20.c"}}
+COV_SKIP = {}
 COV_REPORTS = "coverage_reports"  # per-env gcovr tracefiles, unioned once every env has run
 
 

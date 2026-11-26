@@ -52,6 +52,24 @@ def wrap_all_between(content, heading_regex, next_heading_regex, summary_text_bu
     return content
 
 
+##
+# @brief Write each markdown heading inside a details element as an HTML heading of the same level.
+# @param content The raw text content of the markdown file.
+# @return The content with each heading of a details body in HTML.
+#
+# Doxygen ends a details element at a markdown heading, and then the close tag has no open tag. An HTML
+# heading does not end it, and GitHub renders the two the same.
+def html_headings_in_details(content):
+    def body(match):
+        return re.sub(
+            r"(?m)^(#{1,6}) (.+?)\s*$",
+            lambda h: "<h%d>%s</h%d>" % (len(h.group(1)), h.group(2), len(h.group(1))),
+            match.group(0),
+        )
+
+    return re.sub(r"<details>.*?</details>", body, content, flags=re.S)
+
+
 if __name__ == "__main__":
     if not os.path.exists(changelog_path):
         print(f"Error: {changelog_path} not found")
@@ -67,9 +85,9 @@ if __name__ == "__main__":
         r"(?m)^## ",
         lambda heading: f"Show Changelog for version {heading.replace('[', '').replace(']', '').strip()}",
     )
+    updated = html_headings_in_details(updated)
 
     # `--check` is the one convention across tools/ci_tooling/ (see tools/ci_tooling/README.md).
-    # This had no check mode, so it could not be gated at all.
     if "--check" in sys.argv[1:]:
         if updated != content:
             print(f"STALE: {changelog_path} is not decorated; rerun decorate_changelog.py", file=sys.stderr)

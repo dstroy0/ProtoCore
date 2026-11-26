@@ -8,9 +8,9 @@ CUDA and C++ carry C comment syntax. Nothing has to be transformed. A file is co
 checked extension, the gate is run on the copy, and the findings are relabeled with the real path.
 Line numbers are already right because nothing is rewritten.
 
-    python utils/maint/prose/grade_unread.py                 # every unread type under src/
-    python utils/maint/prose/grade_unread.py path ...        # named files or directories
-    python utils/maint/prose/grade_unread.py --strict        # every note becomes breaking
+    python tools/prose/grade_unread.py                 # every unread type under src/
+    python tools/prose/grade_unread.py path ...        # named files or directories
+    python tools/prose/grade_unread.py --strict        # every note becomes breaking
 
 WHAT THIS IS NOT
 

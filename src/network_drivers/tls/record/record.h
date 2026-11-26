@@ -166,29 +166,42 @@ typedef struct
  * @brief The record layer (RFC 8446 sec 5): the two record shapes and their keys.
  *
  * A caller sets the members a call takes, invokes it through ::TlsRecord, and reads the outcome off
- * the same handle. The keys are the caller's, named in @ref TlsRecordNs::key.
+ * the same handle. The keys are the caller's, named in @ref TlsRecordVars::key.
  *
- * @var TlsRecordNs::content_type  the record's true content type, on the way out or the way in
- * @var TlsRecordNs::key           the direction a call acts on, and what a derive installs
- * @var TlsRecordNs::plain         sec 5.1 the fragment a build carries and the view a parse fills
- * @var TlsRecordNs::sealed        sec 5.2 the fragment a seal takes and the record an open takes
- * @var TlsRecordNs::out_args      where a build, a protect or an unprotect writes
- * @var TlsRecordNs::ok            a call's true/false outcome
- * @var TlsRecordNs::n             bytes written, or the record length consumed; 0 on refusal
- * @var TlsRecordNs::keys_derive  derive one direction's record keys from a 32-byte TLS 1.3 traffic
+ * @var TlsRecordVars::content_type
+ *                                   the record's true content type, on the way out or the way in
+ * @var TlsRecordVars::key
+ *                                   the direction a call acts on, and what a derive installs
+ * @var TlsRecordVars::plain
+ *                                   sec 5.1 the fragment a build carries and the view a parse fills
+ * @var TlsRecordVars::sealed
+ *                                   sec 5.2 the fragment a seal takes and the record an open takes
+ * @var TlsRecordVars::out_args
+ *                                   where a build, a protect or an unprotect writes
+ * @var TlsRecordVars::ok
+ *                                   a call's true/false outcome
+ * @var TlsRecordVars::n
+ *                                   bytes written, or the record length consumed; 0 on refusal
+ * @var TlsRecordNs::keys_derive
+ *                                derive one direction's record keys from a 32-byte TLS 1.3 traffic
  *      secret. RFC 8446 sec 7.3: key and iv are each HKDF-Expand-Label of it under the "tls13 "
  *      prefix. Sets seq to zero, which is what starting a key generation means (sec 5.3).
- * @var TlsRecordNs::plaintext_build  build a TLSPlaintext record; bytes written, or 0 on overflow
- * @var TlsRecordNs::plaintext_parse  parse one back, validating the length field; the record length
+ * @var TlsRecordNs::plaintext_build
+ *                                    build a TLSPlaintext record; bytes written, or 0 on overflow
+ * @var TlsRecordNs::plaintext_parse
+ *                                    parse one back, validating the length field; the record length
  *      consumed, or 0 if malformed or truncated
- * @var TlsRecordNs::protect  seal one record (sec 5.2): the inner plaintext is @c sealed.pt with the
+ * @var TlsRecordNs::protect
+ *                            seal one record (sec 5.2): the inner plaintext is @c sealed.pt with the
  *      real content type appended, the header carries application_data(23) and the sealed length, and
  *      the nonce is iv XOR seq with the header as the associated data. Advances seq. Bytes written,
  *      or 0 on overflow or an over-long fragment.
- * @var TlsRecordNs::unprotect  open a received record: verify and decrypt into @c out_args.out, then
+ * @var TlsRecordNs::unprotect
+ *                              open a received record: verify and decrypt into @c out_args.out, then
  *      scan back past the zero padding for the real content type. Advances seq only on success. A
  *      record whose inner plaintext is all zeros has no content type and is refused (sec 5.4).
- * @var TlsRecordNs::keys_wipe  wipe the AEAD schedule and the IV; the storage stays the caller's
+ * @var TlsRecordNs::keys_wipe
+ *                              wipe the AEAD schedule and the IV; the storage stays the caller's
  *
  * No storage member: every call works in the caller's buffers and in the keys it was handed.
  */

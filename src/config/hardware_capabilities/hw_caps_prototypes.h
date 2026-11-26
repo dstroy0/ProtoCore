@@ -58,6 +58,11 @@ int protocore_platform_bt_release(void);
 uint8_t protocore_platform_img_state(void); ///< the running image's state, PROTOCORE_PLATFORM_IMG_*
 void protocore_platform_img_commit(void);   ///< mark it valid and cancel the pending rollback
 void protocore_platform_img_rollback(void); ///< mark it invalid and reboot into the previous one
+int protocore_platform_ota_begin(void);     ///< open the next image slot for a write, 0 when it refused
+/** @brief Append @p len bytes of the new image. 0 when the write failed. */
+int protocore_platform_ota_write(const uint8_t *data, size_t len);
+int protocore_platform_ota_end(void);    ///< close the image and boot it next, 0 when it is not valid
+void protocore_platform_ota_abort(void); ///< drop the image that is open
 
 /** @brief Longest partition label a walk carries, terminator included. */
 #define PROTOCORE_PLATFORM_PARTITION_LABEL_MAX 17

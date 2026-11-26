@@ -183,6 +183,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::S7comm with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   S7comm.build_setup_args.buf = ...;
  *   S7comm.build_setup_args.cap = ...;
  *   S7comm.build_setup_args.pdu_ref = ...;
@@ -191,19 +192,32 @@ typedef struct
  *   S7comm.build_setup_args.pdu_size = ...;
  *   S7comm.build_setup(work);
  *   // S7comm.n is what the call reports
+ * @endcode
  *
- * @var S7commNs::build_setup_args  what build_setup takes: buf, cap, pdu_ref, max_amq_calling,
- * @var S7commNs::build_read_request_args  what build_read_request takes: buf, cap, pdu_ref, items, n
- * @var S7commNs::build_write_request_args  what build_write_request takes: buf, cap, pdu_ref, items, n
- * @var S7commNs::parse_header_args  what parse_header takes: buf, len, out
- * @var S7commNs::read_next_item_args  what read_next_item takes: data, data_len, offset, out
- * @var S7commNs::ok  true on a complete item; false at end-of-section or on truncation
- * @var S7commNs::n  the count a call reports
- * @var S7commNs::build_setup  build a Setup Communication job. Returns the PDU length, or 0 on ...
- * @var S7commNs::build_read_request  build a Read Var job for n items. Returns the PDU length, or 0 on ...
- * @var S7commNs::build_write_request  build a Write Var job (function 0x05) for n items. Mirrors the read ...
- * @var S7commNs::parse_header  parse + validate an S7comm header (protocol id, lengths)
- * @var S7commNs::read_next_item  read the next Read Var response data item from the data section
+ * @var S7commVars::build_setup_args
+ *                                    what build_setup takes: buf, cap, pdu_ref, max_amq_calling,
+ * @var S7commVars::build_read_request_args
+ *                                           what build_read_request takes: buf, cap, pdu_ref, items, n
+ * @var S7commVars::build_write_request_args
+ *                                            what build_write_request takes: buf, cap, pdu_ref, items, n
+ * @var S7commVars::parse_header_args
+ *                                     what parse_header takes: buf, len, out
+ * @var S7commVars::read_next_item_args
+ *                                       what read_next_item takes: data, data_len, offset, out
+ * @var S7commVars::ok
+ *                      true on a complete item; false at end-of-section or on truncation
+ * @var S7commVars::n
+ *                     the count a call reports
+ * @var S7commNs::build_setup
+ *                             build a Setup Communication job. Returns the PDU length, or 0 on ...
+ * @var S7commNs::build_read_request
+ *                                    build a Read Var job for n items. Returns the PDU length, or 0 on ...
+ * @var S7commNs::build_write_request
+ *                                     build a Write Var job (function 0x05) for n items. Mirrors the read ...
+ * @var S7commNs::parse_header
+ *                              parse + validate an S7comm header (protocol id, lengths)
+ * @var S7commNs::read_next_item
+ *                                read the next Read Var response data item from the data section
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

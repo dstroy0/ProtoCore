@@ -119,12 +119,18 @@ typedef struct
 /**
  * @brief An IP address, as a value.
  *
- * @var IpNs::parse           read a textual address, v4 or v6, into @c out
- * @var IpNs::format          write @c ip as text into @c out, returning the length
- * @var IpNs::classify        what scope the address names
- * @var IpNs::equal           whether two addresses are the same address
- * @var IpNs::is_unspecified  whether the address names nothing
- * @var IpNs::prefix_match    whether @c addr falls inside @c net at @c prefix_len bits
+ * @var IpNs::parse
+ *                            read a textual address, v4 or v6, into @c out
+ * @var IpNs::format
+ *                            write @c ip as text into @c out, returning the length
+ * @var IpNs::classify
+ *                            what scope the address names
+ * @var IpNs::equal
+ *                            whether two addresses are the same address
+ * @var IpNs::is_unspecified
+ *                            whether the address names nothing
+ * @var IpNs::prefix_match
+ *                            whether @c addr falls inside @c net at @c prefix_len bits
  *
  * No storage member: every operation reads its operands and holds nothing. Reached as @ref Ip,
  * or through network.ip, which points at it: set @c args, invoke the call with @c Ip.internal,

@@ -109,24 +109,39 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Profibus with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Profibus.fcs_args.bytes = ...;
  *   Profibus.fcs_args.len = ...;
  *   Profibus.fcs(work);
  *   // Profibus.value is what the call reports
+ * @endcode
  *
- * @var ProfibusNs::fcs_args  what fcs takes: bytes, len
- * @var ProfibusNs::build_sd1_args  what build_sd1 takes: da, sa, fc, out, cap
- * @var ProfibusNs::build_sd2_args  what build_sd2 takes: da, sa, fc, data, data_len, out, cap
- * @var ProfibusNs::build_sd3_args  what build_sd3 takes: da, sa, fc, data, out, cap
- * @var ProfibusNs::parse_args  what parse takes: frame, len, out
- * @var ProfibusNs::ok  a call's true/false outcome
- * @var ProfibusNs::value  the value a call reports
- * @var ProfibusNs::n  the telegram length (6 + 3 + data_len... = 9 + data_len), or 0 on ...
- * @var ProfibusNs::fcs  PROFIBUS FCS: arithmetic sum (mod 256) of len bytes (DA + SA + FC + ...
- * @var ProfibusNs::build_sd1  build an SD1 (no-data) telegram: SD1 DA SA FC FCS ED. 6, or 0 on ...
- * @var ProfibusNs::build_sd2  build an SD2 (variable-data) telegram: SD2 LE LEr SD2 DA SA FC data ...
- * @var ProfibusNs::build_sd3  build an SD3 (fixed 8-octet data) telegram: SD3 DA SA FC data[8] ...
- * @var ProfibusNs::parse  validate + parse an SD1 / SD2 / SD3 telegram (FCS + ED checked). ...
+ * @var ProfibusVars::fcs_args
+ *                              what fcs takes: bytes, len
+ * @var ProfibusVars::build_sd1_args
+ *                                    what build_sd1 takes: da, sa, fc, out, cap
+ * @var ProfibusVars::build_sd2_args
+ *                                    what build_sd2 takes: da, sa, fc, data, data_len, out, cap
+ * @var ProfibusVars::build_sd3_args
+ *                                    what build_sd3 takes: da, sa, fc, data, out, cap
+ * @var ProfibusVars::parse_args
+ *                                what parse takes: frame, len, out
+ * @var ProfibusVars::ok
+ *                        a call's true/false outcome
+ * @var ProfibusVars::value
+ *                           the value a call reports
+ * @var ProfibusVars::n
+ *                       the telegram length (6 + 3 + data_len... = 9 + data_len), or 0 on ...
+ * @var ProfibusNs::fcs
+ *                       PROFIBUS FCS: arithmetic sum (mod 256) of len bytes (DA + SA + FC + ...
+ * @var ProfibusNs::build_sd1
+ *                             build an SD1 (no-data) telegram: SD1 DA SA FC FCS ED. 6, or 0 on ...
+ * @var ProfibusNs::build_sd2
+ *                             build an SD2 (variable-data) telegram: SD2 LE LEr SD2 DA SA FC data ...
+ * @var ProfibusNs::build_sd3
+ *                             build an SD3 (fixed 8-octet data) telegram: SD3 DA SA FC data[8] ...
+ * @var ProfibusNs::parse
+ *                         validate + parse an SD1 / SD2 / SD3 telegram (FCS + ED checked). ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

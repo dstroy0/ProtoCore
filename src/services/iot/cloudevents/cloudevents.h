@@ -112,8 +112,8 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::CloudEvents, and reads the outcome
  * off the same handle.
  *
- * @ref CloudEventsNs::attr is both directions: a build reads the attributes a caller set, and a read
- * writes the attributes it found on the message. A read clears @ref CloudEventsNs::data, because
+ * @ref CloudEventsVars::attr is both directions: a build reads the attributes a caller set, and a read
+ * writes the attributes it found on the message. A read clears @ref CloudEventsVars::data, because
  * binary mode puts the payload in the HTTP body (sec 3.1.2), not in an attribute.
  *
  * No slot member: one event is built or read at a time, so no call names a row.
@@ -121,14 +121,22 @@ typedef struct
  * No storage member: every octet a call touches belongs to the caller or to the request, so nothing
  * survives a call.
  *
- * @var CloudEventsNs::attr             the context attributes: a build's input, a read's output
- * @var CloudEventsNs::data             the payload a build serializes under `data`
- * @var CloudEventsNs::envelope         where a structured-mode build writes its JSON object
- * @var CloudEventsNs::msg              the message a binary-mode read takes its attributes off
- * @var CloudEventsNs::ok               a build wrote the whole object, or a read found all three REQUIRED attributes
- * @var CloudEventsNs::n                octets a build wrote, excluding the NUL; 0 when it wrote none
- * @var CloudEventsNs::build_structured build the one JSON object of Structured Content Mode into @c envelope
- * @var CloudEventsNs::read_binary      take @c attr off the `ce-` prefixed headers of Binary Content Mode
+ * @var CloudEventsVars::attr
+ *                                        the context attributes: a build's input, a read's output
+ * @var CloudEventsVars::data
+ *                                        the payload a build serializes under `data`
+ * @var CloudEventsVars::envelope
+ *                                        where a structured-mode build writes its JSON object
+ * @var CloudEventsVars::msg
+ *                                        the message a binary-mode read takes its attributes off
+ * @var CloudEventsVars::ok
+ *                                        a build wrote the whole object, or a read found all three REQUIRED attributes
+ * @var CloudEventsVars::n
+ *                                        octets a build wrote, excluding the NUL; 0 when it wrote none
+ * @var CloudEventsNs::build_structured
+ *                                      build the one JSON object of Structured Content Mode into @c envelope
+ * @var CloudEventsNs::read_binary
+ *                                      take @c attr off the `ce-` prefixed headers of Binary Content Mode
  *
  * build_structured emits
  * `{"specversion":"1.0","id":...,"source":...,"type":...[,"subject":...][,"datacontenttype":...][,"data":...]}`.

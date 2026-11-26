@@ -61,20 +61,32 @@ typedef struct
  * @brief The in-memory log ring.
  *
  * A caller sets the members a call takes, invokes it through ::Logbuf, and reads the outcome off the
- * same handle. The ring itself is behind @ref internal.
+ * same handle. The ring itself is internal.
  *
- * @var LogbufNs::line      what one append carries
- * @var LogbufNs::read      where a dump writes, and the line a lookup names
- * @var LogbufNs::trap      what a trap fires on
- * @var LogbufNs::count     lines currently held (0 .. PROTOCORE_LOG_LINES)
- * @var LogbufNs::text      the line a lookup reports, or NULL when the index is out of range
- * @var LogbufNs::n         characters a dump wrote, or 0 when the buffer is too small
- * @var LogbufNs::reset     empty the ring and clear the line count
- * @var LogbufNs::put       append one line, truncated to fit
- * @var LogbufNs::held      how many lines are held
- * @var LogbufNs::at        one held line by index
- * @var LogbufNs::dump      every held line, oldest-first, newline-separated
- * @var LogbufNs::set_trap  install the severity trap
+ * @var LogbufVars::line
+ *                            what one append carries
+ * @var LogbufVars::read
+ *                            where a dump writes, and the line a lookup names
+ * @var LogbufVars::trap
+ *                            what a trap fires on
+ * @var LogbufVars::count
+ *                            lines currently held (0 .. PROTOCORE_LOG_LINES)
+ * @var LogbufVars::text
+ *                            the line a lookup reports, or NULL when the index is out of range
+ * @var LogbufVars::n
+ *                            characters a dump wrote, or 0 when the buffer is too small
+ * @var LogbufNs::reset
+ *                          empty the ring and clear the line count
+ * @var LogbufNs::put
+ *                          append one line, truncated to fit
+ * @var LogbufNs::held
+ *                          how many lines are held
+ * @var LogbufNs::at
+ *                          one held line by index
+ * @var LogbufNs::dump
+ *                          every held line, oldest-first, newline-separated
+ * @var LogbufNs::set_trap
+ *                          install the severity trap
  *
  * dump fails closed: a buffer that cannot hold every line writes nothing and reports 0.
  */

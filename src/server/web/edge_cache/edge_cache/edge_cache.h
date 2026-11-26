@@ -311,6 +311,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::EdgeCache with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   EdgeCache.header_value_args.hdrs = ...;
  *   EdgeCache.header_value_args.len = ...;
  *   EdgeCache.header_value_args.name = ...;
@@ -318,61 +319,117 @@ typedef struct
  *   EdgeCache.header_value_args.out_cap = ...;
  *   EdgeCache.header_value(work);
  *   // EdgeCache.ok is what the call reports
+ * @endcode
  *
- * @var EdgeCacheNs::header_value_args  what header_value takes: hdrs, len, name, out, out_cap
- * @var EdgeCacheNs::parse_http_date_args  what parse_http_date takes: s, len
- * @var EdgeCacheNs::freshness_lifetime_args  what freshness_lifetime takes: cc, shared, date_epoch,
- * @var EdgeCacheNs::heuristic_lifetime_args  what heuristic_lifetime takes: date_epoch,
- * @var EdgeCacheNs::initial_age_args  what initial_age takes: age_hdr, date_epoch,
- * @var EdgeCacheNs::current_age_args  what current_age takes: initial_age, insert_ms, now_ms
- * @var EdgeCacheNs::is_fresh_at_args  what is_fresh_at takes: lifetime, current_age
- * @var EdgeCacheNs::key_canon_args  what key_canon takes: method, host, path, query,
- * @var EdgeCacheNs::key_digest_args  what key_digest takes: digest_work, canon, len, digest
- * @var EdgeCacheNs::vary_serialize_args  what vary_serialize takes: vary_header, lookup, ctx, out,
- * @var EdgeCacheNs::store_init_args  what store_init takes: s
- * @var EdgeCacheNs::store_alloc_args  what store_alloc takes: s, canon, vary_key
- * @var EdgeCacheNs::store_lookup_args  what store_lookup takes: s, canon, vary_key, now_ms
- * @var EdgeCacheNs::store_find_args  what store_find takes: s, canon, lookup, ctx, now_ms
- * @var EdgeCacheNs::entry_set_freshness_args  what entry_set_freshness takes: e, cc, shared, date_epoch,
- * @var EdgeCacheNs::entry_has_validator_args  what entry_has_validator takes: e
- * @var EdgeCacheNs::entry_fresh_args  what entry_fresh takes: e, now_ms
- * @var EdgeCacheNs::store_sweep_args  what store_sweep takes: s, now_ms
- * @var EdgeCacheNs::store_purge_args  what store_purge takes: s, canon
- * @var EdgeCacheNs::store_purge_prefix_args  what store_purge_prefix takes: s, prefix
- * @var EdgeCacheNs::store_free_entry_args  what store_free_entry takes: s, e
- * @var EdgeCacheNs::is_storeable_args  what is_storeable takes: status, method, cc, vary_header,
- * @var EdgeCacheNs::build_conditional_args  what build_conditional takes: e, out, cap
- * @var EdgeCacheNs::apply_304_args  what apply_304 takes: e, new_hdrs, hdr_len,
- * @var EdgeCacheNs::ok  a call's true/false outcome
- * @var EdgeCacheNs::epoch  what a call reports
- * @var EdgeCacheNs::secs  what a call reports
- * @var EdgeCacheNs::n  the key length (excluding NUL), or 0 if it would overflow out_cap ...
- * @var EdgeCacheNs::entry  the entry, or nullptr on a miss. Freshness is the caller's decision ...
- * @var EdgeCacheNs::count  the number evicted. Revalidatable stale entries are kept (they can ...
- * @var EdgeCacheNs::header_value  copy the value of header name from a raw HTTP response head (status ...
- * @var EdgeCacheNs::parse_http_date  parse an HTTP-date to epoch seconds (UTC), or return -1 if it does ...
- * @var EdgeCacheNs::freshness_lifetime  freshness lifetime in seconds, or -1 when none is explicit (caller ...
- * @var EdgeCacheNs::heuristic_lifetime  heuristic freshness (RFC 9111 sec 4.2.2): 10% of (Date - ...
- * @var EdgeCacheNs::initial_age  corrected initial age at store time (RFC 9111 sec 4.2.3)
- * @var EdgeCacheNs::current_age  current age = initial_age + resident time, taken from the monotonic ...
- * @var EdgeCacheNs::is_fresh_at  fresh iff a lifetime is known (>= 0) and the current age has not ...
- * @var EdgeCacheNs::key_canon  build the canonical cache key `METHOD "\n" host "\n" path [ "\n" ...
- * @var EdgeCacheNs::key_digest  SHA-256 of the canonical key -> digest[32] (doubles as the L2 dbm ...
- * @var EdgeCacheNs::vary_serialize  serialize a request's values for each field-name in a response ...
- * @var EdgeCacheNs::store_init  reset a store to empty
- * @var EdgeCacheNs::store_alloc  reserve a slot for canon / vary_key, evicting the LRU entry if the ...
- * @var EdgeCacheNs::store_lookup  find the entry for canon whose stored Vary values equal vary_key; ...
- * @var EdgeCacheNs::store_find  vary-aware lookup: find the entry for canon whose stored `Vary` ...
- * @var EdgeCacheNs::entry_set_freshness  resolve and store an entry's freshness (lifetime with heuristic / ...
- * @var EdgeCacheNs::entry_has_validator  true if the entry carries a validator (ETag or Last-Modified) ...
- * @var EdgeCacheNs::entry_fresh  true if the entry is still fresh at now_ms
- * @var EdgeCacheNs::store_sweep  drop entries that are both stale AND unrevalidatable (no validator) ...
- * @var EdgeCacheNs::store_purge  purge every variant stored under the exact canonical key canon. ...
- * @var EdgeCacheNs::store_purge_prefix  purge every entry whose request path begins with prefix. count ...
- * @var EdgeCacheNs::store_free_entry  unlink e and free its slot (no stat bump). Used to release a ...
- * @var EdgeCacheNs::is_storeable  may a response be stored? GET + 200 + not no-store/private + not ...
- * @var EdgeCacheNs::build_conditional  build the conditional-request header lines for revalidating e ...
- * @var EdgeCacheNs::apply_304  apply an origin `304 Not Modified` to a stored entry: recompute its ...
+ * @var EdgeCacheVars::header_value_args
+ *                                        what header_value takes: hdrs, len, name, out, out_cap
+ * @var EdgeCacheVars::parse_http_date_args
+ *                                           what parse_http_date takes: s, len
+ * @var EdgeCacheVars::freshness_lifetime_args
+ *                                              what freshness_lifetime takes: cc, shared, date_epoch,
+ * @var EdgeCacheVars::heuristic_lifetime_args
+ *                                              what heuristic_lifetime takes: date_epoch,
+ * @var EdgeCacheVars::initial_age_args
+ *                                       what initial_age takes: age_hdr, date_epoch,
+ * @var EdgeCacheVars::current_age_args
+ *                                       what current_age takes: initial_age, insert_ms, now_ms
+ * @var EdgeCacheVars::is_fresh_at_args
+ *                                       what is_fresh_at takes: lifetime, current_age
+ * @var EdgeCacheVars::key_canon_args
+ *                                     what key_canon takes: method, host, path, query,
+ * @var EdgeCacheVars::key_digest_args
+ *                                      what key_digest takes: digest_work, canon, len, digest
+ * @var EdgeCacheVars::vary_serialize_args
+ *                                          what vary_serialize takes: vary_header, lookup, ctx, out,
+ * @var EdgeCacheVars::store_init_args
+ *                                      what store_init takes: s
+ * @var EdgeCacheVars::store_alloc_args
+ *                                       what store_alloc takes: s, canon, vary_key
+ * @var EdgeCacheVars::store_lookup_args
+ *                                        what store_lookup takes: s, canon, vary_key, now_ms
+ * @var EdgeCacheVars::store_find_args
+ *                                      what store_find takes: s, canon, lookup, ctx, now_ms
+ * @var EdgeCacheVars::entry_set_freshness_args
+ *                                               what entry_set_freshness takes: e, cc, shared, date_epoch,
+ * @var EdgeCacheVars::entry_has_validator_args
+ *                                               what entry_has_validator takes: e
+ * @var EdgeCacheVars::entry_fresh_args
+ *                                       what entry_fresh takes: e, now_ms
+ * @var EdgeCacheVars::store_sweep_args
+ *                                       what store_sweep takes: s, now_ms
+ * @var EdgeCacheVars::store_purge_args
+ *                                       what store_purge takes: s, canon
+ * @var EdgeCacheVars::store_purge_prefix_args
+ *                                              what store_purge_prefix takes: s, prefix
+ * @var EdgeCacheVars::store_free_entry_args
+ *                                            what store_free_entry takes: s, e
+ * @var EdgeCacheVars::is_storeable_args
+ *                                        what is_storeable takes: status, method, cc, vary_header,
+ * @var EdgeCacheVars::build_conditional_args
+ *                                             what build_conditional takes: e, out, cap
+ * @var EdgeCacheVars::apply_304_args
+ *                                     what apply_304 takes: e, new_hdrs, hdr_len,
+ * @var EdgeCacheVars::ok
+ *                         a call's true/false outcome
+ * @var EdgeCacheVars::epoch
+ *                            what a call reports
+ * @var EdgeCacheVars::secs
+ *                           what a call reports
+ * @var EdgeCacheVars::n
+ *                        the key length (excluding NUL), or 0 if it would overflow out_cap ...
+ * @var EdgeCacheVars::entry
+ *                            the entry, or nullptr on a miss. Freshness is the caller's decision ...
+ * @var EdgeCacheVars::count
+ *                            the number evicted. Revalidatable stale entries are kept (they can ...
+ * @var EdgeCacheNs::header_value
+ *                                 copy the value of header name from a raw HTTP response head (status ...
+ * @var EdgeCacheNs::parse_http_date
+ *                                    parse an HTTP-date to epoch seconds (UTC), or return -1 if it does ...
+ * @var EdgeCacheNs::freshness_lifetime
+ *                                       freshness lifetime in seconds, or -1 when none is explicit (caller ...
+ * @var EdgeCacheNs::heuristic_lifetime
+ *                                       heuristic freshness (RFC 9111 sec 4.2.2): 10% of (Date - ...
+ * @var EdgeCacheNs::initial_age
+ *                                corrected initial age at store time (RFC 9111 sec 4.2.3)
+ * @var EdgeCacheNs::current_age
+ *                                current age = initial_age + resident time, taken from the monotonic ...
+ * @var EdgeCacheNs::is_fresh_at
+ *                                fresh iff a lifetime is known (>= 0) and the current age has not ...
+ * @var EdgeCacheNs::key_canon
+ *                              build the canonical cache key `METHOD "\n" host "\n" path [ "\n" query ]` (host
+ *                              lowercased)
+ * @var EdgeCacheNs::key_digest
+ *                               SHA-256 of the canonical key -> digest[32] (doubles as the L2 dbm ...
+ * @var EdgeCacheNs::vary_serialize
+ *                                   serialize a request's values for each field-name in a response ...
+ * @var EdgeCacheNs::store_init
+ *                               reset a store to empty
+ * @var EdgeCacheNs::store_alloc
+ *                                reserve a slot for canon / vary_key, evicting the LRU entry if the ...
+ * @var EdgeCacheNs::store_lookup
+ *                                 find the entry for canon whose stored Vary values equal vary_key; ...
+ * @var EdgeCacheNs::store_find
+ *                               vary-aware lookup: find the entry for canon whose stored `Vary` ...
+ * @var EdgeCacheNs::entry_set_freshness
+ *                                        resolve and store an entry's freshness (lifetime with heuristic / ...
+ * @var EdgeCacheNs::entry_has_validator
+ *                                        true if the entry carries a validator (ETag or Last-Modified) ...
+ * @var EdgeCacheNs::entry_fresh
+ *                                true if the entry is still fresh at now_ms
+ * @var EdgeCacheNs::store_sweep
+ *                                drop entries that are both stale AND unrevalidatable (no validator) ...
+ * @var EdgeCacheNs::store_purge
+ *                                purge every variant stored under the exact canonical key canon. ...
+ * @var EdgeCacheNs::store_purge_prefix
+ *                                       purge every entry whose request path begins with prefix. count ...
+ * @var EdgeCacheNs::store_free_entry
+ *                                     unlink e and free its slot (no stat bump). Used to release a ...
+ * @var EdgeCacheNs::is_storeable
+ *                                 may a response be stored? GET + 200 + not no-store/private + not ...
+ * @var EdgeCacheNs::build_conditional
+ *                                      build the conditional-request header lines for revalidating e ...
+ * @var EdgeCacheNs::apply_304
+ *                              apply an origin `304 Not Modified` to a stored entry: recompute its ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

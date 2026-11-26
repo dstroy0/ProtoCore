@@ -51,8 +51,10 @@ typedef struct
 /**
  * @brief The firmware upload route.
  *
- * @var OtaServiceNs::args      what installing the route takes
- * @var OtaServiceNs::begin     install the route and the streaming-body hooks
+ * @var OtaServiceVars::args
+ *                                what installing the route takes
+ * @var OtaServiceNs::begin
+ *                              install the route and the streaming-body hooks
  */
 typedef struct
 {

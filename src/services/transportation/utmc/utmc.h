@@ -43,6 +43,8 @@ size_t protocore_utmc_request(const char *object_id, char *out, size_t cap);
  * @param value     the object value text (escaped).
  * @param quality   a UTMC_QUALITY_* flag.
  * @param timestamp an ISO-8601 timestamp (escaped).
+ * @param out       the destination buffer.
+ * @param cap       the capacity of @p out, in bytes.
  * @return length written, or 0 on overflow.
  */
 size_t protocore_utmc_response(const char *object_id, const char *value, uint8_t quality, const char *timestamp,

@@ -102,24 +102,39 @@ typedef struct
  * No slot member: every call works on the caller's octets and holds no stream, so no call names a
  * row.
  *
- * @var XmppNs::out          where the call writes its octets
- * @var XmppNs::text         the character data an escape reads
- * @var XmppNs::stream       the addresses the initial stream header carries (RFC 6120 sec 4.7)
- * @var XmppNs::common       the common attributes a stanza carries (RFC 6120 sec 8.1)
- * @var XmppNs::child        the `<body/>` or the extension element a stanza carries
- * @var XmppNs::stanza       the received stanza a read walks, and the attribute it names
- * @var XmppNs::ok           a call's true/false outcome
- * @var XmppNs::n            the octets written into @c out, excluding the NUL; 0 when the call failed
- * @var XmppNs::escape       write @c text through the five predefined entities (XML 1.0 sec 4.6)
- * @var XmppNs::stream_open  build the initial stream header from @c stream (RFC 6120 sec 4.2)
- * @var XmppNs::message      build a `<message/>` from @c common to, from and type, and @c child body
+ * @var XmppVars::out
+ *                             where the call writes its octets
+ * @var XmppVars::text
+ *                             the character data an escape reads
+ * @var XmppVars::stream
+ *                             the addresses the initial stream header carries (RFC 6120 sec 4.7)
+ * @var XmppVars::common
+ *                             the common attributes a stanza carries (RFC 6120 sec 8.1)
+ * @var XmppVars::child
+ *                             the `<body/>` or the extension element a stanza carries
+ * @var XmppVars::stanza
+ *                             the received stanza a read walks, and the attribute it names
+ * @var XmppVars::ok
+ *                             a call's true/false outcome
+ * @var XmppVars::n
+ *                             the octets written into @c out, excluding the NUL; 0 when the call failed
+ * @var XmppNs::escape
+ *                           write @c text through the five predefined entities (XML 1.0 sec 4.6)
+ * @var XmppNs::stream_open
+ *                           build the initial stream header from @c stream (RFC 6120 sec 4.2)
+ * @var XmppNs::message
+ *                           build a `<message/>` from @c common to, from and type, and @c child body
  *                           (RFC 6120 sec 8.2.1, RFC 6121 sec 5.2)
- * @var XmppNs::presence     build a `<presence/>` from @c common type (RFC 6120 sec 8.2.2, RFC 6121
+ * @var XmppNs::presence
+ *                           build a `<presence/>` from @c common type (RFC 6120 sec 8.2.2, RFC 6121
  *                           sec 4.7)
- * @var XmppNs::iq           build an `<iq/>` from @c common type and id, and @c child extension
+ * @var XmppNs::iq
+ *                           build an `<iq/>` from @c common type and id, and @c child extension
  *                           (RFC 6120 sec 8.2.3, sec 8.4)
- * @var XmppNs::stanza_name  read the start-tag Name of @c stanza, the element's type (XML 1.0 sec 3.1)
- * @var XmppNs::attr         read the attribute value @c stanza names out of its start-tag, as the raw
+ * @var XmppNs::stanza_name
+ *                           read the start-tag Name of @c stanza, the element's type (XML 1.0 sec 3.1)
+ * @var XmppNs::attr
+ *                           read the attribute value @c stanza names out of its start-tag, as the raw
  *                           octets between the quotes with no entity expanded (XML 1.0 sec 3.1)
  */
 typedef struct

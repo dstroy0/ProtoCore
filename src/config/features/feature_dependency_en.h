@@ -172,7 +172,7 @@
  * client mbedTLS code in protocore_tls - the CA/pin trust config, the BIO typedefs,
  * and the session API - gated by this.
  */
-// Derived: these carry the expression their header used to hold.
+// Derived: each flag below is an expression of the features that use it.
 #ifndef PROTOCORE_ENABLE_AES128GCM
 #define PROTOCORE_ENABLE_AES128GCM                                                                                     \
     (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_ENABLE_SMB || PROTOCORE_ENABLE_TLS)

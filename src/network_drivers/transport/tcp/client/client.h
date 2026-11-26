@@ -54,23 +54,36 @@ typedef struct
  * @brief The outbound side of TCP.
  *
  * A caller sets the members a call takes, invokes it through ::TcpClient, and reads the outcome off
- * the same handle. The slot pool itself is behind @ref internal.
+ * the same handle. The slot pool itself is internal.
  *
- * @var TcpClientNs::cid         the slot a call acts on
- * @var TcpClientNs::dial        what an active OPEN dials
- * @var TcpClientNs::io          the bytes a send or a read moves
- * @var TcpClientNs::ok          a call's true/false outcome
- * @var TcpClientNs::i32         the cid an open took, or < 0 when none is free
- * @var TcpClientNs::n           a byte count a call reports
- * @var TcpClientNs::open       take a slot and start resolving; cid >= 0, or < 0 when none is free
- * @var TcpClientNs::connected  step the open along, and report whether the handshake completed
- * @var TcpClientNs::is_closed  step the open along, and report a close, an error, or the timeout
- * @var TcpClientNs::send       queue wire bytes for transmission
- * @var TcpClientNs::available  wire bytes buffered and ready to read
- * @var TcpClientNs::read       drain buffered wire bytes
- * @var TcpClientNs::close      tear the connection down and free the slot
+ * @var TcpClientVars::cid
+ *                                 the slot a call acts on
+ * @var TcpClientVars::dial
+ *                                 what an active OPEN dials
+ * @var TcpClientVars::io
+ *                                 the bytes a send or a read moves
+ * @var TcpClientVars::ok
+ *                                 a call's true/false outcome
+ * @var TcpClientVars::i32
+ *                                 the cid an open took, or < 0 when none is free
+ * @var TcpClientVars::n
+ *                                 a byte count a call reports
+ * @var TcpClientNs::open
+ *                              take a slot and start resolving; cid >= 0, or < 0 when none is free
+ * @var TcpClientNs::connected
+ *                              step the open along, and report whether the handshake completed
+ * @var TcpClientNs::is_closed
+ *                              step the open along, and report a close, an error, or the timeout
+ * @var TcpClientNs::send
+ *                              queue wire bytes for transmission
+ * @var TcpClientNs::available
+ *                              wire bytes buffered and ready to read
+ * @var TcpClientNs::read
+ *                              drain buffered wire bytes
+ * @var TcpClientNs::close
+ *                              tear the connection down and free the slot
  *
- * open() returns before the connection exists. @ref host is read on every step until the name
+ * open() returns before the connection exists. @ref TcpDialArgs::host is read on every step until the name
  * resolves, so it has to outlive the open. The caller polls connected() until it is true, or
  * is_closed() is, and closes the slot on either failure.
  */

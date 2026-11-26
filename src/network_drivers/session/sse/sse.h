@@ -30,9 +30,12 @@ EMBED_BEGIN_DECLS
 /**
  * @brief Opening and closing one event stream.
  *
- * @var SessionSseNs::ok     whether the stream opened, or whether a close had one to release
- * @var SessionSseNs::open   take a stream for the named connection and run the route's connect
- * @var SessionSseNs::close  release the stream bound to the named connection
+ * @var SessionSseVars::ok
+ *                             whether the stream opened, or whether a close had one to release
+ * @var SessionSseNs::open
+ *                           take a stream for the named connection and run the route's connect
+ * @var SessionSseNs::close
+ *                           release the stream bound to the named connection
  *
  * No storage and no members naming the connection: the caller has already named it on ::Sse, and
  * this sequences what happens to it. A second copy would be a second answer to "which connection".

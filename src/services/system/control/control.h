@@ -289,34 +289,58 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Control with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Control.pid_init_args.p = ...;
  *   Control.pid_init_args.kp = ...;
  *   Control.pid_init_args.ki = ...;
  *   Control.pid_init_args.kd = ...;
  *   Control.pid_init(work);
+ * @endcode
  *
- * @var ControlNs::pid_init_args  what pid_init takes: p, kp, ki, kd
- * @var ControlNs::pid_set_output_limits_args  what pid_set_output_limits takes: p, lo, hi
- * @var ControlNs::pid_set_integral_limits_args  what pid_set_integral_limits takes: p, lo, hi
- * @var ControlNs::pid_set_derivative_filter_args  what pid_set_derivative_filter takes: p, alpha
- * @var ControlNs::pid_set_feedforward_args  what pid_set_feedforward takes: p, kff
- * @var ControlNs::pid_set_rate_args  what pid_set_rate takes: p, dt
- * @var ControlNs::pid_reset_args  what pid_reset takes: p
- * @var ControlNs::pid_update_n_args  what pid_update_n takes: p, setpoint, measurement, dt, out,
- * @var ControlNs::pid_log_header_args  what pid_log_header takes: buf, cap, p, dt
- * @var ControlNs::pid_log_record_args  what pid_log_record takes: buf, cap, setpoint, measurement,
- * @var ControlNs::ok  a call's true/false outcome
- * @var ControlNs::n  the count a call reports
- * @var ControlNs::pid_init  pid_init
- * @var ControlNs::pid_set_output_limits  pid_set_output_limits
- * @var ControlNs::pid_set_integral_limits  pid_set_integral_limits
- * @var ControlNs::pid_set_derivative_filter  pid_set_derivative_filter
- * @var ControlNs::pid_set_feedforward  pid_set_feedforward
- * @var ControlNs::pid_set_rate  pid_set_rate
- * @var ControlNs::pid_reset  pid_reset
- * @var ControlNs::pid_update_n  pid_update_n
- * @var ControlNs::pid_log_header  pid_log_header
- * @var ControlNs::pid_log_record  pid_log_record
+ * @var ControlVars::pid_init_args
+ *                                  what pid_init takes: p, kp, ki, kd
+ * @var ControlVars::pid_set_output_limits_args
+ *                                               what pid_set_output_limits takes: p, lo, hi
+ * @var ControlVars::pid_set_integral_limits_args
+ *                                                 what pid_set_integral_limits takes: p, lo, hi
+ * @var ControlVars::pid_set_derivative_filter_args
+ *                                                   what pid_set_derivative_filter takes: p, alpha
+ * @var ControlVars::pid_set_feedforward_args
+ *                                             what pid_set_feedforward takes: p, kff
+ * @var ControlVars::pid_set_rate_args
+ *                                      what pid_set_rate takes: p, dt
+ * @var ControlVars::pid_reset_args
+ *                                   what pid_reset takes: p
+ * @var ControlVars::pid_update_n_args
+ *                                      what pid_update_n takes: p, setpoint, measurement, dt, out,
+ * @var ControlVars::pid_log_header_args
+ *                                        what pid_log_header takes: buf, cap, p, dt
+ * @var ControlVars::pid_log_record_args
+ *                                        what pid_log_record takes: buf, cap, setpoint, measurement,
+ * @var ControlVars::ok
+ *                       a call's true/false outcome
+ * @var ControlVars::n
+ *                      the count a call reports
+ * @var ControlNs::pid_init
+ *                           pid_init
+ * @var ControlNs::pid_set_output_limits
+ *                                        pid_set_output_limits
+ * @var ControlNs::pid_set_integral_limits
+ *                                          pid_set_integral_limits
+ * @var ControlNs::pid_set_derivative_filter
+ *                                            pid_set_derivative_filter
+ * @var ControlNs::pid_set_feedforward
+ *                                      pid_set_feedforward
+ * @var ControlNs::pid_set_rate
+ *                               pid_set_rate
+ * @var ControlNs::pid_reset
+ *                            pid_reset
+ * @var ControlNs::pid_update_n
+ *                               pid_update_n
+ * @var ControlNs::pid_log_header
+ *                                 pid_log_header
+ * @var ControlNs::pid_log_record
+ *                                 pid_log_record
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

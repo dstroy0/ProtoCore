@@ -50,9 +50,12 @@ typedef struct
  * A caller sets the members the call takes, invokes it through ::SleepSched, and reads the window
  * off the same handle.
  *
- * @var SleepSchedNs::ask       where the clock stands against the last activity
- * @var SleepSchedNs::ms        milliseconds to sleep, or 0 to stay awake
- * @var SleepSchedNs::next      decide the window
+ * @var SleepSchedVars::ask
+ *                                where the clock stands against the last activity
+ * @var SleepSchedVars::ms
+ *                                milliseconds to sleep, or 0 to stay awake
+ * @var SleepSchedNs::next
+ *                              decide the window
  *
  * Wrap-safe: uses the unsigned delta `now - last_active_ms`, correct across a millis() rollover.
  * Reports 0 while idle < `idle_ms`; otherwise a window clamped to [min_ms, max_ms] that grows with

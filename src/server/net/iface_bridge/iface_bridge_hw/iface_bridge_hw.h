@@ -58,17 +58,23 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::IfaceBridgeHw with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   IfaceBridgeHw.publish_args.listener_id = ...;
  *   IfaceBridgeHw.publish_args.port = ...;
  *   IfaceBridgeHw.publish_args.proto = ...;
  *   IfaceBridgeHw.publish_args.target = ...;
  *   IfaceBridgeHw.publish(work);
  *   // IfaceBridgeHw.ok is what the call reports
+ * @endcode
  *
- * @var IfaceBridgeHwNs::publish_args  what publish takes: listener_id, port, proto, target
- * @var IfaceBridgeHwNs::ok  true; false if target is null, the rule table is full, or the ...
- * @var IfaceBridgeHwNs::publish  bind a PROTO_BRIDGE listener to a hardware target and install the ...
- * @var IfaceBridgeHwNs::reset  clear all listener bindings and rules (start from empty)
+ * @var IfaceBridgeHwVars::publish_args
+ *                                       what publish takes: listener_id, port, proto, target
+ * @var IfaceBridgeHwVars::ok
+ *                             true; false if target is null, the rule table is full, or the ...
+ * @var IfaceBridgeHwNs::publish
+ *                                bind a PROTO_BRIDGE listener to a hardware target and install the ...
+ * @var IfaceBridgeHwNs::reset
+ *                              clear all listener bindings and rules (start from empty)
  *
  * @c work is PROTOCORE_IFACE_BRIDGE_HW_BORROW bytes the CALLER took, at an address it knows. It is not held past the
  * call, so nothing here aliases it. How those bytes are carved is this module's and is never named here.

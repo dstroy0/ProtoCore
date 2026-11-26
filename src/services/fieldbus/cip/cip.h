@@ -133,6 +133,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Cip with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Cip.build_epath_args.buf = ...;
  *   Cip.build_epath_args.cap = ...;
  *   Cip.build_epath_args.class_id = ...;
@@ -141,21 +142,36 @@ typedef struct
  *   Cip.build_epath_args.with_attribute = ...;
  *   Cip.build_epath(work);
  *   // Cip.n is what the call reports
+ * @endcode
  *
- * @var CipNs::build_epath_args  what build_epath takes: buf, cap, class_id, instance_id,
- * @var CipNs::build_request_args  what build_request takes: buf, cap, service, epath,
- * @var CipNs::build_get_attr_single_args  what build_get_attr_single takes: buf, cap, class_id,
- * @var CipNs::build_get_attr_all_args  what build_get_attr_all takes: buf, cap, class_id,
- * @var CipNs::build_set_attr_single_args  what build_set_attr_single takes: buf, cap, class_id,
- * @var CipNs::parse_response_args  what parse_response takes: buf, len, out
- * @var CipNs::ok  a call's true/false outcome
- * @var CipNs::n  EPATH length in octets (always even / word-aligned), or 0 on ...
- * @var CipNs::build_epath  build a class/instance[/attribute] EPATH (logical segments) into buf
- * @var CipNs::build_request  build a CIP request: service + path size (words) + EPATH + service ...
- * @var CipNs::build_get_attr_single  build a Get_Attribute_Single request for class/instance/attribute
- * @var CipNs::build_get_attr_all  build a Get_Attributes_All request for class/instance: service 0x01 ...
- * @var CipNs::build_set_attr_single  build a Set_Attribute_Single request for class/instance/attribute ...
- * @var CipNs::parse_response  parse a CIP response (service + status + additional status + data)
+ * @var CipVars::build_epath_args
+ *                                 what build_epath takes: buf, cap, class_id, instance_id,
+ * @var CipVars::build_request_args
+ *                                   what build_request takes: buf, cap, service, epath,
+ * @var CipVars::build_get_attr_single_args
+ *                                           what build_get_attr_single takes: buf, cap, class_id,
+ * @var CipVars::build_get_attr_all_args
+ *                                        what build_get_attr_all takes: buf, cap, class_id,
+ * @var CipVars::build_set_attr_single_args
+ *                                           what build_set_attr_single takes: buf, cap, class_id,
+ * @var CipVars::parse_response_args
+ *                                    what parse_response takes: buf, len, out
+ * @var CipVars::ok
+ *                   a call's true/false outcome
+ * @var CipVars::n
+ *                  EPATH length in octets (always even / word-aligned), or 0 on ...
+ * @var CipNs::build_epath
+ *                          build a class/instance[/attribute] EPATH (logical segments) into buf
+ * @var CipNs::build_request
+ *                            build a CIP request: service + path size (words) + EPATH + service ...
+ * @var CipNs::build_get_attr_single
+ *                                    build a Get_Attribute_Single request for class/instance/attribute
+ * @var CipNs::build_get_attr_all
+ *                                 build a Get_Attributes_All request for class/instance: service 0x01 ...
+ * @var CipNs::build_set_attr_single
+ *                                    build a Set_Attribute_Single request for class/instance/attribute ...
+ * @var CipNs::parse_response
+ *                             parse a CIP response (service + status + additional status + data)
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

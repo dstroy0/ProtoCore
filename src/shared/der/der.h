@@ -83,19 +83,30 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Der, and reads the outcome off the
  * same handle.
  *
- * @var DerNs::read_args  the bytes a read walks, and where it starts
- * @var DerNs::oid_args   the OID a comparison names
- * @var DerNs::tlv        what a read found
- * @var DerNs::ok         a call's true/false outcome
- * @var DerNs::u64        an INTEGER's value, or a time as seconds since the POSIX epoch
- * @var DerNs::read       one value at @c read_args.pos: its tag, content and successor
- * @var DerNs::enter      the same, and then the first value INSIDE it; refuses a primitive
- * @var DerNs::uint       the INTEGER at @c read_args.pos as an unsigned value; refuses a negative
+ * @var DerVars::read_args
+ *                          the bytes a read walks, and where it starts
+ * @var DerVars::oid_args
+ *                          the OID a comparison names
+ * @var DerVars::tlv
+ *                          what a read found
+ * @var DerVars::ok
+ *                          a call's true/false outcome
+ * @var DerVars::u64
+ *                          an INTEGER's value, or a time as seconds since the POSIX epoch
+ * @var DerNs::read
+ *                        one value at @c read_args.pos: its tag, content and successor
+ * @var DerNs::enter
+ *                        the same, and then the first value INSIDE it; refuses a primitive
+ * @var DerNs::uint
+ *                        the INTEGER at @c read_args.pos as an unsigned value; refuses a negative
  *                        one, and one wider than 64 bits
- * @var DerNs::bitstring  the BIT STRING at @c read_args.pos, past its unused-bits octet; refuses
+ * @var DerNs::bitstring
+ *                        the BIT STRING at @c read_args.pos, past its unused-bits octet. Refuses
  *                        any count of unused bits but zero, which is what a key or a signature has
- * @var DerNs::oid_eq     whether the OID at @c read_args.pos is the one @c oid_args names
- * @var DerNs::time       the UTCTime or GeneralizedTime at @c read_args.pos, as seconds since the
+ * @var DerNs::oid_eq
+ *                        whether the OID at @c read_args.pos is the one @c oid_args names
+ * @var DerNs::time
+ *                        the UTCTime or GeneralizedTime at @c read_args.pos, as seconds since the
  *                        POSIX epoch (RFC 5280 sec 4.1.2.5)
  *
  * No storage member: every call works in the caller's buffer and reports on this handle.

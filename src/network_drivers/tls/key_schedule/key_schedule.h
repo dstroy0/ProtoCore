@@ -15,7 +15,7 @@
  * binds SHA-256 or SHA-384 at @ref Tls13KsNs::early and every secret is 32 or 48 bytes from there on.
  * The term layout is stated at the wider of the two (@ref TLS13_SECRET_MAX) so a connection's storage
  * does not depend on what it negotiates, and the length actually in force is read back off @ref
- * Tls13KsNs::len rather than assumed.
+ * Tls13KsVars::len rather than assumed.
  *
  * The schedule is transcript-hash-driven: each step takes a Transcript-Hash over the handshake
  * messages so far, so this module has no dependency on the message wire formats and is host-testable
@@ -43,7 +43,7 @@ EMBED_BEGIN_DECLS
 // schedule (see protocore_tls13_msg.h for the matching guard on the message layer).
 
 /** @brief Longest secret the two schedule hashes produce (SHA-384). The term layout is stated at this
- *  width; the length a schedule actually derives is @ref Tls13KsNs::len. */
+ *  width; the length a schedule actually derives is @ref Tls13KsVars::len. */
 #define TLS13_SECRET_MAX PROTOCORE_TLS13_SECRET_MAX
 
 /** @brief SHA-256 secret length: what a TLS_AES_128_GCM_SHA256 schedule binds. */
@@ -136,7 +136,7 @@ typedef struct
 {
     const uint8_t *base_secret;     ///< the Finished sender's handshake traffic secret
     const uint8_t *transcript_hash; ///< the handshake up to but excluding this Finished
-    uint8_t *out;                   ///< @ref Tls13KsNs::len bytes of verify_data
+    uint8_t *out;                   ///< @ref Tls13KsVars::len bytes of verify_data
 } Tls13FinishedArgs;
 
 /** @brief RFC 8446 sec 4.4.1 Transcript-Hash: the bytes one update absorbs, and where a peek lands. */
@@ -144,31 +144,47 @@ typedef struct
 {
     const uint8_t *data; ///< the handshake message bytes absorbed, header included
     size_t len;          ///< how many
-    uint8_t *out;        ///< where a peek writes @ref Tls13KsNs::len octets of digest
+    uint8_t *out;        ///< where a peek writes @ref Tls13KsVars::len octets of digest
 } Tls13TranscriptArgs;
 
 /**
  * @brief The TLS 1.3 key schedule (RFC 8446 sec 7.1).
  *
  * A caller sets the members a call takes, invokes it through ::Tls13Ks, and reads the outcome off the
- * same handle. The schedule itself is the caller's ::Tls13KeySchedule, named in @ref Tls13KsNs::bind.
+ * same handle. The schedule itself is the caller's ::Tls13KeySchedule, named in @ref Tls13KsVars::bind.
  *
- * @var Tls13KsNs::bind            the variant a call runs under, and the schedule it advances
- * @var Tls13KsNs::derive_args     one derivation's terms
- * @var Tls13KsNs::step            the (EC)DHE input and the transcript each level is keyed off
- * @var Tls13KsNs::finished_args   what the Finished verify_data is taken over
- * @var Tls13KsNs::ok              a call's true/false outcome
- * @var Tls13KsNs::len             the bound hash's secret length, 32 or 48, from @ref Tls13KsNs::early
- * @var Tls13KsNs::expand_label    HKDF-Expand-Label under the bound variant's prefix and hash
- * @var Tls13KsNs::derive_secret   Derive-Secret: Expand-Label over a transcript hash, @c len bytes out
- * @var Tls13KsNs::early           step 1: bind the variant, the hash and the borrow, then early_secret
- * @var Tls13KsNs::handshake       step 2: handshake_secret and the handshake traffic secrets
- * @var Tls13KsNs::master          step 3: master_secret and the application traffic secrets
- * @var Tls13KsNs::finished_mac    the Finished verify_data (sec 4.4.4)
- * @var Tls13KsNs::transcript_args  the bytes one update absorbs, and where a peek lands
- * @var Tls13KsNs::transcript_init  start a Transcript-Hash under the bound hash, in @c work
- * @var Tls13KsNs::transcript_update  absorb one handshake message into it
- * @var Tls13KsNs::transcript_peek  the digest so far, without disturbing the running context
+ * @var Tls13KsVars::bind
+ *                                   the variant a call runs under, and the schedule it advances
+ * @var Tls13KsVars::derive_args
+ *                                   one derivation's terms
+ * @var Tls13KsVars::step
+ *                                   the (EC)DHE input and the transcript each level is keyed off
+ * @var Tls13KsVars::finished_args
+ *                                   what the Finished verify_data is taken over
+ * @var Tls13KsVars::ok
+ *                                   a call's true/false outcome
+ * @var Tls13KsVars::len
+ *                                   the bound hash's secret length, 32 or 48, from @ref Tls13KsNs::early
+ * @var Tls13KsNs::expand_label
+ *                                 HKDF-Expand-Label under the bound variant's prefix and hash
+ * @var Tls13KsNs::derive_secret
+ *                                 Derive-Secret: Expand-Label over a transcript hash, @c len bytes out
+ * @var Tls13KsNs::early
+ *                                 step 1: bind the variant, the hash and the borrow, then early_secret
+ * @var Tls13KsNs::handshake
+ *                                 step 2: handshake_secret and the handshake traffic secrets
+ * @var Tls13KsNs::master
+ *                                 step 3: master_secret and the application traffic secrets
+ * @var Tls13KsNs::finished_mac
+ *                                 the Finished verify_data (sec 4.4.4)
+ * @var Tls13KsVars::transcript_args
+ *                                    the bytes one update absorbs, and where a peek lands
+ * @var Tls13KsNs::transcript_init
+ *                                  start a Transcript-Hash under the bound hash, in @c work
+ * @var Tls13KsNs::transcript_update
+ *                                    absorb one handshake message into it
+ * @var Tls13KsNs::transcript_peek
+ *                                  the digest so far, without disturbing the running context
  *
  * @ref Tls13KsBind::s is bytes the CONNECTION owns and holds for exactly as long as it lives, so the
  * schedule dies with it. It must arrive zeroed: TLS13_KS_ZEROS is the first extract's IKM and nothing

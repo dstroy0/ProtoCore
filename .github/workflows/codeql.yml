@@ -55,10 +55,15 @@ jobs:
           pip install --upgrade platformio
           python3 test/harness.py libs
 
+      # The database comes from the traced build below, so the build mode is manual. An overlay database needs
+      # build mode none, so the overlay mode is none, and the action builds a full database with no warning.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4.39.3
+        env:
+          CODEQL_OVERLAY_DATABASE_MODE: none
         with:
           languages: c-cpp
+          build-mode: manual
           queries: security-and-quality
           config-file: ./.github/codeql/codeql-config.yml
 

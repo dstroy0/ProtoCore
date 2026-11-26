@@ -330,55 +330,100 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Canopen with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Canopen.build_nmt_args.out = ...;
  *   Canopen.build_nmt_args.command = ...;
  *   Canopen.build_nmt_args.node_id = ...;
  *   Canopen.build_nmt(work);
  *   // Canopen.ok is what the call reports
+ * @endcode
  *
- * @var CanopenNs::build_nmt_args  what build_nmt takes: out, command, node_id
- * @var CanopenNs::build_sync_args  what build_sync takes: out
- * @var CanopenNs::build_time_args  what build_time takes: out, ms_since_midnight,
- * @var CanopenNs::build_heartbeat_args  what build_heartbeat takes: out, node_id, state
- * @var CanopenNs::build_emcy_args  what build_emcy takes: out, node_id, error_code, error_reg,
- * @var CanopenNs::build_tpdo_args  what build_tpdo takes: out, pdo_num, node_id, data, len
- * @var CanopenNs::build_rpdo_args  what build_rpdo takes: out, pdo_num, node_id, data, len
- * @var CanopenNs::build_sdo_read_args  what build_sdo_read takes: out, node_id, index, sub
- * @var CanopenNs::build_sdo_write_args  what build_sdo_write takes: out, node_id, index, sub, data,
- * @var CanopenNs::build_sdo_abort_args  what build_sdo_abort takes: out, node_id, index, sub,
- * @var CanopenNs::parse_args  what parse takes: f, out
- * @var CanopenNs::parse_emcy_args  what parse_emcy takes: f, node_id, error_code, error_reg,
- * @var CanopenNs::parse_heartbeat_args  what parse_heartbeat takes: f, node_id, state
- * @var CanopenNs::parse_time_args  what parse_time takes: f, out
- * @var CanopenNs::parse_sdo_response_args  what parse_sdo_response takes: f, out
- * @var CanopenNs::build_sdo_download_init_args  what build_sdo_download_init takes: out, node_id, index,
- * @var CanopenNs::build_sdo_download_segment_args  what build_sdo_download_segment takes: out, node_id,
- * @var CanopenNs::build_sdo_upload_segment_req_args  what build_sdo_upload_segment_req takes: out, node_id,
- * @var CanopenNs::parse_sdo_segment_args  what parse_sdo_segment takes: f, toggle, data, len, last
- * @var CanopenNs::sdo_reasm_init_args  what sdo_reasm_init takes: r, buf, cap
- * @var CanopenNs::sdo_reasm_feed_args  what sdo_reasm_feed takes: r, data, len, toggle, last
- * @var CanopenNs::ok  true iff f is an 8-octet frame whose command specifier is the ...
- * @var CanopenNs::build_nmt  NMT node-control frame. node_id 0 addresses all nodes
- * @var CanopenNs::build_sync  SYNC frame (zero-length, broadcast)
- * @var CanopenNs::build_time  TIME frame (broadcast): the TIME_OF_DAY (ms_since_midnight masked ...
- * @var CanopenNs::build_heartbeat  heartbeat / boot-up frame for node_id reporting state
- * @var CanopenNs::build_emcy  emergency (EMCY) frame: 16-bit error code (LE), error register, 5 ...
- * @var CanopenNs::build_tpdo  Transmit-PDO frame (pdo_num 1..4): up to 8 raw mapped octets
- * @var CanopenNs::build_rpdo  Receive-PDO frame (pdo_num 1..4): up to 8 raw mapped octets
- * @var CanopenNs::build_sdo_read  SDO expedited upload (read) request for object index / sub on ...
- * @var CanopenNs::build_sdo_write  SDO expedited download (write) of len (1..4) octets to index / sub
- * @var CanopenNs::build_sdo_abort  SDO abort frame. to_server true => client->server (0x600), false => ...
- * @var CanopenNs::parse  classify any frame by COB-ID into its CANopen function + node
- * @var CanopenNs::parse_emcy  decode an EMCY frame (must be a 0x080+node, 8-octet frame)
- * @var CanopenNs::parse_heartbeat  decode a heartbeat frame (0x700+node, 1 octet)
- * @var CanopenNs::parse_time  decode a TIME frame (0x100, 6 octets) into out. true iff f is the ...
- * @var CanopenNs::parse_sdo_response  decode an SDO server response (0x580+node): upload data, download ...
- * @var CanopenNs::build_sdo_download_init  build a segmented SDO download (write) initiate: names the object ...
- * @var CanopenNs::build_sdo_download_segment  build a segmented SDO download segment carrying len (1..7) octets ...
- * @var CanopenNs::build_sdo_upload_segment_req  build a segmented SDO upload segment request (client asks the ...
- * @var CanopenNs::parse_sdo_segment  decode an SDO segment frame (either direction) into its toggle, ...
- * @var CanopenNs::sdo_reasm_init  begin a segmented-upload reassembly with a caller-owned buffer
- * @var CanopenNs::sdo_reasm_feed  feed one decoded upload segment into the reassembler (append len ...
+ * @var CanopenVars::build_nmt_args
+ *                                   what build_nmt takes: out, command, node_id
+ * @var CanopenVars::build_sync_args
+ *                                    what build_sync takes: out
+ * @var CanopenVars::build_time_args
+ *                                    what build_time takes: out, ms_since_midnight,
+ * @var CanopenVars::build_heartbeat_args
+ *                                         what build_heartbeat takes: out, node_id, state
+ * @var CanopenVars::build_emcy_args
+ *                                    what build_emcy takes: out, node_id, error_code, error_reg,
+ * @var CanopenVars::build_tpdo_args
+ *                                    what build_tpdo takes: out, pdo_num, node_id, data, len
+ * @var CanopenVars::build_rpdo_args
+ *                                    what build_rpdo takes: out, pdo_num, node_id, data, len
+ * @var CanopenVars::build_sdo_read_args
+ *                                        what build_sdo_read takes: out, node_id, index, sub
+ * @var CanopenVars::build_sdo_write_args
+ *                                         what build_sdo_write takes: out, node_id, index, sub, data,
+ * @var CanopenVars::build_sdo_abort_args
+ *                                         what build_sdo_abort takes: out, node_id, index, sub,
+ * @var CanopenVars::parse_args
+ *                               what parse takes: f, out
+ * @var CanopenVars::parse_emcy_args
+ *                                    what parse_emcy takes: f, node_id, error_code, error_reg,
+ * @var CanopenVars::parse_heartbeat_args
+ *                                         what parse_heartbeat takes: f, node_id, state
+ * @var CanopenVars::parse_time_args
+ *                                    what parse_time takes: f, out
+ * @var CanopenVars::parse_sdo_response_args
+ *                                            what parse_sdo_response takes: f, out
+ * @var CanopenVars::build_sdo_download_init_args
+ *                                                 what build_sdo_download_init takes: out, node_id, index,
+ * @var CanopenVars::build_sdo_download_segment_args
+ *                                                    what build_sdo_download_segment takes: out, node_id,
+ * @var CanopenVars::build_sdo_upload_segment_req_args
+ *                                                      what build_sdo_upload_segment_req takes: out, node_id,
+ * @var CanopenVars::parse_sdo_segment_args
+ *                                           what parse_sdo_segment takes: f, toggle, data, len, last
+ * @var CanopenVars::sdo_reasm_init_args
+ *                                        what sdo_reasm_init takes: r, buf, cap
+ * @var CanopenVars::sdo_reasm_feed_args
+ *                                        what sdo_reasm_feed takes: r, data, len, toggle, last
+ * @var CanopenVars::ok
+ *                       true iff f is an 8-octet frame whose command specifier is the ...
+ * @var CanopenNs::build_nmt
+ *                            NMT node-control frame. node_id 0 addresses all nodes
+ * @var CanopenNs::build_sync
+ *                             SYNC frame (zero-length, broadcast)
+ * @var CanopenNs::build_time
+ *                             TIME frame (broadcast): the TIME_OF_DAY (ms_since_midnight masked ...
+ * @var CanopenNs::build_heartbeat
+ *                                  heartbeat / boot-up frame for node_id reporting state
+ * @var CanopenNs::build_emcy
+ *                             emergency (EMCY) frame: 16-bit error code (LE), error register, 5 ...
+ * @var CanopenNs::build_tpdo
+ *                             Transmit-PDO frame (pdo_num 1..4): up to 8 raw mapped octets
+ * @var CanopenNs::build_rpdo
+ *                             Receive-PDO frame (pdo_num 1..4): up to 8 raw mapped octets
+ * @var CanopenNs::build_sdo_read
+ *                                 SDO expedited upload (read) request for object index / sub on ...
+ * @var CanopenNs::build_sdo_write
+ *                                  SDO expedited download (write) of len (1..4) octets to index / sub
+ * @var CanopenNs::build_sdo_abort
+ *                                  SDO abort frame. to_server true => client->server (0x600), false => ...
+ * @var CanopenNs::parse
+ *                        classify any frame by COB-ID into its CANopen function + node
+ * @var CanopenNs::parse_emcy
+ *                             decode an EMCY frame (must be a 0x080+node, 8-octet frame)
+ * @var CanopenNs::parse_heartbeat
+ *                                  decode a heartbeat frame (0x700+node, 1 octet)
+ * @var CanopenNs::parse_time
+ *                             decode a TIME frame (0x100, 6 octets) into out. true iff f is the ...
+ * @var CanopenNs::parse_sdo_response
+ *                                     decode an SDO server response (0x580+node): upload data, download ...
+ * @var CanopenNs::build_sdo_download_init
+ *                                          build a segmented SDO download (write) initiate: names the object ...
+ * @var CanopenNs::build_sdo_download_segment
+ *                                             build a segmented SDO download segment carrying len (1..7) octets ...
+ * @var CanopenNs::build_sdo_upload_segment_req
+ *                                               build a segmented SDO upload segment request (client asks the ...
+ * @var CanopenNs::parse_sdo_segment
+ *                                    decode an SDO segment frame (either direction) into its toggle, ...
+ * @var CanopenNs::sdo_reasm_init
+ *                                 begin a segmented-upload reassembly with a caller-owned buffer
+ * @var CanopenNs::sdo_reasm_feed
+ *                                 feed one decoded upload segment into the reassembler (append len ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

@@ -106,20 +106,34 @@ typedef struct
  *
  * No slot member: one client sends to one daemon, so no call names a row.
  *
- * @var StatsdNs::server       the daemon an init parses and every metric is sent to
- * @var StatsdNs::tags         the DogStatsD tag lists, the stored one and the per-line one
- * @var StatsdNs::metric       the bucket, the type and the sample rate one line carries
- * @var StatsdNs::value        the value one line carries, in each form a call reads
- * @var StatsdNs::line         the buffer a format writes into
- * @var StatsdNs::ok           a call's true/false outcome
- * @var StatsdNs::n            the line length a format wrote, excluding the NUL, 0 if it did not fit
- * @var StatsdNs::init         parse the daemon address and copy its port and @c tags.global into storage
- * @var StatsdNs::format       build one line from @c metric, @c value.text and @c tags.metric into @c line
- * @var StatsdNs::count        add @c value.i64 to the bucket as `|c`, annotated with @c metric.rate
- * @var StatsdNs::gauge        assign @c value.i64 to the bucket as `|g`
- * @var StatsdNs::gauge_delta  adjust the bucket by @c value.i64 as a signed `|g`
- * @var StatsdNs::timing       record @c value.ms as `|ms`
- * @var StatsdNs::set          count @c value.member as one unique occurrence, `|s`
+ * @var StatsdVars::server
+ *                               the daemon an init parses and every metric is sent to
+ * @var StatsdVars::tags
+ *                               the DogStatsD tag lists, the stored one and the per-line one
+ * @var StatsdVars::metric
+ *                               the bucket, the type and the sample rate one line carries
+ * @var StatsdVars::value
+ *                               the value one line carries, in each form a call reads
+ * @var StatsdVars::line
+ *                               the buffer a format writes into
+ * @var StatsdVars::ok
+ *                               a call's true/false outcome
+ * @var StatsdVars::n
+ *                               the line length a format wrote, excluding the NUL, 0 if it did not fit
+ * @var StatsdNs::init
+ *                             parse the daemon address and copy its port and @c tags.global into storage
+ * @var StatsdNs::format
+ *                             build one line from @c metric, @c value.text and @c tags.metric into @c line
+ * @var StatsdNs::count
+ *                             add @c value.i64 to the bucket as `|c`, annotated with @c metric.rate
+ * @var StatsdNs::gauge
+ *                             assign @c value.i64 to the bucket as `|g`
+ * @var StatsdNs::gauge_delta
+ *                             adjust the bucket by @c value.i64 as a signed `|g`
+ * @var StatsdNs::timing
+ *                             record @c value.ms as `|ms`
+ * @var StatsdNs::set
+ *                             count @c value.member as one unique occurrence, `|s`
  *
  * @c format touches no socket. Every other metric call renders its value into the client's scratch,
  * stamps its own @c metric.type and the stored @c tags.global onto @c tags.metric, formats into the

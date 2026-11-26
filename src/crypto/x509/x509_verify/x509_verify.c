@@ -8,7 +8,7 @@
 
 #include "protocore_config.h" // the entry point: the gate below
 
-#if PROTOCORE_ENABLE_X509
+#if PROTOCORE_ENABLE_X509 || PROTOCORE_ENABLE_TLS
 
 #include "crypto/x509/x509_verify/x509_verify.h"
 
@@ -74,7 +74,7 @@ uint8_t *protocore_x509_verify_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_X509_VERIFY_BORROW);
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_X509_VERIFY_BORROW);
     }
     return s_own.span;
 }
@@ -392,4 +392,4 @@ X509VerifyVars X509VerifyV;
 
 EMBED_END_DECLS
 
-#endif // PROTOCORE_ENABLE_X509
+#endif // PROTOCORE_ENABLE_X509 || PROTOCORE_ENABLE_TLS

@@ -323,9 +323,13 @@ void test_sec5_2_send_cap_is_the_smaller_of_window_and_max_packet(void)
     flow_init(&f, 1024u, 100000u, 512u);
     TEST_ASSERT_EQUAL_UINT32(512u, flow_send_cap(&f, 4096u));
 
-    // Neither binds: the caller gets what it asked for.
+    // The bound this end advertises binds its own sends too.
     flow_init(&f, 1024u, 100000u, 32768u);
-    TEST_ASSERT_EQUAL_UINT32(4096u, flow_send_cap(&f, 4096u));
+    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_MAX_PACKET, flow_send_cap(&f, 4096u));
+
+    // None binds: the caller gets what it asked for.
+    flow_init(&f, 1024u, 100000u, 32768u);
+    TEST_ASSERT_EQUAL_UINT32(1024u, flow_send_cap(&f, 1024u));
 }
 
 void test_sec5_2_window_adjust_increments_the_peer_window(void)
@@ -346,7 +350,7 @@ void test_sec5_2_window_of_2_pow_32_minus_1_is_handled(void)
 
     TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, f.peer_window);
     TEST_ASSERT_TRUE(flow_send_allows(&f, 32768u));
-    TEST_ASSERT_EQUAL_UINT32(32768u, flow_send_cap(&f, 0xFFFFFFFFu));
+    TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_MAX_PACKET, flow_send_cap(&f, 0xFFFFFFFFu));
 
     // Spending against it decrements exactly, with no borrow off the top of the field.
     flow_send_take(&f, 32768u);

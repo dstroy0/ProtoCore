@@ -38,13 +38,20 @@ EMBED_BEGIN_DECLS
  * A caller sets the members a call takes, invokes it through ::SshAppClient, and reads the outcome
  * off the same handle.
  *
- * @var SshAppClientNs::seed      the 32-byte signing seed a key derivation starts from
- * @var SshAppClientNs::pub       where its public half is written
- * @var SshAppClientNs::ok        the forward is up
- * @var SshAppClientNs::state     the phase the forward is in
- * @var SshAppClientNs::state_get read that phase
- * @var SshAppClientNs::up        whether it is up
- * @var SshAppClientNs::pubkey    the seed's public half, without a connection
+ * @var SshAppClientVars::seed
+ *                                  the 32-byte signing seed a key derivation starts from
+ * @var SshAppClientVars::pub
+ *                                  where its public half is written
+ * @var SshAppClientVars::ok
+ *                                  the forward is up
+ * @var SshAppClientVars::state
+ *                                  the phase the forward is in
+ * @var SshAppClientNs::state_get
+ *                                read that phase
+ * @var SshAppClientNs::up
+ *                                whether it is up
+ * @var SshAppClientNs::pubkey
+ *                                the seed's public half, without a connection
  */
 typedef struct
 {

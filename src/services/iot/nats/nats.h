@@ -33,7 +33,7 @@
  *     +OK<CRLF>
  *     -ERR <error message><CRLF>
  *
- * #header bytes counts the header section including its terminating CR LF CR LF, and #total bytes
+ * `#header` bytes counts the header section including its terminating CR LF CR LF, and `#total` bytes
  * counts that section plus the payload, so an HPUB takes the whole section as one span.
  *
  * The Overview states operation names are case insensitive. The parser here matches them in the
@@ -82,9 +82,9 @@ typedef struct
     const char *reply_to;   ///< MSG / HMSG reply-to subject, absent when the field was not written
     size_t reply_to_len;    ///< its length, 0 when absent
     const char *headers;    ///< HMSG header section, NULL for a header-less MSG
-    size_t header_bytes;    ///< the #header bytes field, the terminating CR LF CR LF included
+    size_t header_bytes;    ///< the `#header` bytes field, the terminating CR LF CR LF included
     const uint8_t *payload; ///< MSG payload, the header section excluded
-    size_t payload_len;     ///< its length: #bytes for a MSG, #total bytes less #header bytes for an HMSG
+    size_t payload_len;     ///< its length: `#bytes` for a MSG, `#total` bytes less `#header` bytes for an HMSG
     const char *arg;        ///< the INFO options JSON or the -ERR error message
     size_t arg_len;         ///< its length
 } NatsMsg;
@@ -108,14 +108,14 @@ typedef struct
     const char *subject;    ///< the subject it publishes to
     const char *reply_to;   ///< the reply-to subject; NULL leaves the optional field off
     const uint8_t *payload; ///< the payload octets
-    size_t payload_len;     ///< how many, the #bytes a PUB writes
+    size_t payload_len;     ///< how many, the `#bytes` a PUB writes
 } NatsPublishArgs;
 
 /** @brief The header section an HPUB carries (NATS Protocol, HPUB). */
 typedef struct
 {
     const char *block; ///< the section: the NATS/1.0 version line, name: value lines, CR LF CR LF
-    size_t bytes;      ///< its length, the #header bytes field, the terminator included
+    size_t bytes;      ///< its length, the `#header` bytes field, the terminator included
 } NatsHeadersArgs;
 
 /** @brief The subscription a SUB opens and an UNSUB ends. */
@@ -154,24 +154,42 @@ typedef struct
  *
  * No storage member: every octet a call touches belongs to the caller, so nothing survives a call.
  *
- * @var NatsNs::out           where a builder writes the operation
- * @var NatsNs::client        the options a CONNECT declares
- * @var NatsNs::publish       the subject, reply-to and payload a PUB or an HPUB carries
- * @var NatsNs::headers       the header section an HPUB carries
- * @var NatsNs::subscription  the subscription a SUB opens or an UNSUB ends
- * @var NatsNs::in            the inbound octets a parse reads
- * @var NatsNs::ok            a call's true/false outcome
- * @var NatsNs::n             octets a builder wrote, 0 when it wrote none
- * @var NatsNs::consumed      octets the decoded operation occupies, so a caller can advance @c in.buf
- * @var NatsNs::msg           the decoded operation, its spans pointing into @c in.buf
- * @var NatsNs::connect       write `CONNECT <options>` from @c client into @c out
- * @var NatsNs::pub           write `PUB <subject> [reply-to] <#bytes>` and the payload from @c publish
- * @var NatsNs::hpub          the same with @c headers ahead of the payload, both lengths written
- * @var NatsNs::sub           write `SUB <subject> [queue group] <sid>` from @c subscription
- * @var NatsNs::unsub         write `UNSUB <sid> [max_msgs]` from @c subscription
- * @var NatsNs::ping          write `PING`
- * @var NatsNs::pong          write `PONG`
- * @var NatsNs::parse         decode the operation at the head of @c in into @c msg
+ * @var NatsVars::out
+ *                              where a builder writes the operation
+ * @var NatsVars::client
+ *                              the options a CONNECT declares
+ * @var NatsVars::publish
+ *                              the subject, reply-to and payload a PUB or an HPUB carries
+ * @var NatsVars::headers
+ *                              the header section an HPUB carries
+ * @var NatsVars::subscription
+ *                              the subscription a SUB opens or an UNSUB ends
+ * @var NatsVars::in
+ *                              the inbound octets a parse reads
+ * @var NatsVars::ok
+ *                              a call's true/false outcome
+ * @var NatsVars::n
+ *                              octets a builder wrote, 0 when it wrote none
+ * @var NatsVars::consumed
+ *                              octets the decoded operation occupies, so a caller can advance @c in.buf
+ * @var NatsVars::msg
+ *                              the decoded operation, its spans pointing into @c in.buf
+ * @var NatsNs::connect
+ *                            write `CONNECT <options>` from @c client into @c out
+ * @var NatsNs::pub
+ *                            write `PUB <subject> [reply-to] <#bytes>` and the payload from @c publish
+ * @var NatsNs::hpub
+ *                            the same with @c headers ahead of the payload, both lengths written
+ * @var NatsNs::sub
+ *                            write `SUB <subject> [queue group] <sid>` from @c subscription
+ * @var NatsNs::unsub
+ *                            write `UNSUB <sid> [max_msgs]` from @c subscription
+ * @var NatsNs::ping
+ *                            write `PING`
+ * @var NatsNs::pong
+ *                            write `PONG`
+ * @var NatsNs::parse
+ *                            decode the operation at the head of @c in into @c msg
  */
 typedef struct
 {

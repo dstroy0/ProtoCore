@@ -84,8 +84,11 @@ const char *protocore_scpi_common(ScpiCommon c);
  * @brief Build a SCPI command line: `header` + ' ' + comma-joined `args` + '\n'.
  *
  * With @p argc 0 the line is just `header` + '\n' (e.g. `"*RST\n"`, `"MEAS:VOLT:DC?\n"`).
+ * @param buf    the destination buffer.
+ * @param cap    the capacity of @p buf, in bytes.
  * @param header a full `:`-hierarchy header or a common command, e.g. `"SOURce:VOLTage"`, `"*IDN?"`.
  * @param args   already-formatted parameter strings (see @ref protocore_scpi_fmt_real to format a number).
+ * @param argc   the number of strings in @p args.
  * @return characters written (excluding the NUL terminator), or 0 on overflow / bad input.
  * @note  The line is NUL-terminated so callers may treat @p buf as a C-string.
  */
@@ -121,6 +124,8 @@ size_t protocore_scpi_parse_string(const char *s, size_t len, char *out, size_t 
 /**
  * @brief Parse an IEEE 488.2 arbitrary block: definite `#<n><n-length-digits><data>` or indefinite
  *        `#0<data>` (runs to the trailing newline). On success @p data points INTO @p buf.
+ * @param buf       the destination buffer.
+ * @param len       the number of bytes in @p buf.
  * @param data      receives a pointer to the first data byte.
  * @param data_len  receives the data byte count.
  * @param consumed  receives the total bytes the block occupied (header + data [+ the indefinite NL]).
@@ -159,6 +164,8 @@ void protocore_scpi_event(ScpiStatus *s, uint8_t esr_bits);
 /**
  * @brief Enqueue an error/event and latch its ESR class bit (CME/EXE/DDE/QYE from the -1xx/-2xx/
  *        -3xx/-4xx number range). On overflow the tail entry becomes -350 "Queue overflow".
+ * @param s    the status that holds the error queue and the ESR.
+ * @param number the SCPI error number, for example -113 for an undefined header.
  * @param msg  the description; pass nullptr to use the standard text for a standard number.
  */
 void protocore_scpi_push_error(ScpiStatus *s, int16_t number, const char *msg);

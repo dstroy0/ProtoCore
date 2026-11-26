@@ -131,32 +131,54 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Iolink with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Iolink.mc_args.read = ...;
  *   Iolink.mc_args.channel = ...;
  *   Iolink.mc_args.address = ...;
  *   Iolink.mc(work);
  *   // Iolink.value is what the call reports
+ * @endcode
  *
- * @var IolinkNs::mc_args  what mc takes: read, channel, address
- * @var IolinkNs::mc_is_read_args  what mc_is_read takes: mc
- * @var IolinkNs::mc_channel_args  what mc_channel takes: mc
- * @var IolinkNs::mc_address_args  what mc_address takes: mc
- * @var IolinkNs::ckt_args  what ckt takes: mseq_type, checksum6
- * @var IolinkNs::cks_args  what cks takes: event, pd_invalid, checksum6
- * @var IolinkNs::checksum6_args  what checksum6 takes: msg, len
- * @var IolinkNs::finalize_args  what finalize takes: msg, len, check_idx
- * @var IolinkNs::verify_args  what verify takes: msg, len, check_idx
- * @var IolinkNs::ok  a call's true/false outcome
- * @var IolinkNs::value  the value a call reports
- * @var IolinkNs::mc  build the M-sequence Control octet from access / channel / address ...
- * @var IolinkNs::mc_is_read  true if the MC octet requests a read
- * @var IolinkNs::mc_channel  communication channel from an MC octet (IOL_CH_*)
- * @var IolinkNs::mc_address  address (5-bit) from an MC octet
- * @var IolinkNs::ckt  build a CKT octet from an M-sequence type and a 6-bit checksum (use ...
- * @var IolinkNs::cks  build a CKS octet from the Event / PD-invalid flags and a 6-bit ...
- * @var IolinkNs::checksum6  the compressed 6-bit SDCI checksum over msg (the check octet must ...
- * @var IolinkNs::finalize  finalize a message in place: compute the checksum over msg ...
- * @var IolinkNs::verify  verify a received message: recompute the checksum (masking off the ...
+ * @var IolinkVars::mc_args
+ *                           what mc takes: read, channel, address
+ * @var IolinkVars::mc_is_read_args
+ *                                   what mc_is_read takes: mc
+ * @var IolinkVars::mc_channel_args
+ *                                   what mc_channel takes: mc
+ * @var IolinkVars::mc_address_args
+ *                                   what mc_address takes: mc
+ * @var IolinkVars::ckt_args
+ *                            what ckt takes: mseq_type, checksum6
+ * @var IolinkVars::cks_args
+ *                            what cks takes: event, pd_invalid, checksum6
+ * @var IolinkVars::checksum6_args
+ *                                  what checksum6 takes: msg, len
+ * @var IolinkVars::finalize_args
+ *                                 what finalize takes: msg, len, check_idx
+ * @var IolinkVars::verify_args
+ *                               what verify takes: msg, len, check_idx
+ * @var IolinkVars::ok
+ *                      a call's true/false outcome
+ * @var IolinkVars::value
+ *                         the value a call reports
+ * @var IolinkNs::mc
+ *                    build the M-sequence Control octet from access / channel / address ...
+ * @var IolinkNs::mc_is_read
+ *                            true if the MC octet requests a read
+ * @var IolinkNs::mc_channel
+ *                            communication channel from an MC octet (IOL_CH_*)
+ * @var IolinkNs::mc_address
+ *                            address (5-bit) from an MC octet
+ * @var IolinkNs::ckt
+ *                     build a CKT octet from an M-sequence type and a 6-bit checksum (use ...
+ * @var IolinkNs::cks
+ *                     build a CKS octet from the Event / PD-invalid flags and a 6-bit ...
+ * @var IolinkNs::checksum6
+ *                           the compressed 6-bit SDCI checksum over msg (the check octet must ...
+ * @var IolinkNs::finalize
+ *                          finalize a message in place: compute the checksum over msg ...
+ * @var IolinkNs::verify
+ *                        verify a received message: recompute the checksum (masking off the ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

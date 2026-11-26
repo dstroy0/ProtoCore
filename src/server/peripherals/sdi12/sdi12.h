@@ -210,52 +210,93 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Sdi12 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Sdi12.build_args.buf = ...;
  *   Sdi12.build_args.cap = ...;
  *   Sdi12.build_args.addr = ...;
  *   Sdi12.build_args.body = ...;
  *   Sdi12.build(work);
  *   // Sdi12.n is what the call reports
+ * @endcode
  *
- * @var Sdi12Ns::build_args  what build takes: buf, cap, addr, body
- * @var Sdi12Ns::build_ack_args  what build_ack takes: buf, cap, addr
- * @var Sdi12Ns::build_identify_args  what build_identify takes: buf, cap, addr
- * @var Sdi12Ns::build_measure_args  what build_measure takes: buf, cap, addr, with_crc
- * @var Sdi12Ns::build_concurrent_args  what build_concurrent takes: buf, cap, addr, with_crc
- * @var Sdi12Ns::build_measure_additional_args  what build_measure_additional takes: buf, cap, addr,
- * @var Sdi12Ns::build_concurrent_additional_args  what build_concurrent_additional takes: buf, cap, addr,
- * @var Sdi12Ns::build_continuous_args  what build_continuous takes: buf, cap, addr, r_index,
- * @var Sdi12Ns::build_verify_args  what build_verify takes: buf, cap, addr
- * @var Sdi12Ns::build_data_args  what build_data takes: buf, cap, addr, d_index
- * @var Sdi12Ns::build_change_address_args  what build_change_address takes: buf, cap, addr, new_addr
- * @var Sdi12Ns::build_query_address_args  what build_query_address takes: buf, cap
- * @var Sdi12Ns::parse_measure_args  what parse_measure takes: resp, len, addr, ready_sec,
- * @var Sdi12Ns::parse_values_args  what parse_values takes: resp, len, out, max, n
- * @var Sdi12Ns::parse_identify_args  what parse_identify takes: resp, len, out
- * @var Sdi12Ns::crc16_args  what crc16 takes: data, len
- * @var Sdi12Ns::crc_encode_args  what crc_encode takes: crc, out
- * @var Sdi12Ns::check_crc_args  what check_crc takes: resp, len
- * @var Sdi12Ns::ok  true iff len covers the 20 fixed octets; false otherwise
- * @var Sdi12Ns::n  the count a call reports
- * @var Sdi12Ns::crc  what a call reports
- * @var Sdi12Ns::build  generic `<addr><body>!` command (body is the command letters, e.g. ...
- * @var Sdi12Ns::build_ack  acknowledge-active command `a!`
- * @var Sdi12Ns::build_identify  send-identification command `aI!`
- * @var Sdi12Ns::build_measure  start-measurement command `aM!` (or `aMC!` when with_crc)
- * @var Sdi12Ns::build_concurrent  concurrent-measurement command `aC!` (or `aCC!` when with_crc)
- * @var Sdi12Ns::build_measure_additional  additional-measurement command `aM<n>!` (or `aMC<n>!` when ...
- * @var Sdi12Ns::build_concurrent_additional  additional-concurrent command `aC<n>!` (or `aCC<n>!` when ...
- * @var Sdi12Ns::build_continuous  continuous-measurement command `aR<n>!` (or `aRC<n>!` when ...
- * @var Sdi12Ns::build_verify  start-verification command `aV!`; the response uses the same ...
- * @var Sdi12Ns::build_data  send-data command `aD<n>!` (d_index 0..9)
- * @var Sdi12Ns::build_change_address  change-address command `aA<b>!` (new_addr is the new sensor address)
- * @var Sdi12Ns::build_query_address  address-query command `?!` (asks the single connected sensor for ...
- * @var Sdi12Ns::parse_measure  parse a measurement response `atttn<CR><LF>`: ready_sec = seconds ...
- * @var Sdi12Ns::parse_values  split a data response `a<+/-value...><CR><LF>` into floats. Skips ...
- * @var Sdi12Ns::parse_identify  parse an identify (aI!) response: address + 2-char SDI-12 version + ...
- * @var Sdi12Ns::crc16  compute the SDI-12 CRC-16 over data
- * @var Sdi12Ns::crc_encode  encode a CRC into its 3 printable ASCII octets (out[0..2])
- * @var Sdi12Ns::check_crc  verify a CRC-protected response: the 3 octets before the trailing ...
+ * @var Sdi12Vars::build_args
+ *                             what build takes: buf, cap, addr, body
+ * @var Sdi12Vars::build_ack_args
+ *                                 what build_ack takes: buf, cap, addr
+ * @var Sdi12Vars::build_identify_args
+ *                                      what build_identify takes: buf, cap, addr
+ * @var Sdi12Vars::build_measure_args
+ *                                     what build_measure takes: buf, cap, addr, with_crc
+ * @var Sdi12Vars::build_concurrent_args
+ *                                        what build_concurrent takes: buf, cap, addr, with_crc
+ * @var Sdi12Vars::build_measure_additional_args
+ *                                                what build_measure_additional takes: buf, cap, addr,
+ * @var Sdi12Vars::build_concurrent_additional_args
+ *                                                   what build_concurrent_additional takes: buf, cap, addr,
+ * @var Sdi12Vars::build_continuous_args
+ *                                        what build_continuous takes: buf, cap, addr, r_index,
+ * @var Sdi12Vars::build_verify_args
+ *                                    what build_verify takes: buf, cap, addr
+ * @var Sdi12Vars::build_data_args
+ *                                  what build_data takes: buf, cap, addr, d_index
+ * @var Sdi12Vars::build_change_address_args
+ *                                            what build_change_address takes: buf, cap, addr, new_addr
+ * @var Sdi12Vars::build_query_address_args
+ *                                           what build_query_address takes: buf, cap
+ * @var Sdi12Vars::parse_measure_args
+ *                                     what parse_measure takes: resp, len, addr, ready_sec,
+ * @var Sdi12Vars::parse_values_args
+ *                                    what parse_values takes: resp, len, out, max, n
+ * @var Sdi12Vars::parse_identify_args
+ *                                      what parse_identify takes: resp, len, out
+ * @var Sdi12Vars::crc16_args
+ *                             what crc16 takes: data, len
+ * @var Sdi12Vars::crc_encode_args
+ *                                  what crc_encode takes: crc, out
+ * @var Sdi12Vars::check_crc_args
+ *                                 what check_crc takes: resp, len
+ * @var Sdi12Vars::ok
+ *                     true iff len covers the 20 fixed octets; false otherwise
+ * @var Sdi12Vars::n
+ *                    the count a call reports
+ * @var Sdi12Vars::crc
+ *                      what a call reports
+ * @var Sdi12Ns::build
+ *                      generic `<addr><body>!` command (body is the command letters, e.g. ...
+ * @var Sdi12Ns::build_ack
+ *                          acknowledge-active command `a!`
+ * @var Sdi12Ns::build_identify
+ *                               send-identification command `aI!`
+ * @var Sdi12Ns::build_measure
+ *                              start-measurement command `aM!` (or `aMC!` when with_crc)
+ * @var Sdi12Ns::build_concurrent
+ *                                 concurrent-measurement command `aC!` (or `aCC!` when with_crc)
+ * @var Sdi12Ns::build_measure_additional
+ *                                         additional-measurement command `aM<n>!` (or `aMC<n>!` when ...
+ * @var Sdi12Ns::build_concurrent_additional
+ *                                            additional-concurrent command `aC<n>!` (or `aCC<n>!` when ...
+ * @var Sdi12Ns::build_continuous
+ *                                 continuous-measurement command `aR<n>!` (or `aRC<n>!` when ...
+ * @var Sdi12Ns::build_verify
+ *                             start-verification command `aV!`; the response uses the same ...
+ * @var Sdi12Ns::build_data
+ *                           send-data command `aD<n>!` (d_index 0..9)
+ * @var Sdi12Ns::build_change_address
+ *                                     change-address command `aA<b>!` (new_addr is the new sensor address)
+ * @var Sdi12Ns::build_query_address
+ *                                    address-query command `?!` (asks the single connected sensor for ...
+ * @var Sdi12Ns::parse_measure
+ *                              parse a measurement response `atttn<CR><LF>`: ready_sec = seconds ...
+ * @var Sdi12Ns::parse_values
+ *                             split a data response `a<+/-value...><CR><LF>` into floats. Skips ...
+ * @var Sdi12Ns::parse_identify
+ *                               parse an identify (aI!) response: address + 2-char SDI-12 version + ...
+ * @var Sdi12Ns::crc16
+ *                      compute the SDI-12 CRC-16 over data
+ * @var Sdi12Ns::crc_encode
+ *                           encode a CRC into its 3 printable ASCII octets (out[0..2])
+ * @var Sdi12Ns::check_crc
+ *                          verify a CRC-protected response: the 3 octets before the trailing ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

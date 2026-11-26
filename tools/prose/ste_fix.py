@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The ASD-STE100 repairs that need no new word, made in the comments of the tree and in its technical documents.
 
-    python utils/maint/prose/ste_fix.py [paths]            report each change and the findings it removes
+    python tools/prose/ste_fix.py [paths]            report each change and the findings it removes
 
-    python utils/maint/prose/ste_fix.py --write [paths]    write the changes
+    python tools/prose/ste_fix.py --write [paths]    write the changes
 
 With no path, the tool reads each file of the prose ratchet and each technical document of the ste ratchet.
 

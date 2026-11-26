@@ -74,22 +74,35 @@ typedef struct
  * attempt of the OTP after the successful validation" record of RFC 6238 sec 5.2 are the caller's
  * to keep, so there is no table, window or counter here to hold them.
  *
- * @var TotpNs::k       K: the shared secret every OTP is keyed by (RFC 4226 sec 5.1)
- * @var TotpNs::keylen  how many bytes K holds; over 64 it is replaced by H(K) (RFC 2104 sec 2)
- * @var TotpNs::digit   Digit: how many digits the OTP carries; 0 takes ::PROTOCORE_TOTP_DIGIT_MIN
- * @var TotpNs::step    C, and the T0/X/Unix time that fix T: set @c step.counter for a
+ * @var TotpVars::k
+ *                        K: the shared secret every OTP is keyed by (RFC 4226 sec 5.1)
+ * @var TotpVars::keylen
+ *                        how many bytes K holds; over 64 it is replaced by H(K) (RFC 2104 sec 2)
+ * @var TotpVars::digit
+ *                        Digit: how many digits the OTP carries; 0 takes ::PROTOCORE_TOTP_DIGIT_MIN
+ * @var TotpVars::step
+ *                        C, and the T0/X/Unix time that fix T: set @c step.counter for a
  *                      counter-based code, @c step.unix_time / @c step.t0 / @c step.x for a
  *                      time-based one
- * @var TotpNs::check   the submitted OTP and the drift steps a validation walks around T
- * @var TotpNs::secret  the base32 text a decode reads and the buffer it writes K into
- * @var TotpNs::ok      a validation's true/false verdict
- * @var TotpNs::u32     D: the OTP a generate produced, in 0...10^Digit-1 (RFC 4226 sec 5.3)
- * @var TotpNs::i32     the number of K bytes a decode wrote, or -1 on a rejected character or a
+ * @var TotpVars::check
+ *                        the submitted OTP and the drift steps a validation walks around T
+ * @var TotpVars::secret
+ *                        the base32 text a decode reads and the buffer it writes K into
+ * @var TotpVars::ok
+ *                        a validation's true/false verdict
+ * @var TotpVars::u32
+ *                        D: the OTP a generate produced, in 0...10^Digit-1 (RFC 4226 sec 5.3)
+ * @var TotpVars::i32
+ *                        the number of K bytes a decode wrote, or -1 on a rejected character or a
  *                      buffer too small
- * @var TotpNs::hotp           HOTP(K,C) for @c step.counter (RFC 4226 sec 5.3)
- * @var TotpNs::totp           HOTP(K,T) for the time step T names (RFC 6238 sec 4.2)
- * @var TotpNs::verify         match @c check.otp against T and the steps around it (RFC 6238 sec 6)
- * @var TotpNs::base32_decode  base32 text to the K bytes it stands for (RFC 4648 sec 6)
+ * @var TotpNs::hotp
+ *                             HOTP(K,C) for @c step.counter (RFC 4226 sec 5.3)
+ * @var TotpNs::totp
+ *                             HOTP(K,T) for the time step T names (RFC 6238 sec 4.2)
+ * @var TotpNs::verify
+ *                             match @c check.otp against T and the steps around it (RFC 6238 sec 6)
+ * @var TotpNs::base32_decode
+ *                             base32 text to the K bytes it stands for (RFC 4648 sec 6)
  */
 typedef struct
 {

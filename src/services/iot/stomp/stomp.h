@@ -112,21 +112,34 @@ typedef struct
  * No storage member: both buffers and the frame are the caller's, and the codec holds nothing
  * between calls.
  *
- * @var StompNs::frame       the frame a parse fills and a lookup searches
- * @var StompNs::buf         the caller buffer a build writes and a parse reads
- * @var StompNs::build_args  the command, header entries and body a build emits
- * @var StompNs::lookup      the header-name a lookup matches
- * @var StompNs::ok          a call's true/false outcome
- * @var StompNs::n           octets a build wrote including the NULL, or octets an unescape decoded; 0 on failure
- * @var StompNs::consumed    octets the parsed frame occupied, its leading EOLs included
- * @var StompNs::value       the raw, still escaped header-value a lookup found
- * @var StompNs::value_len   how many
- * @var StompNs::build       write `command EOL *( header EOL ) EOL body NULL` into @c buf.out, every
+ * @var StompVars::frame
+ *                             the frame a parse fills and a lookup searches
+ * @var StompVars::buf
+ *                             the caller buffer a build writes and a parse reads
+ * @var StompVars::build_args
+ *                             the command, header entries and body a build emits
+ * @var StompVars::lookup
+ *                             the header-name a lookup matches
+ * @var StompVars::ok
+ *                             a call's true/false outcome
+ * @var StompVars::n
+ *                             octets a build wrote including the NULL, or octets an unescape decoded; 0 on failure
+ * @var StompVars::consumed
+ *                             octets the parsed frame occupied, its leading EOLs included
+ * @var StompVars::value
+ *                             the raw, still escaped header-value a lookup found
+ * @var StompVars::value_len
+ *                             how many
+ * @var StompNs::build
+ *                           write `command EOL *( header EOL ) EOL body NULL` into @c buf.out, every
  *                           header-name and header-value escaped (sec 4.1, sec 9)
- * @var StompNs::parse       take one frame from the head of @c buf.in into @c *frame, the body sized by
+ * @var StompNs::parse
+ *                           take one frame from the head of @c buf.in into @c *frame, the body sized by
  *                           content-length when present (sec 4.3.1)
- * @var StompNs::header      find @c lookup.name among @c *frame header entries, first match wins (sec 4.4)
- * @var StompNs::unescape    decode the sec 4.1 escapes in @c buf.in into @c buf.out
+ * @var StompNs::header
+ *                           find @c lookup.name among @c *frame header entries, first match wins (sec 4.4)
+ * @var StompNs::unescape
+ *                           decode the sec 4.1 escapes in @c buf.in into @c buf.out
  */
 typedef struct
 {

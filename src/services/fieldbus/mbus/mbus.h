@@ -263,40 +263,71 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Mbus with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Mbus.build_ack_args.buf = ...;
  *   Mbus.build_ack_args.cap = ...;
  *   Mbus.build_ack(work);
  *   // Mbus.n is what the call reports
+ * @endcode
  *
- * @var MbusNs::build_ack_args  what build_ack takes: buf, cap
- * @var MbusNs::build_short_args  what build_short takes: buf, cap, c, a
- * @var MbusNs::build_long_args  what build_long takes: buf, cap, c, a, ci, data, data_len
- * @var MbusNs::build_snd_nke_args  what build_snd_nke takes: buf, cap, a
- * @var MbusNs::build_req_ud2_args  what build_req_ud2 takes: buf, cap, a, fcb
- * @var MbusNs::build_req_ud1_args  what build_req_ud1 takes: buf, cap, a, fcb
- * @var MbusNs::parse_args  what parse takes: buf, len, out, consumed
- * @var MbusNs::dif_data_len_args  what dif_data_len takes: coding
- * @var MbusNs::record_next_args  what record_next takes: body, len, pos, out
- * @var MbusNs::record_value_int_args  what record_value_int takes: r, out
- * @var MbusNs::record_value_real_args  what record_value_real takes: r, out
- * @var MbusNs::vif_decode_args  what vif_decode takes: vif, unit, exp10
- * @var MbusNs::parse_var_header_args  what parse_var_header takes: body, len, out
- * @var MbusNs::ok  true for a decoded measurement VIF; false (unit UNKNOWN) for one ...
- * @var MbusNs::n  the count a call reports
- * @var MbusNs::value  the value a call reports
- * @var MbusNs::build_ack  single-character acknowledge (0xE5)
- * @var MbusNs::build_short  short frame: 10 C A CS 16
- * @var MbusNs::build_long  long frame: 68 L L 68 C A CI [data] CS 16. data_len 0 builds a ...
- * @var MbusNs::build_snd_nke  convenience: a SND_NKE (link reset) short frame to address a
- * @var MbusNs::build_req_ud2  convenience: a REQ_UD2 short frame to address a (fcb toggles the ...
- * @var MbusNs::build_req_ud1  convenience: a REQ_UD1 (class-1 / alarm data request) short frame ...
- * @var MbusNs::parse  parse one M-Bus frame from buf. Validates the start/stop octets, ...
- * @var MbusNs::dif_data_len  map a DIF low-nibble coding to its fixed data length (0 for ...
- * @var MbusNs::record_next  walk one data record at *pos within a long-frame body (the octets ...
- * @var MbusNs::record_value_int  decode a record's value as a signed 64-bit integer (the integer and ...
- * @var MbusNs::record_value_real  decode a record's value as an IEEE-754 float (only the REAL32 DIF ...
- * @var MbusNs::vif_decode  decode a VIF octet into its unit and the base-10 exponent applied ...
- * @var MbusNs::parse_var_header  decode the 12-octet variable-data-structure fixed header (the ...
+ * @var MbusVars::build_ack_args
+ *                                what build_ack takes: buf, cap
+ * @var MbusVars::build_short_args
+ *                                  what build_short takes: buf, cap, c, a
+ * @var MbusVars::build_long_args
+ *                                 what build_long takes: buf, cap, c, a, ci, data, data_len
+ * @var MbusVars::build_snd_nke_args
+ *                                    what build_snd_nke takes: buf, cap, a
+ * @var MbusVars::build_req_ud2_args
+ *                                    what build_req_ud2 takes: buf, cap, a, fcb
+ * @var MbusVars::build_req_ud1_args
+ *                                    what build_req_ud1 takes: buf, cap, a, fcb
+ * @var MbusVars::parse_args
+ *                            what parse takes: buf, len, out, consumed
+ * @var MbusVars::dif_data_len_args
+ *                                   what dif_data_len takes: coding
+ * @var MbusVars::record_next_args
+ *                                  what record_next takes: body, len, pos, out
+ * @var MbusVars::record_value_int_args
+ *                                       what record_value_int takes: r, out
+ * @var MbusVars::record_value_real_args
+ *                                        what record_value_real takes: r, out
+ * @var MbusVars::vif_decode_args
+ *                                 what vif_decode takes: vif, unit, exp10
+ * @var MbusVars::parse_var_header_args
+ *                                       what parse_var_header takes: body, len, out
+ * @var MbusVars::ok
+ *                    true for a decoded measurement VIF; false (unit UNKNOWN) for one ...
+ * @var MbusVars::n
+ *                   the count a call reports
+ * @var MbusVars::value
+ *                       the value a call reports
+ * @var MbusNs::build_ack
+ *                         single-character acknowledge (0xE5)
+ * @var MbusNs::build_short
+ *                           short frame: 10 C A CS 16
+ * @var MbusNs::build_long
+ *                          long frame: 68 L L 68 C A CI [data] CS 16. data_len 0 builds a ...
+ * @var MbusNs::build_snd_nke
+ *                             convenience: a SND_NKE (link reset) short frame to address a
+ * @var MbusNs::build_req_ud2
+ *                             convenience: a REQ_UD2 short frame to address a (fcb toggles the ...
+ * @var MbusNs::build_req_ud1
+ *                             convenience: a REQ_UD1 (class-1 / alarm data request) short frame ...
+ * @var MbusNs::parse
+ *                     parse one M-Bus frame from buf. Validates the start/stop octets, ...
+ * @var MbusNs::dif_data_len
+ *                            map a DIF low-nibble coding to its fixed data length (0 for ...
+ * @var MbusNs::record_next
+ *                           walk one data record at *pos within a long-frame body (the octets ...
+ * @var MbusNs::record_value_int
+ *                                decode a record's value as a signed 64-bit integer (the integer and ...
+ * @var MbusNs::record_value_real
+ *                                 decode a record's value as an IEEE-754 float (only the REAL32 DIF ...
+ * @var MbusNs::vif_decode
+ *                          decode a VIF octet into its unit and the base-10 exponent applied ...
+ * @var MbusNs::parse_var_header
+ *                                decode the 12-octet variable-data-structure fixed header (the ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

@@ -88,13 +88,13 @@ PROTOCORE_NS_LAYOUT(EspNs, gcm_encapsulate, gcm_decapsulate, replay_init, replay
  * @param payload_len Payload len
  * @param out Out
  * @param out_cap Out cap
- * @return The size_t.
+ * @return the ESP packet length written, or 0 on a bad argument / overflow.
  */
 size_t protocore_esp_gcm_encapsulate(const uint8_t *work, uint32_t spi, uint32_t seq, const uint8_t *key,
                                      const uint8_t *salt, const uint8_t *iv, uint8_t next_header,
                                      const uint8_t *payload, size_t payload_len, uint8_t *out, size_t out_cap);
 /**
- * @brief Verify + decapsulate an ESP packet in place (the ciphertext is .
+ * @brief Verify + decapsulate an ESP packet in place (the ciphertext is decrypted within @p packet).
  * @param work PROTOCORE_ESP_BORROW bytes the caller took. Not held past the call.
  * @param key PROTOCORE_ESP_KEY_LEN bytes
  * @param salt PROTOCORE_ESP_SALT_LEN bytes

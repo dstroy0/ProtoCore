@@ -332,8 +332,8 @@ src/network_drivers/network/forward/forward.c	31
 src/network_drivers/network/forward/forward.h	37
 src/network_drivers/network/network.c	5
 src/network_drivers/network/network.h	17
-src/network_drivers/network/stack/stack_net.c	7
-src/network_drivers/network/stack/stack_net.h	6
+src/network_drivers/network/stack/stack_net/stack_net.c	7
+src/network_drivers/network/stack/stack_net/stack_net.h	6
 src/network_drivers/physical/CMakeLists.txt	2
 src/network_drivers/physical/physical/physical.c	16
 src/network_drivers/physical/physical/physical.h	58

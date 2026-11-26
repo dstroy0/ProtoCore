@@ -67,16 +67,24 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Inflate with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Inflate.init_args.z = ...;
  *   Inflate.init_args.window = ...;
  *   Inflate.init(work);
+ * @endcode
  *
- * @var InflateNs::init_args  what init takes: z, window
- * @var InflateNs::packet_args  what packet takes: z, src, src_len, dst, dst_cap, out_len
- * @var InflateNs::ok  a call's true/false outcome
- * @var InflateNs::n  0 on success, -1 on a malformed stream, an output overflow, or a ...
- * @var InflateNs::init  bind a caller-owned 32 KB window to a decompressor and reset it to ...
- * @var InflateNs::packet  decompress one inbound packet payload, continuing the session's ...
+ * @var InflateVars::init_args
+ *                              what init takes: z, window
+ * @var InflateVars::packet_args
+ *                                what packet takes: z, src, src_len, dst, dst_cap, out_len
+ * @var InflateVars::ok
+ *                       a call's true/false outcome
+ * @var InflateVars::n
+ *                      0 on success, -1 on a malformed stream, an output overflow, or a ...
+ * @var InflateNs::init
+ *                       bind a caller-owned 32 KB window to a decompressor and reset it to ...
+ * @var InflateNs::packet
+ *                         decompress one inbound packet payload, continuing the session's ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

@@ -33,6 +33,7 @@
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
+#include "test/core_setup/hal/esp/esp_mnt_fs.h" // protocore_mnt_fs: the LittleFS backend that dav() takes
 #include <LittleFS.h>
 
 static const char *SSID = "YOUR_SSID";
@@ -70,7 +71,7 @@ void setup()
         f.close();
     }
 
-    dav("/dav", LittleFS, "/dav");
+    dav("/dav", protocore_mnt_fs(&LittleFS), "/dav");
     begin_http(80, NULL);
     Serial.println("WebDAV share at http://<ip>/dav");
 }

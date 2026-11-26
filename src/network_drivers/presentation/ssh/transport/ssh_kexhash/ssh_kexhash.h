@@ -54,6 +54,7 @@ typedef struct
  * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
  * never named here.
  *
+ * @code{.c}
  *   SshKexHash.init_args.is512 = is512;
  *   SshKexHash.init(work);
  *   SshKexHash.update_args.data = v_c;
@@ -62,15 +63,24 @@ typedef struct
  *   SshKexHash.final_args.out = H;
  *   SshKexHash.final(work);
  *   // SshKexHash.len is 32 or 64, the length written
+ * @endcode
  *
- * @var SshKexHashNs::init_args    which of the two KEX hashes the negotiated method binds this to
- * @var SshKexHashNs::update_args  the bytes absorbed
- * @var SshKexHashNs::final_args   where the digest lands
- * @var SshKexHashNs::ok           a call's true/false outcome; false on a null pointer
- * @var SshKexHashNs::len          the bound hash's digest length, 32 or 64, from @ref SshKexHashNs::init
- * @var SshKexHashNs::init         bind the digest to the negotiated method's hash and start it
- * @var SshKexHashNs::update       absorb the staged bytes
- * @var SshKexHashNs::final        write @ref SshKexHashNs::len octets of digest
+ * @var SshKexHashVars::init_args
+ *                                   which of the two KEX hashes the negotiated method binds this to
+ * @var SshKexHashVars::update_args
+ *                                   the bytes absorbed
+ * @var SshKexHashVars::final_args
+ *                                   where the digest lands
+ * @var SshKexHashVars::ok
+ *                                   a call's true/false outcome; false on a null pointer
+ * @var SshKexHashVars::len
+ *                                   the bound hash's digest length, 32 or 64, from @ref SshKexHashNs::init
+ * @var SshKexHashNs::init
+ *                                 bind the digest to the negotiated method's hash and start it
+ * @var SshKexHashNs::update
+ *                                 absorb the staged bytes
+ * @var SshKexHashNs::final
+ *                                 write @ref SshKexHashVars::len octets of digest
  *
  * @c work is PROTOCORE_SSH_KEXHASH_BORROW secure bytes the CALLER took, at an address it knows. It
  * is not held past the call, so nothing here aliases it. The caller releases
@@ -78,7 +88,7 @@ typedef struct
  * it. The exchange hash and every key the sec 7.2 chain derives pass through those bytes, so they die
  * with the release rather than on the stack. Two digests are two borrows and never collide.
  *
- * No storage member and no context: a caller sets operands and reads @ref SshKexHashNs::ok, and that
+ * No storage member and no context: a caller sets operands and reads @ref SshKexHashVars::ok, and that
  * is all the surface there is.
  */
 typedef struct

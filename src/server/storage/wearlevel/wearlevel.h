@@ -40,12 +40,18 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Wearlevel, and reads the outcome off
  * the same handle. The table is the caller's; nothing is held here.
  *
- * @var WearlevelNs::args      the slot table a call reads, and the slot it names
- * @var WearlevelNs::n_out     the slot a pick chose
- * @var WearlevelNs::spread    the imbalance a spread reports
- * @var WearlevelNs::pick      the least-worn slot to write next
- * @var WearlevelNs::mark      record a write to args.idx (saturating, so a count never wraps to 0)
- * @var WearlevelNs::imbalance max count - min count across the slots (0 = perfectly level)
+ * @var WearlevelVars::args
+ *                               the slot table a call reads, and the slot it names
+ * @var WearlevelVars::n_out
+ *                               the slot a pick chose
+ * @var WearlevelVars::spread
+ *                               the imbalance a spread reports
+ * @var WearlevelNs::pick
+ *                             the least-worn slot to write next
+ * @var WearlevelNs::mark
+ *                             record a write to args.idx (saturating, so a count never wraps to 0)
+ * @var WearlevelNs::imbalance
+ *                             max count - min count across the slots (0 = perfectly level)
  *
  * pick round-robins naturally: after writing to the chosen slot the app bumps its count with mark,
  * so the next pick moves on and the region wears uniformly. Ties resolve to the lowest index, and a

@@ -133,7 +133,9 @@ extern mmgr_ring protocore_conn_slots;
  * lives in BSS - no heap allocation anywhere in the listener layer.
  *
  * A single `Listener` instance consumes:
+ * @code{.c}
  *   sizeof(protocore_pcb*) + sizeof(protocore_platform_queue_ctrl) + EVT_QUEUE_DEPTH*sizeof(TcpEvt)
+ * @endcode
  *   + sizeof(protocore_platform_queue) + 3 bytes overhead (port, proto, active).
  */
 typedef struct

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The exclusion layer and the reporting lines, checked instead of remembered.
 #
-#   Usage:  python utils/maint/prose/test_docs_check_exclusions.py
+#   Usage:  python tools/prose/test_docs_check_exclusions.py
 #
 # Standalone unittest, no pytest dependency, same as the three suites beside it.
 #

@@ -119,19 +119,29 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Relay with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Relay.init_args.r = ...;
  *   Relay.init_args.client = ...;
  *   Relay.init_args.origin = ...;
  *   Relay.init(work);
+ * @endcode
  *
- * @var RelayNs::init_args  what init takes: r, client, origin
- * @var RelayNs::step_args  what step takes: r
- * @var RelayNs::note_eof_args  what note_eof takes: r, origin
- * @var RelayNs::ok  a call's true/false outcome
- * @var RelayNs::status  a ::protocore_relay_status. Call repeatedly (per poll tick) until ...
- * @var RelayNs::init  initialize a relay between client (the inbound connection) and ...
- * @var RelayNs::step  do one non-blocking pass: flush any pending bytes and read more, in ...
- * @var RelayNs::note_eof  signal that a peer's send side closed, when the transport ...
+ * @var RelayVars::init_args
+ *                            what init takes: r, client, origin
+ * @var RelayVars::step_args
+ *                            what step takes: r
+ * @var RelayVars::note_eof_args
+ *                                what note_eof takes: r, origin
+ * @var RelayVars::ok
+ *                     a call's true/false outcome
+ * @var RelayVars::status
+ *                         a ::protocore_relay_status. Call repeatedly (per poll tick) until ...
+ * @var RelayNs::init
+ *                     initialize a relay between client (the inbound connection) and ...
+ * @var RelayNs::step
+ *                     do one non-blocking pass: flush any pending bytes and read more, in ...
+ * @var RelayNs::note_eof
+ *                         signal that a peer's send side closed, when the transport ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

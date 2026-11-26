@@ -110,15 +110,24 @@ typedef struct
  *
  * No slot member: one originator sends to one collector, so no call names a row.
  *
- * @var SyslogNs::collector  the collector an init parses and a log sends to (RFC 5426 sec 3.3)
- * @var SyslogNs::header     the HEADER fields a format stamps (RFC 5424 sec 6.2)
- * @var SyslogNs::record     the Severity and MSG one record carries (RFC 5424 sec 6.2.1, sec 6.4)
- * @var SyslogNs::line       the buffer a format writes into
- * @var SyslogNs::ok         a call's true/false outcome
- * @var SyslogNs::n          the SYSLOG-MSG length a format wrote, excluding the NUL, 0 if it did not fit
- * @var SyslogNs::init       parse the collector address and copy HOSTNAME, APP-NAME and Facility into storage
- * @var SyslogNs::format     build one SYSLOG-MSG from @c header and @c record into @c line
- * @var SyslogNs::log        stamp the stored HEADER fields onto @c header, format into the client's
+ * @var SyslogVars::collector
+ *                             the collector an init parses and a log sends to (RFC 5426 sec 3.3)
+ * @var SyslogVars::header
+ *                             the HEADER fields a format stamps (RFC 5424 sec 6.2)
+ * @var SyslogVars::record
+ *                             the Severity and MSG one record carries (RFC 5424 sec 6.2.1, sec 6.4)
+ * @var SyslogVars::line
+ *                             the buffer a format writes into
+ * @var SyslogVars::ok
+ *                             a call's true/false outcome
+ * @var SyslogVars::n
+ *                             the SYSLOG-MSG length a format wrote, excluding the NUL, 0 if it did not fit
+ * @var SyslogNs::init
+ *                           parse the collector address and copy HOSTNAME, APP-NAME and Facility into storage
+ * @var SyslogNs::format
+ *                           build one SYSLOG-MSG from @c header and @c record into @c line
+ * @var SyslogNs::log
+ *                           stamp the stored HEADER fields onto @c header, format into the client's
  *                           scratch, and send that one message as one datagram (RFC 5426 sec 3.1)
  */
 typedef struct

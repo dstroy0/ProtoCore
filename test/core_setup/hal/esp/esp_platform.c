@@ -224,6 +224,31 @@ void protocore_platform_img_rollback(void)
     esp_ota_mark_app_invalid_rollback_and_reboot(); // does not return
 }
 
+// The image slot that a write fills, and the handle of the open write. One update runs at a time.
+static const esp_partition_t *s_ota_slot;
+static esp_ota_handle_t s_ota_handle;
+
+int protocore_platform_ota_begin(void)
+{
+    s_ota_slot = esp_ota_get_next_update_partition(NULL);
+    return s_ota_slot != NULL && esp_ota_begin(s_ota_slot, OTA_SIZE_UNKNOWN, &s_ota_handle) == ESP_OK;
+}
+
+int protocore_platform_ota_write(const uint8_t *data, size_t len)
+{
+    return esp_ota_write(s_ota_handle, data, len) == ESP_OK;
+}
+
+int protocore_platform_ota_end(void)
+{
+    return esp_ota_end(s_ota_handle) == ESP_OK && esp_ota_set_boot_partition(s_ota_slot) == ESP_OK;
+}
+
+void protocore_platform_ota_abort(void)
+{
+    (void)esp_ota_abort(s_ota_handle);
+}
+
 #include "esp_partition.h"
 
 uint8_t protocore_platform_partition_walk(protocore_platform_partition *out, uint8_t max)

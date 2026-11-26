@@ -104,14 +104,22 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Auth, and reads the outcome off the
  * same handle.
  *
- * @var AuthNs::slot     the connection a challenge or a check acts on
- * @var AuthNs::req      the parsed request a check reads its credential from
- * @var AuthNs::id       the credential set a call names
- * @var AuthNs::cred       one credential row: realm, user, pass, and whether it is Digest
- * @var AuthNs::nonce_args the nonce a mint writes and a verify judges, and the stale flag
- * @var AuthNs::ok       a call's true/false outcome
- * @var AuthNs::expired  the MAC is authentic but the issue time falls outside the nonce lifetime
- * @var AuthNs::u8       the id an add reports, or ::PROTOCORE_AUTH_NONE when the table is full
+ * @var AuthVars::slot
+ *                         the connection a challenge or a check acts on
+ * @var AuthVars::req
+ *                         the parsed request a check reads its credential from
+ * @var AuthVars::id
+ *                         the credential set a call names
+ * @var AuthVars::cred
+ *                           one credential row: realm, user, pass, and whether it is Digest
+ * @var AuthVars::nonce_args
+ *                           the nonce a mint writes and a verify judges, and the stale flag
+ * @var AuthVars::ok
+ *                         a call's true/false outcome
+ * @var AuthVars::expired
+ *                         the MAC is authentic but the issue time falls outside the nonce lifetime
+ * @var AuthVars::u8
+ *                         the id an add reports, or ::PROTOCORE_AUTH_NONE when the table is full
  */
 typedef struct
 {

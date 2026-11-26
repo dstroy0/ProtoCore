@@ -43,9 +43,9 @@ EMBED_BEGIN_DECLS
 /** @brief The MTConnect DataItem category (which stream element wraps the value). */
 EMBED_ENUM_BYTE(
     protocore_mtc_category,
-    PROTOCORE_MTC_SAMPLE,   ///< a measured value (<Samples>).
-    PROTOCORE_MTC_EVENT,    ///< a discrete state (<Events>).
-    PROTOCORE_MTC_CONDITION ///< a condition (<Condition>): value is the sub-element name (Normal/Warning/Fault).
+    PROTOCORE_MTC_SAMPLE,   ///< a measured value (`<Samples>`).
+    PROTOCORE_MTC_EVENT,    ///< a discrete state (`<Events>`).
+    PROTOCORE_MTC_CONDITION ///< a condition (`<Condition>`): value is the sub-element name (Normal/Warning/Fault).
 );
 
 /** @brief The buffer a document is built into, and the agent identity its Header carries. */
@@ -153,6 +153,7 @@ typedef struct
  * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
  * never named here.
  *
+ * @code{.c}
  *   MtConnect.doc.out = buf;
  *   MtConnect.doc.cap = sizeof(buf);
  *   MtConnect.doc.instance_id = 7;
@@ -162,40 +163,72 @@ typedef struct
  *   MtConnect.streams.device_uuid = "uuid-1";
  *   MtConnect.streams_begin(work);
  *   MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+ * @endcode
  *   ...
+ * @code{.c}
  *   MtConnect.streams_add(work);
  *   MtConnect.streams_end(work);
  *   // MtConnect.n is the document length
+ * @endcode
  *
- * @var MtConnectNs::doc       the buffer a document is built into, and the agent identity
- * @var MtConnectNs::streams   what opening a streams document takes
- * @var MtConnectNs::obs       one observation added to the open component
- * @var MtConnectNs::window    the window a sample response reports
- * @var MtConnectNs::device    what opening a probe document takes
- * @var MtConnectNs::item      one DataItem in the probe document
- * @var MtConnectNs::assets    what opening an asset document takes
- * @var MtConnectNs::tool      one CuttingTool and its opening status
- * @var MtConnectNs::life      one ToolLife element
- * @var MtConnectNs::err       the error an MTConnectError document reports
- * @var MtConnectNs::query     the sub-window a sample replay asks the ring for
- * @var MtConnectNs::ok        a call's true/false outcome
- * @var MtConnectNs::n         a finished document's length, or 0 when it did not fit
- * @var MtConnectNs::seq       the sequence number the last ring add assigned
- * @var MtConnectNs::streams_begin  open a streams document and its device + component
- * @var MtConnectNs::streams_add    add one observation to the open component
- * @var MtConnectNs::streams_end    close the component, the device and the document
- * @var MtConnectNs::error          build a whole MTConnectError document
- * @var MtConnectNs::devices_begin  open a probe document and its device
- * @var MtConnectNs::devices_add    add one DataItem to it
- * @var MtConnectNs::devices_end    close the probe document
- * @var MtConnectNs::assets_begin   open an asset document
- * @var MtConnectNs::tool_begin     open one CuttingTool and its life cycle
- * @var MtConnectNs::tool_life      add one ToolLife to the open life cycle
- * @var MtConnectNs::tool_end       close the life cycle and the tool
- * @var MtConnectNs::assets_end     close the asset document
- * @var MtConnectNs::ring_init      empty the observation ring and seat its first sequence
- * @var MtConnectNs::ring_add       record one observation, assigning it the next sequence
- * @var MtConnectNs::ring_query     replay a window of the ring as a streams document
+ * @var MtConnectVars::doc
+ *                               the buffer a document is built into, and the agent identity
+ * @var MtConnectVars::streams
+ *                               what opening a streams document takes
+ * @var MtConnectVars::obs
+ *                               one observation added to the open component
+ * @var MtConnectVars::window
+ *                               the window a sample response reports
+ * @var MtConnectVars::device
+ *                               what opening a probe document takes
+ * @var MtConnectVars::item
+ *                               one DataItem in the probe document
+ * @var MtConnectVars::assets
+ *                               what opening an asset document takes
+ * @var MtConnectVars::tool
+ *                               one CuttingTool and its opening status
+ * @var MtConnectVars::life
+ *                               one ToolLife element
+ * @var MtConnectVars::err
+ *                               the error an MTConnectError document reports
+ * @var MtConnectVars::query
+ *                               the sub-window a sample replay asks the ring for
+ * @var MtConnectVars::ok
+ *                               a call's true/false outcome
+ * @var MtConnectVars::n
+ *                               a finished document's length, or 0 when it did not fit
+ * @var MtConnectVars::seq
+ *                               the sequence number the last ring add assigned
+ * @var MtConnectNs::streams_begin
+ *                                  open a streams document and its device + component
+ * @var MtConnectNs::streams_add
+ *                                  add one observation to the open component
+ * @var MtConnectNs::streams_end
+ *                                  close the component, the device and the document
+ * @var MtConnectNs::error
+ *                                  build a whole MTConnectError document
+ * @var MtConnectNs::devices_begin
+ *                                  open a probe document and its device
+ * @var MtConnectNs::devices_add
+ *                                  add one DataItem to it
+ * @var MtConnectNs::devices_end
+ *                                  close the probe document
+ * @var MtConnectNs::assets_begin
+ *                                  open an asset document
+ * @var MtConnectNs::tool_begin
+ *                                  open one CuttingTool and its life cycle
+ * @var MtConnectNs::tool_life
+ *                                  add one ToolLife to the open life cycle
+ * @var MtConnectNs::tool_end
+ *                                  close the life cycle and the tool
+ * @var MtConnectNs::assets_end
+ *                                  close the asset document
+ * @var MtConnectNs::ring_init
+ *                                  empty the observation ring and seat its first sequence
+ * @var MtConnectNs::ring_add
+ *                                  record one observation, assigning it the next sequence
+ * @var MtConnectNs::ring_query
+ *                                  replay a window of the ring as a streams document
  *
  * A ComponentStream is an xs:sequence of Samples, Events and Condition, each maxOccurs="1", so an
  * observation is accumulated in the region its category owns and the three are written out in that

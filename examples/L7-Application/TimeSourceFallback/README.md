@@ -35,7 +35,7 @@ read, and add a GPS source the same way (returning 0 with no fix).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_NTP=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_NTP=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/TimeSourceFallback/TimeSourceFallback.ino
 ```
 

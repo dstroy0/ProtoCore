@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The hole a repair leaves behind: a word taken out and the sentence left ungrammatical.
 #
@@ -13,7 +13,7 @@
 # So this takes a unified diff and reads the added lines only. The deletions are what the pass meant
 # to remove and the context is what it did not touch; neither can carry a hole the pass made.
 #
-# IT IS A SUSPICION AND NEVER A FINDING. Nothing here fails anything. utils/maint/prose/check_fixes.py names
+# IT IS A SUSPICION AND NEVER A FINDING. Nothing here fails anything. tools/prose/check_fixes.py names
 # this fault, and the output is a list of lines to read.
 
 import re

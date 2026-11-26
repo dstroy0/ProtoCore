@@ -78,6 +78,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::FtpSession with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   FtpSession.store_args.target = ...;
  *   FtpSession.store_args.remote_path = ...;
  *   FtpSession.store_args.total = ...;
@@ -85,11 +86,16 @@ typedef struct
  *   FtpSession.store_args.ctx = ...;
  *   FtpSession.store(work);
  *   // FtpSession.value is what the call reports
+ * @endcode
  *
- * @var FtpSessionNs::store_args  what store takes: target, remote_path, total,
- * @var FtpSessionNs::ok  a call's true/false outcome
- * @var FtpSessionNs::value  ::PROTOCORE_FTP_READY only if the server confirmed the completed ...
- * @var FtpSessionNs::store  upload total bytes pulled from src to remote_path (RFC 959 STOR). ...
+ * @var FtpSessionVars::store_args
+ *                                  what store takes: target, remote_path, total,
+ * @var FtpSessionVars::ok
+ *                          a call's true/false outcome
+ * @var FtpSessionVars::value
+ *                             ::PROTOCORE_FTP_READY only if the server confirmed the completed ...
+ * @var FtpSessionNs::store
+ *                           upload total bytes pulled from src to remote_path (RFC 959 STOR). ...
  *
  * @c work is PROTOCORE_FTP_SESSION_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

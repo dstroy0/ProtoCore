@@ -73,20 +73,31 @@ typedef struct
  *
  * RFC 1035 sec 4.1: a query message in, a response message out. A caller sets the members a call
  * takes, invokes it through ::DnsServer, and reads the outcome off the same handle. The name
- * table itself is behind @ref internal.
+ * table itself is internal.
  *
- * @var DnsServerNs::msg             the query message read and the response written (RFC 1035 sec 4.1)
- * @var DnsServerNs::ans             what the answer RR carries (RFC 1035 sec 4.1.3)
- * @var DnsServerNs::rec             the record a table call names (RFC 1035 sec 3.4.1)
- * @var DnsServerNs::ok              a call's true/false outcome
- * @var DnsServerNs::n               octets the response builder wrote, 0 on a malformed query or
+ * @var DnsServerVars::msg
+ *                                     the query message read and the response written (RFC 1035 sec 4.1)
+ * @var DnsServerVars::ans
+ *                                     what the answer RR carries (RFC 1035 sec 4.1.3)
+ * @var DnsServerVars::rec
+ *                                     the record a table call names (RFC 1035 sec 3.4.1)
+ * @var DnsServerVars::ok
+ *                                     a call's true/false outcome
+ * @var DnsServerVars::n
+ *                                     octets the response builder wrote, 0 on a malformed query or
  *                                   a response buffer too small
- * @var DnsServerNs::ip              the ADDRESS a lookup found, host order, 0 when the name is absent
- * @var DnsServerNs::build_response  frame a response to a query, asking @c ans.resolve for the QNAME
- * @var DnsServerNs::add             record one name and its A record
- * @var DnsServerNs::clear           forget every recorded name
- * @var DnsServerNs::begin           start answering on UDP port 53 (RFC 1035 sec 4.2.1)
- * @var DnsServerNs::lookup          the ADDRESS recorded for a name, or 0
+ * @var DnsServerVars::ip
+ *                                     the ADDRESS a lookup found, host order, 0 when the name is absent
+ * @var DnsServerNs::build_response
+ *                                   frame a response to a query, asking @c ans.resolve for the QNAME
+ * @var DnsServerNs::add
+ *                                   record one name and its A record
+ * @var DnsServerNs::clear
+ *                                   forget every recorded name
+ * @var DnsServerNs::begin
+ *                                   start answering on UDP port 53 (RFC 1035 sec 4.2.1)
+ * @var DnsServerNs::lookup
+ *                                   the ADDRESS recorded for a name, or 0
  */
 typedef struct
 {
@@ -143,7 +154,7 @@ static const DnsServerNs DnsServer __attribute__((unused)) = {
 uint8_t *protocore_dns_server_span(void);
 
 /**
- * @brief The built-in table as a ::DnsResolveFn, for @ref DnsServerNs::ans.resolve.
+ * @brief The built-in table as a ::DnsResolveFn, for @ref DnsServerVars::ans, its @c resolve.
  *
  * Scans the same records @ref DnsServerNs::add fills and @ref DnsServerNs::lookup reads, matching
  * ignoring ASCII case (RFC 1035 sec 2.3.3), and touches no member of ::DnsServer, so a build in

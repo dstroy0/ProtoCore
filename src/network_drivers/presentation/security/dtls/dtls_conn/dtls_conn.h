@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_dtls_conn.h
+ * @file dtls_conn.h
  * @brief DTLS 1.3 server handshake state machine (RFC 9147 §5-6).
  *
  * The transport-neutral core that drives one DTLS 1.3 server handshake: it consumes inbound
@@ -17,7 +17,9 @@
  *
  *   epoch 0  ClientHello ->
  *            <- ServerHello                                          (epoch 0, DTLSPlaintext)
+ * @code{.c}
  *   epoch 2  <- EncryptedExtensions, Certificate, CertificateVerify, Finished  (DTLSCiphertext)
+ * @endcode
  *   epoch 2  Finished ->
  *   epoch 3  application data (CoAP) protected with the app-traffic keys
  *
@@ -80,7 +82,7 @@ EMBED_BEGIN_DECLS
 #define PROTOCORE_DTLS_FLIGHT_CAP (PROTOCORE_DTLS_CONN_MSG_CAP + 512)
 
 /** @brief Retransmission timer (RFC 9147 §5.8.1): initial PTO, its cap, and the retransmission ceiling
- *         after which the handshake is abandoned. Times are in the units of @ref protocore_millis (ms). */
+ *         after which the handshake is abandoned. Times are in the units of protocore_millis() (ms). */
 #define PROTOCORE_DTLS_PTO_INITIAL_MS 1000u
 #define PROTOCORE_DTLS_PTO_MAX_MS 60000u
 #define PROTOCORE_DTLS_MAX_RETRANSMITS 8
@@ -99,7 +101,7 @@ EMBED_ENUM_BYTE(DtlsConnState,
                 DTLS_CONN_STATE_START,         ///< awaiting ClientHello
                 DTLS_CONN_STATE_WAIT_FINISHED, ///< server flight sent; awaiting client Finished
                 DTLS_CONN_STATE_DONE,          ///< handshake complete; application keys installed
-                DTLS_CONN_STATE_FAILED         ///< fatal error (see @ref protocore_dtls_conn_alert)
+                DTLS_CONN_STATE_FAILED         ///< fatal error (see @ref protocore_dtls_server_alert)
 );
 
 /**
@@ -277,38 +279,66 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::DtlsServer with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   DtlsServer.init_args.c = ...;
  *   DtlsServer.init_args.cfg = ...;
  *   DtlsServer.init_args.peer_addr = ...;
  *   DtlsServer.init_args.peer_addr_len = ...;
  *   DtlsServer.init(work);
+ * @endcode
  *
- * @var DtlsConnNs::init_args  what init takes: c, cfg, peer_addr, peer_addr_len
- * @var DtlsConnNs::process_args  what process takes: c, dgram, len, out, out_cap
- * @var DtlsConnNs::timeout_ms_args  what timeout_ms takes: c
- * @var DtlsConnNs::on_timeout_args  what on_timeout takes: c, out, out_cap
- * @var DtlsConnNs::established_args  what established takes: c
- * @var DtlsConnNs::alert_args  what alert takes: c
- * @var DtlsConnNs::app_write_keys_args  what app_write_keys takes: c
- * @var DtlsConnNs::app_read_keys_args  what app_read_keys takes: c
- * @var DtlsConnNs::local_cid_args  what local_cid takes: c, out
- * @var DtlsConnNs::open_app_args  what open_app takes: c, rec, rec_len, out, out_cap, out_len
- * @var DtlsConnNs::seal_app_args  what seal_app takes: c, data, len, out, out_cap
- * @var DtlsConnNs::ok  a call's true/false outcome
- * @var DtlsConnNs::n  the count a call reports
- * @var DtlsConnNs::value  the value a call reports
- * @var DtlsConnNs::ptr  the pointer a call reports
- * @var DtlsConnNs::init  bind a connection to its configuration and peer address
- * @var DtlsConnNs::process  turn one received datagram, writing whatever it owes back into out
- * @var DtlsConnNs::timeout_ms  milliseconds until the flight needs retransmitting
- * @var DtlsConnNs::on_timeout  retransmit the current flight once that timeout passed
- * @var DtlsConnNs::established  whether the handshake completed
- * @var DtlsConnNs::alert  the alert that ended the connection, or 0
- * @var DtlsConnNs::app_write_keys  the application-epoch write keys
- * @var DtlsConnNs::app_read_keys  the application-epoch read keys
- * @var DtlsConnNs::local_cid  this side's connection id, and its length
- * @var DtlsConnNs::open_app  open one application-data record once the handshake is done
- * @var DtlsConnNs::seal_app  seal application data into one record
+ * @var DtlsServerVars::init_args
+ *                             what init takes: c, cfg, peer_addr, peer_addr_len
+ * @var DtlsServerVars::process_args
+ *                                what process takes: c, dgram, len, out, out_cap
+ * @var DtlsServerVars::timeout_ms_args
+ *                                   what timeout_ms takes: c
+ * @var DtlsServerVars::on_timeout_args
+ *                                   what on_timeout takes: c, out, out_cap
+ * @var DtlsServerVars::established_args
+ *                                    what established takes: c
+ * @var DtlsServerVars::alert_args
+ *                              what alert takes: c
+ * @var DtlsServerVars::app_write_keys_args
+ *                                       what app_write_keys takes: c
+ * @var DtlsServerVars::app_read_keys_args
+ *                                      what app_read_keys takes: c
+ * @var DtlsServerVars::local_cid_args
+ *                                  what local_cid takes: c, out
+ * @var DtlsServerVars::open_app_args
+ *                                 what open_app takes: c, rec, rec_len, out, out_cap, out_len
+ * @var DtlsServerVars::seal_app_args
+ *                                 what seal_app takes: c, data, len, out, out_cap
+ * @var DtlsServerVars::ok
+ *                      a call's true/false outcome
+ * @var DtlsServerVars::n
+ *                     the count a call reports
+ * @var DtlsServerVars::value
+ *                         the value a call reports
+ * @var DtlsServerVars::ptr
+ *                       the pointer a call reports
+ * @var DtlsConnNs::init
+ *                        bind a connection to its configuration and peer address
+ * @var DtlsConnNs::process
+ *                           turn one received datagram, writing whatever it owes back into out
+ * @var DtlsConnNs::timeout_ms
+ *                              milliseconds until the flight needs retransmitting
+ * @var DtlsConnNs::on_timeout
+ *                              retransmit the current flight once that timeout passed
+ * @var DtlsConnNs::established
+ *                               whether the handshake completed
+ * @var DtlsConnNs::alert
+ *                         the alert that ended the connection, or 0
+ * @var DtlsConnNs::app_write_keys
+ *                                  the application-epoch write keys
+ * @var DtlsConnNs::app_read_keys
+ *                                 the application-epoch read keys
+ * @var DtlsConnNs::local_cid
+ *                             this side's connection id, and its length
+ * @var DtlsConnNs::open_app
+ *                            open one application-data record once the handshake is done
+ * @var DtlsConnNs::seal_app
+ *                            seal application data into one record
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

@@ -128,6 +128,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Powerlink with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Powerlink.build_args.msg_type = ...;
  *   Powerlink.build_args.dest = ...;
  *   Powerlink.build_args.source = ...;
@@ -137,23 +138,40 @@ typedef struct
  *   Powerlink.build_args.cap = ...;
  *   Powerlink.build(work);
  *   // Powerlink.n is what the call reports
+ * @endcode
  *
- * @var PowerlinkNs::build_args  what build takes: msg_type, dest, source, payload,
- * @var PowerlinkNs::soc_args  what soc takes: source, out, cap
- * @var PowerlinkNs::preq_args  what preq takes: dest_cn, source, pdo, pdo_len, out, cap
- * @var PowerlinkNs::pres_args  what pres takes: source_cn, pdo, pdo_len, out, cap
- * @var PowerlinkNs::soa_args  what soa takes: source, payload, payload_len, out, cap
- * @var PowerlinkNs::asnd_args  what asnd takes: dest, source, payload, payload_len, out,
- * @var PowerlinkNs::parse_args  what parse takes: frame, len, out
- * @var PowerlinkNs::ok  a call's true/false outcome
- * @var PowerlinkNs::n  the frame length (3 + payload_len), or 0 on overflow / bad args
- * @var PowerlinkNs::build  build an EPL basic frame: [messageType][dest][source][payload...]
- * @var PowerlinkNs::soc  convenience: build an SoC (MN -> broadcast, no payload)
- * @var PowerlinkNs::preq  convenience: build a PReq to a CN carrying its output process image
- * @var PowerlinkNs::pres  convenience: build a PRes from a CN carrying its input process ...
- * @var PowerlinkNs::soa  convenience: build an SoA (MN -> broadcast) that opens the ...
- * @var PowerlinkNs::asnd  convenience: build an ASnd (asynchronous send) from source to dest. ...
- * @var PowerlinkNs::parse  parse an EPL basic frame. true if len >= 3 and the message type is ...
+ * @var PowerlinkVars::build_args
+ *                                 what build takes: msg_type, dest, source, payload,
+ * @var PowerlinkVars::soc_args
+ *                               what soc takes: source, out, cap
+ * @var PowerlinkVars::preq_args
+ *                                what preq takes: dest_cn, source, pdo, pdo_len, out, cap
+ * @var PowerlinkVars::pres_args
+ *                                what pres takes: source_cn, pdo, pdo_len, out, cap
+ * @var PowerlinkVars::soa_args
+ *                               what soa takes: source, payload, payload_len, out, cap
+ * @var PowerlinkVars::asnd_args
+ *                                what asnd takes: dest, source, payload, payload_len, out,
+ * @var PowerlinkVars::parse_args
+ *                                 what parse takes: frame, len, out
+ * @var PowerlinkVars::ok
+ *                         a call's true/false outcome
+ * @var PowerlinkVars::n
+ *                        the frame length (3 + payload_len), or 0 on overflow / bad args
+ * @var PowerlinkNs::build
+ *                          build an EPL basic frame: [messageType][dest][source][payload...]
+ * @var PowerlinkNs::soc
+ *                        convenience: build an SoC (MN -> broadcast, no payload)
+ * @var PowerlinkNs::preq
+ *                         convenience: build a PReq to a CN carrying its output process image
+ * @var PowerlinkNs::pres
+ *                         convenience: build a PRes from a CN carrying its input process ...
+ * @var PowerlinkNs::soa
+ *                        convenience: build an SoA (MN -> broadcast) that opens the ...
+ * @var PowerlinkNs::asnd
+ *                         convenience: build an ASnd (asynchronous send) from source to dest. ...
+ * @var PowerlinkNs::parse
+ *                          parse an EPL basic frame. true if len >= 3 and the message type is ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

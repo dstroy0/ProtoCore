@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file engine.h
+ * @file stack_tcp.h
  * @brief Layer 4 (Transport) - the TCP engine over idemIP: listeners, the connections of the pool, and the
  *        segments that idemIP does not send.
  *
@@ -48,10 +48,14 @@ EMBED_ENUM_BYTE(StackTcpEventKind,
 /**
  * @brief One event of the TCP of the stack, in the event ring.
  *
- * @var StackTcpEvent::data_len the octets of text that a STACK_TCP_DATA put on the receive ring
- * @var StackTcpEvent::type     what happened
- * @var StackTcpEvent::slot_id  the entry
- * @var StackTcpEvent::reserved zeros, so that the record is a power of two in size
+ * @var StackTcpEvent::data_len
+ *                              the octets of text that a STACK_TCP_DATA put on the receive ring
+ * @var StackTcpEvent::type
+ *                              what happened
+ * @var StackTcpEvent::slot_id
+ *                              the entry
+ * @var StackTcpEvent::reserved
+ *                              zeros, so that the record is a power of two in size
  */
 typedef struct
 {
@@ -79,10 +83,12 @@ static_assert((PROTOCORE_STACK_TCP_SEGMENTS & (PROTOCORE_STACK_TCP_SEGMENTS - 1u
 /**
  * @brief What ::StackTcpNs::start takes.
  *
- * @var StackTcpStartArgs::stack  the borrow of the started stack, from protocore_stack_span [BORROWS]. The
+ * @var StackTcpStartArgs::stack
+ *                                the borrow of the started stack, from protocore_stack_span [BORROWS]. The
  *                                 engine calls its units, and it sends each frame in the transmit buffer that
  *                                 the stack holds.
- * @var StackTcpStartArgs::window the receive window of each connection: the vacant octets of an empty receive
+ * @var StackTcpStartArgs::window
+ *                                the receive window of each connection: the vacant octets of an empty receive
  *                                 ring of a pool entry. 1 through 65535, because the engine announces no window
  *                                 scale.
  */
@@ -95,9 +101,12 @@ typedef struct
 /**
  * @brief What ::StackTcpNs::listen takes: one RFC 9293 sec 3.3.2 passive OPEN on each local address.
  *
- * @var StackTcpListenArgs::port       the local port, 1 through 65535
- * @var StackTcpListenArgs::ip_version 4 or 6
- * @var StackTcpListenArgs::backlog    the connections that the listener keeps in SYN-RECEIVED, 1 or more
+ * @var StackTcpListenArgs::port
+ *                                     the local port, 1 through 65535
+ * @var StackTcpListenArgs::ip_version
+ *                                     4 or 6
+ * @var StackTcpListenArgs::backlog
+ *                                     the connections that the listener keeps in SYN-RECEIVED, 1 or more
  */
 typedef struct
 {
@@ -109,13 +118,18 @@ typedef struct
 /**
  * @brief What ::StackTcpNs::slot_bind takes: the two rings of one pool entry.
  *
- * @var StackTcpSlotArgs::receive         the receive ring of the entry, ready and empty. Its vacant octets are
+ * @var StackTcpSlotArgs::receive
+ *                                        the receive ring of the entry, ready and empty. Its vacant octets are
  *                                         the window of ::StackTcpStartArgs at least [BORROWS].
- * @var StackTcpSlotArgs::transmit        the storage of the transmit ring, which the engine lays [BORROWS]
- * @var StackTcpSlotArgs::transmit_buffer the octets of the transmit ring, on a 4-octet boundary [BORROWS]
- * @var StackTcpSlotArgs::transmit_bytes  the octets at transmit_buffer. The engine splits them into
+ * @var StackTcpSlotArgs::transmit
+ *                                        the storage of the transmit ring, which the engine lays [BORROWS]
+ * @var StackTcpSlotArgs::transmit_buffer
+ *                                        the octets of the transmit ring, on a 4-octet boundary [BORROWS]
+ * @var StackTcpSlotArgs::transmit_bytes
+ *                                        the octets at transmit_buffer. The engine splits them into
  *                                         PROTOCORE_STACK_TCP_SEGMENTS segments of one size.
- * @var StackTcpSlotArgs::index           the entry, below PROTOCORE_STACK_TCP_SLOTS
+ * @var StackTcpSlotArgs::index
+ *                                        the entry, below PROTOCORE_STACK_TCP_SLOTS
  */
 typedef struct
 {
@@ -129,9 +143,12 @@ typedef struct
 /**
  * @brief What protocore_stack_tcp_write takes.
  *
- * @var StackTcpWriteArgs::data  the octets to send [BORROWS]
- * @var StackTcpWriteArgs::len   the count of them
- * @var StackTcpWriteArgs::index the pool entry that sends them
+ * @var StackTcpWriteArgs::data
+ *                               the octets to send [BORROWS]
+ * @var StackTcpWriteArgs::len
+ *                               the count of them
+ * @var StackTcpWriteArgs::index
+ *                               the pool entry that sends them
  */
 typedef struct
 {
@@ -143,7 +160,8 @@ typedef struct
 /**
  * @brief What protocore_stack_tcp_close takes.
  *
- * @var StackTcpCloseArgs::index the pool entry that the owner has no more use for
+ * @var StackTcpCloseArgs::index
+ *                               the pool entry that the owner has no more use for
  */
 typedef struct
 {
@@ -153,9 +171,12 @@ typedef struct
 /**
  * @brief What ::StackTcpNs::segment takes: the frame that the last Dispatch.input read.
  *
- * @var StackTcpSegmentArgs::frame  the frame, where the receive descriptor holds it [BORROWS]
- * @var StackTcpSegmentArgs::now_ms the monotonic millisecond count of the tick
- * @var StackTcpSegmentArgs::netif  the interface that the frame came in on
+ * @var StackTcpSegmentArgs::frame
+ *                                  the frame, where the receive descriptor holds it [BORROWS]
+ * @var StackTcpSegmentArgs::now_ms
+ *                                  the monotonic millisecond count of the tick
+ * @var StackTcpSegmentArgs::netif
+ *                                  the interface that the frame came in on
  */
 typedef struct
 {
@@ -167,7 +188,8 @@ typedef struct
 /**
  * @brief What ::StackTcpNs::service takes.
  *
- * @var StackTcpServiceArgs::now_ms the monotonic millisecond count of the tick
+ * @var StackTcpServiceArgs::now_ms
+ *                                  the monotonic millisecond count of the tick
  */
 typedef struct
 {
@@ -177,15 +199,24 @@ typedef struct
 /**
  * @brief The operands and the outcome of the entries on the namespace.
  *
- * @var StackTcpVars::start_args   the stack and the window that ::StackTcpNs::start takes
- * @var StackTcpVars::listen_args  the passive OPEN that ::StackTcpNs::listen takes
- * @var StackTcpVars::slot_args    the rings that ::StackTcpNs::slot_bind takes
- * @var StackTcpVars::segment_args the frame that ::StackTcpNs::segment takes
- * @var StackTcpVars::service_args the clock that ::StackTcpNs::service takes
- * @var StackTcpVars::event        the record that the last ::StackTcpNs::event_take read
- * @var StackTcpVars::sent         the segments that the engine put on a transmit ring since start
- * @var StackTcpVars::lost_events  the events that found the event ring full since start
- * @var StackTcpVars::ok           the outcome of the last call
+ * @var StackTcpVars::start_args
+ *                                 the stack and the window that ::StackTcpNs::start takes
+ * @var StackTcpVars::listen_args
+ *                                 the passive OPEN that ::StackTcpNs::listen takes
+ * @var StackTcpVars::slot_args
+ *                                 the rings that ::StackTcpNs::slot_bind takes
+ * @var StackTcpVars::segment_args
+ *                                 the frame that ::StackTcpNs::segment takes
+ * @var StackTcpVars::service_args
+ *                                 the clock that ::StackTcpNs::service takes
+ * @var StackTcpVars::event
+ *                                 the record that the last ::StackTcpNs::event_take read
+ * @var StackTcpVars::sent
+ *                                 the segments that the engine put on a transmit ring since start
+ * @var StackTcpVars::lost_events
+ *                                 the events that found the event ring full since start
+ * @var StackTcpVars::ok
+ *                                 the outcome of the last call
  */
 typedef struct
 {
@@ -206,13 +237,20 @@ extern StackTcpVars StackTcpV;
 /**
  * @brief The entries. Each one runs on worker 0.
  *
- * @var StackTcpNs::start       clear the pool entries and the event ring, and take the stack and the window
- * @var StackTcpNs::listen      open one listener on each local address of one IP version
- * @var StackTcpNs::slot_bind   give one pool entry its two rings
- * @var StackTcpNs::event_take  read the next event into ::StackTcpVars::event. False when none waits.
- * @var StackTcpNs::segment     act on what the last Dispatch.input decided about a TCP segment
- * @var StackTcpNs::acknowledge send the aggregate ACK that the TCP_ACK step of the flush reports
- * @var StackTcpNs::service     send the transmit rings, open the receive windows, and end each TIME-WAIT
+ * @var StackTcpNs::start
+ *                              clear the pool entries and the event ring, and take the stack and the window
+ * @var StackTcpNs::listen
+ *                              open one listener on each local address of one IP version
+ * @var StackTcpNs::slot_bind
+ *                              give one pool entry its two rings
+ * @var StackTcpNs::event_take
+ *                              read the next event into ::StackTcpVars::event. False when none waits.
+ * @var StackTcpNs::segment
+ *                              act on what the last Dispatch.input decided about a TCP segment
+ * @var StackTcpNs::acknowledge
+ *                              send the aggregate ACK that the TCP_ACK step of the flush reports
+ * @var StackTcpNs::service
+ *                              send the transmit rings, open the receive windows, and end each TIME-WAIT
  *                               whose 2 MSL passed
  */
 typedef struct
@@ -257,10 +295,14 @@ embed_bool protocore_stack_tcp_close(const StackTcpCloseArgs *args);
 /**
  * @brief The two ends of the connection of one entry.
  *
- * @var StackTcpEnds::local_ip    the local IPv4 address, network order
- * @var StackTcpEnds::remote_ip   the IPv4 address of the peer, network order
- * @var StackTcpEnds::local_port  the local port
- * @var StackTcpEnds::remote_port the port of the peer
+ * @var StackTcpEnds::local_ip
+ *                                the local IPv4 address, network order
+ * @var StackTcpEnds::remote_ip
+ *                                the IPv4 address of the peer, network order
+ * @var StackTcpEnds::local_port
+ *                                the local port
+ * @var StackTcpEnds::remote_port
+ *                                the port of the peer
  */
 typedef struct
 {
@@ -288,13 +330,20 @@ void protocore_stack_tcp_abort(uint8_t index);
 /**
  * @brief What an active OPEN takes.
  *
- * @var StackTcpConnectArgs::local_ip    the local IPv4 address, network order
- * @var StackTcpConnectArgs::remote_ip   the IPv4 address of the peer, network order
- * @var StackTcpConnectArgs::next_hop    the hardware address of the next hop to the peer
- * @var StackTcpConnectArgs::now_ms      the monotonic millisecond count of the caller
- * @var StackTcpConnectArgs::random_word a random word, which the choice of the ephemeral port takes
- * @var StackTcpConnectArgs::remote_port the port of the peer
- * @var StackTcpConnectArgs::netif       the interface of the connection
+ * @var StackTcpConnectArgs::local_ip
+ *                                       the local IPv4 address, network order
+ * @var StackTcpConnectArgs::remote_ip
+ *                                       the IPv4 address of the peer, network order
+ * @var StackTcpConnectArgs::next_hop
+ *                                       the hardware address of the next hop to the peer
+ * @var StackTcpConnectArgs::now_ms
+ *                                       the monotonic millisecond count of the caller
+ * @var StackTcpConnectArgs::random_word
+ *                                       a random word, which the choice of the ephemeral port takes
+ * @var StackTcpConnectArgs::remote_port
+ *                                       the port of the peer
+ * @var StackTcpConnectArgs::netif
+ *                                       the interface of the connection
  */
 typedef struct
 {

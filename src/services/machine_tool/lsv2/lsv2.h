@@ -130,6 +130,9 @@ embed_bool protocore_lsv2_is(const Lsv2Telegram *t, const char *mnemonic4);
 /**
  * @brief Build a login telegram (`A_LG`): payload is the NUL-terminated privilege group (one of the
  *        `PROTOCORE_LSV2_LOGIN_*` strings), optionally followed by a NUL-terminated @p password.
+ * @param buf      the destination buffer.
+ * @param cap      the capacity of @p buf, in bytes.
+ * @param login    the privilege group, one of the `PROTOCORE_LSV2_LOGIN_*` strings.
  * @param password pass nullptr for a group that needs no password.
  * @return total bytes written, or 0 on overflow / bad input.
  */

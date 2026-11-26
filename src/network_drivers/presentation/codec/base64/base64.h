@@ -70,21 +70,33 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Base64 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Base64.encode_args.src = ...;
  *   Base64.encode_args.src_len = ...;
  *   Base64.encode_args.dst = ...;
  *   Base64.encode(work);
+ * @endcode
  *
- * @var Base64Ns::encode_args  what encode takes: src, src_len, dst
- * @var Base64Ns::decode_args  what decode takes: src, dst, dst_cap
- * @var Base64Ns::url_encode_args  what url_encode takes: src, src_len, dst
- * @var Base64Ns::url_decode_args  what url_decode takes: src, src_len, dst, dst_cap
- * @var Base64Ns::ok  a call's true/false outcome
- * @var Base64Ns::n  the count a call reports
- * @var Base64Ns::encode  write src_len bytes as NUL-terminated base64; dst holds at least
- * @var Base64Ns::decode  read a NUL-terminated base64 string into at most dst_cap bytes; the
- * @var Base64Ns::url_encode  the same encode in the '-' '_' alphabet with no '=' padding
- * @var Base64Ns::url_decode  read src_len base64url characters, stopping at an '='. Strict: the
+ * @var Base64Vars::encode_args
+ *                               what encode takes: src, src_len, dst
+ * @var Base64Vars::decode_args
+ *                               what decode takes: src, dst, dst_cap
+ * @var Base64Vars::url_encode_args
+ *                                   what url_encode takes: src, src_len, dst
+ * @var Base64Vars::url_decode_args
+ *                                   what url_decode takes: src, src_len, dst, dst_cap
+ * @var Base64Vars::ok
+ *                      a call's true/false outcome
+ * @var Base64Vars::n
+ *                     the count a call reports
+ * @var Base64Ns::encode
+ *                        write src_len bytes as NUL-terminated base64; dst holds at least
+ * @var Base64Ns::decode
+ *                        read a NUL-terminated base64 string into at most dst_cap bytes; the
+ * @var Base64Ns::url_encode
+ *                            the same encode in the '-' '_' alphabet with no '=' padding
+ * @var Base64Ns::url_decode
+ *                            read src_len base64url characters, stopping at an '='. Strict: the
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

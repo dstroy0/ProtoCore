@@ -42,7 +42,7 @@ EMBED_BEGIN_DECLS
  * @brief A `Cache-Control` directive set (a superset of request + response directives).
  *
  * Flags are presence; each delta-seconds value is -1 when the directive is absent. The optional
- * field-name lists on `no-cache` / `private` are not captured (presence only). @ref max_stale
+ * field-name lists on `no-cache` / `private` are not captured (presence only). @ref protocore_cache_control::max_stale
  * uses -1 = absent and -2 = present with no value ("accept any staleness").
  */
 typedef struct protocore_cache_control
@@ -133,28 +133,49 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Httpcache with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Httpcache.control_init_args.cc = ...;
  *   Httpcache.control_init(work);
+ * @endcode
  *
- * @var HttpcacheNs::control_init_args  what control_init takes: cc
- * @var HttpcacheNs::control_build_args  what control_build takes: buf, cap, cc
- * @var HttpcacheNs::control_parse_args  what control_parse takes: s, len, cc
- * @var HttpcacheNs::immutable_asset_args  what immutable_asset takes: cc, max_age
- * @var HttpcacheNs::revalidatable_args  what revalidatable takes: cc, max_age,
- * @var HttpcacheNs::no_store_args  what no_store takes: cc
- * @var HttpcacheNs::shared_args  what shared takes: cc, max_age, s_maxage
- * @var HttpcacheNs::freshness_lifetime_args  what freshness_lifetime takes: cc, shared,
- * @var HttpcacheNs::ok  true if at least one known directive was parsed
- * @var HttpcacheNs::n  bytes written (excluding NUL), or 0 on overflow or an empty ...
- * @var HttpcacheNs::value  the freshness lifetime in seconds, or -1 when none is explicit ...
- * @var HttpcacheNs::control_init  reset to an empty set (all flags false, all delta-seconds -1)
- * @var HttpcacheNs::control_build  build the canonical `Cache-Control` value (no `Cache-Control:` ...
- * @var HttpcacheNs::control_parse  parse a `Cache-Control` header value into cc (initializes it ...
- * @var HttpcacheNs::immutable_asset  long-lived immutable static asset: `public, max-age=<secs>, ...
- * @var HttpcacheNs::revalidatable  cacheable but served-while-revalidating: `public, max-age=<secs>` ...
- * @var HttpcacheNs::no_store  dynamic / sensitive - never store: `no-store`
- * @var HttpcacheNs::shared  distinct shared-cache TTL: `public, max-age=<browser>, ...
- * @var HttpcacheNs::freshness_lifetime  freshness lifetime in seconds (RFC 9111 sec 4.2.1), first-match ...
+ * @var HttpcacheVars::control_init_args
+ *                                        what control_init takes: cc
+ * @var HttpcacheVars::control_build_args
+ *                                         what control_build takes: buf, cap, cc
+ * @var HttpcacheVars::control_parse_args
+ *                                         what control_parse takes: s, len, cc
+ * @var HttpcacheVars::immutable_asset_args
+ *                                           what immutable_asset takes: cc, max_age
+ * @var HttpcacheVars::revalidatable_args
+ *                                         what revalidatable takes: cc, max_age,
+ * @var HttpcacheVars::no_store_args
+ *                                    what no_store takes: cc
+ * @var HttpcacheVars::shared_args
+ *                                  what shared takes: cc, max_age, s_maxage
+ * @var HttpcacheVars::freshness_lifetime_args
+ *                                              what freshness_lifetime takes: cc, shared,
+ * @var HttpcacheVars::ok
+ *                         true if at least one known directive was parsed
+ * @var HttpcacheVars::n
+ *                        bytes written (excluding NUL), or 0 on overflow or an empty ...
+ * @var HttpcacheVars::value
+ *                            the freshness lifetime in seconds, or -1 when none is explicit ...
+ * @var HttpcacheNs::control_init
+ *                                 reset to an empty set (all flags false, all delta-seconds -1)
+ * @var HttpcacheNs::control_build
+ *                                  build the canonical `Cache-Control` value (no `Cache-Control:` ...
+ * @var HttpcacheNs::control_parse
+ *                                  parse a `Cache-Control` header value into cc (initializes it ...
+ * @var HttpcacheNs::immutable_asset
+ *                                    long-lived immutable static asset: `public, max-age=<secs>, immutable`
+ * @var HttpcacheNs::revalidatable
+ *                                  cacheable but served-while-revalidating: `public, max-age=<secs>` ...
+ * @var HttpcacheNs::no_store
+ *                             dynamic / sensitive - never store: `no-store`
+ * @var HttpcacheNs::shared
+ *                           distinct shared-cache TTL: `public, max-age=<browser>, s-maxage=<shared>`
+ * @var HttpcacheNs::freshness_lifetime
+ *                                       freshness lifetime in seconds (RFC 9111 sec 4.2.1), first-match ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

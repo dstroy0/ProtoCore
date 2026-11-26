@@ -166,52 +166,96 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::PhaseMachine with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   PhaseMachine.get_args.i = ...;
  *   PhaseMachine.get(work);
  *   // PhaseMachine.value is what the call reports
+ * @endcode
  *
- * @var PhaseMachineNs::get_args  what get takes: i
- * @var PhaseMachineNs::is_args  what is takes: i, p
- * @var PhaseMachineNs::reset_args  what reset takes: i
- * @var PhaseMachineNs::ident_done_args  what ident_done takes: i
- * @var PhaseMachineNs::kexinit_done_args  what kexinit_done takes: i
- * @var PhaseMachineNs::kex_done_args  what kex_done takes: i
- * @var PhaseMachineNs::newkeys_done_args  what newkeys_done takes: i
- * @var PhaseMachineNs::service_done_args  what service_done takes: i
- * @var PhaseMachineNs::auth_done_args  what auth_done takes: i
- * @var PhaseMachineNs::rekey_begin_args  what rekey_begin takes: i
- * @var PhaseMachineNs::admits_ident_args  what admits_ident takes: i
- * @var PhaseMachineNs::admits_kexinit_args  what admits_kexinit takes: i
- * @var PhaseMachineNs::kexinit_needs_reply_args  what kexinit_needs_reply takes: i
- * @var PhaseMachineNs::admits_kexdh_init_args  what admits_kexdh_init takes: i
- * @var PhaseMachineNs::admits_newkeys_args  what admits_newkeys takes: i
- * @var PhaseMachineNs::admits_service_request_args  what admits_service_request takes: i
- * @var PhaseMachineNs::admits_userauth_args  what admits_userauth takes: i
- * @var PhaseMachineNs::auth_complete_args  what auth_complete takes: i
- * @var PhaseMachineNs::admits_rekey_args  what admits_rekey takes: i
- * @var PhaseMachineNs::is_open_args  what is_open takes: i
- * @var PhaseMachineNs::ok  a call's true/false outcome
- * @var PhaseMachineNs::value  the value a call reports
- * @var PhaseMachineNs::get  the phase slot i is in
- * @var PhaseMachineNs::is  true when slot i is in phase p
- * @var PhaseMachineNs::reset  start a connection at the identification exchange (RFC 4253 sec 4.2)
- * @var PhaseMachineNs::ident_done  the peer identification string is whole: sec 4.2 is done, sec 7.1 ...
- * @var PhaseMachineNs::kexinit_done  algorithms are negotiated (sec 7.1): await the exchange of sec 8
- * @var PhaseMachineNs::kex_done  the exchange produced K and H (sec 8): await NEWKEYS
- * @var PhaseMachineNs::newkeys_done  NEWKEYS ended the exchange (sec 7.3): the keys are in use. A first ...
- * @var PhaseMachineNs::service_done  the service request named "ssh-userauth" and was accepted (sec 10)
- * @var PhaseMachineNs::auth_done  authentication completed (RFC 4252 sec 5.1 SUCCESS): the channel ...
- * @var PhaseMachineNs::rekey_begin  A key re-exchange begins on an established connection (sec 9)
- * @var PhaseMachineNs::admits_ident  RFC 4253 sec 4.2: identification bytes are only read before the ...
- * @var PhaseMachineNs::admits_kexinit  RFC 4253 sec 7.1: a KEXINIT starts an exchange, and one is refused ...
- * @var PhaseMachineNs::kexinit_needs_reply  RFC 4253 sec 7.1: does an inbound KEXINIT still need our own in ...
- * @var PhaseMachineNs::admits_kexdh_init  RFC 4253 sec 8: KEXDH_INIT belongs to an exchange that has been ...
- * @var PhaseMachineNs::admits_newkeys  RFC 4253 sec 7.3: "NEWKEYS ends a key exchange", so one outside an ...
- * @var PhaseMachineNs::admits_service_request  RFC 4253 sec 10: a service request is only valid once the exchange ...
- * @var PhaseMachineNs::admits_userauth  RFC 4252: a userauth request belongs to the authentication phase
- * @var PhaseMachineNs::auth_complete  RFC 4252 sec 5.1: a request arriving after SUCCESS is ignored ...
- * @var PhaseMachineNs::admits_rekey  RFC 4253 sec 9: a re-exchange starts only on an established ...
- * @var PhaseMachineNs::is_open  RFC 4254: the channel protocol runs once the connection is open
+ * @var PhaseMachineVars::get_args
+ *                                  what get takes: i
+ * @var PhaseMachineVars::is_args
+ *                                 what is takes: i, p
+ * @var PhaseMachineVars::reset_args
+ *                                    what reset takes: i
+ * @var PhaseMachineVars::ident_done_args
+ *                                         what ident_done takes: i
+ * @var PhaseMachineVars::kexinit_done_args
+ *                                           what kexinit_done takes: i
+ * @var PhaseMachineVars::kex_done_args
+ *                                       what kex_done takes: i
+ * @var PhaseMachineVars::newkeys_done_args
+ *                                           what newkeys_done takes: i
+ * @var PhaseMachineVars::service_done_args
+ *                                           what service_done takes: i
+ * @var PhaseMachineVars::auth_done_args
+ *                                        what auth_done takes: i
+ * @var PhaseMachineVars::rekey_begin_args
+ *                                          what rekey_begin takes: i
+ * @var PhaseMachineVars::admits_ident_args
+ *                                           what admits_ident takes: i
+ * @var PhaseMachineVars::admits_kexinit_args
+ *                                             what admits_kexinit takes: i
+ * @var PhaseMachineVars::kexinit_needs_reply_args
+ *                                                  what kexinit_needs_reply takes: i
+ * @var PhaseMachineVars::admits_kexdh_init_args
+ *                                                what admits_kexdh_init takes: i
+ * @var PhaseMachineVars::admits_newkeys_args
+ *                                             what admits_newkeys takes: i
+ * @var PhaseMachineVars::admits_service_request_args
+ *                                                     what admits_service_request takes: i
+ * @var PhaseMachineVars::admits_userauth_args
+ *                                              what admits_userauth takes: i
+ * @var PhaseMachineVars::auth_complete_args
+ *                                            what auth_complete takes: i
+ * @var PhaseMachineVars::admits_rekey_args
+ *                                           what admits_rekey takes: i
+ * @var PhaseMachineVars::is_open_args
+ *                                      what is_open takes: i
+ * @var PhaseMachineVars::ok
+ *                            a call's true/false outcome
+ * @var PhaseMachineVars::value
+ *                               the value a call reports
+ * @var PhaseMachineNs::get
+ *                           the phase slot i is in
+ * @var PhaseMachineNs::is
+ *                          true when slot i is in phase p
+ * @var PhaseMachineNs::reset
+ *                             start a connection at the identification exchange (RFC 4253 sec 4.2)
+ * @var PhaseMachineNs::ident_done
+ *                                  the peer identification string is whole: sec 4.2 is done, sec 7.1 ...
+ * @var PhaseMachineNs::kexinit_done
+ *                                    algorithms are negotiated (sec 7.1): await the exchange of sec 8
+ * @var PhaseMachineNs::kex_done
+ *                                the exchange produced K and H (sec 8): await NEWKEYS
+ * @var PhaseMachineNs::newkeys_done
+ *                                    NEWKEYS ended the exchange (sec 7.3): the keys are in use. A first ...
+ * @var PhaseMachineNs::service_done
+ *                                    the service request named "ssh-userauth" and was accepted (sec 10)
+ * @var PhaseMachineNs::auth_done
+ *                                 authentication completed (RFC 4252 sec 5.1 SUCCESS): the channel ...
+ * @var PhaseMachineNs::rekey_begin
+ *                                   A key re-exchange begins on an established connection (sec 9)
+ * @var PhaseMachineNs::admits_ident
+ *                                    RFC 4253 sec 4.2: identification bytes are only read before the ...
+ * @var PhaseMachineNs::admits_kexinit
+ *                                      RFC 4253 sec 7.1: a KEXINIT starts an exchange, and one is refused ...
+ * @var PhaseMachineNs::kexinit_needs_reply
+ *                                           RFC 4253 sec 7.1: does an inbound KEXINIT still need our own in ...
+ * @var PhaseMachineNs::admits_kexdh_init
+ *                                         RFC 4253 sec 8: KEXDH_INIT belongs to an exchange that has been ...
+ * @var PhaseMachineNs::admits_newkeys
+ *                                      RFC 4253 sec 7.3: "NEWKEYS ends a key exchange", so one outside an ...
+ * @var PhaseMachineNs::admits_service_request
+ *                                              RFC 4253 sec 10: a service request is only valid once the exchange ...
+ * @var PhaseMachineNs::admits_userauth
+ *                                       RFC 4252: a userauth request belongs to the authentication phase
+ * @var PhaseMachineNs::auth_complete
+ *                                     RFC 4252 sec 5.1: a request arriving after SUCCESS is ignored ...
+ * @var PhaseMachineNs::admits_rekey
+ *                                    RFC 4253 sec 9: a re-exchange starts only on an established ...
+ * @var PhaseMachineNs::is_open
+ *                               RFC 4254: the channel protocol runs once the connection is open
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

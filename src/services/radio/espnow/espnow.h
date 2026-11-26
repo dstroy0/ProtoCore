@@ -122,6 +122,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Espnow with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Espnow.encode_args.type = ...;
  *   Espnow.encode_args.payload = ...;
  *   Espnow.encode_args.len = ...;
@@ -129,29 +130,52 @@ typedef struct
  *   Espnow.encode_args.cap = ...;
  *   Espnow.encode(work);
  *   // Espnow.n is what the call reports
+ * @endcode
  *
- * @var EspnowNs::encode_args  what encode takes: type, payload, len, out, cap
- * @var EspnowNs::decode_args  what decode takes: buf, len, type, payload, plen
- * @var EspnowNs::peer_add_args  what peer_add takes: mac
- * @var EspnowNs::peer_has_args  what peer_has takes: mac
- * @var EspnowNs::peer_remove_args  what peer_remove takes: mac
- * @var EspnowNs::begin_args  what begin takes: channel, cb
- * @var EspnowNs::add_peer_args  what add_peer takes: mac
- * @var EspnowNs::send_args  what send takes: mac, type, payload, len
- * @var EspnowNs::broadcast_args  what broadcast takes: type, payload, len
- * @var EspnowNs::ok  true on a well-formed envelope
- * @var EspnowNs::n  total bytes written to out, or 0 if it does not fit / payload too ...
- * @var EspnowNs::encode  frame a message: [magic][type][len] + payload
- * @var EspnowNs::decode  validate and unpack a framed message. Checks the magic and that the ...
- * @var EspnowNs::peers_reset  forget all registered peers
- * @var EspnowNs::peer_add  register mac (idempotent). false if the table is full
- * @var EspnowNs::peer_has  true if mac is in the peer registry
- * @var EspnowNs::peer_remove  remove mac from the registry. true if it was present
- * @var EspnowNs::peer_count  the number of registered peers
- * @var EspnowNs::begin  initialize ESP-NOW on channel and deliver decoded frames to cb. ...
- * @var EspnowNs::add_peer  add a unicast peer to both the registry and the radio
- * @var EspnowNs::send  encode and transmit a message to mac. true if queued to the radio
- * @var EspnowNs::broadcast  send to the broadcast address (all peers in range)
+ * @var EspnowVars::encode_args
+ *                               what encode takes: type, payload, len, out, cap
+ * @var EspnowVars::decode_args
+ *                               what decode takes: buf, len, type, payload, plen
+ * @var EspnowVars::peer_add_args
+ *                                 what peer_add takes: mac
+ * @var EspnowVars::peer_has_args
+ *                                 what peer_has takes: mac
+ * @var EspnowVars::peer_remove_args
+ *                                    what peer_remove takes: mac
+ * @var EspnowVars::begin_args
+ *                              what begin takes: channel, cb
+ * @var EspnowVars::add_peer_args
+ *                                 what add_peer takes: mac
+ * @var EspnowVars::send_args
+ *                             what send takes: mac, type, payload, len
+ * @var EspnowVars::broadcast_args
+ *                                  what broadcast takes: type, payload, len
+ * @var EspnowVars::ok
+ *                      true on a well-formed envelope
+ * @var EspnowVars::n
+ *                     total bytes written to out, or 0 if it does not fit / payload too ...
+ * @var EspnowNs::encode
+ *                        frame a message: [magic][type][len] + payload
+ * @var EspnowNs::decode
+ *                        validate and unpack a framed message. Checks the magic and that the ...
+ * @var EspnowNs::peers_reset
+ *                             forget all registered peers
+ * @var EspnowNs::peer_add
+ *                          register mac (idempotent). false if the table is full
+ * @var EspnowNs::peer_has
+ *                          true if mac is in the peer registry
+ * @var EspnowNs::peer_remove
+ *                             remove mac from the registry. true if it was present
+ * @var EspnowNs::peer_count
+ *                            the number of registered peers
+ * @var EspnowNs::begin
+ *                       initialize ESP-NOW on channel and deliver decoded frames to cb. ...
+ * @var EspnowNs::add_peer
+ *                          add a unicast peer to both the registry and the radio
+ * @var EspnowNs::send
+ *                      encode and transmit a message to mac. true if queued to the radio
+ * @var EspnowNs::broadcast
+ *                           send to the broadcast address (all peers in range)
  *
  * @c work is PROTOCORE_ESPNOW_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.
@@ -184,7 +208,7 @@ typedef struct
     void (*const peer_has)(uint8_t *work);
     void (*const peer_remove)(uint8_t *work);
     void (*const peer_count)(uint8_t *work);
-    void (*const begin)(const uint8_t *work);
+    void (*const begin)(uint8_t *work);
     void (*const add_peer)(uint8_t *work);
     void (*const send)(const uint8_t *work);
     void (*const broadcast)(const uint8_t *work);
@@ -199,7 +223,7 @@ void protocore_espnow_peer_add(uint8_t *work);
 void protocore_espnow_peer_has(uint8_t *work);
 void protocore_espnow_peer_remove(uint8_t *work);
 void protocore_espnow_peer_count(uint8_t *work);
-void protocore_espnow_begin(const uint8_t *work);
+void protocore_espnow_begin(uint8_t *work);
 void protocore_espnow_add_peer(uint8_t *work);
 void protocore_espnow_send(const uint8_t *work);
 void protocore_espnow_broadcast(const uint8_t *work);

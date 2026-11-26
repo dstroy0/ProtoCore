@@ -40,7 +40,7 @@
  * An encoder row appends one record at a time into a caller buffer and fails closed on overflow;
  * an embedded message is encoded into a second row's buffer and added with @ref ProtobufNs::write_bytes.
  * A decoder row is a cursor: it decodes the record at its own offset and reports where that offset
- * landed. Rows nest, which is what an embedded message needs, so @ref ProtobufNs::slot names one.
+ * landed. Rows nest, which is what an embedded message needs, so @ref ProtobufVars::slot names one.
  *
  * The module exports one symbol, @ref Protobuf. Everything in protobuf.c has internal linkage.
  *
@@ -125,40 +125,74 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Protobuf, and reads the outcome off
  * the same handle.
  *
- * @var ProtobufNs::slot          the row a call acts on; a @c write_ names an encoder row, a @c read_ a decoder row
- * @var ProtobufNs::writer        the caller buffer an encoder row appends into
- * @var ProtobufNs::tag           the field number and wire type a tag carries
- * @var ProtobufNs::value         the payload one record carries
- * @var ProtobufNs::source        the encoded octets a decoder row walks
- * @var ProtobufNs::ok            a call's true/false outcome
- * @var ProtobufNs::n             the encoded octet count a finish reports, or the offset a decode left its cursor at
- * @var ProtobufNs::u64           the varint a read decoded
- * @var ProtobufNs::i64           the sint64 a ZigZag decode produced
- * @var ProtobufNs::i32           the sint32 a ZigZag decode produced
- * @var ProtobufNs::f32           the float an I32 bit pattern names
- * @var ProtobufNs::f64           the double an I64 bit pattern names
- * @var ProtobufNs::record        the record a read decoded
- * @var ProtobufNs::writer_open   seat an encoder row on @c writer and empty it
- * @var ProtobufNs::write_varint  append @c value.u64 as a Base 128 varint, no tag
- * @var ProtobufNs::write_tag     append the tag `(tag.field_number << 3) | tag.wire_type`
- * @var ProtobufNs::write_uint64  append a VARINT record carrying @c value.u64
- * @var ProtobufNs::write_int64   append a VARINT record carrying @c value.i64 in two's complement
- * @var ProtobufNs::write_sint64  append a VARINT record carrying @c value.i64 in ZigZag
- * @var ProtobufNs::write_bool    append a VARINT record carrying @c value.flag as 0 or 1
- * @var ProtobufNs::write_fixed32 append an I32 record carrying @c value.u32
- * @var ProtobufNs::write_fixed64 append an I64 record carrying @c value.u64
- * @var ProtobufNs::write_float   append an I32 record carrying the bits of @c value.f32
- * @var ProtobufNs::write_double  append an I64 record carrying the bits of @c value.f64
- * @var ProtobufNs::write_bytes   append a LEN record carrying @c value.data for @c value.len
- * @var ProtobufNs::write_string  append a LEN record carrying @c value.text up to its NUL
- * @var ProtobufNs::writer_finish report the encoded octet count in @c n, or 0 if any append overflowed
- * @var ProtobufNs::reader_open   seat a decoder row on @c source at @c source.pos
- * @var ProtobufNs::read_varint   decode the Base 128 varint at the cursor into @c u64 and advance it
- * @var ProtobufNs::read_record   decode the record at the cursor into @c record and advance past it
- * @var ProtobufNs::zigzag64      convert the ZigZag varint @c value.u64 to the sint64 @c i64
- * @var ProtobufNs::zigzag32      convert the ZigZag varint @c value.u32 to the sint32 @c i32
- * @var ProtobufNs::float_bits    convert the I32 bit pattern @c value.u32 to the float @c f32
- * @var ProtobufNs::double_bits   convert the I64 bit pattern @c value.u64 to the double @c f64
+ * @var ProtobufVars::slot
+ *                                  the row a call acts on; a @c write_ names an encoder row, a @c read_ a decoder row
+ * @var ProtobufVars::writer
+ *                                  the caller buffer an encoder row appends into
+ * @var ProtobufVars::tag
+ *                                  the field number and wire type a tag carries
+ * @var ProtobufVars::value
+ *                                  the payload one record carries
+ * @var ProtobufVars::source
+ *                                  the encoded octets a decoder row walks
+ * @var ProtobufVars::ok
+ *                                  a call's true/false outcome
+ * @var ProtobufVars::n
+ *                                  the encoded octet count a finish reports, or the offset a decode left its cursor at
+ * @var ProtobufVars::u64
+ *                                  the varint a read decoded
+ * @var ProtobufVars::i64
+ *                                  the sint64 a ZigZag decode produced
+ * @var ProtobufVars::i32
+ *                                  the sint32 a ZigZag decode produced
+ * @var ProtobufVars::f32
+ *                                  the float an I32 bit pattern names
+ * @var ProtobufVars::f64
+ *                                  the double an I64 bit pattern names
+ * @var ProtobufVars::record
+ *                                  the record a read decoded
+ * @var ProtobufNs::writer_open
+ *                                seat an encoder row on @c writer and empty it
+ * @var ProtobufNs::write_varint
+ *                                append @c value.u64 as a Base 128 varint, no tag
+ * @var ProtobufNs::write_tag
+ *                                append the tag `(tag.field_number << 3) | tag.wire_type`
+ * @var ProtobufNs::write_uint64
+ *                                append a VARINT record carrying @c value.u64
+ * @var ProtobufNs::write_int64
+ *                                append a VARINT record carrying @c value.i64 in two's complement
+ * @var ProtobufNs::write_sint64
+ *                                append a VARINT record carrying @c value.i64 in ZigZag
+ * @var ProtobufNs::write_bool
+ *                                append a VARINT record carrying @c value.flag as 0 or 1
+ * @var ProtobufNs::write_fixed32
+ *                                append an I32 record carrying @c value.u32
+ * @var ProtobufNs::write_fixed64
+ *                                append an I64 record carrying @c value.u64
+ * @var ProtobufNs::write_float
+ *                                append an I32 record carrying the bits of @c value.f32
+ * @var ProtobufNs::write_double
+ *                                append an I64 record carrying the bits of @c value.f64
+ * @var ProtobufNs::write_bytes
+ *                                append a LEN record carrying @c value.data for @c value.len
+ * @var ProtobufNs::write_string
+ *                                append a LEN record carrying @c value.text up to its NUL
+ * @var ProtobufNs::writer_finish
+ *                                report the encoded octet count in @c n, or 0 if any append overflowed
+ * @var ProtobufNs::reader_open
+ *                                seat a decoder row on @c source at @c source.pos
+ * @var ProtobufNs::read_varint
+ *                                decode the Base 128 varint at the cursor into @c u64 and advance it
+ * @var ProtobufNs::read_record
+ *                                decode the record at the cursor into @c record and advance past it
+ * @var ProtobufNs::zigzag64
+ *                                convert the ZigZag varint @c value.u64 to the sint64 @c i64
+ * @var ProtobufNs::zigzag32
+ *                                convert the ZigZag varint @c value.u32 to the sint32 @c i32
+ * @var ProtobufNs::float_bits
+ *                                convert the I32 bit pattern @c value.u32 to the float @c f32
+ * @var ProtobufNs::double_bits
+ *                                convert the I64 bit pattern @c value.u64 to the double @c f64
  */
 typedef struct
 {

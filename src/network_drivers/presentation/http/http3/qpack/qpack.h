@@ -48,15 +48,18 @@ typedef struct
 PROTOCORE_NS_LAYOUT(QpackNs, encode_prefix, encode_header, decode);
 
 /**
- * @brief Write the encoded field-section prefix for a static-only section. .
+ * @brief Write the encoded field-section prefix for a static-only section.
+ * Required Insert Count = 0, Base = 0 -> the two bytes {0x00, 0x00} (RFC 9204 sec 4.5.1).
  * @param work PROTOCORE_QPACK_BORROW bytes the caller took. Not held past the call.
  * @param out Out
  * @param cap Cap
- * @return The size_t.
+ * @return bytes written (2), or 0 if @p cap < 2.
  */
 size_t protocore_qpack_encode_prefix(const uint8_t *work, uint8_t *out, size_t cap);
 /**
- * @brief Encode one header field (server side): a full static match -> .
+ * @brief Encode one header field (server side): a full static match -> Indexed Field Line; a name
+ * match -> Literal Field Line with (static) Name Reference; otherwise Literal Field Line with
+ * Literal Name. Strings are Huffman-coded when that is not longer.
  * @param work PROTOCORE_QPACK_BORROW bytes the caller took. Not held past the call.
  * @param out Out
  * @param cap Cap
@@ -64,12 +67,13 @@ size_t protocore_qpack_encode_prefix(const uint8_t *work, uint8_t *out, size_t c
  * @param name_len Name len
  * @param value Value
  * @param value_len Value len
- * @return The size_t.
+ * @return bytes written, or 0 on overflow. A complete field section is protocore_qpack_encode_prefix()
+ * followed by one protocore_qpack_encode_header() per field.
  */
 size_t protocore_qpack_encode_header(const uint8_t *work, uint8_t *out, size_t cap, const char *name, size_t name_len,
                                      const char *value, size_t value_len);
 /**
- * @brief Decode a whole QPACK field section (prefix + representations), .
+ * @brief Decode a whole QPACK field section (prefix + representations), emitting each header.
  * @param work PROTOCORE_QPACK_BORROW bytes the caller took. Not held past the call.
  * @param block Block
  * @param len Len

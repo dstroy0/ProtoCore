@@ -124,22 +124,35 @@ typedef struct
  *
  * No slot member: one document executes at a time, so no call names a row.
  *
- * @var GraphQLNs::request   the document an execute runs and the resolver its leaves call (sec 6.1)
- * @var GraphQLNs::response  where an execute serializes the response map (sec 7.1)
- * @var GraphQLNs::argument  the argument an accessor reads, and the values it reads from (sec 2.6)
- * @var GraphQLNs::ok        a call's true/false outcome: an execute succeeded, or an argument was
+ * @var GraphQLVars::request
+ *                             the document an execute runs and the resolver its leaves call (sec 6.1)
+ * @var GraphQLVars::response
+ *                             where an execute serializes the response map (sec 7.1)
+ * @var GraphQLVars::argument
+ *                             the argument an accessor reads, and the values it reads from (sec 2.6)
+ * @var GraphQLVars::ok
+ *                             a call's true/false outcome: an execute succeeded, or an argument was
  *                           present with the type the accessor asked for
- * @var GraphQLNs::n         octets an execute wrote to @c response.out, excluding the NUL, 0 if
+ * @var GraphQLVars::n
+ *                             octets an execute wrote to @c response.out, excluding the NUL, 0 if
  *                           nothing was emitted
- * @var GraphQLNs::result    an execute's outcome code
- * @var GraphQLNs::i64       the Int an arg_int read (sec 3.5.1), 0 when @c ok is false
- * @var GraphQLNs::text      the String an arg_str read (sec 3.5.3), NULL when @c ok is false
- * @var GraphQLNs::b         the Boolean an arg_bool read (sec 3.5.4), false when @c ok is false
- * @var GraphQLNs::execute   parse @c request, execute its operation, and serialize the response map
+ * @var GraphQLVars::result
+ *                             an execute's outcome code
+ * @var GraphQLVars::i64
+ *                             the Int an arg_int read (sec 3.5.1), 0 when @c ok is false
+ * @var GraphQLVars::text
+ *                             the String an arg_str read (sec 3.5.3), NULL when @c ok is false
+ * @var GraphQLVars::b
+ *                             the Boolean an arg_bool read (sec 3.5.4), false when @c ok is false
+ * @var GraphQLNs::execute
+ *                           parse @c request, execute its operation, and serialize the response map
  *                           into @c response (sec 6.1)
- * @var GraphQLNs::arg_int   read @c argument as an Int
- * @var GraphQLNs::arg_str   read @c argument as a String
- * @var GraphQLNs::arg_bool  read @c argument as a Boolean
+ * @var GraphQLNs::arg_int
+ *                           read @c argument as an Int
+ * @var GraphQLNs::arg_str
+ *                           read @c argument as a String
+ * @var GraphQLNs::arg_bool
+ *                           read @c argument as a Boolean
  */
 typedef struct
 {

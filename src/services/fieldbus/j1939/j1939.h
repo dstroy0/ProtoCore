@@ -378,6 +378,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::J1939 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   J1939.encode_id_args.id = ...;
  *   J1939.encode_id_args.priority = ...;
  *   J1939.encode_id_args.pgn = ...;
@@ -385,49 +386,92 @@ typedef struct
  *   J1939.encode_id_args.da = ...;
  *   J1939.encode_id(work);
  *   // J1939.ok is what the call reports
+ * @endcode
  *
- * @var J1939Ns::encode_id_args  what encode_id takes: id, priority, pgn, sa, da
- * @var J1939Ns::decode_id_args  what decode_id takes: id, out
- * @var J1939Ns::build_message_args  what build_message takes: out, priority, pgn, sa, da, data,
- * @var J1939Ns::build_request_args  what build_request takes: out, sa, da, requested_pgn
- * @var J1939Ns::build_address_claim_args  what build_address_claim takes: out, sa, name
- * @var J1939Ns::build_name_args  what build_name takes: arbitrary_address_capable,
- * @var J1939Ns::tp_num_packets_args  what tp_num_packets takes: total_size
- * @var J1939Ns::build_bam_cm_args  what build_bam_cm takes: out, sa, pgn, total_size
- * @var J1939Ns::build_tp_dt_args  what build_tp_dt takes: out, sa, da, seq, chunk, chunk_len
- * @var J1939Ns::tp_reset_args  what tp_reset takes: rx
- * @var J1939Ns::tp_feed_args  what tp_feed takes: rx, f
- * @var J1939Ns::decode_eec1_args  what decode_eec1 takes: f, out
- * @var J1939Ns::decode_et1_args  what decode_et1 takes: f, out
- * @var J1939Ns::decode_lfe_args  what decode_lfe takes: f, out
- * @var J1939Ns::decode_amb_args  what decode_amb takes: f, out
- * @var J1939Ns::decode_ic1_args  what decode_ic1 takes: f, out
- * @var J1939Ns::decode_vd_args  what decode_vd takes: f, out
- * @var J1939Ns::decode_ccvs_args  what decode_ccvs takes: f, out
- * @var J1939Ns::decode_dm1_args  what decode_dm1 takes: body, len, out, out_dtcs, max
- * @var J1939Ns::ok  true iff f decodes to PGN 61444 and carries 8 data octets; false ...
- * @var J1939Ns::value  the value a call reports
- * @var J1939Ns::u8  what a call reports
- * @var J1939Ns::tp  what a call reports
- * @var J1939Ns::encode_id  encode a 29-bit J1939 id. da is used only for a PDU1 (PF < 240) PGN
- * @var J1939Ns::decode_id  decode a 29-bit J1939 id into its fields
- * @var J1939Ns::build_message  build a single-frame (<= 8 octet) J1939 message
- * @var J1939Ns::build_request  build a Request-PGN frame asking da for requested_pgn
- * @var J1939Ns::build_address_claim  build an Address-Claimed frame announcing sa with the 64-bit name
- * @var J1939Ns::build_name  compose a 64-bit J1939 NAME from its fields (see J1939-81)
- * @var J1939Ns::tp_num_packets  octet count -> TP packet count (ceil(size / 7))
- * @var J1939Ns::build_bam_cm  build the BAM (broadcast) TP.CM announce frame for pgn / total_size
- * @var J1939Ns::build_tp_dt  build TP.DT data packet seq (1-based) carrying chunk_len (1..7) ...
- * @var J1939Ns::tp_reset  reset a reassembly context to idle
- * @var J1939Ns::tp_feed  feed a received frame to the reassembler; see J1939TpResult
- * @var J1939Ns::decode_eec1  decode an EEC1 (PGN 61444) single frame into out
- * @var J1939Ns::decode_et1  decode an ET1 (PGN 65262) single frame into out
- * @var J1939Ns::decode_lfe  decode an LFE (PGN 65266) single frame into out
- * @var J1939Ns::decode_amb  decode an AMB (PGN 65269) single frame into out
- * @var J1939Ns::decode_ic1  decode an IC1 (PGN 65270) single frame into out
- * @var J1939Ns::decode_vd  decode a VD (PGN 65248) single frame into out
- * @var J1939Ns::decode_ccvs  decode a CCVS (PGN 65265) single frame into out
- * @var J1939Ns::decode_dm1  decode a DM1 (PGN 65226) body: the lamp-status octet, the ...
+ * @var J1939Vars::encode_id_args
+ *                                 what encode_id takes: id, priority, pgn, sa, da
+ * @var J1939Vars::decode_id_args
+ *                                 what decode_id takes: id, out
+ * @var J1939Vars::build_message_args
+ *                                     what build_message takes: out, priority, pgn, sa, da, data,
+ * @var J1939Vars::build_request_args
+ *                                     what build_request takes: out, sa, da, requested_pgn
+ * @var J1939Vars::build_address_claim_args
+ *                                           what build_address_claim takes: out, sa, name
+ * @var J1939Vars::build_name_args
+ *                                  what build_name takes: arbitrary_address_capable,
+ * @var J1939Vars::tp_num_packets_args
+ *                                      what tp_num_packets takes: total_size
+ * @var J1939Vars::build_bam_cm_args
+ *                                    what build_bam_cm takes: out, sa, pgn, total_size
+ * @var J1939Vars::build_tp_dt_args
+ *                                   what build_tp_dt takes: out, sa, da, seq, chunk, chunk_len
+ * @var J1939Vars::tp_reset_args
+ *                                what tp_reset takes: rx
+ * @var J1939Vars::tp_feed_args
+ *                               what tp_feed takes: rx, f
+ * @var J1939Vars::decode_eec1_args
+ *                                   what decode_eec1 takes: f, out
+ * @var J1939Vars::decode_et1_args
+ *                                  what decode_et1 takes: f, out
+ * @var J1939Vars::decode_lfe_args
+ *                                  what decode_lfe takes: f, out
+ * @var J1939Vars::decode_amb_args
+ *                                  what decode_amb takes: f, out
+ * @var J1939Vars::decode_ic1_args
+ *                                  what decode_ic1 takes: f, out
+ * @var J1939Vars::decode_vd_args
+ *                                 what decode_vd takes: f, out
+ * @var J1939Vars::decode_ccvs_args
+ *                                   what decode_ccvs takes: f, out
+ * @var J1939Vars::decode_dm1_args
+ *                                  what decode_dm1 takes: body, len, out, out_dtcs, max
+ * @var J1939Vars::ok
+ *                     true iff f decodes to PGN 61444 and carries 8 data octets; false ...
+ * @var J1939Vars::value
+ *                        the value a call reports
+ * @var J1939Vars::u8
+ *                     what a call reports
+ * @var J1939Vars::tp
+ *                     what a call reports
+ * @var J1939Ns::encode_id
+ *                          encode a 29-bit J1939 id. da is used only for a PDU1 (PF < 240) PGN
+ * @var J1939Ns::decode_id
+ *                          decode a 29-bit J1939 id into its fields
+ * @var J1939Ns::build_message
+ *                              build a single-frame (<= 8 octet) J1939 message
+ * @var J1939Ns::build_request
+ *                              build a Request-PGN frame asking da for requested_pgn
+ * @var J1939Ns::build_address_claim
+ *                                    build an Address-Claimed frame announcing sa with the 64-bit name
+ * @var J1939Ns::build_name
+ *                           compose a 64-bit J1939 NAME from its fields (see J1939-81)
+ * @var J1939Ns::tp_num_packets
+ *                               octet count -> TP packet count (ceil(size / 7))
+ * @var J1939Ns::build_bam_cm
+ *                             build the BAM (broadcast) TP.CM announce frame for pgn / total_size
+ * @var J1939Ns::build_tp_dt
+ *                            build TP.DT data packet seq (1-based) carrying chunk_len (1..7) ...
+ * @var J1939Ns::tp_reset
+ *                         reset a reassembly context to idle
+ * @var J1939Ns::tp_feed
+ *                        feed a received frame to the reassembler; see J1939TpResult
+ * @var J1939Ns::decode_eec1
+ *                            decode an EEC1 (PGN 61444) single frame into out
+ * @var J1939Ns::decode_et1
+ *                           decode an ET1 (PGN 65262) single frame into out
+ * @var J1939Ns::decode_lfe
+ *                           decode an LFE (PGN 65266) single frame into out
+ * @var J1939Ns::decode_amb
+ *                           decode an AMB (PGN 65269) single frame into out
+ * @var J1939Ns::decode_ic1
+ *                           decode an IC1 (PGN 65270) single frame into out
+ * @var J1939Ns::decode_vd
+ *                          decode a VD (PGN 65248) single frame into out
+ * @var J1939Ns::decode_ccvs
+ *                            decode a CCVS (PGN 65265) single frame into out
+ * @var J1939Ns::decode_dm1
+ *                           decode a DM1 (PGN 65226) body: the lamp-status octet, the ...
  *
  * @c work is PROTOCORE_J1939_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

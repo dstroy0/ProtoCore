@@ -56,19 +56,27 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Netadapt with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Netadapt.window_args.free_heap = ...;
  *   Netadapt.window_args.reserve = ...;
  *   Netadapt.window_args.min_win = ...;
  *   Netadapt.window_args.max_win = ...;
  *   Netadapt.window(work);
  *   // Netadapt.u32 is what the call reports
+ * @endcode
  *
- * @var NetadaptNs::window_args  what window takes: free_heap, reserve, min_win, max_win
- * @var NetadaptNs::dhcp_fallback_args  what dhcp_fallback takes: elapsed_ms, attempts, timeout_ms,
- * @var NetadaptNs::ok  true once the elapsed wait exceeds timeout_ms, or (when ...
- * @var NetadaptNs::u32  a window in [min_win, max_win]: min_win if the heap at/below the ...
- * @var NetadaptNs::window  recommend a TCP receive window / RX buffer size (bytes) from the ...
- * @var NetadaptNs::dhcp_fallback  should we stop waiting on DHCP and switch to the configured static ...
+ * @var NetadaptVars::window_args
+ *                                 what window takes: free_heap, reserve, min_win, max_win
+ * @var NetadaptVars::dhcp_fallback_args
+ *                                        what dhcp_fallback takes: elapsed_ms, attempts, timeout_ms,
+ * @var NetadaptVars::ok
+ *                        true once the elapsed wait exceeds timeout_ms, or (when ...
+ * @var NetadaptVars::u32
+ *                         a window in [min_win, max_win]: min_win if the heap at/below the ...
+ * @var NetadaptNs::window
+ *                          recommend a TCP receive window / RX buffer size (bytes) from the ...
+ * @var NetadaptNs::dhcp_fallback
+ *                                 should we stop waiting on DHCP and switch to the configured static ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

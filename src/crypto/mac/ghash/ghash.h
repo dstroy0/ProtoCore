@@ -60,6 +60,7 @@ typedef struct
  * reads the outcome off the same handle. How those bytes are carved is this module's and is never named
  * here.
  *
+ * @code{.c}
  *   Ghash.key_args.h = h;
  *   Ghash.key_init(work);
  *   Ghash.update_args.acc = acc;
@@ -68,14 +69,22 @@ typedef struct
  *   Ghash.update(work);
  *   Ghash.mul_args.acc = acc;
  *   Ghash.mul(work);
+ * @endcode
  *
- * @var GhashNs::key_args     the subkey a table is built from
- * @var GhashNs::mul_args     the accumulator one multiply runs in
- * @var GhashNs::update_args  the accumulator and the bytes a fold runs over
- * @var GhashNs::ok           a call's true/false outcome
- * @var GhashNs::key_init     build the 4-bit table for the subkey, once per key
- * @var GhashNs::mul          acc = acc * H in GF(2^128) under that table
- * @var GhashNs::update       fold the bytes into acc 16 at a time, a final short block MSB-zero-padded
+ * @var GhashVars::key_args
+ *                              the subkey a table is built from
+ * @var GhashVars::mul_args
+ *                              the accumulator one multiply runs in
+ * @var GhashVars::update_args
+ *                              the accumulator and the bytes a fold runs over
+ * @var GhashVars::ok
+ *                              a call's true/false outcome
+ * @var GhashNs::key_init
+ *                            build the 4-bit table for the subkey, once per key
+ * @var GhashNs::mul
+ *                            acc = acc * H in GF(2^128) under that table
+ * @var GhashNs::update
+ *                            fold the bytes into acc 16 at a time, a final short block MSB-zero-padded
  *
  * The accumulator is the CALLER's 16 bytes: both folding entries work in place on the buffer their args
  * name and hold it no longer than the call.
@@ -85,7 +94,7 @@ typedef struct
  * holds it, releases it, nor wipes it. The borrow IS the table, so two subkeys are two borrows and never collide, and
  * the table dies with the release.
  *
- * No storage member and no context: a caller sets operands and reads @ref GhashNs::ok, and that is all
+ * No storage member and no context: a caller sets operands and reads @ref GhashVars::ok, and that is all
  * the surface there is.
  */
 typedef struct

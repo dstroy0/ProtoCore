@@ -92,15 +92,24 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::SnmpNotify, and reads the outcome
  * off the same handle.
  *
- * @var SnmpNotifyNs::pdu           what the notification PDU carries
- * @var SnmpNotifyNs::dst           the notification receiver a send addresses
- * @var SnmpNotifyNs::buf           where the message is built
- * @var SnmpNotifyNs::ok            a send's true/false outcome: the stack took the datagram
- * @var SnmpNotifyNs::n             octets a build wrote, 0 when the buffer could not hold them
- * @var SnmpNotifyNs::build_pdu     append the notification PDU to @c buf.enc, mandatory bindings first
- * @var SnmpNotifyNs::build_v2c     build a complete SNMPv2c notification message into @c buf.out
- * @var SnmpNotifyNs::trap_v2c      build and send an SNMPv2-Trap-PDU, sysUpTime.0 from the clock
- * @var SnmpNotifyNs::inform_v2c    build and send an InformRequest-PDU under the caller's request-id
+ * @var SnmpNotifyVars::pdu
+ *                                    what the notification PDU carries
+ * @var SnmpNotifyVars::dst
+ *                                    the notification receiver a send addresses
+ * @var SnmpNotifyVars::buf
+ *                                    where the message is built
+ * @var SnmpNotifyVars::ok
+ *                                    a send's true/false outcome: the stack took the datagram
+ * @var SnmpNotifyVars::n
+ *                                    octets a build wrote, 0 when the buffer could not hold them
+ * @var SnmpNotifyNs::build_pdu
+ *                                  append the notification PDU to @c buf.enc, mandatory bindings first
+ * @var SnmpNotifyNs::build_v2c
+ *                                  build a complete SNMPv2c notification message into @c buf.out
+ * @var SnmpNotifyNs::trap_v2c
+ *                                  build and send an SNMPv2-Trap-PDU, sysUpTime.0 from the clock
+ * @var SnmpNotifyNs::inform_v2c
+ *                                  build and send an InformRequest-PDU under the caller's request-id
  */
 typedef struct
 {

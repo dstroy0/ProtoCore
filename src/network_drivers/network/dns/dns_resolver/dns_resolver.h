@@ -104,25 +104,42 @@ typedef struct
  * @brief The DNS resolver.
  *
  * A caller sets the members a call takes, invokes it through ::Resolver, and reads the outcome off
- * the same handle. The in-flight query and its timer are behind @ref internal.
+ * the same handle. The in-flight query and its timer are internal.
  *
- * @var ResolverNs::addr    the address a classify or a verify judges
- * @var ResolverNs::query   the question a resolve or a build asks (RFC 1035 sec 4.1.2)
- * @var ResolverNs::answer  the response message a parse reads (RFC 1035 sec 4.1.3)
- * @var ResolverNs::server  the nameserver the portable backend asks (RFC 1035 sec 4.2.1)
- * @var ResolverNs::ok      a call's true/false outcome
- * @var ResolverNs::n       octets a build wrote, or 0 when the name does not encode or does not fit
- * @var ResolverNs::u32     the address a resolve or a parse reports, host order; 0 when it has none
- * @var ResolverNs::cls     the category a classify reports
- * @var ResolverNs::state   where a resolve stands
- * @var ResolverNs::classify      what kind of address a host-order IPv4 word names
- * @var ResolverNs::verify        whether that word is a plausible A record for a remote host
- * @var ResolverNs::query_build   write a standard A-record question (RFC 1035 sec 4.1.1, sec 4.1.2)
- * @var ResolverNs::answer_parse  read the first A record out of a response (RFC 1035 sec 3.4.1)
- * @var ResolverNs::resolve       ask for a host's IPv4 address, host order
- * @var ResolverNs::resolve_verified  as resolve, and require the answer to pass @ref verify
- * @var ResolverNs::busy      a query is out
- * @var ResolverNs::set_server  point the portable backend at a nameserver, as a literal address
+ * @var ResolverVars::addr
+ *                            the address a classify or a verify judges
+ * @var ResolverVars::query
+ *                            the question a resolve or a build asks (RFC 1035 sec 4.1.2)
+ * @var ResolverVars::answer
+ *                            the response message a parse reads (RFC 1035 sec 4.1.3)
+ * @var ResolverVars::server
+ *                            the nameserver the portable backend asks (RFC 1035 sec 4.2.1)
+ * @var ResolverVars::ok
+ *                            a call's true/false outcome
+ * @var ResolverVars::n
+ *                            octets a build wrote, or 0 when the name does not encode or does not fit
+ * @var ResolverVars::u32
+ *                            the address a resolve or a parse reports, host order; 0 when it has none
+ * @var ResolverVars::cls
+ *                            the category a classify reports
+ * @var ResolverVars::state
+ *                            where a resolve stands
+ * @var ResolverNs::classify
+ *                                what kind of address a host-order IPv4 word names
+ * @var ResolverNs::verify
+ *                                whether that word is a plausible A record for a remote host
+ * @var ResolverNs::query_build
+ *                                write a standard A-record question (RFC 1035 sec 4.1.1, sec 4.1.2)
+ * @var ResolverNs::answer_parse
+ *                                read the first A record out of a response (RFC 1035 sec 3.4.1)
+ * @var ResolverNs::resolve
+ *                                ask for a host's IPv4 address, host order
+ * @var ResolverNs::resolve_verified
+ *                                    as resolve, and require the answer to pass @ref verify
+ * @var ResolverNs::busy
+ *                            a query is out
+ * @var ResolverNs::set_server
+ *                              point the portable backend at a nameserver, as a literal address
  *
  * resolve answers a dotted quad from the name itself and reports ::PROTOCORE_DNS_READY. Any other
  * name starts a query, marks the module busy and reports ::PROTOCORE_DNS_BUSY; the caller asks again

@@ -103,26 +103,43 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Cclink with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Cclink.sum_args.bytes = ...;
  *   Cclink.sum_args.len = ...;
  *   Cclink.sum(work);
  *   // Cclink.value is what the call reports
+ * @endcode
  *
- * @var CclinkNs::sum_args  what sum takes: bytes, len
- * @var CclinkNs::build_args  what build takes: station, command, bits, bit_len, words,
- * @var CclinkNs::parse_args  what parse takes: frame, len, out
- * @var CclinkNs::get_bit_args  what get_bit takes: bits, bit_len, index
- * @var CclinkNs::set_bit_args  what set_bit takes: bits, bit_len, index, value
- * @var CclinkNs::get_word_args  what get_word takes: words, word_len, index
- * @var CclinkNs::ok  a call's true/false outcome
- * @var CclinkNs::value  the value a call reports
- * @var CclinkNs::n  the frame length (2 + bit_len + word_len + 1), or 0 on overflow / ...
- * @var CclinkNs::sum  arithmetic-sum checksum: low byte of the sum of len bytes
- * @var CclinkNs::build  build a CC-Link cyclic frame: ...
- * @var CclinkNs::parse  validate the checksum and parse a CC-Link frame. true if the ...
- * @var CclinkNs::get_bit  read bit index (0-based) from a bit-device byte array
- * @var CclinkNs::set_bit  set/clear bit index in a bit-device byte array (no-op if out of ...
- * @var CclinkNs::get_word  read word index (0-based, little-endian) from a word-device byte ...
+ * @var CclinkVars::sum_args
+ *                            what sum takes: bytes, len
+ * @var CclinkVars::build_args
+ *                              what build takes: station, command, bits, bit_len, words,
+ * @var CclinkVars::parse_args
+ *                              what parse takes: frame, len, out
+ * @var CclinkVars::get_bit_args
+ *                                what get_bit takes: bits, bit_len, index
+ * @var CclinkVars::set_bit_args
+ *                                what set_bit takes: bits, bit_len, index, value
+ * @var CclinkVars::get_word_args
+ *                                 what get_word takes: words, word_len, index
+ * @var CclinkVars::ok
+ *                      a call's true/false outcome
+ * @var CclinkVars::value
+ *                         the value a call reports
+ * @var CclinkVars::n
+ *                     the frame length (2 + bit_len + word_len + 1), or 0 on overflow / ...
+ * @var CclinkNs::sum
+ *                     arithmetic-sum checksum: low byte of the sum of len bytes
+ * @var CclinkNs::build
+ *                       build a CC-Link cyclic frame: ...
+ * @var CclinkNs::parse
+ *                       validate the checksum and parse a CC-Link frame. true if the ...
+ * @var CclinkNs::get_bit
+ *                         read bit index (0-based) from a bit-device byte array
+ * @var CclinkNs::set_bit
+ *                         set/clear bit index in a bit-device byte array (no-op if out of ...
+ * @var CclinkNs::get_word
+ *                          read word index (0-based, little-endian) from a word-device byte ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

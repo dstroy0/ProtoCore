@@ -56,6 +56,9 @@ SKIP_DIRS = {
 }
 # Compiled and concatenated output that carries the copyright only because its input did.
 SKIP_EXTS = {".pyc", ".pyo", ".merged", ".bin", ".elf", ".o", ".a"}
+# The ASD-STE100 checker that embedded_types, MMgr, orior and ProtoCore hold as the same bytes. A stamp
+# here makes this copy differ from the others, and a change to it goes into embedded_types first.
+SKIP_FILES = {"tools/prose/ste_check.py"}
 
 OWNER = "Copyright (C) 2026 Douglas Quigg"
 COPYRIGHT = OWNER + " (dstroy0) <dquigg123@gmail.com>"
@@ -129,7 +132,7 @@ def walk():
                 d for d in dirnames if d not in SKIP_DIRS and os.path.normpath(os.path.join(dirpath, d)) not in skip
             ]
             for fn in filenames:
-                if os.path.splitext(fn)[1].lower() in SKIP_EXTS:
+                if os.path.splitext(fn)[1].lower() in SKIP_EXTS or rel(os.path.join(dirpath, fn)) in SKIP_FILES:
                     continue
                 yield os.path.join(dirpath, fn)
 

@@ -175,15 +175,23 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Euromap77 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Euromap77.bind_args.imm = ...;
  *   Euromap77.bind(work);
+ * @endcode
  *
- * @var Euromap77Ns::bind_args  what bind takes: imm
- * @var Euromap77Ns::install_args  what install takes: imm
- * @var Euromap77Ns::ok  a call's true/false outcome
- * @var Euromap77Ns::ns  the NamespaceIndex the server gave EUROMAP77_NS_URI, once a bind has run
- * @var Euromap77Ns::bind  bind the IMM the resolvers serve. imm must outlive the server (own ...
- * @var Euromap77Ns::install  bind imm and hand the model's Read and Browse resolvers to the OPC ...
+ * @var Euromap77Vars::bind_args
+ *                                what bind takes: imm
+ * @var Euromap77Vars::install_args
+ *                                   what install takes: imm
+ * @var Euromap77Vars::ok
+ *                         a call's true/false outcome
+ * @var Euromap77Vars::ns
+ *                         the NamespaceIndex the server gave EUROMAP77_NS_URI, once a bind has run
+ * @var Euromap77Ns::bind
+ *                         bind the IMM the resolvers serve. imm must outlive the server (own ...
+ * @var Euromap77Ns::install
+ *                            bind imm and hand the model's Read and Browse resolvers to the OPC ...
  *
  * @c work is PROTOCORE_EUROMAP77_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

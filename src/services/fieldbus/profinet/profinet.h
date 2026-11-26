@@ -9,7 +9,9 @@
  * It rides raw L2 (ethertype 0x8892, PROFINET RT; see services/fieldbus/rawl2) with a fixed 10-octet frame header
  * followed by DCP blocks:
  *
+ * @code{.c}
  *   Header:  frameID(2) serviceID(1) serviceType(1) xid(4) responseDelayFactor(2) dataLength(2)
+ * @endcode
  *   Block:   option(1) suboption(1) blockLength(2) [blockInfo(2) for Set/Get responses] value...
  *
  * FrameIDs: 0xFEFE Identify-request (multicast), 0xFEFF Identify-response, 0xFEFD Get/Set. This builds
@@ -112,6 +114,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Profinet with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Profinet.dcp_header_args.frame_id = ...;
  *   Profinet.dcp_header_args.service_id = ...;
  *   Profinet.dcp_header_args.service_type = ...;
@@ -122,17 +125,28 @@ typedef struct
  *   Profinet.dcp_header_args.cap = ...;
  *   Profinet.dcp_header(work);
  *   // Profinet.n is what the call reports
+ * @endcode
  *
- * @var ProfinetNs::dcp_header_args  what dcp_header takes: frame_id, service_id, service_type,
- * @var ProfinetNs::dcp_block_args  what dcp_block takes: option, suboption, value, value_len,
- * @var ProfinetNs::dcp_parse_header_args  what dcp_parse_header takes: frame, len, out
- * @var ProfinetNs::dcp_walk_args  what dcp_walk takes: blocks, len, cb, arg
- * @var ProfinetNs::ok  true if every block fits; invokes cb per block (value excludes the ...
- * @var ProfinetNs::n  the block length written (4 + value_len, padded to even per DCP), ...
- * @var ProfinetNs::dcp_header  build a DCP frame header into out (>= PN_DCP_HDR_LEN bytes). 12, or ...
- * @var ProfinetNs::dcp_block  append a DCP block `[option][suboption][blockLength][value...]` (no ...
- * @var ProfinetNs::dcp_parse_header  parse the DCP header. true if len >= PN_DCP_HDR_LEN
- * @var ProfinetNs::dcp_walk  walk the DCP blocks after the header (blocks points at header+10, ...
+ * @var ProfinetVars::dcp_header_args
+ *                                     what dcp_header takes: frame_id, service_id, service_type,
+ * @var ProfinetVars::dcp_block_args
+ *                                    what dcp_block takes: option, suboption, value, value_len,
+ * @var ProfinetVars::dcp_parse_header_args
+ *                                           what dcp_parse_header takes: frame, len, out
+ * @var ProfinetVars::dcp_walk_args
+ *                                   what dcp_walk takes: blocks, len, cb, arg
+ * @var ProfinetVars::ok
+ *                        true if every block fits; invokes cb per block (value excludes the ...
+ * @var ProfinetVars::n
+ *                       the block length written (4 + value_len, padded to even per DCP), ...
+ * @var ProfinetNs::dcp_header
+ *                              build a DCP frame header into out (>= PN_DCP_HDR_LEN bytes). 12, or ...
+ * @var ProfinetNs::dcp_block
+ *                             append a DCP block `[option][suboption][blockLength][value...]` (no ...
+ * @var ProfinetNs::dcp_parse_header
+ *                                    parse the DCP header. true if len >= PN_DCP_HDR_LEN
+ * @var ProfinetNs::dcp_walk
+ *                            walk the DCP blocks after the header (blocks points at header+10, ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

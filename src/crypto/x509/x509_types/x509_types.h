@@ -66,26 +66,45 @@ typedef struct
 /**
  * @brief One certificate, as a view over the DER it was read from.
  *
- * @var X509Cert::tbs        the TBSCertificate's own octets, which the signature covers
- * @var X509Cert::serial     serialNumber's content, as it was encoded (sec 4.1.2.2 allows 20 octets)
- * @var X509Cert::issuer     the issuer Name, whole and encoded: a chain matches it against a
+ * @var X509Cert::tbs
+ *                           the TBSCertificate's own octets, which the signature covers
+ * @var X509Cert::serial
+ *                           serialNumber's content, as it was encoded (sec 4.1.2.2 allows 20 octets)
+ * @var X509Cert::issuer
+ *                           the issuer Name, whole and encoded: a chain matches it against a
  *                           subject byte for byte, so it is not decoded
- * @var X509Cert::subject    the subject Name, likewise
- * @var X509Cert::spki       the SubjectPublicKeyInfo's own octets, whole
- * @var X509Cert::key        subjectPublicKey's octets, past the BIT STRING's unused-bits count
- * @var X509Cert::sig        signatureValue's octets, likewise
- * @var X509Cert::san        the subjectAltName extension's value, or empty when absent
- * @var X509Cert::not_before validity's start, seconds since the POSIX epoch (sec 4.1.2.5)
- * @var X509Cert::not_after  validity's end, likewise
- * @var X509Cert::sig_alg    what signed it
- * @var X509Cert::key_alg    what its public key is
- * @var X509Cert::key_usage  the KeyUsage bits, or 0 when the extension is absent
- * @var X509Cert::path_len   basicConstraints pathLenConstraint, when stated
- * @var X509Cert::version    0, 1 or 2 for v1, v2, v3 (sec 4.1.2.1)
- * @var X509Cert::is_ca      basicConstraints cA (sec 4.2.1.9)
- * @var X509Cert::has_bc     the basicConstraints extension was present at all
- * @var X509Cert::has_ku     the keyUsage extension was present at all
- * @var X509Cert::has_path_len  pathLenConstraint was stated
+ * @var X509Cert::subject
+ *                           the subject Name, likewise
+ * @var X509Cert::spki
+ *                           the SubjectPublicKeyInfo's own octets, whole
+ * @var X509Cert::key
+ *                           subjectPublicKey's octets, past the BIT STRING's unused-bits count
+ * @var X509Cert::sig
+ *                           signatureValue's octets, likewise
+ * @var X509Cert::san
+ *                           the subjectAltName extension's value, or empty when absent
+ * @var X509Cert::not_before
+ *                           validity's start, seconds since the POSIX epoch (sec 4.1.2.5)
+ * @var X509Cert::not_after
+ *                           validity's end, likewise
+ * @var X509Cert::sig_alg
+ *                           what signed it
+ * @var X509Cert::key_alg
+ *                           what its public key is
+ * @var X509Cert::key_usage
+ *                           the KeyUsage bits, or 0 when the extension is absent
+ * @var X509Cert::path_len
+ *                           basicConstraints pathLenConstraint, when stated
+ * @var X509Cert::version
+ *                           0, 1 or 2 for v1, v2, v3 (sec 4.1.2.1)
+ * @var X509Cert::is_ca
+ *                           basicConstraints cA (sec 4.2.1.9)
+ * @var X509Cert::has_bc
+ *                           the basicConstraints extension was present at all
+ * @var X509Cert::has_ku
+ *                           the keyUsage extension was present at all
+ * @var X509Cert::has_path_len
+ *                              pathLenConstraint was stated
  */
 typedef struct
 {

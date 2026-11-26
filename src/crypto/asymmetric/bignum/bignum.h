@@ -126,6 +126,7 @@ typedef struct
  * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
  * named here.
  *
+ * @code{.c}
  *   Bignum.from_bytes_args.out = &e;
  *   Bignum.from_bytes_args.bytes = e_be;
  *   Bignum.from_bytes_args.len = 256;
@@ -136,32 +137,50 @@ typedef struct
  *   Bignum.expmod_args.base = &e;
  *   Bignum.expmod_args.exp = &y;
  *   Bignum.expmod_group14(work);
+ * @endcode
  *
- * @var BignumNs::from_bytes_args  the big-endian bytes read into a bignum
- * @var BignumNs::to_bytes_args    where a bignum lands as big-endian bytes
- * @var BignumNs::cmp_args         the two values a compare orders
- * @var BignumNs::cmp_raw_args     the two magnitudes a raw compare orders
- * @var BignumNs::is_zero_args     the value tested for zero
- * @var BignumNs::expmod_args      the operands of a group-14 modular exponentiation
- * @var BignumNs::validate_args    the received DH public value a validation checks
- * @var BignumNs::ok               a call's true/false outcome
- * @var BignumNs::sign             the sign of a - b the last @ref BignumNs::cmp or @ref BignumNs::cmp_raw
+ * @var BignumVars::from_bytes_args
+ *                                   the big-endian bytes read into a bignum
+ * @var BignumVars::to_bytes_args
+ *                                   where a bignum lands as big-endian bytes
+ * @var BignumVars::cmp_args
+ *                                   the two values a compare orders
+ * @var BignumVars::cmp_raw_args
+ *                                   the two magnitudes a raw compare orders
+ * @var BignumVars::is_zero_args
+ *                                   the value tested for zero
+ * @var BignumVars::expmod_args
+ *                                   the operands of a group-14 modular exponentiation
+ * @var BignumVars::validate_args
+ *                                   the received DH public value a validation checks
+ * @var BignumVars::ok
+ *                                   a call's true/false outcome
+ * @var BignumVars::sign
+ *                                   the sign of a - b the last @ref BignumNs::cmp or @ref BignumNs::cmp_raw
  *                                 left: -1, 0 or 1
- * @var BignumNs::zero             whether the last @ref BignumNs::is_zero found every limb zero
- * @var BignumNs::from_bytes       read a big-endian byte array into a bignum
- * @var BignumNs::to_bytes         write a bignum as 256 big-endian bytes
- * @var BignumNs::cmp              order two bignums over all 64 limbs
- * @var BignumNs::cmp_raw          order two magnitudes over the stated limb count
- * @var BignumNs::is_zero          test every limb for zero
- * @var BignumNs::expmod_group14   out = base^exp mod group14_p, on the linked backend
- * @var BignumNs::dh_validate      RFC 4253 §8: @ref BignumNs::ok is true when 1 < v < p-1
+ * @var BignumVars::zero
+ *                                   whether the last @ref BignumNs::is_zero found every limb zero
+ * @var BignumNs::from_bytes
+ *                                 read a big-endian byte array into a bignum
+ * @var BignumNs::to_bytes
+ *                                 write a bignum as 256 big-endian bytes
+ * @var BignumNs::cmp
+ *                                 order two bignums over all 64 limbs
+ * @var BignumNs::cmp_raw
+ *                                 order two magnitudes over the stated limb count
+ * @var BignumNs::is_zero
+ *                                 test every limb for zero
+ * @var BignumNs::expmod_group14
+ *                                 out = base^exp mod group14_p, on the linked backend
+ * @var BignumNs::dh_validate
+ *                                 RFC 4253 §8: @ref BignumVars::ok is true when 1 < v < p-1
  *
  * @c work is PROTOCORE_BIGNUM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
  * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
  * it, holds it, releases it, nor wipes it. The DH exponent and the shared secret pass through those bytes, so they die
  * with the release rather than on the stack. Two callers are two borrows and never collide.
  *
- * No storage member and no context: a caller sets operands and reads @ref BignumNs::ok, and that is
+ * No storage member and no context: a caller sets operands and reads @ref BignumVars::ok, and that is
  * all the surface there is.
  */
 typedef struct

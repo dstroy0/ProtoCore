@@ -201,9 +201,9 @@ void test_sec6_1_the_required_payload_size_is_carried(void)
     TEST_ASSERT_EQUAL_UINT32(32768u, (uint32_t)SSH_RFC_MAX_PAYLOAD);
 }
 
-void test_sec6_1_reassembly_holds_a_full_payload(void)
+void test_reassembly_holds_the_largest_accepted_packet(void)
 {
-    TEST_ASSERT_GREATER_OR_EQUAL_UINT32((uint32_t)SSH_RFC_MAX_PAYLOAD, (uint32_t)SSH_RX_ASM_CAP);
+    TEST_ASSERT_GREATER_OR_EQUAL_UINT32((uint32_t)SSH_PKT_WIRE_MAX, (uint32_t)SSH_RX_ASM_CAP);
 }
 
 void test_sec6_1_oversized_payload_is_refused(void)

@@ -68,6 +68,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::ConfigIo with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   ConfigIo.export_args.ns = ...;
  *   ConfigIo.export_args.fields = ...;
  *   ConfigIo.export_args.n = ...;
@@ -75,13 +76,20 @@ typedef struct
  *   ConfigIo.export_args.cap = ...;
  *   ConfigIo.export_lines(work);
  *   // ConfigIo.n is what the call reports
+ * @endcode
  *
- * @var ConfigIoNs::export_args  what export takes: ns, fields, n, out, cap
- * @var ConfigIoNs::import_args  what import takes: ns, fields, n, text, len
- * @var ConfigIoNs::ok  a call's true/false outcome
- * @var ConfigIoNs::n  characters written, or 0 on a too-small buffer / failure ...
- * @var ConfigIoNs::export_lines  export the schema's current values from namespace ns as `key=value` ...
- * @var ConfigIoNs::import_lines  import `key=value` lines from text into namespace ns, writing each ...
+ * @var ConfigIoVars::export_args
+ *                                 what export takes: ns, fields, n, out, cap
+ * @var ConfigIoVars::import_args
+ *                                 what import takes: ns, fields, n, text, len
+ * @var ConfigIoVars::ok
+ *                        a call's true/false outcome
+ * @var ConfigIoVars::n
+ *                       characters written, or 0 on a too-small buffer / failure ...
+ * @var ConfigIoNs::export_lines
+ *                                export the schema's current values from namespace ns as `key=value` ...
+ * @var ConfigIoNs::import_lines
+ *                                import `key=value` lines from text into namespace ns, writing each ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

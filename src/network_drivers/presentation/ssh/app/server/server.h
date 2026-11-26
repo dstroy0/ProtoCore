@@ -35,11 +35,16 @@ typedef struct
  * A caller sets the members the call takes, invokes it through ::SshAppServer, and reads the outcome
  * off the same handle.
  *
- * @var SshAppServerNs::slot       the SSH slot the request arrived on
- * @var SshAppServerNs::channel    the channel it names
- * @var SshAppServerNs::req        what one channel request names and carries (RFC 4254 sec 5.4)
- * @var SshAppServerNs::accept     in/out: set when an accepted SFTP subsystem flips acceptance
- * @var SshAppServerNs::classify   tag the channel and fire the matching open handler
+ * @var SshAppServerVars::slot
+ *                                   the SSH slot the request arrived on
+ * @var SshAppServerVars::channel
+ *                                   the channel it names
+ * @var SshAppServerVars::req
+ *                                   what one channel request names and carries (RFC 4254 sec 5.4)
+ * @var SshAppServerVars::accept
+ *                                   in/out: set when an accepted SFTP subsystem flips acceptance
+ * @var SshAppServerNs::classify
+ *                                 tag the channel and fire the matching open handler
  */
 typedef struct
 {

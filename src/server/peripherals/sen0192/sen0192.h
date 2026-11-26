@@ -112,7 +112,7 @@ uint32_t protocore_sen0192_motion_events(const uint8_t *work, const Sen0192Motio
  */
 uint32_t protocore_sen0192_motion_active_age_ms(const uint8_t *work, const Sen0192Motion *m, uint32_t now_ms);
 /**
- * @brief Configure PROTOCORE_SEN0192_PIN as an input and start tracking .
+ * @brief Configure PROTOCORE_SEN0192_PIN as an input and start tracking (polarity / hold from ServerConfig).
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @return EMBED_TRUE on success.
  */
@@ -130,7 +130,7 @@ embed_bool protocore_sen0192_poll(uint8_t *work);
  */
 embed_bool protocore_sen0192_present(uint8_t *work);
 /**
- * @brief Count of motion events (clear -> present transitions) since .
+ * @brief Count of motion events (clear -> present transitions) since protocore_sen0192_begin().
  * @param work PROTOCORE_SEN0192_BORROW bytes the caller took. Not held past the call.
  * @return the number of clear -> present transitions.
  */

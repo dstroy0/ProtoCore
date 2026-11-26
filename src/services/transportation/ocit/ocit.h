@@ -49,6 +49,8 @@ EMBED_BEGIN_DECLS
  * @param data_type   OCIT_TYPE_*.
  * @param value       the value bytes (big-endian for the integer types; may be null if value_len == 0).
  * @param value_len   value length.
+ * @param out         the destination buffer.
+ * @param cap         the capacity of @p out, in bytes.
  * @return the message length (6 + value_len), or 0 on overflow / bad args.
  */
 size_t protocore_ocit_build(uint8_t msg_type, uint16_t object_type, uint16_t instance, uint8_t data_type,

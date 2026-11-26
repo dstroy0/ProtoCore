@@ -65,6 +65,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Csrf with the bytes it runs out of,
  * and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Csrf.secret_args.secret = seed;
  *   Csrf.secret_args.len = sizeof(seed);
  *   Csrf.set_secret(work);
@@ -72,24 +73,35 @@ typedef struct
  *   Csrf.issue_args.cap = sizeof(buf);
  *   Csrf.issue(work);
  *   // Csrf.n is the token length, 0 when no secret is set or the buffer is short
+ * @endcode
  *
- * @var CsrfNs::secret_args  the secret an issuer signs with
- * @var CsrfNs::issue_args   where a fresh token lands
- * @var CsrfNs::verify_args  the token a verify checks
- * @var CsrfNs::ok           a call's true/false outcome
- * @var CsrfNs::n            the issued token's length in characters
- * @var CsrfNs::valid        whether the last @ref CsrfNs::verify accepted the token
- * @var CsrfNs::set_secret   seed the HMAC secret; call once with platform randomness
- * @var CsrfNs::issue        write a fresh signed token out
- * @var CsrfNs::verify       recompute the HMAC over the embedded nonce and compare in constant time
- * @var CsrfNs::reset        clear the secret and the nonce counter
+ * @var CsrfVars::secret_args
+ *                             the secret an issuer signs with
+ * @var CsrfVars::issue_args
+ *                             where a fresh token lands
+ * @var CsrfVars::verify_args
+ *                             the token a verify checks
+ * @var CsrfVars::ok
+ *                             a call's true/false outcome
+ * @var CsrfVars::n
+ *                             the issued token's length in characters
+ * @var CsrfVars::valid
+ *                             whether the last @ref CsrfNs::verify accepted the token
+ * @var CsrfNs::set_secret
+ *                           seed the HMAC secret; call once with platform randomness
+ * @var CsrfNs::issue
+ *                           write a fresh signed token out
+ * @var CsrfNs::verify
+ *                           recompute the HMAC over the embedded nonce and compare in constant time
+ * @var CsrfNs::reset
+ *                           clear the secret and the nonce counter
  *
  * @c work is PROTOCORE_CSRF_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. The secret is in those bytes rather than in this module, so a caller takes them once for
  * the life of the program and every call runs out of the same span. The caller releases it, and the pool wipes on
  * release; this module neither takes it, holds it, nor releases it.
  *
- * No storage member and no context: a caller sets operands and reads @ref CsrfNs::ok, and that is
+ * No storage member and no context: a caller sets operands and reads @ref CsrfVars::ok, and that is
  * all the surface there is.
  */
 typedef struct

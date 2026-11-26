@@ -101,16 +101,25 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::SshRsa with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   SshRsa.load_pubkey(work);
  *   // SshRsa.n is what the call reports
+ * @endcode
  *
- * @var SshRsaNs::sign_args  what sign takes: crypto_work, msg, msg_len, hash, sig
- * @var SshRsaNs::encode_pubkey_args  what encode_pubkey takes: out, out_len, out_cap
- * @var SshRsaNs::ok  a call's true/false outcome
- * @var SshRsaNs::n  0 on success, -1 if the key is absent or malformed
- * @var SshRsaNs::load_pubkey  load the public portion of the RSA host key into ssh_host_pubkey. ...
- * @var SshRsaNs::sign  sign msg with the RSA host key (PKCS#1 v1.5, rsa-sha2-256/512)
- * @var SshRsaNs::encode_pubkey  encode ssh_host_pubkey as the RFC 4253 §6.6 "ssh-rsa" public-key ...
+ * @var SshRsaVars::sign_args
+ *                             what sign takes: crypto_work, msg, msg_len, hash, sig
+ * @var SshRsaVars::encode_pubkey_args
+ *                                      what encode_pubkey takes: out, out_len, out_cap
+ * @var SshRsaVars::ok
+ *                      a call's true/false outcome
+ * @var SshRsaVars::n
+ *                     0 on success, -1 if the key is absent or malformed
+ * @var SshRsaNs::load_pubkey
+ *                             load the public portion of the RSA host key into ssh_host_pubkey. ...
+ * @var SshRsaNs::sign
+ *                      sign msg with the RSA host key (PKCS#1 v1.5, rsa-sha2-256/512)
+ * @var SshRsaNs::encode_pubkey
+ *                               encode ssh_host_pubkey as the RFC 4253 §6.6 "ssh-rsa" public-key ...
  *
  * @c work is PROTOCORE_SSH_RSA_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

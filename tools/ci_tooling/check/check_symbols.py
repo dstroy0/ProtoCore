@@ -56,7 +56,7 @@ MACRO_LIMIT = 31
 # PC-prefix sweep would have renamed PCA9685 and the PCR_* register block.
 # EMBED_CALL is embedded_types' macro. types.h restates it for C++, where the name has to stay the same.
 FOREIGN = re.compile(r"^(?:PCB|PCA\d|PCF\d|PCR_|PCNT|PCIE|PROTOCORE_?LCD)", re.I)
-FOREIGN_NAMES = {"EMBED_CALL"}
+FOREIGN_NAMES = {"EMBED_CALL", "EMBED_WORD_BITS", "EMBED_INDEX_BITS"}
 
 
 def decomment(t):

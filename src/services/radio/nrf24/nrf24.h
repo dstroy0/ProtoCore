@@ -108,8 +108,8 @@ void protocore_nrf24_set_rx(const uint8_t *work, const nrf_bus *bus);
  * @param bus Bus
  * @param buf Buf
  * @param cap Cap
- * @param pipe Pipe
- * @return The int.
+ * @param[out] pipe set to the receiving pipe number 0..5 (may be null).
+ * @return the payload width (PROTOCORE_NRF24_PAYLOAD, capped at @p cap), or -1 if none.
  */
 int protocore_nrf24_recv(const uint8_t *work, const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe);
 

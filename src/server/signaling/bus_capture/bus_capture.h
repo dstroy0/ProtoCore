@@ -69,20 +69,30 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::BusCapture with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   BusCapture.can_to_socketcan_args.f = ...;
  *   BusCapture.can_to_socketcan_args.out = ...;
  *   BusCapture.can_to_socketcan_args.cap = ...;
  *   BusCapture.can_to_socketcan(work);
  *   // BusCapture.n is what the call reports
+ * @endcode
  *
- * @var BusCaptureNs::can_to_socketcan_args  what can_to_socketcan takes: f, out, cap
- * @var BusCaptureNs::begin_args  what begin takes: tx_pin, rx_pin, bitrate, sink
- * @var BusCaptureNs::ok  true if the driver installed and started; false on a bad bit rate, ...
- * @var BusCaptureNs::n  ::PROTOCORE_SOCKETCAN_FRAME_LEN, or 0 if out is null / cap is too ...
- * @var BusCaptureNs::can_to_socketcan  format f as a 16-byte Linux SocketCAN frame (for a ...
- * @var BusCaptureNs::begin  install the CAN controller in listen-only mode and start capturing. ...
- * @var BusCaptureNs::poll  drain any received frames, calling the sink for each. Call from ...
- * @var BusCaptureNs::end  stop capture and release the controller
+ * @var BusCaptureVars::can_to_socketcan_args
+ *                                             what can_to_socketcan takes: f, out, cap
+ * @var BusCaptureVars::begin_args
+ *                                  what begin takes: tx_pin, rx_pin, bitrate, sink
+ * @var BusCaptureVars::ok
+ *                          true if the driver installed and started; false on a bad bit rate, ...
+ * @var BusCaptureVars::n
+ *                         ::PROTOCORE_SOCKETCAN_FRAME_LEN, or 0 if out is null / cap is too ...
+ * @var BusCaptureNs::can_to_socketcan
+ *                                      format f as a 16-byte Linux SocketCAN frame (for a ...
+ * @var BusCaptureNs::begin
+ *                           install the CAN controller in listen-only mode and start capturing. ...
+ * @var BusCaptureNs::poll
+ *                          drain any received frames, calling the sink for each. Call from ...
+ * @var BusCaptureNs::end
+ *                         stop capture and release the controller
  *
  * @c work is PROTOCORE_BUS_CAPTURE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

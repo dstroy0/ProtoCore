@@ -246,40 +246,71 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Simatic with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Simatic.bcc_3964r_args.data = ...;
  *   Simatic.bcc_3964r_args.len = ...;
  *   Simatic.bcc_3964r(work);
  *   // Simatic.value is what the call reports
+ * @endcode
  *
- * @var SimaticNs::bcc_3964r_args  what bcc_3964r takes: data, len
- * @var SimaticNs::build_block_3964r_args  what build_block_3964r takes: buf, cap, data, len, with_bcc
- * @var SimaticNs::parse_block_3964r_args  what parse_block_3964r takes: buf, len, with_bcc, out,
- * @var SimaticNs::init_3964r_args  what init_3964r takes: ctx, high_priority, with_bcc, tx,
- * @var SimaticNs::send_3964r_args  what send_3964r takes: ctx, data, len, now_ms
- * @var SimaticNs::rx_byte_3964r_args  what rx_byte_3964r takes: ctx, b, now_ms
- * @var SimaticNs::tick_3964r_args  what tick_3964r takes: ctx, now_ms
- * @var SimaticNs::idle_3964r_args  what idle_3964r takes: ctx
- * @var SimaticNs::build_send_rk512_args  what build_send_rk512 takes: buf, cap, area, dbnr, addr,
- * @var SimaticNs::build_fetch_rk512_args  what build_fetch_rk512 takes: buf, cap, area, dbnr, addr,
- * @var SimaticNs::build_reaction_rk512_args  what build_reaction_rk512 takes: buf, cap, status
- * @var SimaticNs::parse_header_rk512_args  what parse_header_rk512 takes: buf, len, out
- * @var SimaticNs::parse_reaction_rk512_args  what parse_reaction_rk512 takes: buf, len, status, data,
- * @var SimaticNs::ok  true on a complete, check-valid block; false on bad framing, a lone ...
- * @var SimaticNs::value  the value a call reports
- * @var SimaticNs::n  octets written, or 0 on overflow / bad input
- * @var SimaticNs::bcc_3964r  3964R BCC: the longitudinal XOR (even parity) over len bytes at ...
- * @var SimaticNs::build_block_3964r  build the 3964R block body: DLE-stuffed data, then DLE ETX, then ...
- * @var SimaticNs::parse_block_3964r  parse + validate a 3964R block body (the bytes after STX): un-stuff ...
- * @var SimaticNs::init_3964r  initialize the link. high_priority: one end true, the other false ...
- * @var SimaticNs::send_3964r  start sending data (one job in flight). Emits STX and arms the ...
- * @var SimaticNs::rx_byte_3964r  feed one inbound byte at now_ms; drives the handshake / block ...
- * @var SimaticNs::tick_3964r  drive timeouts (QVZ/ZVZ) + retries; call periodically with the ...
- * @var SimaticNs::idle_3964r  true when no job is in flight and no block is being received
- * @var SimaticNs::build_send_rk512  build a SEND telegram header + the wcount big-endian data words at ...
- * @var SimaticNs::build_fetch_rk512  build a FETCH telegram header (no data words - the partner returns ...
- * @var SimaticNs::build_reaction_rk512  build a reaction (acknowledge) telegram carrying status (0 = ok)
- * @var SimaticNs::parse_header_rk512  parse an RK512 header off a telegram. true on a complete, valid ...
- * @var SimaticNs::parse_reaction_rk512  parse a reaction telegram: the status word, and (for a FETCH ...
+ * @var SimaticVars::bcc_3964r_args
+ *                                   what bcc_3964r takes: data, len
+ * @var SimaticVars::build_block_3964r_args
+ *                                           what build_block_3964r takes: buf, cap, data, len, with_bcc
+ * @var SimaticVars::parse_block_3964r_args
+ *                                           what parse_block_3964r takes: buf, len, with_bcc, out,
+ * @var SimaticVars::init_3964r_args
+ *                                    what init_3964r takes: ctx, high_priority, with_bcc, tx,
+ * @var SimaticVars::send_3964r_args
+ *                                    what send_3964r takes: ctx, data, len, now_ms
+ * @var SimaticVars::rx_byte_3964r_args
+ *                                       what rx_byte_3964r takes: ctx, b, now_ms
+ * @var SimaticVars::tick_3964r_args
+ *                                    what tick_3964r takes: ctx, now_ms
+ * @var SimaticVars::idle_3964r_args
+ *                                    what idle_3964r takes: ctx
+ * @var SimaticVars::build_send_rk512_args
+ *                                          what build_send_rk512 takes: buf, cap, area, dbnr, addr,
+ * @var SimaticVars::build_fetch_rk512_args
+ *                                           what build_fetch_rk512 takes: buf, cap, area, dbnr, addr,
+ * @var SimaticVars::build_reaction_rk512_args
+ *                                              what build_reaction_rk512 takes: buf, cap, status
+ * @var SimaticVars::parse_header_rk512_args
+ *                                            what parse_header_rk512 takes: buf, len, out
+ * @var SimaticVars::parse_reaction_rk512_args
+ *                                              what parse_reaction_rk512 takes: buf, len, status, data,
+ * @var SimaticVars::ok
+ *                       true on a complete, check-valid block; false on bad framing, a lone ...
+ * @var SimaticVars::value
+ *                          the value a call reports
+ * @var SimaticVars::n
+ *                      octets written, or 0 on overflow / bad input
+ * @var SimaticNs::bcc_3964r
+ *                            3964R BCC: the longitudinal XOR (even parity) over len bytes at ...
+ * @var SimaticNs::build_block_3964r
+ *                                    build the 3964R block body: DLE-stuffed data, then DLE ETX, then ...
+ * @var SimaticNs::parse_block_3964r
+ *                                    parse + validate a 3964R block body (the bytes after STX): un-stuff ...
+ * @var SimaticNs::init_3964r
+ *                             initialize the link. high_priority: one end true, the other false ...
+ * @var SimaticNs::send_3964r
+ *                             start sending data (one job in flight). Emits STX and arms the ...
+ * @var SimaticNs::rx_byte_3964r
+ *                                feed one inbound byte at now_ms; drives the handshake / block ...
+ * @var SimaticNs::tick_3964r
+ *                             drive timeouts (QVZ/ZVZ) + retries; call periodically with the ...
+ * @var SimaticNs::idle_3964r
+ *                             true when no job is in flight and no block is being received
+ * @var SimaticNs::build_send_rk512
+ *                                   build a SEND telegram header + the wcount big-endian data words at ...
+ * @var SimaticNs::build_fetch_rk512
+ *                                    build a FETCH telegram header (no data words - the partner returns ...
+ * @var SimaticNs::build_reaction_rk512
+ *                                       build a reaction (acknowledge) telegram carrying status (0 = ok)
+ * @var SimaticNs::parse_header_rk512
+ *                                     parse an RK512 header off a telegram. true on a complete, valid ...
+ * @var SimaticNs::parse_reaction_rk512
+ *                                       parse a reaction telegram: the status word, and (for a FETCH ...
  *
  * @c work is PROTOCORE_SIMATIC_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

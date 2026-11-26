@@ -248,54 +248,99 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Json with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Json.init_args.w = ...;
  *   Json.init_args.buf = ...;
  *   Json.init_args.cap = ...;
  *   Json.init(work);
+ * @endcode
  *
- * @var JsonNs::init_args  what init takes: w, buf, cap
- * @var JsonNs::begin_object_args  what begin_object takes: w
- * @var JsonNs::end_object_args  what end_object takes: w
- * @var JsonNs::begin_array_args  what begin_array takes: w
- * @var JsonNs::end_array_args  what end_array takes: w
- * @var JsonNs::key_args  what key takes: w, k
- * @var JsonNs::put_str_args  what put_str takes: w, v
- * @var JsonNs::put_int_args  what put_int takes: w, v
- * @var JsonNs::put_uint_args  what put_uint takes: w, v
- * @var JsonNs::put_bool_args  what put_bool takes: w, v
- * @var JsonNs::put_null_args  what put_null takes: w
- * @var JsonNs::put_raw_args  what put_raw takes: w, literal
- * @var JsonNs::kv_str_args  what kv_str takes: w, k, v
- * @var JsonNs::kv_int_args  what kv_int takes: w, k, v
- * @var JsonNs::kv_uint_args  what kv_uint takes: w, k, v
- * @var JsonNs::kv_bool_args  what kv_bool takes: w, k, v
- * @var JsonNs::kv_null_args  what kv_null takes: w, k
- * @var JsonNs::kv_raw_args  what kv_raw takes: w, k, literal
- * @var JsonNs::get_str_args  what get_str takes: json, key, out, out_cap
- * @var JsonNs::get_int_args  what get_int takes: json, key, out
- * @var JsonNs::get_bool_args  what get_bool takes: json, key, out
- * @var JsonNs::ok  a call's true/false outcome
- * @var JsonNs::init  bind the writer to a caller buffer, capacity including the NUL
- * @var JsonNs::begin_object  open `{`, as a value or an element where that applies
- * @var JsonNs::end_object  close `}`
- * @var JsonNs::begin_array  open `[`
- * @var JsonNs::end_array  close `]`
- * @var JsonNs::key  an object member name (`"k":`); one value call follows it
- * @var JsonNs::put_str  a quoted, escaped string value
- * @var JsonNs::put_int  a signed integer value
- * @var JsonNs::put_uint  an unsigned integer value
- * @var JsonNs::put_bool  `true` or `false`
- * @var JsonNs::put_null  `null`
- * @var JsonNs::put_raw  a pre-formatted literal, verbatim
- * @var JsonNs::kv_str  `"k":"v"`, escaped
- * @var JsonNs::kv_int  `"k":<int>`
- * @var JsonNs::kv_uint  `"k":<uint>`
- * @var JsonNs::kv_bool  `"k":true|false`
- * @var JsonNs::kv_null  `"k":null`
- * @var JsonNs::kv_raw  `"k":<literal>`
- * @var JsonNs::get_str  a top-level string member, unescaped into out and bounded by
- * @var JsonNs::get_int  a top-level member that parses as an integer
- * @var JsonNs::get_bool  a top-level member that is a JSON boolean
+ * @var JsonVars::init_args
+ *                           what init takes: w, buf, cap
+ * @var JsonVars::begin_object_args
+ *                                   what begin_object takes: w
+ * @var JsonVars::end_object_args
+ *                                 what end_object takes: w
+ * @var JsonVars::begin_array_args
+ *                                  what begin_array takes: w
+ * @var JsonVars::end_array_args
+ *                                what end_array takes: w
+ * @var JsonVars::key_args
+ *                          what key takes: w, k
+ * @var JsonVars::put_str_args
+ *                              what put_str takes: w, v
+ * @var JsonVars::put_int_args
+ *                              what put_int takes: w, v
+ * @var JsonVars::put_uint_args
+ *                               what put_uint takes: w, v
+ * @var JsonVars::put_bool_args
+ *                               what put_bool takes: w, v
+ * @var JsonVars::put_null_args
+ *                               what put_null takes: w
+ * @var JsonVars::put_raw_args
+ *                              what put_raw takes: w, literal
+ * @var JsonVars::kv_str_args
+ *                             what kv_str takes: w, k, v
+ * @var JsonVars::kv_int_args
+ *                             what kv_int takes: w, k, v
+ * @var JsonVars::kv_uint_args
+ *                              what kv_uint takes: w, k, v
+ * @var JsonVars::kv_bool_args
+ *                              what kv_bool takes: w, k, v
+ * @var JsonVars::kv_null_args
+ *                              what kv_null takes: w, k
+ * @var JsonVars::kv_raw_args
+ *                             what kv_raw takes: w, k, literal
+ * @var JsonVars::get_str_args
+ *                              what get_str takes: json, key, out, out_cap
+ * @var JsonVars::get_int_args
+ *                              what get_int takes: json, key, out
+ * @var JsonVars::get_bool_args
+ *                               what get_bool takes: json, key, out
+ * @var JsonVars::ok
+ *                    a call's true/false outcome
+ * @var JsonNs::init
+ *                    bind the writer to a caller buffer, capacity including the NUL
+ * @var JsonNs::begin_object
+ *                            open `{`, as a value or an element where that applies
+ * @var JsonNs::end_object
+ *                          close `}`
+ * @var JsonNs::begin_array
+ *                           open `[`
+ * @var JsonNs::end_array
+ *                         close `]`
+ * @var JsonNs::key
+ *                   an object member name (`"k":`); one value call follows it
+ * @var JsonNs::put_str
+ *                       a quoted, escaped string value
+ * @var JsonNs::put_int
+ *                       a signed integer value
+ * @var JsonNs::put_uint
+ *                        an unsigned integer value
+ * @var JsonNs::put_bool
+ *                        `true` or `false`
+ * @var JsonNs::put_null
+ *                        `null`
+ * @var JsonNs::put_raw
+ *                       a pre-formatted literal, verbatim
+ * @var JsonNs::kv_str
+ *                      `"k":"v"`, escaped
+ * @var JsonNs::kv_int
+ *                      `"k":<int>`
+ * @var JsonNs::kv_uint
+ *                       `"k":<uint>`
+ * @var JsonNs::kv_bool
+ *                       `"k":true|false`
+ * @var JsonNs::kv_null
+ *                       `"k":null`
+ * @var JsonNs::kv_raw
+ *                      `"k":<literal>`
+ * @var JsonNs::get_str
+ *                       a top-level string member, unescaped into out and bounded by
+ * @var JsonNs::get_int
+ *                       a top-level member that parses as an integer
+ * @var JsonNs::get_bool
+ *                        a top-level member that is a JSON boolean
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

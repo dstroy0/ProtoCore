@@ -76,23 +76,37 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::PartitionMonitor with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   PartitionMonitor.kind_args.type = ...;
  *   PartitionMonitor.kind_args.subtype = ...;
  *   PartitionMonitor.kind(work);
  *   // PartitionMonitor.text is what the call reports
+ * @endcode
  *
- * @var PartitionMonitorNs::kind_args  what kind takes: type, subtype
- * @var PartitionMonitorNs::json_args  what json takes: parts, count, out, cap
- * @var PartitionMonitorNs::collect_args  what collect takes: out, max
- * @var PartitionMonitorNs::begin_args  what begin takes: path
- * @var PartitionMonitorNs::ok  a call's true/false outcome
- * @var PartitionMonitorNs::text  the string a call reports
- * @var PartitionMonitorNs::n  characters written, or 0 if cap is too small
- * @var PartitionMonitorNs::u8  number of partitions written (<= max)
- * @var PartitionMonitorNs::kind  human name for a partition type/subtype (e.g. "factory", "ota", ...
- * @var PartitionMonitorNs::json  serialize a partition array as JSON `{"partitions":[...]}` into out
- * @var PartitionMonitorNs::collect  walk the flash partition table into out (ESP32; 0 on host builds)
- * @var PartitionMonitorNs::begin  serve the partition map as JSON at path (GET). Default "/partitions"
+ * @var PartitionMonitorVars::kind_args
+ *                                       what kind takes: type, subtype
+ * @var PartitionMonitorVars::json_args
+ *                                       what json takes: parts, count, out, cap
+ * @var PartitionMonitorVars::collect_args
+ *                                          what collect takes: out, max
+ * @var PartitionMonitorVars::begin_args
+ *                                        what begin takes: path
+ * @var PartitionMonitorVars::ok
+ *                                a call's true/false outcome
+ * @var PartitionMonitorVars::text
+ *                                  the string a call reports
+ * @var PartitionMonitorVars::n
+ *                               characters written, or 0 if cap is too small
+ * @var PartitionMonitorVars::u8
+ *                                number of partitions written (<= max)
+ * @var PartitionMonitorNs::kind
+ *                                human name for a partition type/subtype (e.g. "factory", "ota", ...
+ * @var PartitionMonitorNs::json
+ *                                serialize a partition array as JSON `{"partitions":[...]}` into out
+ * @var PartitionMonitorNs::collect
+ *                                   walk the flash partition table into out (ESP32; 0 on host builds)
+ * @var PartitionMonitorNs::begin
+ *                                 serve the partition map as JSON at path (GET). Default "/partitions"
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

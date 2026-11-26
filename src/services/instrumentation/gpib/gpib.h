@@ -61,6 +61,8 @@ size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd);
 
 /**
  * @brief Build `++addr <pad>[ <sad>]` - set the instrument GPIB address.
+ * @param buf the destination buffer.
+ * @param cap the capacity of @p buf, in bytes.
  * @param pad primary address (0-30).
  * @param sad optional secondary address (96-126); pass < 0 for none.
  * @return characters written (excluding NUL), or 0 on overflow / bad @p pad.
@@ -69,6 +71,9 @@ size_t protocore_gpib_addr(char *buf, size_t cap, uint8_t pad, int sad);
 
 /**
  * @brief Build a `++read` command in one of its three forms.
+ * @param buf the destination buffer.
+ * @param cap the capacity of @p buf, in bytes.
+ * @param mode the form of the `++read` command: until the timeout, until EOI, or until a character.
  * @param ch the read-until character (decimal), used only when @p mode is @ref UNTIL_CHAR.
  * @return characters written (excluding NUL), or 0 on overflow.
  */
@@ -104,6 +109,8 @@ embed_bool protocore_gpib_parse_decimal(const char *s, size_t len, uint32_t *out
 
 /**
  * @brief Parse a `++addr` query response: a primary address, optionally a space + secondary.
+ * @param s   the text of the response.
+ * @param len the number of characters in @p s.
  * @param pad receives the primary address.
  * @param sad receives the secondary address, or -1 if none was present.
  * @return true on a clean response; false otherwise.

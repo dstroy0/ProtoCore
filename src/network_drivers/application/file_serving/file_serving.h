@@ -102,26 +102,43 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::FileServing with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   FileServing.http_rfc1123_args.epoch = ...;
  *   FileServing.http_rfc1123_args.out = ...;
  *   FileServing.http_rfc1123_args.cap = ...;
  *   FileServing.http_rfc1123(work);
+ * @endcode
  *
- * @var FileServingNs::http_rfc1123_args  what http_rfc1123 takes: epoch, out, cap
- * @var FileServingNs::serve_static_request_args  what serve_static_request takes: slot_id, req, r
- * @var FileServingNs::serve_file_internal_args  what serve_file_internal takes: slot_id, head, file_sys,
- * @var FileServingNs::file_send_pump_args  what file_send_pump takes: slot_id
- * @var FileServingNs::holds_slot_args  what holds_slot takes: slot
- * @var FileServingNs::serve_file_args  what serve_file takes: slot_id, file_sys, fs_path,
- * @var FileServingNs::serve_static_args  what serve_static takes: url_prefix, file_sys, fs_root
- * @var FileServingNs::ok  a call's true/false outcome
- * @var FileServingNs::http_rfc1123  format epoch as an RFC 1123 GMT date into out (cap bytes); out is ...
- * @var FileServingNs::serve_static_request  dispatch a ROUTE_STATIC match: resolve the FS path and serve it ...
- * @var FileServingNs::serve_file_internal  open fs_path on file_sys and stream it as 200 with the given type ...
- * @var FileServingNs::file_send_pump  resume a pending file response: page out one send-buffer window, ...
- * @var FileServingNs::holds_slot  true while a file response is paging out on slot
- * @var FileServingNs::serve_file  serve a file from the mounted volume. Opens fs_path through the ...
- * @var FileServingNs::serve_static  mount a filesystem subtree at a URL prefix (one-call static ...
+ * @var FileServingVars::http_rfc1123_args
+ *                                          what http_rfc1123 takes: epoch, out, cap
+ * @var FileServingVars::serve_static_request_args
+ *                                                  what serve_static_request takes: slot_id, req, r
+ * @var FileServingVars::serve_file_internal_args
+ *                                                 what serve_file_internal takes: slot_id, head, file_sys,
+ * @var FileServingVars::file_send_pump_args
+ *                                            what file_send_pump takes: slot_id
+ * @var FileServingVars::holds_slot_args
+ *                                        what holds_slot takes: slot
+ * @var FileServingVars::serve_file_args
+ *                                        what serve_file takes: slot_id, file_sys, fs_path,
+ * @var FileServingVars::serve_static_args
+ *                                          what serve_static takes: url_prefix, file_sys, fs_root
+ * @var FileServingVars::ok
+ *                           a call's true/false outcome
+ * @var FileServingNs::http_rfc1123
+ *                                   format epoch as an RFC 1123 GMT date into out (cap bytes); out is ...
+ * @var FileServingNs::serve_static_request
+ *                                           dispatch a ROUTE_STATIC match: resolve the FS path and serve it ...
+ * @var FileServingNs::serve_file_internal
+ *                                          open fs_path on file_sys and stream it as 200 with the given type ...
+ * @var FileServingNs::file_send_pump
+ *                                     resume a pending file response: page out one send-buffer window, ...
+ * @var FileServingNs::holds_slot
+ *                                 true while a file response is paging out on slot
+ * @var FileServingNs::serve_file
+ *                                 serve a file from the mounted volume. Opens fs_path through the ...
+ * @var FileServingNs::serve_static
+ *                                   mount a filesystem subtree at a URL prefix (one-call static ...
  *
  * @c work is PROTOCORE_FILE_SERVING_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

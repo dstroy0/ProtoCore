@@ -240,39 +240,71 @@ typedef struct
  * runs once the socket is open belongs to this module. A route stores the id, so nothing above
  * holds a pointer into here and the same handler set can serve more than one route.
  *
- * @var WsNs::slot        the TCP slot a call acts on
- * @var WsNs::ws_id       the socket a call names
- * @var WsNs::id          the route id a lookup names
- * @var WsNs::route      the handlers one route records
- * @var WsNs::conn        the socket a call acts on, when it takes one by pointer
- * @var WsNs::frame      one frame's type, payload and close status (RFC 6455 sec 5.2, 7.4)
- * @var WsNs::byte        one already-plaintext byte for the frame state machine
- * @var WsNs::frag_size   the outbound fragmentation size in payload bytes; 0 = off
- * @var WsNs::ok          a call's true/false outcome
- * @var WsNs::u8          the route id an add reports, or ::PROTOCORE_WS_NONE when full
- * @var WsNs::text        the reassembled message payload a lookup reports, or NULL
- * @var WsNs::found       the socket an alloc or a find reports, or NULL
- * @var WsNs::connect_handler  the connect handler an id names, or NULL
- * @var WsNs::message_handler  the message handler an id names, or NULL
- * @var WsNs::close_handler    the close handler an id names, or NULL
- * @var WsNs::route_add        record one route's handlers
- * @var WsNs::route_reset      empty the handler table; a route holds the id an add returned, so
+ * @var WsVars::slot
+ *                          the TCP slot a call acts on
+ * @var WsVars::ws_id
+ *                          the socket a call names
+ * @var WsVars::id
+ *                          the route id a lookup names
+ * @var WsVars::route
+ *                         the handlers one route records
+ * @var WsVars::conn
+ *                          the socket a call acts on, when it takes one by pointer
+ * @var WsVars::frame
+ *                         one frame's type, payload and close status (RFC 6455 sec 5.2, 7.4)
+ * @var WsVars::byte
+ *                          one already-plaintext byte for the frame state machine
+ * @var WsVars::frag_size
+ *                          the outbound fragmentation size in payload bytes; 0 = off
+ * @var WsVars::ok
+ *                          a call's true/false outcome
+ * @var WsVars::u8
+ *                          the route id an add reports, or ::PROTOCORE_WS_NONE when full
+ * @var WsVars::text
+ *                          the reassembled message payload a lookup reports, or NULL
+ * @var WsVars::found
+ *                          the socket an alloc or a find reports, or NULL
+ * @var WsVars::connect_handler
+ *                               the connect handler an id names, or NULL
+ * @var WsVars::message_handler
+ *                               the message handler an id names, or NULL
+ * @var WsVars::close_handler
+ *                               the close handler an id names, or NULL
+ * @var WsNs::route_add
+ *                             record one route's handlers
+ * @var WsNs::route_reset
+ *                             empty the handler table; a route holds the id an add returned, so
  *                             this empties with the routes
- * @var WsNs::route_connect    the connect handler an id names
- * @var WsNs::route_message    the message handler an id names
- * @var WsNs::route_close      the close handler an id names
- * @var WsNs::init             set every pool slot inactive; called once from begin()
- * @var WsNs::active           whether ws_id is a valid, in-use socket
- * @var WsNs::payload_of       the reassembled message payload for ws_id
- * @var WsNs::alloc            take a socket and bind it to a TCP slot
- * @var WsNs::find             the socket bound to a TCP slot
- * @var WsNs::free             release the socket bound to a TCP slot
- * @var WsNs::parse            feed the slot's bytes through the frame state machine
- * @var WsNs::feed_byte        feed one already-plaintext byte through it
- * @var WsNs::reset_frame      back to WS_HEADER1, ready for the next frame
- * @var WsNs::send_frame       build and send one frame; server-to-client frames are never masked
- * @var WsNs::set_frag_size    the outbound fragmentation size (RFC 6455 sec 5.4)
- * @var WsNs::close            send a Close frame and mark the socket WS_CLOSED
+ * @var WsNs::route_connect
+ *                             the connect handler an id names
+ * @var WsNs::route_message
+ *                             the message handler an id names
+ * @var WsNs::route_close
+ *                             the close handler an id names
+ * @var WsNs::init
+ *                             set every pool slot inactive; called once from begin()
+ * @var WsNs::active
+ *                             whether ws_id is a valid, in-use socket
+ * @var WsNs::payload_of
+ *                             the reassembled message payload for ws_id
+ * @var WsNs::alloc
+ *                             take a socket and bind it to a TCP slot
+ * @var WsNs::find
+ *                             the socket bound to a TCP slot
+ * @var WsNs::free
+ *                             release the socket bound to a TCP slot
+ * @var WsNs::parse
+ *                             feed the slot's bytes through the frame state machine
+ * @var WsNs::feed_byte
+ *                             feed one already-plaintext byte through it
+ * @var WsNs::reset_frame
+ *                             back to WS_HEADER1, ready for the next frame
+ * @var WsNs::send_frame
+ *                             build and send one frame; server-to-client frames are never masked
+ * @var WsNs::set_frag_size
+ *                             the outbound fragmentation size (RFC 6455 sec 5.4)
+ * @var WsNs::close
+ *                             send a Close frame and mark the socket WS_CLOSED
  *
  * Every entry takes the module's borrow. How those bytes are carved is websocket.c's and is never
  * named here. ::protocore_ws_span is where a caller gets one.

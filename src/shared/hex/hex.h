@@ -60,19 +60,30 @@ typedef struct
  * @brief Hex digits, and the conversions both directions.
  *
  * A caller sets the members a call takes, invokes it through ::Hex, and reads the outcome off the
- * same handle. The digit tables are behind @ref internal.
+ * same handle. The digit tables are internal.
  *
- * @var HexNs::args      one nibble, or one character
- * @var HexNs::io        the buffers a run conversion moves between
- * @var HexNs::ch        the digit a lookup rendered
- * @var HexNs::i8        the value a digit lookup read, or -1 when it is not a hex digit
- * @var HexNs::u8        digits a u32 render wrote (1..8)
- * @var HexNs::i32       bytes a decode wrote, or -1 on a refusal
- * @var HexNs::digit     the hex character for a nibble
- * @var HexNs::val       the value of a hex character
- * @var HexNs::u32       render a value as lowercase hex, most significant digit first
- * @var HexNs::encode    render a byte run as hex characters plus a NUL
- * @var HexNs::decode    read a hex run back into bytes
+ * @var HexVars::args
+ *                         one nibble, or one character
+ * @var HexVars::io
+ *                         the buffers a run conversion moves between
+ * @var HexVars::ch
+ *                         the digit a lookup rendered
+ * @var HexVars::i8
+ *                         the value a digit lookup read, or -1 when it is not a hex digit
+ * @var HexVars::u8
+ *                         digits a u32 render wrote (1..8)
+ * @var HexVars::i32
+ *                         bytes a decode wrote, or -1 on a refusal
+ * @var HexNs::digit
+ *                       the hex character for a nibble
+ * @var HexNs::val
+ *                       the value of a hex character
+ * @var HexNs::u32
+ *                       render a value as lowercase hex, most significant digit first
+ * @var HexNs::encode
+ *                       render a byte run as hex characters plus a NUL
+ * @var HexNs::decode
+ *                       read a hex run back into bytes
  *
  * u32 writes no `0x` prefix, no NUL, and no leading zeros, which is the form the HTTP/1.1 chunked
  * size line takes. Zero renders as a single "0" and @c io.out needs room for 8 characters.

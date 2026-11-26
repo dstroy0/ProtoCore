@@ -43,6 +43,8 @@ typedef struct
  * @param event_name the event name (string; escaped).
  * @param intervals  the interval payload points.
  * @param count      number of intervals.
+ * @param out        the destination buffer.
+ * @param cap        the capacity of @p out, in bytes.
  * @return length written (excl NUL), or 0 on overflow.
  */
 size_t protocore_openadr_event(const char *program_id, const char *event_name, const OpenAdrInterval *intervals,
@@ -55,6 +57,8 @@ size_t protocore_openadr_event(const char *program_id, const char *event_name, c
  * @param resource_name the reporting resource.
  * @param value         the reading value.
  * @param timestamp     the reading time (epoch seconds).
+ * @param out           the destination buffer.
+ * @param cap           the capacity of @p out, in bytes.
  * @return length written (excl NUL), or 0 on overflow.
  */
 size_t protocore_openadr_report(const char *program_id, const char *event_id, const char *resource_name, double value,

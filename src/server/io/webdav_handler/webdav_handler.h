@@ -42,14 +42,19 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Dav with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Dav.try_serve_dav_args.slot_id = ...;
  *   Dav.try_serve_dav_args.req = ...;
  *   Dav.try_serve_dav(work);
  *   // Dav.ok is what the call reports
+ * @endcode
  *
- * @var DavNs::try_serve_dav_args  what try_serve_dav takes: slot_id, req
- * @var DavNs::ok  a call's true/false outcome
- * @var DavNs::try_serve_dav  if req matches a ROUTE_DAV mount, handle it as WebDAV and return ...
+ * @var DavVars::try_serve_dav_args
+ *                                   what try_serve_dav takes: slot_id, req
+ * @var DavVars::ok
+ *                   a call's true/false outcome
+ * @var DavNs::try_serve_dav
+ *                            if req matches a ROUTE_DAV mount, handle it as WebDAV and return ...
  *
  * @c work is PROTOCORE_WEBDAV_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_opcua_client.h
+ * @file opcua_client.h
  * @brief OPC UA Binary client - request builders + response parsers (PROTOCORE_ENABLE_OPCUA_CLIENT).
  *
  * The client side of the OPC UA Binary protocol, the mirror of services/opcua: it

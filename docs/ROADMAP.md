@@ -43,7 +43,7 @@ In flight. Each of these is either being worked or blocks something that is.
 - [ ] **Include guards to `PROTOCORE_<FILE>_H`** (M, naming law) - 85 of 373 headers still carry another
       form. `PROTOCORE_`, because a guard has to be unique in someone else's build,
       where `PC_*` is a plausible name for their own. Two headers exceed the 31-character limit and take
-      the documented word-elision exception in [SYMBOLS.md](SYMBOLS.md#4-include-guards-files-and-test-targets).
+      the documented word-elision exception in [SYMBOLS.md](SYMBOLS.md#4-guards-files-and-test-targets).
       Also fix the 18 macros over the same limit. Measure with `tools/ci_tooling/check/check_symbols.py`, then
       re-run `--baseline` so the gate ratchets down.
 - [ ] **`tools/ci_tooling/check/check_symbols.py`** (M, CI guard) - enforce the naming law mechanically (prefix and casing per

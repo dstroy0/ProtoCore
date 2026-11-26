@@ -29,9 +29,12 @@ typedef struct
 /**
  * @brief UTF-8 well-formedness.
  *
- * @var Utf8Ns::args      the octet run a check walks
- * @var Utf8Ns::ok        the run is well-formed UTF-8
- * @var Utf8Ns::valid     walk the run and judge it
+ * @var Utf8Vars::args
+ *                          the octet run a check walks
+ * @var Utf8Vars::ok
+ *                          the run is well-formed UTF-8
+ * @var Utf8Ns::valid
+ *                        walk the run and judge it
  *
  * Rejects overlong encodings, surrogate code points (U+D800..U+DFFF), values above U+10FFFF, bad
  * continuation bytes, and truncated multi-byte sequences.

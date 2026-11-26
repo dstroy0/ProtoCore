@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_quic_server.h
+ * @file quic_server.h
  * @brief HTTP/3 server glue - binds UDP to a pool of QUIC + HTTP/3 connections (RFC 9000/9114).
  *
  * The last piece of the HTTP/3 stack: it owns a fixed pool of QuicConn + H3Conn engines, binds the
@@ -95,19 +95,30 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::QuicServer, and reads the outcome off
  * the same handle.
  *
- * @var QuicServerNs::begin_args    what binding the server takes
- * @var QuicServerNs::now_ms        the caller's monotonic clock, so this module stays platform-agnostic
- * @var QuicServerNs::stream        the connection and stream a response names
- * @var QuicServerNs::resp          what that response carries
- * @var QuicServerNs::ok            a call's true/false outcome
- * @var QuicServerNs::u8            the pool slots currently in use
- * @var QuicServerNs::begin         install begin_args.cfg, bind its port over UDP, route datagrams into the pool
- * @var QuicServerNs::poll          drive the server once: drain, run the engines, flush; closed or
+ * @var QuicServerNs::begin_args
+ *                                  what binding the server takes
+ * @var QuicServerNs::now_ms
+ *                                  the caller's monotonic clock, so this module stays platform-agnostic
+ * @var QuicServerNs::stream
+ *                                  the connection and stream a response names
+ * @var QuicServerNs::resp
+ *                                  what that response carries
+ * @var QuicServerNs::ok
+ *                                  a call's true/false outcome
+ * @var QuicServerNs::u8
+ *                                  the pool slots currently in use
+ * @var QuicServerNs::begin
+ *                                  install begin_args.cfg, bind its port over UDP, route datagrams into the pool
+ * @var QuicServerNs::poll
+ *                                  drive the server once: drain, run the engines, flush; closed or
  *                                  idle (PROTOCORE_QUIC_IDLE_MS) connections are reaped here
- * @var QuicServerNs::respond       send HEADERS + DATA, finishing the stream; call from within the
+ * @var QuicServerNs::respond
+ *                                  send HEADERS + DATA, finishing the stream; call from within the
  *                                  request callback
- * @var QuicServerNs::active_conns  open connections, for diagnostics and tests
- * @var QuicServerNs::stop          close the UDP binding and release every pool slot
+ * @var QuicServerNs::active_conns
+ *                                  open connections, for diagnostics and tests
+ * @var QuicServerNs::stop
+ *                                  close the UDP binding and release every pool slot
  */
 typedef struct
 {

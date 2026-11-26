@@ -50,6 +50,10 @@ typedef struct
     uint8_t img_state;
     int img_committed;
     int img_rolled_back;
+    int ota_open;            ///< an image write is open
+    uint32_t ota_bytes;      ///< bytes the open write took
+    int ota_ended;           ///< the last write closed and asked to boot the image
+    int ota_fail_next_write; ///< a test sets it, and the next write fails
 #endif
 #if PROTOCORE_HAS_VENDOR_COREDUMP
     uint8_t crash[PROTOCORE_HOST_CRASHDUMP_CAP];
@@ -144,6 +148,21 @@ int protocore_host_img_committed(void)
 int protocore_host_img_rolled_back(void)
 {
     return s_hp.img_rolled_back;
+}
+
+uint32_t protocore_host_ota_bytes(void)
+{
+    return s_hp.ota_bytes;
+}
+
+int protocore_host_ota_ended(void)
+{
+    return s_hp.ota_ended;
+}
+
+void protocore_host_ota_fail_next_write(void)
+{
+    s_hp.ota_fail_next_write = 1;
 }
 #endif
 
@@ -295,6 +314,40 @@ void protocore_platform_img_commit(void)
 {
     s_hp.img_committed = 1;
     s_hp.img_state = PROTOCORE_PLATFORM_IMG_VALID;
+}
+
+int protocore_platform_ota_begin(void)
+{
+    s_hp.ota_open = 1;
+    s_hp.ota_bytes = 0;
+    s_hp.ota_ended = 0;
+    return 1;
+}
+
+int protocore_platform_ota_write(const uint8_t *data, size_t len)
+{
+    (void)data;
+    if (!s_hp.ota_open || s_hp.ota_fail_next_write)
+    {
+        s_hp.ota_fail_next_write = 0;
+        return 0;
+    }
+    // Explicit cast narrows the length, which one HTTP body chunk holds far below 4 GB
+    s_hp.ota_bytes += (uint32_t)len;
+    return 1;
+}
+
+int protocore_platform_ota_end(void)
+{
+    const int ok = s_hp.ota_open;
+    s_hp.ota_open = 0;
+    s_hp.ota_ended = ok;
+    return ok;
+}
+
+void protocore_platform_ota_abort(void)
+{
+    s_hp.ota_open = 0;
 }
 
 void protocore_platform_img_rollback(void)

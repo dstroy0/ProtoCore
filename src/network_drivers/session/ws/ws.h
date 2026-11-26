@@ -31,9 +31,12 @@ EMBED_BEGIN_DECLS
 /**
  * @brief Opening and closing one WebSocket connection.
  *
- * @var SessionWsNs::ok     whether the channel opened, or whether a close had one to release
- * @var SessionWsNs::open   take a channel for the named connection and run the route's connect
- * @var SessionWsNs::close  run the route's close, then release the channel for reuse
+ * @var SessionWsVars::ok
+ *                            whether the channel opened, or whether a close had one to release
+ * @var SessionWsNs::open
+ *                          take a channel for the named connection and run the route's connect
+ * @var SessionWsNs::close
+ *                          run the route's close, then release the channel for reuse
  *
  * No storage and no members naming the connection: the caller has already named it on ::Ws, and
  * this sequences what happens to it. A second copy would be a second answer to "which connection".

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Assemble one continuous sample of this project's prose, for a detector that takes pasted text.
 #
-#   python utils/maint/prose/docs_check --sample --words 10000 theory
-#   python utils/maint/prose/docs_check --sample --words 4000 theory/theory/millennium
+#   python tools/prose/docs_check --sample --words 10000 theory
+#   python tools/prose/docs_check --sample --words 4000 theory/theory/millennium
 #
 # Writes build/gate/sample.txt and prints the word count, the character count, and every file that
 # went into it with its share. The manifest is the point: a detector returns one number over the

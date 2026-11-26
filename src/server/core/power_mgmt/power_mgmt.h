@@ -84,24 +84,40 @@ typedef struct
  * @brief The CPU clock governor.
  *
  * A caller sets the members a call takes, invokes it through ::Power, and reads the outcome off the
- * same handle. The latched boot cause and the released-domain flag are behind @ref internal.
+ * same handle. The latched boot cause and the released-domain flag are internal.
  *
- * @var PowerMgmtNs::plan_args   what the pure plan reads
- * @var PowerMgmtNs::out_args    the plan a call acts on, and where a report is written
- * @var PowerMgmtNs::cfg_out     where defaults are written
- * @var PowerMgmtNs::plan        the plan a decide produced
- * @var PowerMgmtNs::ok          a call's true/false outcome
- * @var PowerMgmtNs::n           bytes a report wrote, or 0 when it did not fit
- * @var PowerMgmtNs::temp_c      the die temperature a read reports, INT16_MIN for no sensor
- * @var PowerMgmtNs::mhz         the CPU clock a read reports
- * @var PowerMgmtNs::defaults    fill a config from the build flags
- * @var PowerMgmtNs::decide      choose a clock, reading nothing outside plan_args
- * @var PowerMgmtNs::json        serialize a plan
- * @var PowerMgmtNs::brownout    this boot followed a brownout; latched, so it stays true
- * @var PowerMgmtNs::die_temp    the die temperature, from the platform seam
- * @var PowerMgmtNs::cpu_mhz     the clock the part is running at
- * @var PowerMgmtNs::apply       set the clock a plan asks for, when it is not already there
- * @var PowerMgmtNs::gate_bt     release the radio controller's power domain
+ * @var PowerVars::plan_args
+ *                               what the pure plan reads
+ * @var PowerVars::out_args
+ *                               the plan a call acts on, and where a report is written
+ * @var PowerVars::cfg_out
+ *                               where defaults are written
+ * @var PowerVars::plan
+ *                               the plan a decide produced
+ * @var PowerVars::ok
+ *                               a call's true/false outcome
+ * @var PowerVars::n
+ *                               bytes a report wrote, or 0 when it did not fit
+ * @var PowerVars::temp_c
+ *                               the die temperature a read reports, INT16_MIN for no sensor
+ * @var PowerVars::mhz
+ *                               the CPU clock a read reports
+ * @var PowerMgmtNs::defaults
+ *                               fill a config from the build flags
+ * @var PowerMgmtNs::decide
+ *                               choose a clock, reading nothing outside plan_args
+ * @var PowerMgmtNs::json
+ *                               serialize a plan
+ * @var PowerMgmtNs::brownout
+ *                               this boot followed a brownout; latched, so it stays true
+ * @var PowerMgmtNs::die_temp
+ *                               the die temperature, from the platform seam
+ * @var PowerMgmtNs::cpu_mhz
+ *                               the clock the part is running at
+ * @var PowerMgmtNs::apply
+ *                               set the clock a plan asks for, when it is not already there
+ * @var PowerMgmtNs::gate_bt
+ *                               release the radio controller's power domain
  *
  * decide takes its own previous output back in as @c plan_args.was_throttled: with one threshold a
  * part sitting at the limit would flap between ceiling and floor every tick, so once throttled it
@@ -167,9 +183,16 @@ static const PowerMgmtNs Power __attribute__((unused)) = {
     .die_temp = protocore_power_die_temp,
     .cpu_mhz = protocore_power_cpu_mhz,
     .apply = protocore_power_apply,
+#else
+    .brownout = NULL,
+    .die_temp = NULL,
+    .cpu_mhz = NULL,
+    .apply = NULL,
 #endif
 #if PROTOCORE_HAS_VENDOR_BT
     .gate_bt = protocore_power_gate_bt,
+#else
+    .gate_bt = NULL,
 #endif
 };
 

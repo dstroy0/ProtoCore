@@ -15,15 +15,14 @@
  *
  * NOTE: optional services are gated by a compile flag the *library* sources must
  * also see; for PlatformIO enable it for the whole build, e.g.:
- *     build_flags = -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4
+ *     build_flags = -DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_UPLOAD=1
  * (Arduino IDE: they are already set for you in the build_opt.h beside this sketch, so it builds as-is.) The upload
  * sink shares the parser streaming hook with OTA - enable one or the other, not both.
  *
  * Enabling upload raises RX_BUF_SIZE to the streaming floor of 8192 (a full TCP
  * receive window) automatically - a smaller ring stalls a large upload into the
- * idle-timeout reset (HW-measured: 2048 resets a 64 KB upload; 8192 round-trips
- * 256 KB byte-exact). That ring is real DRAM per connection, so MAX_CONNS is
- * dialed to 4 to fit the classic ESP32; a PSRAM/large-SRAM board can raise it.
+ * idle-timeout reset. That ring is real DRAM for each connection, and the board
+ * profile sizes MAX_CONNS so the rings fit: 2 on the classic ESP32.
  */
 
 #define PROTOCORE_ENABLE_UPLOAD 1

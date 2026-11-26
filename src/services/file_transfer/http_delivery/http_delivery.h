@@ -85,23 +85,37 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::HttpDelivery with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   HttpDelivery.swr_args.age_s = ...;
  *   HttpDelivery.swr_args.max_age_s = ...;
  *   HttpDelivery.swr_args.swr_s = ...;
  *   HttpDelivery.swr(work);
  *   // HttpDelivery.value is what the call reports
+ * @endcode
  *
- * @var HttpDeliveryNs::swr_args  what swr takes: age_s, max_age_s, swr_s
- * @var HttpDeliveryNs::cache_control_args  what cache_control takes: max_age_s,
- * @var HttpDeliveryNs::sw_manifest_args  what sw_manifest takes: paths, n,
- * @var HttpDeliveryNs::serve_sw_args  what serve_sw takes: paths, n, version
- * @var HttpDeliveryNs::ok  true if both routes were registered
- * @var HttpDeliveryNs::value  DELIVERY_FRESH / DELIVERY_STALE_REVALIDATE / DELIVERY_EXPIRED
- * @var HttpDeliveryNs::n  length written (excl NUL), or 0 on overflow / bad args
- * @var HttpDeliveryNs::swr  RFC 5861 freshness decision
- * @var HttpDeliveryNs::cache_control  build a `Cache-Control` value: `public, max-age=N[, ...
- * @var HttpDeliveryNs::sw_manifest  emit the service-worker precache manifest: ...
- * @var HttpDeliveryNs::serve_sw  serve the service worker and its precache manifest. Registers two
+ * @var HttpDeliveryVars::swr_args
+ *                                  what swr takes: age_s, max_age_s, swr_s
+ * @var HttpDeliveryVars::cache_control_args
+ *                                            what cache_control takes: max_age_s,
+ * @var HttpDeliveryVars::sw_manifest_args
+ *                                          what sw_manifest takes: paths, n,
+ * @var HttpDeliveryVars::serve_sw_args
+ *                                       what serve_sw takes: paths, n, version
+ * @var HttpDeliveryVars::ok
+ *                            true if both routes were registered
+ * @var HttpDeliveryVars::value
+ *                               DELIVERY_FRESH / DELIVERY_STALE_REVALIDATE / DELIVERY_EXPIRED
+ * @var HttpDeliveryVars::n
+ *                           length written (excl NUL), or 0 on overflow / bad args
+ * @var HttpDeliveryNs::swr
+ *                           RFC 5861 freshness decision
+ * @var HttpDeliveryNs::cache_control
+ *                                     build a `Cache-Control` value: `public, max-age=N[, stale-while-revalidate=M]`.
+ *                                     The swr directive is omitted when swr_s is 0
+ * @var HttpDeliveryNs::sw_manifest
+ *                                   emit the service-worker precache manifest: ...
+ * @var HttpDeliveryNs::serve_sw
+ *                                serve the service worker and its precache manifest. Registers two
  * ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing

@@ -19,7 +19,6 @@ static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "protocore.h"
 #include "shared/mime/mime.h"
-#include <Update.h>
 
 EMBED_BEGIN_DECLS
 
@@ -32,7 +31,7 @@ typedef struct
     char user[MAX_AUTH_LEN];
     char pass[MAX_AUTH_LEN];
     embed_bool authed; ///< Credentials validated for the current upload.
-    embed_bool active; ///< Update.begin() succeeded for the current upload.
+    embed_bool active; ///< The platform opened an image write for the current upload.
     embed_bool error;  ///< A write failed during the current upload.
 } OtaCtx;
 static OtaCtx s_ota;
@@ -73,7 +72,7 @@ static embed_bool ota_check_auth(HttpReq *req)
                       .ci = EMBED_FALSE);
 }
 
-/// @brief Stream-begin hook: accept POST @p s_ota.path; begin Update if authorized.
+/// @brief Stream-begin hook: accept POST @p s_ota.path, and open an image write if authorized.
 static embed_bool ota_stream_begin(HttpReq *req)
 {
     if (!EMBED_CALL(cellul.eq, CatenaFinitaCfg, .src = req->method, .other = "POST", .cap = sizeof("POST"),
@@ -92,7 +91,7 @@ static embed_bool ota_stream_begin(HttpReq *req)
     s_ota.error = EMBED_FALSE;
     if (s_ota.authed)
     {
-        if (Update.begin(UPDATE_SIZE_UNKNOWN))
+        if (protocore_platform_ota_begin())
         {
             s_ota.active = EMBED_TRUE;
         }
@@ -106,13 +105,13 @@ static embed_bool ota_stream_begin(HttpReq *req)
     return EMBED_TRUE;
 }
 
-/// @brief Stream-data hook: write one chunk of the image to Update.
+/// @brief Stream-data hook: write one chunk of the image.
 static void ota_stream_data(HttpReq *req, const uint8_t *data, size_t len)
 {
     (void)req; // a single OTA image streams at a time
     if (s_ota.authed && s_ota.active && !s_ota.error)
     {
-        if (Update.write((uint8_t *)data, len) != len)
+        if (!protocore_platform_ota_write(data, len))
         {
             s_ota.error = EMBED_TRUE;
         }
@@ -132,12 +131,12 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
         send_text(slot_id, 401, PROTOCORE_MIME_TEXT_PLAIN, "Unauthorized");
         return;
     }
-    embed_bool ok = s_ota.active && !s_ota.error && Update.end(EMBED_TRUE);
+    embed_bool ok = s_ota.active && !s_ota.error && protocore_platform_ota_end();
     if (!ok)
     {
         if (s_ota.active)
         {
-            Update.abort();
+            protocore_platform_ota_abort();
         }
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "Update failed");
         return;

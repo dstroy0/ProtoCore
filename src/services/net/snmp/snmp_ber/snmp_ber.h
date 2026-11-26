@@ -122,31 +122,56 @@ typedef struct
  * No storage member: both cursors are the caller's and every call reads or writes only through
  * them, so the module keeps nothing between calls.
  *
- * @var SnmpBerNs::enc       the encoder cursor a write acts on
- * @var SnmpBerNs::dec       the decoder cursor a read acts on
- * @var SnmpBerNs::buf       the caller buffer an init binds a cursor to
- * @var SnmpBerNs::tlv       the identifier octet and value a write carries
- * @var SnmpBerNs::read_args  where a read lands what it took
- * @var SnmpBerNs::ok        a call's true/false outcome: the cursor still fits its buffer
- * @var SnmpBerNs::tag       the identifier octet a header read took
- * @var SnmpBerNs::vlen      the value length that header states, in octets
- * @var SnmpBerNs::ival      the value an INTEGER read took
- * @var SnmpBerNs::n         subidentifiers an OBJECT IDENTIFIER read landed
- * @var SnmpBerNs::enc_init          bind an encoder cursor to @c buf.out for @c buf.cap octets
- * @var SnmpBerNs::put_integer       write an INTEGER, two's complement, minimal
- * @var SnmpBerNs::put_uint          write a non-negative value under @c tlv.tag, big-endian, minimal
- * @var SnmpBerNs::put_octet_string  write @c tlv.bytes under @c tlv.tag
- * @var SnmpBerNs::put_null          write NULL, the value a GetRequest-PDU binding carries
- * @var SnmpBerNs::put_oid           write an OBJECT IDENTIFIER from @c tlv.arcs
- * @var SnmpBerNs::put_tlv           write one primitive TLV verbatim
- * @var SnmpBerNs::put_raw           append already-encoded octets, no header of their own
- * @var SnmpBerNs::seq_begin         open a constructed type, reserving its definite-long length
- * @var SnmpBerNs::seq_end           close it, back-patching that length (RFC 3417 sec 8 item 1)
- * @var SnmpBerNs::dec_init          bind a decoder cursor to @c buf.in for @c buf.cap octets
- * @var SnmpBerNs::read_header       take a tag and length, leaving the cursor at the value
- * @var SnmpBerNs::read_integer      take an INTEGER, sign-extended from its first octet
- * @var SnmpBerNs::read_oid          take an OBJECT IDENTIFIER into @c read.arc_out
- * @var SnmpBerNs::skip              step the cursor past @c read.skip value octets
+ * @var SnmpBerVars::enc
+ *                             the encoder cursor a write acts on
+ * @var SnmpBerVars::dec
+ *                             the decoder cursor a read acts on
+ * @var SnmpBerVars::buf
+ *                             the caller buffer an init binds a cursor to
+ * @var SnmpBerVars::tlv
+ *                             the identifier octet and value a write carries
+ * @var SnmpBerVars::read_args
+ *                              where a read lands what it took
+ * @var SnmpBerVars::ok
+ *                             a call's true/false outcome: the cursor still fits its buffer
+ * @var SnmpBerVars::tag
+ *                             the identifier octet a header read took
+ * @var SnmpBerVars::vlen
+ *                             the value length that header states, in octets
+ * @var SnmpBerVars::ival
+ *                             the value an INTEGER read took
+ * @var SnmpBerVars::n
+ *                             subidentifiers an OBJECT IDENTIFIER read landed
+ * @var SnmpBerNs::enc_init
+ *                                   bind an encoder cursor to @c buf.out for @c buf.cap octets
+ * @var SnmpBerNs::put_integer
+ *                                   write an INTEGER, two's complement, minimal
+ * @var SnmpBerNs::put_uint
+ *                                   write a non-negative value under @c tlv.tag, big-endian, minimal
+ * @var SnmpBerNs::put_octet_string
+ *                                   write @c tlv.bytes under @c tlv.tag
+ * @var SnmpBerNs::put_null
+ *                                   write NULL, the value a GetRequest-PDU binding carries
+ * @var SnmpBerNs::put_oid
+ *                                   write an OBJECT IDENTIFIER from @c tlv.arcs
+ * @var SnmpBerNs::put_tlv
+ *                                   write one primitive TLV verbatim
+ * @var SnmpBerNs::put_raw
+ *                                   append already-encoded octets, no header of their own
+ * @var SnmpBerNs::seq_begin
+ *                                   open a constructed type, reserving its definite-long length
+ * @var SnmpBerNs::seq_end
+ *                                   close it, back-patching that length (RFC 3417 sec 8 item 1)
+ * @var SnmpBerNs::dec_init
+ *                                   bind a decoder cursor to @c buf.in for @c buf.cap octets
+ * @var SnmpBerNs::read_header
+ *                                   take a tag and length, leaving the cursor at the value
+ * @var SnmpBerNs::read_integer
+ *                                   take an INTEGER, sign-extended from its first octet
+ * @var SnmpBerNs::read_oid
+ *                                   take an OBJECT IDENTIFIER into @c read.arc_out
+ * @var SnmpBerNs::skip
+ *                                   step the cursor past @c read.skip value octets
  */
 typedef struct
 {

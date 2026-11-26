@@ -56,6 +56,9 @@ int protocore_host_bt_released(void); ///< the radio power domain was handed bac
 void protocore_host_set_img_state(uint8_t state); ///< PROTOCORE_PLATFORM_IMG_*
 int protocore_host_img_committed(void);           ///< the module marked the running image valid
 int protocore_host_img_rolled_back(void);         ///< the module asked for a rollback
+uint32_t protocore_host_ota_bytes(void);          ///< bytes the open image write took
+int protocore_host_ota_ended(void);               ///< the last image write closed and asked to boot it
+void protocore_host_ota_fail_next_write(void);    ///< the next image write fails
 #endif
 
 #if PROTOCORE_HAS_VENDOR_COREDUMP

@@ -129,24 +129,39 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Hart with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Hart.checksum_args.bytes = ...;
  *   Hart.checksum_args.len = ...;
  *   Hart.checksum(work);
  *   // Hart.value is what the call reports
+ * @endcode
  *
- * @var HartNs::checksum_args  what checksum takes: bytes, len
- * @var HartNs::build_args  what build takes: delimiter, addr, addr_len, command, data,
- * @var HartNs::parse_args  what parse takes: frame, len, out
- * @var HartNs::ip_build_header_args  what ip_build_header takes: msg_type, msg_id, status, seq,
- * @var HartNs::ip_parse_header_args  what ip_parse_header takes: buf, len, out
- * @var HartNs::ok  true if the frame is well-formed and the checksum matches; fills out
- * @var HartNs::value  the value a call reports
- * @var HartNs::n  the frame length written, or 0 if it would not fit or addr_len is ...
- * @var HartNs::checksum  longitudinal XOR checksum of len bytes (the HART frame check byte)
- * @var HartNs::build  build a HART command frame (no preamble - the transport prepends ...
- * @var HartNs::parse  validate + parse a HART frame (checksum checked)
- * @var HartNs::ip_build_header  build the 8-octet HART-IP message header into out (>= 8 bytes)
- * @var HartNs::ip_parse_header  parse an 8-octet HART-IP message header and expose its payload ...
+ * @var HartVars::checksum_args
+ *                               what checksum takes: bytes, len
+ * @var HartVars::build_args
+ *                            what build takes: delimiter, addr, addr_len, command, data,
+ * @var HartVars::parse_args
+ *                            what parse takes: frame, len, out
+ * @var HartVars::ip_build_header_args
+ *                                      what ip_build_header takes: msg_type, msg_id, status, seq,
+ * @var HartVars::ip_parse_header_args
+ *                                      what ip_parse_header takes: buf, len, out
+ * @var HartVars::ok
+ *                    true if the frame is well-formed and the checksum matches; fills out
+ * @var HartVars::value
+ *                       the value a call reports
+ * @var HartVars::n
+ *                   the frame length written, or 0 if it would not fit or addr_len is ...
+ * @var HartNs::checksum
+ *                        longitudinal XOR checksum of len bytes (the HART frame check byte)
+ * @var HartNs::build
+ *                     build a HART command frame (no preamble - the transport prepends ...
+ * @var HartNs::parse
+ *                     validate + parse a HART frame (checksum checked)
+ * @var HartNs::ip_build_header
+ *                               build the 8-octet HART-IP message header into out (>= 8 bytes)
+ * @var HartNs::ip_parse_header
+ *                               parse an 8-octet HART-IP message header and expose its payload ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

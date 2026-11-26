@@ -68,17 +68,28 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Guardrails, and reads the outcome
  * off the same handle.
  *
- * @var GuardrailsNs::health    the snapshot a call fills, judges, or serializes
- * @var GuardrailsNs::floors    what an eval judges against
- * @var GuardrailsNs::out       where a json writes
- * @var GuardrailsNs::cb        the callback a begin installs
- * @var GuardrailsNs::breaches  the PROTOCORE_BREACH_* bitmask an eval or a check reports
- * @var GuardrailsNs::n         characters a json wrote, 0 when it did not fit
- * @var GuardrailsNs::eval      judge @ref health against @ref floors
- * @var GuardrailsNs::json      serialize @ref health
- * @var GuardrailsNs::sample    fill @ref health from the live counters
- * @var GuardrailsNs::begin     install the breach callback
- * @var GuardrailsNs::check     sample, judge against PROTOCORE_GUARDRAIL_*, fire on a breach
+ * @var GuardrailsVars::health
+ *                                the snapshot a call fills, judges, or serializes
+ * @var GuardrailsVars::floors
+ *                                what an eval judges against
+ * @var GuardrailsVars::out
+ *                                where a json writes
+ * @var GuardrailsVars::cb
+ *                                the callback a begin installs
+ * @var GuardrailsVars::breaches
+ *                                the PROTOCORE_BREACH_* bitmask an eval or a check reports
+ * @var GuardrailsVars::n
+ *                                characters a json wrote, 0 when it did not fit
+ * @var GuardrailsNs::eval
+ *                              judge @ref GuardrailsVars::health against @ref GuardrailsVars::floors
+ * @var GuardrailsNs::json
+ *                              serialize @ref GuardrailsVars::health
+ * @var GuardrailsNs::sample
+ *                              fill @ref GuardrailsVars::health from the live counters
+ * @var GuardrailsNs::begin
+ *                              install the breach callback
+ * @var GuardrailsNs::check
+ *                              sample, judge against PROTOCORE_GUARDRAIL_*, fire on a breach
  */
 typedef struct
 {

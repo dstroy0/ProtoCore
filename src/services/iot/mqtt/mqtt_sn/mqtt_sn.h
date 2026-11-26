@@ -171,14 +171,21 @@ typedef struct
  *
  * No slot member: every call works on the buffer the caller lends, so no call names a row.
  *
- * @var MqttsnNs::flags   the six fields the Flags octet packs (sec 5.3.4)
- * @var MqttsnNs::topic   how a message names its topic (sec 5.3.11, sec 5.3.12)
- * @var MqttsnNs::field   ClientId, Duration, MsgId, Radius and ReturnCode (sec 5.3)
- * @var MqttsnNs::data    the Data a PUBLISH carries (sec 5.3.2)
- * @var MqttsnNs::header  the Length and MsgType header a parse read (sec 5.2)
- * @var MqttsnNs::buf     the octets a build writes or a parse reads
- * @var MqttsnNs::ok      a call's true/false outcome
- * @var MqttsnNs::n
+ * @var MqttsnVars::flags
+ *                          the six fields the Flags octet packs (sec 5.3.4)
+ * @var MqttsnVars::topic
+ *                          how a message names its topic (sec 5.3.11, sec 5.3.12)
+ * @var MqttsnVars::field
+ *                          ClientId, Duration, MsgId, Radius and ReturnCode (sec 5.3)
+ * @var MqttsnVars::data
+ *                          the Data a PUBLISH carries (sec 5.3.2)
+ * @var MqttsnVars::header
+ *                          the Length and MsgType header a parse read (sec 5.2)
+ * @var MqttsnVars::buf
+ *                          the octets a build writes or a parse reads
+ * @var MqttsnVars::ok
+ *                          a call's true/false outcome
+ * @var MqttsnVars::n
  * The whole message length: what a build wrote, or what a header parse consumed so the caller can
  * advance. 0 when a build did not fit @c cap or the message would exceed the 16-bit Length field.
  * @var MqttsnNs::make_flags
@@ -210,7 +217,8 @@ typedef struct
  * Read the Length and MsgType at the head of @c in into @c header, with @c n reporting the whole
  * message length so the caller can advance (sec 5.2). False on an incomplete or self-inconsistent
  * message.
- * @var MqttsnNs::parse_connack   CONNACK: ReturnCode into @c field.return_code (sec 5.4.5)
+ * @var MqttsnNs::parse_connack
+ *                                CONNACK: ReturnCode into @c field.return_code (sec 5.4.5)
  * @var MqttsnNs::parse_regack
  * REGACK: TopicId, MsgId and ReturnCode into @c topic and @c field (sec 5.4.11).
  * @var MqttsnNs::parse_puback

@@ -189,8 +189,12 @@ EMBED_ENUM_BYTE(SshOpenFailureReason, SSH_OPEN_ADMINISTRATIVELY_PROHIBITED = 1, 
 #define SSH_OFF_RX_READ SSH_PACKET_END
 #define SSH_OFF_RX_ASM (SSH_OFF_RX_READ + RX_BUF_SIZE)
 
-/** @brief Capacity of the reassembly region at SSH_OFF_RX_ASM: what rx_buf actually spans. */
-#define SSH_RX_ASM_CAP ((size_t)SSH_RFC_MAX_PAYLOAD)
+/**
+ * @brief Capacity of the reassembly region at SSH_OFF_RX_ASM: what rx_buf actually spans. It holds the
+ *        largest packet this end accepts, one framed SSH_PKT_BUF_SIZE payload, rounded up to 16 bytes so
+ *        the next slot stays aligned.
+ */
+#define SSH_RX_ASM_CAP ((SSH_PKT_WIRE_MAX + 15u) & ~(size_t)15u)
 
 /** @brief One connection's whole span, and the stride between slots. */
 #define SSH_SLOT_BORROW (SSH_OFF_RX_ASM + SSH_RX_ASM_CAP)
@@ -297,9 +301,9 @@ EMBED_INLINE void protocore_ssh_wr_mpint(mmgr_span *w, const uint8_t *be, size_t
 // Callers MUST size the wire buffer with this so a compressed packet never overflows and desyncs the
 // stateful cipher / compression stream (a dropped packet mid-stream would corrupt the session).
 #if PROTOCORE_ENABLE_SSH_ZLIB
-#define SSH_MAX_EFFECTIVE_PAYLOAD (2 + SSH_RFC_MAX_PAYLOAD + (SSH_RFC_MAX_PAYLOAD >> 3) + 32) // = ssh_deflate_bound()
+#define SSH_MAX_EFFECTIVE_PAYLOAD (2 + SSH_PKT_BUF_SIZE + (SSH_PKT_BUF_SIZE >> 3) + 32) // = ssh_deflate_bound()
 #else
-#define SSH_MAX_EFFECTIVE_PAYLOAD (SSH_RFC_MAX_PAYLOAD)
+#define SSH_MAX_EFFECTIVE_PAYLOAD (SSH_PKT_BUF_SIZE)
 #endif
 #define SSH_MAX_PAD 32 // worst-case padding across block-8 / block-16 modes (min-4 rule)
 #define SSH_MAX_MAC 64 // largest MAC tag (hmac-sha2-512); chacha's Poly1305 tag is 16
@@ -309,23 +313,23 @@ EMBED_INLINE void protocore_ssh_wr_mpint(mmgr_span *w, const uint8_t *be, size_t
  * @brief Uncompressed payload RFC 4253 sec 6.1 requires an implementation to process.
  *
  * "All implementations MUST be able to process packets with an uncompressed payload length of
- * 32768 bytes or less". This tree sizes its own spans on this rather than on SSH_PKT_BUF_SIZE,
- * which the pre-move tree still shares.
+ * 32768 bytes or less". The spans of this tree take SSH_PKT_BUF_SIZE in place of it. This end sends no
+ * payload past SSH_PKT_BUF_SIZE. The channel data of a peer stays under the SSH_CHAN_MAX_PACKET that
+ * this end advertises (RFC 4254 sec 5.1), and the receive path decompresses into SSH_PKT_BUF_SIZE
+ * bytes. A larger packet ends the connection.
  */
 #define SSH_RFC_MAX_PAYLOAD 32768u
 
 /** @brief Largest total packet RFC 4253 sec 6.1 requires an implementation to process. */
 #define SSH_RFC_MAX_PACKET 35000u
 
-// Two framed packets. ssh_pkt_emit() appends at tx_len when a packet is framed and not yet drained,
-// so a pair (KEXDH_REPLY then NEWKEYS at the kex boundary) leaves on one drain instead of the second
-// being refused. The payload is written at SSH_WIRE_PAYLOAD_OFF and framed in place by
-// ssh_pkt_send_at(), so each packet costs its own bytes and no copy of them.
-#define SSH_WIRE_CAP ((size_t)131072u)
+// Two framed packets of this end's largest size. ssh_pkt_emit() appends at tx_len when a packet is
+// framed and not yet drained, so a pair (KEXDH_REPLY then NEWKEYS at the kex boundary) leaves on one
+// drain instead of the second being refused. The payload is written at SSH_WIRE_PAYLOAD_OFF and framed
+// in place by ssh_pkt_send_at(), so each packet costs its own bytes and no copy of them. The span
+// rounds up to 16 bytes, so the session region after it stays aligned.
+#define SSH_WIRE_CAP ((2u * SSH_PKT_WIRE_MAX + 15u) & ~(size_t)15u)
 static_assert(SSH_WIRE_CAP >= 2u * SSH_PKT_WIRE_MAX, "the wire span must frame two of this end's largest packets");
-static_assert(SSH_WIRE_CAP >= 2u * SSH_RFC_MAX_PACKET,
-              "the wire span must hold two of the 35000-byte packets RFC 4253 sec 6.1 requires processing");
-static_assert((SSH_WIRE_CAP & (SSH_WIRE_CAP - 1u)) == 0u, "SSH_WIRE_CAP must stay a power of two");
 
 // Scratch the transport layer (RFC 4253) borrows to frame one packet, and nothing more - the wire
 // buffer and the payload being framed belong to whoever called in, because this layer is the framer,

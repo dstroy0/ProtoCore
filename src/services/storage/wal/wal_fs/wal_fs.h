@@ -125,6 +125,9 @@ EMBED_INLINE embed_bool protocore_wal_fs_prealloc(const protocore_mnt_backend *f
  *
  * @param c    filled with the store and handle; must outlive @p dev and any ::WalStore mounted on it.
  * @param dev  filled with the three function pointers and @p size.
+ * @param fs   the mounted store that holds the file.
+ * @param path the path of the file on @p fs.
+ * @param size the size of the block device, in bytes.
  * @return false if @p fs has no durability barrier, or the file will not open. On false, nothing is
  *         left open and @p dev is not usable.
  */

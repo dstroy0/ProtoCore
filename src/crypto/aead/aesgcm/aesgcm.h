@@ -89,6 +89,7 @@ typedef struct
  * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
  * named here.
  *
+ * @code{.c}
  *   AesGcm.key_args.key = key;
  *   AesGcm.key_init(work);
  *   AesGcm.seal_args.nonce = iv;
@@ -101,21 +102,32 @@ typedef struct
  *   AesGcm.seal(work);
  *   AesGcm.iv_args.iv = iv;
  *   AesGcm.iv_increment(work);
+ * @endcode
  *
- * @var AesGcmNs::key_args     the key a context is bound to
- * @var AesGcmNs::seal_args    one record sealed under the bound key
- * @var AesGcmNs::open_args    one record opened under the bound key
- * @var AesGcmNs::iv_args      the nonce an invocation counter is advanced in
- * @var AesGcmNs::ok           a call's true/false outcome
- * @var AesGcmNs::key_init     bind the borrow as a context keyed with @ref AesGcmNs::key_args
- * @var AesGcmNs::key_wipe     release what the context attached; call on rekey and on close
- * @var AesGcmNs::seal         encrypt one record and write its detached tag
- * @var AesGcmNs::open         verify the tag over aad || ct in constant time, then decrypt
- * @var AesGcmNs::iv_increment advance the RFC 5647 invocation counter, the nonce's low 8 bytes as a
+ * @var AesGcmVars::key_args
+ *                               the key a context is bound to
+ * @var AesGcmVars::seal_args
+ *                               one record sealed under the bound key
+ * @var AesGcmVars::open_args
+ *                               one record opened under the bound key
+ * @var AesGcmVars::iv_args
+ *                               the nonce an invocation counter is advanced in
+ * @var AesGcmVars::ok
+ *                               a call's true/false outcome
+ * @var AesGcmNs::key_init
+ *                             bind the borrow as a context keyed with @ref AesGcmVars::key_args
+ * @var AesGcmNs::key_wipe
+ *                             release what the context attached; call on rekey and on close
+ * @var AesGcmNs::seal
+ *                             encrypt one record and write its detached tag
+ * @var AesGcmNs::open
+ *                             verify the tag over aad || ct in constant time, then decrypt
+ * @var AesGcmNs::iv_increment
+ *                             advance the RFC 5647 invocation counter, the nonce's low 8 bytes as a
  *                             big-endian integer; the 4-byte fixed field never changes
  *
  * @ref AesGcmNs::open produces no plaintext on a tag mismatch: it authenticates the received ciphertext
- * first and leaves @c out untouched when @ref AesGcmNs::ok comes back false.
+ * first and leaves @c out untouched when @ref AesGcmVars::ok comes back false.
  *
  * @c work is PROTOCORE_AESGCM_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
  * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
@@ -123,7 +135,7 @@ typedef struct
  * never collide, and the key material dies with the release. @ref AesGcmNs::iv_increment works on the caller's nonce
  * and reads nothing out of the borrow.
  *
- * No storage member and no context: a caller sets operands and reads @ref AesGcmNs::ok, and that is
+ * No storage member and no context: a caller sets operands and reads @ref AesGcmVars::ok, and that is
  * all the surface there is.
  */
 typedef struct

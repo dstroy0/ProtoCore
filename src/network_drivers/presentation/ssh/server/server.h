@@ -25,18 +25,6 @@ struct ProtoHandler;
  * the connection protocol's. The builtins list installs this handler.
  */
 
-/**
- * @brief Start listening on @p bind_port for a sec 7.1 remote forward.
- *
- * "The 'address to bind' and 'port number to bind' specify the IP address... and port on which
- * connections for forwarding are to be accepted." Which bindings exist is the connection protocol's
- * decision; the socket that accepts on one is this role's, so the pool it comes from is here.
- *
- * @return An opaque handle for ssh_rfwd_listener_close() and protocore_ssh_forward_binding(),
- *         or -1 when there is no listener capacity or the port could not be bound.
- */
-
-/** @brief Stop accepting on a handle from ssh_rfwd_listener_open(). Open bridges are unaffected. */
 #endif
 
 /**
@@ -45,14 +33,22 @@ struct ProtoHandler;
  * A caller sets the members a call takes, invokes it through ::SshServer, and reads the outcome off
  * the same handle.
  *
- * @var SshServerNs::bind_port  the port a remote forward (RFC 4254 sec 7.1) binds
- * @var SshServerNs::handle     the listener a close releases
- * @var SshServerNs::i32        the listener an open reports, or < 0
- * @var SshServerNs::handler    the ProtoHandler a lookup reports
- * @var SshServerNs::rfwd_listener_open   bind a port for an accepted remote forward
- * @var SshServerNs::rfwd_listener_close  release one
- * @var SshServerNs::proto_handler        the dispatch seam an SSH slot is driven through
- * @var SshServerNs::rfwd_proto_handler   the same for a forwarded slot
+ * @var SshServerVars::bind_port
+ *                                the port a remote forward (RFC 4254 sec 7.1) binds
+ * @var SshServerVars::handle
+ *                                the listener a close releases
+ * @var SshServerVars::i32
+ *                                the listener an open reports, or < 0
+ * @var SshServerVars::handler
+ *                                the ProtoHandler a lookup reports
+ * @var SshServerNs::rfwd_listener_open
+ *                                        bind a port for an accepted remote forward
+ * @var SshServerNs::rfwd_listener_close
+ *                                        release one
+ * @var SshServerNs::proto_handler
+ *                                        the dispatch seam an SSH slot is driven through
+ * @var SshServerNs::rfwd_proto_handler
+ *                                        the same for a forwarded slot
  */
 typedef struct
 {
@@ -76,7 +72,18 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshServerV or a region of the borrow at a fixed offset.
+/**
+ * @brief Start listening on @p bind_port for a sec 7.1 remote forward.
+ *
+ * "The 'address to bind' and 'port number to bind' specify the IP address... and port on which
+ * connections for forwarding are to be accepted." Which bindings exist is the connection protocol's
+ * decision; the socket that accepts on one is this role's, so the pool it comes from is here.
+ *
+ * @post SshServerV.i32: An opaque handle for ssh_rfwd_listener_close() and protocore_ssh_forward_binding(),
+ *         or -1 when there is no listener capacity or the port could not be bound.
+ */
 void protocore_ssh_server_rfwd_listener_open(const uint8_t *work);
+/** @brief Stop accepting on a handle from ssh_rfwd_listener_open(). Open bridges are unaffected. */
 void protocore_ssh_server_rfwd_listener_close(const uint8_t *work);
 void protocore_ssh_server_proto_handler(const uint8_t *work);
 void protocore_ssh_server_rfwd_proto_handler(const uint8_t *work);

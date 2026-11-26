@@ -10,10 +10,14 @@
  * encrypts the 4-byte packet-length field separately (so a receiver can size the packet before it
  * has the whole thing). The nonce for both is the packet sequence number as a big-endian uint64.
  *
+ * @code{.c}
  *   - Poly1305 key = first 32 bytes of ChaCha20(K_main, seqnr, counter 0)
+ * @endcode
  *   - encrypted length  = ChaCha20(K_header, seqnr, counter 0) XOR length
  *   - encrypted payload = ChaCha20(K_main,   seqnr, counter 1) XOR payload
+ * @code{.c}
  *   - tag = Poly1305(encrypted_length || encrypted_payload)  (16 bytes, appended)
+ * @endcode
  *
  * On decrypt the tag is verified (constant-time) before any plaintext is produced. Pure, no heap.
  *
@@ -72,28 +76,38 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::ChachaPoly with the bytes it runs out of, and
  * reads the outcome off the same handle. How those bytes are carved is this module's and is never named here.
  *
+ * @code{.c}
  *   ChachaPoly.length_args.key = key;
  *   ChachaPoly.length_args.enc_len = pkt;
  *   ChachaPoly.length_args.seqnr = seqnr;
  *   ChachaPoly.get_length(work);
  *   // ChachaPoly.length now holds the packet_length
+ * @endcode
  *
- * @var ChachaPolyNs::length_args   the encrypted length field a length peek reads
- * @var ChachaPolyNs::encrypt_args  the packet an encryption covers
- * @var ChachaPolyNs::decrypt_args  the packet a decryption verifies
- * @var ChachaPolyNs::ok            a call's true/false outcome; false on a null pointer, and on a tag mismatch
- * @var ChachaPolyNs::length        the SSH packet_length the last peek recovered: bytes after the length
+ * @var ChachaPolyVars::length_args
+ *                                    the encrypted length field a length peek reads
+ * @var ChachaPolyVars::encrypt_args
+ *                                    the packet an encryption covers
+ * @var ChachaPolyVars::decrypt_args
+ *                                    the packet a decryption verifies
+ * @var ChachaPolyVars::ok
+ *                                    a call's true/false outcome; false on a null pointer, and on a tag mismatch
+ * @var ChachaPolyVars::length
+ *                                    the SSH packet_length the last peek recovered: bytes after the length
  *                                  field, excluding the tag
- * @var ChachaPolyNs::get_length    decrypt the 4-byte length field to size the packet before reading its body
- * @var ChachaPolyNs::encrypt       encrypt and authenticate one packet, tag appended
- * @var ChachaPolyNs::decrypt       verify the tag, then decrypt; no plaintext is produced unless it verified
+ * @var ChachaPolyNs::get_length
+ *                                  decrypt the 4-byte length field to size the packet before reading its body
+ * @var ChachaPolyNs::encrypt
+ *                                  encrypt and authenticate one packet, tag appended
+ * @var ChachaPolyNs::decrypt
+ *                                  verify the tag, then decrypt; no plaintext is produced unless it verified
  *
  * @c work is PROTOCORE_CHACHAPOLY_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
  * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
  * it, holds it, releases it, nor wipes it. That is what keeps the one-time Poly1305 key derived per packet from
  * outliving the caller. A connection takes those bytes once for its slot and passes them on every packet.
  *
- * No storage member and no context: a caller sets operands and reads @ref ChachaPolyNs::ok, and that is all the
+ * No storage member and no context: a caller sets operands and reads @ref ChachaPolyVars::ok, and that is all the
  * surface there is.
  */
 typedef struct

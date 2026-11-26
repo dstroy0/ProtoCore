@@ -55,23 +55,37 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Telnet, and reads the outcome off
  * the same handle.
  *
- * @var TelnetNs::slot           the connection a call acts on
- * @var TelnetNs::cb             the per-line command handler an install registers
- * @var TelnetNs::out            what a write puts on the NVT: a line, or a field set
- * @var TelnetNs::u8             a call's 8-bit outcome
- * @var TelnetNs::handler        the ProtoHandler a lookup reports
- * @var TelnetNs::on_command     register the per-line command handler
- * @var TelnetNs::print          text to every connected client, no trailing newline added
- * @var TelnetNs::println        text + CRLF to every connected client
- * @var TelnetNs::frame          build @c out.spec and broadcast it. The shape is a `static const
+ * @var TelnetVars::slot
+ *                                 the connection a call acts on
+ * @var TelnetVars::cb
+ *                                 the per-line command handler an install registers
+ * @var TelnetVars::out
+ *                                 what a write puts on the NVT: a line, or a field set
+ * @var TelnetVars::u8
+ *                                 a call's 8-bit outcome
+ * @var TelnetVars::handler
+ *                                 the ProtoHandler a lookup reports
+ * @var TelnetNs::on_command
+ *                               register the per-line command handler
+ * @var TelnetNs::print
+ *                               text to every connected client, no trailing newline added
+ * @var TelnetNs::println
+ *                               text + CRLF to every connected client
+ * @var TelnetNs::frame
+ *                               build @c out.spec and broadcast it. The shape is a `static const
  *                               mmgr_field[]` the caller declares, so a console line costs a table
  *                               walk rather than a format-string parse, and one longer than
  *                               TELNET_BUF_SIZE is dropped rather than clipped mid-word
- * @var TelnetNs::client_count   connected clients
- * @var TelnetNs::accept         a connection was accepted on TCP slot @c slot
- * @var TelnetNs::rx             process the received bytes for the connection on @c slot
- * @var TelnetNs::close          the connection on @c slot closed; release its state
- * @var TelnetNs::proto_handler  the ProtoHandler the builtins list installs, which is what keeps
+ * @var TelnetNs::client_count
+ *                               connected clients
+ * @var TelnetNs::accept
+ *                               a connection was accepted on TCP slot @c slot
+ * @var TelnetNs::rx
+ *                               process the received bytes for the connection on @c slot
+ * @var TelnetNs::close
+ *                               the connection on @c slot closed; release its state
+ * @var TelnetNs::proto_handler
+ *                               the ProtoHandler the builtins list installs, which is what keeps
  *                               this module free of a dependency on the session layer
  *
  * @code

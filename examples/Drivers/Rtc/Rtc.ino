@@ -18,7 +18,7 @@
  * Wiring (I2C): module SDA -> GPIO 21, SCL -> GPIO 22, VCC -> 3V3, GND -> GND (ESP32 default
  * I2C pins; change with Wire.begin(sda, scl) if yours differ).
  *
- * Build flags (PlatformIO): `-DPROTOCORE_ENABLE_RTC=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1 -DPROTOCORE_ENABLE_NTP=1`
+ * Build flags (PlatformIO): `-DPROTOCORE_ENABLE_RTC=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1 -DPROTOCORE_ENABLE_NTP=1 -DPROTOCORE_ENABLE_UDP=1`
  */
 
 #define PROTOCORE_ENABLE_RTC 1

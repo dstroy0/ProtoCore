@@ -72,31 +72,46 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::TlsPolicy with the bytes it runs out
  * of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   TlsPolicy.negotiate_args.client_max = TLS_VERSION_1_3;
  *   TlsPolicy.negotiate_args.server_min = TLS_VERSION_1_2;
  *   TlsPolicy.negotiate_args.server_max = TLS_VERSION_1_3;
  *   TlsPolicy.negotiate(work);
  *   // TlsPolicy.version is the chosen word, 0 when the ranges do not overlap
+ * @endcode
  *
- * @var TlsPolicyNs::negotiate_args  the client's offer and the server's supported range
- * @var TlsPolicyNs::name_args       the version word a name is asked for
- * @var TlsPolicyNs::select_args     the offered suites, and the pinned list that orders the choice
- * @var TlsPolicyNs::aead_args       the suite a classification is asked about
- * @var TlsPolicyNs::ok              a call's true/false outcome
- * @var TlsPolicyNs::version         the negotiated version word, 0 when the ranges do not overlap
- * @var TlsPolicyNs::suite           the selected suite id, 0 when none of the pinned suites was offered
- * @var TlsPolicyNs::text            the version's human name: "TLS 1.2", "TLS 1.3", or "unknown"
- * @var TlsPolicyNs::aead            whether the suite is one of the modern AEAD suites
- * @var TlsPolicyNs::negotiate       the highest supported version not above the client's
- * @var TlsPolicyNs::name            name a version word for a status endpoint
- * @var TlsPolicyNs::select          the first pinned suite the client also offered (server preference)
- * @var TlsPolicyNs::is_aead         classify a suite as GCM / ChaCha20-Poly1305 or not
+ * @var TlsPolicyVars::negotiate_args
+ *                                     the client's offer and the server's supported range
+ * @var TlsPolicyVars::name_args
+ *                                     the version word a name is asked for
+ * @var TlsPolicyVars::select_args
+ *                                     the offered suites, and the pinned list that orders the choice
+ * @var TlsPolicyVars::aead_args
+ *                                     the suite a classification is asked about
+ * @var TlsPolicyVars::ok
+ *                                     a call's true/false outcome
+ * @var TlsPolicyVars::version
+ *                                     the negotiated version word, 0 when the ranges do not overlap
+ * @var TlsPolicyVars::suite
+ *                                     the selected suite id, 0 when none of the pinned suites was offered
+ * @var TlsPolicyVars::text
+ *                                     the version's human name: "TLS 1.2", "TLS 1.3", or "unknown"
+ * @var TlsPolicyVars::aead
+ *                                     whether the suite is one of the modern AEAD suites
+ * @var TlsPolicyNs::negotiate
+ *                                   the highest supported version not above the client's
+ * @var TlsPolicyNs::name
+ *                                   name a version word for a status endpoint
+ * @var TlsPolicyNs::select
+ *                                   the first pinned suite the client also offered (server preference)
+ * @var TlsPolicyNs::is_aead
+ *                                   classify a suite as GCM / ChaCha20-Poly1305 or not
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing between
  * calls, so there is no state to keep and nothing to wipe. The parameter is there so a caller drives
  * every namespace the same way.
  *
- * No storage member and no context: a caller sets operands and reads @ref TlsPolicyNs::ok, and that
+ * No storage member and no context: a caller sets operands and reads @ref TlsPolicyVars::ok, and that
  * is all the surface there is.
  */
 typedef struct

@@ -110,32 +110,55 @@ typedef struct
  *
  * No slot member: the codec owns no rows, so a build names its buffer and a read names its message.
  *
- * @var WampNs::out       the buffer a build writes into
- * @var WampNs::id        the ids a message names (sec 2.1.2)
- * @var WampNs::uri       the URI element a message names (sec 2.1.1)
- * @var WampNs::payload   the Details / Options dicts and the Arguments / ArgumentsKw payload
- * @var WampNs::parse     the received message, the element a read names, and where a URI lands
- * @var WampNs::ok        a call's true/false outcome
- * @var WampNs::n         the byte count a build wrote, or the length of the element @c text names
- * @var WampNs::u64       the id a read reports (sec 2.1.2)
- * @var WampNs::i32       the message type code a read reports (sec 3.5)
- * @var WampNs::text      the raw element a slice names, pointing into @c parse.msg
- * @var WampNs::build_hello        `[HELLO, Realm|uri, Details|dict]` (sec 3.4.1.1)
- * @var WampNs::build_goodbye      `[GOODBYE, Details|dict, Reason|uri]` (sec 3.4.1.4)
- * @var WampNs::build_subscribe    `[SUBSCRIBE, Request|id, Options|dict, Topic|uri]` (sec 3.4.2.3)
- * @var WampNs::build_unsubscribe  `[UNSUBSCRIBE, Request|id, SUBSCRIBED.Subscription|id]` (sec 3.4.2.5)
- * @var WampNs::build_publish      `[PUBLISH, Request|id, Options|dict, Topic|uri]`, the payload
+ * @var WampVars::out
+ *                          the buffer a build writes into
+ * @var WampVars::id
+ *                          the ids a message names (sec 2.1.2)
+ * @var WampVars::uri
+ *                          the URI element a message names (sec 2.1.1)
+ * @var WampVars::payload
+ *                          the Details / Options dicts and the Arguments / ArgumentsKw payload
+ * @var WampVars::parse
+ *                          the received message, the element a read names, and where a URI lands
+ * @var WampVars::ok
+ *                          a call's true/false outcome
+ * @var WampVars::n
+ *                          the byte count a build wrote, or the length of the element @c text names
+ * @var WampVars::u64
+ *                          the id a read reports (sec 2.1.2)
+ * @var WampVars::i32
+ *                          the message type code a read reports (sec 3.5)
+ * @var WampVars::text
+ *                          the raw element a slice names, pointing into @c parse.msg
+ * @var WampNs::build_hello
+ *                                 `[HELLO, Realm|uri, Details|dict]` (sec 3.4.1.1)
+ * @var WampNs::build_goodbye
+ *                                 `[GOODBYE, Details|dict, Reason|uri]` (sec 3.4.1.4)
+ * @var WampNs::build_subscribe
+ *                                 `[SUBSCRIBE, Request|id, Options|dict, Topic|uri]` (sec 3.4.2.3)
+ * @var WampNs::build_unsubscribe
+ *                                 `[UNSUBSCRIBE, Request|id, SUBSCRIBED.Subscription|id]` (sec 3.4.2.5)
+ * @var WampNs::build_publish
+ *                                 `[PUBLISH, Request|id, Options|dict, Topic|uri]`, the payload
  *                                 appended when set (sec 3.4.2.1)
- * @var WampNs::build_call         `[CALL, Request|id, Options|dict, Procedure|uri]`, the payload
+ * @var WampNs::build_call
+ *                                 `[CALL, Request|id, Options|dict, Procedure|uri]`, the payload
  *                                 appended when set (sec 3.4.3.1)
- * @var WampNs::build_register     `[REGISTER, Request|id, Options|dict, Procedure|uri]` (sec 3.4.3.3)
- * @var WampNs::build_unregister   `[UNREGISTER, Request|id, REGISTERED.Registration|id]` (sec 3.4.3.5)
- * @var WampNs::build_yield        `[YIELD, INVOCATION.Request|id, Options|dict]`, the payload
+ * @var WampNs::build_register
+ *                                 `[REGISTER, Request|id, Options|dict, Procedure|uri]` (sec 3.4.3.3)
+ * @var WampNs::build_unregister
+ *                                 `[UNREGISTER, Request|id, REGISTERED.Registration|id]` (sec 3.4.3.5)
+ * @var WampNs::build_yield
+ *                                 `[YIELD, INVOCATION.Request|id, Options|dict]`, the payload
  *                                 appended when set (sec 3.4.3.8)
- * @var WampNs::element   slice the raw element at @c parse.index into @c text and @c n
- * @var WampNs::get_type  read the message type code into @c i32, naming element 0 itself (sec 3.5)
- * @var WampNs::get_id    read the id at @c parse.index into @c u64 (sec 2.1.2)
- * @var WampNs::get_uri   copy the URI at @c parse.index into @c parse.uri_out, quotes stripped
+ * @var WampNs::element
+ *                        slice the raw element at @c parse.index into @c text and @c n
+ * @var WampNs::get_type
+ *                        read the message type code into @c i32, naming element 0 itself (sec 3.5)
+ * @var WampNs::get_id
+ *                        read the id at @c parse.index into @c u64 (sec 2.1.2)
+ * @var WampNs::get_uri
+ *                        copy the URI at @c parse.index into @c parse.uri_out, quotes stripped
  */
 typedef struct
 {

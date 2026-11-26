@@ -1016,7 +1016,7 @@ pinout and none is documented here. Pure codecs have no bring-up call at all: yo
 | `ble_gatt` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_BLE_GATT` |
 | `cc1101` | SPI (caller-supplied bus) | `protocore_cc1101_init(const uint8_t *work, const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)` | `PROTOCORE_ENABLE_CC1101` |
 | `enocean` | codec only - caller owns the link | _none (pure codec)_ | `PROTOCORE_ENABLE_ENOCEAN` |
-| `espnow` | caller-supplied link | `protocore_espnow_begin(const uint8_t *work)` | `PROTOCORE_ENABLE_ESPNOW` |
+| `espnow` | caller-supplied link | `protocore_espnow_begin(uint8_t *work)` | `PROTOCORE_ENABLE_ESPNOW` |
 | `lora` | SPI (caller-supplied bus) | `protocore_lora_init(const uint8_t *work, const protocore_lora_bus *bus, const protocore_lora_config *cfg)` | `PROTOCORE_ENABLE_LORA` |
 | `nrf24` | SPI (caller-supplied bus) | `protocore_nrf24_init(const uint8_t *work, const nrf_bus *bus, const nrf_config *cfg)` | `PROTOCORE_ENABLE_NRF24` |
 | `promisc` | caller-supplied link | `protocore_promisc_begin(uint8_t *work, uint8_t channel, protocore_promisc_sink_fn sink)` | `PROTOCORE_ENABLE_PROMISC` |

@@ -129,27 +129,44 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Cotp with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Cotp.tpkt_build_args.buf = ...;
  *   Cotp.tpkt_build_args.cap = ...;
  *   Cotp.tpkt_build_args.payload = ...;
  *   Cotp.tpkt_build_args.payload_len = ...;
  *   Cotp.tpkt_build(work);
  *   // Cotp.n is what the call reports
+ * @endcode
  *
- * @var CotpNs::tpkt_build_args  what tpkt_build takes: buf, cap, payload, payload_len
- * @var CotpNs::tpkt_parse_args  what tpkt_parse takes: buf, len, payload, payload_len,
- * @var CotpNs::build_dt_args  what build_dt takes: buf, cap, data, data_len, eot
- * @var CotpNs::build_cr_args  what build_cr takes: buf, cap, src_ref, tpdu_size_code,
- * @var CotpNs::build_cc_args  what build_cc takes: buf, cap, dst_ref, src_ref,
- * @var CotpNs::parse_args  what parse takes: buf, len, out
- * @var CotpNs::ok  true on a complete, version-3 packet; false on bad version / ...
- * @var CotpNs::n  the count a call reports
- * @var CotpNs::tpkt_build  wrap payload in a TPKT envelope. Returns total octets, or 0 on ...
- * @var CotpNs::tpkt_parse  parse a TPKT envelope; reports the X.224 payload slice and bytes ...
- * @var CotpNs::build_dt  build a COTP Data TPDU around data: `LI=2, 0xF0, (EOT|0)` + data
- * @var CotpNs::build_cr  build a COTP Connection Request: `LI 0xE0 dst-ref(0) src-ref ...
- * @var CotpNs::build_cc  build a COTP Connection Confirm (the server's response to a CR): ...
- * @var CotpNs::parse  parse a COTP TPDU (typically the TPKT payload)
+ * @var CotpVars::tpkt_build_args
+ *                                 what tpkt_build takes: buf, cap, payload, payload_len
+ * @var CotpVars::tpkt_parse_args
+ *                                 what tpkt_parse takes: buf, len, payload, payload_len,
+ * @var CotpVars::build_dt_args
+ *                               what build_dt takes: buf, cap, data, data_len, eot
+ * @var CotpVars::build_cr_args
+ *                               what build_cr takes: buf, cap, src_ref, tpdu_size_code,
+ * @var CotpVars::build_cc_args
+ *                               what build_cc takes: buf, cap, dst_ref, src_ref,
+ * @var CotpVars::parse_args
+ *                            what parse takes: buf, len, out
+ * @var CotpVars::ok
+ *                    true on a complete, version-3 packet; false on bad version / ...
+ * @var CotpVars::n
+ *                   the count a call reports
+ * @var CotpNs::tpkt_build
+ *                          wrap payload in a TPKT envelope. Returns total octets, or 0 on ...
+ * @var CotpNs::tpkt_parse
+ *                          parse a TPKT envelope; reports the X.224 payload slice and bytes ...
+ * @var CotpNs::build_dt
+ *                        build a COTP Data TPDU around data: `LI=2, 0xF0, (EOT|0)` + data
+ * @var CotpNs::build_cr
+ *                        build a COTP Connection Request: `LI 0xE0 dst-ref(0) src-ref class(0)` + a TPDU-size parameter
+ *                        + any @p extra_params (e.g. the S7 src/dst TSAP parameters)
+ * @var CotpNs::build_cc
+ *                        build a COTP Connection Confirm (the server's response to a CR): ...
+ * @var CotpNs::parse
+ *                     parse a COTP TPDU (typically the TPKT payload)
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

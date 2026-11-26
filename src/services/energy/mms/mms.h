@@ -41,6 +41,8 @@ EMBED_BEGIN_DECLS
  * @brief Build an MMS confirmed-request Read PDU for one named variable.
  * @param invoke_id the invoke id (echoed in the response).
  * @param item_name the MMS ObjectName (e.g. "LD0/GGIO1$ST$Ind1$stVal"), a VisibleString.
+ * @param out       the destination buffer.
+ * @param cap       the capacity of @p out, in bytes.
  * @return the PDU length written, or 0 on overflow / bad args.
  */
 size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uint8_t *out, size_t cap);
@@ -51,6 +53,8 @@ size_t protocore_mms_read_request(uint32_t invoke_id, const char *item_name, uin
  * @param data      a caller-encoded BER Data value (e.g. `85 01 01` for a boolean-ish, or an integer);
  *                  wrapped in the listOfAccessResult.
  * @param data_len  its length.
+ * @param out       the destination buffer.
+ * @param cap       the capacity of @p out, in bytes.
  * @return the PDU length written, or 0 on overflow.
  */
 size_t protocore_mms_read_response(uint32_t invoke_id, const uint8_t *data, size_t data_len, uint8_t *out, size_t cap);

@@ -135,25 +135,42 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::SpaRouter with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   SpaRouter.has_extension_args.path = ...;
  *   SpaRouter.has_extension(work);
  *   // SpaRouter.ok is what the call reports
+ * @endcode
  *
- * @var SpaRouterNs::has_extension_args  what has_extension takes: path
- * @var SpaRouterNs::route_args  what route takes: path, api_prefix
- * @var SpaRouterNs::route_ex_args  what route_ex takes: path, ctx
- * @var SpaRouterNs::ui_stream_begin_args  what ui_stream_begin takes: s, frags, count, ctx
- * @var SpaRouterNs::ui_stream_next_args  what ui_stream_next takes: s, out, cap
- * @var SpaRouterNs::ui_stream_done_args  what ui_stream_done takes: s
- * @var SpaRouterNs::ok  a call's true/false outcome
- * @var SpaRouterNs::action  the routing action. "/" (or empty) serves the shell. A path ...
- * @var SpaRouterNs::n  bytes written; 0 when the stream is finished (or on bad args)
- * @var SpaRouterNs::has_extension  true if the last path segment has a file extension (a '.' after the ...
- * @var SpaRouterNs::route  decide how to route path for a single-page app
- * @var SpaRouterNs::route_ex  decide how to route path, choosing the fallback HMI when the SPA ...
- * @var SpaRouterNs::ui_stream_begin  start streaming frags, evaluating each predicate against ctx. ...
- * @var SpaRouterNs::ui_stream_next  emit up to cap bytes of the remaining included fragments into out. ...
- * @var SpaRouterNs::ui_stream_done  true once every included fragment has been emitted
+ * @var SpaRouterVars::has_extension_args
+ *                                         what has_extension takes: path
+ * @var SpaRouterVars::route_args
+ *                                 what route takes: path, api_prefix
+ * @var SpaRouterVars::route_ex_args
+ *                                    what route_ex takes: path, ctx
+ * @var SpaRouterVars::ui_stream_begin_args
+ *                                           what ui_stream_begin takes: s, frags, count, ctx
+ * @var SpaRouterVars::ui_stream_next_args
+ *                                          what ui_stream_next takes: s, out, cap
+ * @var SpaRouterVars::ui_stream_done_args
+ *                                          what ui_stream_done takes: s
+ * @var SpaRouterVars::ok
+ *                         a call's true/false outcome
+ * @var SpaRouterVars::action
+ *                             the routing action. "/" (or empty) serves the shell. A path ...
+ * @var SpaRouterVars::n
+ *                        bytes written; 0 when the stream is finished (or on bad args)
+ * @var SpaRouterNs::has_extension
+ *                                  true if the last path segment has a file extension (a '.' after the ...
+ * @var SpaRouterNs::route
+ *                          decide how to route path for a single-page app
+ * @var SpaRouterNs::route_ex
+ *                             decide how to route path, choosing the fallback HMI when the SPA ...
+ * @var SpaRouterNs::ui_stream_begin
+ *                                    start streaming frags, evaluating each predicate against ctx. ...
+ * @var SpaRouterNs::ui_stream_next
+ *                                   emit up to cap bytes of the remaining included fragments into out. ...
+ * @var SpaRouterNs::ui_stream_done
+ *                                   true once every included fragment has been emitted
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

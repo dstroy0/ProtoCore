@@ -66,14 +66,20 @@ typedef struct
  * reads the outcome off the same handle. How those bytes are carved is this module's and is never
  * named here.
  *
+ * @code{.c}
  *   Rng.fill_args.out = nonce;
  *   Rng.fill_args.len = nonce_len;
  *   Rng.fill(protocore_rng_span());
+ * @endcode
  *
- * @var RngNs::fill_args  where a draw lands
- * @var RngNs::ok         a call's true/false outcome
- * @var RngNs::fill       write @c len keystream bytes out, then ratchet the seed
- * @var RngNs::reseed     redraw the seed and its nonce from the platform, and start the budget over
+ * @var RngVars::fill_args
+ *                          where a draw lands
+ * @var RngVars::ok
+ *                          a call's true/false outcome
+ * @var RngNs::fill
+ *                        write @c len keystream bytes out, then ratchet the seed
+ * @var RngNs::reseed
+ *                        redraw the seed and its nonce from the platform, and start the budget over
  *
  * A caller with no reason to hold a generator of its own passes @ref protocore_rng_span, the one the
  * whole program shares. A caller that took its own PROTOCORE_RNG_BORROW span passes that instead and
@@ -90,7 +96,7 @@ typedef struct
  * ratchet's replacement copy, after every draw. The borrow IS the generator, so two workers are two
  * borrows and never collide.
  *
- * No storage member and no context: a caller sets operands and reads @ref RngNs::ok, and that is all
+ * No storage member and no context: a caller sets operands and reads @ref RngVars::ok, and that is all
  * the surface there is.
  */
 typedef struct

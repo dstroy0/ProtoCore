@@ -30,7 +30,7 @@
  * recurses and nothing is allocated.
  *
  * A decoded string points into the buffer that was parsed and is never copied, so a caller walking
- * an aggregate takes what it needs from @ref RespNs::reply before the next parse overwrites it.
+ * an aggregate takes what it needs from @ref RespVars::reply before the next parse overwrites it.
  *
  * The module exports one symbol, @ref Resp. Everything in redis_resp.c has internal linkage.
  *
@@ -106,14 +106,22 @@ typedef struct
  *
  * No slot member: the codec holds no rows, so no call names one.
  *
- * @var RespNs::command  the array of bulk strings an encode builds ("Sending commands to a Redis server")
- * @var RespNs::out      the buffer that array is written into
- * @var RespNs::wire     the buffered reply octets a parse decodes from
- * @var RespNs::ok       a call's true/false outcome
- * @var RespNs::n        the octets an encode wrote excluding the NUL, or the octets a parse consumed, 0 on failure
- * @var RespNs::reply    the value a parse decoded
- * @var RespNs::encode_command  build `*<argc>\r\n$<len>\r\n<arg>\r\n...` from @c command into @c out
- * @var RespNs::parse_reply     decode the one value at the head of @c wire into @c reply
+ * @var RespVars::command
+ *                         the array of bulk strings an encode builds ("Sending commands to a Redis server")
+ * @var RespVars::out
+ *                         the buffer that array is written into
+ * @var RespVars::wire
+ *                         the buffered reply octets a parse decodes from
+ * @var RespVars::ok
+ *                         a call's true/false outcome
+ * @var RespVars::n
+ *                         the octets an encode wrote excluding the NUL, or the octets a parse consumed, 0 on failure
+ * @var RespVars::reply
+ *                         the value a parse decoded
+ * @var RespNs::encode_command
+ *                              build `*<argc>\r\n$<len>\r\n<arg>\r\n...` from @c command into @c out
+ * @var RespNs::parse_reply
+ *                              decode the one value at the head of @c wire into @c reply
  */
 typedef struct
 {

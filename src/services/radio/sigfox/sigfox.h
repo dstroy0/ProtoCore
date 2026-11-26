@@ -54,7 +54,8 @@ PROTOCORE_NS_LAYOUT(SigfoxNs, build_uplink, parse_response);
  * @param len Len
  * @param out Out
  * @param cap Cap
- * @return The uint16_t.
+ * @return the command length (excluding the NUL), or 0 if @p len exceeds
+ *         PROTOCORE_SIGFOX_MAX_PAYLOAD or the command would not fit @p cap.
  */
 uint16_t protocore_sigfox_build_uplink(const uint8_t *work, const uint8_t *payload, uint8_t len, char *out,
                                        uint16_t cap);
@@ -63,7 +64,8 @@ uint16_t protocore_sigfox_build_uplink(const uint8_t *work, const uint8_t *paylo
  * @param work PROTOCORE_SIGFOX_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param len Len
- * @return The protocore_sigfox_result.
+ * @return SIGFOX_OK, SIGFOX_ERROR, or SIGFOX_PENDING if
+ * neither is present yet.
  */
 protocore_sigfox_result protocore_sigfox_parse_response(const uint8_t *work, const char *buf, uint16_t len);
 

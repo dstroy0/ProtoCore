@@ -77,20 +77,31 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Snp with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Snp.bcc_args.bytes = ...;
  *   Snp.bcc_args.len = ...;
  *   Snp.bcc(work);
  *   // Snp.value is what the call reports
+ * @endcode
  *
- * @var SnpNs::bcc_args  what bcc takes: bytes, len
- * @var SnpNs::build_args  what build takes: control, data, data_len, out, cap
- * @var SnpNs::parse_args  what parse takes: frame, len, out
- * @var SnpNs::ok  a call's true/false outcome
- * @var SnpNs::value  the value a call reports
- * @var SnpNs::n  the frame length (2 + data_len + 1), or 0 on overflow / bad args ...
- * @var SnpNs::bcc  block Check Code over len bytes (GFK-0582D p. 7-62). Seeded at ...
- * @var SnpNs::build  build an SNP frame: [control][length][data...][BCC]. length is the ...
- * @var SnpNs::parse  validate the BCC and parse an SNP frame. true if the BCC matches ...
+ * @var SnpVars::bcc_args
+ *                         what bcc takes: bytes, len
+ * @var SnpVars::build_args
+ *                           what build takes: control, data, data_len, out, cap
+ * @var SnpVars::parse_args
+ *                           what parse takes: frame, len, out
+ * @var SnpVars::ok
+ *                   a call's true/false outcome
+ * @var SnpVars::value
+ *                      the value a call reports
+ * @var SnpVars::n
+ *                  the frame length (2 + data_len + 1), or 0 on overflow / bad args ...
+ * @var SnpNs::bcc
+ *                  block Check Code over len bytes (GFK-0582D p. 7-62). Seeded at ...
+ * @var SnpNs::build
+ *                    build an SNP frame: [control][length][data...][BCC]. length is the ...
+ * @var SnpNs::parse
+ *                    validate the BCC and parse an SNP frame. true if the BCC matches ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

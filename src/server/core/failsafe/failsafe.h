@@ -80,20 +80,32 @@ typedef struct
  * @brief The lifeline watchdog.
  *
  * A caller sets the members a call takes, invokes it through ::Failsafe, and reads the outcome off
- * the same handle. The lifeline table is behind @ref internal.
+ * the same handle. The lifeline table is internal.
  *
- * @var FailsafeNs::args       the lifeline a call names, and what arming it takes
- * @var FailsafeNs::out_args   what a breach fires, and where a report is written
- * @var FailsafeNs::ok         a call's true/false outcome
- * @var FailsafeNs::i32        the lifeline a register took, or < 0 when the table is full
- * @var FailsafeNs::breached   one bit per lifeline that went overdue on this check
- * @var FailsafeNs::n          characters a report wrote
- * @var FailsafeNs::reset      clear every lifeline and drop the breach callback
- * @var FailsafeNs::add        arm a lifeline against args.now; it starts fed
- * @var FailsafeNs::feed       check one in against args.now
- * @var FailsafeNs::on_breach  install what a breach fires
- * @var FailsafeNs::check      judge every armed lifeline against args.now
- * @var FailsafeNs::json       report every armed lifeline
+ * @var FailsafeVars::args
+ *                               the lifeline a call names, and what arming it takes
+ * @var FailsafeVars::out_args
+ *                               what a breach fires, and where a report is written
+ * @var FailsafeVars::ok
+ *                               a call's true/false outcome
+ * @var FailsafeVars::i32
+ *                               the lifeline a register took, or < 0 when the table is full
+ * @var FailsafeVars::breached
+ *                               one bit per lifeline that went overdue on this check
+ * @var FailsafeVars::n
+ *                               characters a report wrote
+ * @var FailsafeNs::reset
+ *                             clear every lifeline and drop the breach callback
+ * @var FailsafeNs::add
+ *                             arm a lifeline against args.now; it starts fed
+ * @var FailsafeNs::feed
+ *                             check one in against args.now
+ * @var FailsafeNs::on_breach
+ *                             install what a breach fires
+ * @var FailsafeNs::check
+ *                             judge every armed lifeline against args.now
+ * @var FailsafeNs::json
+ *                             report every armed lifeline
  *
  * Every call takes the clock as @c args.now rather than reading one, so the whole module runs
  * against a synthetic clock on the host. A feed clears the breach so the lifeline can fire again.

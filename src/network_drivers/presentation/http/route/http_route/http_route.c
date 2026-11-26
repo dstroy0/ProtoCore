@@ -5,9 +5,9 @@
  * @file route.c
  * @brief The route table and its one owner. See route.h.
  *
- * The table is internal server state, so it is borrowed from the secure pool: that borrow is
- * aligned and padded like every other, and the pool wipes it on release rather than leaving a
- * previous tenant's handler and backend pointers readable.
+ * The table is internal server state and holds no key material, so it takes the plaintext pool.
+ * The borrow is aligned and padded like every other, and the pool zeroes it on hand-out. No
+ * release reclaims it.
  *
  * The one symbol this file exports is @ref HttpRoutes.
  */
@@ -21,7 +21,7 @@
 #include "protocore.h"                 // completes HttpRoute; route.h names it only as an opaque tag
 #include "server/core/worker/worker.h" // the cellblock the table lives in
 
-// The table's layout, known only here. The storage behind it belongs to the secure pool.
+// The table's layout, known only here. The storage behind it belongs to the plaintext pool.
 struct HttpRouteCtx
 {
     HttpRoute entry[MAX_ROUTES];
@@ -53,7 +53,7 @@ uint8_t *protocore_http_route_span(void)
 {
     if (s_span == NULL)
     {
-        s_span = (uint8_t *)protocore_secure_persist(PROTOCORE_HTTP_ROUTE_BORROW);
+        s_span = (uint8_t *)protocore_plain_persist(PROTOCORE_HTTP_ROUTE_BORROW);
     }
     return s_span;
 }

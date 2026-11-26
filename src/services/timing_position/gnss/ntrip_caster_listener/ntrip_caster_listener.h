@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_ntrip_caster_listener.h
+ * @file ntrip_caster_listener.h
  * @brief Server-side NTRIP caster listener (PROTOCORE_ENABLE_NTRIP_CASTER): the ProtoConn::PROTO_NTRIP_CASTER
  *        handler that answers rover requests and streams RTCM to subscribers.
  *

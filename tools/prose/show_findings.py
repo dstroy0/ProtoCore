@@ -4,9 +4,9 @@ Fixing a finding needs the sentence instead of the token. The gate prints a file
 which is enough to locate but not enough to rewrite, and rewriting from the phrase alone is how a
 replacement ends up saying less than the original did.
 
-    python utils/maint/prose/show_findings.py src hooks          # checked types
-    python utils/maint/prose/show_findings.py --unread src       # types the gate does not read
-    python utils/maint/prose/show_findings.py --tsv src          # tab separated, for building a fix table
+    python tools/prose/show_findings.py src hooks          # checked types
+    python tools/prose/show_findings.py --unread src       # types the gate does not read
+    python tools/prose/show_findings.py --tsv src          # tab separated, for building a fix table
 
 One line of output per finding. Two findings on one source line appear twice and both get
 rewritten in the same pass instead of one being cleared and the other left located.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_h2_conn.h
+ * @file h2_conn.h
  * @brief HTTP/2 connection + stream engine (RFC 9113) over the HPACK + frame layers.
  *
  * One H2Conn drives a single HTTP/2 connection: it consumes the client connection preface, the
@@ -96,15 +96,24 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::H2Conn, and reads the outcome off
  * the same handle.
  *
- * @var H2ConnNs::init_args     the callbacks an init installs
- * @var H2ConnNs::recv_args     the bytes a feed carries
- * @var H2ConnNs::respond_args  what a serialized response carries
- * @var H2ConnNs::goaway_args   the error a shutdown reports
- * @var H2ConnNs::ok            a call's true/false outcome
- * @var H2ConnNs::init     start the engine and send our initial SETTINGS through cb.write
- * @var H2ConnNs::recv     feed inbound bytes; drives the machine, invokes callbacks, writes control frames
- * @var H2ConnNs::respond  serialize HEADERS + DATA on a stream and close it
- * @var H2ConnNs::goaway   send a GOAWAY to begin a graceful shutdown
+ * @var H2ConnVars::init_args
+ *                                the callbacks an init installs
+ * @var H2ConnVars::recv_args
+ *                                the bytes a feed carries
+ * @var H2ConnVars::respond_args
+ *                                what a serialized response carries
+ * @var H2ConnVars::goaway_args
+ *                                the error a shutdown reports
+ * @var H2ConnVars::ok
+ *                                a call's true/false outcome
+ * @var H2ConnNs::init
+ *                         start the engine and send our initial SETTINGS through cb.write
+ * @var H2ConnNs::recv
+ *                         feed inbound bytes; drives the machine, invokes callbacks, writes control frames
+ * @var H2ConnNs::respond
+ *                         serialize HEADERS + DATA on a stream and close it
+ * @var H2ConnNs::goaway
+ *                         send a GOAWAY to begin a graceful shutdown
  *
  * Every entry takes one connection's borrow. How those bytes are carved is h2_conn.c's and is
  * never named here; ::PROTOCORE_H2_CONN_BORROW is how many a caller must hand over.

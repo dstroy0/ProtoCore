@@ -151,26 +151,41 @@ typedef struct
  * @brief One TLS 1.3 handshake over a stream. ::TlsConn is the resource; this drives it.
  *
  * A caller sets the members a call takes, invokes it through ::TlsConnection, and reads the outcome
- * off the same handle. The connection itself is the caller's, named in @ref TlsConnNs::conn.
+ * off the same handle. The connection itself is the caller's, named in @ref TlsConnectionVars::conn.
  *
- * @var TlsConnNs::conn         the connection every call acts on
- * @var TlsConnNs::init_args    which end this connection drives, and what it presents
- * @var TlsConnNs::io           the bytes one call moves
- * @var TlsConnNs::out_args     where a call writes, and what it wrote
- * @var TlsConnNs::ok           a call's true/false outcome
- * @var TlsConnNs::n            bytes written to @c out_args.out
- * @var TlsConnNs::i32          bytes written, or a negative alert-bearing failure
- * @var TlsConnNs::u8           the alert a lookup reports
- * @var TlsConnNs::init         bind a connection to its role and configuration. The borrow is taken
+ * @var TlsConnectionVars::conn
+ *                              the connection every call acts on
+ * @var TlsConnectionVars::init_args
+ *                              which end this connection drives, and what it presents
+ * @var TlsConnectionVars::io
+ *                              the bytes one call moves
+ * @var TlsConnectionVars::out_args
+ *                              where a call writes, and what it wrote
+ * @var TlsConnectionVars::ok
+ *                              a call's true/false outcome
+ * @var TlsConnectionVars::n
+ *                              bytes written to @c out_args.out
+ * @var TlsConnectionVars::i32
+ *                              bytes written, or a negative alert-bearing failure
+ * @var TlsConnectionVars::u8
+ *                              the alert a lookup reports
+ * @var TlsConnNs::init
+ *                              bind a connection to its role and configuration. The borrow is taken
  *                              on first use and kept, so a connection initialised again reuses the
  *                              bytes it already holds
- * @var TlsConnNs::start        client only: write the ClientHello; bytes written, or 0
- * @var TlsConnNs::process      the worker filled @ref TlsConn::rx with one record of @c io.rx_len
+ * @var TlsConnNs::start
+ *                              client only: write the ClientHello; bytes written, or 0
+ * @var TlsConnNs::process
+ *                              the worker filled @ref TlsConn::rx with one record of @c io.rx_len
  *                              bytes; consume it, writing whatever it owes into @c out_args.out
- * @var TlsConnNs::established  whether the handshake completed
- * @var TlsConnNs::alert        the alert that ended the connection, or 0
- * @var TlsConnNs::seal_app     seal application data into one record; bytes written, or 0
- * @var TlsConnNs::open_app     open one received application record; false on an AEAD failure
+ * @var TlsConnNs::established
+ *                              whether the handshake completed
+ * @var TlsConnNs::alert
+ *                              the alert that ended the connection, or 0
+ * @var TlsConnNs::seal_app
+ *                              seal application data into one record; bytes written, or 0
+ * @var TlsConnNs::open_app
+ *                              open one received application record; false on an AEAD failure
  *
  * No storage member: one secure-pool borrow per connection lives in ::TlsConn, taken by
  * @ref TlsConnNs::init and split by offset.

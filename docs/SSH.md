@@ -149,7 +149,7 @@ per device:
    public half (n, e) is available for the host-key blob. The private half is
    parsed by the same call and kept for the server's lifetime, as an SSH host key
    normally is: on ESP32 inside a private mbedTLS context, on the software backend
-   as a secure-pool borrow ([`mmgr/secure.h`](@ref secure.h)) whose reclaim wipes.
+   as a secure-pool borrow (`mmgr/secure.h`) whose reclaim wipes.
    Neither holds it in static memory, and the DER it was read from is wiped before
    the call returns.
 
@@ -212,7 +212,7 @@ All numbers use default configuration values.
 
 **Key material is excluded by design.** AES-256 keys, HMAC keys, and the DH
 shared secret K live in `ssh_keys[]` / `ssh_dh[]`. The RSA private key is never
-in static memory - it exists only on the stack during [`ssh_rsa_sign()`](@ref ssh_rsa_sign) and is
+in static memory - it exists only on the stack during `ssh_rsa_sign()` and is
 volatile-wiped before the function returns.
 
 The BSS symbols (`ssh_pkt`, `ssh_keys`, `ssh_dh`) are separate linker symbols.

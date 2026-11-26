@@ -20,7 +20,7 @@
 
 #if PROTOCORE_ENABLE_IDEMIP
 
-#include "network_drivers/network/stack/stack_tcp.h"
+#include "network_drivers/network/stack/stack_tcp/stack_tcp.h"
 
 #include "src/idemip.h" // every unit of idemIP, its borrow and its operand block
 
@@ -1639,8 +1639,8 @@ void protocore_stack_tcp_abort(uint8_t index)
 typedef struct
 {
     uint8_t *borrow; ///< PROTOCORE_STACK_TCP_BORROW persistent bytes
-} StackTcpOwnContext;
-static StackTcpOwnContext s_own;
+} StackTcpOwnCtx;
+static StackTcpOwnCtx s_own;
 
 uint8_t *protocore_stack_tcp_span(void)
 {

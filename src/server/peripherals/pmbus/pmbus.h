@@ -266,53 +266,98 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Pmbus with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Pmbus.vout_mode_kind_args.vout_mode = ...;
  *   Pmbus.vout_mode_kind(work);
  *   // Pmbus.kind is what the call reports
+ * @endcode
  *
- * @var PmbusNs::vout_mode_kind_args  what vout_mode_kind takes: vout_mode
- * @var PmbusNs::vout_exponent_args  what vout_exponent takes: vout_mode
- * @var PmbusNs::l11_mantissa_args  what l11_mantissa takes: word
- * @var PmbusNs::l11_exponent_args  what l11_exponent takes: word
- * @var PmbusNs::linear11_micro_args  what linear11_micro takes: word
- * @var PmbusNs::linear11_encode_args  what linear11_encode takes: micro
- * @var PmbusNs::linear16_micro_args  what linear16_micro takes: word, exponent
- * @var PmbusNs::linear16_encode_args  what linear16_encode takes: micro, exponent
- * @var PmbusNs::direct_micro_args  what direct_micro takes: word, m, b, r
- * @var PmbusNs::set_page_args  what set_page takes: addr, page
- * @var PmbusNs::read_vout_mode_args  what read_vout_mode takes: addr, out
- * @var PmbusNs::read_linear11_args  what read_linear11 takes: addr, cmd, micro
- * @var PmbusNs::read_linear16_args  what read_linear16 takes: addr, cmd, exponent, micro
- * @var PmbusNs::write_linear16_args  what write_linear16 takes: addr, cmd, exponent, micro
- * @var PmbusNs::status_byte_args  what status_byte takes: addr, out
- * @var PmbusNs::status_word_args  what status_word takes: addr, out
- * @var PmbusNs::clear_faults_args  what clear_faults takes: addr
- * @var PmbusNs::read_mfr_string_args  what read_mfr_string takes: addr, cmd, out, cap, len
- * @var PmbusNs::ok  a call's true/false outcome
- * @var PmbusNs::kind  what a call reports
- * @var PmbusNs::exp  what a call reports
- * @var PmbusNs::mantissa  what a call reports
- * @var PmbusNs::micro  the value, or ::PROTOCORE_PMBUS_INVALID if it does not fit in an ...
- * @var PmbusNs::word  what a call reports
- * @var PmbusNs::vout_mode_kind  the encoding VOUT_MODE names, from its bits 7:5
- * @var PmbusNs::vout_exponent  the exponent VOUT_MODE carries in its bits 4:0, sign-extended from ...
- * @var PmbusNs::l11_mantissa  the 11-bit signed mantissa of a LINEAR11 word, sign-extended
- * @var PmbusNs::l11_exponent  the 5-bit signed exponent of a LINEAR11 word, sign-extended
- * @var PmbusNs::linear11_micro  decode a LINEAR11 word to micro-units: mantissa * 2^exponent, ...
- * @var PmbusNs::linear11_encode  encode micro micro-units as a LINEAR11 word, picking the exponent ...
- * @var PmbusNs::linear16_micro  decode a LINEAR16 word to micro-units: an unsigned mantissa scaled ...
- * @var PmbusNs::linear16_encode  encode micro micro-units as a LINEAR16 word at exponent
- * @var PmbusNs::direct_micro  decode a DIRECT-format word to micro-units: (word / 10^r - b) / m, ...
- * @var PmbusNs::begin  bring up the bus for PMBus traffic
- * @var PmbusNs::set_page  select page page on addr; a multi-rail part answers per page
- * @var PmbusNs::read_vout_mode  read VOUT_MODE, whose exponent every LINEAR16 reading on this part ...
- * @var PmbusNs::read_linear11  read a LINEAR11 telemetry command (READ_VIN, READ_IOUT, READ_PIN, ...
- * @var PmbusNs::read_linear16  read a LINEAR16 command (READ_VOUT, VOUT_COMMAND) in microvolts at ...
- * @var PmbusNs::write_linear16  write micro microvolts to a LINEAR16 command at exponent
- * @var PmbusNs::status_byte  read STATUS_BYTE
- * @var PmbusNs::status_word  read STATUS_WORD, whose low half is STATUS_BYTE
- * @var PmbusNs::clear_faults  clear every latched fault on addr
- * @var PmbusNs::read_mfr_string  read one of the block-encoded manufacturer strings (MFR_ID, ...
+ * @var PmbusNs::vout_mode_kind_args
+ *                                    what vout_mode_kind takes: vout_mode
+ * @var PmbusNs::vout_exponent_args
+ *                                   what vout_exponent takes: vout_mode
+ * @var PmbusNs::l11_mantissa_args
+ *                                  what l11_mantissa takes: word
+ * @var PmbusNs::l11_exponent_args
+ *                                  what l11_exponent takes: word
+ * @var PmbusNs::linear11_micro_args
+ *                                    what linear11_micro takes: word
+ * @var PmbusNs::linear11_encode_args
+ *                                     what linear11_encode takes: micro
+ * @var PmbusNs::linear16_micro_args
+ *                                    what linear16_micro takes: word, exponent
+ * @var PmbusNs::linear16_encode_args
+ *                                     what linear16_encode takes: micro, exponent
+ * @var PmbusNs::direct_micro_args
+ *                                  what direct_micro takes: word, m, b, r
+ * @var PmbusNs::set_page_args
+ *                              what set_page takes: addr, page
+ * @var PmbusNs::read_vout_mode_args
+ *                                    what read_vout_mode takes: addr, out
+ * @var PmbusNs::read_linear11_args
+ *                                   what read_linear11 takes: addr, cmd, micro
+ * @var PmbusNs::read_linear16_args
+ *                                   what read_linear16 takes: addr, cmd, exponent, micro
+ * @var PmbusNs::write_linear16_args
+ *                                    what write_linear16 takes: addr, cmd, exponent, micro
+ * @var PmbusNs::status_byte_args
+ *                                 what status_byte takes: addr, out
+ * @var PmbusNs::status_word_args
+ *                                 what status_word takes: addr, out
+ * @var PmbusNs::clear_faults_args
+ *                                  what clear_faults takes: addr
+ * @var PmbusNs::read_mfr_string_args
+ *                                     what read_mfr_string takes: addr, cmd, out, cap, len
+ * @var PmbusNs::ok
+ *                   a call's true/false outcome
+ * @var PmbusNs::kind
+ *                     what a call reports
+ * @var PmbusNs::exp
+ *                    what a call reports
+ * @var PmbusNs::mantissa
+ *                         what a call reports
+ * @var PmbusNs::micro
+ *                      the value, or ::PROTOCORE_PMBUS_INVALID if it does not fit in an ...
+ * @var PmbusNs::word
+ *                     what a call reports
+ * @var PmbusNs::vout_mode_kind
+ *                               the encoding VOUT_MODE names, from its bits 7:5
+ * @var PmbusNs::vout_exponent
+ *                              the exponent VOUT_MODE carries in its bits 4:0, sign-extended from ...
+ * @var PmbusNs::l11_mantissa
+ *                             the 11-bit signed mantissa of a LINEAR11 word, sign-extended
+ * @var PmbusNs::l11_exponent
+ *                             the 5-bit signed exponent of a LINEAR11 word, sign-extended
+ * @var PmbusNs::linear11_micro
+ *                               decode a LINEAR11 word to micro-units: mantissa * 2^exponent, ...
+ * @var PmbusNs::linear11_encode
+ *                                encode micro micro-units as a LINEAR11 word, picking the exponent ...
+ * @var PmbusNs::linear16_micro
+ *                               decode a LINEAR16 word to micro-units: an unsigned mantissa scaled ...
+ * @var PmbusNs::linear16_encode
+ *                                encode micro micro-units as a LINEAR16 word at exponent
+ * @var PmbusNs::direct_micro
+ *                             decode a DIRECT-format word to micro-units: (word / 10^r - b) / m, ...
+ * @var PmbusNs::begin
+ *                      bring up the bus for PMBus traffic
+ * @var PmbusNs::set_page
+ *                         select page page on addr; a multi-rail part answers per page
+ * @var PmbusNs::read_vout_mode
+ *                               read VOUT_MODE, whose exponent every LINEAR16 reading on this part ...
+ * @var PmbusNs::read_linear11
+ *                              read a LINEAR11 telemetry command (READ_VIN, READ_IOUT, READ_PIN, ...
+ * @var PmbusNs::read_linear16
+ *                              read a LINEAR16 command (READ_VOUT, VOUT_COMMAND) in microvolts at ...
+ * @var PmbusNs::write_linear16
+ *                               write micro microvolts to a LINEAR16 command at exponent
+ * @var PmbusNs::status_byte
+ *                            read STATUS_BYTE
+ * @var PmbusNs::status_word
+ *                            read STATUS_WORD, whose low half is STATUS_BYTE
+ * @var PmbusNs::clear_faults
+ *                             clear every latched fault on addr
+ * @var PmbusNs::read_mfr_string
+ *                                read one of the block-encoded manufacturer strings (MFR_ID, ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

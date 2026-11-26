@@ -35,7 +35,7 @@ EMBED_BEGIN_DECLS
  * marshaling overhead). Zero heap; peak stack ~9 KB (Decaps, which re-encrypts).
  *
  * @ref MlKemNs::encaps runs the FIPS 203 modulus check on the peer key first: on a key whose decoded
- * coefficients are not all < q it writes nothing and leaves @ref MlKemNs::ok false.
+ * coefficients are not all < q it writes nothing and the call comes back false.
  *
  * @ref MlKemNs::decaps has no failure of its own: a malformed or tampered ciphertext selects
  * J(z || ct) in constant time and the call still reports true.

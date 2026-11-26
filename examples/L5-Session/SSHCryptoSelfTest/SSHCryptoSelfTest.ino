@@ -50,7 +50,7 @@ void setup()
 
     // Each primitive runs out of a key-material borrow, taken from the secure cellblock and handed back
     // (wiped) when the checks are done.
-    const MaximumSecurityGuard *guard = protocore_secure_guard();
+    const MaxSecurityGuard *guard = protocore_secure_guard();
     const size_t mark = guard->temporary_buf_mark();
 
     // --- SHA-256("abc") streaming ---

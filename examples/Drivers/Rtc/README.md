@@ -82,7 +82,7 @@ The feature lives in the library, so its flags must reach the whole build:
 ```bash
 pio ci examples/Drivers/Rtc \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_RTC=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1 -DPROTOCORE_ENABLE_NTP=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_RTC=1 -DPROTOCORE_ENABLE_TIME_SOURCE=1 -DPROTOCORE_ENABLE_NTP=1 -DPROTOCORE_ENABLE_UDP=1"
 ```
 
 (The Arduino IDE reads the flags from `build_opt.h` beside the sketch automatically.)

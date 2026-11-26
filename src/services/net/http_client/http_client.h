@@ -41,7 +41,7 @@ EMBED_BEGIN_DECLS
  * @brief What went wrong below the status code.
  *
  * RFC 9110 sec 15: every status code is in the range 100..599, so a negative value can never
- * collide with one and @ref HttpClientNs::status carries both.
+ * collide with one and @ref HttpClientVars::status carries both.
  */
 EMBED_ENUM_BYTE(HttpClientError,
                 HTTP_CLIENT_ERR_URL = -1, ///< the target URI does not parse (RFC 9110 sec 4.2.1 / 4.2.2)
@@ -99,20 +99,34 @@ typedef struct
  * An exchange sets @c target.host, @c target.path and @c request.out to the module's own buffers
  * before it splits the target URI, so a caller sets only @c target.url and reads the parts back.
  *
- * @var HttpClientNs::target   the target URI a call splits, dials, or names in a request-line
- * @var HttpClientNs::request  the method, the content, and where the request message is built
- * @var HttpClientNs::message  the received message a parse frames
- * @var HttpClientNs::ok       a call's true/false outcome
- * @var HttpClientNs::status   the status-code (RFC 9112 sec 4), or a negative ::HttpClientError
- * @var HttpClientNs::n        octets a build wrote; 0 when the message would not fit
- * @var HttpClientNs::body_off where the content starts inside the parsed message
- * @var HttpClientNs::body_len the content's octet count (RFC 9112 sec 6.3)
- * @var HttpClientNs::body     the content an exchange read, pointing into the module's receive buffer
- * @var HttpClientNs::parse_target_uri  split the target URI into authority, port and request target
- * @var HttpClientNs::build_request     write the request-line and field lines of one HTTP-message
- * @var HttpClientNs::parse_response    read the status-line and frame the message body
- * @var HttpClientNs::get               run one GET exchange (RFC 9110 sec 9.3.1)
- * @var HttpClientNs::post              run one POST exchange (RFC 9110 sec 9.3.3)
+ * @var HttpClientVars::target
+ *                               the target URI a call splits, dials, or names in a request-line
+ * @var HttpClientVars::request
+ *                               the method, the content, and where the request message is built
+ * @var HttpClientVars::message
+ *                               the received message a parse frames
+ * @var HttpClientVars::ok
+ *                               a call's true/false outcome
+ * @var HttpClientVars::status
+ *                               the status-code (RFC 9112 sec 4), or a negative ::HttpClientError
+ * @var HttpClientVars::n
+ *                               octets a build wrote; 0 when the message would not fit
+ * @var HttpClientVars::body_off
+ *                               where the content starts inside the parsed message
+ * @var HttpClientVars::body_len
+ *                               the content's octet count (RFC 9112 sec 6.3)
+ * @var HttpClientVars::body
+ *                               the content an exchange read, pointing into the module's receive buffer
+ * @var HttpClientNs::parse_target_uri
+ *                                      split the target URI into authority, port and request target
+ * @var HttpClientNs::build_request
+ *                                      write the request-line and field lines of one HTTP-message
+ * @var HttpClientNs::parse_response
+ *                                      read the status-line and frame the message body
+ * @var HttpClientNs::get
+ *                                      run one GET exchange (RFC 9110 sec 9.3.1)
+ * @var HttpClientNs::post
+ *                                      run one POST exchange (RFC 9110 sec 9.3.3)
  */
 typedef struct
 {

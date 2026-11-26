@@ -695,111 +695,214 @@ typedef struct
  * No storage member: every octet, SA, handshake and reassembly a call touches belongs to the caller,
  * so nothing survives a call.
  *
- * @var IkeNs::work     the caller's scratch region the hash, PRF and signature calls borrow
- * @var IkeNs::hdr      in: the header a build encodes; out: the header a parse decoded (sec 3.1)
- * @var IkeNs::out      where a build, a hash or a signature writes
- * @var IkeNs::wire     the octets a parse reads
- * @var IkeNs::pl       the generic payload header a build writes, and the payload's variable field
- * @var IkeNs::prop     the Proposal Substructure a build encodes, and the SPIs a Notify or Delete names
- * @var IkeNs::ke       the key exchange: the group and the public and private values
- * @var IkeNs::id       the identity: the ID payload's fields and its signed remainder
- * @var IkeNs::auth     the Auth Method and every input the AUTH value is computed from
- * @var IkeNs::notify   the Notify payload's own fields and the COOKIE it carries
- * @var IkeNs::ts       the Traffic Selectors a build encodes and the one a get names
- * @var IkeNs::cp       the Configuration payload a build encodes
- * @var IkeNs::sk       the Encrypted payload and its AEAD inputs
- * @var IkeNs::frag     the Encrypted Fragment counters and the chunk a reassembler stages
- * @var IkeNs::keymat   the key schedule's inputs and outputs
- * @var IkeNs::msg      what a whole-message build stamps into the header and wraps
- * @var IkeNs::walk     the caller-owned chain, transform and attribute walks
- * @var IkeNs::sess     the SA or handshake a call acts on
+ * @var IkeVars::work
+ *                        the caller's scratch region the hash, PRF and signature calls borrow
+ * @var IkeVars::hdr
+ *                        in: the header a build encodes; out: the header a parse decoded (sec 3.1)
+ * @var IkeVars::out
+ *                        where a build, a hash or a signature writes
+ * @var IkeVars::wire
+ *                        the octets a parse reads
+ * @var IkeVars::pl
+ *                        the generic payload header a build writes, and the payload's variable field
+ * @var IkeVars::prop
+ *                        the Proposal Substructure a build encodes, and the SPIs a Notify or Delete names
+ * @var IkeVars::ke
+ *                        the key exchange: the group and the public and private values
+ * @var IkeVars::id
+ *                        the identity: the ID payload's fields and its signed remainder
+ * @var IkeVars::auth
+ *                        the Auth Method and every input the AUTH value is computed from
+ * @var IkeVars::notify
+ *                        the Notify payload's own fields and the COOKIE it carries
+ * @var IkeVars::ts
+ *                        the Traffic Selectors a build encodes and the one a get names
+ * @var IkeVars::cp
+ *                        the Configuration payload a build encodes
+ * @var IkeVars::sk
+ *                        the Encrypted payload and its AEAD inputs
+ * @var IkeVars::frag
+ *                        the Encrypted Fragment counters and the chunk a reassembler stages
+ * @var IkeVars::keymat
+ *                        the key schedule's inputs and outputs
+ * @var IkeVars::msg
+ *                        what a whole-message build stamps into the header and wraps
+ * @var IkeVars::walk
+ *                        the caller-owned chain, transform and attribute walks
+ * @var IkeVars::sess
+ *                        the SA or handshake a call acts on
  *
- * @var IkeNs::ok          a call's true/false outcome
- * @var IkeNs::n           octets a build wrote or a call produced, zero on failure
- * @var IkeNs::u8          Number of TSs a count reports (sec 3.13)
- * @var IkeNs::payload     the payload a chain walk produced
- * @var IkeNs::proposal    the first Proposal Substructure of an SA payload
- * @var IkeNs::transform   the Transform Substructure a transform walk produced
- * @var IkeNs::sel         the Traffic Selector a get decoded
- * @var IkeNs::attr        the Configuration Attribute an attribute walk produced
- * @var IkeNs::ke_ref      the decoded Key Exchange payload
- * @var IkeNs::id_ref      the decoded Identification payload
- * @var IkeNs::auth_ref    the decoded Authentication payload
- * @var IkeNs::notify_ref  the decoded Notify payload
- * @var IkeNs::delete_ref  the decoded Delete payload
- * @var IkeNs::sk_ref      the sliced Encrypted or Encrypted Fragment body
- * @var IkeNs::cp_ref      the decoded Configuration payload
- * @var IkeNs::opened      the inner payload chain an open exposed
- * @var IkeNs::sa_init     the parsed IKE_SA_INIT message
+ * @var IkeVars::ok
+ *                           a call's true/false outcome
+ * @var IkeVars::n
+ *                           octets a build wrote or a call produced, zero on failure
+ * @var IkeVars::u8
+ *                           Number of TSs a count reports (sec 3.13)
+ * @var IkeVars::payload
+ *                           the payload a chain walk produced
+ * @var IkeVars::proposal
+ *                           the first Proposal Substructure of an SA payload
+ * @var IkeVars::transform
+ *                           the Transform Substructure a transform walk produced
+ * @var IkeVars::sel
+ *                           the Traffic Selector a get decoded
+ * @var IkeVars::attr
+ *                           the Configuration Attribute an attribute walk produced
+ * @var IkeVars::ke_ref
+ *                           the decoded Key Exchange payload
+ * @var IkeVars::id_ref
+ *                           the decoded Identification payload
+ * @var IkeVars::auth_ref
+ *                           the decoded Authentication payload
+ * @var IkeVars::notify_ref
+ *                           the decoded Notify payload
+ * @var IkeVars::delete_ref
+ *                           the decoded Delete payload
+ * @var IkeVars::sk_ref
+ *                           the sliced Encrypted or Encrypted Fragment body
+ * @var IkeVars::cp_ref
+ *                           the decoded Configuration payload
+ * @var IkeVars::opened
+ *                           the inner payload chain an open exposed
+ * @var IkeVars::sa_init
+ *                           the parsed IKE_SA_INIT message
  *
- * @var IkeNs::hdr_build   write the 28-octet IKE header from @c hdr, Length verbatim (sec 3.1)
- * @var IkeNs::hdr_parse   read the 28-octet IKE header into @c hdr (sec 3.1)
- * @var IkeNs::set_length  patch octets 24..27 of a built header to @c msg.length (sec 3.1)
- * @var IkeNs::payload_iter_init  start @c walk.chain at @c walk.first_type over @c wire (sec 3.2)
- * @var IkeNs::payload_next       read the next payload into @c payload and advance (sec 3.2)
- * @var IkeNs::payload_build      write a generic payload header and @c pl.data behind it (sec 3.2)
- * @var IkeNs::sa_build           write an SA payload carrying one proposal (sec 3.3, 3.3.1, 3.3.2)
- * @var IkeNs::ke_build           write a KE payload: @c ke.dh_group then @c pl.data (sec 3.4)
- * @var IkeNs::nonce_build        write a Nonce payload: @c pl.data is the Nonce Data (sec 3.9)
- * @var IkeNs::id_build           write an ID payload: @c id.id_type then @c pl.data (sec 3.5)
- * @var IkeNs::auth_build         write an AUTH payload: @c auth.auth_method then @c pl.data (sec 3.8)
- * @var IkeNs::cert_build         write a CERT or CERTREQ body: @c id.cert_encoding then @c pl.data (sec 3.6)
- * @var IkeNs::notify_build       write a Notify payload: @c prop SPI fields, type, @c pl.data (sec 3.10)
- * @var IkeNs::delete_build       write a Delete payload: @c prop fields then @c pl.data SPIs (sec 3.11)
- * @var IkeNs::ts_build           write a TSi or TSr payload from @c ts.sels (sec 3.13)
- * @var IkeNs::cp_build           write a CP payload: @c cp.cfg_type then its attributes (sec 3.15)
- * @var IkeNs::sk_build           lay out an SK payload: IV, Ciphertext, ICV (sec 3.14)
- * @var IkeNs::skf_build          lay out an SKF payload: the counters then IV, Ciphertext, ICV (RFC 7383 sec 2.5)
- * @var IkeNs::skf_parse          slice an SKF body into @c sk_ref (RFC 7383 sec 2.5)
- * @var IkeNs::frag_reasm_init    bind @c frag.reasm to the pool at @c out (RFC 7383 sec 2.6)
- * @var IkeNs::frag_reasm_add     stage one fragment's content (RFC 7383 sec 2.6)
- * @var IkeNs::frag_reasm_complete  every one of Total Fragments is staged (RFC 7383 sec 2.6)
- * @var IkeNs::frag_reasm_assemble  merge the staged fragments 1..Total into @c out (RFC 7383 sec 2.6)
- * @var IkeNs::cookie_compute     VersionIDofSecret | SHA-256(Ni | IPi | SPIi | secret) (sec 2.6)
- * @var IkeNs::cookie_verify      recompute that cookie and compare it in constant time (sec 2.6)
- * @var IkeNs::cookie_notify_build  write a COOKIE Notify carrying @c notify.cookie (sec 2.6)
- * @var IkeNs::ke_parse           decode a KE body into @c ke_ref (sec 3.4)
- * @var IkeNs::id_parse           decode an ID body into @c id_ref (sec 3.5)
- * @var IkeNs::auth_parse         decode an AUTH body into @c auth_ref (sec 3.8)
- * @var IkeNs::notify_parse       decode a Notify body into @c notify_ref (sec 3.10)
- * @var IkeNs::delete_parse       decode a Delete body into @c delete_ref (sec 3.11)
- * @var IkeNs::sk_parse           slice an SK body into @c sk_ref by @c sk.iv_len and @c sk.icv_len (sec 3.14)
- * @var IkeNs::sa_first_proposal  decode the first Proposal Substructure into @c proposal (sec 3.3.1)
- * @var IkeNs::transform_iter_init  start @c walk.transforms over @c walk.proposal (sec 3.3.2)
- * @var IkeNs::transform_next     read the next Transform Substructure into @c transform (sec 3.3.2)
- * @var IkeNs::ts_count           Number of TSs in a TS body, into @c u8 (sec 3.13)
- * @var IkeNs::ts_get             decode selector @c ts.index into @c sel (sec 3.13.1)
- * @var IkeNs::cp_parse           decode a CP body into @c cp_ref (sec 3.15)
- * @var IkeNs::cp_attr_iter_init  start @c walk.attrs over @c wire (sec 3.15.1)
- * @var IkeNs::cp_attr_next       read the next Configuration Attribute into @c attr (sec 3.15.1)
- * @var IkeNs::prf_plus           expand prf+(@c keymat.prf_key, @c keymat.seed) into @c out (sec 2.13)
- * @var IkeNs::derive_keys        SKEYSEED then the seven SK_* keys for a new IKE SA (sec 2.14)
- * @var IkeNs::rekey_derive_keys  the same split with SKEYSEED keyed by the old SK_d (sec 2.18)
- * @var IkeNs::child_keymat       KEYMAT = prf+(SK_d, [g^ir |] Ni | Nr) into @c out (sec 2.17)
- * @var IkeNs::suite_keylengths   map @c keymat.suite to the SK_* lengths in @c keymat.lens (sec 2.13)
- * @var IkeNs::sa_keys_from_init  compute g^ir then run the sec 2.14 schedule for @c sess.sa
- * @var IkeNs::sk_aead_seal       encrypt @c sk.pt under @c sk.key, writing Ciphertext then ICV (RFC 5282 sec 3.2)
- * @var IkeNs::sk_aead_open       verify the ICV, then decrypt into @c out (RFC 5282 sec 3.2, 5.1)
- * @var IkeNs::dh_public          our Key Exchange Data for @c ke.dh_group (RFC 8031 sec 3.1)
- * @var IkeNs::dh_compute         g^ir from @c ke.our_priv and @c ke.peer_pub (RFC 8031 sec 2)
- * @var IkeNs::auth_psk           AUTH = prf(prf(Shared Secret, pad), SignedOctets) (sec 2.15)
- * @var IkeNs::signed_octets      assemble RealMessage | Nonce | MACedID into @c auth.scratch (sec 2.15)
- * @var IkeNs::auth_sign_ecdsa_p256    sign those octets with P-256, writing r | s to @c out (RFC 7427 sec 3)
- * @var IkeNs::auth_verify_ecdsa_p256  verify a peer's P-256 signature over them (RFC 7427 sec 3)
- * @var IkeNs::auth_verify_rsa_sha256  verify a peer's RSA PKCS#1 v1.5 SHA-256 signature (sec 3.8)
- * @var IkeNs::sa_init_build      build HDR, SA, KE, Nonce as one IKE_SA_INIT message (sec 1.2)
- * @var IkeNs::sa_init_parse      parse an IKE_SA_INIT message into @c sa_init (sec 1.2)
- * @var IkeNs::auth_msg_build     build HDR, SK{ @c msg.inner } for an IKE_AUTH exchange (sec 3.14)
- * @var IkeNs::auth_msg_open      verify and decrypt an SK message in place into @c opened (sec 3.14)
- * @var IkeNs::initiator_start    emit the initiator's IKE_SA_INIT request (sec 1.2)
- * @var IkeNs::initiator_on_sa_init     consume the IKE_SA_INIT response and derive the keys (sec 1.2)
- * @var IkeNs::initiator_build_auth_psk emit SK{ IDi, AUTH } with a pre-shared key (sec 1.2, 2.15)
- * @var IkeNs::initiator_on_auth_psk    verify the responder's SK{ IDr, AUTH } (sec 1.2, 2.15)
- * @var IkeNs::responder_on_sa_init     consume an IKE_SA_INIT request and emit the response (sec 1.2)
- * @var IkeNs::responder_on_auth_psk    verify SK{ IDi, AUTH } and emit SK{ IDr, AUTH } (sec 1.2, 2.15)
- * @var IkeNs::informational_build  build an SK-protected INFORMATIONAL message (sec 1.4)
- * @var IkeNs::informational_open   verify and decrypt a received SK-protected message (sec 1.4)
- * @var IkeNs::create_child_sa_build  build an SK-protected CREATE_CHILD_SA message (sec 1.3)
+ * @var IkeNs::hdr_build
+ *                         write the 28-octet IKE header from @c hdr, Length verbatim (sec 3.1)
+ * @var IkeNs::hdr_parse
+ *                         read the 28-octet IKE header into @c hdr (sec 3.1)
+ * @var IkeNs::set_length
+ *                         patch octets 24..27 of a built header to @c msg.length (sec 3.1)
+ * @var IkeNs::payload_iter_init
+ *                                start @c walk.chain at @c walk.first_type over @c wire (sec 3.2)
+ * @var IkeNs::payload_next
+ *                                read the next payload into @c payload and advance (sec 3.2)
+ * @var IkeNs::payload_build
+ *                                write a generic payload header and @c pl.data behind it (sec 3.2)
+ * @var IkeNs::sa_build
+ *                                write an SA payload carrying one proposal (sec 3.3, 3.3.1, 3.3.2)
+ * @var IkeNs::ke_build
+ *                                write a KE payload: @c ke.dh_group then @c pl.data (sec 3.4)
+ * @var IkeNs::nonce_build
+ *                                write a Nonce payload: @c pl.data is the Nonce Data (sec 3.9)
+ * @var IkeNs::id_build
+ *                                write an ID payload: @c id.id_type then @c pl.data (sec 3.5)
+ * @var IkeNs::auth_build
+ *                                write an AUTH payload: @c auth.auth_method then @c pl.data (sec 3.8)
+ * @var IkeNs::cert_build
+ *                                write a CERT or CERTREQ body: @c id.cert_encoding then @c pl.data (sec 3.6)
+ * @var IkeNs::notify_build
+ *                                write a Notify payload: @c prop SPI fields, type, @c pl.data (sec 3.10)
+ * @var IkeNs::delete_build
+ *                                write a Delete payload: @c prop fields then @c pl.data SPIs (sec 3.11)
+ * @var IkeNs::ts_build
+ *                                write a TSi or TSr payload from @c ts.sels (sec 3.13)
+ * @var IkeNs::cp_build
+ *                                write a CP payload: @c cp.cfg_type then its attributes (sec 3.15)
+ * @var IkeNs::sk_build
+ *                                lay out an SK payload: IV, Ciphertext, ICV (sec 3.14)
+ * @var IkeNs::skf_build
+ *                                lay out an SKF payload: the counters then IV, Ciphertext, ICV (RFC 7383 sec 2.5)
+ * @var IkeNs::skf_parse
+ *                                slice an SKF body into @c sk_ref (RFC 7383 sec 2.5)
+ * @var IkeNs::frag_reasm_init
+ *                                bind @c frag.reasm to the pool at @c out (RFC 7383 sec 2.6)
+ * @var IkeNs::frag_reasm_add
+ *                                stage one fragment's content (RFC 7383 sec 2.6)
+ * @var IkeNs::frag_reasm_complete
+ *                                  every one of Total Fragments is staged (RFC 7383 sec 2.6)
+ * @var IkeNs::frag_reasm_assemble
+ *                                  merge the staged fragments 1..Total into @c out (RFC 7383 sec 2.6)
+ * @var IkeNs::cookie_compute
+ *                                VersionIDofSecret | SHA-256(Ni | IPi | SPIi | secret) (sec 2.6)
+ * @var IkeNs::cookie_verify
+ *                                recompute that cookie and compare it in constant time (sec 2.6)
+ * @var IkeNs::cookie_notify_build
+ *                                  write a COOKIE Notify carrying @c notify.cookie (sec 2.6)
+ * @var IkeNs::ke_parse
+ *                                decode a KE body into @c ke_ref (sec 3.4)
+ * @var IkeNs::id_parse
+ *                                decode an ID body into @c id_ref (sec 3.5)
+ * @var IkeNs::auth_parse
+ *                                decode an AUTH body into @c auth_ref (sec 3.8)
+ * @var IkeNs::notify_parse
+ *                                decode a Notify body into @c notify_ref (sec 3.10)
+ * @var IkeNs::delete_parse
+ *                                decode a Delete body into @c delete_ref (sec 3.11)
+ * @var IkeNs::sk_parse
+ *                                slice an SK body into @c sk_ref by @c sk.iv_len and @c sk.icv_len (sec 3.14)
+ * @var IkeNs::sa_first_proposal
+ *                                decode the first Proposal Substructure into @c proposal (sec 3.3.1)
+ * @var IkeNs::transform_iter_init
+ *                                  start @c walk.transforms over @c walk.proposal (sec 3.3.2)
+ * @var IkeNs::transform_next
+ *                                read the next Transform Substructure into @c transform (sec 3.3.2)
+ * @var IkeNs::ts_count
+ *                                Number of TSs in a TS body, into @c u8 (sec 3.13)
+ * @var IkeNs::ts_get
+ *                                decode selector @c ts.index into @c sel (sec 3.13.1)
+ * @var IkeNs::cp_parse
+ *                                decode a CP body into @c cp_ref (sec 3.15)
+ * @var IkeNs::cp_attr_iter_init
+ *                                start @c walk.attrs over @c wire (sec 3.15.1)
+ * @var IkeNs::cp_attr_next
+ *                                read the next Configuration Attribute into @c attr (sec 3.15.1)
+ * @var IkeNs::prf_plus
+ *                                expand prf+(@c keymat.prf_key, @c keymat.seed) into @c out (sec 2.13)
+ * @var IkeNs::derive_keys
+ *                                SKEYSEED then the seven SK_* keys for a new IKE SA (sec 2.14)
+ * @var IkeNs::rekey_derive_keys
+ *                                the same split with SKEYSEED keyed by the old SK_d (sec 2.18)
+ * @var IkeNs::child_keymat
+ *                                KEYMAT = prf+(SK_d, [g^ir |] Ni | Nr) into @c out (sec 2.17)
+ * @var IkeNs::suite_keylengths
+ *                                map @c keymat.suite to the SK_* lengths in @c keymat.lens (sec 2.13)
+ * @var IkeNs::sa_keys_from_init
+ *                                compute g^ir then run the sec 2.14 schedule for @c sess.sa
+ * @var IkeNs::sk_aead_seal
+ *                                encrypt @c sk.pt under @c sk.key, writing Ciphertext then ICV (RFC 5282 sec 3.2)
+ * @var IkeNs::sk_aead_open
+ *                                verify the ICV, then decrypt into @c out (RFC 5282 sec 3.2, 5.1)
+ * @var IkeNs::dh_public
+ *                                our Key Exchange Data for @c ke.dh_group (RFC 8031 sec 3.1)
+ * @var IkeNs::dh_compute
+ *                                g^ir from @c ke.our_priv and @c ke.peer_pub (RFC 8031 sec 2)
+ * @var IkeNs::auth_psk
+ *                                AUTH = prf(prf(Shared Secret, pad), SignedOctets) (sec 2.15)
+ * @var IkeNs::signed_octets
+ *                                assemble RealMessage | Nonce | MACedID into @c auth.scratch (sec 2.15)
+ * @var IkeNs::auth_sign_ecdsa_p256
+ *                                     sign those octets with P-256, writing r | s to @c out (RFC 7427 sec 3)
+ * @var IkeNs::auth_verify_ecdsa_p256
+ *                                     verify a peer's P-256 signature over them (RFC 7427 sec 3)
+ * @var IkeNs::auth_verify_rsa_sha256
+ *                                     verify a peer's RSA PKCS#1 v1.5 SHA-256 signature (sec 3.8)
+ * @var IkeNs::sa_init_build
+ *                                build HDR, SA, KE, Nonce as one IKE_SA_INIT message (sec 1.2)
+ * @var IkeNs::sa_init_parse
+ *                                parse an IKE_SA_INIT message into @c sa_init (sec 1.2)
+ * @var IkeNs::auth_msg_build
+ *                                build HDR, SK{ @c msg.inner } for an IKE_AUTH exchange (sec 3.14)
+ * @var IkeNs::auth_msg_open
+ *                                verify and decrypt an SK message in place into @c opened (sec 3.14)
+ * @var IkeNs::initiator_start
+ *                                emit the initiator's IKE_SA_INIT request (sec 1.2)
+ * @var IkeNs::initiator_on_sa_init
+ *                                      consume the IKE_SA_INIT response and derive the keys (sec 1.2)
+ * @var IkeNs::initiator_build_auth_psk
+ *                                      emit SK{ IDi, AUTH } with a pre-shared key (sec 1.2, 2.15)
+ * @var IkeNs::initiator_on_auth_psk
+ *                                      verify the responder's SK{ IDr, AUTH } (sec 1.2, 2.15)
+ * @var IkeNs::responder_on_sa_init
+ *                                      consume an IKE_SA_INIT request and emit the response (sec 1.2)
+ * @var IkeNs::responder_on_auth_psk
+ *                                      verify SK{ IDi, AUTH } and emit SK{ IDr, AUTH } (sec 1.2, 2.15)
+ * @var IkeNs::informational_build
+ *                                  build an SK-protected INFORMATIONAL message (sec 1.4)
+ * @var IkeNs::informational_open
+ *                                  verify and decrypt a received SK-protected message (sec 1.4)
+ * @var IkeNs::create_child_sa_build
+ *                                    build an SK-protected CREATE_CHILD_SA message (sec 1.3)
  */
 typedef struct
 {

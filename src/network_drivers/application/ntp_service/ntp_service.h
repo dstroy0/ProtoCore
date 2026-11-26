@@ -59,22 +59,34 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::NtpService with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   NtpService.begin_args.tz = ...;
  *   NtpService.begin_args.server1 = ...;
  *   NtpService.begin_args.server2 = ...;
  *   NtpService.begin(work);
  *   // NtpService.ok is what the call reports
+ * @endcode
  *
- * @var NtpServiceNs::begin_args  what begin takes: tz, server1, server2
- * @var NtpServiceNs::set_test_epoch_args  what set_test_epoch takes: epoch
- * @var NtpServiceNs::ok  true if the client was started; false if disabled at compile time
- * @var NtpServiceNs::value  the value a call reports
- * @var NtpServiceNs::ms  the milliseconds a call reports
- * @var NtpServiceNs::begin  start the SNTP client. Returns immediately; the first sync arrives ...
- * @var NtpServiceNs::synced  true once a plausible wall-clock time has been obtained from SNTP. ...
- * @var NtpServiceNs::epoch  current Unix epoch seconds, or 0 if not yet synced (or disabled)
- * @var NtpServiceNs::time_source  NTP as a time source for the multi-source registry ...
- * @var NtpServiceNs::set_test_epoch  seed the clock without asking a server: the accessors above report ...
+ * @var NtpServiceVars::begin_args
+ *                                  what begin takes: tz, server1, server2
+ * @var NtpServiceVars::set_test_epoch_args
+ *                                           what set_test_epoch takes: epoch
+ * @var NtpServiceVars::ok
+ *                          true if the client was started; false if disabled at compile time
+ * @var NtpServiceVars::value
+ *                             the value a call reports
+ * @var NtpServiceVars::ms
+ *                          the milliseconds a call reports
+ * @var NtpServiceNs::begin
+ *                           start the SNTP client. Returns immediately; the first sync arrives ...
+ * @var NtpServiceNs::synced
+ *                            true once a plausible wall-clock time has been obtained from SNTP. ...
+ * @var NtpServiceNs::epoch
+ *                           current Unix epoch seconds, or 0 if not yet synced (or disabled)
+ * @var NtpServiceNs::time_source
+ *                                 NTP as a time source for the multi-source registry ...
+ * @var NtpServiceNs::set_test_epoch
+ *                                    seed the clock without asking a server: the accessors above report ...
  *
  * @c work is PROTOCORE_NTP_SERVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

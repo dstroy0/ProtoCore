@@ -22,7 +22,7 @@ EMBED_BEGIN_DECLS
  * byte strings and the derived client/server secrets).
  *
  * @ref HkdfNs::expand caps out_len at 255*PROTOCORE_HKDF_HASH_LEN, the point past which the single-octet
- * block counter has no encoding: out is zeroed and @ref HkdfNs::ok comes back false.
+ * block counter has no encoding: out is zeroed and the call comes back false.
  *
  * @c work is PROTOCORE_HKDF_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,

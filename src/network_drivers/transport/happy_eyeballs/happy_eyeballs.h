@@ -65,18 +65,28 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::HappyEyeballs with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   HappyEyeballs.pref_args.ip = ...;
  *   HappyEyeballs.pref(work);
  *   // HappyEyeballs.n is what the call reports
+ * @endcode
  *
- * @var HappyEyeballsNs::pref_args  what pref takes: ip
- * @var HappyEyeballsNs::order_args  what order takes: list, n
- * @var HappyEyeballsNs::attempt_due_args  what attempt_due takes: last_start_ms, now_ms,
- * @var HappyEyeballsNs::ok  true when now_ms - last_start_ms >= attempt_delay_ms (wrap-safe)
- * @var HappyEyeballsNs::n  the count a call reports
- * @var HappyEyeballsNs::pref  RFC 6724-style preference score for a destination address (higher ...
- * @var HappyEyeballsNs::order  order a candidate list for Happy Eyeballs: stable-sort by ...
- * @var HappyEyeballsNs::attempt_due  connection Attempt Delay gate (RFC 8305 sec 5): may the next ...
+ * @var HappyEyeballsVars::pref_args
+ *                                    what pref takes: ip
+ * @var HappyEyeballsVars::order_args
+ *                                     what order takes: list, n
+ * @var HappyEyeballsVars::attempt_due_args
+ *                                           what attempt_due takes: last_start_ms, now_ms,
+ * @var HappyEyeballsVars::ok
+ *                             true when now_ms - last_start_ms >= attempt_delay_ms (wrap-safe)
+ * @var HappyEyeballsVars::n
+ *                            the count a call reports
+ * @var HappyEyeballsNs::pref
+ *                             RFC 6724-style preference score for a destination address (higher ...
+ * @var HappyEyeballsNs::order
+ *                              order a candidate list for Happy Eyeballs: stable-sort by ...
+ * @var HappyEyeballsNs::attempt_due
+ *                                    connection Attempt Delay gate (RFC 8305 sec 5): may the next ...
  *
  * @c work is PROTOCORE_HAPPY_EYEBALLS_BORROW bytes the CALLER took, at an address it knows. It is not held past the
  * call, so nothing here aliases it. How those bytes are carved is this module's and is never named here.

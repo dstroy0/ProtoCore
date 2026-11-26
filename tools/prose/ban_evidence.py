@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Score every banned pattern against human technical writing, and against both arms of this tree.
 #
-#   Usage:  python utils/maint/prose/ban_evidence.py [--worst N]
+#   Usage:  python tools/prose/ban_evidence.py [--worst N]
 #
 # docs_check carries 242 patterns and every one of them got there because somebody noticed it.
 # That makes the list a record of what was noticed. This asks what the list is claiming: that these

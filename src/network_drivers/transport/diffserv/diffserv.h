@@ -54,12 +54,18 @@ static inline uint8_t protocore_dscp_to_tos(uint8_t dscp)
  * A caller sets the mark it wants, invokes the call through ::DiffServ, and reads a mark back off
  * the same handle.
  *
- * @var DiffServNs::dscp          the code point a setter installs
- * @var DiffServNs::u8            the code point a getter reports
- * @var DiffServNs::set_default   the mark new TCP connections take
- * @var DiffServNs::default_dscp  that mark
- * @var DiffServNs::set_udp       the mark UDP sends take
- * @var DiffServNs::udp_dscp      that mark
+ * @var DiffServVars::dscp
+ *                                  the code point a setter installs
+ * @var DiffServVars::u8
+ *                                  the code point a getter reports
+ * @var DiffServNs::set_default
+ *                                the mark new TCP connections take
+ * @var DiffServNs::default_dscp
+ *                                that mark
+ * @var DiffServNs::set_udp
+ *                                the mark UDP sends take
+ * @var DiffServNs::udp_dscp
+ *                                that mark
  *
  * Per-connection and per-listener marks are set through the connection and the listener, which own
  * those objects; this table holds only the defaults they start from.

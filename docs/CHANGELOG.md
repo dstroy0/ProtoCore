@@ -749,7 +749,7 @@ All notable changes to ProtoCore are documented here.
 - tools gate bugfix ([`9addb7c`](https://github.com/dstroy0/ProtoCore/commit/9addb7c8991c7700f078dd31ce96d5f8519da3ee))
 - tools comment bugfix ([`5320eda`](https://github.com/dstroy0/ProtoCore/commit/5320eda82194a64e49446189c418b0a7f608e2d6))
 - restrict is gone, because there is nothing left for it to promise ([`3f56f82`](https://github.com/dstroy0/ProtoCore/commit/3f56f82dcba7d198271f389dfc80986ee6a27fad))
-- an operand group is not always called <entry>_args ([`cf4fbfd`](https://github.com/dstroy0/ProtoCore/commit/cf4fbfd517c45c276cedaa3eaf0e15340069578b))
+- an operand group is not always called `<entry>_args` ([`cf4fbfd`](https://github.com/dstroy0/ProtoCore/commit/cf4fbfd517c45c276cedaa3eaf0e15340069578b))
 - thread, 120 call sites ([`1c64d60`](https://github.com/dstroy0/ProtoCore/commit/1c64d602a786cd0635704331bf5ec537e6ea07b8))
 - five more, on the fixes rather than on anything new ([`0838dc5`](https://github.com/dstroy0/ProtoCore/commit/0838dc58e31c3ea4e5bd987c5d43ccfc48d8cf3b))
 - a result local always declares, with a fresh name when that one is taken ([`d803b7b`](https://github.com/dstroy0/ProtoCore/commit/d803b7b1b90a8be896aea8de760dcc177a70781b))
@@ -788,7 +788,7 @@ All notable changes to ProtoCore are documented here.
 - convert shape: say what it guesses and what it must not move ([`d43c677`](https://github.com/dstroy0/ProtoCore/commit/d43c677f163b49a5588bd12fb9f547e169c6a8c3))
 - clang-format the vendor HAL headers ([`d126f0f`](https://github.com/dstroy0/ProtoCore/commit/d126f0fabcb0c8e2e159b63b866ec82a941c9908))
 - black over tools/ ([`4067311`](https://github.com/dstroy0/ProtoCore/commit/40673111739ffa30840b4e764423e77d9cd65d14))
-- clang-format the 77 files that had drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
+- clang-format the 77 files that drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
 - retire the stand-in arrays, 663 sites ([`c78ea4b`](https://github.com/dstroy0/ProtoCore/commit/c78ea4b9ebe232ba6da845628c6e45d575ce3080))
 - only the config include above the gate, 195 files ([`1cd928d`](https://github.com/dstroy0/ProtoCore/commit/1cd928d6a858f175eeae18d2705d0ebb75367e09))
 - read the gate, and see a static with no initializer ([`96b0057`](https://github.com/dstroy0/ProtoCore/commit/96b00576c692dcff7ae4859f0a4a57eb5c573bb4))
@@ -1263,21 +1263,18 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.7 - 2026-08-08</b></summary>
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - bump `github/codeql-action` from `4.37.4` to `4.37.6` ([`80583da`](https://github.com/dstroy0/ProtoCore/commit/80583da1fdb89cef102c37115cb5d25eaeb9645c))
 - update test report + coverage [skip ci] ([`2ab9538`](https://github.com/dstroy0/ProtoCore/commit/2ab95388c5e8f7f2f59ceac305d504d3f212b994))
 - update CHANGELOG.md [skip ci] ([`e32c090`](https://github.com/dstroy0/ProtoCore/commit/e32c090457bb459660d9d3b3a2c62c9e0c49aaaf))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 1.0.6 → 1.0.7 ([`008347f`](https://github.com/dstroy0/ProtoCore/commit/008347fbb73d6ef2abd3c043af1815776f6fbdcf))
 - Merge Dependabot #25: build(deps): bump `github/codeql-action` from `4.37.4` to `4.37.6` ([`dd73c4e`](https://github.com/dstroy0/ProtoCore/commit/dd73c4e33f070c4b73736e606a9328ce05ffeb92))
 - Merge branch `c11-target` into `main` ([`fa05744`](https://github.com/dstroy0/ProtoCore/commit/fa057449d298df0900d6a2127fc4e9af84fb1f7f))
 - Merge pull request #24 from `dstroy0/c11-target` ([`2dca621`](https://github.com/dstroy0/ProtoCore/commit/2dca621fe1ba3caecd58f3dbc58cba4313be4b88))
 
-### Documentation
-
+<h3>Documentation</h3>
 - update ESP32 build footprints [skip ci] ([`c27c802`](https://github.com/dstroy0/ProtoCore/commit/c27c8021f689b3e0a1da90ac403b871b08632a91))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`2324dff`](https://github.com/dstroy0/ProtoCore/commit/2324dff6a8f34a26bccdf42e874770f30a2f9a0e))
 
@@ -1288,16 +1285,13 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.6 - 2026-08-08</b></summary>
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 1.0.5 → 1.0.6 ([`e56e724`](https://github.com/dstroy0/ProtoCore/commit/e56e72485e094a0f94a5ce6bbb9f75304446d549))
 
-### Features
-
+<h3>Features</h3>
 - the SSH host key comes from NVS, and TLS gets a software record layer ([`b8d3971`](https://github.com/dstroy0/ProtoCore/commit/b8d397187cc64aa10c7b73dab91b4f661c689ea3))
 
-### Refactor
-
+<h3>Refactor</h3>
 - every backend pair selects on its capability, not on the build ([`c4346fa`](https://github.com/dstroy0/ProtoCore/commit/c4346fabd0b78db07fd30bfbcd02bc12d0fc3ae8))
 - the RSA backends select on the capability, not on the build ([`a233906`](https://github.com/dstroy0/ProtoCore/commit/a23390644f6c1de0359a48c6dc5442632ec10b6f))
 
@@ -1308,16 +1302,13 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.5 - 2026-08-08</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - every buffer in these modules is borrowed, and ban 19 has no waiver ([`f78f49d`](https://github.com/dstroy0/ProtoCore/commit/f78f49d38bbeb7a00fda48e0ef654bae91358901))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 1.0.4 → 1.0.5 ([`6471ed0`](https://github.com/dstroy0/ProtoCore/commit/6471ed074b76dca02bfd70c2ed8370af17735995))
 
-### Features
-
+<h3>Features</h3>
 - a portable SNTP client, so the wall clock exists off the SDK's ([`a3a566b`](https://github.com/dstroy0/ProtoCore/commit/a3a566b73b759031ca8af89cd3e50cf85e41cda7))
 
 </details>
@@ -1327,21 +1318,17 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.4 - 2026-08-07</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - three shell scripts resolved the repo root one directory short ([`50b3e44`](https://github.com/dstroy0/ProtoCore/commit/50b3e44be68eddf0a3248fea3174a0cebb67803b))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 1.0.3 → 1.0.4 ([`4133d81`](https://github.com/dstroy0/ProtoCore/commit/4133d81ba3b5db692bbe698318e10803d4415623))
 
-### Features
-
+<h3>Features</h3>
 - a portable responder, so mDNS exists on a part with no vendor component ([`5d5cff5`](https://github.com/dstroy0/ProtoCore/commit/5d5cff529e318024726456cbbc658e07c3a83601))
 - one DNS name codec, and dns_server reads names through it ([`7bb62fb`](https://github.com/dstroy0/ProtoCore/commit/7bb62fb6436034a2f43182081be873cfce2a4294))
 
-### Refactor
-
+<h3>Refactor</h3>
 - one path, and the UDP bind is covered on the wire ([`a2d0c6f`](https://github.com/dstroy0/ProtoCore/commit/a2d0c6f32b80ca675a58920064c4b07bbc84dd91))
 
 </details>
@@ -1351,8 +1338,7 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.3 - 2026-08-07</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - the QUIC server closes its port, and its tests drive the real listener ([`ad55ca9`](https://github.com/dstroy0/ProtoCore/commit/ad55ca9543c449e43b2dd49a7d96e8a2471ee630))
 - sequence the finish before the strlen it is compared against ([`d720925`](https://github.com/dstroy0/ProtoCore/commit/d7209255e617ee04dd43daa5b7571b24d3c837b0))
 - build_src_filter reaches core_setup with a step up ([`448fb43`](https://github.com/dstroy0/ProtoCore/commit/448fb4346b7dd397c448a0baaa73ccb913354bf5))
@@ -1414,24 +1400,21 @@ All notable changes to ProtoCore are documented here.
 - the base flags that defeated PROTOCORE_HOT_FORCE, so the target path gets a test env ([`f014fd1`](https://github.com/dstroy0/ProtoCore/commit/f014fd1fab2c2d0af005d01cbad47dc19c9bc2d9))
 - the dns server takes the raw mover's header, not the span module's ([`1d5d3e6`](https://github.com/dstroy0/ProtoCore/commit/1d5d3e6838ce7e2769c6883b3b55cd4b6750f0fe))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - one example-discovery action instead of the same 29 lines in two workflows ([`2140a76`](https://github.com/dstroy0/ProtoCore/commit/2140a762a4939ccf8e4bf76d45851aae0f558e3b))
 - build the platform the project ships on, and pull before committing to a tree CI writes ([`8063f5a`](https://github.com/dstroy0/ProtoCore/commit/8063f5a2a92c0847574fcaec1f621f281f289418))
 - drop the scratch bucket map that rode along with the test move ([`8740361`](https://github.com/dstroy0/ProtoCore/commit/8740361589c0b1353ce240ebe9fe379c7405e38b))
 - the byte ops and the libc string/stdio includes become enforced bans ([`54ac756`](https://github.com/dstroy0/ProtoCore/commit/54ac756cb1ba224381e0c4870683d164d8f69371))
 - the exec bit on the 16 shell scripts that carry a shebang and never had one ([`23b3073`](https://github.com/dstroy0/ProtoCore/commit/23b30737841e6153cde763341044c1ad56823db0))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 1.0.2 → 1.0.3 ([`9d03db2`](https://github.com/dstroy0/ProtoCore/commit/9d03db2f21a9f6ed326e3384ad82f73e1843af09))
 - clang-format the tree, and pin the one macro run it cannot converge on ([`069153a`](https://github.com/dstroy0/ProtoCore/commit/069153a989b1211846ea2bd2c7236a0b5a582b70))
 - clang-format the two rig sketches, and the hook's own package invocation ([`ed4620b`](https://github.com/dstroy0/ProtoCore/commit/ed4620b941980d926b6fa2a941b4f345554819a9))
 - back out the ssh table conversion until it carries per-member feature guards ([`5e326da`](https://github.com/dstroy0/ProtoCore/commit/5e326dad88771b67dd5522f061a4a2989477ac58))
 - Revert "refactor: the listener registry moves to the listener that owns the pool" ([`9dd5037`](https://github.com/dstroy0/ProtoCore/commit/9dd50375c4279cf2ec68fe720efe11d277622b7f))
 
-### Documentation
-
+<h3>Documentation</h3>
 - name the crypto arms HW path and SW path, and stop calling the fallback a test path ([`9896750`](https://github.com/dstroy0/ProtoCore/commit/9896750d9ffd77875022f0cdd7146a3ddcf0bbe8))
 - stop sending readers to hardware for what the host now covers ([`83141a8`](https://github.com/dstroy0/ProtoCore/commit/83141a84435cd56c5346b2624fe9b291b6a0e9a4))
 - log the fieldbus audit findings incl. a verified out-of-bounds axis read ([`b9ebcae`](https://github.com/dstroy0/ProtoCore/commit/b9ebcaeb041bb881e90d9d2ab95c473cb833e5bf))
@@ -1447,13 +1430,11 @@ All notable changes to ProtoCore are documented here.
 - cut the three law docs by 55 percent, and correct the type-name row ([`bfdd238`](https://github.com/dstroy0/ProtoCore/commit/bfdd23841dfb835419bae2265c36337d8bf3ec2a))
 - log the arena sizing and id-table reset defects ([`7fe1256`](https://github.com/dstroy0/ProtoCore/commit/7fe1256633557f39bf6b184d4352034f75365b1e))
 
-### Features
-
+<h3>Features</h3>
 - float_bits.h, and membuild reads IEEE-754 fields through it ([`13a3575`](https://github.com/dstroy0/ProtoCore/commit/13a3575733434820da01ea9e6c577ec71ea0c714))
 - the ring answers which slot, and what a held one keeps out ([`8d4afd3`](https://github.com/dstroy0/ProtoCore/commit/8d4afd38495d66b3de82d272e09aed33e201b9d0))
 
-### Refactor
-
+<h3>Refactor</h3>
 - one path through the SSH client, the H3 RNG, and the packet framer ([`1c067cb`](https://github.com/dstroy0/ProtoCore/commit/1c067cb43aea11afc5f0ac91def0ccdb37da3ec4))
 - one path, and the DMA lane runs off the DMA driver ([`1d57592`](https://github.com/dstroy0/ProtoCore/commit/1d575924ba847ce3509233e4cac177ee71ab5750))
 - one path for the worker tasks, and designate the table ([`5ba9807`](https://github.com/dstroy0/ProtoCore/commit/5ba98070e7b5e9ce6e4b63386a2fece03c5e2503))
@@ -1507,8 +1488,7 @@ All notable changes to ProtoCore are documented here.
 - the dns server moves off implicit libc onto mem and str ([`9514960`](https://github.com/dstroy0/ProtoCore/commit/9514960a99bd0155d3c0623766a8d1ab9c6b2cf5))
 - dns joins under network; Route carries ids, not other modules' state ([`b822440`](https://github.com/dstroy0/ProtoCore/commit/b822440d85ffe7ed61a194990ffd1c1a227d8918))
 
-### Testing
-
+<h3>Testing</h3>
 - unwind a task entry, and honor the queue depth create asked for ([`d72177a`](https://github.com/dstroy0/ProtoCore/commit/d72177ab339c29a2161f2e2e2aafd8c61ab5073a))
 - the host platform can run a started task ([`7193191`](https://github.com/dstroy0/ProtoCore/commit/7193191a12e44d6e1612784f842e3cfaf6f0efe1))
 - close two gaps in the DMA host mock ([`87ed76c`](https://github.com/dstroy0/ProtoCore/commit/87ed76c2b0cfce17a8bc62be37411596ac535caf))
@@ -1539,8 +1519,7 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.2 - 2026-08-05</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - the four auth examples now enable PC_ENABLE_AUTH ([`1c56a73`](https://github.com/dstroy0/ProtoCore/commit/1c56a7350c048e2d45f3259431539a25e2e41586))
 - five examples still calling the C++ default-argument forms, and WebTerminal's missing dependency flag ([`a43092f`](https://github.com/dstroy0/ProtoCore/commit/a43092f3b29d6c49aee47680a57e56a0cc03f96b))
 - the coverage union aborted on a function with two build-time definitions ([`7597275`](https://github.com/dstroy0/ProtoCore/commit/759727591f2bd66de517db119217783a245126d2))
@@ -1574,8 +1553,7 @@ All notable changes to ProtoCore are documented here.
 - examples pointed at pre-migration header paths ([`e5dbd79`](https://github.com/dstroy0/ProtoCore/commit/e5dbd79ba3d249e30b96b50de1b2e8948631c794))
 - the conversion left .cpp paths in the asset generator and two docs ([`5d1ef59`](https://github.com/dstroy0/ProtoCore/commit/5d1ef5985a32fccbc958528eaa2f591a07923122))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - rename the format workflow, since clang-format is one step of several ([`50f2aa1`](https://github.com/dstroy0/ProtoCore/commit/50f2aa1bfbff79ff4aeec54686070cbf5ef5fb4a))
 - gate Python formatting, and keep vendored components out of the C style sweep ([`f505f82`](https://github.com/dstroy0/ProtoCore/commit/f505f8240616bd3d7a3f286417019f2278e428af))
 - unblock the two formatting gates ([`35a1972`](https://github.com/dstroy0/ProtoCore/commit/35a1972574bb72c3a6b90be461c2018ef8590256))
@@ -1586,15 +1564,13 @@ All notable changes to ProtoCore are documented here.
 - unpin the espressif32 platform so the toolchain tracks latest ([`b02e57b`](https://github.com/dstroy0/ProtoCore/commit/b02e57be6e267dcc584b028faa9f2abcf59b647a))
 - the naming law stops demanding a C++ construct, and reads the enum's real name ([`9ae2f64`](https://github.com/dstroy0/ProtoCore/commit/9ae2f6449b219c4278168dd1ee0389084f81ed27))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 1.0.1 → 1.0.2 ([`ecf5cfc`](https://github.com/dstroy0/ProtoCore/commit/ecf5cfc2dd8a3544abed5a7cda919bc04968bc9b))
 - Merge remote-tracking branch 'origin/main' into c11-target ([`1fd5f6c`](https://github.com/dstroy0/ProtoCore/commit/1fd5f6c5b673063ef2c01d369f5984eae10a43bf))
 - Merge pull request #23 from `dstroy0/c11-target` ([`cce1c5a`](https://github.com/dstroy0/ProtoCore/commit/cce1c5ab634cbe7aa7f4da682164b5d782b89d9b))
 - survey a JTAG DRAM dump for dispatch tables ([`19d7ef8`](https://github.com/dstroy0/ProtoCore/commit/19d7ef8985cf9eb54d888824042eee01d4603318))
 
-### Documentation
-
+<h3>Documentation</h3>
 - the radio keep-awake note names Radio.busy_hold ([`91a8824`](https://github.com/dstroy0/ProtoCore/commit/91a88241fe0d34a68c832f667b7087f98431e698))
 - regenerate what the two new feature flags feed, and name the stack idemIP ([`febe99a`](https://github.com/dstroy0/ProtoCore/commit/febe99a1802af8efe3508d8de99330c931edba46))
 - regenerate the README feature tables for SMBus and PMBus ([`f8661f2`](https://github.com/dstroy0/ProtoCore/commit/f8661f252f5c059c749b5063b7b42647da47660c))
@@ -1613,8 +1589,7 @@ All notable changes to ProtoCore are documented here.
 - capture the analog RF programming sequences from the radio blobs ([`3d15598`](https://github.com/dstroy0/ProtoCore/commit/3d15598decb2495303ac596f325da99744d92f4d))
 - map the radio blobs' registers by function, and roadmap our own stack ([`7823177`](https://github.com/dstroy0/ProtoCore/commit/7823177a4a3ada1580df0814b924898ec5c31f2b))
 
-### Features
-
+<h3>Features</h3>
 - protomem, the byte-span module ([`65fce52`](https://github.com/dstroy0/ProtoCore/commit/65fce529bfa06273dbec6719512d594c265bef48))
 - gate the comment law, and sweep the CRC history clause ([`cd10764`](https://github.com/dstroy0/ProtoCore/commit/cd107643c06393d9be251328704a3b8c37d83038))
 - per-transfer log with timestamps in the host bus capture ([`f0c9e62`](https://github.com/dstroy0/ProtoCore/commit/f0c9e62714a6ef1481a347eb3975975f450ee3cc))
@@ -1625,8 +1600,7 @@ All notable changes to ProtoCore are documented here.
 - a microsecond delay beside the millisecond one ([`2f78cb9`](https://github.com/dstroy0/ProtoCore/commit/2f78cb99dbf1effb108218f260f4e9de831bded2))
 - a shared SPI bus owner beside the I2C one ([`0460d48`](https://github.com/dstroy0/ProtoCore/commit/0460d48bf51b25dccb369571d6541096e6baa2c6))
 
-### Refactor
-
+<h3>Refactor</h3>
 - mmgr owns the byte layer; auth owns its credentials ([`53ce282`](https://github.com/dstroy0/ProtoCore/commit/53ce282d62cedd0b0f52d6e2dc1cc008728f565e))
 - the route table lives in the secure pool ([`c696004`](https://github.com/dstroy0/ProtoCore/commit/c696004bc1384b625539e96c558542a631debaaf))
 - route exports one symbol, carried as network.route ([`c600e39`](https://github.com/dstroy0/ProtoCore/commit/c600e397810c6768dbe2db61694c74a509e4a86c))
@@ -1642,8 +1616,7 @@ All notable changes to ProtoCore are documented here.
 - the INA219 driver reaches the bus through the i2c owner ([`c27abc5`](https://github.com/dstroy0/ProtoCore/commit/c27abc5f3bed3d9b1b68a38130e1689315a42c5d))
 - the DMA submit moves its span through proto_raw_read ([`8e212ea`](https://github.com/dstroy0/ProtoCore/commit/8e212ea2baaae66822b875b2f186c47ad915c90e))
 
-### Testing
-
+<h3>Testing</h3>
 - pointer nesting instead of by value ([`261ddd9`](https://github.com/dstroy0/ProtoCore/commit/261ddd921169b5f63ec4019d8ebbf693d1a74625))
 - does a layer object embed a module's struct by value across a TU ([`d08865b`](https://github.com/dstroy0/ProtoCore/commit/d08865b19c759f1db09beba43e1f86c24f75dfa7))
 - roaming borrows its BTM hint instead of declaring it ([`528ea45`](https://github.com/dstroy0/ProtoCore/commit/528ea453a099e3f55b2e2b9c5bf82c942e8f52fb))
@@ -1666,8 +1639,7 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.1 - 2026-08-04</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - drop an unreachable release left behind the return in ssh_conn ([`a50b556`](https://github.com/dstroy0/ProtoCore/commit/a50b556d4b43d926ba38924083125e3825930e62))
 - the RSA HAL reaches the entry point for the widths it is written in ([`49c20a1`](https://github.com/dstroy0/ProtoCore/commit/49c20a147ba6ca8fde3c01c361f456d6dbdc4f15))
 - protocore.h gives its declarations C linkage, so a C++ sketch can link them ([`89bb630`](https://github.com/dstroy0/ProtoCore/commit/89bb63052320107ba32b1834e79704da74fd890a))
@@ -1686,8 +1658,7 @@ All notable changes to ProtoCore are documented here.
 - the scoped-enum residue in test/, resolved by the compiler not by guessing ([`3757c8b`](https://github.com/dstroy0/ProtoCore/commit/3757c8b4599f4a90050b6c931268a6f2c2a32a23))
 - the C++ the native suites could not see, and the WAL's missing barrier ([`ac57b39`](https://github.com/dstroy0/ProtoCore/commit/ac57b390ee164122c6d612b582dd931150be1c78))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - gcovr unions the coverage tracefiles; merge_coverage.py is gone ([`79e766a`](https://github.com/dstroy0/ProtoCore/commit/79e766ac52f499a869fe2511d71c20a86a1422fe))
 - measure coverage over all of src, with nothing excluded ([`c6c2615`](https://github.com/dstroy0/ProtoCore/commit/c6c261575d9029bea5c4a6f4c5c96fec19ae441d))
 - esp32dev states the C standard src/ is written in ([`3d0cd7f`](https://github.com/dstroy0/ProtoCore/commit/3d0cd7fbb5633d25edd3d45672fdf0a30f40aa28))
@@ -1702,26 +1673,22 @@ All notable changes to ProtoCore are documented here.
 - update CHANGELOG.md [skip ci] ([`3ce47f1`](https://github.com/dstroy0/ProtoCore/commit/3ce47f11b957557d380d165cde21eda838e305be))
 - update CHANGELOG.md [skip ci] ([`da8ea60`](https://github.com/dstroy0/ProtoCore/commit/da8ea6076f97d76ff45ddb84a7d1bcf3e3926d55))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 1.0.0 → 1.0.1 ([`aba541d`](https://github.com/dstroy0/ProtoCore/commit/aba541d60cc49cc41f0ce06c5d591f08f0b27e0f))
 - target build fixes ([`7376463`](https://github.com/dstroy0/ProtoCore/commit/73764635aa37d6354e6076ee08d2896a0d6df1fe))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`b067357`](https://github.com/dstroy0/ProtoCore/commit/b0673577e65345139744be56357df0dc3b3b021b))
 - Bump version: 0.0.7 → 1.0.0 ([`e0dab2a`](https://github.com/dstroy0/ProtoCore/commit/e0dab2ae887a8e3d7c72baf04c146ea0fdf22c82))
 
-### Features
-
+<h3>Features</h3>
 - an NVS seam in board_drivers; the core stops naming Preferences, String and FreeRTOS ([`1595187`](https://github.com/dstroy0/ProtoCore/commit/1595187b009c2a308a3c0fa6e84e8c1fe4d03f48))
 
-### Refactor
-
+<h3>Refactor</h3>
 - drop the rationale that only justified a coverage exclusion ([`3f4a17b`](https://github.com/dstroy0/ProtoCore/commit/3f4a17ba10499502d93cad11473910ce89fae257))
 - remove every gcovr exclusion marker from src/ ([`2aea443`](https://github.com/dstroy0/ProtoCore/commit/2aea44338c75aed5baa4af13c3833f5b8d86163d))
 - the event record leaves tcp.h, so the sketches stop parsing the slots ([`3741068`](https://github.com/dstroy0/ProtoCore/commit/3741068fb5b5ca94fd7484997b57e550b0b747a2))
 - move stdatomic.h from types.h to ring.h ([`5bd5d17`](https://github.com/dstroy0/ProtoCore/commit/5bd5d1794a64793be6cae86fe7d926d1f7fda7b7))
 
-### Testing
-
+<h3>Testing</h3>
 - the config-store env builds the host NVS backend it now sits on ([`8042c81`](https://github.com/dstroy0/ProtoCore/commit/8042c8129976b6d9997fa6a62ea1982eded6b38b))
 
 </details>
@@ -1731,8 +1698,7 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 1.0.0 - 2026-08-04</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - the GPIO direction enum a board profile's macro was rewriting ([`874c7b6`](https://github.com/dstroy0/ProtoCore/commit/874c7b6292a271b0ee8dbe959d379a5059980016))
 - the RAII scope guards and member initializers left in .c files ([`322aece`](https://github.com/dstroy0/ProtoCore/commit/322aece24d80265589c5c554f5e12c5e5d48a763))
 - the C++ residue the .c rename hid, and the API drift under it ([`1552db3`](https://github.com/dstroy0/ProtoCore/commit/1552db37ec3f885c50a850b9cb8450f17d90eec7))
@@ -1777,8 +1743,7 @@ All notable changes to ProtoCore are documented here.
 - restore the enum widths the C conversion dropped ([`8a8ed21`](https://github.com/dstroy0/ProtoCore/commit/8a8ed21805582d8e5a0c5426d9297c00bc21df12))
 - make the checkers agree with a C11 tree ([`c2250a8`](https://github.com/dstroy0/ProtoCore/commit/c2250a88eef2eb4855cf8cf2ada86a3f947f3a4e))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - update test report + coverage [skip ci] ([`d3f2a62`](https://github.com/dstroy0/ProtoCore/commit/d3f2a6263f1ed72b8c04b4e8a0dc4aa31bd05336))
 - update CHANGELOG.md [skip ci] ([`0d4b298`](https://github.com/dstroy0/ProtoCore/commit/0d4b2987203b244c9ab8b736269ad256b1906f25))
 - update CHANGELOG.md [skip ci] ([`9d9164f`](https://github.com/dstroy0/ProtoCore/commit/9d9164f0186735f457962ca4a921723ec9a7d27f))
@@ -1961,16 +1926,14 @@ All notable changes to ProtoCore are documented here.
 - update CHANGELOG.md [skip ci] ([`af0f1f0`](https://github.com/dstroy0/ProtoCore/commit/af0f1f00fa2037594eb1769ef855140e57ee29af))
 - update CHANGELOG.md [skip ci] ([`ec656a5`](https://github.com/dstroy0/ProtoCore/commit/ec656a5acb27c0f4ee83948c70a3c81efc9b85cf))
 
-### Changes
-
+<h3>Changes</h3>
 - Revert "test: copying onto the root collection is refused, not created" ([`7530cd4`](https://github.com/dstroy0/ProtoCore/commit/7530cd49a51b7280fbb6c522e43c979bcaa2f28c))
 - Revert "test: remount after filling, so the fixture starts from the medium" ([`853fa84`](https://github.com/dstroy0/ProtoCore/commit/853fa84858e7fd19a920406669c83b5771e3471e))
 - Revert "fix: do not drive the fixture volume to the block littlefs cannot recover from" ([`5271a31`](https://github.com/dstroy0/ProtoCore/commit/5271a317d777ae9814a83657776e2af2c1ff48f7))
 - Merge Dependabot #21: build(deps): bump `github/codeql-action` from `4` to `4.37.4` ([`20f2f07`](https://github.com/dstroy0/ProtoCore/commit/20f2f0790e903042ed8386992ece099fc00738c5))
 - clang-format the two benches the layer move left unformatted ([`2417aed`](https://github.com/dstroy0/ProtoCore/commit/2417aed4b675633fb801088689846392eaf4485a))
 
-### Documentation
-
+<h3>Documentation</h3>
 - log the HTTP/2 refusal that RSTs stream 0 ([`de41121`](https://github.com/dstroy0/ProtoCore/commit/de41121e905bfbbaf81fa17a39f6fa3a4324c197))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`8a59f15`](https://github.com/dstroy0/ProtoCore/commit/8a59f156e3a4e3bed30876fcf5e45a95d2145a85))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`5f426ab`](https://github.com/dstroy0/ProtoCore/commit/5f426ab0bffe50b4bce87d06d6969ec444cd4ba8))
@@ -2007,12 +1970,10 @@ All notable changes to ProtoCore are documented here.
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9080722`](https://github.com/dstroy0/ProtoCore/commit/908072291b8e67e082146f2b9c1ed9700ae6b23f))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`3b98034`](https://github.com/dstroy0/ProtoCore/commit/3b98034dfc30c9c3c9caaa7fcc711e32a40d6e44))
 
-### Features
-
+<h3>Features</h3>
 - add a mock vendor so the hot path is testable on a host ([`623fef1`](https://github.com/dstroy0/ProtoCore/commit/623fef10eec4af2e875647bd1d3a7ed36370affe))
 
-### Refactor
-
+<h3>Refactor</h3>
 - finish the C11 conversion - the last seven .cpp files ([`bb68538`](https://github.com/dstroy0/ProtoCore/commit/bb685389ff13a5c28820a12744a9438f2875da96))
 - the member initializers the renamed files still carried ([`2bdf468`](https://github.com/dstroy0/ProtoCore/commit/2bdf4683863b6c5af8585972da605927e2c1a376))
 - convert the last ten src/ .cpp files except ssh_transport ([`e234e72`](https://github.com/dstroy0/ProtoCore/commit/e234e72b9f4f84e242c54c499b8dc6d622202da3))
@@ -2050,8 +2011,7 @@ All notable changes to ProtoCore are documented here.
 - move exc_decoder and power_mgmt into server/ ([`f9def28`](https://github.com/dstroy0/ProtoCore/commit/f9def281eea48cd82a377f64a3239358af816959))
 - move each module under the layer that owns it ([`4c4b0c1`](https://github.com/dstroy0/ProtoCore/commit/4c4b0c11db8f683a91aa4a596b30571c6b540fbd))
 
-### Testing
-
+<h3>Testing</h3>
 - copy the trace samples at their real width ([`79eff1e`](https://github.com/dstroy0/ProtoCore/commit/79eff1ed44c2dd0f302d4f7697ce61de66343215))
 - trace_capture reads its window through a pointer ([`fdfe73e`](https://github.com/dstroy0/ProtoCore/commit/fdfe73e7e0dbe72fb8c67784aed308fa38b9d9d7))
 - gateway and trace_capture record into fixed tables ([`0faf56d`](https://github.com/dstroy0/ProtoCore/commit/0faf56df19733f82a015023b17a78b852f3e553b))
@@ -2167,16 +2127,13 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 0.0.7 - 2026-08-02</b></summary>
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - update CHANGELOG.md [skip ci] ([`fad20f0`](https://github.com/dstroy0/ProtoCore/commit/fad20f056f899fdc5897e18776770ea0961397f3))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 0.0.6 → 0.0.7 ([`8ef81a3`](https://github.com/dstroy0/ProtoCore/commit/8ef81a304f16b03e66eb26bc2bfd21a220481788))
 
-### Documentation
-
+<h3>Documentation</h3>
 - state C11 in the law, and retire DONE as a status in the sweep notes ([`ae8560d`](https://github.com/dstroy0/ProtoCore/commit/ae8560d24cbdfa66e232038819104abf747a68f2))
 
 </details>
@@ -2186,20 +2143,16 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 0.0.6 - 2026-08-02</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - convert the C++ type declarations behind sqlite, aes128gcm and hkdf ([`51af8ec`](https://github.com/dstroy0/ProtoCore/commit/51af8ec90b096f0d4b6bbf9ebc1f94e510db215c))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - update CHANGELOG.md [skip ci] ([`fc7be5d`](https://github.com/dstroy0/ProtoCore/commit/fc7be5ddc3425b94b5716ce3cc5deda532521e9c))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 0.0.5 → 0.0.6 ([`1424f63`](https://github.com/dstroy0/ProtoCore/commit/1424f639300b848c6f2501887299d6a295a3aed0))
 
-### Documentation
-
+<h3>Documentation</h3>
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`887876a`](https://github.com/dstroy0/ProtoCore/commit/887876a943e59637ec5ef4229b4e40f56be86dc5))
 
 </details>
@@ -2209,21 +2162,17 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 0.0.5 - 2026-08-02</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - restore the constant names the constexpr sweep truncated, and close the guard chain ([`b89a2e5`](https://github.com/dstroy0/ProtoCore/commit/b89a2e56bf1ee43ae22bcf47ae8904a4456c04c5))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - update test report + coverage [skip ci] ([`34cab0b`](https://github.com/dstroy0/ProtoCore/commit/34cab0b6409fc27929b9493400a3ca4ea5878a77))
 - update CHANGELOG.md [skip ci] ([`ae95357`](https://github.com/dstroy0/ProtoCore/commit/ae9535746afc891788c848024ff74c3e68f0a889))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 0.0.4 → 0.0.5 ([`1223bf0`](https://github.com/dstroy0/ProtoCore/commit/1223bf01653f1b3d222dfbf175551fbab4e62971))
 
-### Documentation
-
+<h3>Documentation</h3>
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4065219`](https://github.com/dstroy0/ProtoCore/commit/40652197cf0332d4756064e9a000c179027b3ef5))
 
 </details>
@@ -2233,16 +2182,14 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 0.0.4 - 2026-08-02</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - reattach the three envs left extending a base the rename deleted ([`2629515`](https://github.com/dstroy0/ProtoCore/commit/2629515d96aad97d063af5c426000db0d09d452b))
 - pin LF in every generator that writes a text file ([`135eab0`](https://github.com/dstroy0/ProtoCore/commit/135eab05c26b8fe25f292fc354e920cd423b26c6))
 - unbreak the default link, and stop the tree walk storing every path ten times ([`96504c5`](https://github.com/dstroy0/ProtoCore/commit/96504c563496226955282afdb6ad34f683d848f6))
 - stop protocore.h from defining a secret and declaring six symbols nobody can link ([`ef5919a`](https://github.com/dstroy0/ProtoCore/commit/ef5919ae98eba5bb83c6ddcd63071b0829a543cf))
 - native_ssh satisfies the SFTP/SCP guard through the mount, not FILE_SERVING ([`121b187`](https://github.com/dstroy0/ProtoCore/commit/121b1877109be924ea5955b804b71b7fb95cc5cd))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - update test report + coverage [skip ci] ([`92a4bae`](https://github.com/dstroy0/ProtoCore/commit/92a4baee10f002db98951c2346998b47acf2eb4a))
 - update CHANGELOG.md [skip ci] ([`fe5c680`](https://github.com/dstroy0/ProtoCore/commit/fe5c68018062c756c708959442dd355a25a926a2))
 - update test report + coverage [skip ci] ([`2c9ca2f`](https://github.com/dstroy0/ProtoCore/commit/2c9ca2f4612d0f12f890b785974b778d8dae9eac))
@@ -2255,15 +2202,13 @@ All notable changes to ProtoCore are documented here.
 - update test report + coverage [skip ci] ([`6faeded`](https://github.com/dstroy0/ProtoCore/commit/6faeded1dfaa1d21f7000f87e542ef6ca58e5abe))
 - update CHANGELOG.md [skip ci] ([`d6d713d`](https://github.com/dstroy0/ProtoCore/commit/d6d713d40ebed5e1a87c90afb4493dd3d701a18a))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 0.0.3 → 0.0.4 ([`a651281`](https://github.com/dstroy0/ProtoCore/commit/a651281e76ddd0df6e4b50e19b77e6d05ad8ee3e))
 - Merge remote-tracking branch 'origin/main' into refactor/lib-wide ([`52b06c6`](https://github.com/dstroy0/ProtoCore/commit/52b06c64393773865d561a943a5af0225ef12c50))
 - Merge pull request #20 from `dstroy0/refactor/json-codec` ([`727cb9c`](https://github.com/dstroy0/ProtoCore/commit/727cb9c4b29f01c326a31f424ab3c859d4520d6a))
 - Merge remote-tracking branch 'origin/main' into refactor/json-codec ([`01e5715`](https://github.com/dstroy0/ProtoCore/commit/01e57156d23140eeeb78238209d550a800131de9))
 
-### Documentation
-
+<h3>Documentation</h3>
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`100bb49`](https://github.com/dstroy0/ProtoCore/commit/100bb49080944dde990f737749006585c68f0a78))
 - move the CI badges to the top of the README ([`50182fd`](https://github.com/dstroy0/ProtoCore/commit/50182fdb3ffe62f71c01a7a3d1bf5d4939917a87))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`92cb52c`](https://github.com/dstroy0/ProtoCore/commit/92cb52c368aece2f7444c3496e8c36d23d2f7dce))
@@ -2275,12 +2220,10 @@ All notable changes to ProtoCore are documented here.
 - update ESP32 build footprints [skip ci] ([`ee036cb`](https://github.com/dstroy0/ProtoCore/commit/ee036cbccf63e17abb48c2a29a80fa0f9577280d))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`e1d786e`](https://github.com/dstroy0/ProtoCore/commit/e1d786e3c30499f4736b700e05337bd60f72c5d7))
 
-### Features
-
+<h3>Features</h3>
 - give the server's state one place to be read from ([`9ade3ba`](https://github.com/dstroy0/ProtoCore/commit/9ade3ba95f96cffb732b6494155613b68645c656))
 
-### Refactor
-
+<h3>Refactor</h3>
 - convert src/ to C11 and split the build into PROTOCORE_HOT / PROTOCORE_HOST ([`09b4bb2`](https://github.com/dstroy0/ProtoCore/commit/09b4bb2eff04c3c18219d36add86187c32c0b019))
 - split swar into an access layer and bounded-run operations ([`95b97e9`](https://github.com/dstroy0/ProtoCore/commit/95b97e9ffd82752b1c5a3a1197e03c068a3a6f9a))
 - finish removing the PC class, and default every feature off ([`78f3739`](https://github.com/dstroy0/ProtoCore/commit/78f37397190aa029922444d32fc86d031d768a79))
@@ -2294,13 +2237,11 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 0.0.3 - 2026-07-31</b></summary>
 
-### Bug Fixes
-
+<h3>Bug Fixes</h3>
 - reject a wire length that overflows the bounds check on 32-bit targets ([`d51573d`](https://github.com/dstroy0/ProtoCore/commit/d51573d1f0688886581385825d0bebf8a5dedfb0))
 - derive forced feature dependencies instead of rewriting the user's flags ([`1bd8569`](https://github.com/dstroy0/ProtoCore/commit/1bd8569877e24881b510a9b4c20f111a8d4f4ef9))
 
-### CI / Build
-
+<h3>CI / Build</h3>
 - update test report + coverage [skip ci] ([`ce0a0f6`](https://github.com/dstroy0/ProtoCore/commit/ce0a0f6c35baf0bb21cf2cfada2acbdda71a2bfc))
 - update CHANGELOG.md [skip ci] ([`399fd2b`](https://github.com/dstroy0/ProtoCore/commit/399fd2b5da3d1bb8a72194660e32f8adb5b75c9e))
 - update test report + coverage [skip ci] ([`502db96`](https://github.com/dstroy0/ProtoCore/commit/502db9616afc9cbe0a59f8d68b9c449c46e4dc13))
@@ -2324,8 +2265,7 @@ All notable changes to ProtoCore are documented here.
 - fix the gates that broke on the fresh tree ([`29427c7`](https://github.com/dstroy0/ProtoCore/commit/29427c7ac7fe7b9bf43597bb6790cfa94da3b508))
 - update CHANGELOG.md [skip ci] ([`3e271f5`](https://github.com/dstroy0/ProtoCore/commit/3e271f587fbff1e6c60c1bd80456a3f284c160b8))
 
-### Changes
-
+<h3>Changes</h3>
 - Bump version: 0.0.2 → 0.0.3 ([`69a30c2`](https://github.com/dstroy0/ProtoCore/commit/69a30c22d485e956996d920c41a6716492fdc58b))
 - Bump version: 0.0.1 → 0.0.2 ([`0627820`](https://github.com/dstroy0/ProtoCore/commit/06278207ca70f2b0f44584bf1f958db7d57c8900))
 - drop the clip mode; logging takes the one contract ([`f5e88f5`](https://github.com/dstroy0/ProtoCore/commit/f5e88f5aa23ef8b8989a987fd166ba2730b4131d))
@@ -2335,8 +2275,7 @@ All notable changes to ProtoCore are documented here.
 - ban nondeterministic dispatch, retire the last format-string appender ([`92e0638`](https://github.com/dstroy0/ProtoCore/commit/92e0638a500c543f4d702f6561fedcb86ba3d712))
 - pin LF checkout on every platform ([`389dab8`](https://github.com/dstroy0/ProtoCore/commit/389dab8f3c64aceda56d84b184da3c02844148fb))
 
-### Documentation
-
+<h3>Documentation</h3>
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`d730d0e`](https://github.com/dstroy0/ProtoCore/commit/d730d0ecff322d13499b5f33217ef78fc7d78034))
 - update ESP32 build footprints [skip ci] ([`58db1bb`](https://github.com/dstroy0/ProtoCore/commit/58db1bba72e08da677fcf925a66cd1ac08d34e0a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`9182061`](https://github.com/dstroy0/ProtoCore/commit/91820610a9e02c0008156862810a24c8cbccf6ab))
@@ -2351,8 +2290,7 @@ All notable changes to ProtoCore are documented here.
 - update ESP32 build footprints [skip ci] ([`c4d5c19`](https://github.com/dstroy0/ProtoCore/commit/c4d5c19d61bc8927906bd0ae6a86949f948e404a))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`df2f22d`](https://github.com/dstroy0/ProtoCore/commit/df2f22d498d3436daf85a27bf800cf49a40981bc))
 
-### Refactor
-
+<h3>Refactor</h3>
 - give storage one owner and take the vendor out of the file-transfer servers ([`ebbb55e`](https://github.com/dstroy0/ProtoCore/commit/ebbb55eabd98146fedc6f878f43ef58c55baf1b8))
 - take the codec's tag byte out of the shared read cursor ([`d430b89`](https://github.com/dstroy0/ProtoCore/commit/d430b898bc140b128da3c863bd7dd2b954b5268a))
 - collapse the codec cursors onto pc_span and give SSH signaling an owner ([`77ee090`](https://github.com/dstroy0/ProtoCore/commit/77ee0904544a6435d995e546189ff176ccc6a29d))
@@ -2364,8 +2302,7 @@ All notable changes to ProtoCore are documented here.
 <details>
 <summary><b>Show Changelog for version 0.0.1 - 2026-07-31</b></summary>
 
-### Changes
-
+<h3>Changes</h3>
 - ProtoCore 0.0.1 ([`ee62982`](https://github.com/dstroy0/ProtoCore/commit/ee62982f8eefb8961258ffd788952d731ff29b0d))
 
 </details>

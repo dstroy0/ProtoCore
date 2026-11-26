@@ -133,18 +133,28 @@ typedef struct
  * @brief The mount table and the active filesystem.
  *
  * A caller sets the members a call takes, invokes it through ::Mnt, and reads the outcome off the
- * same handle. The table itself is behind @ref internal.
+ * same handle. The table itself is internal.
  *
- * @var MntNs::args        the mount point a call names, and what registering one takes
- * @var MntNs::u8          the point an add took
- * @var MntNs::backend     the filesystem a lookup reports, or NULL
- * @var MntNs::text        the root a lookup reports, or NULL
- * @var MntNs::point_add   register a mount point
- * @var MntNs::point_of    the filesystem behind a point
- * @var MntNs::root_of     the path prefix a point answers for
- * @var MntNs::reset       clear every registered point
- * @var MntNs::mount       make one filesystem the active one
- * @var MntNs::active      the active filesystem
+ * @var MntVars::args
+ *                           the mount point a call names, and what registering one takes
+ * @var MntVars::u8
+ *                           the point an add took
+ * @var MntVars::backend
+ *                           the filesystem a lookup reports, or NULL
+ * @var MntVars::text
+ *                           the root a lookup reports, or NULL
+ * @var MntNs::point_add
+ *                         register a mount point
+ * @var MntNs::point_of
+ *                         the filesystem behind a point
+ * @var MntNs::root_of
+ *                         the path prefix a point answers for
+ * @var MntNs::reset
+ *                         clear every registered point
+ * @var MntNs::mount
+ *                         make one filesystem the active one
+ * @var MntNs::active
+ *                         the active filesystem
  */
 typedef struct
 {

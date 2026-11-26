@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The passages where the subject is the convention, and a normative keyword stays.
 #
@@ -32,7 +32,7 @@ import re
 #
 # THE COST OF THIS ARM IS ZERO FINDINGS SILENCED across every tree here, because nothing in them
 # writes about the convention. The rule is the objective's own clause written down before a
-# document needs it. utils/maint/prose/test_docs_check_exclusions.py re-derives that zero from the trees
+# document needs it. tools/prose/test_docs_check_exclusions.py re-derives that zero from the trees
 # on disk, so a reader checks it instead of trusting this sentence.
 BRITISH_SUBJECT = (
     re.compile(

@@ -5,7 +5,7 @@ grouped by area; each names the file(s) involved so the fix is easy to locate.
 
 > **Status:** Security/correctness, the ESP32 build blocker, SSH
 > `UNIMPLEMENTED`, housekeeping, the DX feature set (`serve_static` + MIME + gzip,
-> [`redirect()`](@ref PC::redirect), named [`begin()`](@ref PC::begin) codes), the **HW-crypto performance** items
+> `redirect()`, named `begin()` codes), the **HW-crypto performance** items
 > (streaming SHA-256 + AES-CTR whole-buffer, **verified on a DevKitV1**), and the
 > **optional services** (mDNS, OTA, WiFi provisioning/captive portal, SNTP, ETag,
 > runtime stats, access-log hook) are all **done** - host-tested where possible
@@ -488,25 +488,25 @@ native Unity tests before moving on. Each must keep the "no heap after
 
 - [x] **1. Custom response headers + cookies (high / easy).** _(done)_
       Per-connection `_extra_hdr[MAX_CONNS][EXTRA_HDR_BUF_SIZE]` buffer injected
-      into [`send()`](@ref PC::send) /
-      [`send_empty()`](@ref PC::send_empty) /
-      [`redirect()`](@ref PC::redirect), the same way the CORS block is
-      injected. New API: [`add_response_header()`](@ref PC::add_response_header),
-      [`set_cookie()`](@ref PC::set_cookie),
-      [`clear_response_headers()`](@ref PC::clear_response_headers).
+      into `send()` /
+      `send_empty()` /
+      `redirect()`, the same way the CORS block is
+      injected. New API: `add_response_header()`,
+      `set_cookie()`,
+      `clear_response_headers()`.
       Oversized headers are dropped whole; the buffer is cleared at the start of
       each dispatch. Tested by `test_response_headers` (9 cases).
 
 - [x] **2. Request-data convenience (high / easy).** _(done)_ By-name request
-      header lookup already existed via [`http_get_header()`](@ref http_get_header);
-      added [`http_get_form()`](@ref http_get_form) for urlencoded POST body
+      header lookup already existed via `http_get_header()`;
+      added `http_get_form()` for urlencoded POST body
       fields (parsed on demand into a caller buffer, gated on the
       `application/x-www-form-urlencoded` Content-Type, raw values to match
       `http_get_query()`). Tested by `test_form_params` (5 cases).
 
 - [x] **3. Path parameters in routing (high / medium).** _(done)_ `/users/:id`
       style capture segments stored in a fixed `HttpReq::path_params[MAX_PATH_PARAMS]`
-      array, exposed via [`http_get_param()`](@ref http_get_param). Routes are
+      array, exposed via `http_get_param()`. Routes are
       flagged `is_param` at registration; `match_path_params()` does a
       segment-by-segment match (literal segments exact, `:name` segments
       captured) alongside the existing exact + trailing-`*` matcher. Tested by
@@ -515,7 +515,7 @@ native Unity tests before moving on. Each must keep the "no heap after
 - [x] **4. Digest authentication (medium / medium).** _(done)_ HTTP Digest
       (RFC 7616, SHA-256, `qop=auth`) via the shared `protocore_sha256`, selected by
       the new `digest` flag on
-      [`on(..., realm, user, pass, digest=true)`](@ref PC::on).
+      `on(..., realm, user, pass, digest=true)`.
       Server nonce regenerated per `begin()`; challenge emitted by
       `send_unauth()`; verified by `check_digest_auth()`. The parser now
       captures the full `Authorization` value into a dedicated
@@ -533,7 +533,7 @@ native Unity tests before moving on. Each must keep the "no heap after
       bounds the replay window in the meantime.
 
 - [x] **5. Response templating (medium / medium).** _(done)_ `{{name}}`
-      substitution via [`send_template()`](@ref PC::send_template) with
+      substitution via `send_template()` with
       a `TemplateVar` resolver callback. The body is walked twice (size, then
       write) so it is never buffered whole - constant memory regardless of body
       size. Unterminated/over-long placeholders are emitted literally; HEAD
@@ -543,28 +543,28 @@ native Unity tests before moving on. Each must keep the "no heap after
 - [x] **6. Middleware pipeline (high value / large).** _(done)_ Fixed-size,
       composable global middleware chain (cap `MAX_MIDDLEWARE`, default 4) run in
       registration order before route matching via
-      [`use()`](@ref PC::use). A [`Middleware`](@ref Middleware) returns
-      [`MW_NEXT`](@ref MwResult) to fall through or [`MW_HALT`](@ref MwResult) to
+      `use()`. A `Middleware` returns
+      `MW_NEXT` to fall through or `MW_HALT` to
       short-circuit (after sending its own response); middlewares can also inject
       response headers / log every request (incl. unmatched 404s). Added a
       built-in fixed-window rate limiter,
-      [`enable_rate_limit(max, window_ms)`](@ref PC::enable_rate_limit),
+      `enable_rate_limit(max, window_ms)`,
       that answers over-budget requests with `429` + `Retry-After` before the
       chain (cheapest rejection under flood); rollover-safe, per-server state, no
       per-IP table. Tested by `test_middleware` (9 cases).
       _Design note:_ CORS + Basic/Digest auth were **left as-is** (tested/green).
       They are not re-expressed as middlewares - the chain is additive and
       composes alongside them; "logging middleware" is the existing
-      [`on_request_log()`](@ref PC::on_request_log) hook plus any
+      `on_request_log()` hook plus any
       user `use()` middleware. _Follow-up:_ per-route middleware attachment (a
       middleware can already gate on `req->path` in user code).
 
 - [x] **7. Chunked / streaming app responses (medium / medium).** _(done; pull
       generator since v4.5.0)_
-      [`send_chunked(slot, code, type, source, ctx)`](@ref PC::send_chunked)
+      `send_chunked(slot, code, type, source, ctx)`
       writes the status + headers (`Transfer-Encoding: chunked`, plus CORS /
       queued custom headers), then pulls the body from a
-      [`ChunkSource`](@ref ChunkSource) generator one piece at a time, frames each
+      `ChunkSource` generator one piece at a time, frames each
       as an RFC 7230 §4.1 chunk, and emits the terminating `0\r\n\r\n`. The body is
       never buffered whole AND the send paces with the TCP window, paging across
       worker loops (`chunk_send_pump`, resumed by the sent callback) - so output is
@@ -572,7 +572,7 @@ native Unity tests before moving on. Each must keep the "no heap after
       truncated (the old one-shot `ChunkedResponse` writer silently truncated
       there). The source returns 0 to end and tracks its position in `ctx` (which
       must outlive the response). HEAD sends headers only;
-      [`on_request_log()`](@ref PC::on_request_log) reports the total body
+      `on_request_log()` reports the total body
       length. Tested by `test_chunked` (10 cases, incl. a 16 KB body).
       _Follow-up (done):_ `chunk_send_pump` sizes each chunk to `protocore_conn_pool_sndbuf()`
       (reserving the frame overhead), flushes and resumes on the next loop when the
@@ -581,7 +581,7 @@ native Unity tests before moving on. Each must keep the "no heap after
 
 - [x] **8. Stretch / lower priority.** _(resolved: the sub-items are shipped, except multi-MCU
       portability which is a closed won't-do per the user's standing request.)_
-  - [x] Regex routes _(done)_: [`on_regex()`](@ref PC::on_regex):
+  - [x] Regex routes _(done)_: `on_regex()`:
         whole-path match via a bounded, allocation-free backtracker (`.`, `* + ?`,
         `[...]`/`[^...]` ranges, `\d \w \s`, `\` escapes; non-capturing). A
         `RE_MAX_STEPS` budget keeps it deterministic (fails closed). Tested by
@@ -592,7 +592,7 @@ native Unity tests before moving on. Each must keep the "no heap after
         readers (`src/network_drivers/presentation/json.*`). ArduinoJson stays optional (it heap-allocates).
         Tested by `test_json` (17 cases); example `Json`.
   - [x] Interface filters _(done)_: per-route STA/AP gate via
-        [`on(..., protocore_if_kind)`](@ref PC::on) + [`set_ap_ip()`](@ref PC::set_ap_ip).
+        `on(..., protocore_if_kind)` + `set_ap_ip()`.
         Each connection is tagged `PROTOCORE_IF_WIFI_STA`/`PROTOCORE_IF_WIFI_AP` at accept time by
         comparing its local IP to the softAP IP. Tested by `test_iface` (7 cases);
         example `InterfaceFilter`.
@@ -616,7 +616,7 @@ and HW-verified on an ESP32 DevKit. Per-feature footprints are in the README.
 - [x] **Architecture pass.** Pluggable per-protocol handler dispatch
       (`server/core/proto_handler.h` - a `ProtoHandler` table; a new
       TCP protocol registers a handler instead of editing the dispatchers),
-      flow-control primitives ([`Tcp.conn->send`](@ref Tcp.conn->send) returns bool,
+      flow-control primitives (`Tcp.conn->send` returns bool,
       `protocore_conn_pool_sndbuf`, context-safe `Tcp.conn->raw_send`), response header+body
       write coalescing, and a TLS-BIO unification that fixed a latent handshake
       cross-thread race.
@@ -750,7 +750,7 @@ Open follow-ups discovered during the above:
       stores and matches the FULL address - the per-IP throttle + auth lockout by
       [`protocore_ip_equal`](@ref protocore_ip_equal), the IP allowlist by
       [`protocore_ip_prefix_match`](@ref protocore_ip_prefix_match) (v4 /0-32 + v6 /0-128 CIDR via
-      [`Tcp.listener->ip_allow_add_cidr`](@ref Tcp.listener->ip_allow_add_cidr)). This replaced the interim v6
+      `Tcp.listener->ip_allow_add_cidr`). This replaced the interim v6
       32-bit hash key, which was collidable (see docs/BUGS.md); no abuse-prevention state is keyed on
       a hash or a uint32 flattening any more (the audit log has no client-IP field). **HW-verified
       (2026-07-19):** an ESP32-S3 (arduino-esp32 2.x) joined to a dual-stack Wi-Fi network formed a
@@ -812,7 +812,7 @@ shipped work:
       (with an `esp_fill_random`-backed `f_rng`), and `mbedtls_rsa_pkcs1_verify`.
       Two further fixes: (1) a missing `intelhex` Python module broke
       `bootloader.bin` (installed into the PlatformIO Python); (2) **latent bug** -
-      the ARDUINO [`ssh_rsa_sign()`](@ref ssh_rsa_sign) passed the raw exchange hash `H` to
+      the ARDUINO `ssh_rsa_sign()` passed the raw exchange hash `H` to
       `mbedtls_pk_sign()`, which does not re-hash, so it signed `DigestInfo||H`
       instead of `DigestInfo||SHA256(H)` (RFC 8332) and any client would reject
       the host signature; now hashes `H` first to match the native path.
@@ -862,7 +862,7 @@ shipped work:
 
 - [x] **No connection-flood / rate limiting.** _(done - opt-in global throttle)_
       The TCP listener now has a fixed-window accept-rate gate
-      ([`Tcp.listener->accept_allowed()`](@ref Tcp.listener->accept_allowed)): when [`PROTOCORE_ENABLE_ACCEPT_THROTTLE`](@ref PROTOCORE_ENABLE_ACCEPT_THROTTLE) is set,
+      (`Tcp.listener->accept_allowed()`): when [`PROTOCORE_ENABLE_ACCEPT_THROTTLE`](@ref PROTOCORE_ENABLE_ACCEPT_THROTTLE) is set,
       the accept callback drops connections beyond
       [`PROTOCORE_ACCEPT_THROTTLE_MAX`](@ref PROTOCORE_ACCEPT_THROTTLE_MAX) per [`PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS`](@ref PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS)
       (`protocore_config.h`) before claiming a pool slot. Default off (zero
@@ -979,7 +979,7 @@ shipped work:
       and EOF+CLOSE propagation; `protocore_ssh_conn_close_channel` sends a server-initiated
       close as two packets. ESP32 build + link verified.
       **Global requests** (RFC 4254 §4) now have a real handler
-      ([`ssh_global_request_handle`](@ref ssh_global_request_handle)): an unrecognized
+      (`ssh_global_request_handle`): an unrecognized
       request answers `REQUEST_FAILURE` when `want_reply` is set (never `UNIMPLEMENTED` -
       that was a client-keepalive interop bug, see docs/BUGS.md), and **`tcpip-forward` /
       `cancel-tcpip-forward`** (`ssh -R`) route to an opt-in remote-forward seam
@@ -1069,7 +1069,7 @@ shipped work:
       `examples/SSHCryptoSelfTest` validates the HW path on-device.
 
 - [x] **AES-256-CTR re-acquired the HW engine once per 16-byte block.** _(done)_
-      The Arduino [`ssh_aes256ctr_crypt()`](@ref ssh_aes256ctr_crypt) now makes a single
+      The Arduino `ssh_aes256ctr_crypt()` now makes a single
       `mbedtls_aes_crypt_ctr()` call for the whole buffer (our `counter` /
       `keystream` / `pos` fields map 1:1 to mbedtls's `nonce_counter` /
       `stream_block` / `nc_off`), replacing the per-block
@@ -1124,7 +1124,7 @@ shipped work:
       FDC2214 capacitive, LDC1614 inductive, VL53L0X ToF) shipped. _Remaining:_ Wi-SUN FAN
       (blocked on a devboard choice), analog Doppler + MR60BHA 60 GHz radar variants, and
       the real-module HW verification of each. See
-      [ROADMAP.md](ROADMAP.md#post-v5-rf--wireless-gateway-bridges).
+      [ROADMAP.md](ROADMAP.md).
 
 </details>
 
@@ -1207,7 +1207,7 @@ by how often a deployed device needs it.
       is present); with no wall clock the date validator is skipped and the ETag
       validator still works.
 
-- [x] **SNTP time sync (`PROTOCORE_ENABLE_NTP`).** _(done)_ [`protocore_ntp_begin()`](@ref protocore_ntp_begin)/
+- [x] **SNTP time sync (`PROTOCORE_ENABLE_NTP`).** _(done)_ `protocore_ntp_begin()`/
       `_synced()`/`_epoch()`/`_http_date()` (`src/services/protocore_ntp_service.*`) wrap
       `configTzTime` (ESP-IDF SNTP) and format an RFC 7231 `Date`. `examples/SNTP`
       exposes `GET /time`; firmware links. (Auto-emitting the `Date` response
@@ -1225,7 +1225,7 @@ by how often a deployed device needs it.
       `TimeSourceFallback` (NTP preferred, RTC fallback); esp32dev links.
 
 - [x] **Zero-copy template slicing.** _(addressed by design)_
-      [`send_template()`](@ref PC::send_template) never buffers the
+      `send_template()` never buffers the
       expanded body: it walks the template twice (size, then stream each literal
       run and resolved `{{name}}` value straight to the socket), and placeholder
       names over 32 chars are emitted literally - so there is no fixed expansion
@@ -1256,7 +1256,7 @@ by how often a deployed device needs it.
       (`PROTOCORE_TLS_ARENA_SIZE`, default 48 KB) via
       `mbedtls_platform_set_calloc_free()`, so the zero-heap guarantee holds. HW
       CSPRNG RNG; BIO bridged to the raw `tcp_pcb` + rx ring; handshake pumped in
-      the session loop. `begin_tls(port, cert, …)` / [`listen_tls()`](@ref PC::listen_tls).
+      the session loop. `begin_tls(port, cert, …)` / `listen_tls()`.
       HW-verified: `ECDHE-ECDSA-AES256-GCM-SHA384`, TLS 1.2+. See SECURITY.md §6.
       Example `HTTPS`. `wss://` + TLS-SSE now run over the same record layer,
       and **session resumption** shipped (RFC 5077 tickets,
@@ -1291,7 +1291,7 @@ by how often a deployed device needs it.
         NVS), USM error Reports (unknownUserNames / wrongDigests /
         notInTimeWindows / decryptionErrors), and key localization (RFC 3414
         §2.6). `protocore_snmp_v3_*` API; `protocore_snmp_v3_process()` reuses the shared
-        [`protocore_snmp_agent_dispatch_pdu()`](@ref protocore_snmp_dispatch_pdu) MIB core. Native tests
+        `protocore_snmp_agent_dispatch_pdu()` MIB core. Native tests
         (`env:native_snmp_v3`): SHA-256 localization KAT (hashlib-grounded),
         AES-128 FIPS-197 KAT, and the full discovery -> authNoPriv -> authPriv
         flow. **HW-verified** against an independent manager (pycryptodome AES +
@@ -1316,9 +1316,9 @@ by how often a deployed device needs it.
       compare, all in fixed stack/BSS - no sessions, no heap
       (`src/services/security/jwt/*`). Host-tested (`native_jwt_rfc7515`); example `JWTAuth`.
       **Time claims now enforced (opt-in via the caller's clock):** the `*_at`
-      variants ([`protocore_jwt_time_claims_valid`](@ref protocore_jwt_time_valid),
-      [`protocore_jwt_verify_hs256_at`](@ref protocore_jwt_verify_hs256_at),
-      [`protocore_jwt_bearer_valid_at`](@ref protocore_jwt_bearer_valid_at)) reject on `exp` (RFC 7519
+      variants (`protocore_jwt_time_claims_valid`,
+      `protocore_jwt_verify_hs256_at`,
+      `protocore_jwt_bearer_valid_at`) reject on `exp` (RFC 7519
       §4.1.4) and `nbf` (§4.1.5) with a skew leeway, given `now = (long)protocore_time_now()`
       (`PROTOCORE_ENABLE_NTP` / any time source); passing `now = 0` on a clockless device
       skips the time check so the signature still gates. `iat` is informational
@@ -1387,9 +1387,9 @@ Newbie / developer experience:
       `application/octet-stream`). Used automatically by `serve_static()` and
       callable directly with `serve_file()`. Tested by `test_mime_type_detection`.
 
-- [x] **Named `begin()` failure codes.** _(done)_ `begin()`/[`listen()`](@ref PC::listen)/[`restart()`](@ref PC::restart)
-      now return a [`protocore_result`](@ref protocore_result) enum: [`PROTOCORE_OK`](@ref PROTOCORE_OK), [`PROTOCORE_ERR_NO_LISTENERS`](@ref PROTOCORE_ERR_NO_LISTENERS),
-      [`PROTOCORE_ERR_LISTENER_FULL`](@ref PROTOCORE_ERR_LISTENER_FULL), [`PROTOCORE_ERR_LISTEN_FAILED`](@ref PROTOCORE_ERR_LISTEN_FAILED)
+- [x] **Named `begin()` failure codes.** _(done)_ `begin()`/`listen()`/`restart()`
+      now return a `protocore_result` enum: `PROTOCORE_OK`, `PROTOCORE_ERR_NO_LISTENERS`,
+      `PROTOCORE_ERR_LISTENER_FULL`, `PROTOCORE_ERR_LISTEN_FAILED`
       (`protocore.h`/`.cpp`). Subsumes the heap-bytes mismatch
       item below (docstring corrected).
 
@@ -1440,7 +1440,7 @@ Operator / sysadmin:
 
 - [x] **`test/test_application/` is orphaned** _(done)_ - wired into the
       `native_application` env's `test_filter` (`platformio.ini`) and de-bit-rotted (it
-      called the removed `DeterministicAsyncTCP::init(80)`; now [`pool_init()`](@ref DeterministicAsyncTCP::pool_init)).
+      called the removed `DeterministicAsyncTCP::init(80)`; now `pool_init()`).
       All 35 cases pass.
 
 - [x] **`docs/CHANGELOG.md` upkeep.** _(done - automated)_ Generated and
@@ -1450,7 +1450,7 @@ Operator / sysadmin:
 - [x] **Add an SSH usage example** _(done)_ - `examples/SSH/SSH.ino`:
       enables SSH, loads the host key from NVS ([`protocore_ssh_rsa_load_pubkey()`](@ref protocore_ssh_rsa_load_pubkey)), installs
       password + publickey auth callbacks and a channel data callback that echoes
-      via the new [`protocore_ssh_conn_send()`](@ref protocore_ssh_conn_send) helper, listens on [`PROTO_SSH`](@ref PROTO_SSH). Required a
+      via the new `protocore_ssh_conn_send()` helper, listens on [`PROTO_SSH`](@ref PROTO_SSH). Required a
       small public outbound API (`protocore_ssh_conn_send()`, `ssh_conn.*`) since the
       dispatcher's emit path was internal-only.
 

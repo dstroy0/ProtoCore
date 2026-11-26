@@ -362,7 +362,9 @@ static void on_general(const uint8_t *data, size_t len, const struct protocore_u
 
 void setup()
 {
-    Ip.parse(PTP_GROUP, &g_group); // the tag becomes an address once, here
+    IpV.args.text = PTP_GROUP; // the tag becomes an address once, here
+    IpV.args.out = &g_group;
+    Ip.parse(ptp_work);
 
     Serial.begin(115200);
     delay(300);

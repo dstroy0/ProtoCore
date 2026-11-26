@@ -61,16 +61,24 @@ static_assert(sizeof(protocore_tcp_op) == 1, "protocore_tcp_op must stay one byt
  *
  * A caller sets the op it wants and what it acts on, invokes it through ::TcpLower, and reads the
  * outcome off the same handle. The seam's own state - the stack thread it captured, the TTL it
- * stamps, and the call records - is behind @ref internal and is not describable here.
+ * stamps, and the call records - is internal and is not describable here.
  *
- * @var TcpLowerNs::op        which call into the lower module to make
- * @var TcpLowerNs::slot      the connection the op acts on
- * @var TcpLowerNs::pcb       the control block the op acts on
- * @var TcpLowerNs::data      bytes for a write
- * @var TcpLowerNs::len       how many, or the byte a stamping op carries
- * @var TcpLowerNs::flush     SEND: push after a successful write
- * @var TcpLowerNs::result    what the op reported
- * @var TcpLowerNs::ok        a call's true/false outcome
+ * @var TcpLowerVars::op
+ *                              which call into the lower module to make
+ * @var TcpLowerVars::slot
+ *                              the connection the op acts on
+ * @var TcpLowerVars::pcb
+ *                              the control block the op acts on
+ * @var TcpLowerVars::data
+ *                              bytes for a write
+ * @var TcpLowerVars::len
+ *                              how many, or the byte a stamping op carries
+ * @var TcpLowerVars::flush
+ *                              SEND: push after a successful write
+ * @var TcpLowerVars::result
+ *                              what the op reported
+ * @var TcpLowerVars::ok
+ *                              a call's true/false outcome
  */
 typedef struct
 {

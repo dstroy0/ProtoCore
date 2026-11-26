@@ -171,32 +171,53 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Devicenet with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Devicenet.encode_id_args.id = ...;
  *   Devicenet.encode_id_args.group = ...;
  *   Devicenet.encode_id_args.msg_id = ...;
  *   Devicenet.encode_id_args.mac_id = ...;
  *   Devicenet.encode_id(work);
  *   // Devicenet.ok is what the call reports
+ * @endcode
  *
- * @var DevicenetNs::encode_id_args  what encode_id takes: id, group, msg_id, mac_id
- * @var DevicenetNs::decode_id_args  what decode_id takes: can_id, out
- * @var DevicenetNs::msg_header_args  what msg_header takes: frag, xid, mac_id
- * @var DevicenetNs::frag_octet_args  what frag_octet takes: type, count
- * @var DevicenetNs::build_explicit_args  what build_explicit takes: out, group, msg_id, mac_id,
- * @var DevicenetNs::build_fragment_args  what build_fragment takes: out, group, msg_id, mac_id, xid,
- * @var DevicenetNs::frag_reset_args  what frag_reset takes: rx
- * @var DevicenetNs::frag_feed_args  what frag_feed takes: rx, body, body_len
- * @var DevicenetNs::ok  true on success; false on a null out, data_len > 6, a null data ...
- * @var DevicenetNs::value  the value a call reports
- * @var DevicenetNs::frag  what a call reports
- * @var DevicenetNs::encode_id  encode a DeviceNet 11-bit CAN id. mac_id is ignored for Group 4
- * @var DevicenetNs::decode_id  decode an 11-bit CAN id into its DeviceNet group / message id / MAC ...
- * @var DevicenetNs::msg_header  compose the explicit-message header octet (FRAG / XID / MAC id)
- * @var DevicenetNs::frag_octet  compose a fragmentation octet from a type (DEVICENET_FRAG_*) and a ...
- * @var DevicenetNs::build_explicit  build a single-frame explicit message: [header octet][body...] at ...
- * @var DevicenetNs::build_fragment  build one fragment of a fragmented explicit message (the sender ...
- * @var DevicenetNs::frag_reset  reset a reassembly context to idle
- * @var DevicenetNs::frag_feed  feed a received frame's body (the octets after the CAN id) to the ...
+ * @var DevicenetVars::encode_id_args
+ *                                     what encode_id takes: id, group, msg_id, mac_id
+ * @var DevicenetVars::decode_id_args
+ *                                     what decode_id takes: can_id, out
+ * @var DevicenetVars::msg_header_args
+ *                                      what msg_header takes: frag, xid, mac_id
+ * @var DevicenetVars::frag_octet_args
+ *                                      what frag_octet takes: type, count
+ * @var DevicenetVars::build_explicit_args
+ *                                          what build_explicit takes: out, group, msg_id, mac_id,
+ * @var DevicenetVars::build_fragment_args
+ *                                          what build_fragment takes: out, group, msg_id, mac_id, xid,
+ * @var DevicenetVars::frag_reset_args
+ *                                      what frag_reset takes: rx
+ * @var DevicenetVars::frag_feed_args
+ *                                     what frag_feed takes: rx, body, body_len
+ * @var DevicenetVars::ok
+ *                         true on success; false on a null out, data_len > 6, a null data ...
+ * @var DevicenetVars::value
+ *                            the value a call reports
+ * @var DevicenetVars::frag
+ *                           what a call reports
+ * @var DevicenetNs::encode_id
+ *                              encode a DeviceNet 11-bit CAN id. mac_id is ignored for Group 4
+ * @var DevicenetNs::decode_id
+ *                              decode an 11-bit CAN id into its DeviceNet group / message id / MAC ...
+ * @var DevicenetNs::msg_header
+ *                               compose the explicit-message header octet (FRAG / XID / MAC id)
+ * @var DevicenetNs::frag_octet
+ *                               compose a fragmentation octet from a type (DEVICENET_FRAG_*) and a ...
+ * @var DevicenetNs::build_explicit
+ *                                   build a single-frame explicit message: [header octet][body...] at ...
+ * @var DevicenetNs::build_fragment
+ *                                   build one fragment of a fragmented explicit message (the sender ...
+ * @var DevicenetNs::frag_reset
+ *                               reset a reassembly context to idle
+ * @var DevicenetNs::frag_feed
+ *                              feed a received frame's body (the octets after the CAN id) to the ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

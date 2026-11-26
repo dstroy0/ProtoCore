@@ -82,11 +82,12 @@ PROTOCORE_NS_LAYOUT(NtlmsspNs, build_negotiate, parse_challenge, build_authentic
  * @param buf Buf
  * @param cap Cap
  * @param flags Flags
- * @return The size_t.
+ * @return message length (32), or 0 if @p cap < 32.
  */
 size_t protocore_ntlmssp_build_negotiate(const uint8_t *work, uint8_t *buf, size_t cap, uint32_t flags);
 /**
- * @brief Parse a CHALLENGE_MESSAGE (type 2): extract the flags, the 8-byte .
+ * @brief Parse a CHALLENGE_MESSAGE (type 2): extract the flags, the 8-byte server challenge, and
+ *        the target-info AV_PAIRs (bounds-checked into @p msg).
  * @param work PROTOCORE_NTLMSSP_BORROW bytes the caller took. Not held past the call.
  * @param msg Msg
  * @param len Len
@@ -95,7 +96,7 @@ size_t protocore_ntlmssp_build_negotiate(const uint8_t *work, uint8_t *buf, size
  */
 embed_bool protocore_ntlmssp_parse_challenge(const uint8_t *work, const uint8_t *msg, size_t len, NtlmChallenge *out);
 /**
- * @brief Build an AUTHENTICATE_MESSAGE (type 3) carrying the LM + NT .
+ * @brief Build an AUTHENTICATE_MESSAGE (type 3) carrying the LM + NT responses and the identity.
  * @param work PROTOCORE_NTLMSSP_BORROW bytes the caller took. Not held past the call.
  * @param buf Buf
  * @param cap Cap
@@ -108,7 +109,7 @@ embed_bool protocore_ntlmssp_parse_challenge(const uint8_t *work, const uint8_t 
  * @param workstation Workstation
  * @param flags the NegotiateFlags to echo (usually the server's from the CHALLENGE)
  * @param with_mic when true, reserve the 8-byte Version + 16-byte MIC fields between the fixed header and the
- * @return The size_t.
+ * @return total message length, or 0 on overflow. No session-key exchange (EncryptedRandomSessionKey empty).
  */
 size_t protocore_ntlmssp_build_authenticate(const uint8_t *work, uint8_t *buf, size_t cap, const uint8_t *lm_resp,
                                             size_t lm_len, const uint8_t *nt_resp, size_t nt_len, const char *domain,

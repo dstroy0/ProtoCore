@@ -333,6 +333,17 @@ typedef struct
     const char *host;
 } DnsMarshal;
 
+// The stack thread writes the two flags and the tick reads them, so each access is atomic.
+static void flag_set(embed_atomic_u32 *flag, uint32_t value)
+{
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = flag, .value = value);
+}
+
+static embed_bool flag_is_set(const embed_atomic_u32 *flag)
+{
+    return EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = flag) != 0u;
+}
+
 // The four network-order octets, read in wire order into a host-order word.
 static uint32_t addr_host_order(const protocore_net_ip *a)
 {
@@ -351,9 +362,9 @@ static void dns_found(const char *name, const protocore_net_ip *addr, void *arg)
     if (addr != NULL)
     {
         DNS_RESOLVER_CTX(work)->addr = *addr;
-        DNS_RESOLVER_CTX(work)->ok = EMBED_TRUE;
+        flag_set(&DNS_RESOLVER_CTX(work)->ok, 1u);
     }
-    DNS_RESOLVER_CTX(work)->done = EMBED_TRUE;
+    flag_set(&DNS_RESOLVER_CTX(work)->done, 1u);
 }
 
 // The ask, on the stack's own thread. A name the stack already holds completes inside this call.
@@ -363,12 +374,12 @@ static protocore_net_err dns_ask(protocore_net_call *c)
     protocore_net_err e = protocore_net_dns_resolve(m->host, &DNS_RESOLVER_CTX(m->work)->addr, dns_found, m->work);
     if (e == PROTOCORE_NET_OK) // already held
     {
-        DNS_RESOLVER_CTX(m->work)->ok = EMBED_TRUE;
-        DNS_RESOLVER_CTX(m->work)->done = EMBED_TRUE;
+        flag_set(&DNS_RESOLVER_CTX(m->work)->ok, 1u);
+        flag_set(&DNS_RESOLVER_CTX(m->work)->done, 1u);
     }
     else if (e != PROTOCORE_NET_ERR_INPROGRESS) // hard failure
     {
-        DNS_RESOLVER_CTX(m->work)->done = EMBED_TRUE;
+        flag_set(&DNS_RESOLVER_CTX(m->work)->done, 1u);
     }
     return PROTOCORE_NET_OK;
 }
@@ -394,10 +405,10 @@ void protocore_resolver_resolve(uint8_t *work)
     // The query already out: the stack's callback ran, or the timer ran out.
     if (DNS_RESOLVER_CTX(work)->busy)
     {
-        if (DNS_RESOLVER_CTX(work)->done)
+        if (flag_is_set(&DNS_RESOLVER_CTX(work)->done))
         {
             DNS_RESOLVER_CTX(work)->busy = EMBED_FALSE;
-            if (!DNS_RESOLVER_CTX(work)->ok)
+            if (!flag_is_set(&DNS_RESOLVER_CTX(work)->ok))
             {
                 return;
             }
@@ -414,8 +425,8 @@ void protocore_resolver_resolve(uint8_t *work)
         return;
     }
 
-    DNS_RESOLVER_CTX(work)->done = EMBED_FALSE;
-    DNS_RESOLVER_CTX(work)->ok = EMBED_FALSE;
+    flag_set(&DNS_RESOLVER_CTX(work)->done, 0u);
+    flag_set(&DNS_RESOLVER_CTX(work)->ok, 0u);
     DnsMarshal m;
     EMBED_CALL(memor.set, MemoriaCfg, .dst = &m, .val = 0, .bytes = sizeof(m));
     m.work = work;
@@ -423,9 +434,9 @@ void protocore_resolver_resolve(uint8_t *work)
     (void)protocore_net_call_marshal(dns_ask, &m.base);
 
     // Already held, so the callback ran inside the marshal and there is nothing to wait for.
-    if (DNS_RESOLVER_CTX(work)->done)
+    if (flag_is_set(&DNS_RESOLVER_CTX(work)->done))
     {
-        if (!DNS_RESOLVER_CTX(work)->ok)
+        if (!flag_is_set(&DNS_RESOLVER_CTX(work)->ok))
         {
             return;
         }

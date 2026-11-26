@@ -90,21 +90,31 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::ProxyProtocol with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   ProxyProtocol.parse_args.buf = ...;
  *   ProxyProtocol.parse_args.len = ...;
  *   ProxyProtocol.parse_args.out = ...;
  *   ProxyProtocol.parse_args.consumed = ...;
  *   ProxyProtocol.parse(work);
  *   // ProxyProtocol.ok is what the call reports
+ * @endcode
  *
- * @var ProxyProtocolNs::parse_args  what parse takes: buf, len, out, consumed
- * @var ProxyProtocolNs::v1_build_args  what v1_build takes: buf, cap, src_addr, dst_addr,
- * @var ProxyProtocolNs::v2_build_args  what v2_build takes: buf, cap, src_addr, dst_addr,
- * @var ProxyProtocolNs::ok  true if a complete v1/v2 header was parsed; false if absent or not ...
- * @var ProxyProtocolNs::n  the count a call reports
- * @var ProxyProtocolNs::parse  detect + parse a PROXY header (v1 or v2) at the head of [buf, ...
- * @var ProxyProtocolNs::v1_build  build a v1 (text) TCP4 header. Returns bytes written (excluding ...
- * @var ProxyProtocolNs::v2_build  build a v2 (binary) TCP/IPv4 PROXY header. Returns 28, or 0 on ...
+ * @var ProxyProtocolVars::parse_args
+ *                                     what parse takes: buf, len, out, consumed
+ * @var ProxyProtocolVars::v1_build_args
+ *                                        what v1_build takes: buf, cap, src_addr, dst_addr,
+ * @var ProxyProtocolVars::v2_build_args
+ *                                        what v2_build takes: buf, cap, src_addr, dst_addr,
+ * @var ProxyProtocolVars::ok
+ *                             true if a complete v1/v2 header was parsed; false if absent or not ...
+ * @var ProxyProtocolVars::n
+ *                            the count a call reports
+ * @var ProxyProtocolNs::parse
+ *                              detect + parse a PROXY header (v1 or v2) at the head of [buf, ...
+ * @var ProxyProtocolNs::v1_build
+ *                                 build a v1 (text) TCP4 header. Returns bytes written (excluding ...
+ * @var ProxyProtocolNs::v2_build
+ *                                 build a v2 (binary) TCP/IPv4 PROXY header. Returns 28, or 0 on ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

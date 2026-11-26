@@ -85,21 +85,36 @@ typedef struct
  * @c add takes the keyword-free name of the registration call; every other member carries the name of
  * the operation it performs.
  *
- * @var SouthboundNs::name     the driver a lookup or a dispatch addresses
- * @var SouthboundNs::drv      the driver an add registers (borrowed; must outlive the registry)
- * @var SouthboundNs::point    the one point a read or a write moves
- * @var SouthboundNs::block    the span of points a block read or a block write moves
- * @var SouthboundNs::i32      SB_OK / a count from a registration or a dispatch, or a negative code
- * @var SouthboundNs::n        how many drivers the registry holds
- * @var SouthboundNs::driver   the driver a find matched, or null
- * @var SouthboundNs::add         register @c drv: SB_OK, SB_ERR_ARG, SB_ERR_DUP or SB_ERR_FULL
- * @var SouthboundNs::clear       drop all registrations
- * @var SouthboundNs::count       how many drivers are registered
- * @var SouthboundNs::find        look up @c name
- * @var SouthboundNs::read        read @c point.point from @c name
- * @var SouthboundNs::write       write @c point.value to @c point.point of @c name
- * @var SouthboundNs::read_block  read @c block.n points from @c name, starting at @c block.first
- * @var SouthboundNs::write_block write @c block.n points to @c name, starting at @c block.first
+ * @var SouthboundVars::name
+ *                               the driver a lookup or a dispatch addresses
+ * @var SouthboundVars::drv
+ *                               the driver an add registers (borrowed; must outlive the registry)
+ * @var SouthboundVars::point
+ *                               the one point a read or a write moves
+ * @var SouthboundVars::block
+ *                               the span of points a block read or a block write moves
+ * @var SouthboundVars::i32
+ *                               SB_OK / a count from a registration or a dispatch, or a negative code
+ * @var SouthboundVars::n
+ *                               how many drivers the registry holds
+ * @var SouthboundVars::driver
+ *                               the driver a find matched, or null
+ * @var SouthboundNs::add
+ *                                register @c drv: SB_OK, SB_ERR_ARG, SB_ERR_DUP or SB_ERR_FULL
+ * @var SouthboundNs::clear
+ *                                drop all registrations
+ * @var SouthboundNs::count
+ *                                how many drivers are registered
+ * @var SouthboundNs::find
+ *                                look up @c name
+ * @var SouthboundNs::read
+ *                                read @c point.point from @c name
+ * @var SouthboundNs::write
+ *                                write @c point.value to @c point.point of @c name
+ * @var SouthboundNs::read_block
+ *                                read @c block.n points from @c name, starting at @c block.first
+ * @var SouthboundNs::write_block
+ *                                write @c block.n points to @c name, starting at @c block.first
  */
 typedef struct
 {

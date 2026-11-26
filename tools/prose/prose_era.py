@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Date a body of prose by its word choice, against six decades of papers in the same register.
 #
-#   Usage:  python utils/maint/prose/prose_era.py [--markers N]
+#   Usage:  python tools/prose/prose_era.py [--markers N]
 #
 # THE THIRD STAGE OF THE SAME FILTER
 #

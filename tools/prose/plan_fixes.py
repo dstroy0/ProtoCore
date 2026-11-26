@@ -4,9 +4,9 @@ The gate names a token instead of a phrase: it reports the bare contrast word wh
 has to act on the phrase. Each site is widened to the construction actually present and then a
 rule is applied to that construction.
 
-    python utils/maint/prose/plan_fixes.py src hooks > plan.tsv
-    python utils/maint/prose/build_fixes.py plan.tsv --write
-    python utils/maint/prose/fix_prose.py --write
+    python tools/prose/plan_fixes.py src hooks > plan.tsv
+    python tools/prose/build_fixes.py plan.tsv --write
+    python tools/prose/fix_prose.py --write
 
 Sites with no rule are printed to stderr and left for a person. That is the intended split: the
 mechanical majority is one substitution with the sentence otherwise untouched, and everything else

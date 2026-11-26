@@ -131,6 +131,7 @@ typedef struct
  * A caller binds the two spans once, sets the members a call takes, invokes it through ::QuicConn,
  * and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   QuicConn.init(ctx_span;
  *   QuicConn.bind.b = byte_span;
  *   QuicConn.init_args.cfg = cfg;
@@ -138,40 +139,65 @@ typedef struct
  *   QuicConn.recv_args.datagram = pkt;
  *   QuicConn.recv_args.len = pkt_len;
  *   QuicConn.recv(QuicConn.internal);
+ * @endcode
  *
- * @var QuicConnNs::bind              the two spans one connection runs out of
- * @var QuicConnNs::cb                the hooks the engine drives
- * @var QuicConnNs::init_args         the client's first Initial, as a connection is opened from it
- * @var QuicConnNs::recv_args         one received datagram
- * @var QuicConnNs::send_args         where the next outbound datagram lands
- * @var QuicConnNs::timeout_args      the caller's monotonic clock
- * @var QuicConnNs::stream_send_args  bytes queued to send on one stream
- * @var QuicConnNs::close_args        the error a close reports
- * @var QuicConnNs::ok                a call's true/false outcome
- * @var QuicConnNs::n                 bytes the last send or stream_send produced
- * @var QuicConnNs::established       whether the handshake completed (client Finished verified)
- * @var QuicConnNs::closed            whether the connection is closed or draining
- * @var QuicConnNs::init              open a server connection from the client's first Initial
- * @var QuicConnNs::callbacks         install @ref QuicConnNs::cb on the bound connection
- * @var QuicConnNs::recv              process one datagram: frames drive the handshake, ACKs and streams
- * @var QuicConnNs::send              build the next outbound datagram; @ref QuicConnNs::n is 0 when idle
- * @var QuicConnNs::on_timeout        drive loss recovery; call once per poll before @ref QuicConnNs::send
- * @var QuicConnNs::stream_send       queue bytes on a stream
- * @var QuicConnNs::owns              whether this connection answers to a received DCID
- * @var QuicConnNs::owns_args         a received Destination Connection ID, asked of a connection
- * @var QuicConnNs::close             queue a transport CONNECTION_CLOSE (RFC 9000 sec 19.19)
- * @var QuicConnNs::close_app         queue the application variant (0x1d), error code in the app's space
- * @var QuicConnNs::is_established    read the handshake state into @ref QuicConnNs::established
- * @var QuicConnNs::is_closed         read the close state into @ref QuicConnNs::closed
+ * @var QuicConnVars::bind
+ *                                      the two spans one connection runs out of
+ * @var QuicConnVars::cb
+ *                                      the hooks the engine drives
+ * @var QuicConnVars::init_args
+ *                                      the client's first Initial, as a connection is opened from it
+ * @var QuicConnVars::recv_args
+ *                                      one received datagram
+ * @var QuicConnVars::send_args
+ *                                      where the next outbound datagram lands
+ * @var QuicConnVars::timeout_args
+ *                                      the caller's monotonic clock
+ * @var QuicConnVars::stream_send_args
+ *                                      bytes queued to send on one stream
+ * @var QuicConnVars::close_args
+ *                                      the error a close reports
+ * @var QuicConnVars::ok
+ *                                      a call's true/false outcome
+ * @var QuicConnVars::n
+ *                                      bytes the last send or stream_send produced
+ * @var QuicConnVars::established
+ *                                      whether the handshake completed (client Finished verified)
+ * @var QuicConnVars::closed
+ *                                      whether the connection is closed or draining
+ * @var QuicConnNs::init
+ *                                    open a server connection from the client's first Initial
+ * @var QuicConnNs::callbacks
+ *                                    install @ref QuicConnVars::cb on the bound connection
+ * @var QuicConnNs::recv
+ *                                    process one datagram: frames drive the handshake, ACKs and streams
+ * @var QuicConnNs::send
+ *                                    build the next outbound datagram; @ref QuicConnVars::n is 0 when idle
+ * @var QuicConnNs::on_timeout
+ *                                    drive loss recovery; call once per poll before @ref QuicConnNs::send
+ * @var QuicConnNs::stream_send
+ *                                    queue bytes on a stream
+ * @var QuicConnNs::owns
+ *                                    whether this connection answers to a received DCID
+ * @var QuicConnVars::owns_args
+ *                                      a received Destination Connection ID, asked of a connection
+ * @var QuicConnNs::close
+ *                                    queue a transport CONNECTION_CLOSE (RFC 9000 sec 19.19)
+ * @var QuicConnNs::close_app
+ *                                    queue the application variant (0x1d), error code in the app's space
+ * @var QuicConnNs::is_established
+ *                                    read the handshake state into @ref QuicConnVars::established
+ * @var QuicConnNs::is_closed
+ *                                    read the close state into @ref QuicConnVars::closed
  *
- * @ref QuicConnNs::send is called repeatedly until @ref QuicConnNs::n is 0, and honors the
+ * @ref QuicConnNs::send is called repeatedly until @ref QuicConnVars::n is 0, and honors the
  * pre-validation 3x anti-amplification limit.
  *
  * The bound spans are the CALLER's, at addresses it knows. The caller releases them, and each pool
  * wipes on release; this module neither takes them, holds them past the connection, nor releases
  * them. The context span IS the connection, so two connections are two spans and never collide.
  *
- * No storage member: a caller binds, sets operands and reads @ref QuicConnNs::ok, and that is all
+ * No storage member: a caller binds, sets operands and reads @ref QuicConnVars::ok, and that is all
  * the surface there is.
  */
 typedef struct

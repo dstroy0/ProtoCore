@@ -28,7 +28,7 @@
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "network_drivers/application/smb/smb2/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
-#include "network_drivers/application/smb/smb_client/smb_client.h" // smb_open / smb_read / smb_close
+#include "network_drivers/application/smb/smb_client/smb_client.h" // SmbClient: smb_open, smb_read and smb_close
 
 
 // --- CHANGE ME: your WiFi ---
@@ -129,7 +129,7 @@ void read_program()
 
     SmbHandle h;
     x.deadline = millis() + 8000;
-    SmbResult rc = smb_open(&cfg, &h, cl_send, cl_recv, &x);
+    SmbResult rc = SmbClient.smb_open(protocore_smb_client_span(), &cfg, &h, cl_send, cl_recv, &x);
     if (rc != SMB_OK)
     {
         Serial.printf("smb_open failed (SmbResult %d) - see the README troubleshooting table\n", (int)rc);
@@ -142,15 +142,15 @@ void read_program()
     uint8_t buf[1024];
     size_t got = 0;
     x.deadline = millis() + 8000;
-    rc = smb_read(&h, 0, buf, sizeof(buf), &got, cl_send, cl_recv, &x);
+    rc = SmbClient.smb_read(protocore_smb_client_span(), &h, 0, buf, sizeof(buf), &got, cl_send, cl_recv, &x);
     if (rc == SMB_OK)
     {
         Serial.printf("--- first %u bytes ---\n", (unsigned)got);
         Serial.write(buf, got);
         Serial.println("\n--- end ---");
-        // To read a larger file, loop smb_read with a growing offset until got == 0.
+        // To read a larger file, loop SmbClient.smb_read with a growing offset until got == 0.
         // To upload instead, open with SMB2_FILE_GENERIC_WRITE + SMB2_FILE_OVERWRITE_IF
-        // and call smb_write(&h, 0, data, len, &wrote, cl_send, cl_recv, &x).
+        // and call SmbClient.smb_write(protocore_smb_client_span(), &h, 0, data, len, &wrote, cl_send, cl_recv, &x).
     }
     else
     {
@@ -158,7 +158,7 @@ void read_program()
     }
 
     x.deadline = millis() + 8000;
-    smb_close(&h, cl_send, cl_recv, &x);
+    SmbClient.smb_close(protocore_smb_client_span(), &h, cl_send, cl_recv, &x);
     TcpClientV.cid = cid;
     TcpClient.close(protocore_tcp_client_span());
 }

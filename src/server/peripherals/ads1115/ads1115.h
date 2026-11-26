@@ -112,25 +112,40 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ads1115 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ads1115.config_single_args.channel = ...;
  *   Ads1115.config_single_args.gain = ...;
  *   Ads1115.config_single_args.dr = ...;
  *   Ads1115.config_single(work);
  *   // Ads1115.word is what the call reports
+ * @endcode
  *
- * @var Ads1115Ns::config_single_args  what config_single takes: channel, gain, dr
- * @var Ads1115Ns::raw_to_uv_args  what raw_to_uv takes: raw, gain
- * @var Ads1115Ns::begin_args  what begin takes: addr
- * @var Ads1115Ns::read_raw_args  what read_raw takes: channel, gain, raw
- * @var Ads1115Ns::read_uv_args  what read_uv takes: channel, gain, microvolts
- * @var Ads1115Ns::ok  a call's true/false outcome
- * @var Ads1115Ns::word  what a call reports
- * @var Ads1115Ns::uv  what a call reports
- * @var Ads1115Ns::config_single  build the 16-bit config word for a single-shot, single-ended ...
- * @var Ads1115Ns::raw_to_uv  convert a signed 16-bit sample to microvolts for gain's full-scale ...
- * @var Ads1115Ns::begin  initialize the I2C bus for the ADS1115 at addr. true on ESP32
- * @var Ads1115Ns::read_raw  single-shot read of channel (0..3) at gain into raw. false on error
- * @var Ads1115Ns::read_uv  single-shot read of channel at gain, converted to microvolts in ...
+ * @var Ads1115Vars::config_single_args
+ *                                       what config_single takes: channel, gain, dr
+ * @var Ads1115Vars::raw_to_uv_args
+ *                                   what raw_to_uv takes: raw, gain
+ * @var Ads1115Vars::begin_args
+ *                               what begin takes: addr
+ * @var Ads1115Vars::read_raw_args
+ *                                  what read_raw takes: channel, gain, raw
+ * @var Ads1115Vars::read_uv_args
+ *                                 what read_uv takes: channel, gain, microvolts
+ * @var Ads1115Vars::ok
+ *                       a call's true/false outcome
+ * @var Ads1115Vars::word
+ *                         what a call reports
+ * @var Ads1115Vars::uv
+ *                       what a call reports
+ * @var Ads1115Ns::config_single
+ *                                build the 16-bit config word for a single-shot, single-ended ...
+ * @var Ads1115Ns::raw_to_uv
+ *                            convert a signed 16-bit sample to microvolts for gain's full-scale ...
+ * @var Ads1115Ns::begin
+ *                        initialize the I2C bus for the ADS1115 at addr. true on ESP32
+ * @var Ads1115Ns::read_raw
+ *                           single-shot read of channel (0..3) at gain into raw. false on error
+ * @var Ads1115Ns::read_uv
+ *                          single-shot read of channel at gain, converted to microvolts in ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

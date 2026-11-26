@@ -84,21 +84,36 @@ typedef struct
  * return the data octets and an indication of source port and source address. A caller sets the
  * members a call takes, invokes it through ::UdpListener, and reads the outcome off the same handle.
  *
- * @var UdpListenerNs::port          the receive port a call acts on
- * @var UdpListenerNs::bind          what creating a receive port takes
- * @var UdpListenerNs::send_args     what sending a datagram takes
- * @var UdpListenerNs::peer_args     what a sender lookup reads and writes
- * @var UdpListenerNs::ok            a call's true/false outcome
- * @var UdpListenerNs::text          the group a lookup reports, or NULL
- * @var UdpListenerNs::listen            bind a port and route its datagrams to a handler
- * @var UdpListenerNs::listen_multicast  bind a port and join an IPv4 group on every interface
- * @var UdpListenerNs::leave_multicast   leave the group bound on a port and free its slot
- * @var UdpListenerNs::poll              deliver received datagrams to their handlers
- * @var UdpListenerNs::reply             answer the peer a handler was given
- * @var UdpListenerNs::peer_addr         copy a peer's address and port out
- * @var UdpListenerNs::sendto            send from a bound port to an arbitrary destination
- * @var UdpListenerNs::close             unbind a port and free its slot, leaving any group first
- * @var UdpListenerNs::joined_group      the group a port joined, formatted, or NULL
+ * @var UdpListenerVars::port
+ *                                     the receive port a call acts on
+ * @var UdpListenerVars::bind
+ *                                     what creating a receive port takes
+ * @var UdpListenerVars::send_args
+ *                                     what sending a datagram takes
+ * @var UdpListenerVars::peer_args
+ *                                     what a sender lookup reads and writes
+ * @var UdpListenerVars::ok
+ *                                     a call's true/false outcome
+ * @var UdpListenerVars::text
+ *                                     the group a lookup reports, or NULL
+ * @var UdpListenerNs::listen
+ *                                       bind a port and route its datagrams to a handler
+ * @var UdpListenerNs::listen_multicast
+ *                                       bind a port and join an IPv4 group on every interface
+ * @var UdpListenerNs::leave_multicast
+ *                                       leave the group bound on a port and free its slot
+ * @var UdpListenerNs::poll
+ *                                       deliver received datagrams to their handlers
+ * @var UdpListenerNs::reply
+ *                                       answer the peer a handler was given
+ * @var UdpListenerNs::peer_addr
+ *                                       copy a peer's address and port out
+ * @var UdpListenerNs::sendto
+ *                                       send from a bound port to an arbitrary destination
+ * @var UdpListenerNs::close
+ *                                       unbind a port and free its slot, leaving any group first
+ * @var UdpListenerNs::joined_group
+ *                                       the group a port joined, formatted, or NULL
  *
  * reply() and sendto() send the caller's bytes from where they already are, and report whether the
  * stack took them. There is nothing between the caller and the wire: a refusal means the datagram

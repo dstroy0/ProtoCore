@@ -40,8 +40,10 @@ EMBED_BEGIN_DECLS
 /**
  * @brief The datagram service.
  *
- * @var UdpNs::listener  bound ports: receiving, replying, and sending from the bound endpoint
- * @var UdpNs::client    an ephemeral source port: sending only
+ * @var UdpNs::listener
+ *                       bound ports: receiving, replying, and sending from the bound endpoint
+ * @var UdpNs::client
+ *                       an ephemeral source port: sending only
  */
 typedef struct
 {

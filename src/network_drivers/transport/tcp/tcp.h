@@ -38,9 +38,12 @@ EMBED_BEGIN_DECLS
 /**
  * @brief The connection oriented transport.
  *
- * @var TcpNs::conn      the pool of accepted connections
- * @var TcpNs::listener  bound ports, their worker queues, and the accept-time gates
- * @var TcpNs::client    dialing out; present only when a client transport is enabled
+ * @var TcpNs::conn
+ *                       the pool of accepted connections
+ * @var TcpNs::listener
+ *                       bound ports, their worker queues, and the accept-time gates
+ * @var TcpNs::client
+ *                       dialing out; present only when a client transport is enabled
  *
  * Pointers rather than values because a table in one translation unit is not a constant expression
  * in another, so a by-value member could not be initialized from tcp.c.

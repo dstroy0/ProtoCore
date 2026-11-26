@@ -42,7 +42,9 @@ typedef struct
 PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_epoch);
 
 /**
- * @brief Convert the 7 raw RTC time registers (BCD: sec, min, hour, dow, .
+ * @brief Convert the 7 raw RTC time registers (BCD: sec, min, hour, dow, date, month, year) to
+ * a Unix timestamp. Pure - no I2C. Handles both 24-hour and 12-hour (AM/PM) hour encodings and
+ * masks the DS1307 clock-halt / DS3231 century bits.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @param regs the 7 register bytes as read from register 0 RTC_REG_COUNT bytes
  * @param epoch out: seconds since 1970-01-01 UTC
@@ -50,7 +52,8 @@ PROTOCORE_NS_LAYOUT(RtcNs, regs_to_epoch, epoch_to_regs, begin, read_epoch, set_
  */
 embed_bool protocore_rtc_regs_to_epoch(const uint8_t *work, const uint8_t *regs, uint32_t *epoch);
 /**
- * @brief Convert a Unix timestamp to the 7 RTC time registers (BCD, .
+ * @brief Convert a Unix timestamp to the 7 RTC time registers (BCD, 24-hour). Pure - no I2C.
+ * The day-of-week register is filled (1=Mon..7=Sun) for completeness.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
  * @param epoch Epoch
  * @param regs RTC_REG_COUNT bytes
@@ -65,7 +68,7 @@ embed_bool protocore_rtc_begin(const uint8_t *work);
 /**
  * @brief Read the current time from the RTC over I2C.
  * @param work PROTOCORE_RTC_BORROW bytes the caller took. Not held past the call.
- * @return The uint32_t.
+ * @return seconds since 1970-01-01 UTC, or 0 if the RTC is absent / holds an invalid time.
  */
 uint32_t protocore_rtc_read_epoch(uint8_t *work);
 /**

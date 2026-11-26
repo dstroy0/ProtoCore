@@ -107,27 +107,43 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ftp with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ftp.build_command_args.buf = ...;
  *   Ftp.build_command_args.cap = ...;
  *   Ftp.build_command_args.verb = ...;
  *   Ftp.build_command_args.arg = ...;
  *   Ftp.build_command(work);
  *   // Ftp.n is what the call reports
+ * @endcode
  *
- * @var FtpNs::build_command_args  what build_command takes: buf, cap, verb, arg
- * @var FtpNs::build_port_args  what build_port takes: buf, cap, ip, port
- * @var FtpNs::build_eprt_args  what build_eprt takes: buf, cap, ip_str, ipv6, port
- * @var FtpNs::parse_reply_args  what parse_reply takes: buf, len, code, consumed
- * @var FtpNs::parse_pasv_args  what parse_pasv takes: buf, len, ip, port
- * @var FtpNs::parse_epsv_args  what parse_epsv takes: buf, len, port
- * @var FtpNs::ok  true if a complete reply is present; false if the buffer holds only ...
- * @var FtpNs::n  bytes written (excluding the NUL terminator), or 0 on overflow / ...
- * @var FtpNs::build_command  build a control command line: `VERB<CRLF>` or `VERB<SP>ARG<CRLF>`. ...
- * @var FtpNs::build_port  build an active-mode `PORT h1,h2,h3,h4,p1,p2<CRLF>` from an IPv4 ...
- * @var FtpNs::build_eprt  build an extended active-mode ...
- * @var FtpNs::parse_reply  detect and measure a complete control-channel reply at the head of ...
- * @var FtpNs::parse_pasv  decode the data address from a `227` passive-mode reply. Reads the ...
- * @var FtpNs::parse_epsv  decode the port from a `229` extended-passive reply ...
+ * @var FtpVars::build_command_args
+ *                                   what build_command takes: buf, cap, verb, arg
+ * @var FtpVars::build_port_args
+ *                                what build_port takes: buf, cap, ip, port
+ * @var FtpVars::build_eprt_args
+ *                                what build_eprt takes: buf, cap, ip_str, ipv6, port
+ * @var FtpVars::parse_reply_args
+ *                                 what parse_reply takes: buf, len, code, consumed
+ * @var FtpVars::parse_pasv_args
+ *                                what parse_pasv takes: buf, len, ip, port
+ * @var FtpVars::parse_epsv_args
+ *                                what parse_epsv takes: buf, len, port
+ * @var FtpVars::ok
+ *                   true if a complete reply is present; false if the buffer holds only ...
+ * @var FtpVars::n
+ *                  bytes written (excluding the NUL terminator), or 0 on overflow / ...
+ * @var FtpNs::build_command
+ *                            build a control command line: `VERB<CRLF>` or `VERB<SP>ARG<CRLF>`. ...
+ * @var FtpNs::build_port
+ *                         build an active-mode `PORT h1,h2,h3,h4,p1,p2<CRLF>` from an IPv4 ...
+ * @var FtpNs::build_eprt
+ *                         build an extended active-mode ...
+ * @var FtpNs::parse_reply
+ *                          detect and measure a complete control-channel reply at the head of ...
+ * @var FtpNs::parse_pasv
+ *                         decode the data address from a `227` passive-mode reply. Reads the ...
+ * @var FtpNs::parse_epsv
+ *                         decode the port from a `229` extended-passive reply ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

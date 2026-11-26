@@ -41,8 +41,10 @@ EMBED_BEGIN_DECLS
 /**
  * @brief What ::protocore_wifi_link_start takes: the network that the station joins.
  *
- * @var WifiLinkStartArgs::ssid     the SSID, a string of 1 to 32 octets [BORROWS]
- * @var WifiLinkStartArgs::password the passphrase, a string of 8 to 63 octets, or empty for an open network [BORROWS]
+ * @var WifiLinkStartArgs::ssid
+ *                                  the SSID, a string of 1 to 32 octets [BORROWS]
+ * @var WifiLinkStartArgs::password
+ *                                  the passphrase, a string of 8 to 63 octets, or empty for an open network [BORROWS]
  */
 typedef struct
 {
@@ -53,8 +55,10 @@ typedef struct
 /**
  * @brief One frame, as the radio gives it or takes it: an Ethernet II frame with no frame check sequence.
  *
- * @var WifiLinkFrameArgs::frame the first octet of the frame [BORROWS]
- * @var WifiLinkFrameArgs::len   octets in the frame
+ * @var WifiLinkFrameArgs::frame
+ *                               the first octet of the frame [BORROWS]
+ * @var WifiLinkFrameArgs::len
+ *                               octets in the frame
  */
 typedef struct
 {
@@ -65,7 +69,8 @@ typedef struct
 /**
  * @brief What ::protocore_wifi_link_state_set takes.
  *
- * @var WifiLinkStateArgs::up EMBED_TRUE once the station joins its network, and EMBED_FALSE after it leaves
+ * @var WifiLinkStateArgs::up
+ *                            EMBED_TRUE once the station joins its network, and EMBED_FALSE after it leaves
  */
 typedef struct
 {

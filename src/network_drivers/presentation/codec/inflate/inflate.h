@@ -72,6 +72,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Inflate with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Inflate.raw_args.src = ...;
  *   Inflate.raw_args.src_len = ...;
  *   Inflate.raw_args.dst = ...;
@@ -81,11 +82,16 @@ typedef struct
  *   Inflate.raw_args.scratch_len = ...;
  *   Inflate.raw(work);
  *   // Inflate.value is what the call reports
+ * @endcode
  *
- * @var InflateNs::raw_args  what raw takes: src, src_len, dst, dst_cap, out_len,
- * @var InflateNs::ok  a call's true/false outcome
- * @var InflateNs::value  the value a call reports
- * @var InflateNs::raw  decompress a raw DEFLATE (RFC 1951) stream. dst is also the window, ...
+ * @var InflateVars::raw_args
+ *                             what raw takes: src, src_len, dst, dst_cap, out_len,
+ * @var InflateVars::ok
+ *                       a call's true/false outcome
+ * @var InflateVars::value
+ *                          the value a call reports
+ * @var InflateNs::raw
+ *                      decompress a raw DEFLATE (RFC 1951) stream. dst is also the window, ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

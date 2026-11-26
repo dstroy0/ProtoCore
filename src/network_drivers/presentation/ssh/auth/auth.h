@@ -49,8 +49,6 @@ typedef struct
  */
 typedef embed_bool (*SshPasswordCb)(const char *user, const char *password);
 
-/** @brief Install the password-verification callback (nullptr → all fail). */
-
 /**
  * @brief Application callback that STARTS a password change (RFC 4252 sec 8) for slot @p slot.
  *
@@ -71,47 +69,10 @@ typedef enum
     PROTOCORE_SSH_PW_CHANGE_FAIL,
 } SshPwChange;
 
-/** @brief Install the password-change start callback (nullptr → change requests are refused busy). */
-
-/**
- * @brief Report the outcome of the change the start callback began for slot @p slot.
- *
- * @p ok true when the old password verified and the new one was stored. Moves the slot to OK or
- * FAIL, which the next poll drains into the deferred reply. A no-op when no change is in flight
- * (a stale report after the connection left).
- */
-
 /**
  * @brief Take slot @p i's finished change outcome, clearing it back to NONE.
  *
  * @return OK or FAIL once the application reported, NONE while idle or still in flight.
- */
-/**
- * @brief Write the "publickey" USERAUTH_REQUEST body that RFC 4252 sec 7 signs and sends.
- *
- * sec 7 gives one field order and uses it twice: the signature covers
- *
- *     string    session identifier
- *     byte      SSH_MSG_USERAUTH_REQUEST
- *     string    user name
- *     string    service name
- *     string    "publickey"
- *     boolean   TRUE
- *     string    public key algorithm name
- *     string    public key to be used for authentication
- *
- * and the request that carries the signature is the same bytes from SSH_MSG_USERAUTH_REQUEST on,
- * with the signature appended. Writing it in one place is what keeps the two identical - a
- * verifier hashes what arrived, so any divergence here is a signature that never validates.
- *
- * @param w        Span written into.
- * @param sid      Session identifier, or null to start at SSH_MSG_USERAUTH_REQUEST (the request form).
- * @param sid_len  Length of @p sid; ignored when @p sid is null.
- * @param user     User name.
- * @param service  Service name, normally "ssh-connection".
- * @param pk_algo  Public key algorithm name.
- * @param pk_blob  Public key blob.
- * @param pk_len   Length of @p pk_blob.
  */
 
 /**
@@ -126,64 +87,15 @@ typedef enum
 SshPwChange protocore_ssh_auth_pw_change_take(uint8_t i);
 
 /**
- * @brief Drop a parked password change without replying to it.
- *
- * RFC 4252 sec 5.1 sends SSH_MSG_USERAUTH_SUCCESS once, so a change whose answer arrives after some
- * other method already succeeded is discarded rather than answered.
- */
-
-/**
- * @brief Drop slot @p i's half-finished authentication state and wipe its username.
- *
- * A keyboard-interactive exchange is armed by the USERAUTH_REQUEST and consumed by the matching
- * INFO_RESPONSE. A connection that leaves between the two ends here.
- */
-
-/**
  * @brief Application callback that decides whether a public key is authorized
  *        for @p user. @p blob is the "ssh-rsa" public-key blob.
  * @return true if the key may authenticate this user.
  */
 typedef embed_bool (*SshPubkeyCb)(const char *user, const uint8_t *blob, size_t blob_len);
 
-/** @brief Install the publickey-authorization callback (nullptr → all fail). */
-
-/**
- * @brief Parse an SSH_MSG_USERAUTH_REQUEST into @p req.
- * @return 0 on success, -1 if malformed.
- */
-
-/** @brief Build SSH_MSG_USERAUTH_FAILURE advertising "password". */
-
-/** @brief Build SSH_MSG_USERAUTH_SUCCESS. */
-
-/**
- * @brief Handle a USERAUTH_REQUEST end-to-end for slot @p i.
- *
- * Parses the request, checks "password" credentials via the installed callback,
- * and writes either USERAUTH_SUCCESS or USERAUTH_FAILURE to @p out. On success
- * the session is marked authenticated and advanced to the connection phase.
- *
- * @return 0 if a response was produced (check the message type), -1 on parse
- *         error.
- */
-
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-/**
- * @brief Handle an SSH_MSG_USERAUTH_INFO_RESPONSE (RFC 4256 §3.4) for slot @p i.
- *
- * The response to the single "Password:" prompt this server sends is verified through the installed
- * password callback (keyboard-interactive is the challenge-response face of password auth here). Writes
- * USERAUTH_SUCCESS or USERAUTH_FAILURE to @p out. Only valid while a keyboard-interactive exchange is
- * pending for the slot (a prior USERAUTH_REQUEST selected it); otherwise fails.
- *
- * @return 0 if a response was produced (check the message type), -1 on parse error / no exchange pending.
- */
+
 #endif
-
-/** @brief Dispatch messages 50 to 79; 80 and above need authentication (RFC 4252 sec 6). */
-
-/** @brief Send the reply a finished password change (RFC 4252 sec 8) deferred on slot @p i. */
 
 /** @brief RFC 4252 sec 5: the body of one userauth message. */
 typedef struct
@@ -227,31 +139,56 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::SshAuth, and reads the outcome off
  * the same handle.
  *
- * @var SshAuthNs::slot        the SSH slot a call acts on
- * @var SshAuthNs::msg_type    the message a dispatch routes (sec 6: 50-79 here, 80+ need auth)
- * @var SshAuthNs::msg         sec 5 the message body a dispatch is given
- * @var SshAuthNs::out_args    where a reply is written
- * @var SshAuthNs::req         where a parse lands the request (sec 5)
- * @var SshAuthNs::partial     the failure is a partial success (sec 5.1)
- * @var SshAuthNs::userauth    sec 5 / sec 7 the fields one request names
- * @var SshAuthNs::cbs         what an attempt of each method is checked against
- * @var SshAuthNs::ok          a call's true/false outcome
- * @var SshAuthNs::i32         a call's signed outcome
- * @var SshAuthNs::set_password_cb         install the password check
- * @var SshAuthNs::set_password_change_cb  install the change handler
- * @var SshAuthNs::set_pubkey_cb           install the public key check
- * @var SshAuthNs::pw_change_report        report a finished change back to the slot
- * @var SshAuthNs::pw_change_clear         drop a pending change on the slot
- * @var SshAuthNs::passwd_change_reply     send the reply a finished change deferred
- * @var SshAuthNs::write_publickey_request build a publickey request into out_args.w (sec 7)
- * @var SshAuthNs::timed_out               the slot has gone too long unauthenticated (sec 4)
- * @var SshAuthNs::reset                   clear the slot's authentication state
- * @var SshAuthNs::parse_request           parse a USERAUTH_REQUEST into req (sec 5)
- * @var SshAuthNs::build_failure           write USERAUTH_FAILURE (sec 5.1)
- * @var SshAuthNs::build_success           write USERAUTH_SUCCESS (sec 5.1)
- * @var SshAuthNs::handle_request          answer a USERAUTH_REQUEST
- * @var SshAuthNs::handle_info_response    answer a USERAUTH_INFO_RESPONSE (RFC 4256 sec 3.4)
- * @var SshAuthNs::dispatch                route messages 50 to 79
+ * @var SshAuthVars::slot
+ *                               the SSH slot a call acts on
+ * @var SshAuthVars::msg_type
+ *                               the message a dispatch routes (sec 6: 50-79 here, 80+ need auth)
+ * @var SshAuthVars::msg
+ *                               sec 5 the message body a dispatch is given
+ * @var SshAuthVars::out_args
+ *                               where a reply is written
+ * @var SshAuthVars::req
+ *                               where a parse lands the request (sec 5)
+ * @var SshAuthVars::partial
+ *                               the failure is a partial success (sec 5.1)
+ * @var SshAuthVars::userauth
+ *                               sec 5 / sec 7 the fields one request names
+ * @var SshAuthVars::cbs
+ *                               what an attempt of each method is checked against
+ * @var SshAuthVars::ok
+ *                               a call's true/false outcome
+ * @var SshAuthVars::i32
+ *                               a call's signed outcome
+ * @var SshAuthNs::set_password_cb
+ *                                         install the password check
+ * @var SshAuthNs::set_password_change_cb
+ *                                         install the change handler
+ * @var SshAuthNs::set_pubkey_cb
+ *                                         install the public key check
+ * @var SshAuthNs::pw_change_report
+ *                                         report a finished change back to the slot
+ * @var SshAuthNs::pw_change_clear
+ *                                         drop a pending change on the slot
+ * @var SshAuthNs::passwd_change_reply
+ *                                         send the reply a finished change deferred
+ * @var SshAuthNs::write_publickey_request
+ *                                         build a publickey request into out_args.w (sec 7)
+ * @var SshAuthNs::timed_out
+ *                                         the slot has gone too long unauthenticated (sec 4)
+ * @var SshAuthNs::reset
+ *                                         clear the slot's authentication state
+ * @var SshAuthNs::parse_request
+ *                                         parse a USERAUTH_REQUEST into req (sec 5)
+ * @var SshAuthNs::build_failure
+ *                                         write USERAUTH_FAILURE (sec 5.1)
+ * @var SshAuthNs::build_success
+ *                                         write USERAUTH_SUCCESS (sec 5.1)
+ * @var SshAuthNs::handle_request
+ *                                         answer a USERAUTH_REQUEST
+ * @var SshAuthNs::handle_info_response
+ *                                         answer a USERAUTH_INFO_RESPONSE (RFC 4256 sec 3.4)
+ * @var SshAuthNs::dispatch
+ *                                         route messages 50 to 79
  */
 typedef struct
 {
@@ -294,22 +231,90 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in SshAuthV or a region of the borrow at a fixed offset.
+/** @brief Install the password-verification callback (nullptr → all fail). */
 void protocore_ssh_auth_set_password_cb(const uint8_t *work);
+/** @brief Install the password-change start callback (nullptr → change requests are refused busy). */
 void protocore_ssh_auth_set_password_change_cb(const uint8_t *work);
+/** @brief Install the publickey-authorization callback (nullptr → all fail). */
 void protocore_ssh_auth_set_pubkey_cb(const uint8_t *work);
+/**
+ * @brief Report the outcome of the change the start callback began for slot @p slot.
+ *
+ * @p ok true when the old password verified and the new one was stored. Moves the slot to OK or
+ * FAIL, which the next poll drains into the deferred reply. A no-op when no change is in flight
+ * (a stale report after the connection left).
+ */
 void protocore_ssh_auth_pw_change_report(const uint8_t *work);
+/**
+ * @brief Drop a parked password change without replying to it.
+ *
+ * RFC 4252 sec 5.1 sends SSH_MSG_USERAUTH_SUCCESS once, so a change whose answer arrives after some
+ * other method already succeeded is discarded rather than answered.
+ */
 void protocore_ssh_auth_pw_change_clear(const uint8_t *work);
+/** @brief Send the reply a finished password change (RFC 4252 sec 8) deferred on slot @p i. */
 void protocore_ssh_auth_passwd_change_reply(const uint8_t *work);
+/**
+ * @brief Write the "publickey" USERAUTH_REQUEST body that RFC 4252 sec 7 signs and sends.
+ *
+ * sec 7 gives one field order and uses it twice: the signature covers
+ *
+ *     string    session identifier
+ *     byte      SSH_MSG_USERAUTH_REQUEST
+ *     string    user name
+ *     string    service name
+ *     string    "publickey"
+ *     boolean   TRUE
+ *     string    public key algorithm name
+ *     string    public key to be used for authentication
+ *
+ * and the request that carries the signature is the same bytes from SSH_MSG_USERAUTH_REQUEST on,
+ * with the signature appended. Writing it in one place is what keeps the two identical - a
+ * verifier hashes what arrived, so any divergence here is a signature that never validates.
+ */
 void protocore_ssh_auth_write_publickey_request(const uint8_t *work);
 void protocore_ssh_auth_timed_out(const uint8_t *work);
+/**
+ * @brief Drop slot @p i's half-finished authentication state and wipe its username.
+ *
+ * A keyboard-interactive exchange is armed by the USERAUTH_REQUEST and consumed by the matching
+ * INFO_RESPONSE. A connection that leaves between the two ends here.
+ */
 void protocore_ssh_auth_reset(const uint8_t *work);
+/**
+ * @brief Parse an SSH_MSG_USERAUTH_REQUEST into @p req.
+ * @post SshAuthV.i32: 0 on success, -1 if malformed.
+ */
 void protocore_ssh_auth_parse_request(const uint8_t *work);
+/** @brief Build SSH_MSG_USERAUTH_FAILURE advertising "password". */
 void protocore_ssh_auth_build_failure(const uint8_t *work);
+/** @brief Build SSH_MSG_USERAUTH_SUCCESS. */
 void protocore_ssh_auth_build_success(const uint8_t *work);
+/**
+ * @brief Handle a USERAUTH_REQUEST end-to-end for slot @p i.
+ *
+ * Parses the request, checks "password" credentials via the installed callback,
+ * and writes either USERAUTH_SUCCESS or USERAUTH_FAILURE to @p out. On success
+ * the session is marked authenticated and advanced to the connection phase.
+ *
+ * @post SshAuthV.i32: 0 if a response was produced (check the message type), -1 on parse
+ *         error.
+ */
 void protocore_ssh_auth_handle_request(const uint8_t *work);
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
+/**
+ * @brief Handle an SSH_MSG_USERAUTH_INFO_RESPONSE (RFC 4256 §3.4) for slot @p i.
+ *
+ * The response to the single "Password:" prompt this server sends is verified through the installed
+ * password callback (keyboard-interactive is the challenge-response face of password auth here). Writes
+ * USERAUTH_SUCCESS or USERAUTH_FAILURE to @p out. Only valid while a keyboard-interactive exchange is
+ * pending for the slot (a prior USERAUTH_REQUEST selected it); otherwise fails.
+ *
+ * @post SshAuthV.i32: 0 if a response was produced (check the message type), -1 on parse error / no exchange pending.
+ */
 void protocore_ssh_auth_handle_info_response(uint8_t *work);
 #endif
+/** @brief Dispatch messages 50 to 79; 80 and above need authentication (RFC 4252 sec 6). */
 void protocore_ssh_auth_dispatch(uint8_t *work);
 
 // `static const`, initialised HERE rather than `extern` against a definition in the .c: a
@@ -332,6 +337,8 @@ static const SshAuthNs SshAuth __attribute__((unused)) = {
     .handle_request = protocore_ssh_auth_handle_request,
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
     .handle_info_response = protocore_ssh_auth_handle_info_response,
+#else
+    .handle_info_response = NULL,
 #endif
     .dispatch = protocore_ssh_auth_dispatch,
 };

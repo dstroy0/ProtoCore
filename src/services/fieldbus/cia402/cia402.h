@@ -238,40 +238,72 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Cia402 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Cia402.state_args.statusword = ...;
  *   Cia402.state(work);
  *   // Cia402.value is what the call reports
+ * @endcode
  *
- * @var Cia402Ns::state_args  what state takes: statusword
- * @var Cia402Ns::controlword_args  what controlword takes: cmd
- * @var Cia402Ns::enable_sequence_args  what enable_sequence takes: state
- * @var Cia402Ns::sdo_set_controlword_args  what sdo_set_controlword takes: out, node, controlword
- * @var Cia402Ns::sdo_set_mode_args  what sdo_set_mode takes: out, node, mode
- * @var Cia402Ns::sdo_set_target_position_args  what sdo_set_target_position takes: out, node, position
- * @var Cia402Ns::sdo_set_target_velocity_args  what sdo_set_target_velocity takes: out, node, velocity
- * @var Cia402Ns::sdo_set_target_torque_args  what sdo_set_target_torque takes: out, node, torque
- * @var Cia402Ns::sdo_read_args  what sdo_read takes: out, node, index, sub
- * @var Cia402Ns::sdo_get_u16_args  what sdo_get_u16 takes: f, want_index, value
- * @var Cia402Ns::sdo_get_i32_args  what sdo_get_i32 takes: f, want_index, value
- * @var Cia402Ns::pack_command_args  what pack_command takes: buf, cap, controlword, target
- * @var Cia402Ns::unpack_status_args  what unpack_status takes: buf, len, statusword, actual
- * @var Cia402Ns::ok  a call's true/false outcome
- * @var Cia402Ns::value  the value a call reports
- * @var Cia402Ns::u16  what a call reports
- * @var Cia402Ns::n  the count a call reports
- * @var Cia402Ns::state  state
- * @var Cia402Ns::controlword  controlword
- * @var Cia402Ns::enable_sequence  enable_sequence
- * @var Cia402Ns::sdo_set_controlword  sdo_set_controlword
- * @var Cia402Ns::sdo_set_mode  sdo_set_mode
- * @var Cia402Ns::sdo_set_target_position  sdo_set_target_position
- * @var Cia402Ns::sdo_set_target_velocity  sdo_set_target_velocity
- * @var Cia402Ns::sdo_set_target_torque  sdo_set_target_torque
- * @var Cia402Ns::sdo_read  sdo_read
- * @var Cia402Ns::sdo_get_u16  sdo_get_u16
- * @var Cia402Ns::sdo_get_i32  sdo_get_i32
- * @var Cia402Ns::pack_command  pack_command
- * @var Cia402Ns::unpack_status  unpack_status
+ * @var Cia402Vars::state_args
+ *                              what state takes: statusword
+ * @var Cia402Vars::controlword_args
+ *                                    what controlword takes: cmd
+ * @var Cia402Vars::enable_sequence_args
+ *                                        what enable_sequence takes: state
+ * @var Cia402Vars::sdo_set_controlword_args
+ *                                            what sdo_set_controlword takes: out, node, controlword
+ * @var Cia402Vars::sdo_set_mode_args
+ *                                     what sdo_set_mode takes: out, node, mode
+ * @var Cia402Vars::sdo_set_target_position_args
+ *                                                what sdo_set_target_position takes: out, node, position
+ * @var Cia402Vars::sdo_set_target_velocity_args
+ *                                                what sdo_set_target_velocity takes: out, node, velocity
+ * @var Cia402Vars::sdo_set_target_torque_args
+ *                                              what sdo_set_target_torque takes: out, node, torque
+ * @var Cia402Vars::sdo_read_args
+ *                                 what sdo_read takes: out, node, index, sub
+ * @var Cia402Vars::sdo_get_u16_args
+ *                                    what sdo_get_u16 takes: f, want_index, value
+ * @var Cia402Vars::sdo_get_i32_args
+ *                                    what sdo_get_i32 takes: f, want_index, value
+ * @var Cia402Vars::pack_command_args
+ *                                     what pack_command takes: buf, cap, controlword, target
+ * @var Cia402Vars::unpack_status_args
+ *                                      what unpack_status takes: buf, len, statusword, actual
+ * @var Cia402Vars::ok
+ *                      a call's true/false outcome
+ * @var Cia402Vars::value
+ *                         the value a call reports
+ * @var Cia402Vars::u16
+ *                       what a call reports
+ * @var Cia402Vars::n
+ *                     the count a call reports
+ * @var Cia402Ns::state
+ *                       state
+ * @var Cia402Ns::controlword
+ *                             controlword
+ * @var Cia402Ns::enable_sequence
+ *                                 enable_sequence
+ * @var Cia402Ns::sdo_set_controlword
+ *                                     sdo_set_controlword
+ * @var Cia402Ns::sdo_set_mode
+ *                              sdo_set_mode
+ * @var Cia402Ns::sdo_set_target_position
+ *                                         sdo_set_target_position
+ * @var Cia402Ns::sdo_set_target_velocity
+ *                                         sdo_set_target_velocity
+ * @var Cia402Ns::sdo_set_target_torque
+ *                                       sdo_set_target_torque
+ * @var Cia402Ns::sdo_read
+ *                          sdo_read
+ * @var Cia402Ns::sdo_get_u16
+ *                             sdo_get_u16
+ * @var Cia402Ns::sdo_get_i32
+ *                             sdo_get_i32
+ * @var Cia402Ns::pack_command
+ *                              pack_command
+ * @var Cia402Ns::unpack_status
+ *                               unpack_status
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

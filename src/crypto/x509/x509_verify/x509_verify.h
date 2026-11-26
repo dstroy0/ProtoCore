@@ -82,18 +82,28 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::X509Verify, and reads the outcome
  * off the same handle.
  *
- * @var X509VerifyNs::link_args    the certificate and its issuer
- * @var X509VerifyNs::time_args    the certificate and the current time
- * @var X509VerifyNs::issuer_args  the candidate issuer and its depth
- * @var X509VerifyNs::message_args whose key verifies a message, and the bytes it covers
- * @var X509VerifyNs::work         the bytes a signature check runs out of; the caller's
- * @var X509VerifyNs::ok           a call's true/false outcome
- * @var X509VerifyNs::status       why, when it is false
- * @var X509VerifyNs::signature    the signature over the TBS verifies under the issuer's key
- * @var X509VerifyNs::validity     the current time is inside the certificate's validity period
- * @var X509VerifyNs::may_sign     the issuer is allowed to have signed anything at this depth
- * @var X509VerifyNs::link         all three, and the issuer-name match: one whole link
- * @var X509VerifyNs::message      a signature over arbitrary bytes verifies under a certificate's
+ * @var X509VerifyVars::link_args
+ *                                   the certificate and its issuer
+ * @var X509VerifyVars::time_args
+ *                                   the certificate and the current time
+ * @var X509VerifyVars::issuer_args
+ *                                   the candidate issuer and its depth
+ * @var X509VerifyVars::message_args
+ *                                   whose key verifies a message, and the bytes it covers
+ * @var X509VerifyVars::ok
+ *                                   a call's true/false outcome
+ * @var X509VerifyVars::status
+ *                                   why, when it is false
+ * @var X509VerifyNs::signature
+ *                                 the signature over the TBS verifies under the issuer's key
+ * @var X509VerifyNs::validity
+ *                                 the current time is inside the certificate's validity period
+ * @var X509VerifyNs::may_sign
+ *                                 the issuer is allowed to have signed anything at this depth
+ * @var X509VerifyNs::link
+ *                                 all three, and the issuer-name match: one whole link
+ * @var X509VerifyNs::message
+ *                                 a signature over arbitrary bytes verifies under a certificate's
  *                                 key, which is what a TLS CertificateVerify is (RFC 8446 sec 4.4.3)
  *
  * No storage member: the caller hands in the bytes a signature check needs.

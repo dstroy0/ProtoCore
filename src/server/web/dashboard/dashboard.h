@@ -7,8 +7,10 @@
  *
  * Widgets are declared once in a fixed compile-time protocore_widget table - no heap,
  * fixed at link. protocore_dashboard_begin() serves three things at @p path:
+ * @code{.c}
  *   - GET path           the self-contained SVG dashboard page (from web);
  *   - GET path/layout    the widget table serialized as a JSON array;
+ * @endcode
  *   - SSE path/stream     a live stream of the current values.
  * The page fetches the layout, renders one SVG widget per entry, and updates them
  * from the SSE value stream. The application feeds readings with
@@ -125,29 +127,50 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Dashboard with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Dashboard.configure_args.widgets = ...;
  *   Dashboard.configure_args.count = ...;
  *   Dashboard.configure(work);
+ * @endcode
  *
- * @var DashboardNs::configure_args  what configure takes: widgets, count
- * @var DashboardNs::set_args  what set takes: key, value
- * @var DashboardNs::layout_json_args  what layout_json takes: out, cap
- * @var DashboardNs::values_json_args  what values_json takes: out, cap
- * @var DashboardNs::on_control_args  what on_control takes: cb
- * @var DashboardNs::parse_control_args  what parse_control takes: msg, key_out, key_cap, value_out
- * @var DashboardNs::dispatch_control_args  what dispatch_control takes: msg
- * @var DashboardNs::begin_args  what begin takes: path, widgets, count
- * @var DashboardNs::ok  true if well-formed; writes the key (bounded by key_cap) and value
- * @var DashboardNs::value  number of characters written, or 0 if cap is too small
- * @var DashboardNs::configure  bind the widget table and reset every value to 0
- * @var DashboardNs::set  set a widget's current value by key. false if the key is unknown
- * @var DashboardNs::layout_json  serialize the widget layout as a JSON array into out
- * @var DashboardNs::values_json  serialize the current values as a JSON object {key:value,...} into ...
- * @var DashboardNs::on_control  register the callback invoked when a control widget sends a value
- * @var DashboardNs::parse_control  parse a control message `{"k":"<key>","v":<number>}` from the page
- * @var DashboardNs::dispatch_control  parse a control message and invoke the registered control callback
- * @var DashboardNs::begin  serve the dashboard at path (page, layout JSON, and SSE value ...
- * @var DashboardNs::publish  broadcast the current values to all SSE subscribers (after ...
+ * @var DashboardVars::configure_args
+ *                                     what configure takes: widgets, count
+ * @var DashboardVars::set_args
+ *                               what set takes: key, value
+ * @var DashboardVars::layout_json_args
+ *                                       what layout_json takes: out, cap
+ * @var DashboardVars::values_json_args
+ *                                       what values_json takes: out, cap
+ * @var DashboardVars::on_control_args
+ *                                      what on_control takes: cb
+ * @var DashboardVars::parse_control_args
+ *                                         what parse_control takes: msg, key_out, key_cap, value_out
+ * @var DashboardVars::dispatch_control_args
+ *                                            what dispatch_control takes: msg
+ * @var DashboardVars::begin_args
+ *                                 what begin takes: path, widgets, count
+ * @var DashboardVars::ok
+ *                         true if well-formed; writes the key (bounded by key_cap) and value
+ * @var DashboardVars::value
+ *                            number of characters written, or 0 if cap is too small
+ * @var DashboardNs::configure
+ *                              bind the widget table and reset every value to 0
+ * @var DashboardNs::set
+ *                        set a widget's current value by key. false if the key is unknown
+ * @var DashboardNs::layout_json
+ *                                serialize the widget layout as a JSON array into out
+ * @var DashboardNs::values_json
+ *                                serialize the current values as a JSON object {key:value,...} into ...
+ * @var DashboardNs::on_control
+ *                               register the callback invoked when a control widget sends a value
+ * @var DashboardNs::parse_control
+ *                                  parse a control message `{"k":"<key>","v":<number>}` from the page
+ * @var DashboardNs::dispatch_control
+ *                                     parse a control message and invoke the registered control callback
+ * @var DashboardNs::begin
+ *                          serve the dashboard at path (page, layout JSON, and SSE value ...
+ * @var DashboardNs::publish
+ *                            broadcast the current values to all SSE subscribers (after ...
  *
  * @c work is PROTOCORE_DASHBOARD_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

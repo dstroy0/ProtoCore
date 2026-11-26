@@ -46,18 +46,19 @@ typedef struct
 PROTOCORE_NS_LAYOUT(SpnegoNs, wrap_negotiate, parse_response, wrap_authenticate);
 
 /**
- * @brief Wrap an NTLMSSP NEGOTIATE token in a SPNEGO GSS-API .
+ * @brief Wrap an NTLMSSP NEGOTIATE token in a SPNEGO GSS-API InitialContextToken (the first
+ *        SESSION_SETUP security buffer).
  * @param work PROTOCORE_SPNEGO_BORROW bytes the caller took. Not held past the call.
  * @param ntlm Ntlm
  * @param protocore_ntlm_len Protocore ntlm len
  * @param out Out
  * @param cap Cap
- * @return The size_t.
+ * @return the token length written to @p out, or 0 on overflow.
  */
 size_t protocore_spnego_wrap_negotiate(const uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len,
                                        uint8_t *out, size_t cap);
 /**
- * @brief Extract the responseToken (the NTLMSSP CHALLENGE) from a server .
+ * @brief Extract the responseToken (the NTLMSSP CHALLENGE) from a server NegTokenResp.
  * @param work PROTOCORE_SPNEGO_BORROW bytes the caller took. Not held past the call.
  * @param blob Blob
  * @param len Len
@@ -68,13 +69,14 @@ size_t protocore_spnego_wrap_negotiate(const uint8_t *work, const uint8_t *ntlm,
 embed_bool protocore_spnego_parse_response(const uint8_t *work, const uint8_t *blob, size_t len,
                                            const uint8_t **protocore_resp_token, size_t *protocore_resp_len);
 /**
- * @brief Wrap an NTLMSSP AUTHENTICATE token in a SPNEGO NegTokenResp (the .
+ * @brief Wrap an NTLMSSP AUTHENTICATE token in a SPNEGO NegTokenResp (the second SESSION_SETUP
+ *        security buffer).
  * @param work PROTOCORE_SPNEGO_BORROW bytes the caller took. Not held past the call.
  * @param ntlm Ntlm
  * @param protocore_ntlm_len Protocore ntlm len
  * @param out Out
  * @param cap Cap
- * @return The size_t.
+ * @return the token length written to @p out, or 0 on overflow.
  */
 size_t protocore_spnego_wrap_authenticate(const uint8_t *work, const uint8_t *ntlm, size_t protocore_ntlm_len,
                                           uint8_t *out, size_t cap);

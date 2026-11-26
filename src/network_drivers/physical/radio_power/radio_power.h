@@ -55,20 +55,32 @@ typedef struct
  * @brief The radio: its power management mode and its transmit power cap.
  *
  * A caller sets the members a call takes, invokes it through ::Radio, and reads the outcome off the
- * same handle. The keep-awake count is behind @ref internal.
+ * same handle. The keep-awake count is internal.
  *
- * @var RadioNs::ps       the power management mode a call applies or renders (802.11-2020 11.2.3.2)
- * @var RadioNs::tx       the transmit power a cap applies (802.11-2020 11.7)
- * @var RadioNs::ok       a call's true/false outcome
- * @var RadioNs::mode     the mode the radio reports, in L1's own protocore_phy_ps terms
- * @var RadioNs::text     the name a render reports ("none" / "min_modem" / "max_modem")
- * @var RadioNs::power        apply PROTOCORE_RADIO_WIFI_PS, and PROTOCORE_RADIO_MAX_TX_DBM when nonzero
- * @var RadioNs::ps_name      render a power management mode as text
- * @var RadioNs::busy_hold    hold the radio in active mode for a bulk transfer (reference-counted)
- * @var RadioNs::busy_release release one bulk-transfer hold
- * @var RadioNs::ps_set       select active mode or PS mode (802.11-2020 6.3.2.2)
- * @var RadioNs::ps_mode      read the mode back into @ref RadioNs::mode
- * @var RadioNs::tx_power_set cap transmit power at @ref RadioTxArgs::dbm (802.11-2020 11.7.6)
+ * @var RadioNs::ps
+ *                        the power management mode a call applies or renders (802.11-2020 11.2.3.2)
+ * @var RadioNs::tx
+ *                        the transmit power a cap applies (802.11-2020 11.7)
+ * @var RadioNs::ok
+ *                        a call's true/false outcome
+ * @var RadioNs::mode
+ *                        the mode the radio reports, in L1's own protocore_phy_ps terms
+ * @var RadioNs::text
+ *                        the name a render reports ("none" / "min_modem" / "max_modem")
+ * @var RadioNs::power
+ *                            apply PROTOCORE_RADIO_WIFI_PS, and PROTOCORE_RADIO_MAX_TX_DBM when nonzero
+ * @var RadioNs::ps_name
+ *                            render a power management mode as text
+ * @var RadioNs::busy_hold
+ *                            hold the radio in active mode for a bulk transfer (reference-counted)
+ * @var RadioNs::busy_release
+ *                            release one bulk-transfer hold
+ * @var RadioNs::ps_set
+ *                            select active mode or PS mode (802.11-2020 6.3.2.2)
+ * @var RadioNs::ps_mode
+ *                            read the mode back into @ref RadioNs::mode
+ * @var RadioNs::tx_power_set
+ *                            cap transmit power at @ref RadioTxArgs::dbm (802.11-2020 11.7.6)
  *
  * The first @ref RadioNs::busy_hold puts the radio in active mode so a long transfer crosses no
  * doze interval; the matching release, once the count returns to zero, applies the configured

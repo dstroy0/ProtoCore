@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # The voice as a rhythm spectrum, and the band a text is graded inside.
 #
 #   build/tessera_host/tessera_run --processors 1 --name voice_harmonics -- \
-#       python utils/maint/prose/docs_check --harmonics
+#       python tools/prose/docs_check --harmonics
 #   from voice_harmonics import Voice
 #
 # A voice is read here as four signals taken off prose in the order it was written, each one
@@ -27,7 +27,7 @@
 # held-out text is never in the reference it is measured against. A text is outside the voice on a
 # signal when its distance is past the EDGE percentile of the held-out blocks of its size.
 #
-# Writes utils/maint/prose/voice_spectra.tsv (signal, bin, share) and utils/maint/prose/voice_band.tsv
+# Writes tools/prose/voice_spectra.tsv (signal, bin, share) and tools/prose/voice_band.tsv
 # (signal, words, blocks, median, edge, worst). The ranks are the committed tables' ranks, taken over
 # all six texts. A held-out block therefore sees ranks its own text helped set. That moves the
 # common ranks by nothing a spectrum can see and is stated here because it is not held out.

@@ -5,9 +5,9 @@ it is mechanical: a rewrite that matches nothing leaves the finding located whil
 successful, and a rewrite that matches twice edits a site nobody read. Both are the failure this
 whole day has been about. Both are errors here.
 
-    python utils/maint/prose/fix_prose.py                    # report what would change
-    python utils/maint/prose/fix_prose.py --write            # change it
-    python utils/maint/prose/fix_prose.py --table other.tsv  # a different table
+    python tools/prose/fix_prose.py                    # report what would change
+    python tools/prose/fix_prose.py --write            # change it
+    python tools/prose/fix_prose.py --table other.tsv  # a different table
 
 Each row of the table is a file, the exact text to find, and what it becomes, tab separated, with
 \\n for a line break inside a field. The text must appear once in that file. Not zero times, which

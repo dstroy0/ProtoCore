@@ -111,28 +111,47 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Fdc2214 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Fdc2214.data_args.msb_reg = ...;
  *   Fdc2214.data_args.lsb_reg = ...;
  *   Fdc2214.data(work);
  *   // Fdc2214.value is what the call reports
+ * @endcode
  *
- * @var Fdc2214Ns::data_args  what data takes: msb_reg, lsb_reg
- * @var Fdc2214Ns::error_args  what error takes: msb_reg
- * @var Fdc2214Ns::sensor_freq_hz_args  what sensor_freq_hz takes: data28, fref_hz
- * @var Fdc2214Ns::build_config_args  what build_config takes: buf, cap, rcount, settlecount
- * @var Fdc2214Ns::begin_args  what begin takes: addr, rcount, settlecount
- * @var Fdc2214Ns::read_ch0_args  what read_ch0 takes: out
- * @var Fdc2214Ns::ok  a call's true/false outcome
- * @var Fdc2214Ns::value  the value a call reports
- * @var Fdc2214Ns::flags  what a call reports
- * @var Fdc2214Ns::hz  what a call reports
- * @var Fdc2214Ns::n  bytes written (7 * 3 = 21), or 0 if cap < FDC2214_CONFIG_MAX
- * @var Fdc2214Ns::data  combine a DATA MSB register (low 12 bits) and DATA LSB register ...
- * @var Fdc2214Ns::error  the 4 error flags from the top of a DATA MSB register (bits 15:12)
- * @var Fdc2214Ns::sensor_freq_hz  sensor frequency in Hz for a 28-bit result against a reference ...
- * @var Fdc2214Ns::build_config  emit a single-channel (CH0) continuous-conversion bring-up as ...
- * @var Fdc2214Ns::begin  verify the device id and apply the CH0 config at addr. true if ...
- * @var Fdc2214Ns::read_ch0  read channel 0's 28-bit conversion result into out. false on I2C ...
+ * @var Fdc2214Vars::data_args
+ *                              what data takes: msb_reg, lsb_reg
+ * @var Fdc2214Vars::error_args
+ *                               what error takes: msb_reg
+ * @var Fdc2214Vars::sensor_freq_hz_args
+ *                                        what sensor_freq_hz takes: data28, fref_hz
+ * @var Fdc2214Vars::build_config_args
+ *                                      what build_config takes: buf, cap, rcount, settlecount
+ * @var Fdc2214Vars::begin_args
+ *                               what begin takes: addr, rcount, settlecount
+ * @var Fdc2214Vars::read_ch0_args
+ *                                  what read_ch0 takes: out
+ * @var Fdc2214Vars::ok
+ *                       a call's true/false outcome
+ * @var Fdc2214Vars::value
+ *                          the value a call reports
+ * @var Fdc2214Vars::flags
+ *                          what a call reports
+ * @var Fdc2214Vars::hz
+ *                       what a call reports
+ * @var Fdc2214Vars::n
+ *                      bytes written (7 * 3 = 21), or 0 if cap < FDC2214_CONFIG_MAX
+ * @var Fdc2214Ns::data
+ *                       combine a DATA MSB register (low 12 bits) and DATA LSB register ...
+ * @var Fdc2214Ns::error
+ *                        the 4 error flags from the top of a DATA MSB register (bits 15:12)
+ * @var Fdc2214Ns::sensor_freq_hz
+ *                                 sensor frequency in Hz for a 28-bit result against a reference ...
+ * @var Fdc2214Ns::build_config
+ *                               emit a single-channel (CH0) continuous-conversion bring-up as ...
+ * @var Fdc2214Ns::begin
+ *                        verify the device id and apply the CH0 config at addr. true if ...
+ * @var Fdc2214Ns::read_ch0
+ *                           read channel 0's 28-bit conversion result into out. false on I2C ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

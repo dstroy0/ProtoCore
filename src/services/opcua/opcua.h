@@ -98,6 +98,9 @@ double protocore_ua_r_f64(UaReader *r);
 embed_bool protocore_ua_r_bool(UaReader *r);
 /**
  * @brief Decode a String/ByteString into @p out (NUL-terminated, bounded).
+ * @param r        the reader, with its position in the message.
+ * @param out      the destination buffer.
+ * @param cap      the capacity of @p out, in bytes.
  * @param out_len  set to the decoded length (or -1 for a null string).
  * @return false on underrun or if the value does not fit @p cap.
  */
@@ -215,6 +218,8 @@ embed_bool protocore_opcua_parse_open(const uint8_t *msg, size_t len, OpcUaOpenC
  * @param seq_number server SequenceNumber for this message.
  * @param now_ft     OPC UA DateTime for the response/token timestamps (0 = unset).
  * @param lifetime   RevisedLifetime (ms) granted to the token.
+ * @param out        the destination buffer.
+ * @param cap        the capacity of @p out, in bytes.
  * @return total OPN message bytes written, or 0 if it does not fit @p cap.
  */
 size_t protocore_opcua_build_open_response(const OpcUaOpenChannel *req, uint32_t channel_id, uint32_t token_id,
@@ -268,6 +273,8 @@ typedef struct
  * @param info            server identity for the advertised endpoint (may be null for defaults).
  * @param seq             server SequenceNumber for this message.
  * @param now_ft          OPC UA DateTime for the response timestamp (0 = unset).
+ * @param out             the destination buffer.
+ * @param cap             the capacity of @p out, in bytes.
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
 size_t protocore_opcua_build_create_session_response(const OpcUaMsg *req, uint32_t session_id, uint32_t auth_token,
@@ -332,6 +339,7 @@ embed_bool protocore_ua_r_variant(UaReader *r, OpcUaVariant *out);
 /**
  * @brief Decode a DataValue: the mask byte, then (if present) the Variant value and
  *        StatusCode; SourceTimestamp/ServerTimestamp (and picoseconds) are skipped.
+ * @param r         the reader, with its position in the message.
  * @param out_value filled with the value (type 0 if no value field present).
  * @param out_status set to the StatusCode (0 if not present).
  */
@@ -360,8 +368,13 @@ embed_bool protocore_opcua_parse_read(const uint8_t *msg, size_t len, OpcUaReadR
 
 /**
  * @brief Build a `MSG` ReadResponse: one DataValue per captured NodesToRead entry.
+ * @param req      the parsed request. The response echoes its RequestId and RequestHandle.
  * @param values   per-node values (values[i] paired with req->items[i]); null type = no value.
  * @param statuses per-node StatusCodes (0 = Good).
+ * @param seq      server SequenceNumber for this message.
+ * @param now_ft   OPC UA DateTime for the response timestamp (0 = unset).
+ * @param out      the destination buffer.
+ * @param cap      the capacity of @p out, in bytes.
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
 size_t protocore_opcua_build_read_response(const OpcUaReadRequest *req, const OpcUaVariant *values,
@@ -579,7 +592,12 @@ embed_bool protocore_opcua_parse_write(const uint8_t *msg, size_t len, OpcUaWrit
 
 /**
  * @brief Build a `MSG` WriteResponse: one StatusCode per NodesToWrite entry.
+ * @param req     the parsed request. The response echoes its RequestId and RequestHandle.
  * @param results per-node StatusCodes (0 = Good); may be null (all Good).
+ * @param seq     server SequenceNumber for this message.
+ * @param now_ft  OPC UA DateTime for the response timestamp (0 = unset).
+ * @param out     the destination buffer.
+ * @param cap     the capacity of @p out, in bytes.
  * @return total MSG bytes written, or 0 if it does not fit @p cap.
  */
 size_t protocore_opcua_build_write_response(const OpcUaWriteRequest *req, const uint32_t *results, uint32_t seq,

@@ -94,9 +94,13 @@ static const mmgr_field FILESYSTEM_ROOT[] = {MMGR_STR, MMGR_END};
 
 /** @brief Join a mount @p root, a request @p dir, and a leaf @p name into @p out.
  *
+ * @param root the mount root.
+ * @param dir  the directory of the request.
  * @param name the leaf, or "" when @p dir is the whole path. When @p name is given, @p dir must end
  *             with '/' - that is what a directory destination means. It is known at the call
  *             site rather than tested here.
+ * @param out  the destination buffer.
+ * @param cap  the capacity of @p out, in bytes.
  * @return bytes written, or 0 on overflow - the engine already knows the length, so it is handed
  *         back rather than left for the caller to rediscover with a scan. */
 // C only, with protocore_fs_resolve below: the join's values are an array compound literal, which C++
@@ -112,12 +116,6 @@ EMBED_INLINE size_t protocore_fs_join(const char *root, const char *dir, const c
                       .vals = (const mmgr_fval[]){MMGR_VSTR(root), MMGR_VSTR(dir), MMGR_VSTR(name)}, .nvals = 3);
 }
 
-/**
- * @brief Resolve a mount @p root + a request @p dir + a leaf @p name to an on-disk path in @p out:
- *        reject any `..` traversal, join onto the root, and drop a trailing '/'.
- * @return 0 on success, -1 on a traversal attempt (`..` present), -2 if the joined path would
- *         overflow @p out.
- */
 /** @brief True if @p s contains a `..` traversal.
  *
  * ".." is two bytes at one offset, not a pattern to search for: compare the pair and advance. */
@@ -133,6 +131,17 @@ EMBED_INLINE embed_bool protocore_fs_has_dotdot(const char *s)
     return EMBED_FALSE;
 }
 
+/**
+ * @brief Resolve a mount @p root + a request @p dir + a leaf @p name to an on-disk path in @p out:
+ *        reject any `..` traversal, join onto the root, and drop a trailing '/'.
+ * @param root the mount root.
+ * @param dir  the directory of the request.
+ * @param name the leaf, or "" when @p dir is the whole path.
+ * @param out  the destination buffer.
+ * @param cap  the capacity of @p out, in bytes.
+ * @return 0 on success, -1 on a traversal attempt (`..` present), -2 if the joined path would
+ *         overflow @p out.
+ */
 EMBED_INLINE int protocore_fs_resolve(const char *root, const char *dir, const char *name, char *out, size_t cap)
 {
     // Both request-supplied pieces are checked; the root is ours.
@@ -214,37 +223,68 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Fs, and reads the outcome off the
  * same handle. Every path is joined and bounds-checked here before it reaches a backend.
  *
- * @var FilesystemNs::path      the file one call names
- * @var FilesystemNs::dest      the second path a rename or a copy needs
- * @var FilesystemNs::io        the open file a call acts on, and the bytes it moves
- * @var FilesystemNs::mount     the mount a begin opens, by name
- * @var FilesystemNs::ok        a call's true/false outcome
- * @var FilesystemNs::i32       a handle, a byte count, or < 0 on failure
- * @var FilesystemNs::len       a file length a size or a whole-file read reports
- * @var FilesystemNs::bits      the sticky fault bits
- * @var FilesystemNs::text      the joined path a resolve reports, or NULL when it would escape
- * @var FilesystemNs::status    the sticky fault bits since the last clear
- * @var FilesystemNs::clear     drop them
- * @var FilesystemNs::present   storage is mounted and answering
- * @var FilesystemNs::begin     open the named mount
- * @var FilesystemNs::resolve   join and bounds-check a path without touching storage
- * @var FilesystemNs::open      open a file
- * @var FilesystemNs::read      read from an open file
- * @var FilesystemNs::write     write to an open file
- * @var FilesystemNs::close     close an open file or directory
- * @var FilesystemNs::seek      move an open file's cursor
- * @var FilesystemNs::size      a file's length
- * @var FilesystemNs::exists    a file is there
- * @var FilesystemNs::stat      a file's metadata
- * @var FilesystemNs::remove    delete a file
- * @var FilesystemNs::rename    move one
- * @var FilesystemNs::copy      duplicate one
- * @var FilesystemNs::mkdir     create a directory
- * @var FilesystemNs::rmdir     remove one
- * @var FilesystemNs::opendir   open a directory for listing
- * @var FilesystemNs::readdir   take the next entry from it
- * @var FilesystemNs::read_file  read a whole file into one buffer
- * @var FilesystemNs::write_file write one buffer as a whole file
+ * @var FilesystemNs::path
+ *                              the file one call names
+ * @var FilesystemNs::dest
+ *                              the second path a rename or a copy needs
+ * @var FilesystemNs::io
+ *                              the open file a call acts on, and the bytes it moves
+ * @var FilesystemNs::mount
+ *                              the mount a begin opens, by name
+ * @var FilesystemNs::ok
+ *                              a call's true/false outcome
+ * @var FilesystemNs::i32
+ *                              a handle, a byte count, or < 0 on failure
+ * @var FilesystemNs::len
+ *                              a file length a size or a whole-file read reports
+ * @var FilesystemNs::bits
+ *                              the sticky fault bits
+ * @var FilesystemNs::text
+ *                              the joined path a resolve reports, or NULL when it would escape
+ * @var FilesystemNs::status
+ *                              the sticky fault bits since the last clear
+ * @var FilesystemNs::clear
+ *                              drop them
+ * @var FilesystemNs::present
+ *                              storage is mounted and answering
+ * @var FilesystemNs::begin
+ *                              open the named mount
+ * @var FilesystemNs::resolve
+ *                              join and bounds-check a path without touching storage
+ * @var FilesystemNs::open
+ *                              open a file
+ * @var FilesystemNs::read
+ *                              read from an open file
+ * @var FilesystemNs::write
+ *                              write to an open file
+ * @var FilesystemNs::close
+ *                              close an open file or directory
+ * @var FilesystemNs::seek
+ *                              move an open file's cursor
+ * @var FilesystemNs::size
+ *                              a file's length
+ * @var FilesystemNs::exists
+ *                              a file is there
+ * @var FilesystemNs::stat
+ *                              a file's metadata
+ * @var FilesystemNs::remove
+ *                              delete a file
+ * @var FilesystemNs::rename
+ *                              move one
+ * @var FilesystemNs::copy
+ *                              duplicate one
+ * @var FilesystemNs::mkdir
+ *                              create a directory
+ * @var FilesystemNs::rmdir
+ *                              remove one
+ * @var FilesystemNs::opendir
+ *                              open a directory for listing
+ * @var FilesystemNs::readdir
+ *                              take the next entry from it
+ * @var FilesystemNs::read_file
+ *                               read a whole file into one buffer
+ * @var FilesystemNs::write_file
+ *                               write one buffer as a whole file
  *
  * The joined path is `..`-free by construction, and the small embedded filesystems have no
  * symlinks, so a resolved path cannot leave its root.

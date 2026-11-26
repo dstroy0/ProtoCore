@@ -26,17 +26,16 @@ server.on("/file", HttpMethod::HTTP_GET, [](uint8_t id, HttpReq *) {   // read i
   the other, not both.**
 - Enabling upload raises `RX_BUF_SIZE` to the streaming floor of **8192** (a full
   TCP receive window) automatically - a smaller ring keeps a large upload in
-  backpressure long enough to trip the idle-timeout reap and the connection resets
-  mid-transfer (HW-measured: a 2048 ring resets a 64 KB upload; 8192 round-trips
-  256 KB byte-exact). Because that ring is real DRAM per connection, this build
-  dials `MAX_CONNS` down to **4** so `8192 * MAX_CONNS` fits the classic ESP32's
-  ~122 KB internal DRAM; a PSRAM/large-SRAM board can raise it.
+  backpressure long enough to trip the idle-timeout reap, and the connection resets
+  mid-transfer. That ring is real DRAM for each connection. The board profile sizes
+  `MAX_CONNS` so that `8192 * MAX_CONNS` fits: 2 on the classic ESP32, more on a
+  board with PSRAM or a large SRAM.
 
 ## Build and run
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_UPLOAD=1 -DMAX_CONNS=4" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_FILE_SERVING=1 -DPROTOCORE_ENABLE_MNT=1 -DPROTOCORE_ENABLE_UPLOAD=1" \
   --lib="." examples/L7-Application/FileUpload/FileUpload.ino
 ```
 

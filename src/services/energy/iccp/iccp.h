@@ -10,7 +10,9 @@
  * value with quality + timestamp) is transferred as an MMS Read on a named object. This codec builds the
  * TASE.2 data value - the standard `Data_Value` structure a Read carries:
  *
+ * @code{.c}
  *   Data_Value ::= SEQUENCE { value CHOICE {state/discrete/real/...}, flags DataFlags, timestamp }
+ * @endcode
  *
  * simplified here to the common **StateQ** (a discrete state 0..3 + a quality-flags byte) and **RealQ**
  * (an IEEE-754-ish scaled real + quality) indication points that most bilateral tables use. The result
@@ -44,6 +46,8 @@ EMBED_BEGIN_DECLS
  * @param state  the 2-bit state (ICCP_STATE_*).
  * @param flags  the quality flags byte (ICCP_QUAL_*).
  * @param time   the 4-octet TimeStamp (seconds since 1970; big-endian), or null for no timestamp.
+ * @param out    the destination buffer.
+ * @param cap    the capacity of @p out, in bytes.
  * @return the BER length written, or 0 on overflow.
  *
  * Encodes `[A2 { 85 <stateAndQuality byte> [17 <4-octet time>] }]` (context-tagged StateQ structure).
@@ -55,6 +59,8 @@ size_t protocore_iccp_state_q(uint8_t state, uint8_t flags, const uint8_t time[4
  * @param milli  the value in 1/1000 units (so 12.345 -> 12345), a signed 32-bit integer.
  * @param flags  the quality flags byte.
  * @param time   the 4-octet TimeStamp, or null.
+ * @param out    the destination buffer.
+ * @param cap    the capacity of @p out, in bytes.
  * @return the BER length written, or 0 on overflow.
  *
  * Encodes `[A3 { 02 <INTEGER milli> 85 <quality byte> [17 <time>] }]`.

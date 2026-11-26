@@ -54,6 +54,8 @@ size_t protocore_wave_decode_psid(const uint8_t *in, size_t len, uint32_t *psid)
  * @param psid    the Provider Service Identifier.
  * @param payload the WSM payload (e.g. a 1609.2-wrapped J2735 message).
  * @param payload_len 0..255.
+ * @param out     the destination buffer.
+ * @param cap     the capacity of @p out, in bytes.
  * @return the frame length, or 0 on overflow / bad args.
  */
 size_t protocore_wsmp_build(uint32_t psid, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t cap);
@@ -72,6 +74,10 @@ embed_bool protocore_wsmp_parse(const uint8_t *frame, size_t len, WsmpFrame *out
 /**
  * @brief Build a 1609.2 secured-message envelope header + payload: [version][contentType][payload...].
  * @param content_type WAVE_16092_UNSECURED / WAVE_16092_SIGNED.
+ * @param payload      the payload, which follows the envelope header.
+ * @param payload_len  the number of bytes in @p payload.
+ * @param out          the destination buffer.
+ * @param cap          the capacity of @p out, in bytes.
  * @return the length written (2 + payload_len), or 0 on overflow.
  */
 size_t protocore_wave_1609dot2_wrap(uint8_t content_type, const uint8_t *payload, size_t payload_len, uint8_t *out,

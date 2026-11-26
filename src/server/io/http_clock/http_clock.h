@@ -37,8 +37,10 @@ EMBED_BEGIN_DECLS
  * No args record: the instant is whatever the build's clock reads now, and the destination is a
  * region of the borrow rather than a buffer the caller states.
  *
- * @var HttpClockVars::n    characters written, or 0 when no source has valid time yet
- * @var HttpClockVars::imf  the rendered date, inside the borrow the call was handed
+ * @var HttpClockVars::n
+ *                          characters written, or 0 when no source has valid time yet
+ * @var HttpClockVars::imf
+ *                          the rendered date, inside the borrow the call was handed
  */
 typedef struct
 {
@@ -51,9 +53,12 @@ extern HttpClockVars HttpClockV;
 /**
  * @brief The `Date` header's instant, rendered.
  *
- * @var HttpClockNs::n    characters written, or 0 when no source has valid time yet
- * @var HttpClockNs::imf  the rendered date, inside the borrow the call was handed
- * @var HttpClockNs::date  render the current instant from whichever clock this build compiled in.
+ * @var HttpClockNs::n
+ *                        characters written, or 0 when no source has valid time yet
+ * @var HttpClockNs::imf
+ *                        the rendered date, inside the borrow the call was handed
+ * @var HttpClockNs::date
+ *                         render the current instant from whichever clock this build compiled in.
  *                         Writes nothing and reports 0 before any source has valid time, which is
  *                         the correct answer for a clock-less boot: RFC 7231 sec 7.1.1.2 has a
  *                         `Date` omitted rather than guessed.

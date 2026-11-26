@@ -63,11 +63,16 @@ typedef struct
  *
  * A caller sets the members a call takes and invokes it through ::H3Server.
  *
- * @var H3ServerNs::stream     the connection and stream a request arrived on
- * @var H3ServerNs::req        the request that stream carried
- * @var H3ServerNs::rng_args   where random bytes are drawn
- * @var H3ServerNs::request    map the request onto the reserved dispatch slot and run it
- * @var H3ServerNs::rng        fill rng_args.out with rng_args.len random bytes from the device source
+ * @var H3ServerNs::stream
+ *                             the connection and stream a request arrived on
+ * @var H3ServerNs::req
+ *                             the request that stream carried
+ * @var H3ServerNs::rng_args
+ *                             where random bytes are drawn
+ * @var H3ServerNs::request
+ *                             map the request onto the reserved dispatch slot and run it
+ * @var H3ServerNs::rng
+ *                             fill rng_args.out with rng_args.len random bytes from the device source
  */
 typedef struct
 {

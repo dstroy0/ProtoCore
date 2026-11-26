@@ -17,7 +17,7 @@
  * and dot-stuffed (RFC 5321 sec 4.5.2) ahead of the "<CRLF>.<CRLF>" end of mail data indication
  * (sec 4.1.1.4).
  *
- * ::SmtpNs::run walks the dialogue over the byte seam in @ref SmtpNs::transport, so a scripted
+ * ::SmtpNs::run walks the dialogue over the byte seam in @ref SmtpVars::transport, so a scripted
  * transport runs the whole exchange on the host. ::SmtpNs::send binds that seam to the outbound
  * client transport (::TcpClient) and blocks until the message is accepted.
  *
@@ -129,16 +129,26 @@ typedef struct
  * same handle. There is no slot member: the module drives one session at a time, so no call has a
  * row to name.
  *
- * @var SmtpNs::session   the server a session is opened with (RFC 5321 sec 3.1)
- * @var SmtpNs::auth      the identity the AUTH exchange presents (RFC 4954 sec 4)
- * @var SmtpNs::envelope  the reverse-path and forward-path of the transaction (RFC 5321 sec 3.3)
- * @var SmtpNs::content   the RFC 5322 message DATA carries
- * @var SmtpNs::transport the seam the octets move through
- * @var SmtpNs::ok        a call's true/false outcome: the message was accepted
- * @var SmtpNs::result    the same outcome as a distinct ::SmtpResult code
- * @var SmtpNs::code      the reply code of the last reply read (RFC 5321 sec 4.2)
- * @var SmtpNs::run       walk the whole session over the seam in @c transport
- * @var SmtpNs::send      open the outbound client transport, walk the session, close
+ * @var SmtpVars::session
+ *                          the server a session is opened with (RFC 5321 sec 3.1)
+ * @var SmtpVars::auth
+ *                          the identity the AUTH exchange presents (RFC 4954 sec 4)
+ * @var SmtpVars::envelope
+ *                          the reverse-path and forward-path of the transaction (RFC 5321 sec 3.3)
+ * @var SmtpVars::content
+ *                          the RFC 5322 message DATA carries
+ * @var SmtpVars::transport
+ *                          the seam the octets move through
+ * @var SmtpVars::ok
+ *                          a call's true/false outcome: the message was accepted
+ * @var SmtpVars::result
+ *                          the same outcome as a distinct ::SmtpResult code
+ * @var SmtpVars::code
+ *                          the reply code of the last reply read (RFC 5321 sec 4.2)
+ * @var SmtpNs::run
+ *                        walk the whole session over the seam in @c transport
+ * @var SmtpNs::send
+ *                        open the outbound client transport, walk the session, close
  */
 typedef struct
 {

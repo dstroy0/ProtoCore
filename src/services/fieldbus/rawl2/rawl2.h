@@ -103,6 +103,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Rawl2 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Rawl2.build_args.dst = ...;
  *   Rawl2.build_args.src = ...;
  *   Rawl2.build_args.ethertype = ...;
@@ -112,18 +113,30 @@ typedef struct
  *   Rawl2.build_args.cap = ...;
  *   Rawl2.build(work);
  *   // Rawl2.n is what the call reports
+ * @endcode
  *
- * @var Rawl2Ns::build_args  what build takes: dst, src, ethertype, payload,
- * @var Rawl2Ns::build_vlan_args  what build_vlan takes: dst, src, pcp, dei, vid, ethertype,
- * @var Rawl2Ns::parse_args  what parse takes: frame, len, out
- * @var Rawl2Ns::fcs_args  what fcs takes: bytes, len
- * @var Rawl2Ns::ok  a call's true/false outcome
- * @var Rawl2Ns::n  the frame length (14 + payload_len), or 0 if it won't fit or a ...
- * @var Rawl2Ns::u32  what a call reports
- * @var Rawl2Ns::build  build an Ethernet II frame (no FCS)
- * @var Rawl2Ns::build_vlan  build an 802.1Q VLAN-tagged Ethernet frame (no FCS)
- * @var Rawl2Ns::parse  parse an Ethernet II / 802.1Q frame (FCS not expected). true if ...
- * @var Rawl2Ns::fcs  IEEE 802.3 frame check sequence (CRC-32, reflected, init ...
+ * @var Rawl2Vars::build_args
+ *                             what build takes: dst, src, ethertype, payload,
+ * @var Rawl2Vars::build_vlan_args
+ *                                  what build_vlan takes: dst, src, pcp, dei, vid, ethertype,
+ * @var Rawl2Vars::parse_args
+ *                             what parse takes: frame, len, out
+ * @var Rawl2Vars::fcs_args
+ *                           what fcs takes: bytes, len
+ * @var Rawl2Vars::ok
+ *                     a call's true/false outcome
+ * @var Rawl2Vars::n
+ *                    the frame length (14 + payload_len), or 0 if it won't fit or a ...
+ * @var Rawl2Vars::u32
+ *                      what a call reports
+ * @var Rawl2Ns::build
+ *                      build an Ethernet II frame (no FCS)
+ * @var Rawl2Ns::build_vlan
+ *                           build an 802.1Q VLAN-tagged Ethernet frame (no FCS)
+ * @var Rawl2Ns::parse
+ *                      parse an Ethernet II / 802.1Q frame (FCS not expected). true if ...
+ * @var Rawl2Ns::fcs
+ *                    IEEE 802.3 frame check sequence (CRC-32, reflected, init ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

@@ -8,38 +8,32 @@
  * With PROTOCORE_ENABLE_DIFFSERV the transport writes the 6-bit DSCP into the IP DS field of outbound traffic so
  * a QoS-aware network - and the Wi-Fi WMM access-category mapping - prioritizes it over best-effort.
  *
- *   - protocore_set_default_dscp(EF)   -> every accepted connection's data is marked Expedited Forwarding (46)
- *   - protocore_conn_set_dscp(slot, X) -> re-tag ONE connection with any DSCP (real per-flow QoS, or arbitrary
- *                                   tagging for network testing)
- *   - protocore_udp_set_dscp(X)        -> mark outbound UDP datagrams
+ *   - DiffServ.set_default   -> every outbound TCP connection starts with this mark: EF (46) here
+ *   - TcpListener.set_dscp   -> every connection accepted on one port takes its own mark: CS6 (48) on :8080
+ *   - DiffServ.set_udp       -> outbound UDP datagrams take this mark
+ *
+ * A live connection keeps the mark it starts with. RFC 9293 sec 3.9.2 SHLD-23: an application does not change the
+ * DS field during a connection, so the port is the finest level.
  *
  * Verify on the wire (from a machine on the same LAN):
- *   sudo tcpdump -i <iface> -v host <board-ip> and tcp port 80
- * GET /    responses carry tos 0xb8 (EF, DSCP 46); GET /tag responses carry tos 0xc0 (CS6, DSCP 48).
+ *   sudo tcpdump -i <iface> -v host <board-ip> and tcp
+ * Responses on :80 carry tos 0xb8 (EF, DSCP 46); responses on :8080 carry tos 0xc0 (CS6, DSCP 48).
  */
 
 #include "protocore.h"
 #include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/diffserv/diffserv.h"
+#include "network_drivers/transport/tcp/server/server.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";
+static const uint16_t MARKED_PORT = 8080; // the listener whose connections take CS6
 
-
-// GET / - the response inherits the server-wide default DSCP (EF) set in setup().
+// GET / - the response carries the mark of the port that the request came in on.
 void handle_root(uint8_t slot, HttpReq *req)
 {
     (void)req;
-    send_text(slot, 200, "text/plain", "marked EF (DSCP 46)\n");
-}
-
-// GET /tag - re-tag THIS connection to CS6 (48) before responding, overriding the default. This is the
-// per-flow lever: tag any single connection with any class - useful for real QoS or network testing.
-void handle_tag(uint8_t slot, HttpReq *req)
-{
-    (void)req;
-    protocore_conn_set_dscp(slot, PROTOCORE_DSCP_CS6);
-    send_text(slot, 200, "text/plain", "re-tagged CS6 (DSCP 48)\n");
+    send_text(slot, 200, "text/plain", "marked by its port: EF (46) on :80, CS6 (48) on :8080\n");
 }
 
 void setup()
@@ -60,15 +54,20 @@ void setup()
                   (unsigned)((ip >> 16) & 0xFF), (unsigned)((ip >> 24) & 0xFF));
 
     // Mark every outbound TCP connection Expedited Forwarding, and outbound UDP too. A DSCP of 0 would
-    // mean best-effort (no marking). Set before begin() so listeners pick it up.
+    // mean best-effort (no marking). Set before begin_http() so listeners pick it up.
     DiffServV.dscp = PROTOCORE_DSCP_EF;
     DiffServ.set_default(protocore_diffserv_span());
     DiffServ.set_udp(protocore_diffserv_span());
 
     on_http("/", HTTP_GET, handle_root);
-    on_http("/tag", HTTP_GET, handle_tag);
     begin_http(80, NULL);
-    Serial.println("DiffServ server on :80 (default EF; /tag -> CS6)");
+
+    // A second HTTP port, whose accepted connections take CS6 in place of the default.
+    listen(MARKED_PORT, PROTO_HTTP);
+    TcpListenerV.bind.port = MARKED_PORT;
+    TcpListenerV.bind.dscp = PROTOCORE_DSCP_CS6;
+    TcpListener.set_dscp(protocore_tcp_listener_span());
+    Serial.printf("DiffServ server on :80 (EF) and :%u (CS6)\n", (unsigned)MARKED_PORT);
 }
 
 void loop()

@@ -179,26 +179,38 @@ typedef struct
  * @brief The MQTT Client (OASIS MQTT Version 3.1.1).
  *
  * A caller sets the members a call takes, invokes it through ::Mqtt, and reads the outcome off the
- * same handle. The session, its in-flight window and its buffers are behind @ref internal.
+ * same handle. The session, its in-flight window and its buffers are internal.
  *
  * No slot member: this Client holds one Network Connection at a time (sec 4.2), so no call names a
  * row.
  *
- * @var MqttNs::server    the Network Connection this Client opens (sec 4.2)
- * @var MqttNs::session   the CONNECT variable header and payload (sec 3.1)
- * @var MqttNs::will      the Will a CONNECT carries (sec 3.1.2.5, sec 3.1.3.2, sec 3.1.3.3)
- * @var MqttNs::message   a PUBLISH's Topic Name, Payload and flags (sec 3.3)
- * @var MqttNs::filter    the Topic Filter a SUBSCRIBE or UNSUBSCRIBE names (sec 4.7)
- * @var MqttNs::packet    the fixed header a build stamps or a parse reads (sec 2.2, sec 2.3.1)
- * @var MqttNs::buf       the octets a codec call writes or reads
- * @var MqttNs::delivery  where an inbound Application Message is handed on (sec 3.3)
- * @var MqttNs::ok        a call's true/false outcome
- * @var MqttNs::n
+ * @var MqttVars::server
+ *                          the Network Connection this Client opens (sec 4.2)
+ * @var MqttVars::session
+ *                          the CONNECT variable header and payload (sec 3.1)
+ * @var MqttVars::will
+ *                          the Will a CONNECT carries (sec 3.1.2.5, sec 3.1.3.2, sec 3.1.3.3)
+ * @var MqttVars::message
+ *                          a PUBLISH's Topic Name, Payload and flags (sec 3.3)
+ * @var MqttVars::filter
+ *                          the Topic Filter a SUBSCRIBE or UNSUBSCRIBE names (sec 4.7)
+ * @var MqttVars::packet
+ *                          the fixed header a build stamps or a parse reads (sec 2.2, sec 2.3.1)
+ * @var MqttVars::buf
+ *                          the octets a codec call writes or reads
+ * @var MqttVars::delivery
+ *                          where an inbound Application Message is handed on (sec 3.3)
+ * @var MqttVars::ok
+ *                          a call's true/false outcome
+ * @var MqttVars::n
  * An octet count: the Control Packet a build wrote, the fixed header a parse read, or the Remaining
  * Length field an encode or decode covered. 0 when a build did not fit @c cap or @c body_cap.
- * @var MqttNs::i32       the Connect Return code a CONNACK carried (sec 3.2.2.3), or -1 if malformed
- * @var MqttNs::u8        the first return code a SUBACK carried (sec 3.9.3)
- * @var MqttNs::session_present  the Session Present flag a CONNACK carried (sec 3.2.2.2)
+ * @var MqttVars::i32
+ *                          the Connect Return code a CONNACK carried (sec 3.2.2.3), or -1 if malformed
+ * @var MqttVars::u8
+ *                          the first return code a SUBACK carried (sec 3.9.3)
+ * @var MqttVars::session_present
+ *                                 the Session Present flag a CONNACK carried (sec 3.2.2.2)
  * @var MqttNs::encode_remaining_length
  * Write @c packet.remaining_length into @c out as a Remaining Length field of 1 to 4 octets
  * (sec 2.2.3). @c n reports the octets written, 0 above ::PROTOCORE_MQTT_REMAINING_LENGTH_MAX or
@@ -222,8 +234,10 @@ typedef struct
  * @var MqttNs::build_ack
  * Build the four-octet PUBACK, PUBREC, PUBREL or PUBCOMP named by @c packet.type carrying
  * @c packet.packet_id (sec 3.4 - sec 3.7). PUBREL takes the reserved flags 0,0,1,0 (sec 3.6.1).
- * @var MqttNs::build_pingreq     build the two-octet PINGREQ (sec 3.12)
- * @var MqttNs::build_disconnect  build the two-octet DISCONNECT (sec 3.14)
+ * @var MqttNs::build_pingreq
+ *                                build the two-octet PINGREQ (sec 3.12)
+ * @var MqttNs::build_disconnect
+ *                                build the two-octet DISCONNECT (sec 3.14)
  * @var MqttNs::parse_fixed_header
  * Read the fixed header at @c in into @c packet.type, @c packet.flags and @c packet.remaining_length,
  * @c n reporting its size (sec 2.2). False until @c avail holds the whole header.
@@ -241,7 +255,8 @@ typedef struct
  * @var MqttNs::parse_suback
  * Read a SUBACK body into @c packet.packet_id and @c u8, the first return code of the payload list
  * (sec 3.9.2, sec 3.9.3). ::PROTOCORE_MQTT_SUBACK_FAILURE there is a refused subscription.
- * @var MqttNs::on_message  record @c delivery.on_message; call it before @ref MqttNs::connect
+ * @var MqttNs::on_message
+ *                          record @c delivery.on_message; call it before @ref MqttNs::connect
  * @var MqttNs::connect
  * Open the Network Connection to @c server and frame the CONNECT built from @c session and @c will.
  * Returns straight away: @ref MqttNs::loop steps the transport, then the handshake, then the CONNACK,
@@ -250,14 +265,17 @@ typedef struct
  * @var MqttNs::publish
  * Send @c message as a PUBLISH (sec 3.3). QoS 0 goes out and is forgotten; QoS 1 and QoS 2 take an
  * in-flight slot and are re-delivered with DUP until acknowledged (sec 4.3.2, sec 4.3.3).
- * @var MqttNs::subscribe    send a SUBSCRIBE for @c filter (sec 3.8)
- * @var MqttNs::unsubscribe  send an UNSUBSCRIBE for @c filter.topic_filter (sec 3.10)
+ * @var MqttNs::subscribe
+ *                           send a SUBSCRIBE for @c filter (sec 3.8)
+ * @var MqttNs::unsubscribe
+ *                           send an UNSUBSCRIBE for @c filter.topic_filter (sec 3.10)
  * @var MqttNs::loop
  * Pump the Network Connection: read inbound Control Packets, deliver PUBLISH to
  * @c delivery.on_message and run the QoS 1 and QoS 2 acknowledgement flows, re-deliver unacknowledged
  * in-flight messages, and send PINGREQ when Keep Alive is due (sec 3.1.2.10). Call once per loop().
  * False once the Network Connection is gone.
- * @var MqttNs::connected  true while the Server accepted the CONNECT
+ * @var MqttNs::connected
+ *                         true while the Server accepted the CONNECT
  * @var MqttNs::disconnect
  * Send DISCONNECT and close the Network Connection (sec 3.14).
  */

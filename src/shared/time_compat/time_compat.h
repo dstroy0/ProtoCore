@@ -31,12 +31,15 @@ typedef struct
 /**
  * @brief Broken-down UTC in caller storage, whichever runtime is underneath.
  *
- * @var TimeCompatNs::args      the instant a conversion reads, and the storage it fills
- * @var TimeCompatNs::tm_out    @c args.out on success, or NULL when the instant cannot be represented
- * @var TimeCompatNs::gmtime    convert to broken-down UTC
+ * @var TimeCompatVars::args
+ *                                the instant a conversion reads, and the storage it fills
+ * @var TimeCompatVars::tm_out
+ *                                @c args.out on success, or NULL when the instant cannot be represented
+ * @var TimeCompatNs::gmtime
+ *                              convert to broken-down UTC
  *
  * Reentrant: the destination is the caller's. One runtime takes (tm, time) and reports an errno_t,
- * the other takes (time, tm) and reports the destination; both are reduced to @ref tm_out here.
+ * the other takes (time, tm) and reports the destination; both are reduced to @ref TimeCompatVars::tm_out here.
  *
  * No storage member: nothing is held between calls.
  */

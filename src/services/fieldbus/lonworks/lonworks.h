@@ -105,6 +105,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Lonworks with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Lonworks.build_nv_args.msg_code = ...;
  *   Lonworks.build_nv_args.selector = ...;
  *   Lonworks.build_nv_args.value = ...;
@@ -113,22 +114,38 @@ typedef struct
  *   Lonworks.build_nv_args.cap = ...;
  *   Lonworks.build_nv(work);
  *   // Lonworks.n is what the call reports
+ * @endcode
  *
- * @var LonworksNs::build_nv_args  what build_nv takes: msg_code, selector, value, value_len,
- * @var LonworksNs::parse_nv_args  what parse_nv takes: pdu, len, out
- * @var LonworksNs::snvt_temp_encode_args  what snvt_temp_encode takes: celsius, out
- * @var LonworksNs::snvt_temp_decode_args  what snvt_temp_decode takes: in
- * @var LonworksNs::snvt_switch_encode_args  what snvt_switch_encode takes: percent, state, out
- * @var LonworksNs::snvt_switch_decode_args  what snvt_switch_decode takes: in, percent, state
- * @var LonworksNs::ok  a call's true/false outcome
- * @var LonworksNs::n  the PDU length (2 + value_len), or 0 on overflow / bad args
- * @var LonworksNs::value  the value a call reports
- * @var LonworksNs::build_nv  build a LonTalk NV application PDU: ...
- * @var LonworksNs::parse_nv  parse a LonTalk NV PDU. true if len >= 3
- * @var LonworksNs::snvt_temp_encode  encode degrees C as the 2-byte big-endian SNVT_temp raw: (celsius * ...
- * @var LonworksNs::snvt_temp_decode  decode a SNVT_temp 2-byte value to degrees C: (raw - 2740) / 10
- * @var LonworksNs::snvt_switch_encode  encode a SNVT_switch (value 0..100 % in 0.5 % steps, state 0 OFF / ...
- * @var LonworksNs::snvt_switch_decode  decode a SNVT_switch 2-byte value (percent out via percent, state ...
+ * @var LonworksVars::build_nv_args
+ *                                   what build_nv takes: msg_code, selector, value, value_len,
+ * @var LonworksVars::parse_nv_args
+ *                                   what parse_nv takes: pdu, len, out
+ * @var LonworksVars::snvt_temp_encode_args
+ *                                           what snvt_temp_encode takes: celsius, out
+ * @var LonworksVars::snvt_temp_decode_args
+ *                                           what snvt_temp_decode takes: in
+ * @var LonworksVars::snvt_switch_encode_args
+ *                                             what snvt_switch_encode takes: percent, state, out
+ * @var LonworksVars::snvt_switch_decode_args
+ *                                             what snvt_switch_decode takes: in, percent, state
+ * @var LonworksVars::ok
+ *                        a call's true/false outcome
+ * @var LonworksVars::n
+ *                       the PDU length (2 + value_len), or 0 on overflow / bad args
+ * @var LonworksVars::value
+ *                           the value a call reports
+ * @var LonworksNs::build_nv
+ *                            build a LonTalk NV application PDU: ...
+ * @var LonworksNs::parse_nv
+ *                            parse a LonTalk NV PDU. true if len >= 3
+ * @var LonworksNs::snvt_temp_encode
+ *                                    encode degrees C as the 2-byte big-endian SNVT_temp raw: (celsius * ...
+ * @var LonworksNs::snvt_temp_decode
+ *                                    decode a SNVT_temp 2-byte value to degrees C: (raw - 2740) / 10
+ * @var LonworksNs::snvt_switch_encode
+ *                                      encode a SNVT_switch (value 0..100 % in 0.5 % steps, state 0 OFF / ...
+ * @var LonworksNs::snvt_switch_decode
+ *                                      decode a SNVT_switch 2-byte value (percent out via percent, state ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

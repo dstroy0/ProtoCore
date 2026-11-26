@@ -113,16 +113,26 @@ typedef struct
  *
  * No slot member: the codec keeps no rows, so no call names one.
  *
- * @var RtpsNs::hdr         the Header fields a header stamps (sec 8.3.3.1)
- * @var RtpsNs::sub         the SubmessageHeader fields and contents a submessage writes (sec 8.3.3.3)
- * @var RtpsNs::out         the buffer a header or a submessage writes into
- * @var RtpsNs::msg         the Message a parse walks (sec 9.4.1)
- * @var RtpsNs::sink        where a parse surfaces each Submessage
- * @var RtpsNs::ok          a parse's verdict: the Header is valid and every Submessage fits
- * @var RtpsNs::n           the octets a header or a submessage wrote, 0 when it did not fit
- * @var RtpsNs::header      build the 20-octet Header into @c out (sec 9.4.4)
- * @var RtpsNs::submessage  build one SubmessageHeader and its contents into @c out (sec 9.4.5.1)
- * @var RtpsNs::parse       validate the Header and walk the Submessages, surfacing each to @c sink
+ * @var RtpsVars::hdr
+ *                            the Header fields a header stamps (sec 8.3.3.1)
+ * @var RtpsVars::sub
+ *                            the SubmessageHeader fields and contents a submessage writes (sec 8.3.3.3)
+ * @var RtpsVars::out
+ *                            the buffer a header or a submessage writes into
+ * @var RtpsVars::msg
+ *                            the Message a parse walks (sec 9.4.1)
+ * @var RtpsVars::sink
+ *                            where a parse surfaces each Submessage
+ * @var RtpsVars::ok
+ *                            a parse's verdict: the Header is valid and every Submessage fits
+ * @var RtpsVars::n
+ *                            the octets a header or a submessage wrote, 0 when it did not fit
+ * @var RtpsNs::header
+ *                          build the 20-octet Header into @c out (sec 9.4.4)
+ * @var RtpsNs::submessage
+ *                          build one SubmessageHeader and its contents into @c out (sec 9.4.5.1)
+ * @var RtpsNs::parse
+ *                          validate the Header and walk the Submessages, surfacing each to @c sink
  */
 typedef struct
 {

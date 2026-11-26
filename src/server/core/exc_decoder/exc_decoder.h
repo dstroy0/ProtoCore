@@ -88,18 +88,30 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Exc, and reads the outcome off the
  * same handle. The decoding is pure; the image calls reach the platform seam.
  *
- * @var ExcDecoderNs::parse_args  the panic a call reads, and where the decoded form lands
- * @var ExcDecoderNs::dump        the stored crash image: the span a call names, and where it lands
- * @var ExcDecoderNs::out_args    where a report is written
- * @var ExcDecoderNs::ok          a call's true/false outcome
- * @var ExcDecoderNs::n           bytes a report wrote, or 0 when it did not fit
- * @var ExcDecoderNs::parse       decode a printed panic dump
- * @var ExcDecoderNs::json        serialize a decoded panic
- * @var ExcDecoderNs::present     a stored crash image exists and verifies
- * @var ExcDecoderNs::summary     the stored image's summary, decoded into an ExcInfo
- * @var ExcDecoderNs::read        read a span of the stored image
- * @var ExcDecoderNs::save        stream the whole image to a file
- * @var ExcDecoderNs::erase       discard the stored image
+ * @var ExcVars::parse_args
+ *                                the panic a call reads, and where the decoded form lands
+ * @var ExcVars::dump
+ *                                the stored crash image: the span a call names, and where it lands
+ * @var ExcVars::out_args
+ *                                where a report is written
+ * @var ExcVars::ok
+ *                                a call's true/false outcome
+ * @var ExcVars::n
+ *                                bytes a report wrote, or 0 when it did not fit
+ * @var ExcDecoderNs::parse
+ *                                decode a printed panic dump
+ * @var ExcDecoderNs::json
+ *                                serialize a decoded panic
+ * @var ExcDecoderNs::present
+ *                                a stored crash image exists and verifies
+ * @var ExcDecoderNs::summary
+ *                                the stored image's summary, decoded into an ExcInfo
+ * @var ExcDecoderNs::read
+ *                                read a span of the stored image
+ * @var ExcDecoderNs::save
+ *                                stream the whole image to a file
+ * @var ExcDecoderNs::erase
+ *                                discard the stored image
  *
  * No storage member: the parse works in the caller's ExcInfo and the image lives in the part.
  */
@@ -154,6 +166,12 @@ static const ExcDecoderNs Exc __attribute__((unused)) = {
     .read = protocore_exc_read,
     .save = protocore_exc_save,
     .erase = protocore_exc_erase,
+#else
+    .present = NULL,
+    .summary = NULL,
+    .read = NULL,
+    .save = NULL,
+    .erase = NULL,
 #endif
 };
 

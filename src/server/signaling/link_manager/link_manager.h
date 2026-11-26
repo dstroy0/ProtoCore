@@ -66,15 +66,24 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Link, and reads the outcome off the
  * same handle. The manager and its table are the caller's.
  *
- * @var LinkManagerNs::args      the table a call acts on, and the interface it names
- * @var LinkManagerNs::i32       the interface a select or an active lookup reports, -1 for none
- * @var LinkManagerNs::from      the interface that was active before a set
- * @var LinkManagerNs::to        the one active after it
- * @var LinkManagerNs::changed   that set moved the active interface
- * @var LinkManagerNs::init      bind the table and pick the first active interface
- * @var LinkManagerNs::select    the highest-priority interface that is up, -1 when none is
- * @var LinkManagerNs::active    the interface currently carrying traffic
- * @var LinkManagerNs::set       change one interface's carrier state and reselect
+ * @var LinkVars::args
+ *                               the table a call acts on, and the interface it names
+ * @var LinkVars::i32
+ *                               the interface a select or an active lookup reports, -1 for none
+ * @var LinkVars::from
+ *                               the interface that was active before a set
+ * @var LinkVars::to
+ *                               the one active after it
+ * @var LinkVars::changed
+ *                               that set moved the active interface
+ * @var LinkManagerNs::init
+ *                               bind the table and pick the first active interface
+ * @var LinkManagerNs::select
+ *                               the highest-priority interface that is up, -1 when none is
+ * @var LinkManagerNs::active
+ *                               the interface currently carrying traffic
+ * @var LinkManagerNs::set
+ *                               change one interface's carrier state and reselect
  *
  * Higher priority wins; the lower index breaks a tie. No storage member: the manager is the
  * caller's, so nothing is held here.

@@ -184,22 +184,38 @@ struct CoapInternal;
  * No slot member: one server owns one resource table, and each call names its own subject inside its
  * own argument group, so no member is common to all of them.
  *
- * @var CoapNs::resource  the row an add registers
- * @var CoapNs::msg       the request datagram a process reads and the response it writes
- * @var CoapNs::observe   the Observe sequence a response carries and the resource a notify renders
- * @var CoapNs::exchange  the endpoint and Message ID a deduplication entry is keyed by
- * @var CoapNs::bind      the UDP port a begin binds
- * @var CoapNs::ok        a call's true/false outcome
- * @var CoapNs::n         the octets a call produced: the response datagram's length, or a cached response's
- * @var CoapNs::bytes     the cached response a deduplication lookup reports, NULL on a miss
- * @var CoapNs::reset          empty the resource table and every cache
- * @var CoapNs::add_resource   register @c resource, reporting false when the table is full
- * @var CoapNs::process        answer one request datagram, emitting no Observe option
- * @var CoapNs::process_observe  the same, carrying @c observe.seq in a 2.xx response (RFC 7641 sec 4.2)
- * @var CoapNs::dedup_lookup   report the response already sent for @c exchange (RFC 7252 sec 4.5)
- * @var CoapNs::dedup_store    cache the response sent for @c exchange so a repeat is answered from it
- * @var CoapNs::begin          bind @c bind.port and route its datagrams into the server
- * @var CoapNs::notify         send the current representation of @c observe.path to every observer
+ * @var CoapVars::resource
+ *                          the row an add registers
+ * @var CoapVars::msg
+ *                          the request datagram a process reads and the response it writes
+ * @var CoapVars::observe
+ *                          the Observe sequence a response carries and the resource a notify renders
+ * @var CoapVars::exchange
+ *                          the endpoint and Message ID a deduplication entry is keyed by
+ * @var CoapVars::bind
+ *                          the UDP port a begin binds
+ * @var CoapVars::ok
+ *                          a call's true/false outcome
+ * @var CoapVars::n
+ *                          the octets a call produced: the response datagram's length, or a cached response's
+ * @var CoapVars::bytes
+ *                          the cached response a deduplication lookup reports, NULL on a miss
+ * @var CoapNs::reset
+ *                             empty the resource table and every cache
+ * @var CoapNs::add_resource
+ *                             register @c resource, reporting false when the table is full
+ * @var CoapNs::process
+ *                             answer one request datagram, emitting no Observe option
+ * @var CoapNs::process_observe
+ *                               the same, carrying @c observe.seq in a 2.xx response (RFC 7641 sec 4.2)
+ * @var CoapNs::dedup_lookup
+ *                             report the response already sent for @c exchange (RFC 7252 sec 4.5)
+ * @var CoapNs::dedup_store
+ *                             cache the response sent for @c exchange so a repeat is answered from it
+ * @var CoapNs::begin
+ *                             bind @c bind.port and route its datagrams into the server
+ * @var CoapNs::notify
+ *                             send the current representation of @c observe.path to every observer
  */
 typedef struct
 {
@@ -260,10 +276,15 @@ static const CoapNs Coap __attribute__((unused)) = {
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     .dedup_lookup = protocore_coap_dedup_lookup,
     .dedup_store = protocore_coap_dedup_store,
+#else
+    .dedup_lookup = NULL,
+    .dedup_store = NULL,
 #endif
     .begin = protocore_coap_begin,
 #if PROTOCORE_ENABLE_COAP_OBSERVE
     .notify = protocore_coap_notify,
+#else
+    .notify = NULL,
 #endif
 };
 

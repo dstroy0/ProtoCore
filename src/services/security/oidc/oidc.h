@@ -10,7 +10,9 @@
  * IETF one, a JWS in the Compact Serialization (RFC 7515 sec 7.1) whose `alg` is RS256, which
  * JWA (RFC 7518 sec 3.3) defines as RSASSA-PKCS1-v1_5 using SHA-256 over the JWS Signing Input
  * (RFC 7515 sec 2). Given an ID Token and the OP's JWK Set (RFC 7517 sec 5), a verify:
+ * @code{.c}
  *   1. splits the Compact Serialization and requires `alg` == RS256 (RFC 7515 sec 4.1.1;
+ * @endcode
  *      OIDC Core sec 3.1.3.7 step 7 makes RS256 the default),
  *   2. selects the signing key by `kid` (RFC 7515 sec 4.1.4), or the sole RSA key when the
  *      JOSE Header carries no `kid`,
@@ -116,18 +118,30 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Oidc, and reads the outcome off
  * the same handle. The validation steps are OIDC Core sec 3.1.3.7's.
  *
- * @var OidcNs::token      the ID Token as a JWS Compact Serialization (RFC 7515 sec 7.1)
- * @var OidcNs::token_len  how many characters of it there are
- * @var OidcNs::key        the JWK Set a find scans and the RSA public key it yields
- * @var OidcNs::expect     the Issuer Identifier, the client_id and the clock a validation uses
- * @var OidcNs::ok         a find's or a header read's true/false outcome
- * @var OidcNs::result     a validation's ::protocore_oidc_result
- * @var OidcNs::text       the `kid` a header read reports, empty when the JOSE Header carries none
- * @var OidcNs::claims     the Claims a validated ID Token carries, cleared before every validation
- * @var OidcNs::token_kid        read `kid` out of the JOSE Header (RFC 7515 sec 4.1.4)
- * @var OidcNs::jwks_find        take the RSA JWK the `kid` names out of the JWK Set (RFC 7517 sec 5.1)
- * @var OidcNs::verify_with_key  validate the ID Token against the key already in @c key.rsa
- * @var OidcNs::verify           the two above in order: resolve the key by the token's `kid`, then validate
+ * @var OidcVars::token
+ *                           the ID Token as a JWS Compact Serialization (RFC 7515 sec 7.1)
+ * @var OidcVars::token_len
+ *                           how many characters of it there are
+ * @var OidcVars::key
+ *                           the JWK Set a find scans and the RSA public key it yields
+ * @var OidcVars::expect
+ *                           the Issuer Identifier, the client_id and the clock a validation uses
+ * @var OidcVars::ok
+ *                           a find's or a header read's true/false outcome
+ * @var OidcVars::result
+ *                           a validation's ::protocore_oidc_result
+ * @var OidcVars::text
+ *                           the `kid` a header read reports, empty when the JOSE Header carries none
+ * @var OidcVars::claims
+ *                           the Claims a validated ID Token carries, cleared before every validation
+ * @var OidcNs::token_kid
+ *                               read `kid` out of the JOSE Header (RFC 7515 sec 4.1.4)
+ * @var OidcNs::jwks_find
+ *                               take the RSA JWK the `kid` names out of the JWK Set (RFC 7517 sec 5.1)
+ * @var OidcNs::verify_with_key
+ *                               validate the ID Token against the key already in @c key.rsa
+ * @var OidcNs::verify
+ *                               the two above in order: resolve the key by the token's `kid`, then validate
  */
 typedef struct
 {

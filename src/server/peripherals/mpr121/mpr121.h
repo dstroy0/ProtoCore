@@ -101,31 +101,53 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Mpr121 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Mpr121.touched_args.status_lo = ...;
  *   Mpr121.touched_args.status_hi = ...;
  *   Mpr121.touched(work);
  *   // Mpr121.value is what the call reports
+ * @endcode
  *
- * @var Mpr121Ns::touched_args  what touched takes: status_lo, status_hi
- * @var Mpr121Ns::is_touched_args  what is_touched takes: mask, e
- * @var Mpr121Ns::proximity_args  what proximity takes: status_hi
- * @var Mpr121Ns::overcurrent_args  what overcurrent takes: status_hi
- * @var Mpr121Ns::word10_args  what word10 takes: lsb, msb
- * @var Mpr121Ns::build_init_args  what build_init takes: buf, cap, n_electrodes, touch_thr,
- * @var Mpr121Ns::begin_args  what begin takes: addr
- * @var Mpr121Ns::read_filtered_args  what read_filtered takes: e
- * @var Mpr121Ns::ok  a call's true/false outcome
- * @var Mpr121Ns::value  the value a call reports
- * @var Mpr121Ns::n  the number of bytes written (pairs * 2), or 0 if cap is too small / ...
- * @var Mpr121Ns::touched  decode the 12-electrode touch bitmask from the two status registers ...
- * @var Mpr121Ns::is_touched  true if electrode e (0..11) is touched in a mask from ...
- * @var Mpr121Ns::proximity  true if the proximity electrode (status bit 12) is active
- * @var Mpr121Ns::overcurrent  true if the over-current flag (status bit 15) is set (wiring fault ...
- * @var Mpr121Ns::word10  combine a little-endian LSB/MSB register pair into a 10-bit value ...
- * @var Mpr121Ns::build_init  build the MPR121 bring-up sequence as consecutive `(register, ...
- * @var Mpr121Ns::begin  reset + configure the MPR121 at addr over I2C. true if it ...
- * @var Mpr121Ns::read_touched  read the current 12-electrode touch bitmask (0 if the device is ...
- * @var Mpr121Ns::read_filtered  read electrode e's 10-bit filtered capacitance value
+ * @var Mpr121Vars::touched_args
+ *                                what touched takes: status_lo, status_hi
+ * @var Mpr121Vars::is_touched_args
+ *                                   what is_touched takes: mask, e
+ * @var Mpr121Vars::proximity_args
+ *                                  what proximity takes: status_hi
+ * @var Mpr121Vars::overcurrent_args
+ *                                    what overcurrent takes: status_hi
+ * @var Mpr121Vars::word10_args
+ *                               what word10 takes: lsb, msb
+ * @var Mpr121Vars::build_init_args
+ *                                   what build_init takes: buf, cap, n_electrodes, touch_thr,
+ * @var Mpr121Vars::begin_args
+ *                              what begin takes: addr
+ * @var Mpr121Vars::read_filtered_args
+ *                                      what read_filtered takes: e
+ * @var Mpr121Vars::ok
+ *                      a call's true/false outcome
+ * @var Mpr121Vars::value
+ *                         the value a call reports
+ * @var Mpr121Vars::n
+ *                     the number of bytes written (pairs * 2), or 0 if cap is too small / ...
+ * @var Mpr121Ns::touched
+ *                         decode the 12-electrode touch bitmask from the two status registers ...
+ * @var Mpr121Ns::is_touched
+ *                            true if electrode e (0..11) is touched in a mask from ...
+ * @var Mpr121Ns::proximity
+ *                           true if the proximity electrode (status bit 12) is active
+ * @var Mpr121Ns::overcurrent
+ *                             true if the over-current flag (status bit 15) is set (wiring fault ...
+ * @var Mpr121Ns::word10
+ *                        combine a little-endian LSB/MSB register pair into a 10-bit value ...
+ * @var Mpr121Ns::build_init
+ *                            build the MPR121 bring-up sequence as consecutive `(register, value)` byte pairs
+ * @var Mpr121Ns::begin
+ *                       reset + configure the MPR121 at addr over I2C. true if it ...
+ * @var Mpr121Ns::read_touched
+ *                              read the current 12-electrode touch bitmask (0 if the device is ...
+ * @var Mpr121Ns::read_filtered
+ *                               read electrode e's 10-bit filtered capacitance value
  *
  * @c work is PROTOCORE_MPR121_BORROW bytes the CALLER took, at an address it knows. It is not held past the call, so
  * nothing here aliases it. How those bytes are carved is this module's and is never named here.

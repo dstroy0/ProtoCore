@@ -43,18 +43,27 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::AuthLockout with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   AuthLockout.args.ip = &peer;
  *   AuthLockout.args.now_ms = Clock.ms;
  *   AuthLockout.remaining(work);
  *   // AuthLockout.ms is 0 when the address may try again
+ * @endcode
  *
- * @var AuthLockoutNs::args       the address a call is about, and the clock it is asked at
- * @var AuthLockoutNs::ok         a call's true/false outcome
- * @var AuthLockoutNs::ms         milliseconds until the lockout expires; 0 when not locked out
- * @var AuthLockoutNs::remaining  read the remaining lockout for the address
- * @var AuthLockoutNs::fail       record a failed authentication; may start or escalate a lockout
- * @var AuthLockoutNs::succeed    clear the address's failure and lockout state
- * @var AuthLockoutNs::reset      empty the whole table
+ * @var AuthLockoutVars::args
+ *                                  the address a call is about, and the clock it is asked at
+ * @var AuthLockoutVars::ok
+ *                                  a call's true/false outcome
+ * @var AuthLockoutVars::ms
+ *                                  milliseconds until the lockout expires; 0 when not locked out
+ * @var AuthLockoutNs::remaining
+ *                                read the remaining lockout for the address
+ * @var AuthLockoutNs::fail
+ *                                record a failed authentication; may start or escalate a lockout
+ * @var AuthLockoutNs::succeed
+ *                                clear the address's failure and lockout state
+ * @var AuthLockoutNs::reset
+ *                                empty the whole table
  *
  * @c work is PROTOCORE_AUTH_LOCKOUT_BORROW secure bytes the CALLER took, at an address it knows. It
  * is not held past the call, so nothing here aliases it. The table is in
@@ -62,7 +71,7 @@ typedef struct
  * and every call runs out of the same span. The caller releases it, and the pool wipes on release;
  * this module neither takes it, holds it, nor releases it.
  *
- * No storage member and no context: a caller sets operands and reads @ref AuthLockoutNs::ok, and
+ * No storage member and no context: a caller sets operands and reads @ref AuthLockoutVars::ok, and
  * that is all the surface there is.
  */
 typedef struct

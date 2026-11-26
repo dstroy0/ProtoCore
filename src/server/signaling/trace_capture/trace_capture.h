@@ -88,18 +88,28 @@ typedef struct
  * @brief The pre/post-trigger sample capture.
  *
  * A caller sets the members a call takes, invokes it through ::TraceCapture, and reads the outcome
- * off the same handle. The pre-roll ring and the assembled window are behind @ref internal.
+ * off the same handle. The pre-roll ring and the assembled window are internal.
  *
- * @var TraceCaptureNs::cfg        what arming the capture takes
- * @var TraceCaptureNs::feed       the samples one feed carries, and where a stats read lands
- * @var TraceCaptureNs::ok         a call's true/false outcome
- * @var TraceCaptureNs::accepted   samples the feed took
- * @var TraceCaptureNs::begin      arm the capture at its pre/post sample counts
- * @var TraceCaptureNs::feed_in    push samples through the pre-roll ring and the window
- * @var TraceCaptureNs::trigger    latch the pre-roll and start collecting post-trigger samples
- * @var TraceCaptureNs::get_stats  copy the tallies out
- * @var TraceCaptureNs::capturing  a window is being assembled right now
- * @var TraceCaptureNs::end        disarm
+ * @var TraceCaptureVars::cfg
+ *                                   what arming the capture takes
+ * @var TraceCaptureVars::feed
+ *                                   the samples one feed carries, and where a stats read lands
+ * @var TraceCaptureVars::ok
+ *                                   a call's true/false outcome
+ * @var TraceCaptureVars::accepted
+ *                                   samples the feed took
+ * @var TraceCaptureNs::begin
+ *                                 arm the capture at its pre/post sample counts
+ * @var TraceCaptureNs::feed_in
+ *                                 push samples through the pre-roll ring and the window
+ * @var TraceCaptureNs::trigger
+ *                                 latch the pre-roll and start collecting post-trigger samples
+ * @var TraceCaptureNs::get_stats
+ *                                 copy the tallies out
+ * @var TraceCaptureNs::capturing
+ *                                 a window is being assembled right now
+ * @var TraceCaptureNs::end
+ *                                 disarm
  *
  * The window completes inside a feed: when the last post-trigger sample lands, the sink is called
  * with the assembled window before the feed returns.

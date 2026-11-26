@@ -98,7 +98,7 @@ typedef struct
     size_t frag_len;
 } DtlsPlaintext;
 
-/** @brief Result of a successful @ref protocore_dtls_ciphertext_unprotect. */
+/** @brief Result of a successful @ref protocore_dtls_record_unprotect. */
 typedef struct
 {
     uint8_t content_type; ///< recovered inner content type (last non-zero byte of the inner plaintext)

@@ -140,34 +140,60 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::MdnsAdaptive with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   MdnsAdaptive.refresh_interval_args.ttl_s = ...;
  *   MdnsAdaptive.refresh_interval(work);
  *   // MdnsAdaptive.ms is what the call reports
+ * @endcode
  *
- * @var MdnsAdaptiveNs::refresh_interval_args  what refresh_interval takes: ttl_s
- * @var MdnsAdaptiveNs::beacon_init_args  what beacon_init takes: b, base_ms, max_ms, hi_thresh
- * @var MdnsAdaptiveNs::beacon_adapt_args  what beacon_adapt takes: b, contention
- * @var MdnsAdaptiveNs::beacon_due_args  what beacon_due takes: b, last_ms, now_ms
- * @var MdnsAdaptiveNs::beacon_presleep_due_args  what beacon_presleep_due takes: b, last_ms, now_ms, sleep_ms
- * @var MdnsAdaptiveNs::contention_init_args  what contention_init takes: w, window_ms, frames_now, now_ms
- * @var MdnsAdaptiveNs::contention_sample_args  what contention_sample takes: w, frames_now, now_ms, out
- * @var MdnsAdaptiveNs::begin_args  what begin takes: cfg
- * @var MdnsAdaptiveNs::ok  true when a window closed and out was written; false if the window ...
- * @var MdnsAdaptiveNs::ms  the new interval (ms)
- * @var MdnsAdaptiveNs::value  the value a call reports
- * @var MdnsAdaptiveNs::refresh_interval  the continuous-refresher cadence for a record TTL: half the TTL, in ...
- * @var MdnsAdaptiveNs::beacon_init  initialize a beacon. cur_ms starts at base_ms
- * @var MdnsAdaptiveNs::beacon_adapt  adapt the interval to observed RF contention (announces/collisions ...
- * @var MdnsAdaptiveNs::beacon_due  is an announce due now? (wrap-safe: elapsed since last_ms >= the ...
- * @var MdnsAdaptiveNs::beacon_presleep_due  auto-sleep beacon: should we announce *before* sleeping for ...
- * @var MdnsAdaptiveNs::contention_init  start sampling at now_ms, anchored to the current counter frames_now
- * @var MdnsAdaptiveNs::contention_sample  if a window elapsed, report the frames counted in it and start ...
- * @var MdnsAdaptiveNs::begin  start adaptive announcing: begin promiscuous capture on the ...
- * @var MdnsAdaptiveNs::tick  advance the schedule: sample contention, adapt the interval, follow ...
- * @var MdnsAdaptiveNs::end  stop adaptive announcing and release promiscuous mode
- * @var MdnsAdaptiveNs::interval_ms  current adaptive announce interval (ms) - for a diagnostics panel
- * @var MdnsAdaptiveNs::contention  frames counted in the most recently closed window - the live ...
- * @var MdnsAdaptiveNs::announces  total announces sent since begin()
+ * @var MdnsAdaptiveVars::refresh_interval_args
+ *                                               what refresh_interval takes: ttl_s
+ * @var MdnsAdaptiveVars::beacon_init_args
+ *                                          what beacon_init takes: b, base_ms, max_ms, hi_thresh
+ * @var MdnsAdaptiveVars::beacon_adapt_args
+ *                                           what beacon_adapt takes: b, contention
+ * @var MdnsAdaptiveVars::beacon_due_args
+ *                                         what beacon_due takes: b, last_ms, now_ms
+ * @var MdnsAdaptiveVars::beacon_presleep_due_args
+ *                                                  what beacon_presleep_due takes: b, last_ms, now_ms, sleep_ms
+ * @var MdnsAdaptiveVars::contention_init_args
+ *                                              what contention_init takes: w, window_ms, frames_now, now_ms
+ * @var MdnsAdaptiveVars::contention_sample_args
+ *                                                what contention_sample takes: w, frames_now, now_ms, out
+ * @var MdnsAdaptiveVars::begin_args
+ *                                    what begin takes: cfg
+ * @var MdnsAdaptiveVars::ok
+ *                            true when a window closed and out was written; false if the window ...
+ * @var MdnsAdaptiveVars::ms
+ *                            the new interval (ms)
+ * @var MdnsAdaptiveVars::value
+ *                               the value a call reports
+ * @var MdnsAdaptiveNs::refresh_interval
+ *                                        the continuous-refresher cadence for a record TTL: half the TTL, in ...
+ * @var MdnsAdaptiveNs::beacon_init
+ *                                   initialize a beacon. cur_ms starts at base_ms
+ * @var MdnsAdaptiveNs::beacon_adapt
+ *                                    adapt the interval to observed RF contention (announces/collisions ...
+ * @var MdnsAdaptiveNs::beacon_due
+ *                                  is an announce due now? (wrap-safe: elapsed since last_ms >= the ...
+ * @var MdnsAdaptiveNs::beacon_presleep_due
+ *                                           auto-sleep beacon: should we announce *before* sleeping for ...
+ * @var MdnsAdaptiveNs::contention_init
+ *                                       start sampling at now_ms, anchored to the current counter frames_now
+ * @var MdnsAdaptiveNs::contention_sample
+ *                                         if a window elapsed, report the frames counted in it and start ...
+ * @var MdnsAdaptiveNs::begin
+ *                             start adaptive announcing: begin promiscuous capture on the ...
+ * @var MdnsAdaptiveNs::tick
+ *                            advance the schedule: sample contention, adapt the interval, follow ...
+ * @var MdnsAdaptiveNs::end
+ *                           stop adaptive announcing and release promiscuous mode
+ * @var MdnsAdaptiveNs::interval_ms
+ *                                   current adaptive announce interval (ms) - for a diagnostics panel
+ * @var MdnsAdaptiveNs::contention
+ *                                  frames counted in the most recently closed window - the live ...
+ * @var MdnsAdaptiveNs::announces
+ *                                 total announces sent since begin()
  *
  * @c work is PROTOCORE_MDNS_ADAPTIVE_BORROW bytes the CALLER took, at an address it knows. It is not held past the
  * call, so nothing here aliases it. How those bytes are carved is this module's and is never named here.

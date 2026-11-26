@@ -10,8 +10,8 @@
  * and NAME SERVERS, "server programs which hold information about the domain tree's structure and
  * set information", described in sec 4. This module holds one of each and nothing else.
  *
- * Each component is reached through its own handle: ::Resolver and ::DnsServer. Behind @ref
- * DnsNs::internal they are pointers rather than values, because a table in one translation unit is
+ * Each component is reached through its own handle: ::Resolver and ::DnsServer. As members of @ref
+ * DnsNs they are pointers rather than values, because a table in one translation unit is
  * not a constant expression in another, so a by-value member could not be initialized from here.
  *
  * A component its feature flag leaves out is not a member at all, so dns.c names only what the
@@ -45,14 +45,15 @@ EMBED_BEGIN_DECLS
  * No storage member: the RESOLVER's timer and in-flight query belong to dns_resolver.c and the NAME
  * SERVER's record table to dns_server.c, so this module owns no pool.
  *
- * @var DnsNs::resolver  extracts information from name servers in response to client requests
+ * @var DnsNs::resolver
+ *                       extracts information from name servers in response to client requests
  *                       (RFC 1034 sec 5)
- * @var DnsNs::server    holds the domain tree's structure and set information (RFC 1034 sec 4)
- * @var DnsNs::present   what the table holds when both components are gated out: nothing
+ * @var DnsNs::server
+ *                       holds the domain tree's structure and set information (RFC 1034 sec 4)
  *
  * Pointers rather than values because a table in one translation unit is not a constant expression
  * in another, so a by-value member could not be initialized from dns.c. A struct with no members is
- * not valid C, so @ref DnsNs::present stands in when both flags are off.
+ * not valid C, so @c present stands in when both flags are off.
  */
 typedef struct
 {
@@ -63,7 +64,7 @@ typedef struct
     DnsServerNs *const server;
 #endif
 #if !PROTOCORE_ENABLE_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
-    embed_bool present;
+    embed_bool present; ///< what the table holds when both components are gated out: nothing
 #endif
 } DnsNs;
 

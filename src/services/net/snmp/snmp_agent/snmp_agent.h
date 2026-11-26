@@ -134,23 +134,40 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::SnmpAgent, and reads the outcome
  * off the same handle.
  *
- * @var SnmpAgentNs::port           the UDP port a listen binds, 161 by convention (RFC 3417 sec 3.2)
- * @var SnmpAgentNs::community      the communities a message is authenticated against
- * @var SnmpAgentNs::object         the managed object a registration binds
- * @var SnmpAgentNs::system         the system group values (RFC 3418 sec 2)
- * @var SnmpAgentNs::msg            the message read and the one written back
- * @var SnmpAgentNs::pdu            the PDU dispatched and the Response-PDU written
- * @var SnmpAgentNs::ok             a registration's true/false outcome: the table had room
- * @var SnmpAgentNs::n              octets written, 0 to send nothing
- * @var SnmpAgentNs::init           empty the MIB and take the read-only community
- * @var SnmpAgentNs::set_rw_community  take the community that authorizes a SetRequest-PDU
- * @var SnmpAgentNs::set_system     register the system group (RFC 3418 sec 2)
- * @var SnmpAgentNs::add_string     register an object whose value is an OCTET STRING
- * @var SnmpAgentNs::add_integer    register an object whose value is an INTEGER
- * @var SnmpAgentNs::add_dynamic    register an object whose value is read through a getter
- * @var SnmpAgentNs::dispatch_pdu   run one request PDU against the MIB and write a Response-PDU
- * @var SnmpAgentNs::process        decode one message, dispatch it, and frame the response message
- * @var SnmpAgentNs::listen         answer requests arriving on @c port
+ * @var SnmpAgentVars::port
+ *                                    the UDP port a listen binds, 161 by convention (RFC 3417 sec 3.2)
+ * @var SnmpAgentVars::community
+ *                                    the communities a message is authenticated against
+ * @var SnmpAgentVars::object
+ *                                    the managed object a registration binds
+ * @var SnmpAgentVars::system
+ *                                    the system group values (RFC 3418 sec 2)
+ * @var SnmpAgentVars::msg
+ *                                    the message read and the one written back
+ * @var SnmpAgentVars::pdu
+ *                                    the PDU dispatched and the Response-PDU written
+ * @var SnmpAgentVars::ok
+ *                                    a registration's true/false outcome: the table had room
+ * @var SnmpAgentVars::n
+ *                                    octets written, 0 to send nothing
+ * @var SnmpAgentNs::init
+ *                                  empty the MIB and take the read-only community
+ * @var SnmpAgentNs::set_rw_community
+ *                                     take the community that authorizes a SetRequest-PDU
+ * @var SnmpAgentNs::set_system
+ *                                  register the system group (RFC 3418 sec 2)
+ * @var SnmpAgentNs::add_string
+ *                                  register an object whose value is an OCTET STRING
+ * @var SnmpAgentNs::add_integer
+ *                                  register an object whose value is an INTEGER
+ * @var SnmpAgentNs::add_dynamic
+ *                                  register an object whose value is read through a getter
+ * @var SnmpAgentNs::dispatch_pdu
+ *                                  run one request PDU against the MIB and write a Response-PDU
+ * @var SnmpAgentNs::process
+ *                                  decode one message, dispatch it, and frame the response message
+ * @var SnmpAgentNs::listen
+ *                                  answer requests arriving on @c port
  */
 typedef struct
 {

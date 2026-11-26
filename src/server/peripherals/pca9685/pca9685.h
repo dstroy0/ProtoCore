@@ -108,28 +108,48 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Pca9685 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Pca9685.prescale_args.freq_hz = ...;
  *   Pca9685.prescale(work);
  *   // Pca9685.value is what the call reports
+ * @endcode
  *
- * @var Pca9685Ns::prescale_args  what prescale takes: freq_hz
- * @var Pca9685Ns::channel_reg_args  what channel_reg takes: channel
- * @var Pca9685Ns::us_to_count_args  what us_to_count takes: microseconds, freq_hz
- * @var Pca9685Ns::set_pwm_bytes_args  what set_pwm_bytes takes: buf, cap, channel, on, off
- * @var Pca9685Ns::begin_args  what begin takes: addr, freq_hz
- * @var Pca9685Ns::set_pwm_args  what set_pwm takes: channel, on, off
- * @var Pca9685Ns::set_servo_us_args  what set_servo_us takes: channel, microseconds
- * @var Pca9685Ns::ok  a call's true/false outcome
- * @var Pca9685Ns::value  the value a call reports
- * @var Pca9685Ns::count  what a call reports
- * @var Pca9685Ns::n  5, or 0 if cap < 5 or channel is out of range
- * @var Pca9685Ns::prescale  compute the PRESCALE register value for a PWM output frequency (25 ...
- * @var Pca9685Ns::channel_reg  the register base (LED_ON_L) for channel (0..15); 0 for an ...
- * @var Pca9685Ns::us_to_count  convert a servo pulse width (microseconds) at freq_hz to a 12-bit ...
- * @var Pca9685Ns::set_pwm_bytes  emit the 5-byte channel PWM write: `[LED_ON_L(channel), ON_L, ON_H, ...
- * @var Pca9685Ns::begin  reset the PCA9685 at addr and set the PWM frequency freq_hz. true ...
- * @var Pca9685Ns::set_pwm  set channel's raw 12-bit ON / OFF counts. false on I2C error / bad ...
- * @var Pca9685Ns::set_servo_us  drive a servo on channel to a microseconds pulse (uses the ...
+ * @var Pca9685Vars::prescale_args
+ *                                  what prescale takes: freq_hz
+ * @var Pca9685Vars::channel_reg_args
+ *                                     what channel_reg takes: channel
+ * @var Pca9685Vars::us_to_count_args
+ *                                     what us_to_count takes: microseconds, freq_hz
+ * @var Pca9685Vars::set_pwm_bytes_args
+ *                                       what set_pwm_bytes takes: buf, cap, channel, on, off
+ * @var Pca9685Vars::begin_args
+ *                               what begin takes: addr, freq_hz
+ * @var Pca9685Vars::set_pwm_args
+ *                                 what set_pwm takes: channel, on, off
+ * @var Pca9685Vars::set_servo_us_args
+ *                                      what set_servo_us takes: channel, microseconds
+ * @var Pca9685Vars::ok
+ *                       a call's true/false outcome
+ * @var Pca9685Vars::value
+ *                          the value a call reports
+ * @var Pca9685Vars::count
+ *                          what a call reports
+ * @var Pca9685Vars::n
+ *                      5, or 0 if cap < 5 or channel is out of range
+ * @var Pca9685Ns::prescale
+ *                           compute the PRESCALE register value for a PWM output frequency (25 ...
+ * @var Pca9685Ns::channel_reg
+ *                              the register base (LED_ON_L) for channel (0..15); 0 for an ...
+ * @var Pca9685Ns::us_to_count
+ *                              convert a servo pulse width (microseconds) at freq_hz to a 12-bit ...
+ * @var Pca9685Ns::set_pwm_bytes
+ *                                emit the 5-byte channel PWM write: `[LED_ON_L(channel), ON_L, ON_H, OFF_L, OFF_H]`
+ * @var Pca9685Ns::begin
+ *                        reset the PCA9685 at addr and set the PWM frequency freq_hz. true ...
+ * @var Pca9685Ns::set_pwm
+ *                          set channel's raw 12-bit ON / OFF counts. false on I2C error / bad ...
+ * @var Pca9685Ns::set_servo_us
+ *                               drive a servo on channel to a microseconds pulse (uses the ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

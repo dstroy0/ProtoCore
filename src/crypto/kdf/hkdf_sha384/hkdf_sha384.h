@@ -84,6 +84,7 @@ typedef struct
  * reads the outcome off the same handle. How those bytes are carved is this module's and is never named
  * here.
  *
+ * @code{.c}
  *   HkdfSha384.extract_args.salt = derived;
  *   HkdfSha384.extract_args.salt_len = PROTOCORE_HKDF_SHA384_HASH_LEN;
  *   HkdfSha384.extract_args.ikm = ecdhe;
@@ -96,26 +97,36 @@ typedef struct
  *   HkdfSha384.expand_label_args.out_len = PROTOCORE_HKDF_SHA384_HASH_LEN;
  *   HkdfSha384.expand_label_args.label_prefix = PROTOCORE_HKDF_SHA384_LABEL_PREFIX;
  *   HkdfSha384.expand_label(work);
+ * @endcode
  *
- * @var HkdfSha384Ns::extract_args           the salt and IKM HKDF-Extract folds into a PRK
- * @var HkdfSha384Ns::expand_args            the PRK, context and output span of a bare HKDF-Expand
- * @var HkdfSha384Ns::expand_label_args      the secret and label of an empty-context HKDF-Expand-Label
- * @var HkdfSha384Ns::expand_label_ctx_args  the same with an explicit HkdfLabel context
- * @var HkdfSha384Ns::ok                     a call's true/false outcome
- * @var HkdfSha384Ns::extract                PRK = HMAC-SHA384(salt, ikm) (RFC 5869 sec 2.2)
- * @var HkdfSha384Ns::expand                 OKM = T(1) | T(2) | ..., info taken verbatim (RFC 5869 sec 2.3)
- * @var HkdfSha384Ns::expand_label           expand under an HkdfLabel with an empty context
- * @var HkdfSha384Ns::expand_label_ctx       expand under an HkdfLabel carrying a context, the Derive-Secret form
+ * @var HkdfSha384Vars::extract_args
+ *                                             the salt and IKM HKDF-Extract folds into a PRK
+ * @var HkdfSha384Vars::expand_args
+ *                                             the PRK, context and output span of a bare HKDF-Expand
+ * @var HkdfSha384Vars::expand_label_args
+ *                                             the secret and label of an empty-context HKDF-Expand-Label
+ * @var HkdfSha384Vars::expand_label_ctx_args
+ *                                             the same with an explicit HkdfLabel context
+ * @var HkdfSha384Vars::ok
+ *                                             a call's true/false outcome
+ * @var HkdfSha384Ns::extract
+ *                                           PRK = HMAC-SHA384(salt, ikm) (RFC 5869 sec 2.2)
+ * @var HkdfSha384Ns::expand
+ *                                           OKM = T(1) | T(2) | ..., info taken verbatim (RFC 5869 sec 2.3)
+ * @var HkdfSha384Ns::expand_label
+ *                                           expand under an HkdfLabel with an empty context
+ * @var HkdfSha384Ns::expand_label_ctx
+ *                                           expand under an HkdfLabel carrying a context, the Derive-Secret form
  *
  * @ref HkdfSha384Ns::expand caps out_len at 255*PROTOCORE_HKDF_SHA384_HASH_LEN, the point past which the single-octet
- * block counter has no encoding: out is zeroed and @ref HkdfSha384Ns::ok comes back false.
+ * block counter has no encoding: out is zeroed and @ref HkdfSha384Vars::ok comes back false.
  *
  * @c work is PROTOCORE_HKDF_SHA384_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the
  * call, so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes
  * it, holds it, releases it, nor wipes it. The borrow carries the PRK and the T(i) block, so two derivations in flight
  * are two borrows and never collide.
  *
- * No storage member and no context: a caller sets operands and reads @ref HkdfSha384Ns::ok, and that is all
+ * No storage member and no context: a caller sets operands and reads @ref HkdfSha384Vars::ok, and that is all
  * the surface there is.
  */
 typedef struct

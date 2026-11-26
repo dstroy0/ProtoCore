@@ -59,8 +59,11 @@ uint32_t protocore_wal_crc32_final(uint32_t crc);                              /
 
 /**
  * @brief Encode one journal record into @p out.
+ * @param out     the destination buffer.
+ * @param cap     the capacity of @p out, in bytes.
  * @param seq     the record's monotonic sequence number.
  * @param payload the record body (may be null when @p len is 0).
+ * @param len     the number of bytes in @p payload.
  * @return total bytes written (::WAL_RECORD_HEADER + @p len), or 0 if it does not fit @p cap.
  */
 size_t protocore_wal_record_encode(uint8_t *out, size_t cap, uint64_t seq, const uint8_t *payload, uint32_t len);

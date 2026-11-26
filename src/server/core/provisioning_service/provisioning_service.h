@@ -40,7 +40,7 @@ typedef struct
 PROTOCORE_NS_LAYOUT(ProvNs, form_field, load, begin, clear);
 
 /**
- * @brief Extract and URL-decode a field from an x-www-form-urlencoded body. .
+ * @brief Extract and URL-decode a field from an x-www-form-urlencoded body.
  * @param work PROTOCORE_PROV_BORROW bytes the caller took. Not held past the call.
  * @param body Form body (e.g. "ssid=My+AP&psk=p%40ss")
  * @param key Field name (e.g. "ssid")

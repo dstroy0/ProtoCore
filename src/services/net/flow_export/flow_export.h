@@ -137,25 +137,42 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::FlowExport, and reads the outcome
  * off the same handle.
  *
- * @var FlowExportNs::template_id  RFC 7011 sec 3.4.1 / RFC 3954 sec 5.2 Template ID a Set names
- * @var FlowExportNs::out          where a builder writes and how far it may go
- * @var FlowExportNs::v5           the vendor Version 5 header and record a fixed write emits
- * @var FlowExportNs::message      the Message Header fields a begin writes
- * @var FlowExportNs::tmpl         the Field Specifiers a Template Record lists
- * @var FlowExportNs::data         one encoded Data Record and its length
- * @var FlowExportNs::ok           a call's true/false outcome
- * @var FlowExportNs::n            octets a v5 write emitted, or the finished message length
- * @var FlowExportNs::v5_header      write the 24-octet vendor Version 5 packet header
- * @var FlowExportNs::v5_record      write one 48-octet vendor Version 5 flow record
- * @var FlowExportNs::ipfix_begin    write the IPFIX Message Header (RFC 7011 sec 3.1)
- * @var FlowExportNs::v9_begin       write the NetFlow v9 packet Header (RFC 3954 sec 5.1)
- * @var FlowExportNs::template_set   emit a Template Set (RFC 7011 sec 3.3.2 Set ID 2) or a Template
+ * @var FlowExportVars::template_id
+ *                                   RFC 7011 sec 3.4.1 / RFC 3954 sec 5.2 Template ID a Set names
+ * @var FlowExportVars::out
+ *                                   where a builder writes and how far it may go
+ * @var FlowExportVars::v5
+ *                                   the vendor Version 5 header and record a fixed write emits
+ * @var FlowExportVars::message
+ *                                   the Message Header fields a begin writes
+ * @var FlowExportVars::tmpl
+ *                                   the Field Specifiers a Template Record lists
+ * @var FlowExportVars::data
+ *                                   one encoded Data Record and its length
+ * @var FlowExportVars::ok
+ *                                   a call's true/false outcome
+ * @var FlowExportVars::n
+ *                                   octets a v5 write emitted, or the finished message length
+ * @var FlowExportNs::v5_header
+ *                                   write the 24-octet vendor Version 5 packet header
+ * @var FlowExportNs::v5_record
+ *                                   write one 48-octet vendor Version 5 flow record
+ * @var FlowExportNs::ipfix_begin
+ *                                   write the IPFIX Message Header (RFC 7011 sec 3.1)
+ * @var FlowExportNs::v9_begin
+ *                                   write the NetFlow v9 packet Header (RFC 3954 sec 5.1)
+ * @var FlowExportNs::template_set
+ *                                   emit a Template Set (RFC 7011 sec 3.3.2 Set ID 2) or a Template
  *                                   FlowSet (RFC 3954 sec 5.2 FlowSet ID 0)
- * @var FlowExportNs::data_set_begin open a Data Set for template_id (RFC 7011 sec 3.3.2,
+ * @var FlowExportNs::data_set_begin
+ *                                   open a Data Set for template_id (RFC 7011 sec 3.3.2,
  *                                   RFC 3954 sec 5.3)
- * @var FlowExportNs::data_record    append one Data Record to the open Set
- * @var FlowExportNs::data_set_end   patch the Set Length and, for v9, pad to a 4-octet boundary
- * @var FlowExportNs::message_finish close any open Set, patch the IPFIX Length or the v9 Count
+ * @var FlowExportNs::data_record
+ *                                   append one Data Record to the open Set
+ * @var FlowExportNs::data_set_end
+ *                                   patch the Set Length and, for v9, pad to a 4-octet boundary
+ * @var FlowExportNs::message_finish
+ *                                   close any open Set, patch the IPFIX Length or the v9 Count
  */
 typedef struct
 {

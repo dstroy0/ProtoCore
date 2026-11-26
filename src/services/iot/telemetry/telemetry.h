@@ -109,30 +109,51 @@ typedef struct
  * No slot member: each call names its own caller-owned accumulator through the sub-struct of its
  * concern, so no call names a row.
  *
- * @var TelemetryNs::window            the window a call acts on, and what an init or a push feeds it
- * @var TelemetryNs::rate              the rate tracker a call acts on, and what an update feeds it
- * @var TelemetryNs::totalizer         the totalizer a call acts on, and what an add feeds it
- * @var TelemetryNs::ok                true when the call reached a bound accumulator; a window
+ * @var TelemetryVars::window
+ *                                       the window a call acts on, and what an init or a push feeds it
+ * @var TelemetryVars::rate
+ *                                       the rate tracker a call acts on, and what an update feeds it
+ * @var TelemetryVars::totalizer
+ *                                       the totalizer a call acts on, and what an add feeds it
+ * @var TelemetryVars::ok
+ *                                       true when the call reached a bound accumulator; a window
  *                                     statistic also needs one sample held
- * @var TelemetryNs::u16               a call's unsigned count outcome
- * @var TelemetryNs::f32               a call's single-precision outcome
- * @var TelemetryNs::f64               a call's double-precision outcome
- * @var TelemetryNs::window_init       bind @c window.buf and @c window.cap to @c window.w and empty it
- * @var TelemetryNs::window_push       add @c window.sample, evicting the oldest sample once full
- * @var TelemetryNs::window_count      the samples held, into @c u16
- * @var TelemetryNs::window_mean       their arithmetic mean, into @c f32
- * @var TelemetryNs::window_variance   their population variance, into @c f32
- * @var TelemetryNs::window_stddev     the square root of that variance, into @c f32
- * @var TelemetryNs::window_min        the smallest sample held, into @c f32
- * @var TelemetryNs::window_max        the largest sample held, into @c f32
- * @var TelemetryNs::rate_init         drop the prior sample, so the next update primes @c rate.r
- * @var TelemetryNs::rate_update       feed @c rate.value at @c rate.now_ms and report the change per
+ * @var TelemetryVars::u16
+ *                                       a call's unsigned count outcome
+ * @var TelemetryVars::f32
+ *                                       a call's single-precision outcome
+ * @var TelemetryVars::f64
+ *                                       a call's double-precision outcome
+ * @var TelemetryNs::window_init
+ *                                     bind @c window.buf and @c window.cap to @c window.w and empty it
+ * @var TelemetryNs::window_push
+ *                                     add @c window.sample, evicting the oldest sample once full
+ * @var TelemetryNs::window_count
+ *                                     the samples held, into @c u16
+ * @var TelemetryNs::window_mean
+ *                                     their arithmetic mean, into @c f32
+ * @var TelemetryNs::window_variance
+ *                                     their population variance, into @c f32
+ * @var TelemetryNs::window_stddev
+ *                                     the square root of that variance, into @c f32
+ * @var TelemetryNs::window_min
+ *                                     the smallest sample held, into @c f32
+ * @var TelemetryNs::window_max
+ *                                     the largest sample held, into @c f32
+ * @var TelemetryNs::rate_init
+ *                                     drop the prior sample, so the next update primes @c rate.r
+ * @var TelemetryNs::rate_update
+ *                                     feed @c rate.value at @c rate.now_ms and report the change per
  *                                     second since the previous sample, into @c f32
- * @var TelemetryNs::totalizer_init    zero @c totalizer.t and drop its prior rate sample
- * @var TelemetryNs::totalizer_add     integrate @c totalizer.rate from the previous sample to
+ * @var TelemetryNs::totalizer_init
+ *                                     zero @c totalizer.t and drop its prior rate sample
+ * @var TelemetryNs::totalizer_add
+ *                                     integrate @c totalizer.rate from the previous sample to
  *                                     @c totalizer.now_ms by the trapezoidal rule, into @c f64
- * @var TelemetryNs::totalizer_total   the running total, into @c f64 (SenML Sum, RFC 8428 sec 4.2)
- * @var TelemetryNs::totalizer_reset   zero the running total and drop the prior rate sample
+ * @var TelemetryNs::totalizer_total
+ *                                     the running total, into @c f64 (SenML Sum, RFC 8428 sec 4.2)
+ * @var TelemetryNs::totalizer_reset
+ *                                     zero the running total and drop the prior rate sample
  */
 typedef struct
 {

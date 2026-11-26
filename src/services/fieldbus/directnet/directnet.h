@@ -86,22 +86,35 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Directnet with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Directnet.lrc_args.bytes = ...;
  *   Directnet.lrc_args.len = ...;
  *   Directnet.lrc(work);
  *   // Directnet.value is what the call reports
+ * @endcode
  *
- * @var DirectnetNs::lrc_args  what lrc takes: bytes, len
- * @var DirectnetNs::header_args  what header takes: slave, type, address, blocks, out, cap
- * @var DirectnetNs::data_args  what data takes: data, data_len, out, cap
- * @var DirectnetNs::data_parse_args  what data_parse takes: frame, len, data, data_len
- * @var DirectnetNs::ok  true if it is well-formed and the LRC matches; sets data / data_len ...
- * @var DirectnetNs::value  the value a call reports
- * @var DirectnetNs::n  the frame length, or 0 on overflow. The LRC covers slave..ETB
- * @var DirectnetNs::lrc  longitudinal XOR checksum (the DirectNET LRC) over len bytes
- * @var DirectnetNs::header  build a DirectNET header frame: SOH + ...
- * @var DirectnetNs::data  build a DirectNET data frame: STX + data + ETX + LRC. The LRC ...
- * @var DirectnetNs::data_parse  validate a DirectNET data frame (STX..ETX + LRC) and expose its ...
+ * @var DirectnetVars::lrc_args
+ *                               what lrc takes: bytes, len
+ * @var DirectnetVars::header_args
+ *                                  what header takes: slave, type, address, blocks, out, cap
+ * @var DirectnetVars::data_args
+ *                                what data takes: data, data_len, out, cap
+ * @var DirectnetVars::data_parse_args
+ *                                      what data_parse takes: frame, len, data, data_len
+ * @var DirectnetVars::ok
+ *                         true if it is well-formed and the LRC matches; sets data / data_len ...
+ * @var DirectnetVars::value
+ *                            the value a call reports
+ * @var DirectnetVars::n
+ *                        the frame length, or 0 on overflow. The LRC covers slave..ETB
+ * @var DirectnetNs::lrc
+ *                        longitudinal XOR checksum (the DirectNET LRC) over len bytes
+ * @var DirectnetNs::header
+ *                           build a DirectNET header frame: SOH + ...
+ * @var DirectnetNs::data
+ *                         build a DirectNET data frame: STX + data + ETX + LRC. The LRC ...
+ * @var DirectnetNs::data_parse
+ *                               validate a DirectNET data frame (STX..ETX + LRC) and expose its ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

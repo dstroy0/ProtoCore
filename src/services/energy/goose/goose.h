@@ -53,7 +53,12 @@ size_t protocore_goose_pdu(const protocore_goose *g, uint8_t *out, size_t cap);
 
 /**
  * @brief Build a full GOOSE Ethernet frame: [dst][src][88B8][APPID len rsvd rsvd][IECGoosePdu].
+ * @param dst   the destination MAC address, 6 octets (a GOOSE multicast address).
+ * @param src   the source MAC address, 6 octets.
  * @param appid the GOOSE APPID.
+ * @param g     the GOOSE message fields that the IECGoosePdu holds.
+ * @param out   the destination buffer.
+ * @param cap   the capacity of @p out, in bytes.
  * @return the frame length, or 0 on overflow. Requires PROTOCORE_ENABLE_RAWL2 for the Ethernet framing.
  */
 size_t protocore_goose_frame(const uint8_t *dst, const uint8_t *src, uint16_t appid, const protocore_goose *g,

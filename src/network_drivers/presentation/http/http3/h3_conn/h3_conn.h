@@ -74,6 +74,7 @@ typedef struct
  * connection under it, sets the members a call takes, invokes it through ::H3Conn with those bytes,
  * and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   H3Conn.bind.qc = quic_ctx_span;
  *   H3Conn.app_args.on_request = on_request;
  *   H3Conn.app_args.app = app;
@@ -81,22 +82,29 @@ typedef struct
  *   H3Conn.respond_args.stream_id = id;
  *   H3Conn.respond_args.status = 200;
  *   H3Conn.respond(byte_span);
+ * @endcode
  *
- * @var H3ConnNs::bind          the QUIC connection under this one; the storage is the borrow
- * @var H3ConnNs::app_args      what the application is told about
- * @var H3ConnNs::respond_args  one response, serialized onto a request stream
- * @var H3ConnNs::ok            a call's true/false outcome
- * @var H3ConnNs::init          open the connection and install its hooks on the bound QUIC connection
- * @var H3ConnNs::respond       serialize HEADERS + DATA onto a request stream and finish it
+ * @var H3ConnVars::bind
+ *                                the QUIC connection under this one; the storage is the borrow
+ * @var H3ConnVars::app_args
+ *                                what the application is told about
+ * @var H3ConnVars::respond_args
+ *                                one response, serialized onto a request stream
+ * @var H3ConnVars::ok
+ *                                a call's true/false outcome
+ * @var H3ConnNs::init
+ *                              open the connection and install its hooks on the bound QUIC connection
+ * @var H3ConnNs::respond
+ *                              serialize HEADERS + DATA onto a request stream and finish it
  *
  * @ref H3ConnNs::init overwrites the bound QUIC connection's callbacks with this engine's hooks, so
- * the application callback goes in @ref H3ConnNs::app_args rather than on the transport.
+ * the application callback goes in @ref H3ConnVars::app_args rather than on the transport.
  *
  * The bound span is the CALLER's, at an address it knows. The caller releases it, and the pool wipes
  * on release; this module neither takes it, holds it past the connection, nor releases it. The span
  * IS the connection, so two connections are two spans and never collide.
  *
- * No storage member: a caller binds, sets operands and reads @ref H3ConnNs::ok, and that is all the
+ * No storage member: a caller binds, sets operands and reads @ref H3ConnVars::ok, and that is all the
  * surface there is.
  */
 typedef struct

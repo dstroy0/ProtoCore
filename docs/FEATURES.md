@@ -552,7 +552,7 @@ Opt-in ICCP / TASE.2 (IEC 60870-6) inter-control-center telemetry codec. When se
 
 `PROTOCORE_ENABLE_IDEMIP`
 
-The idemIP stack in place of lwIP, under the same transport. Default off. src/network_drivers/network/stack runs the units of idemIP over each interface, holds each TCP connection with the RFC 6298 timer and RFC 5681 fast retransmit, and answers each `protocore_net_*` call of the transport: TCP listen, accept, connect, write and close, UDP bind, receive and send, and IGMP join and leave. `protocore_stack_net_start()` starts the task that runs the stack, once the interface is up. The counts that idemIP reads are in vendor/board_profiles/stack_profile.h. See src/network_drivers/network/stack/stack_net.h.
+The idemIP stack in place of lwIP, under the same transport. Default off. src/network_drivers/network/stack runs the units of idemIP over each interface, holds each TCP connection with the RFC 6298 timer and RFC 5681 fast retransmit, and answers each `protocore_net_*` call of the transport: TCP listen, accept, connect, write and close, UDP bind, receive and send, and IGMP join and leave. `protocore_stack_net_start()` starts the task that runs the stack, once the interface is up. The counts that idemIP reads are in vendor/board_profiles/stack_profile.h. See src/network_drivers/network/stack/stack_net/stack_net.h.
 
 ## IEC 60870
 

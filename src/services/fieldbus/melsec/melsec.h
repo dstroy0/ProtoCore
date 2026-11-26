@@ -130,6 +130,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Melsec with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Melsec.build_read_args.buf = ...;
  *   Melsec.build_read_args.cap = ...;
  *   Melsec.build_read_args.device_code = ...;
@@ -138,15 +139,24 @@ typedef struct
  *   Melsec.build_read_args.monitoring_timer = ...;
  *   Melsec.build_read(work);
  *   // Melsec.n is what the call reports
+ * @endcode
  *
- * @var MelsecNs::build_read_args  what build_read takes: buf, cap, device_code, head_device,
- * @var MelsecNs::build_write_args  what build_write takes: buf, cap, device_code, head_device,
- * @var MelsecNs::parse_response_args  what parse_response takes: buf, len, out
- * @var MelsecNs::ok  a call's true/false outcome
- * @var MelsecNs::n  total octets written (21), or 0 on overflow / bad input
- * @var MelsecNs::build_read  build a binary 3E batch-read (word units) request
- * @var MelsecNs::build_write  build a binary 3E batch-write (word units) request: the same device ...
- * @var MelsecNs::parse_response  parse + validate a binary 3E response (subheader 0xD0 0x00, length, ...
+ * @var MelsecVars::build_read_args
+ *                                   what build_read takes: buf, cap, device_code, head_device,
+ * @var MelsecVars::build_write_args
+ *                                    what build_write takes: buf, cap, device_code, head_device,
+ * @var MelsecVars::parse_response_args
+ *                                       what parse_response takes: buf, len, out
+ * @var MelsecVars::ok
+ *                      a call's true/false outcome
+ * @var MelsecVars::n
+ *                     total octets written (21), or 0 on overflow / bad input
+ * @var MelsecNs::build_read
+ *                            build a binary 3E batch-read (word units) request
+ * @var MelsecNs::build_write
+ *                             build a binary 3E batch-write (word units) request: the same device ...
+ * @var MelsecNs::parse_response
+ *                                parse + validate a binary 3E response (subheader 0xD0 0x00, length, ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

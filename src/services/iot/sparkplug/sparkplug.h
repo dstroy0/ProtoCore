@@ -213,24 +213,42 @@ typedef struct
  *
  * No slot member: the codec holds no rows, so no call names one.
  *
- * @var SparkplugNs::topic         the topic namespace elements a topic build joins (sec 4.1)
- * @var SparkplugNs::topic_out     the buffer a topic build writes into
- * @var SparkplugNs::out           the buffer a Payload or Metric build writes into
- * @var SparkplugNs::payload       the Payload header fields a build stamps (sec 6.4.5)
- * @var SparkplugNs::metrics       the Metrics a build serializes (sec 6.4.6)
- * @var SparkplugNs::source        the octets a decode reads, and its metrics cursor
- * @var SparkplugNs::ok            a call's true/false outcome; a build reports whether it wrote anything
- * @var SparkplugNs::n             the length a build wrote, 0 if it did not fit
- * @var SparkplugNs::header        the Payload header a parse decoded (sec 6.4.5)
- * @var SparkplugNs::metric        the Metric a parse decoded (sec 6.4.6)
- * @var SparkplugNs::metric_bytes  the next Metric sub-message an iteration reports, pointing into @c source
- * @var SparkplugNs::metric_len    how many octets that sub-message holds
- * @var SparkplugNs::build_topic   join `spBv1.0/group_id/message_type/edge_node_id[/device_id]` into @c topic_out
- * @var SparkplugNs::build_metric  serialize @c metrics.list[0] as one Metric message into @c out
- * @var SparkplugNs::build_payload serialize @c payload plus @c metrics.count Metrics as one Payload into @c out
- * @var SparkplugNs::parse_payload read a Payload's timestamp and seq from @c source into @c header
- * @var SparkplugNs::next_metric   report the next metrics(2) sub-message of a Payload and advance @c source.cursor
- * @var SparkplugNs::parse_metric  decode the Metric in @c source into @c metric
+ * @var SparkplugVars::topic
+ *                                   the topic namespace elements a topic build joins (sec 4.1)
+ * @var SparkplugVars::topic_out
+ *                                   the buffer a topic build writes into
+ * @var SparkplugVars::out
+ *                                   the buffer a Payload or Metric build writes into
+ * @var SparkplugVars::payload
+ *                                   the Payload header fields a build stamps (sec 6.4.5)
+ * @var SparkplugVars::metrics
+ *                                   the Metrics a build serializes (sec 6.4.6)
+ * @var SparkplugVars::source
+ *                                   the octets a decode reads, and its metrics cursor
+ * @var SparkplugVars::ok
+ *                                   a call's true/false outcome; a build reports whether it wrote anything
+ * @var SparkplugVars::n
+ *                                   the length a build wrote, 0 if it did not fit
+ * @var SparkplugVars::header
+ *                                   the Payload header a parse decoded (sec 6.4.5)
+ * @var SparkplugVars::metric
+ *                                   the Metric a parse decoded (sec 6.4.6)
+ * @var SparkplugVars::metric_bytes
+ *                                   the next Metric sub-message an iteration reports, pointing into @c source
+ * @var SparkplugVars::metric_len
+ *                                   how many octets that sub-message holds
+ * @var SparkplugNs::build_topic
+ *                                 join `spBv1.0/group_id/message_type/edge_node_id[/device_id]` into @c topic_out
+ * @var SparkplugNs::build_metric
+ *                                 serialize @c metrics.list[0] as one Metric message into @c out
+ * @var SparkplugNs::build_payload
+ *                                 serialize @c payload plus @c metrics.count Metrics as one Payload into @c out
+ * @var SparkplugNs::parse_payload
+ *                                 read a Payload's timestamp and seq from @c source into @c header
+ * @var SparkplugNs::next_metric
+ *                                 report the next metrics(2) sub-message of a Payload and advance @c source.cursor
+ * @var SparkplugNs::parse_metric
+ *                                 decode the Metric in @c source into @c metric
  */
 typedef struct
 {

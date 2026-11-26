@@ -22,7 +22,7 @@
 
 #include "src/idemip.h" // every unit of idemIP, its borrow and its operand block
 
-#include "network_drivers/network/stack/stack_tcp.h" // the TCP engine, which acts on each TCP decision of Dispatch
+#include "network_drivers/network/stack/stack_tcp/stack_tcp.h" // the TCP engine, which acts on each TCP decision of Dispatch
 #include "server/core/worker/worker.h" // the owners of the units, mmgr_zero_buf, and the context of this module
 
 EMBED_BEGIN_DECLS
@@ -600,8 +600,8 @@ const StackUnits *protocore_stack_units(const uint8_t *work)
 typedef struct
 {
     uint8_t *borrow; ///< PROTOCORE_STACK_BORROW persistent bytes
-} StackOwnContext;
-static StackOwnContext s_own;
+} StackOwnCtx;
+static StackOwnCtx s_own;
 
 uint8_t *protocore_stack_span(void)
 {

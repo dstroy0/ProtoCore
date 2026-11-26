@@ -122,20 +122,20 @@ void protocore_gateway_reset(uint8_t *work);
  */
 embed_bool protocore_gateway_add_port(uint8_t *work, const protocore_gateway_port_config *cfg);
 /**
- * @brief Install the northbound publish callback (required to publish .
+ * @brief Install the northbound publish callback (required to publish anything).
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param fn Fn
  * @param ctx Ctx
  */
 void protocore_gateway_set_uplink_cb(uint8_t *work, protocore_gateway_uplink_fn fn, void *ctx);
 /**
- * @brief Set the topic prefix used by protocore_gateway_topic() .
+ * @brief Set the topic prefix used by protocore_gateway_topic() (caller-owned string; default "gw").
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param prefix Prefix
  */
 void protocore_gateway_set_topic_prefix(uint8_t *work, const char *prefix);
 /**
- * @brief Bridge a received southbound frame northbound: envelope it and .
+ * @brief Bridge a received southbound frame northbound: envelope it and publish.
  * @param work PROTOCORE_GATEWAY_BORROW bytes the caller took. Not held past the call.
  * @param port_id Port id
  * @param src_addr Src addr
@@ -163,7 +163,7 @@ embed_bool protocore_gateway_downlink(uint8_t *work, uint8_t port_id, uint16_t d
  * @param msg Msg
  * @param buf Buf
  * @param buflen Buflen
- * @return The uint16_t.
+ * @return the string length written (excluding the NUL), or 0 if @p buf is too small.
  */
 uint16_t protocore_gateway_topic(uint8_t *work, const protocore_gateway_msg *msg, char *buf, uint16_t buflen);
 /**

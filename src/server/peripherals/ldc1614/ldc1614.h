@@ -110,28 +110,47 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ldc1614 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ldc1614.data_args.msb_reg = ...;
  *   Ldc1614.data_args.lsb_reg = ...;
  *   Ldc1614.data(work);
  *   // Ldc1614.value is what the call reports
+ * @endcode
  *
- * @var Ldc1614Ns::data_args  what data takes: msb_reg, lsb_reg
- * @var Ldc1614Ns::error_args  what error takes: msb_reg
- * @var Ldc1614Ns::sensor_freq_hz_args  what sensor_freq_hz takes: data28, fref_hz
- * @var Ldc1614Ns::build_config_args  what build_config takes: buf, cap, rcount, settlecount
- * @var Ldc1614Ns::begin_args  what begin takes: addr, rcount, settlecount
- * @var Ldc1614Ns::read_ch0_args  what read_ch0 takes: out
- * @var Ldc1614Ns::ok  a call's true/false outcome
- * @var Ldc1614Ns::value  the value a call reports
- * @var Ldc1614Ns::flags  what a call reports
- * @var Ldc1614Ns::hz  what a call reports
- * @var Ldc1614Ns::n  bytes written (7 * 3 = 21), or 0 if cap < LDC1614_CONFIG_MAX
- * @var Ldc1614Ns::data  combine a DATA MSB register (low 12 bits) and DATA LSB register ...
- * @var Ldc1614Ns::error  the 4 error flags from the top of a DATA MSB register (bits 15:12)
- * @var Ldc1614Ns::sensor_freq_hz  sensor frequency in Hz for a 28-bit result against a reference ...
- * @var Ldc1614Ns::build_config  emit a single-channel (CH0) continuous-conversion bring-up as ...
- * @var Ldc1614Ns::begin  verify the device id and apply the CH0 config at addr. true if ...
- * @var Ldc1614Ns::read_ch0  read channel 0's 28-bit conversion result into out. false on I2C ...
+ * @var Ldc1614Vars::data_args
+ *                              what data takes: msb_reg, lsb_reg
+ * @var Ldc1614Vars::error_args
+ *                               what error takes: msb_reg
+ * @var Ldc1614Vars::sensor_freq_hz_args
+ *                                        what sensor_freq_hz takes: data28, fref_hz
+ * @var Ldc1614Vars::build_config_args
+ *                                      what build_config takes: buf, cap, rcount, settlecount
+ * @var Ldc1614Vars::begin_args
+ *                               what begin takes: addr, rcount, settlecount
+ * @var Ldc1614Vars::read_ch0_args
+ *                                  what read_ch0 takes: out
+ * @var Ldc1614Vars::ok
+ *                       a call's true/false outcome
+ * @var Ldc1614Vars::value
+ *                          the value a call reports
+ * @var Ldc1614Vars::flags
+ *                          what a call reports
+ * @var Ldc1614Vars::hz
+ *                       what a call reports
+ * @var Ldc1614Vars::n
+ *                      bytes written (7 * 3 = 21), or 0 if cap < LDC1614_CONFIG_MAX
+ * @var Ldc1614Ns::data
+ *                       combine a DATA MSB register (low 12 bits) and DATA LSB register ...
+ * @var Ldc1614Ns::error
+ *                        the 4 error flags from the top of a DATA MSB register (bits 15:12)
+ * @var Ldc1614Ns::sensor_freq_hz
+ *                                 sensor frequency in Hz for a 28-bit result against a reference ...
+ * @var Ldc1614Ns::build_config
+ *                               emit a single-channel (CH0) continuous-conversion bring-up as ...
+ * @var Ldc1614Ns::begin
+ *                        verify the device id and apply the CH0 config at addr. true if ...
+ * @var Ldc1614Ns::read_ch0
+ *                           read channel 0's 28-bit conversion result into out. false on I2C ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

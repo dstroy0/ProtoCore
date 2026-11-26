@@ -89,23 +89,37 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Df1 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Df1.bcc_args.data = ...;
  *   Df1.bcc_args.len = ...;
  *   Df1.bcc(work);
  *   // Df1.value is what the call reports
+ * @endcode
  *
- * @var Df1Ns::bcc_args  what bcc takes: data, len
- * @var Df1Ns::crc_args  what crc takes: data, len
- * @var Df1Ns::build_frame_args  what build_frame takes: buf, cap, data, data_len, check
- * @var Df1Ns::parse_frame_args  what parse_frame takes: buf, len, check, out, out_cap,
- * @var Df1Ns::ok  true on a complete, check-valid frame; false on bad framing, ...
- * @var Df1Ns::value  the value a call reports
- * @var Df1Ns::u16  what a call reports
- * @var Df1Ns::n  total octets written, or 0 on overflow / bad input
- * @var Df1Ns::bcc  BCC: 2's complement of the modulo-256 sum of [data, data+len)
- * @var Df1Ns::crc  CRC-16/ARC (poly 0x8005 / 0xA001 reflected, init 0) over [data, ...
- * @var Df1Ns::build_frame  build a full-duplex frame around data: DLE STX + stuffed data + DLE ...
- * @var Df1Ns::parse_frame  parse + validate a full-duplex frame, un-stuffing the application ...
+ * @var Df1Vars::bcc_args
+ *                         what bcc takes: data, len
+ * @var Df1Vars::crc_args
+ *                         what crc takes: data, len
+ * @var Df1Vars::build_frame_args
+ *                                 what build_frame takes: buf, cap, data, data_len, check
+ * @var Df1Vars::parse_frame_args
+ *                                 what parse_frame takes: buf, len, check, out, out_cap,
+ * @var Df1Vars::ok
+ *                   true on a complete, check-valid frame; false on bad framing, ...
+ * @var Df1Vars::value
+ *                      the value a call reports
+ * @var Df1Vars::u16
+ *                    what a call reports
+ * @var Df1Vars::n
+ *                  total octets written, or 0 on overflow / bad input
+ * @var Df1Ns::bcc
+ *                  BCC: 2's complement of the modulo-256 sum of [data, data+len)
+ * @var Df1Ns::crc
+ *                  CRC-16/ARC (poly 0x8005 / 0xA001 reflected, init 0) over [data, ...
+ * @var Df1Ns::build_frame
+ *                          build a full-duplex frame around data: DLE STX + stuffed data + DLE ...
+ * @var Df1Ns::parse_frame
+ *                          parse + validate a full-duplex frame, un-stuffing the application ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

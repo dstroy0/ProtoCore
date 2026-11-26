@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Tests for the register stages of docs_check: the two tiers, what is behind each one, and
 # the reporting text.
 #
-#   Usage:  python utils/maint/prose/test_docs_check_tiers.py
+#   Usage:  python tools/prose/test_docs_check_tiers.py
 #
 # THE FIRST TEST IN THIS FILE IS THE GOVERNING ONE. The two writing standards ARE the standard. A
 # gate that reports either of them on vocabulary is wrong by construction, whatever it found. That

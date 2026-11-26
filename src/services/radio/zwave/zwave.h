@@ -75,7 +75,8 @@ PROTOCORE_NS_LAYOUT(ZwaveNs, build_frame, parse_frame, is_ack, is_nak, is_can, b
  * @param data_len Data len
  * @param out Out
  * @param cap Cap
- * @return The uint16_t.
+ * @return the total frame length, or 0 if it would not fit @p cap or @p data_len exceeds
+ *         PROTOCORE_ZWAVE_MAX_DATA.
  */
 uint16_t protocore_zwave_build_frame(const uint8_t *work, protocore_zwave_type type, uint8_t cmd, const uint8_t *data,
                                      uint8_t data_len, uint8_t *out, uint16_t cap);
@@ -84,11 +85,14 @@ uint16_t protocore_zwave_build_frame(const uint8_t *work, protocore_zwave_type t
  * @param work PROTOCORE_ZWAVE_BORROW bytes the caller took. Not held past the call.
  * @param raw Raw
  * @param len Len
- * @param type Type
- * @param cmd Cmd
- * @param pdata Pdata
- * @param pdata_len Pdata len
- * @return The int.
+ * @param[out] type      set to the frame type (REQ / RES).
+ * @param[out] cmd       set to the function command byte.
+ * @param[out] pdata     set to the first payload byte (points into @p raw).
+ * @param[out] pdata_len set to the payload length.
+ * @return the frame length consumed (> 0), 0 if more bytes are needed, or -1 if @p raw[0]
+ *         does not start a valid data frame (not SOF / bad length / bad checksum). A single
+ *         control byte (ACK / NAK / CAN) is not a data frame - test it with the helpers
+ *         below before calling this.
  */
 int protocore_zwave_parse_frame(const uint8_t *work, const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd,
                                 const uint8_t **pdata, uint8_t *pdata_len);

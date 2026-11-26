@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Find the machine register in this tree by a measurement against a written sample of it.
 #
-#   Usage:  python utils/maint/prose/machine_distance.py [<root> ...] [--worst N]
+#   Usage:  python tools/prose/machine_distance.py [<root> ...] [--worst N]
 #
 # WHY A POSITIVE CONTROL CHANGES THE QUESTION
 #
@@ -13,7 +13,7 @@
 # All three ask how far a text sits from something human. None of them can say what it sits near instead. A detector
 # with one pole can only ever report a distance from normal.
 #
-# utils/maint/prose/fixtures/machine_reference.md is the other pole. It is a page in the machine register, at full
+# tools/prose/fixtures/machine_reference.md is the other pole. It is a page in the machine register, at full
 # strength, by the machine, about the work in this repository. The match of subject makes it usable, because it is not a
 # distance to a 1667 epic or to a linguistics paper. Genre, locale and era all stay fixed, and the only thing left free
 # to vary is the register.
@@ -431,7 +431,7 @@ def main():
 
     out.write("\n  the two poles\n")
     out.write("    %-10s %7d words  %s\n" % ("machine", machine_words, pole_name))
-    out.write("    %-10s %7d words  utils/maint/prose/voice.tsv\n" % ("human", human_words))
+    out.write("    %-10s %7d words  tools/prose/voice.tsv\n" % ("human", human_words))
     out.write("    compared over the %d commonest words of the two\n" % len(vocabulary))
     out.write("    they sit %.4f apart\n" % distance(machine, human))
 

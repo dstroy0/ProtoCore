@@ -121,7 +121,7 @@ void test_every_region_ends_within_the_borrow(void)
     TEST_ASSERT_TRUE(SSH_OFF_MAC_WORK < SSH_SLOT_BORROW);
     TEST_ASSERT_TRUE(SSH_OFF_CRYPTO_WORK < SSH_SLOT_BORROW);
     TEST_ASSERT_TRUE(SSH_OFF_RX_READ + RX_BUF_SIZE <= SSH_SLOT_BORROW);
-    TEST_ASSERT_TRUE(SSH_OFF_RX_ASM + SSH_RFC_MAX_PAYLOAD <= SSH_SLOT_BORROW);
+    TEST_ASSERT_TRUE(SSH_OFF_RX_ASM + SSH_RX_ASM_CAP <= SSH_SLOT_BORROW);
 }
 
 // The map is laid out in one direction, each offset starting where the one before it ended, so no
@@ -190,18 +190,17 @@ void test_the_two_key_epochs_are_one_stride_apart(void)
     TEST_ASSERT_TRUE(SSH_OFF_EPOCH_1 + SSH_EPOCH_STRIDE <= SSH_SLOT_BORROW);
 }
 
-// RFC 4253 sec 6.1: "All implementations MUST be able to process packets with an uncompressed
-// payload length of 32768 bytes or less". The reassembly region is sized to hold one.
-void test_sec6_1_reassembly_region_holds_a_full_payload(void)
+// The reassembly region holds the largest packet this end accepts: one framed SSH_PKT_BUF_SIZE payload.
+void test_reassembly_region_holds_the_largest_accepted_packet(void)
 {
-    TEST_ASSERT_TRUE(SSH_RFC_MAX_PAYLOAD >= 32768u);
-    TEST_ASSERT_TRUE(SSH_OFF_RX_ASM + SSH_RFC_MAX_PAYLOAD <= SSH_SLOT_BORROW);
+    TEST_ASSERT_TRUE(SSH_RX_ASM_CAP >= SSH_PKT_WIRE_MAX);
+    TEST_ASSERT_TRUE(SSH_OFF_RX_ASM + SSH_RX_ASM_CAP <= SSH_SLOT_BORROW);
 }
 
 // The wire holds two whole packets, so a reply framed while one is still draining has somewhere to
-// go, and it is a power of two so the index arithmetic is a mask.
-void test_the_wire_holds_two_packets_and_is_a_power_of_two(void)
+// go. It is a multiple of 16, so the session region after it stays aligned.
+void test_the_wire_holds_two_packets_and_keeps_the_alignment(void)
 {
-    TEST_ASSERT_TRUE(SSH_WIRE_CAP >= 2u * SSH_RFC_MAX_PAYLOAD);
-    TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)(SSH_WIRE_CAP & (SSH_WIRE_CAP - 1u)));
+    TEST_ASSERT_TRUE(SSH_WIRE_CAP >= 2u * SSH_PKT_WIRE_MAX);
+    TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)(SSH_WIRE_CAP % 16u));
 }

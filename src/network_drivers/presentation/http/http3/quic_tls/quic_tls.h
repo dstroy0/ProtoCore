@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_quic_tls.h
+ * @file quic_tls.h
  * @brief TLS 1.3 server handshake state machine for QUIC (RFC 9001 / RFC 8446).
  *
  * Drives the server side of the TLS 1.3 handshake that QUIC carries in CRYPTO frames. It ties the
@@ -159,25 +159,42 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::QuicTlsServer with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   QuicTlsServer.server_init_args.qt = ...;
  *   QuicTlsServer.server_init_args.cfg = ...;
  *   QuicTlsServer.server_init(work);
+ * @endcode
  *
- * @var QuicTlsServerNs::server_init_args  what server_init takes: qt, cfg
- * @var QuicTlsServerNs::recv_crypto_args  what recv_crypto takes: qt, level, data, len
- * @var QuicTlsServerNs::flight_args  what flight takes: qt, level, len
- * @var QuicTlsServerNs::keys_args  what keys takes: qt, level, is_server
- * @var QuicTlsServerNs::peer_params_args  what peer_params takes: qt
- * @var QuicTlsServerNs::ok  a call's true/false outcome
- * @var QuicTlsServerNs::n  the count a call reports
- * @var QuicTlsServerNs::bytes  a pointer to the flight bytes and its length via len (0 if none). ...
- * @var QuicTlsServerNs::pkt_keys  what a call reports
- * @var QuicTlsServerNs::peer  what a call reports
- * @var QuicTlsServerNs::server_init  initialize a server handshake with cfg (copied). Resets the ...
- * @var QuicTlsServerNs::recv_crypto  feed in-order CRYPTO stream bytes for encryption level level. ...
- * @var QuicTlsServerNs::flight  the pending outbound CRYPTO flight for level (QUIC_ENC_INITIAL / ...
- * @var QuicTlsServerNs::keys  the packet-protection keys for level (QUIC_ENC_HANDSHAKE / ...
- * @var QuicTlsServerNs::peer_params  the client's parsed transport parameters (valid once the ...
+ * @var QuicTlsServerVars::server_init_args
+ *                                           what server_init takes: qt, cfg
+ * @var QuicTlsServerVars::recv_crypto_args
+ *                                           what recv_crypto takes: qt, level, data, len
+ * @var QuicTlsServerVars::flight_args
+ *                                      what flight takes: qt, level, len
+ * @var QuicTlsServerVars::keys_args
+ *                                    what keys takes: qt, level, is_server
+ * @var QuicTlsServerVars::peer_params_args
+ *                                           what peer_params takes: qt
+ * @var QuicTlsServerVars::ok
+ *                             a call's true/false outcome
+ * @var QuicTlsServerVars::n
+ *                            the count a call reports
+ * @var QuicTlsServerVars::bytes
+ *                                a pointer to the flight bytes and its length via len (0 if none). ...
+ * @var QuicTlsServerVars::pkt_keys
+ *                                   what a call reports
+ * @var QuicTlsServerVars::peer
+ *                               what a call reports
+ * @var QuicTlsServerNs::server_init
+ *                                    initialize a server handshake with cfg (copied). Resets the ...
+ * @var QuicTlsServerNs::recv_crypto
+ *                                    feed in-order CRYPTO stream bytes for encryption level level. ...
+ * @var QuicTlsServerNs::flight
+ *                               the pending outbound CRYPTO flight for level (QUIC_ENC_INITIAL / ...
+ * @var QuicTlsServerNs::keys
+ *                             the packet-protection keys for level (QUIC_ENC_HANDSHAKE / ...
+ * @var QuicTlsServerNs::peer_params
+ *                                    the client's parsed transport parameters (valid once the ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

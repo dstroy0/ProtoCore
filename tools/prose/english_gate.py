@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Retain the English of a mixed corpus and drop the rest, leaving a comparison that is about English.
 #
 #   Usage:  from english_gate import english_only, english_words
-#           python utils/maint/prose/english_gate.py            (reports what the gate removes)
+#           python tools/prose/english_gate.py            (reports what the gate removes)
 #
 # WHY THIS EXISTS, AND WHAT IT CORRECTS
 #

@@ -74,8 +74,10 @@
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
 #endif
 
+#if PROTOCORE_ENABLE_HTTP_DELIVERY
 static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
-static uint8_t mnt_work[16];           // the borrow an entry takes; Mnt never reads it
+#endif
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
 // No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through
 // cellularum_laboro/cellularum_laboro.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX rather

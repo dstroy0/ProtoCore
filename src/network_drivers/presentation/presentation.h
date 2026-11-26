@@ -28,15 +28,6 @@
 // Slot-indexed wrappers called by the session and application layers
 // ---------------------------------------------------------------------------
 
-/**
- * @brief Reset the HTTP parser for a connection slot.
- *
- * Delegates to http_parser_reset() for the slot's request struct.
- * Silently ignores out-of-range slot IDs.
- *
- * @param slot_id Index into conn_pool / http_pool (0 … MAX_CONNS-1).
- */
-
 #if PROTOCORE_ENABLE_KEEPALIVE
 /**
  * @brief Requests served on each connection slot (HTTP keep-alive fairness bound).
@@ -56,63 +47,13 @@ extern uint16_t http_req_count[MAX_CONNS];
  * of building an HTTP/1.1 message. Null means plain HTTP/1.1, the default builder.
  */
 
-/**
- * @brief HTTP's own per-slot state, keyed on the transport slot index.
- *
- * All of it HTTP semantics, so it lives here rather than in TcpConn, the same way
- * ::http_req_count already does. Sized CONN_POOL_SLOTS, not MAX_CONNS: the HTTP/3 dispatch slot is
- * a reserved index above the TCP range. Defined in presentation.c.
- *
- * @var http_req_start_ms  protocore_millis() at the first byte of the in-progress request (0 = none).
- *                         The request-header deadline (PROTOCORE_REQUEST_TIMEOUT_MS, slow-loris
- *                         defense) measures against this; unlike the transport's idle timer a
- *                         trickle byte cannot reset it. Armed by the HTTP layer on the first byte.
- * @var http_resp_sink     the TX seam above, per slot.
- */
-
 #if PROTOCORE_ENABLE_KEEPALIVE
 
-/**
- * @brief Whether the connection carrying @p slot_id's request is reused for the next one.
- *
- * Reads the parsed request: a message whose boundary is not known closes, HTTP/1.1 is persistent
- * unless Connection carries "close", and 1.0 is the reverse. A kept connection counts against
- * PROTOCORE_KEEPALIVE_MAX_REQUESTS and closes once it reaches the bound.
- */
 #endif
 
 #if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
-/**
- * @brief Whether @p token appears as an element of the Connection header value @p hdr.
- *
- * The value is a comma-delimited list ("Keep-Alive, Upgrade"), matched case insensitively on whole
- * elements so a longer token cannot match on its prefix.
- */
+
 #endif
-
-/**
- * @brief Initialize a slot for a freshly-accepted HTTP connection.
- *
- * Resets the HTTP parser (like http_reset()) and, when keep-alive is enabled,
- * zeroes the slot's persistent request counter. The session layer calls this on
- * EvtType::EVT_CONNECT; http_reset() is used for the lighter inter-request reset that must
- * not clear the counter. With keep-alive off this is identical to http_reset().
- *
- * @param slot_id Index into conn_pool / http_pool (0 … MAX_CONNS-1).
- */
-
-/**
- * @brief Drain the transport ring buffer and advance the HTTP parser.
- *
- * Reads all available bytes from the slot's transport ring buffer and feeds
- * each byte to `http_parser_feed()`.  Stops early if the parser reaches a
- * terminal state (PARSE_COMPLETE, PARSE_ERROR, PARSE_ENTITY_TOO_LARGE,
- * PARSE_URI_TOO_LONG).
- *
- * Silently ignores out-of-range slot IDs.
- *
- * @param slot_id Connection slot to parse.
- */
 
 /**
  * @brief The HTTP connection ProtoHandler (the L5 dispatch seam).
@@ -137,18 +78,30 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::HttpConn, and reads the outcome off
  * the same handle.
  *
- * @var HttpConnNs::slot      the connection a call acts on
- * @var HttpConnNs::hdr_args  the header value a token test reads, and the element it looks for
- * @var HttpConnNs::poll      the per-slot poll pump the application installs
- * @var HttpConnNs::ok        a call's true/false outcome
- * @var HttpConnNs::handler   the ProtoHandler a lookup reports
- * @var HttpConnNs::reset       reset the parser between requests, leaving the keep-alive tally
- * @var HttpConnNs::conn_open   initialize a slot for a freshly-accepted connection
- * @var HttpConnNs::parse       drain the slot's bytes and advance the parser
- * @var HttpConnNs::keepalive_eval  whether the connection is reused for the next request
- * @var HttpConnNs::has_token   whether hdr_args.token appears as an element of hdr_args.hdr
- * @var HttpConnNs::proto_handler  the L5 dispatch seam this module registers into
- * @var HttpConnNs::set_poll    install the per-slot poll pump
+ * @var HttpConnVars::slot
+ *                              the connection a call acts on
+ * @var HttpConnVars::hdr_args
+ *                              the header value a token test reads, and the element it looks for
+ * @var HttpConnVars::poll
+ *                              the per-slot poll pump the application installs
+ * @var HttpConnVars::ok
+ *                              a call's true/false outcome
+ * @var HttpConnVars::handler
+ *                              the ProtoHandler a lookup reports
+ * @var HttpConnNs::reset
+ *                              reset the parser between requests, leaving the keep-alive tally
+ * @var HttpConnNs::conn_open
+ *                              initialize a slot for a freshly-accepted connection
+ * @var HttpConnNs::parse
+ *                              drain the slot's bytes and advance the parser
+ * @var HttpConnNs::keepalive_eval
+ *                                  whether the connection is reused for the next request
+ * @var HttpConnNs::has_token
+ *                              whether hdr_args.token appears as an element of hdr_args.hdr
+ * @var HttpConnNs::proto_handler
+ *                                 the L5 dispatch seam this module registers into
+ * @var HttpConnNs::set_poll
+ *                              install the per-slot poll pump
  */
 typedef struct
 {
@@ -180,10 +133,47 @@ typedef struct
 
 // What the table binds, defined once in the .c and taking one parameter each: everything
 // else an entry needs is an operand in HttpConnV or a region of the borrow at a fixed offset.
+/**
+ * @brief Reset the HTTP parser for a connection slot.
+ *
+ * Delegates to http_parser_reset() for the slot's request struct.
+ * Silently ignores out-of-range slot IDs.
+ */
 void protocore_http_conn_reset(const uint8_t *work);
+/**
+ * @brief Initialize a slot for a freshly-accepted HTTP connection.
+ *
+ * Resets the HTTP parser (like http_reset()) and, when keep-alive is enabled,
+ * zeroes the slot's persistent request counter. The session layer calls this on
+ * EvtType::EVT_CONNECT; http_reset() is used for the lighter inter-request reset that must
+ * not clear the counter. With keep-alive off this is identical to http_reset().
+ */
 void protocore_http_conn_conn_open(const uint8_t *work);
+/**
+ * @brief Drain the transport ring buffer and advance the HTTP parser.
+ *
+ * Reads all available bytes from the slot's transport ring buffer and feeds
+ * each byte to `http_parser_feed()`.  Stops early if the parser reaches a
+ * terminal state (PARSE_COMPLETE, PARSE_ERROR, PARSE_ENTITY_TOO_LARGE,
+ * PARSE_URI_TOO_LONG).
+ *
+ * Silently ignores out-of-range slot IDs.
+ */
 void protocore_http_conn_parse(uint8_t *work);
+/**
+ * @brief Whether the connection carrying @p slot_id's request is reused for the next one.
+ *
+ * Reads the parsed request: a message whose boundary is not known closes, HTTP/1.1 is persistent
+ * unless Connection carries "close", and 1.0 is the reverse. A kept connection counts against
+ * PROTOCORE_KEEPALIVE_MAX_REQUESTS and closes once it reaches the bound.
+ */
 void protocore_http_conn_keepalive_eval(uint8_t *work);
+/**
+ * @brief Whether @p token appears as an element of the Connection header value @p hdr.
+ *
+ * The value is a comma-delimited list ("Keep-Alive, Upgrade"), matched case insensitively on whole
+ * elements so a longer token cannot match on its prefix.
+ */
 void protocore_http_conn_has_token(uint8_t *work);
 void protocore_http_conn_proto_handler(const uint8_t *work);
 void protocore_http_conn_set_poll(uint8_t *work);

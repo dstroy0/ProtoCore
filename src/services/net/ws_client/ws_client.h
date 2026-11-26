@@ -115,16 +115,22 @@ typedef struct
  * @brief The client end of the WebSocket Protocol (RFC 6455).
  *
  * A caller sets the members a call takes, invokes it through ::WsClient, and reads the outcome off
- * the same handle. The connection and its buffers are behind @ref internal.
+ * the same handle. The connection and its buffers are internal.
  *
  * No slot member: this end drives one connection at a time, so no call names one.
  *
- * @var WsClientNs::handshake  the four URI terms and the three handshake fields (RFC 6455 sec 3, sec 4.1)
- * @var WsClientNs::frame      the base framing protocol's fields (RFC 6455 sec 5.2)
- * @var WsClientNs::buf        the octets a codec call writes or reads
- * @var WsClientNs::msg        the Application data a Data frame carries (RFC 6455 sec 5.6)
- * @var WsClientNs::ok         a call's true/false outcome
- * @var WsClientNs::n          the octets a build wrote, 0 when they would not fit @ref WsBufArgs::cap
+ * @var WsClientVars::handshake
+ *                               the four URI terms and the three handshake fields (RFC 6455 sec 3, sec 4.1)
+ * @var WsClientVars::frame
+ *                               the base framing protocol's fields (RFC 6455 sec 5.2)
+ * @var WsClientVars::buf
+ *                               the octets a codec call writes or reads
+ * @var WsClientVars::msg
+ *                               the Application data a Data frame carries (RFC 6455 sec 5.6)
+ * @var WsClientVars::ok
+ *                               a call's true/false outcome
+ * @var WsClientVars::n
+ *                               the octets a build wrote, 0 when they would not fit @ref WsBufArgs::cap
  * @var WsClientNs::accept_for_key
  * Write base64(SHA-1(@c key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")) into @c accept, the value the
  * server's |Sec-WebSocket-Accept| must carry (RFC 6455 sec 1.3, sec 4.2.2 step 5).
@@ -141,16 +147,20 @@ typedef struct
  * @var WsClientNs::parse_frame
  * Read one inbound frame from @c buf, filling @c opcode, @c fin, @c payload_off, @c payload_len and
  * @c consumed. False when @c avail holds less than the whole frame (RFC 6455 sec 5.2).
- * @var WsClientNs::on_message  record @c on_message; call it before @ref WsClientNs::connect
+ * @var WsClientNs::on_message
+ *                              record @c on_message; call it before @ref WsClientNs::connect
  * @var WsClientNs::connect
  * Dial /host/ and /port/, run TLS when /secure/ is set, then exchange the opening handshake and
  * verify the response. True once the WebSocket connection is established (RFC 6455 sec 4.1).
- * @var WsClientNs::send_text    send @c text as a masked Text frame (RFC 6455 sec 5.6)
- * @var WsClientNs::send_binary  send @c data as a masked Binary frame (RFC 6455 sec 5.6)
+ * @var WsClientNs::send_text
+ *                               send @c text as a masked Text frame (RFC 6455 sec 5.6)
+ * @var WsClientNs::send_binary
+ *                               send @c data as a masked Binary frame (RFC 6455 sec 5.6)
  * @var WsClientNs::loop
  * Read inbound frames, reassemble fragments, answer Ping with Pong (RFC 6455 sec 5.5.2) and echo a
  * Close (RFC 6455 sec 5.5.1). False once the connection is gone. Call once per loop().
- * @var WsClientNs::connected  true while the WebSocket connection is established
+ * @var WsClientNs::connected
+ *                             true while the WebSocket connection is established
  * @var WsClientNs::close
  * Send a Close frame and then Close the WebSocket Connection (RFC 6455 sec 5.5.1, sec 7.1.1).
  */

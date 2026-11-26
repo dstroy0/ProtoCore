@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # What a contribution looks like before a person reads it.
 #
-#   Usage:  `python utils/maint/prose/submission_check.py <path> [<path> ...]`
-#           `python utils/maint/prose/submission_check.py --tree <repository root>`
+#   Usage:  `python tools/prose/submission_check.py <path> [<path> ...]`
+#           `python tools/prose/submission_check.py --tree <repository root>`
 #
 # THE RULE THIS SERVES
 #
@@ -27,7 +27,7 @@
 #
 # THE SURFACE
 #
-# A register, which carries the measurement. The tool utils/maint/prose/docs_check holds 285 patterns. For
+# A register, which carries the measurement. The tool tools/prose/docs_check holds 285 patterns. For
 # 121 of them, it holds the human rate: the rate in 759,815 words of the papers under build/papers. This file imports
 # those rates from that file, and never restates them. Their sum is the rate that a human carries for the whole list.
 # The baseline here comes from the same table as the findings, and cannot drift away from it.

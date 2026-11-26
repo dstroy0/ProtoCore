@@ -34,6 +34,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 # The generators the Feature Tables workflow runs, in its order: later ones read what earlier ones
 # wrote, so the sequence is part of the contract.
 GEN_DEFAULT = [
+    "profile_primitives",
+    "doxygen_features",
     "feature_tables",
     "readme_sections",
     "configurator",
@@ -43,11 +45,8 @@ GEN_DEFAULT = [
     "examples",
     "nav_groups",
     "tools_inventory",
-    # These four were registered in GEN but ran in no default sweep, so `gen --check` passed while
-    # their outputs aged. docs/features.html was serving renamed symbols to readers, and
-    # HARDWARE_HOOKUP.md documented protocore_rtc_begin(void) after the entry took a work buffer. A
-    # generator nothing checks is a file that goes stale silently, which is the failure this whole
-    # sweep exists to catch. They run last: each reads FEATURES.md after feature_tables settles it.
+    # These four run last, because each reads FEATURES.md after feature_tables writes it. Each generator here
+    # writes a tracked file, and `gen --check` fails when that file is stale.
     "features_page",
     "features_tree",
     "hardware_ref",
@@ -77,6 +76,8 @@ GEN = {
     "changelog": "generate.decorate_changelog",
     "footprints": "generate.example_footprints",
     "feature_budget": "generate.feature_budget",
+    "profile_primitives": "generate.gen_profile_primitives",
+    "doxygen_features": "generate.gen_doxygen_features",
 }
 
 # The guards the Format Code workflow runs. src_banned takes --all there.

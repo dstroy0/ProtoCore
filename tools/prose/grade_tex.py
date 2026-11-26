@@ -8,9 +8,9 @@ answer is the failure this whole class shares.
 
 So the LaTeX is reduced to plain text here and the gate is run on that.
 
-    python utils/maint/prose/grade_tex.py                 # every .tex under theory/
-    python utils/maint/prose/grade_tex.py path.tex ...    # named files
-    python utils/maint/prose/grade_tex.py --strict        # every note becomes breaking
+    python tools/prose/grade_tex.py                 # every .tex under theory/
+    python tools/prose/grade_tex.py path.tex ...    # named files
+    python tools/prose/grade_tex.py --strict        # every note becomes breaking
 
 WHY ONE OUTPUT LINE PER INPUT LINE
 

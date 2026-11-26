@@ -347,48 +347,85 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Fe25519, and reads the outcome off the
  * same handle.
  *
+ * @code{.c}
  *   Fe25519.hw_enable(work);
  *   Fe25519.mul_args.z = z;
  *   Fe25519.mul_args.x = x;
  *   Fe25519.mul_args.y = y;
  *   Fe25519.mul(work);
  *   Fe25519.hw_disable(work);
+ * @endcode
  *
- * @var Fe25519Ns::mul_args        the product a multiply writes and the two factors it reads
- * @var Fe25519Ns::sq_args         the square a squaring writes and the element it reads
- * @var Fe25519Ns::copy_args       the destination and source of a field-element copy
- * @var Fe25519Ns::zero_args       the element set to zero
- * @var Fe25519Ns::one_args        the element set to one
- * @var Fe25519Ns::reduce_args     the element canonicalized in place
- * @var Fe25519Ns::add_args        the sum an addition writes and the two terms it reads
- * @var Fe25519Ns::sub_args        the difference a subtraction writes and the two terms it reads
- * @var Fe25519Ns::cswap_args      the two elements a conditional swap exchanges, and the bit selecting it
- * @var Fe25519Ns::frombytes_args  the 32 bytes a decode reads and the element it writes
- * @var Fe25519Ns::tobytes_args    the element an encode reads and the 32 bytes it writes
- * @var Fe25519Ns::invert_args     the inverse an inversion writes and the element it reads
- * @var Fe25519Ns::pow2523_args    the power a^((p-5)/8) writes and the element it reads
- * @var Fe25519Ns::parity_args     the element a parity read is taken over
- * @var Fe25519Ns::neq_args        the two elements an equality test compares
- * @var Fe25519Ns::ok              a call's true/false outcome; false on a null operand
- * @var Fe25519Ns::parity          the low bit of the canonical encoding the last parity read recovered
- * @var Fe25519Ns::neq             0 when the last compare found the same element, -1 otherwise
- * @var Fe25519Ns::hw_enable       take the accelerator lock and power it for a run
- * @var Fe25519Ns::hw_disable      drop the lock and power the accelerator down
- * @var Fe25519Ns::mul             z = x*y mod p, one 256-bit MODMULT
- * @var Fe25519Ns::sq              o = x^2 mod p
- * @var Fe25519Ns::copy            o = a
- * @var Fe25519Ns::zero            o = 0
- * @var Fe25519Ns::one             o = 1
- * @var Fe25519Ns::reduce_once     subtract p once when o >= p, in constant time
- * @var Fe25519Ns::add             o = x+y mod p
- * @var Fe25519Ns::sub             o = x-y mod p
- * @var Fe25519Ns::cswap           exchange x and y when @c swap is 1, in constant time
- * @var Fe25519Ns::frombytes       decode 32 little-endian bytes to a canonical element
- * @var Fe25519Ns::tobytes         encode a canonical element to 32 little-endian bytes
- * @var Fe25519Ns::invert          o = a^(p-2) = a^-1 mod p
- * @var Fe25519Ns::pow2523         o = a^((p-5)/8), the Ed25519 decompression square-root exponent
- * @var Fe25519Ns::get_parity      read the low bit of a's canonical encoding into @ref Fe25519Ns::parity
- * @var Fe25519Ns::get_neq         compare a and b in constant time into @ref Fe25519Ns::neq
+ * @var Fe25519Vars::mul_args
+ *                                   the product a multiply writes and the two factors it reads
+ * @var Fe25519Vars::sq_args
+ *                                   the square a squaring writes and the element it reads
+ * @var Fe25519Vars::copy_args
+ *                                   the destination and source of a field-element copy
+ * @var Fe25519Vars::zero_args
+ *                                   the element set to zero
+ * @var Fe25519Vars::one_args
+ *                                   the element set to one
+ * @var Fe25519Vars::reduce_args
+ *                                   the element canonicalized in place
+ * @var Fe25519Vars::add_args
+ *                                   the sum an addition writes and the two terms it reads
+ * @var Fe25519Vars::sub_args
+ *                                   the difference a subtraction writes and the two terms it reads
+ * @var Fe25519Vars::cswap_args
+ *                                   the two elements a conditional swap exchanges, and the bit selecting it
+ * @var Fe25519Vars::frombytes_args
+ *                                   the 32 bytes a decode reads and the element it writes
+ * @var Fe25519Vars::tobytes_args
+ *                                   the element an encode reads and the 32 bytes it writes
+ * @var Fe25519Vars::invert_args
+ *                                   the inverse an inversion writes and the element it reads
+ * @var Fe25519Vars::pow2523_args
+ *                                   the power a^((p-5)/8) writes and the element it reads
+ * @var Fe25519Vars::parity_args
+ *                                   the element a parity read is taken over
+ * @var Fe25519Vars::neq_args
+ *                                   the two elements an equality test compares
+ * @var Fe25519Vars::ok
+ *                                   a call's true/false outcome; false on a null operand
+ * @var Fe25519Vars::parity
+ *                                   the low bit of the canonical encoding the last parity read recovered
+ * @var Fe25519Vars::neq
+ *                                   0 when the last compare found the same element, -1 otherwise
+ * @var Fe25519Ns::hw_enable
+ *                                 take the accelerator lock and power it for a run
+ * @var Fe25519Ns::hw_disable
+ *                                 drop the lock and power the accelerator down
+ * @var Fe25519Ns::mul
+ *                                 z = x*y mod p, one 256-bit MODMULT
+ * @var Fe25519Ns::sq
+ *                                 o = x^2 mod p
+ * @var Fe25519Ns::copy
+ *                                 o = a
+ * @var Fe25519Ns::zero
+ *                                 o = 0
+ * @var Fe25519Ns::one
+ *                                 o = 1
+ * @var Fe25519Ns::reduce_once
+ *                                 subtract p once when o >= p, in constant time
+ * @var Fe25519Ns::add
+ *                                 o = x+y mod p
+ * @var Fe25519Ns::sub
+ *                                 o = x-y mod p
+ * @var Fe25519Ns::cswap
+ *                                 exchange x and y when @c swap is 1, in constant time
+ * @var Fe25519Ns::frombytes
+ *                                 decode 32 little-endian bytes to a canonical element
+ * @var Fe25519Ns::tobytes
+ *                                 encode a canonical element to 32 little-endian bytes
+ * @var Fe25519Ns::invert
+ *                                 o = a^(p-2) = a^-1 mod p
+ * @var Fe25519Ns::pow2523
+ *                                 o = a^((p-5)/8), the Ed25519 decompression square-root exponent
+ * @var Fe25519Ns::get_parity
+ *                                 read the low bit of a's canonical encoding into @ref Fe25519Ns::parity
+ * @var Fe25519Ns::get_neq
+ *                                 compare a and b in constant time into @ref Fe25519Ns::neq
  *
  * @ref Fe25519Ns::mul, @ref Fe25519Ns::sq, @ref Fe25519Ns::invert and @ref Fe25519Ns::pow2523 run on the
  * accelerator, so @ref Fe25519Ns::hw_enable brackets them and @ref Fe25519Ns::hw_disable closes the run.

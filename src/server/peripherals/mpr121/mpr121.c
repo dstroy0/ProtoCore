@@ -45,7 +45,7 @@ uint8_t *protocore_mpr121_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_MPR121_BORROW);
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_MPR121_BORROW);
     }
     return s_own.span;
 }

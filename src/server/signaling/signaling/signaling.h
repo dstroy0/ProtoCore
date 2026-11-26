@@ -69,7 +69,7 @@ typedef struct
     // Masks, not counts. Which slot and which listener is the fact the pools already hold, and a
     // count throws it away: __builtin_popcount recovers the tally from the mask in one instruction,
     // while nothing recovers the identity from a tally. It is the shape the pools are allocated with
-    // (protocore_conn_alloc_free in tcp.c, the SFTP handle table), so a reader comparing the bucket against
+    // (ConnPool.alloc_free in tcp/protocol/protocol.c, the SFTP handle table), so a reader comparing the bucket against
     // the pool is comparing like with like.
     uint32_t conns_active; ///< One bit per connection slot in use.
     uint32_t listeners_up; ///< One bit per bound listener.
@@ -91,16 +91,24 @@ typedef struct
  * @brief The server's signalling bucket.
  *
  * A caller sets the members a call takes, invokes it through ::Signal, and reads the outcome off the
- * same handle. The bucket itself is behind @ref internal.
+ * same handle. The bucket itself is internal.
  *
- * @var SignalingNs::put           what one deposit carries
- * @var SignalingNs::slot          the connection a kill names
- * @var SignalingNs::out           where a read copies the bucket
- * @var SignalingNs::know          copy the bucket out; no gathering, this is what the loop deposited
- * @var SignalingNs::reset         empty the bucket
- * @var SignalingNs::put_response  deposit a response, from the send path, as the status goes out
- * @var SignalingNs::put_tick      deposit what the loop iteration already established
- * @var SignalingNs::kill          end a connection, for an application that does not talk transport
+ * @var SignalVars::put
+ *                                 what one deposit carries
+ * @var SignalVars::slot
+ *                                 the connection a kill names
+ * @var SignalVars::out
+ *                                 where a read copies the bucket
+ * @var SignalingNs::know
+ *                                 copy the bucket out; no gathering, this is what the loop deposited
+ * @var SignalingNs::reset
+ *                                 empty the bucket
+ * @var SignalingNs::put_response
+ *                                 deposit a response, from the send path, as the status goes out
+ * @var SignalingNs::put_tick
+ *                                 deposit what the loop iteration already established
+ * @var SignalingNs::kill
+ *                                 end a connection, for an application that does not talk transport
  *
  * know copies rather than handing out a pointer: a reader formats several fields and the loop
  * deposits between its reads, so lending the storage would let one report mix two server states.

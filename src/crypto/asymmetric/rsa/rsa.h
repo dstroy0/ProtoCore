@@ -90,6 +90,7 @@ typedef struct
  * reads the outcome off the same handle. How those bytes are carved is this module's and is never
  * named here.
  *
+ * @code{.c}
  *   Rsa.verify_args.n = n_be;
  *   Rsa.verify_args.e = e_be4;
  *   Rsa.verify_args.msg = msg;
@@ -99,15 +100,21 @@ typedef struct
  *   Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
  *   Rsa.verify(work);
  *   // Rsa.ok is true only for a signature that verified
+ * @endcode
  *
- * @var RsaNs::verify_args  the key, message and signature a verify checks
- * @var RsaNs::sign_args    the key and message a sign covers
- * @var RsaNs::ok           a call's true/false outcome; false on a null pointer, a signature that is
+ * @var RsaVars::verify_args
+ *                            the key, message and signature a verify checks
+ * @var RsaVars::sign_args
+ *                            the key and message a sign covers
+ * @var RsaVars::ok
+ *                            a call's true/false outcome; false on a null pointer, a signature that is
  *                          not PROTOCORE_RSA_KEY_BYTES long, a representative that is not below n, and
  *                          a block that does not match
- * @var RsaNs::verify       hash the message, recover the signature block, compare the two in constant
+ * @var RsaNs::verify
+ *                          hash the message, recover the signature block, compare the two in constant
  *                          time
- * @var RsaNs::sign         hash the message, PKCS#1 v1.5 encode it, raise it to d mod n; NOT
+ * @var RsaNs::sign
+ *                          hash the message, PKCS#1 v1.5 encode it, raise it to d mod n; NOT
  *                          constant-time - see SECURITY.md, timing
  *
  * @c work is PROTOCORE_RSA_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
@@ -116,7 +123,7 @@ typedef struct
  * from outliving the caller. The digest each entry takes runs out of those bytes too, so a verify costs one borrow and
  * no wipe.
  *
- * No storage member and no context: a caller sets operands and reads @ref RsaNs::ok, and that is all
+ * No storage member and no context: a caller sets operands and reads @ref RsaVars::ok, and that is all
  * the surface there is.
  */
 typedef struct

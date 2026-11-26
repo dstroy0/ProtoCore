@@ -52,9 +52,13 @@ uint16_t protocore_dnp3_crc(const uint8_t *data, size_t len);
 
 /**
  * @brief Build a complete data-link frame (header block + CRC'd data blocks).
+ * @param buf     the destination buffer.
+ * @param cap     the capacity of @p buf, in bytes.
  * @param control link-layer control octet (DIR/PRM/FCB/FCV + function code).
  * @param dest    16-bit destination address (written little-endian).
  * @param src     16-bit source address (written little-endian).
+ * @param user_data the user data. The frame holds it in data blocks of 16 octets at max, each with its CRC.
+ * @param user_data_len the number of octets in @p user_data.
  * @return total octets written, or 0 on overflow / user_data_len > DNP3_MAX_USER_DATA.
  */
 size_t protocore_dnp3_build_frame(uint8_t *buf, size_t cap, uint8_t control, uint16_t dest, uint16_t src,
@@ -71,6 +75,9 @@ typedef struct
 
 /**
  * @brief Parse + CRC-validate a frame, de-blocking the user data (per-block CRCs stripped).
+ * @param buf          the destination buffer.
+ * @param len          the number of bytes in @p buf.
+ * @param out          the destination buffer.
  * @param out_user     receives the reassembled user data.
  * @param out_cap      capacity of @p out_user.
  * @param out_user_len receives the user-data length.

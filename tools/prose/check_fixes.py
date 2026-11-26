@@ -29,7 +29,7 @@ So deletions are not banned here - sometimes dropping a word IS the correct repa
 REPORTED, every one, for a human to read the resulting sentence. The check is that someone looked,
 not that the rule is forbidden.
 
-    python utils/maint/prose/check_fixes.py
+    python tools/prose/check_fixes.py
 """
 
 import io

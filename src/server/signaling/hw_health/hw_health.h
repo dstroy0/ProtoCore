@@ -120,22 +120,38 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::HwHealth, and reads the outcome off
  * the same handle. Every monitor is the caller's.
  *
- * @var HwHealthNs::rail        the rail a call watches, and the reading it just took
- * @var HwHealthNs::spi         the bus a backoff governs, and how it just fared
- * @var HwHealthNs::probe       a pin driven against what it read back, and a timed discharge
- * @var HwHealthNs::out_args    where a report is written
- * @var HwHealthNs::rail_verdict  what a rail sample decided
- * @var HwHealthNs::gpio_verdict  what a pin probe decided
- * @var HwHealthNs::cap_verdict   what a discharge probe decided
- * @var HwHealthNs::hz          the clock a backoff settled on
- * @var HwHealthNs::n           bytes a report wrote, or 0 when it did not fit
- * @var HwHealthNs::rail_init   arm a rail monitor at its thresholds
- * @var HwHealthNs::rail_sample judge one reading and tally what it was
- * @var HwHealthNs::rail_json   report the rail's tallies
- * @var HwHealthNs::spi_init    arm a bus backoff between its floor and ceiling
- * @var HwHealthNs::spi_result  feed one transfer's outcome in and take the new clock
- * @var HwHealthNs::gpio_short  a pin that does not read back what it was driven to
- * @var HwHealthNs::cap_leak    a discharge outside its tolerance band
+ * @var HwHealthVars::rail
+ *                                the rail a call watches, and the reading it just took
+ * @var HwHealthVars::spi
+ *                                the bus a backoff governs, and how it just fared
+ * @var HwHealthVars::probe
+ *                                a pin driven against what it read back, and a timed discharge
+ * @var HwHealthVars::out_args
+ *                                where a report is written
+ * @var HwHealthVars::rail_verdict
+ *                                  what a rail sample decided
+ * @var HwHealthVars::gpio_verdict
+ *                                  what a pin probe decided
+ * @var HwHealthVars::cap_verdict
+ *                                  what a discharge probe decided
+ * @var HwHealthVars::hz
+ *                                the clock a backoff settled on
+ * @var HwHealthVars::n
+ *                                bytes a report wrote, or 0 when it did not fit
+ * @var HwHealthNs::rail_init
+ *                              arm a rail monitor at its thresholds
+ * @var HwHealthNs::rail_sample
+ *                              judge one reading and tally what it was
+ * @var HwHealthNs::rail_json
+ *                              report the rail's tallies
+ * @var HwHealthNs::spi_init
+ *                              arm a bus backoff between its floor and ceiling
+ * @var HwHealthNs::spi_result
+ *                              feed one transfer's outcome in and take the new clock
+ * @var HwHealthNs::gpio_short
+ *                              a pin that does not read back what it was driven to
+ * @var HwHealthNs::cap_leak
+ *                              a discharge outside its tolerance band
  *
  * No storage member: every call works in the caller's monitor.
  */

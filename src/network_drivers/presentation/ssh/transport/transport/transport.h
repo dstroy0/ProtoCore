@@ -222,28 +222,46 @@ typedef struct
  * One member per rule the RFC states, so a section number resolves to exactly one implementation.
  * Role selects which half of a mirrored pair a caller sends - it does not select a second machine.
  *
- * @var SshTransportNs::recv_ident       sec 4.2 receive the peer identification string
- * @var SshTransportNs::send_ident       sec 4.2 send ours
- * @var SshTransportNs::kexinit_build    sec 7.1 build our KEXINIT, keeping a copy for H
- * @var SshTransportNs::kexinit_parse    sec 7.1 parse the peer's and negotiate every list
- * @var SshTransportNs::kex_generate     sec 8 generate this exchange's ephemeral
- * @var SshTransportNs::exchange_hash    sec 8 the exchange hash H over the negotiated method's terms
- * @var SshTransportNs::kexdh_reply      sec 8 the KEXDH half this role sends
- * @var SshTransportNs::newkeys_sent     sec 7.3 our outbound switches when we send NEWKEYS
- * @var SshTransportNs::newkeys_complete sec 7.3 our inbound switches when the peer's arrives
- * @var SshTransportNs::rekey_due        sec 9 the volume and time budget since the last exchange
- * @var SshTransportNs::begin_rekey      sec 9 start a re-exchange, when not already doing one
+ * @var SshTransportNs::recv_ident
+ *                                       sec 4.2 receive the peer identification string
+ * @var SshTransportNs::send_ident
+ *                                       sec 4.2 send ours
+ * @var SshTransportNs::kexinit_build
+ *                                       sec 7.1 build our KEXINIT, keeping a copy for H
+ * @var SshTransportNs::kexinit_parse
+ *                                       sec 7.1 parse the peer's and negotiate every list
+ * @var SshTransportNs::kex_generate
+ *                                       sec 8 generate this exchange's ephemeral
+ * @var SshTransportNs::exchange_hash
+ *                                       sec 8 the exchange hash H over the negotiated method's terms
+ * @var SshTransportNs::kexdh_reply
+ *                                       sec 8 the KEXDH half this role sends
+ * @var SshTransportNs::newkeys_sent
+ *                                       sec 7.3 our outbound switches when we send NEWKEYS
+ * @var SshTransportNs::newkeys_complete
+ *                                       sec 7.3 our inbound switches when the peer's arrives
+ * @var SshTransportNs::rekey_due
+ *                                       sec 9 the volume and time budget since the last exchange
+ * @var SshTransportNs::begin_rekey
+ *                                       sec 9 start a re-exchange, when not already doing one
  *
  * A caller sets the members a call takes, invokes it through ::SshTransport, and reads the outcome
  * off the same handle.
  *
- * @var SshTransportNs::slot             the SSH slot a call acts on
- * @var SshTransportNs::pkt              sec 6 the bytes one message occupies
- * @var SshTransportNs::out_args         where a build or a send writes
- * @var SshTransportNs::kexhash          sec 8 the terms the exchange hash H is taken over
- * @var SshTransportNs::rekey            sec 9 the volume and time budget since the last exchange
- * @var SshTransportNs::ok               a call's true/false outcome
- * @var SshTransportNs::i32              a call's signed outcome
+ * @var SshTransportVars::slot
+ *                                         the SSH slot a call acts on
+ * @var SshTransportVars::pkt
+ *                                         sec 6 the bytes one message occupies
+ * @var SshTransportVars::out_args
+ *                                         where a build or a send writes
+ * @var SshTransportVars::kexhash
+ *                                         sec 8 the terms the exchange hash H is taken over
+ * @var SshTransportVars::rekey
+ *                                         sec 9 the volume and time budget since the last exchange
+ * @var SshTransportVars::ok
+ *                                         a call's true/false outcome
+ * @var SshTransportVars::i32
+ *                                         a call's signed outcome
  */
 
 typedef struct
@@ -511,6 +529,7 @@ int ssh_pkt_emit(uint8_t i, const uint8_t *payload, size_t len, const SshDir *di
  * @param out         Output buffer for the wire packet.
  * @param out_len     Set to the number of bytes written into @p out.
  * @param out_cap     Capacity of @p out.
+ * @param dir         the state of the send direction: whether its cipher and MAC are active, and its key epoch.
  * @return 0 on success, -1 on overflow or sequence-number exhaustion.
  */
 int ssh_pkt_send(uint8_t i, const uint8_t *payload, size_t payload_len, uint8_t *out, size_t *out_len, size_t out_cap,
@@ -540,6 +559,7 @@ typedef void (*ssh_msg_handler_t)(uint8_t slot, uint8_t msg_type, const uint8_t 
  * @param data     Received bytes (from TCP).
  * @param len      Number of bytes in @p data.
  * @param handler  Callback invoked once per complete, verified packet.
+ * @param dir      the state of the receive direction: whether its cipher and MAC are active, and its key epoch.
  * @return 0 on success, -1 on MAC failure or sequence-number exhaustion
  *         (caller must close the TCP connection).
  */
@@ -555,6 +575,7 @@ int ssh_pkt_recv(uint8_t i, const uint8_t *data, size_t len, ssh_msg_handler_t h
  * @param out          Output buffer for the wire packet.
  * @param out_len      Set to the number of bytes written.
  * @param out_cap      Capacity of @p out.
+ * @param dir          the state of the send direction: whether its cipher and MAC are active, and its key epoch.
  * @return 0 on success, -1 on error.
  */
 int ssh_pkt_disconnect(uint8_t i, uint32_t reason_code, uint8_t *out, size_t *out_len, size_t out_cap,
@@ -710,9 +731,13 @@ extern SshKeyMat ssh_keys[MAX_SSH_CONNS][2];
  *
  * FIELD LIFETIME:
  *   y  - generated by ssh_dh_generate(); zeroed in ssh_dh_wipe().
+ * @code{.c}
  *   f  - computed in ssh_dh_generate() as g^y mod p; sent in KEXDH_REPLY;
+ * @endcode
  *         zeroed in ssh_dh_wipe().
+ * @code{.c}
  *   K  - computed in ssh_dh_finish() as e^y mod p; used for key derivation;
+ * @endcode
  *         zeroed in ssh_dh_wipe() AFTER keys are installed.
  */
 // All three sit in the kmt region of the connection's span, each at its own named offset, after the
@@ -745,7 +770,10 @@ int ssh_dh_generate(uint8_t i);
  * "the key is extended by computing HASH of the concatenation of K and H and the entire key so
  * far" - K2 = HASH(K || H || K1), K3 = HASH(K || H || K1 || K2), key = K1 || K2 || K3.
  *
+ * @param in       the inputs of the key derivation (RFC 4253 sec 7.2): the shared secret K, the exchange hash H and the
+ * session identifier.
  * @param label    'A'..'F', the six keys sec 7.2 lists in order.
+ * @param out      the destination of the derived key.
  * @param out_len  Bytes wanted, clamped to SSH_KDF_MAX.
  */
 void ssh_kdf_derive(const SshKdfInputs *in, char label, uint8_t *out, size_t out_len);
@@ -874,10 +902,14 @@ int ssh_transport_version_exchange_recv(uint8_t i, const uint8_t *buf, size_t n,
 /**
  * @brief The initiating role's ephemeral, as the sec 8 method needs to read it.
  *
- * @var SshKexEphemeral::alg        the negotiated method, which selects every term below
- * @var SshKexEphemeral::priv       32 bytes: X25519 scalar, P-256 d, or the DH exponent
- * @var SshKexEphemeral::hybrid_sk  a PQ/T hybrid's decapsulation key, null for the classical methods
- * @var SshKexEphemeral::work       crypto scratch, borrowed from the caller's slot
+ * @var SshKexEphemeral::alg
+ *                                  the negotiated method, which selects every term below
+ * @var SshKexEphemeral::priv
+ *                                  32 bytes: X25519 scalar, P-256 d, or the DH exponent
+ * @var SshKexEphemeral::hybrid_sk
+ *                                  a PQ/T hybrid's decapsulation key, null for the classical methods
+ * @var SshKexEphemeral::work
+ *                                  crypto scratch, borrowed from the caller's slot
  */
 typedef struct
 {

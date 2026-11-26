@@ -82,38 +82,70 @@ typedef struct
  * sets the members a call takes, invokes it through ::TcpListener, and reads the outcome off the
  * same handle.
  *
- * @var TcpListenerNs::idx         the listener row a call acts on
- * @var TcpListenerNs::port        the port it binds, or the one a lookup names
- * @var TcpListenerNs::proto       the application protocol its connections take
- * @var TcpListenerNs::tls         connections accepted here begin a handshake
- * @var TcpListenerNs::dscp        the code point a port marks with
- * @var TcpListenerNs::now_ms      the clock a throttle window measures against
- * @var TcpListenerNs::addr        the source address a gate judges
- * @var TcpListenerNs::prefix_len  its CIDR prefix length (RFC 4632)
- * @var TcpListenerNs::cidr        the same rule as text
- * @var TcpListenerNs::worker_id   whose queue is being named
- * @var TcpListenerNs::evt         the event an enqueue posts
- * @var TcpListenerNs::conn_slot   the slot that event names
- * @var TcpListenerNs::ok          a call's true/false outcome
- * @var TcpListenerNs::i32         a call's signed outcome
- * @var TcpListenerNs::queue       the queue a lookup reports
- * @var TcpListenerNs::add                  bind a port and start accepting on it
- * @var TcpListenerNs::add_dynamic          the same from a running task, for ssh -R
- * @var TcpListenerNs::stop                 tear one listener down
- * @var TcpListenerNs::stop_all             tear every listener down
- * @var TcpListenerNs::stop_dynamic         tear down only the dynamically started listeners
- * @var TcpListenerNs::enqueue              post an event to the owning worker's queue
- * @var TcpListenerNs::set_dscp             the mark every connection accepted on a port takes
- * @var TcpListenerNs::worker_queues_init   create the per-worker queues
- * @var TcpListenerNs::worker_queue         the queue a worker drains
- * @var TcpListenerNs::accept_allowed       the global fixed-window accept throttle
- * @var TcpListenerNs::accept_throttle_reset  clear the global window
- * @var TcpListenerNs::accept_allowed_ip    the per-source-address throttle bucket
- * @var TcpListenerNs::per_ip_throttle_reset  clear every per-address bucket
- * @var TcpListenerNs::ip_allow_add         add one address to the allowlist
- * @var TcpListenerNs::ip_allow_add_cidr    add one CIDR rule to the allowlist
- * @var TcpListenerNs::ip_allowed           the allowlist verdict for an address
- * @var TcpListenerNs::ip_allowlist_reset   clear every allowlist rule
+ * @var TcpListenerVars::idx
+ *                                   the listener row a call acts on
+ * @var TcpBindArgs::port
+ *                                 the port it binds, or the one a lookup names
+ * @var TcpBindArgs::proto
+ *                                 the application protocol its connections take
+ * @var TcpBindArgs::tls
+ *                                 connections accepted here begin a handshake
+ * @var TcpBindArgs::dscp
+ *                                 the code point a port marks with
+ * @var TcpGateArgs::now_ms
+ *                                 the clock a throttle window measures against
+ * @var TcpGateArgs::addr
+ *                                 the source address a gate judges
+ * @var TcpGateArgs::prefix_len
+ *                                 its CIDR prefix length (RFC 4632)
+ * @var TcpGateArgs::cidr
+ *                                 the same rule as text
+ * @var TcpQueueArgs::worker_id
+ *                                 whose queue is being named
+ * @var TcpQueueArgs::evt
+ *                                 the event an enqueue posts
+ * @var TcpQueueArgs::conn_slot
+ *                                 the slot that event names
+ * @var TcpListenerVars::ok
+ *                                   a call's true/false outcome
+ * @var TcpListenerVars::i32
+ *                                   a call's signed outcome
+ * @var TcpListenerVars::queue
+ *                                   the queue a lookup reports
+ * @var TcpListenerNs::add
+ *                                          bind a port and start accepting on it
+ * @var TcpListenerNs::add_dynamic
+ *                                          the same from a running task, for ssh -R
+ * @var TcpListenerNs::stop
+ *                                          tear one listener down
+ * @var TcpListenerNs::stop_all
+ *                                          tear every listener down
+ * @var TcpListenerNs::stop_dynamic
+ *                                          tear down only the dynamically started listeners
+ * @var TcpListenerNs::enqueue
+ *                                          post an event to the owning worker's queue
+ * @var TcpListenerNs::set_dscp
+ *                                          the mark every connection accepted on a port takes
+ * @var TcpListenerNs::worker_queues_init
+ *                                          create the per-worker queues
+ * @var TcpListenerNs::worker_queue
+ *                                          the queue a worker drains
+ * @var TcpListenerNs::accept_allowed
+ *                                          the global fixed-window accept throttle
+ * @var TcpListenerNs::accept_throttle_reset
+ *                                            clear the global window
+ * @var TcpListenerNs::accept_allowed_ip
+ *                                          the per-source-address throttle bucket
+ * @var TcpListenerNs::per_ip_throttle_reset
+ *                                            clear every per-address bucket
+ * @var TcpListenerNs::ip_allow_add
+ *                                          add one address to the allowlist
+ * @var TcpListenerNs::ip_allow_add_cidr
+ *                                          add one CIDR rule to the allowlist
+ * @var TcpListenerNs::ip_allowed
+ *                                          the allowlist verdict for an address
+ * @var TcpListenerNs::ip_allowlist_reset
+ *                                          clear every allowlist rule
  */
 typedef struct
 {
@@ -196,7 +228,10 @@ static const TcpListenerNs TcpListener __attribute__((unused)) = {
 #if PROTOCORE_WORKER_COUNT > 1
     .worker_queues_init = protocore_tcp_listener_worker_queues_init,
     .worker_queue = protocore_tcp_listener_worker_queue,
+    .listener_queue = NULL,
 #else
+    .worker_queues_init = NULL,
+    .worker_queue = NULL,
     .listener_queue = protocore_tcp_listener_listener_queue,
 #endif
     .accept_allowed = protocore_tcp_listener_accept_allowed,

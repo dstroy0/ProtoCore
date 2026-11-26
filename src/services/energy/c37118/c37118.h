@@ -66,8 +66,16 @@ uint16_t protocore_c37118_crc(const uint8_t *data, size_t len);
 
 /**
  * @brief Build a frame: SYNC + FRAMESIZE + IDCODE + SOC + FRACSEC + payload + CHK.
+ * @param buf     the destination buffer.
+ * @param cap     the capacity of @p buf, in bytes.
  * @param type    frame type (C37118_TYPE_*), placed in SYNC bits 6-4.
  * @param version version nibble (e.g. C37118_VERSION_2011).
+ * @param idcode  the IDCODE: the identifier of the PMU or PDC that sends the frame.
+ * @param soc     the SOC (second of century): the count of seconds since midnight, 1 January 1970 (UTC).
+ * @param fracsec the FRACSEC: the time-quality flags in the high octet and the fraction of the second in the low 24
+ * bits.
+ * @param payload the data of the frame, which follows FRACSEC.
+ * @param payload_len the number of bytes in @p payload.
  * @return total octets written, or 0 on overflow / bad input.
  */
 size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t version, uint16_t idcode,

@@ -120,24 +120,42 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::IfaceBridge with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   IfaceBridge.clear(work);
+ * @endcode
  *
- * @var IfaceBridgeNs::add_args  what add takes: rule
- * @var IfaceBridgeNs::map_args  what map takes: ip, port, proto, target
- * @var IfaceBridgeNs::find_args  what find takes: port, proto
- * @var IfaceBridgeNs::txn_parse_args  what txn_parse takes: buf, len, write_len, read_len,
- * @var IfaceBridgeNs::txn_build_args  what txn_build takes: out, cap, write_data, write_len,
- * @var IfaceBridgeNs::ok  a call's true/false outcome
- * @var IfaceBridgeNs::rule  what a call reports
- * @var IfaceBridgeNs::u8  what a call reports
- * @var IfaceBridgeNs::n  bytes written, or 0 if out is too small
- * @var IfaceBridgeNs::clear  clear
- * @var IfaceBridgeNs::add  add
- * @var IfaceBridgeNs::map  map
- * @var IfaceBridgeNs::find  find
- * @var IfaceBridgeNs::count  count
- * @var IfaceBridgeNs::txn_parse  parse a transaction request from a socket buffer. On a complete ...
- * @var IfaceBridgeNs::txn_build  build a transaction request frame (header + write payload) into out
+ * @var IfaceBridgeVars::add_args
+ *                                 what add takes: rule
+ * @var IfaceBridgeVars::map_args
+ *                                 what map takes: ip, port, proto, target
+ * @var IfaceBridgeVars::find_args
+ *                                  what find takes: port, proto
+ * @var IfaceBridgeVars::txn_parse_args
+ *                                       what txn_parse takes: buf, len, write_len, read_len,
+ * @var IfaceBridgeVars::txn_build_args
+ *                                       what txn_build takes: out, cap, write_data, write_len,
+ * @var IfaceBridgeVars::ok
+ *                           a call's true/false outcome
+ * @var IfaceBridgeVars::rule
+ *                             what a call reports
+ * @var IfaceBridgeVars::u8
+ *                           what a call reports
+ * @var IfaceBridgeVars::n
+ *                          bytes written, or 0 if out is too small
+ * @var IfaceBridgeNs::clear
+ *                            clear
+ * @var IfaceBridgeNs::add
+ *                          add
+ * @var IfaceBridgeNs::map
+ *                          map
+ * @var IfaceBridgeNs::find
+ *                           find
+ * @var IfaceBridgeNs::count
+ *                            count
+ * @var IfaceBridgeNs::txn_parse
+ *                                parse a transaction request from a socket buffer. On a complete ...
+ * @var IfaceBridgeNs::txn_build
+ *                                build a transaction request frame (header + write payload) into out
  *
  * @c work is PROTOCORE_IFACE_BRIDGE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

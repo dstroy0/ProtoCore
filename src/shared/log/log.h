@@ -62,13 +62,17 @@ typedef struct
 /**
  * @brief The frame logger.
  *
- * A caller sets the members a call takes and invokes it through ::Log. The installed sink is behind
- * @ref internal; the level macros below do the member-set and the call in one statement.
+ * A caller sets the members a call takes and invokes it through ::Log. The installed sink is
+ * internal; the level macros below do the member-set and the call in one statement.
  *
- * @var LogNs::frame     one line to emit: its level, and the spec that shapes it
- * @var LogNs::sink      the sink an install registers; NULL clears it
- * @var LogNs::emit      build the line and route it to the ring and/or the sink
- * @var LogNs::set_sink  install (or clear) the sink emitted lines are handed to
+ * @var LogVars::frame
+ *                         one line to emit: its level, and the spec that shapes it
+ * @var LogVars::sink
+ *                         the sink an install registers; NULL clears it
+ * @var LogNs::emit
+ *                       build the line and route it to the ring and/or the sink
+ * @var LogNs::set_sink
+ *                       install (or clear) the sink emitted lines are handed to
  *
  * A spec, not a format string: the shape of the message is decided when the code is written, so
  * nothing here parses anything at runtime, and a build whose logs declare no float field links no

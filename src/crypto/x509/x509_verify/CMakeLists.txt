@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(crypto/x509/x509_verify
+  GATE PROTOCORE_ENABLE_X509 OR PROTOCORE_ENABLE_TLS
   SOURCES x509_verify.c
   DEPS
     crypto/x509/x509_types

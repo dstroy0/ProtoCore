@@ -170,6 +170,10 @@ uint32_t protocore_iec_get_ioa(const uint8_t *p);
 
 /**
  * @brief Build a single-point information object (M_SP_NA_1, type 1): IOA(3) + SIQ(1).
+ * @param buf      the destination buffer.
+ * @param cap      the capacity of @p buf, in bytes.
+ * @param ioa      the information object address (IOA). The object holds it in 3 octets, the least significant octet
+ * first.
  * @param on       the single-point value (SPI bit).
  * @param quality  the quality flags (IEC_QUAL_BL / _SB / _NT / _IV; the low bits are ignored).
  * @return 4 on success, 0 on overflow / a null buffer.
@@ -225,6 +229,10 @@ embed_bool protocore_iec_io_parse_counter(const uint8_t *buf, size_t len, uint32
 
 /**
  * @brief Build a single command object (C_SC_NA_1, type 45): IOA(3) + SCO(1).
+ * @param buf     the destination buffer.
+ * @param cap     the capacity of @p buf, in bytes.
+ * @param ioa     the information object address (IOA). The object holds it in 3 octets, the least significant octet
+ * first.
  * @param on      the commanded state (SCS bit).
  * @param select  true for a select, false for an execute (S/E bit).
  * @return 4 on success, 0 on overflow / a null buffer.
@@ -236,6 +244,10 @@ embed_bool protocore_iec_io_parse_sc(const uint8_t *buf, size_t len, uint32_t *i
 
 /**
  * @brief Build a double-point information object (M_DP_NA_1, type 3): IOA(3) + DIQ(1).
+ * @param buf      the destination buffer.
+ * @param cap      the capacity of @p buf, in bytes.
+ * @param ioa      the information object address (IOA). The object holds it in 3 octets, the least significant octet
+ * first.
  * @param dpi      the 2-bit double-point value (IEC_DP_OFF / _ON / _INDETERMINATE).
  * @param quality  the quality flags (IEC_QUAL_BL / _SB / _NT / _IV; other bits are ignored).
  * @return 4 on success, 0 on overflow / a null buffer.
@@ -247,6 +259,10 @@ embed_bool protocore_iec_io_parse_dp(const uint8_t *buf, size_t len, uint32_t *i
 
 /**
  * @brief Build a double command object (C_DC_NA_1, type 46): IOA(3) + DCO(1).
+ * @param buf     the destination buffer.
+ * @param cap     the capacity of @p buf, in bytes.
+ * @param ioa     the information object address (IOA). The object holds it in 3 octets, the least significant octet
+ * first.
  * @param dcs     the 2-bit double command state (IEC_DP_OFF / _ON).
  * @param qu      the 5-bit qualifier of command (QU).
  * @param select  true for a select, false for an execute (S/E bit).
@@ -263,7 +279,7 @@ embed_bool protocore_iec_io_parse_dc(const uint8_t *buf, size_t len, uint32_t *i
 /** @brief Build a fixed-length frame: 10 C A CS 16 (1-octet link address). */
 size_t protocore_iec101_build_fixed(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr);
 
-/** @brief Build a variable-length frame: 68 L L 68 C A <asdu> CS 16 (1-octet link address). */
+/** @brief Build a variable-length frame: 68 L L 68 C A `<asdu>` CS 16 (1-octet link address). */
 size_t protocore_iec101_build_variable(uint8_t *buf, size_t cap, uint8_t control, uint8_t addr, const uint8_t *asdu,
                                        uint8_t asdu_len);
 

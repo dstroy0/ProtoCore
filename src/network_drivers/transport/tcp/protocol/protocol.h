@@ -81,69 +81,130 @@ typedef struct
  *
  * A caller sets the members a call takes, invokes it through ::ConnPool, and reads the result off
  * the same handle. The pool's own state - the idle bound, the counters, the template a slot is
- * reset from, and the calls themselves - is behind @ref internal and is not describable here.
+ * reset from, and the calls themselves - is internal and is not describable here.
  *
- * @var ConnPoolNs::slot       the connection a call acts on
- * @var ConnPoolNs::st         the state a write installs
- * @var ConnPoolNs::data       bytes for a send
- * @var ConnPoolNs::len        how many
- * @var ConnPoolNs::pcb        the control block a raw call acts on
- * @var ConnPoolNs::conn_timeout_ms  the idle deadline init loads
- * @var ConnPoolNs::worker_id  whose slots the sweep reaps
- * @var ConnPoolNs::out        where the peer address is written
- * @var ConnPoolNs::evt        the event an enqueue posts
- * @var ConnPoolNs::buf        where a read or a peek lands
- * @var ConnPoolNs::cap        how much room it has
- * @var ConnPoolNs::off        a peek's offset from the tail
- * @var ConnPoolNs::count      bytes a peek copies, or a consume drops
- * @var ConnPoolNs::ok         a call's true/false outcome
- * @var ConnPoolNs::u16        a call's 16-bit outcome
- * @var ConnPoolNs::u32        a call's 32-bit outcome
- * @var ConnPoolNs::u8         a call's 8-bit outcome
- * @var ConnPoolNs::i32        a call's signed outcome
- * @var ConnPoolNs::n          a byte count a call reports
- * @var ConnPoolNs::if_kind    the interface a slot's connection arrived on
- * @var ConnPoolNs::proto      the application protocol a slot carries
- * @var ConnPoolNs::set_state         install the state in st on the slot
- * @var ConnPoolNs::alloc_free        claim the lowest free slot
- * @var ConnPoolNs::timeout_ms        the idle deadline the sweep measures against
- * @var ConnPoolNs::send              queue bytes for transmission (RFC 9293 sec 3.9.1 SEND)
- * @var ConnPoolNs::send_flush        the same, pushed on the way out
- * @var ConnPoolNs::sndbuf            room the send buffer left
- * @var ConnPoolNs::flush             push what is queued (RFC 9293 sec 3.9.1 PUSH)
- * @var ConnPoolNs::ack_consumed      reopen the receive window by what was drained
- * @var ConnPoolNs::raw_send          write already-encrypted bytes, no TLS re-entry
- * @var ConnPoolNs::close             tear the connection down (RFC 9293 sec 3.9.1 CLOSE)
- * @var ConnPoolNs::abort_slot        reset it (RFC 9293 sec 3.9.1 ABORT)
- * @var ConnPoolNs::closing_finalize  finish a slot whose TX drained
- * @var ConnPoolNs::closing_check     finalize it if it has
- * @var ConnPoolNs::begin_close       enter the dwell that precedes the close
- * @var ConnPoolNs::enqueue           post an event to the owning listener's queue
- * @var ConnPoolNs::init              bring the pool up on the idle deadline it was given
- * @var ConnPoolNs::stop              take every slot down
- * @var ConnPoolNs::active_count      how many slots are live
- * @var ConnPoolNs::remote_ip         the peer address of a slot
- * @var ConnPoolNs::remote_addr       the same, formatted
- * @var ConnPoolNs::touch_active      restart a slot's idle timer
- * @var ConnPoolNs::check_timeouts    reap the slots whose deadline passed
- * @var ConnPoolNs::on_event          install the observer in event_cb_in
- * @var ConnPoolNs::counters_get      read the counters out
- * @var ConnPoolNs::counters_reset    zero them
- * @var ConnPoolNs::obs_bump          count one reason
- * @var ConnPoolNs::obs_transition    record a state change
- * @var ConnPoolNs::obs_notice        record a notice against the current state
- * @var ConnPoolNs::available         bytes the slot's receive ring holds
- * @var ConnPoolNs::read_byte         pop one byte into u8
- * @var ConnPoolNs::peek              copy count bytes at off into buf without consuming
- * @var ConnPoolNs::consume           drop count bytes from the tail
- * @var ConnPoolNs::read              pop up to cap bytes into buf
- * @var ConnPoolNs::active            the slot holds a live connection that can take a send
- * @var ConnPoolNs::iface             the interface it arrived on
- * @var ConnPoolNs::listener_id       the listener it was accepted on
- * @var ConnPoolNs::tls               the connection began a TLS handshake
- * @var ConnPoolNs::owner             the worker that owns the slot
- * @var ConnPoolNs::proto_of          the application protocol it carries
- * @var ConnPoolNs::pcb_of            its control block
+ * @var ConnPoolVars::slot
+ *                               the connection a call acts on
+ * @var ConnPoolVars::st
+ *                               the state a write installs
+ * @var ConnIoArgs::data
+ *                             bytes for a send
+ * @var ConnIoArgs::len
+ *                             how many
+ * @var ConnPoolVars::pcb
+ *                               the control block a raw call acts on
+ * @var ConnLifeArgs::conn_timeout_ms
+ *                                   the idle deadline init loads
+ * @var ConnLifeArgs::worker_id
+ *                             whose slots the sweep reaps
+ * @var ConnPoolVars::out
+ *                               where the peer address is written
+ * @var ConnPoolVars::evt
+ *                               the event an enqueue posts
+ * @var ConnIoArgs::buf
+ *                             where a read or a peek lands
+ * @var ConnIoArgs::cap
+ *                             how much room it has
+ * @var ConnIoArgs::off
+ *                             a peek's offset from the tail
+ * @var ConnIoArgs::count
+ *                             bytes a peek copies, or a consume drops
+ * @var ConnPoolVars::ok
+ *                               a call's true/false outcome
+ * @var ConnPoolVars::u16
+ *                               a call's 16-bit outcome
+ * @var ConnPoolVars::u32
+ *                               a call's 32-bit outcome
+ * @var ConnPoolVars::u8
+ *                               a call's 8-bit outcome
+ * @var ConnPoolVars::i32
+ *                               a call's signed outcome
+ * @var ConnPoolVars::n
+ *                               a byte count a call reports
+ * @var ConnPoolVars::if_kind
+ *                               the interface a slot's connection arrived on
+ * @var ConnPoolVars::proto
+ *                               the application protocol a slot carries
+ * @var ConnPoolNs::set_state
+ *                                    install the state in st on the slot
+ * @var ConnPoolNs::alloc_free
+ *                                    claim the lowest free slot
+ * @var ConnPoolNs::timeout_ms
+ *                                    the idle deadline the sweep measures against
+ * @var ConnPoolNs::send
+ *                                    queue bytes for transmission (RFC 9293 sec 3.9.1 SEND)
+ * @var ConnPoolNs::send_flush
+ *                                    the same, pushed on the way out
+ * @var ConnPoolNs::sndbuf
+ *                                    room the send buffer left
+ * @var ConnPoolNs::flush
+ *                                    push what is queued (RFC 9293 sec 3.9.1 PUSH)
+ * @var ConnPoolNs::ack_consumed
+ *                                    reopen the receive window by what was drained
+ * @var ConnPoolNs::raw_send
+ *                                    write already-encrypted bytes, no TLS re-entry
+ * @var ConnPoolNs::close
+ *                                    tear the connection down (RFC 9293 sec 3.9.1 CLOSE)
+ * @var ConnPoolNs::abort_slot
+ *                                    reset it (RFC 9293 sec 3.9.1 ABORT)
+ * @var ConnPoolNs::closing_finalize
+ *                                    finish a slot whose TX drained
+ * @var ConnPoolNs::closing_check
+ *                                    finalize it if it has
+ * @var ConnPoolNs::begin_close
+ *                                    enter the dwell that precedes the close
+ * @var ConnPoolNs::enqueue
+ *                                    post an event to the owning listener's queue
+ * @var ConnPoolNs::init
+ *                                    bring the pool up on the idle deadline it was given
+ * @var ConnPoolNs::stop
+ *                                    take every slot down
+ * @var ConnPoolNs::active_count
+ *                                    how many slots are live
+ * @var ConnPoolNs::remote_ip
+ *                                    the peer address of a slot
+ * @var ConnPoolNs::remote_addr
+ *                                    the same, formatted
+ * @var ConnPoolNs::touch_active
+ *                                    restart a slot's idle timer
+ * @var ConnPoolNs::check_timeouts
+ *                                    reap the slots whose deadline passed
+ * @var ConnPoolNs::on_event
+ *                                    install the observer in event_cb_in
+ * @var ConnPoolNs::counters_get
+ *                                    read the counters out
+ * @var ConnPoolNs::counters_reset
+ *                                    zero them
+ * @var ConnPoolNs::obs_bump
+ *                                    count one reason
+ * @var ConnPoolNs::obs_transition
+ *                                    record a state change
+ * @var ConnPoolNs::obs_notice
+ *                                    record a notice against the current state
+ * @var ConnPoolNs::available
+ *                                    bytes the slot's receive ring holds
+ * @var ConnPoolNs::read_byte
+ *                                    pop one byte into u8
+ * @var ConnPoolNs::peek
+ *                                    copy count bytes at off into buf without consuming
+ * @var ConnPoolNs::consume
+ *                                    drop count bytes from the tail
+ * @var ConnPoolNs::read
+ *                                    pop up to cap bytes into buf
+ * @var ConnPoolNs::active
+ *                                    the slot holds a live connection that can take a send
+ * @var ConnPoolNs::iface
+ *                                    the interface it arrived on
+ * @var ConnPoolNs::listener_id
+ *                                    the listener it was accepted on
+ * @var ConnPoolNs::tls
+ *                                    the connection began a TLS handshake
+ * @var ConnPoolNs::owner
+ *                                    the worker that owns the slot
+ * @var ConnPoolNs::proto_of
+ *                                    the application protocol it carries
+ * @var ConnPoolNs::pcb_of
+ *                                    its control block
  */
 typedef struct
 {
@@ -298,6 +359,13 @@ static const ConnPoolNs ConnPool __attribute__((unused)) = {
     .obs_bump = protocore_conn_pool_obs_bump,
     .obs_transition = protocore_conn_pool_obs_transition,
     .obs_notice = protocore_conn_pool_obs_notice,
+#else
+    .on_event = NULL,
+    .counters_get = NULL,
+    .counters_reset = NULL,
+    .obs_bump = NULL,
+    .obs_transition = NULL,
+    .obs_notice = NULL,
 #endif
     .available = protocore_conn_pool_available,
     .read_byte = protocore_conn_pool_read_byte,

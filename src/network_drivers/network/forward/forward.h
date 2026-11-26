@@ -139,27 +139,43 @@ typedef struct
  * @brief The interface forwarding plane. RFC 1812 sec 5.2 "FORWARDING WALK-THROUGH".
  *
  * A caller sets the members a call takes, invokes it through ::Forward, and reads the outcome off
- * the same handle. The tables are behind @ref internal.
+ * the same handle. The tables are internal.
  *
- * @var ForwardNs::src_if           the interface a frame arrives on, and the one an entry scopes to;
+ * @var ForwardVars::src_if
+ *                                    the interface a frame arrives on, and the one an entry scopes to;
  *                                  PROTOCORE_FWD_IF_ANY on an entry matches every interface
- * @var ForwardNs::rule             the destination of a (src, dst) pair (RFC 1812 sec 5.3.11)
- * @var ForwardNs::match            the byte pattern an entry or a route matches on (RFC 1812 sec 5.3.9)
- * @var ForwardNs::acl              the access list's entry verdict and its fallback (RFC 1812 sec 5.3.9)
- * @var ForwardNs::route            the next hop a policy route binds to (RFC 1812 sec 5.2.4.3)
- * @var ForwardNs::frame            the received frame the forwarding algorithm runs on
- * @var ForwardNs::inspect          the inspection hook and the pointer it is handed back
- * @var ForwardNs::ok               a call's true/false outcome
- * @var ForwardNs::n                next hops a frame reached
- * @var ForwardNs::stats            the counters a read reports
- * @var ForwardNs::reset            empty every control, entry and route, and zero the counters
- * @var ForwardNs::add_rule         add a control on forwarding for one (src, dst) pair
- * @var ForwardNs::acl_set_default  set what a frame matching no access-list entry takes
- * @var ForwardNs::acl_add          add an access-list entry; the first match decides
- * @var ForwardNs::route_add        add a policy route, taken ahead of the (src, dst) fan-out
- * @var ForwardNs::set_inspector    install the ingress inspection hook
- * @var ForwardNs::ingress          run one received frame through the forwarding walk-through
- * @var ForwardNs::get_stats        copy the counters onto the handle
+ * @var ForwardVars::rule
+ *                                    the destination of a (src, dst) pair (RFC 1812 sec 5.3.11)
+ * @var ForwardVars::match
+ *                                    the byte pattern an entry or a route matches on (RFC 1812 sec 5.3.9)
+ * @var ForwardVars::acl
+ *                                    the access list's entry verdict and its fallback (RFC 1812 sec 5.3.9)
+ * @var ForwardVars::route
+ *                                    the next hop a policy route binds to (RFC 1812 sec 5.2.4.3)
+ * @var ForwardVars::frame
+ *                                    the received frame the forwarding algorithm runs on
+ * @var ForwardVars::ok
+ *                                    a call's true/false outcome
+ * @var ForwardVars::n
+ *                                    next hops a frame reached
+ * @var ForwardVars::stats
+ *                                    the counters a read reports
+ * @var ForwardNs::reset
+ *                                  empty every control, entry and route, and zero the counters
+ * @var ForwardNs::add_rule
+ *                                  add a control on forwarding for one (src, dst) pair
+ * @var ForwardNs::acl_set_default
+ *                                  set what a frame matching no access-list entry takes
+ * @var ForwardNs::acl_add
+ *                                  add an access-list entry; the first match decides
+ * @var ForwardNs::route_add
+ *                                  add a policy route, taken ahead of the (src, dst) fan-out
+ * @var ForwardNs::set_inspector
+ *                                  install the ingress inspection hook
+ * @var ForwardNs::ingress
+ *                                  run one received frame through the forwarding walk-through
+ * @var ForwardNs::get_stats
+ *                                  copy the counters onto the handle
  */
 typedef struct
 {
@@ -170,7 +186,7 @@ typedef struct
     FwdRouteArgs route; ///< the next hop a policy route binds to
     FwdFrameArgs frame; ///< the frame the forwarding algorithm runs on
 #if PROTOCORE_FWD_INSPECT
-    FwdInspectArgs inspect; ///< the ingress inspection hook
+    FwdInspectArgs inspect; ///< the inspection hook and the pointer it is handed back
 #endif
     embed_bool ok;
     uint8_t n;
@@ -220,6 +236,8 @@ static const ForwardNs Forward __attribute__((unused)) = {
     .route_add = protocore_forward_route_add,
 #if PROTOCORE_FWD_INSPECT
     .set_inspector = protocore_forward_set_inspector,
+#else
+    .set_inspector = NULL,
 #endif
     .ingress = protocore_forward_ingress,
     .get_stats = protocore_forward_get_stats,

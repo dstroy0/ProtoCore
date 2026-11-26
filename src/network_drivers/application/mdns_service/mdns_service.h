@@ -60,18 +60,27 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::MdnsService with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   MdnsService.begin_args.hostname = ...;
  *   MdnsService.begin_args.http_port = ...;
  *   MdnsService.begin(work);
  *   // MdnsService.ok is what the call reports
+ * @endcode
  *
- * @var MdnsServiceNs::begin_args  what begin takes: hostname, http_port
- * @var MdnsServiceNs::txt_args  what txt takes: key, value
- * @var MdnsServiceNs::add_service_args  what add_service takes: service_type, proto, port
- * @var MdnsServiceNs::ok  true if the responder started; false if disabled at compile time, ...
- * @var MdnsServiceNs::begin  start mDNS responder and advertise an HTTP service. Call once after ...
- * @var MdnsServiceNs::txt  add a TXT key/value record to the advertised `_http._tcp` service. ...
- * @var MdnsServiceNs::add_service  advertise an additional service, e.g. `("_https", "_tcp", 443)`
+ * @var MdnsServiceVars::begin_args
+ *                                   what begin takes: hostname, http_port
+ * @var MdnsServiceVars::txt_args
+ *                                 what txt takes: key, value
+ * @var MdnsServiceVars::add_service_args
+ *                                         what add_service takes: service_type, proto, port
+ * @var MdnsServiceVars::ok
+ *                           true if the responder started; false if disabled at compile time, ...
+ * @var MdnsServiceNs::begin
+ *                            start mDNS responder and advertise an HTTP service. Call once after ...
+ * @var MdnsServiceNs::txt
+ *                          add a TXT key/value record to the advertised `_http._tcp` service. ...
+ * @var MdnsServiceNs::add_service
+ *                                  advertise an additional service, e.g. `("_https", "_tcp", 443)`
  *
  * @c work is PROTOCORE_MDNS_SERVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

@@ -67,20 +67,31 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Interbus with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Interbus.fcs_args.bytes = ...;
  *   Interbus.fcs_args.len = ...;
  *   Interbus.fcs(work);
  *   // Interbus.value is what the call reports
+ * @endcode
  *
- * @var InterbusNs::fcs_args  what fcs takes: bytes, len
- * @var InterbusNs::build_args  what build takes: words, word_count, out, cap
- * @var InterbusNs::parse_args  what parse takes: frame, len, out_words, max_words,
- * @var InterbusNs::ok  true if the loopback word + FCS are valid and the words fit ...
- * @var InterbusNs::value  the value a call reports
- * @var InterbusNs::n  the frame length (2 + word_count*2 + 2), or 0 on overflow. Layout: ...
- * @var InterbusNs::fcs  CRC-16/CCITT-FALSE (the INTERBUS FCS) over len bytes
- * @var InterbusNs::build  assemble a summation frame from per-device 16-bit word slices
- * @var InterbusNs::parse  disassemble a summation frame back into device data words
+ * @var InterbusVars::fcs_args
+ *                              what fcs takes: bytes, len
+ * @var InterbusVars::build_args
+ *                                what build takes: words, word_count, out, cap
+ * @var InterbusVars::parse_args
+ *                                what parse takes: frame, len, out_words, max_words,
+ * @var InterbusVars::ok
+ *                        true if the loopback word + FCS are valid and the words fit ...
+ * @var InterbusVars::value
+ *                           the value a call reports
+ * @var InterbusVars::n
+ *                       the frame length (2 + word_count*2 + 2), or 0 on overflow. Layout: ...
+ * @var InterbusNs::fcs
+ *                       CRC-16/CCITT-FALSE (the INTERBUS FCS) over len bytes
+ * @var InterbusNs::build
+ *                         assemble a summation frame from per-device 16-bit word slices
+ * @var InterbusNs::parse
+ *                         disassemble a summation frame back into device data words
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

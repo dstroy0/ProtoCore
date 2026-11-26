@@ -38,16 +38,23 @@ struct SensorDevice
     char name[16];
     float temperature;
     bool active;
-    bool in_use; // Slot flag
+    embed_atomic_u32 in_use; // Slot flag, 1 while the slot holds a sensor
 };
 
 #define MAX_SENSORS 4
 static SensorDevice sensor_db[MAX_SENSORS] = {
-    {0, "Living Room", 22.4, true, true},
-    {1, "Kitchen", 24.1, true, true},
-    {2, "Garage", 15.8, false, true},
-    {3, "", 0.0, false, false} // Empty slot
+    {0, "Living Room", 22.4, true, {1u}},
+    {1, "Kitchen", 24.1, true, {1u}},
+    {2, "Garage", 15.8, false, {1u}},
+    {3, "", 0.0, false, {0u}} // Empty slot
 };
+
+// True while slot @p i holds a sensor. The flag is atomic, because a handler can claim a slot while
+// another handler reads it.
+static bool slot_in_use(int i)
+{
+    return EMBED_CALL(embed_atomic_u32_table.load, EmbedAtomicU32LoadCfg, .word = &sensor_db[i].in_use) != 0u;
+}
 
 // --- Helper Functions ---
 
@@ -156,7 +163,7 @@ void handle_get_sensors(uint8_t slot_id, HttpReq *req)
     bool first = true;
     for (int i = 0; i < MAX_SENSORS; i++)
     {
-        if (!sensor_db[i].in_use)
+        if (!slot_in_use(i))
         {
             continue;
         }
@@ -193,7 +200,7 @@ void handle_get_sensor_by_id(uint8_t slot_id, HttpReq *req)
     }
 
     int id = atoi(req->path + 13);
-    if (id < 0 || id >= MAX_SENSORS || !sensor_db[id].in_use)
+    if (id < 0 || id >= MAX_SENSORS || !slot_in_use(id))
     {
         send_text(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
         return;
@@ -228,7 +235,7 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
     int empty_slot = -1;
     for (int i = 0; i < MAX_SENSORS; i++)
     {
-        if (!sensor_db[i].in_use)
+        if (!slot_in_use(i))
         {
             empty_slot = i;
             break;
@@ -257,7 +264,7 @@ void handle_create_sensor(uint8_t slot_id, HttpReq *req)
     strncpy(sensor_db[empty_slot].name, name, sizeof(sensor_db[empty_slot].name) - 1);
     sensor_db[empty_slot].temperature = temp;
     sensor_db[empty_slot].active = active;
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &sensor_db[empty_slot].in_use, .value = true);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &sensor_db[empty_slot].in_use, .value = 1u);
 
     char response_buf[192];
     snprintf(response_buf, sizeof(response_buf), "{\"id\":%d,\"name\":\"%s\",\"status\":\"created\"}", empty_slot,
@@ -285,7 +292,7 @@ void handle_patch_sensor(uint8_t slot_id, HttpReq *req)
     }
 
     int id = atoi(req->path + 13);
-    if (id < 0 || id >= MAX_SENSORS || !sensor_db[id].in_use)
+    if (id < 0 || id >= MAX_SENSORS || !slot_in_use(id))
     {
         send_text(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
         return;
@@ -330,13 +337,13 @@ void handle_delete_sensor(uint8_t slot_id, HttpReq *req)
     }
 
     int id = atoi(req->path + 13);
-    if (id < 0 || id >= MAX_SENSORS || !sensor_db[id].in_use)
+    if (id < 0 || id >= MAX_SENSORS || !slot_in_use(id))
     {
         send_text(slot_id, 404, "application/json", "{\"error\":\"Sensor not found\"}");
         return;
     }
 
-    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &sensor_db[id].in_use, .value = false);
+    EMBED_CALL(embed_atomic_u32_table.store, EmbedAtomicU32StoreCfg, .word = &sensor_db[id].in_use, .value = 0u);
     send_empty(slot_id, 204); // 204 No Content carries no body
 }
 

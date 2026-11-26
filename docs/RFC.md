@@ -17,7 +17,7 @@ The parser enforces these rules byte-by-byte during parsing:
 
 | Field              | Allowed characters                                                   | RFC reference | Violation response                  |
 | ------------------ | -------------------------------------------------------------------- | ------------- | ----------------------------------- |
-| Method             | `tchar` (`ALPHA DIGIT ! # $ % & ' * + - . ^ _ \` \| ~`)              | §3.1.1        | 400                                 |
+| Method             | `tchar` (`` ALPHA DIGIT ! # $ % & ' * + - . ^ _ ` \| ~ ``)              | §3.1.1        | 400                                 |
 | Path / Query       | `VCHAR` (%x21–7E)                                                    | RFC 3986 §3.3 | 400                                 |
 | Header field-name  | `tchar`                                                              | §3.2          | 400                                 |
 | Header field-value | `VCHAR`, SP, HTAB, obs-text (%x80–FF)                                | §3.2          | 400                                 |
@@ -58,8 +58,8 @@ sweep; pipelined requests already in the buffer are drained in order.
 
 | Behavior                                  | RFC reference | Notes                                                                                                                                                                                       |
 | ----------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Content-Length` on fixed-size responses  | 7230 §3.3.2   | [`send_text()`](@ref send_text) / [`send_bin()`](@ref send_bin) / [`send_empty()`](@ref send_empty) / [`redirect()`](@ref redirect) / [`send_template()`](@ref send_template) |
-| Chunked transfer-encoding (streamed body) | 7230 §4.1     | [`send_chunked()`](@ref send_chunked): `Transfer-Encoding: chunked`, `<hexlen>\r\n<data>\r\n` chunks, `0\r\n\r\n` terminator                                                  |
+| `Content-Length` on fixed-size responses  | 7230 §3.3.2   | `send_text()` / `send_bin()` / `send_empty()` / `redirect()` / `send_template()` |
+| Chunked transfer-encoding (streamed body) | 7230 §4.1     | `send_chunked()`: `Transfer-Encoding: chunked`, `<hexlen>\r\n<data>\r\n` chunks, `0\r\n\r\n` terminator                                                  |
 | `HEAD` suppresses body, keeps headers     | 7231 §4.3.2   | applies to chunked too (the `Transfer-Encoding` header is sent, but no chunks)                                                                                                              |
 
 </details>
@@ -67,7 +67,7 @@ sweep; pipelined requests already in the buffer are drained in order.
 Note the deliberate asymmetry: an inbound **request** carrying `Transfer-Encoding`
 is **rejected** (501, §3.3.1 - the server does not de-chunk request bodies),
 whereas an outbound **response** may use chunked transfer via
-[`send_chunked()`](@ref send_chunked).
+`send_chunked()`.
 
 ## HTTP authentication (RFC 7235)
 
@@ -131,7 +131,7 @@ mbedTLS on a static memory pool (no heap). TLS 1.2 (RFC 5246) is the negotiated
 minimum; TLS 1.3 (RFC 8446) is used when the client offers it. The verified
 cipher suite is `ECDHE-ECDSA-AES256-GCM-SHA384` (forward-secret ECDHE, ECDSA
 authentication, AEAD AES-256-GCM). Server certificate/key are loaded via
-[`begin_tls()`](@ref begin_tls) / [`tls_cert()`](@ref tls_cert).
+`begin_tls()` / `tls_cert()`.
 `wss://` and TLS Server-Sent Events run over the same TLS record layer when TLS is
 enabled: the WebSocket upgrade and every subsequent frame/event are encrypted,
 transparent to handler code. The server authenticates itself by RFC 7250 raw public key; it
@@ -209,7 +209,7 @@ RFC 7233 §3.1 explicitly permits, as does a malformed or absent `Range`.
 ## WebDAV (RFC 4918)
 
 Optional ([`PROTOCORE_ENABLE_WEBDAV`](@ref PROTOCORE_ENABLE_WEBDAV), requires file serving,
-default off). [`dav()`](@ref dav) mounts a filesystem subtree that
+default off). `dav()` mounts a filesystem subtree that
 answers the WebDAV methods, extending HTTP for a client to manage files:
 
 - **OPTIONS** advertises `DAV: 1, 2` and the supported `Allow` set.
@@ -259,7 +259,7 @@ Confirmable (CON) request is answered with a piggybacked ACK, a Non-confirmable
 (RST). The parser handles the 4-byte header + token (≤ 8 bytes), delta-encoded
 options (Uri-Path, Uri-Query, Content-Format), and the `0xFF` payload marker, then
 dispatches GET/POST/PUT/DELETE against a fixed resource table by reconstructed
-Uri-Path. The codec ([`protocore_coap_server_process()`](@ref protocore_coap_server_process)) is
+Uri-Path. The codec (`protocore_coap_server_process()`) is
 transport-independent and host-tested; only the UDP socket is ESP32-specific.
 
 **Resource discovery (RFC 6690):** a GET to `/.well-known/core` returns the
@@ -397,7 +397,7 @@ the request in the clear. See [SECURITY.md](SECURITY.md).
 
 ## Automatic error responses
 
-[`handle()`](@ref handle) sends these before dispatching to any route handler:
+`handle()` sends these before dispatching to any route handler:
 
 <details>
 <summary><b>Parser State Errors Table</b></summary>

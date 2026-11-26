@@ -70,17 +70,26 @@ typedef struct
  * No storage member: the builders write the caller's region, and the URI and content a trigger
  * builds live on that call's own frame, so nothing survives a call.
  *
- * @var WebhookNs::request  the target URI a POST names and the content it carries
- * @var WebhookNs::build    the caller region a builder writes into
- * @var WebhookNs::ifttt    the Maker event, key, and up to three values
- * @var WebhookNs::n        octets a builder wrote, 0 when the whole build would not fit
- * @var WebhookNs::i32      the status code a POST read back (RFC 9110 sec 15.1), or a negative
+ * @var WebhookVars::request
+ *                            the target URI a POST names and the content it carries
+ * @var WebhookVars::build
+ *                            the caller region a builder writes into
+ * @var WebhookVars::ifttt
+ *                            the Maker event, key, and up to three values
+ * @var WebhookVars::n
+ *                            octets a builder wrote, 0 when the whole build would not fit
+ * @var WebhookVars::i32
+ *                            the status code a POST read back (RFC 9110 sec 15.1), or a negative
  *                          transport error
- * @var WebhookNs::ifttt_url      build the Maker target URI from @c ifttt.event and @c ifttt.key
- * @var WebhookNs::ifttt_payload  build the value1/value2/value3 object (RFC 8259 sec 4)
- * @var WebhookNs::post           POST @c request.content as application/json to
+ * @var WebhookNs::ifttt_url
+ *                                build the Maker target URI from @c ifttt.event and @c ifttt.key
+ * @var WebhookNs::ifttt_payload
+ *                                build the value1/value2/value3 object (RFC 8259 sec 4)
+ * @var WebhookNs::post
+ *                                POST @c request.content as application/json to
  *                                @c request.target_uri (RFC 9110 sec 9.3.3)
- * @var WebhookNs::ifttt_trigger  build the URI and the object into its own frames, then POST them
+ * @var WebhookNs::ifttt_trigger
+ *                                build the URI and the object into its own frames, then POST them
  */
 typedef struct
 {

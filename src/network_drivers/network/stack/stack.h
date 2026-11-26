@@ -40,7 +40,8 @@ EMBED_BEGIN_DECLS
 /**
  * @brief What ::StackNs::start takes.
  *
- * @var StackStartArgs::isn_secret IDEMIP_TCP_ISN_SECRET_BYTES random octets, the RFC 6528 sec 3 secret
+ * @var StackStartArgs::isn_secret
+ *                                 IDEMIP_TCP_ISN_SECRET_BYTES random octets, the RFC 6528 sec 3 secret
  *                                 of the initial sequence numbers. The stack copies them.
  */
 typedef struct
@@ -51,12 +52,18 @@ typedef struct
 /**
  * @brief What ::StackNs::bind takes: one interface and its link driver.
  *
- * @var StackBindArgs::driver   the link driver of the interface [BORROWS]
- * @var StackBindArgs::mac      IDEMIP_MAC_LEN octets of hardware address [BORROWS]
- * @var StackBindArgs::rx_base  IDEMIP_RX_DESCRIPTORS buffers of IDEMIP_DMA_BUF_STRIDE octets, on a cache line
- * @var StackBindArgs::tx_base  IDEMIP_TX_DESCRIPTORS buffers of IDEMIP_DMA_BUF_STRIDE octets, on a cache line
- * @var StackBindArgs::phy_addr the Clause 22 management address of the PHY, 0 through 31
- * @var StackBindArgs::index    the interface, below IDEMIP_NETIF_COUNT
+ * @var StackBindArgs::driver
+ *                              the link driver of the interface [BORROWS]
+ * @var StackBindArgs::mac
+ *                              IDEMIP_MAC_LEN octets of hardware address [BORROWS]
+ * @var StackBindArgs::rx_base
+ *                              IDEMIP_RX_DESCRIPTORS buffers of IDEMIP_DMA_BUF_STRIDE octets, on a cache line
+ * @var StackBindArgs::tx_base
+ *                              IDEMIP_TX_DESCRIPTORS buffers of IDEMIP_DMA_BUF_STRIDE octets, on a cache line
+ * @var StackBindArgs::phy_addr
+ *                              the Clause 22 management address of the PHY, 0 through 31
+ * @var StackBindArgs::index
+ *                              the interface, below IDEMIP_NETIF_COUNT
  */
 typedef struct
 {
@@ -71,10 +78,14 @@ typedef struct
 /**
  * @brief What ::StackNs::set_addr4 takes. Each address is in host order.
  *
- * @var StackAddr4Args::address the IPv4 address of the interface
- * @var StackAddr4Args::mask    its subnet mask
- * @var StackAddr4Args::gateway its default gateway, 0 for none
- * @var StackAddr4Args::index   the interface
+ * @var StackAddr4Args::address
+ *                              the IPv4 address of the interface
+ * @var StackAddr4Args::mask
+ *                              its subnet mask
+ * @var StackAddr4Args::gateway
+ *                              its default gateway, 0 for none
+ * @var StackAddr4Args::index
+ *                              the interface
  */
 typedef struct
 {
@@ -87,8 +98,10 @@ typedef struct
 /**
  * @brief What ::StackNs::tick takes.
  *
- * @var StackTickArgs::now_ms      the monotonic millisecond count of the caller
- * @var StackTickArgs::random_word a random word for this pass, which RFC 2236 sec 3 report delays draw from
+ * @var StackTickArgs::now_ms
+ *                                 the monotonic millisecond count of the caller
+ * @var StackTickArgs::random_word
+ *                                 a random word for this pass, which RFC 2236 sec 3 report delays draw from
  */
 typedef struct
 {
@@ -99,9 +112,11 @@ typedef struct
 /**
  * @brief What ::StackNs::transmit_hold and ::StackNs::transmit_post take.
  *
- * @var StackTransmitArgs::len   the octets of the frame that ::StackNs::transmit_post sends, 1 through
+ * @var StackTransmitArgs::len
+ *                               the octets of the frame that ::StackNs::transmit_post sends, 1 through
  *                               IDEMIP_DMA_FRAME_MAX
- * @var StackTransmitArgs::index the interface
+ * @var StackTransmitArgs::index
+ *                               the interface
  */
 typedef struct
 {
@@ -112,15 +127,24 @@ typedef struct
 /**
  * @brief The operands and the outcome.
  *
- * @var StackVars::start_args     the secret that ::StackNs::start takes
- * @var StackVars::bind_args      the interface that ::StackNs::bind takes
- * @var StackVars::addr4_args     the address that ::StackNs::set_addr4 takes
- * @var StackVars::tick_args      the clock and the random word that ::StackNs::tick takes
- * @var StackVars::transmit_args  the interface and the frame length of a transmit entry
- * @var StackVars::transmit_frame the buffer that the last ::StackNs::transmit_hold reported, NULL for none
- * @var StackVars::ok             the outcome of the last call
- * @var StackVars::frames         the frames that the last tick drained
- * @var StackVars::sent           the frames that the last tick put on a transmit ring
+ * @var StackVars::start_args
+ *                                the secret that ::StackNs::start takes
+ * @var StackVars::bind_args
+ *                                the interface that ::StackNs::bind takes
+ * @var StackVars::addr4_args
+ *                                the address that ::StackNs::set_addr4 takes
+ * @var StackVars::tick_args
+ *                                the clock and the random word that ::StackNs::tick takes
+ * @var StackVars::transmit_args
+ *                                the interface and the frame length of a transmit entry
+ * @var StackVars::transmit_frame
+ *                                the buffer that the last ::StackNs::transmit_hold reported, NULL for none
+ * @var StackVars::ok
+ *                                the outcome of the last call
+ * @var StackVars::frames
+ *                                the frames that the last tick drained
+ * @var StackVars::sent
+ *                                the frames that the last tick put on a transmit ring
  */
 typedef struct
 {
@@ -141,15 +165,21 @@ extern StackVars StackV;
 /**
  * @brief The entries.
  *
- * @var StackNs::start     clear each unit, seed the initial sequence numbers and bind the shared units
- * @var StackNs::bind      bind one interface to its link driver and its frame buffers
- * @var StackNs::set_addr4 give an interface its IPv4 address
- * @var StackNs::tick      run one pass of the stack: drain, services, flush
- * @var StackNs::transmit_hold hold the transmit buffer of an interface, and report it in
+ * @var StackNs::start
+ *                         clear each unit, seed the initial sequence numbers and bind the shared units
+ * @var StackNs::bind
+ *                         bind one interface to its link driver and its frame buffers
+ * @var StackNs::set_addr4
+ *                         give an interface its IPv4 address
+ * @var StackNs::tick
+ *                         run one pass of the stack: drain, services, flush
+ * @var StackNs::transmit_hold
+ *                             hold the transmit buffer of an interface, and report it in
  *                         ::StackVars::transmit_frame. Each interface holds one buffer at a time, and each
  *                         frame of the interface goes out in it. A driver that gives its buffers out in turn
  *                         thus gets each one back in turn.
- * @var StackNs::transmit_post send the frame in the buffer that the interface holds
+ * @var StackNs::transmit_post
+ *                             send the frame in the buffer that the interface holds
  */
 typedef struct
 {

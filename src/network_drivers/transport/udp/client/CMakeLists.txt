@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/transport/udp/client
+  GATE PROTOCORE_ENABLE_UDP
   SOURCES client.c
   DEPS
     shared/ip

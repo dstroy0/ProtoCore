@@ -108,7 +108,7 @@ uint8_t *protocore_dashboard_span(void)
 {
     if (s_own.span == NULL)
     {
-        s_own.span = (uint8_t *)protocore_secure_persist(PROTOCORE_DASHBOARD_BORROW);
+        s_own.span = (uint8_t *)protocore_plain_persist(PROTOCORE_DASHBOARD_BORROW);
     }
     return s_own.span;
 }

@@ -76,7 +76,7 @@ typedef struct
     uint8_t raw;           ///< last raw pin level as sampled (0/1).
     uint8_t stable;        ///< believed level, after debouncing (0/1).
     uint8_t present;       ///< presence output (0/1) - @ref stable, extended by @ref hold_ms.
-    uint8_t changed;       ///< set when @ref present flipped; cleared by @ref protocore_presence_take_event.
+    uint8_t changed;       ///< set when @ref present flipped; cleared by @ref protocore_rcwl0516_presence_take_event.
 } PresenceCore;
 
 /** @brief Dispatch table. Addressed by offset, so the layout is asserted below. */

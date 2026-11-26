@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_wal_store.h
+ * @file wal_store.h
  * @brief Durable write-ahead store: A/B superblock + checkpoint over a block-device seam (PROTOCORE_ENABLE_WAL).
  *
  * Increment 2 on top of the pure record codec in wal.h. It turns the codec into a mountable, power-loss-safe

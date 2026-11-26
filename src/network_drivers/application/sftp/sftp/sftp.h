@@ -311,64 +311,119 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Sftp with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Sftp.rd_init_args.r = ...;
  *   Sftp.rd_init_args.payload = ...;
  *   Sftp.rd_init_args.len = ...;
  *   Sftp.rd_init(work);
+ * @endcode
  *
- * @var SftpNs::rd_init_args  what rd_init takes: r, payload, len
- * @var SftpNs::rd_u8_args  what rd_u8 takes: r
- * @var SftpNs::rd_u32_args  what rd_u32 takes: r
- * @var SftpNs::rd_u64_args  what rd_u64 takes: r
- * @var SftpNs::rd_string_args  what rd_string takes: r, out, out_len
- * @var SftpNs::rd_attrs_args  what rd_attrs takes: r, a
- * @var SftpNs::wr_init_args  what wr_init takes: w, out, cap
- * @var SftpNs::wr_u8_args  what wr_u8 takes: w, v
- * @var SftpNs::wr_u32_args  what wr_u32 takes: w, v
- * @var SftpNs::wr_u64_args  what wr_u64 takes: w, v
- * @var SftpNs::wr_bytes_args  what wr_bytes takes: w, b, n
- * @var SftpNs::wr_string_args  what wr_string takes: w, s, n
- * @var SftpNs::wr_attrs_args  what wr_attrs takes: w, a
- * @var SftpNs::wr_finish_args  what wr_finish takes: w
- * @var SftpNs::wr_pos_args  what wr_pos takes: w
- * @var SftpNs::wr_patch_u32_args  what wr_patch_u32 takes: w, at, v
- * @var SftpNs::frame_len_args  what frame_len takes: buf, have, max
- * @var SftpNs::build_version_args  what build_version takes: out, cap
- * @var SftpNs::build_status_args  what build_status takes: id, code, msg, out, cap
- * @var SftpNs::build_handle_args  what build_handle takes: id, handle, hlen, out, cap
- * @var SftpNs::build_attrs_args  what build_attrs takes: id, a, out, cap
- * @var SftpNs::build_data_args  what build_data takes: id, data, dlen, out, cap
- * @var SftpNs::build_name1_args  what build_name1 takes: id, name, longname, a, out, cap
- * @var SftpNs::format_longname_args  what format_longname takes: is_dir, perms, size, mtime,
- * @var SftpNs::ok  a call's true/false outcome
- * @var SftpNs::value  the value a call reports
- * @var SftpNs::u32  what a call reports
- * @var SftpNs::u64  what a call reports
- * @var SftpNs::n  the string length written (excluding NUL), clamped to cap-1
- * @var SftpNs::rd_init  rd_init
- * @var SftpNs::rd_u8  rd_u8
- * @var SftpNs::rd_u32  rd_u32
- * @var SftpNs::rd_u64  rd_u64
- * @var SftpNs::rd_string  read a `uint32 len || bytes` string as a pointer into the payload ...
- * @var SftpNs::rd_attrs  parse an ATTRS blob (only known fields kept; unknown/extended ...
- * @var SftpNs::wr_init  wr_init
- * @var SftpNs::wr_u8  wr_u8
- * @var SftpNs::wr_u32  wr_u32
- * @var SftpNs::wr_u64  wr_u64
- * @var SftpNs::wr_bytes  wr_bytes
- * @var SftpNs::wr_string  wr_string
- * @var SftpNs::wr_attrs  wr_attrs
- * @var SftpNs::wr_finish  backfill the length prefix (= off-4). the total packet length, or 0 ...
- * @var SftpNs::wr_pos  position where the next byte will be written (used to remember a ...
- * @var SftpNs::wr_patch_u32  overwrite a big-endian uint32 already written at at (for ...
- * @var SftpNs::frame_len  the full length of the leading packet in buf (4-byte prefix + ...
- * @var SftpNs::build_version  build_version
- * @var SftpNs::build_status  build_status
- * @var SftpNs::build_handle  build_handle
- * @var SftpNs::build_attrs  build_attrs
- * @var SftpNs::build_data  PROTOCORE_SSH_FXP_DATA carrying data[0..dlen)
- * @var SftpNs::build_name1  PROTOCORE_SSH_FXP_NAME with one entry (filename + longname + attrs) ...
- * @var SftpNs::format_longname  format a Unix `ls -l`-style longname for a NAME entry, e.g. ...
+ * @var SftpVars::rd_init_args
+ *                              what rd_init takes: r, payload, len
+ * @var SftpVars::rd_u8_args
+ *                            what rd_u8 takes: r
+ * @var SftpVars::rd_u32_args
+ *                             what rd_u32 takes: r
+ * @var SftpVars::rd_u64_args
+ *                             what rd_u64 takes: r
+ * @var SftpVars::rd_string_args
+ *                                what rd_string takes: r, out, out_len
+ * @var SftpVars::rd_attrs_args
+ *                               what rd_attrs takes: r, a
+ * @var SftpVars::wr_init_args
+ *                              what wr_init takes: w, out, cap
+ * @var SftpVars::wr_u8_args
+ *                            what wr_u8 takes: w, v
+ * @var SftpVars::wr_u32_args
+ *                             what wr_u32 takes: w, v
+ * @var SftpVars::wr_u64_args
+ *                             what wr_u64 takes: w, v
+ * @var SftpVars::wr_bytes_args
+ *                               what wr_bytes takes: w, b, n
+ * @var SftpVars::wr_string_args
+ *                                what wr_string takes: w, s, n
+ * @var SftpVars::wr_attrs_args
+ *                               what wr_attrs takes: w, a
+ * @var SftpVars::wr_finish_args
+ *                                what wr_finish takes: w
+ * @var SftpVars::wr_pos_args
+ *                             what wr_pos takes: w
+ * @var SftpVars::wr_patch_u32_args
+ *                                   what wr_patch_u32 takes: w, at, v
+ * @var SftpVars::frame_len_args
+ *                                what frame_len takes: buf, have, max
+ * @var SftpVars::build_version_args
+ *                                    what build_version takes: out, cap
+ * @var SftpVars::build_status_args
+ *                                   what build_status takes: id, code, msg, out, cap
+ * @var SftpVars::build_handle_args
+ *                                   what build_handle takes: id, handle, hlen, out, cap
+ * @var SftpVars::build_attrs_args
+ *                                  what build_attrs takes: id, a, out, cap
+ * @var SftpVars::build_data_args
+ *                                 what build_data takes: id, data, dlen, out, cap
+ * @var SftpVars::build_name1_args
+ *                                  what build_name1 takes: id, name, longname, a, out, cap
+ * @var SftpVars::format_longname_args
+ *                                      what format_longname takes: is_dir, perms, size, mtime,
+ * @var SftpVars::ok
+ *                    a call's true/false outcome
+ * @var SftpVars::value
+ *                       the value a call reports
+ * @var SftpVars::u32
+ *                     what a call reports
+ * @var SftpVars::u64
+ *                     what a call reports
+ * @var SftpVars::n
+ *                   the string length written (excluding NUL), clamped to cap-1
+ * @var SftpNs::rd_init
+ *                       rd_init
+ * @var SftpNs::rd_u8
+ *                     rd_u8
+ * @var SftpNs::rd_u32
+ *                      rd_u32
+ * @var SftpNs::rd_u64
+ *                      rd_u64
+ * @var SftpNs::rd_string
+ *                         read a `uint32 len || bytes` string as a pointer into the payload ...
+ * @var SftpNs::rd_attrs
+ *                        parse an ATTRS blob (only known fields kept; unknown/extended ...
+ * @var SftpNs::wr_init
+ *                       wr_init
+ * @var SftpNs::wr_u8
+ *                     wr_u8
+ * @var SftpNs::wr_u32
+ *                      wr_u32
+ * @var SftpNs::wr_u64
+ *                      wr_u64
+ * @var SftpNs::wr_bytes
+ *                        wr_bytes
+ * @var SftpNs::wr_string
+ *                         wr_string
+ * @var SftpNs::wr_attrs
+ *                        wr_attrs
+ * @var SftpNs::wr_finish
+ *                         backfill the length prefix (= off-4). the total packet length, or 0 ...
+ * @var SftpNs::wr_pos
+ *                      position where the next byte will be written (used to remember a ...
+ * @var SftpNs::wr_patch_u32
+ *                            overwrite a big-endian uint32 already written at at (for ...
+ * @var SftpNs::frame_len
+ *                         the full length of the leading packet in buf (4-byte prefix + ...
+ * @var SftpNs::build_version
+ *                             build_version
+ * @var SftpNs::build_status
+ *                            build_status
+ * @var SftpNs::build_handle
+ *                            build_handle
+ * @var SftpNs::build_attrs
+ *                           build_attrs
+ * @var SftpNs::build_data
+ *                          PROTOCORE_SSH_FXP_DATA carrying data[0..dlen)
+ * @var SftpNs::build_name1
+ *                           PROTOCORE_SSH_FXP_NAME with one entry (filename + longname + attrs) ...
+ * @var SftpNs::format_longname
+ *                               format a Unix `ls -l`-style longname for a NAME entry, e.g. ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

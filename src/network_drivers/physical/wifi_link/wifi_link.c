@@ -54,9 +54,9 @@ typedef struct
     uint8_t mac[IDEMIP_MAC_LEN];
     embed_bool mac_read;
     embed_bool laid; ///< the ring is laid, and each loculus is ready
-} WifiLinkState;
+} WifiLinkOwnCtx;
 
-static WifiLinkState s_link;
+static WifiLinkOwnCtx s_link;
 
 // --- the radio task ---------------------------------------------------------
 

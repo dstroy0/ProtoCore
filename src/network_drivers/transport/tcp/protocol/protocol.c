@@ -260,12 +260,6 @@ void protocore_conn_pool_alloc_free(const uint8_t *work)
     ConnPoolV.i32 = (int32_t)EMBED_CALL(anularis.loculus_next, AnularisCfg, .mask = ready & accept_slots);
 }
 
-static int32_t protocore_conn_alloc_free(void)
-{
-    protocore_conn_pool_alloc_free(protocore_conn_pool_span());
-    return ConnPoolV.i32;
-}
-
 void protocore_conn_pool_timeout_ms(uint8_t *work)
 {
     ConnPoolV.u32 = CONN_POOL_CTX(work)->conn_timeout_ms;

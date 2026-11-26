@@ -316,57 +316,106 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ptp with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ptp.ts_write_args.p = ...;
  *   Ptp.ts_write_args.ts = ...;
  *   Ptp.ts_write(work);
+ * @endcode
  *
- * @var PtpNs::ts_write_args  what ts_write takes: p, ts
- * @var PtpNs::ts_read_args  what ts_read takes: p, ts
- * @var PtpNs::ts_to_ns_args  what ts_to_ns takes: ts
- * @var PtpNs::ts_from_ns_args  what ts_from_ns takes: ns, ts
- * @var PtpNs::build_header_args  what build_header takes: buf, cap, h, body_len
- * @var PtpNs::parse_header_args  what parse_header takes: s, len, h
- * @var PtpNs::build_sync_args  what build_sync takes: buf, cap, h, origin
- * @var PtpNs::build_delay_req_args  what build_delay_req takes: buf, cap, h, origin
- * @var PtpNs::build_follow_up_args  what build_follow_up takes: buf, cap, h, precise
- * @var PtpNs::build_delay_resp_args  what build_delay_resp takes: buf, cap, h, recv,
- * @var PtpNs::build_announce_args  what build_announce takes: buf, cap, h, a
- * @var PtpNs::build_pdelay_req_args  what build_pdelay_req takes: buf, cap, h, origin
- * @var PtpNs::build_pdelay_resp_args  what build_pdelay_resp takes: buf, cap, h, recv,
- * @var PtpNs::build_pdelay_resp_follow_up_args  what build_pdelay_resp_follow_up takes: buf, cap, h,
- * @var PtpNs::parse_timestamp_msg_args  what parse_timestamp_msg takes: s, len, h, ts
- * @var PtpNs::parse_delay_resp_args  what parse_delay_resp takes: s, len, h, out
- * @var PtpNs::parse_announce_args  what parse_announce takes: s, len, h, out
- * @var PtpNs::parse_pdelay_req_args  what parse_pdelay_req takes: s, len, h, ts
- * @var PtpNs::parse_pdelay_resp_args  what parse_pdelay_resp takes: s, len, h, out
- * @var PtpNs::parse_pdelay_resp_follow_up_args  what parse_pdelay_resp_follow_up takes: s, len, h, out
- * @var PtpNs::compute_args  what compute takes: t1, t2, t3, t4, out
- * @var PtpNs::compute_link_delay_args  what compute_link_delay takes: t1, t2, t3, t4
- * @var PtpNs::ok  a call's true/false outcome
- * @var PtpNs::value  the value a call reports
- * @var PtpNs::n  PROTOCORE_PTP_HEADER_LEN or 0 on overflow / bad args
- * @var PtpNs::ts_write  write ts to p as the 10-octet on-wire form (big-endian)
- * @var PtpNs::ts_read  read a 10-octet on-wire timestamp from p into ts
- * @var PtpNs::ts_to_ns  convert ts to signed nanoseconds since its epoch (fits current ...
- * @var PtpNs::ts_from_ns  convert signed-nanoseconds ns to a timestamp
- * @var PtpNs::build_header  build the 34-octet common header into buf, stamping messageLength = ...
- * @var PtpNs::parse_header  parse the common header from s (len octets). Returns false if too ...
- * @var PtpNs::build_sync  build a Sync (origin is the originTimestamp; 0 for a two-step Sync)
- * @var PtpNs::build_delay_req  build a Delay_Req (origin is the originTimestamp; usually 0)
- * @var PtpNs::build_follow_up  build a Follow_Up carrying the precise Sync egress time precise (t1)
- * @var PtpNs::build_delay_resp  build a Delay_Resp carrying t4 recv and the requester's port ...
- * @var PtpNs::build_announce  build an Announce from a - master mode: advertise this clock's ...
- * @var PtpNs::build_pdelay_req  build a Pdelay_Req (origin is the originTimestamp, usually 0; the ...
- * @var PtpNs::build_pdelay_resp  build a Pdelay_Resp carrying t2 recv (requestReceiptTimestamp) + ...
- * @var PtpNs::build_pdelay_resp_follow_up  build a Pdelay_Resp_Follow_Up carrying t3 origin ...
- * @var PtpNs::parse_timestamp_msg  parse a Sync / Delay_Req / Follow_Up message: fills h and its ...
- * @var PtpNs::parse_delay_resp  parse a Delay_Resp into h + out. Returns false on a short / ...
- * @var PtpNs::parse_announce  parse an Announce into h + out. Returns false on a short / ...
- * @var PtpNs::parse_pdelay_req  parse a Pdelay_Req into h + its originTimestamp ts. False on a ...
- * @var PtpNs::parse_pdelay_resp  parse a Pdelay_Resp into h + out (timestamp is t2). False on a ...
- * @var PtpNs::parse_pdelay_resp_follow_up  parse a Pdelay_Resp_Follow_Up into h + out (timestamp is t3). False ...
- * @var PtpNs::compute  compute offsetFromMaster and meanPathDelay from the four PTP ...
- * @var PtpNs::compute_link_delay  compute the meanLinkDelay for the P2P mechanism (IEEE 1588-2008 ...
+ * @var PtpVars::ts_write_args
+ *                              what ts_write takes: p, ts
+ * @var PtpVars::ts_read_args
+ *                             what ts_read takes: p, ts
+ * @var PtpVars::ts_to_ns_args
+ *                              what ts_to_ns takes: ts
+ * @var PtpVars::ts_from_ns_args
+ *                                what ts_from_ns takes: ns, ts
+ * @var PtpVars::build_header_args
+ *                                  what build_header takes: buf, cap, h, body_len
+ * @var PtpVars::parse_header_args
+ *                                  what parse_header takes: s, len, h
+ * @var PtpVars::build_sync_args
+ *                                what build_sync takes: buf, cap, h, origin
+ * @var PtpVars::build_delay_req_args
+ *                                     what build_delay_req takes: buf, cap, h, origin
+ * @var PtpVars::build_follow_up_args
+ *                                     what build_follow_up takes: buf, cap, h, precise
+ * @var PtpVars::build_delay_resp_args
+ *                                      what build_delay_resp takes: buf, cap, h, recv,
+ * @var PtpVars::build_announce_args
+ *                                    what build_announce takes: buf, cap, h, a
+ * @var PtpVars::build_pdelay_req_args
+ *                                      what build_pdelay_req takes: buf, cap, h, origin
+ * @var PtpVars::build_pdelay_resp_args
+ *                                       what build_pdelay_resp takes: buf, cap, h, recv,
+ * @var PtpVars::build_pdelay_resp_follow_up_args
+ *                                                 what build_pdelay_resp_follow_up takes: buf, cap, h,
+ * @var PtpVars::parse_timestamp_msg_args
+ *                                         what parse_timestamp_msg takes: s, len, h, ts
+ * @var PtpVars::parse_delay_resp_args
+ *                                      what parse_delay_resp takes: s, len, h, out
+ * @var PtpVars::parse_announce_args
+ *                                    what parse_announce takes: s, len, h, out
+ * @var PtpVars::parse_pdelay_req_args
+ *                                      what parse_pdelay_req takes: s, len, h, ts
+ * @var PtpVars::parse_pdelay_resp_args
+ *                                       what parse_pdelay_resp takes: s, len, h, out
+ * @var PtpVars::parse_pdelay_resp_follow_up_args
+ *                                                 what parse_pdelay_resp_follow_up takes: s, len, h, out
+ * @var PtpVars::compute_args
+ *                             what compute takes: t1, t2, t3, t4, out
+ * @var PtpVars::compute_link_delay_args
+ *                                        what compute_link_delay takes: t1, t2, t3, t4
+ * @var PtpVars::ok
+ *                   a call's true/false outcome
+ * @var PtpVars::value
+ *                      the value a call reports
+ * @var PtpVars::n
+ *                  PROTOCORE_PTP_HEADER_LEN or 0 on overflow / bad args
+ * @var PtpNs::ts_write
+ *                       write ts to p as the 10-octet on-wire form (big-endian)
+ * @var PtpNs::ts_read
+ *                      read a 10-octet on-wire timestamp from p into ts
+ * @var PtpNs::ts_to_ns
+ *                       convert ts to signed nanoseconds since its epoch (fits current ...
+ * @var PtpNs::ts_from_ns
+ *                         convert signed-nanoseconds ns to a timestamp
+ * @var PtpNs::build_header
+ *                           build the 34-octet common header into buf, stamping messageLength = ...
+ * @var PtpNs::parse_header
+ *                           parse the common header from s (len octets). Returns false if too ...
+ * @var PtpNs::build_sync
+ *                         build a Sync (origin is the originTimestamp; 0 for a two-step Sync)
+ * @var PtpNs::build_delay_req
+ *                              build a Delay_Req (origin is the originTimestamp; usually 0)
+ * @var PtpNs::build_follow_up
+ *                              build a Follow_Up carrying the precise Sync egress time precise (t1)
+ * @var PtpNs::build_delay_resp
+ *                               build a Delay_Resp carrying t4 recv and the requester's port ...
+ * @var PtpNs::build_announce
+ *                             build an Announce from a - master mode: advertise this clock's ...
+ * @var PtpNs::build_pdelay_req
+ *                               build a Pdelay_Req (origin is the originTimestamp, usually 0; the ...
+ * @var PtpNs::build_pdelay_resp
+ *                                build a Pdelay_Resp carrying t2 recv (requestReceiptTimestamp) + ...
+ * @var PtpNs::build_pdelay_resp_follow_up
+ *                                          build a Pdelay_Resp_Follow_Up carrying t3 origin ...
+ * @var PtpNs::parse_timestamp_msg
+ *                                  parse a Sync / Delay_Req / Follow_Up message: fills h and its ...
+ * @var PtpNs::parse_delay_resp
+ *                               parse a Delay_Resp into h + out. Returns false on a short / ...
+ * @var PtpNs::parse_announce
+ *                             parse an Announce into h + out. Returns false on a short / ...
+ * @var PtpNs::parse_pdelay_req
+ *                               parse a Pdelay_Req into h + its originTimestamp ts. False on a ...
+ * @var PtpNs::parse_pdelay_resp
+ *                                parse a Pdelay_Resp into h + out (timestamp is t2). False on a ...
+ * @var PtpNs::parse_pdelay_resp_follow_up
+ *                                          parse a Pdelay_Resp_Follow_Up into h + out (timestamp is t3). False ...
+ * @var PtpNs::compute
+ *                      compute offsetFromMaster and meanPathDelay from the four PTP ...
+ * @var PtpNs::compute_link_delay
+ *                                 compute the meanLinkDelay for the P2P mechanism (IEEE 1588-2008 ...
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

@@ -99,25 +99,43 @@ typedef struct
  *
  * No slot member: one collector, one line at a time, so no call names a row.
  *
- * @var UdpTelemetryNs::collector    where the datagrams go (RFC 768 "User Interface")
- * @var UdpTelemetryNs::line         the buffer a line is built in and the measurement it opens with
- * @var UdpTelemetryNs::tags         one tag set entry
- * @var UdpTelemetryNs::fields       one field set entry, in the width the call takes
- * @var UdpTelemetryNs::time         the trailing timestamp
- * @var UdpTelemetryNs::payload      the octets a send hands the stack
- * @var UdpTelemetryNs::ok           a call's true/false outcome; on a build call, the line is a
+ * @var UdpTelemetryVars::collector
+ *                                     where the datagrams go (RFC 768 "User Interface")
+ * @var UdpTelemetryVars::line
+ *                                     the buffer a line is built in and the measurement it opens with
+ * @var UdpTelemetryVars::tags
+ *                                     one tag set entry
+ * @var UdpTelemetryVars::fields
+ *                                     one field set entry, in the width the call takes
+ * @var UdpTelemetryVars::time
+ *                                     the trailing timestamp
+ * @var UdpTelemetryVars::payload
+ *                                     the octets a send hands the stack
+ * @var UdpTelemetryVars::ok
+ *                                     a call's true/false outcome; on a build call, the line is a
  *                                   complete point so far
- * @var UdpTelemetryNs::overflow     an append did not fit; every later append is a no-op
- * @var UdpTelemetryNs::n            octets the line holds, the NUL excluded
- * @var UdpTelemetryNs::begin        parse the collector address and store it with its port
- * @var UdpTelemetryNs::measurement  bind @c line and open it with the measurement
- * @var UdpTelemetryNs::tag          append one tag set entry, before any field
- * @var UdpTelemetryNs::field_int    append `field_key=<i64>i`
- * @var UdpTelemetryNs::field_uint   append `field_key=<u64>u`
- * @var UdpTelemetryNs::field_float  append `field_key=<f32>` to @c decimals places
- * @var UdpTelemetryNs::timestamp    append the trailing timestamp, after the field set
- * @var UdpTelemetryNs::send         send @c payload to the collector as one datagram
- * @var UdpTelemetryNs::write        send the built line as one datagram; an incomplete line sends
+ * @var UdpTelemetryVars::overflow
+ *                                     an append did not fit; every later append is a no-op
+ * @var UdpTelemetryVars::n
+ *                                     octets the line holds, the NUL excluded
+ * @var UdpTelemetryNs::begin
+ *                                   parse the collector address and store it with its port
+ * @var UdpTelemetryNs::measurement
+ *                                   bind @c line and open it with the measurement
+ * @var UdpTelemetryNs::tag
+ *                                   append one tag set entry, before any field
+ * @var UdpTelemetryNs::field_int
+ *                                   append `field_key=<i64>i`
+ * @var UdpTelemetryNs::field_uint
+ *                                   append `field_key=<u64>u`
+ * @var UdpTelemetryNs::field_float
+ *                                   append `field_key=<f32>` to @c decimals places
+ * @var UdpTelemetryNs::timestamp
+ *                                   append the trailing timestamp, after the field set
+ * @var UdpTelemetryNs::send
+ *                                   send @c payload to the collector as one datagram
+ * @var UdpTelemetryNs::write
+ *                                   send the built line as one datagram; an incomplete line sends
  *                                   nothing
  */
 typedef struct

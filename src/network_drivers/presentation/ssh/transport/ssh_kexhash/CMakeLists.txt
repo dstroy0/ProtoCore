@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 protocore_add_module(network_drivers/presentation/ssh/transport/ssh_kexhash
+  GATE PROTOCORE_ENABLE_SSH
   SOURCES ssh_kexhash.c
   PRIVATE_DEPS
     crypto/hash/sha256

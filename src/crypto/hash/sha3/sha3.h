@@ -84,26 +84,41 @@ typedef struct
  *
  * The incremental XOF ML-KEM samples its matrix with:
  *
+ * @code{.c}
  *   Sha3.shake128_absorb_args.in = seed;
  *   Sha3.shake128_absorb_args.inlen = sizeof(seed);
  *   Sha3.shake128_absorb(work);
  *   Sha3.squeeze_args.out = buf;
  *   Sha3.squeeze_args.outlen = sizeof(buf);
  *   Sha3.squeeze(work);
+ * @endcode
  *
- * @var Sha3Ns::absorb_args           the message a raw sponge absorbs, at a stated rate and domain
- * @var Sha3Ns::squeeze_args          where squeezed octets land
- * @var Sha3Ns::digest_args           the message a fixed-length digest is taken over
- * @var Sha3Ns::xof_args              the message a one-shot XOF is taken over
- * @var Sha3Ns::shake128_absorb_args  the message an incremental SHAKE128 XOF absorbs
- * @var Sha3Ns::ok                    a call's true/false outcome
- * @var Sha3Ns::absorb                absorb the whole message, pad, leave the sponge ready to squeeze
- * @var Sha3Ns::squeeze               pull octets, permuting between blocks; repeatable for XOF use
- * @var Sha3Ns::sha3_256              SHA3-256 one-shot, 32 octets out
- * @var Sha3Ns::sha3_512              SHA3-512 one-shot, 64 octets out
- * @var Sha3Ns::shake128              SHAKE128 one-shot
- * @var Sha3Ns::shake256              SHAKE256 one-shot
- * @var Sha3Ns::shake128_absorb       begin an incremental SHAKE128 XOF
+ * @var Sha3Vars::absorb_args
+ *                                      the message a raw sponge absorbs, at a stated rate and domain
+ * @var Sha3Vars::squeeze_args
+ *                                      where squeezed octets land
+ * @var Sha3Vars::digest_args
+ *                                      the message a fixed-length digest is taken over
+ * @var Sha3Vars::xof_args
+ *                                      the message a one-shot XOF is taken over
+ * @var Sha3Vars::shake128_absorb_args
+ *                                      the message an incremental SHAKE128 XOF absorbs
+ * @var Sha3Vars::ok
+ *                                      a call's true/false outcome
+ * @var Sha3Ns::absorb
+ *                                    absorb the whole message, pad, leave the sponge ready to squeeze
+ * @var Sha3Ns::squeeze
+ *                                    pull octets, permuting between blocks; repeatable for XOF use
+ * @var Sha3Ns::sha3_256
+ *                                    SHA3-256 one-shot, 32 octets out
+ * @var Sha3Ns::sha3_512
+ *                                    SHA3-512 one-shot, 64 octets out
+ * @var Sha3Ns::shake128
+ *                                    SHAKE128 one-shot
+ * @var Sha3Ns::shake256
+ *                                    SHAKE256 one-shot
+ * @var Sha3Ns::shake128_absorb
+ *                                    begin an incremental SHAKE128 XOF
  *
  * @c work is PROTOCORE_SHA3_BORROW secure bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. The caller releases it, and the pool wipes on release; this module neither takes it,
@@ -112,7 +127,7 @@ typedef struct
  * The borrow IS the sponge, and everything carried call to call lives in it. A digest taken in its own
  * borrow therefore leaves an incremental XOF running in another exactly where it was.
  *
- * No storage member and no context: a caller sets operands and reads @ref Sha3Ns::ok, and that is
+ * No storage member and no context: a caller sets operands and reads @ref Sha3Vars::ok, and that is
  * all the surface there is.
  */
 typedef struct

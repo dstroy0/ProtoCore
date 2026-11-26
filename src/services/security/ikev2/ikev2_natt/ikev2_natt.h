@@ -106,21 +106,36 @@ typedef struct
  * No storage member: the addresses come off the socket and the payload buffers are the caller's, so
  * nothing survives a call.
  *
- * @var IkeNattNs::spi     the SPIs a digest covers, in header order
- * @var IkeNattNs::addr    the address and port a digest covers
- * @var IkeNattNs::digest  where a digest lands, and the one a compare judges
- * @var IkeNattNs::out     where a Notify payload is written
- * @var IkeNattNs::pkt     the UDP payload the port 4500 demux judges
- * @var IkeNattNs::ok      a call's true/false outcome
- * @var IkeNattNs::n       octets written, zero on failure
- * @var IkeNattNs::hash    SHA-1(SPIi | SPIr | IP | Port) into @c digest.out (sec 2.23)
- * @var IkeNattNs::source_build  write a NAT_DETECTION_SOURCE_IP Notify over the sender's own address
- * @var IkeNattNs::dest_build    write a NAT_DETECTION_DESTINATION_IP Notify over the address sent to
- * @var IkeNattNs::match         @c digest.received equals the digest over @c spi and @c addr
- * @var IkeNattNs::peer_behind_nat  the received source digest does not match the observed source
- * @var IkeNattNs::self_behind_nat  the received destination digest does not match our own address
- * @var IkeNattNs::is_keepalive  the payload is the one octet 0xFF (RFC 3948 sec 2.3)
- * @var IkeNattNs::is_ike        the payload carries the Non-ESP Marker (RFC 3948 sec 2.2)
+ * @var IkeNattVars::spi
+ *                           the SPIs a digest covers, in header order
+ * @var IkeNattVars::addr
+ *                           the address and port a digest covers
+ * @var IkeNattVars::digest
+ *                           where a digest lands, and the one a compare judges
+ * @var IkeNattVars::out
+ *                           where a Notify payload is written
+ * @var IkeNattVars::pkt
+ *                           the UDP payload the port 4500 demux judges
+ * @var IkeNattVars::ok
+ *                           a call's true/false outcome
+ * @var IkeNattVars::n
+ *                           octets written, zero on failure
+ * @var IkeNattNs::hash
+ *                         SHA-1(SPIi | SPIr | IP | Port) into @c digest.out (sec 2.23)
+ * @var IkeNattNs::source_build
+ *                               write a NAT_DETECTION_SOURCE_IP Notify over the sender's own address
+ * @var IkeNattNs::dest_build
+ *                               write a NAT_DETECTION_DESTINATION_IP Notify over the address sent to
+ * @var IkeNattNs::match
+ *                               @c digest.received equals the digest over @c spi and @c addr
+ * @var IkeNattNs::peer_behind_nat
+ *                                  the received source digest does not match the observed source
+ * @var IkeNattNs::self_behind_nat
+ *                                  the received destination digest does not match our own address
+ * @var IkeNattNs::is_keepalive
+ *                               the payload is the one octet 0xFF (RFC 3948 sec 2.3)
+ * @var IkeNattNs::is_ike
+ *                               the payload carries the Non-ESP Marker (RFC 3948 sec 2.2)
  */
 typedef struct
 {

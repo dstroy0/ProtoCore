@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Convert the voice corpus to text, eight PDFs at a time, as one host job.
 #
 #   build/tessera_host/tessera_run --processors 8 --name voice_pdftotext -- \
-#       bash utils/maint/prose/voice_pdftotext.sh D:/voice
+#       bash tools/prose/voice_pdftotext.sh D:/voice
 #
 # The text goes to build/voice/text/ and never into the tree: it is the books' text. The tree
 # retains voice.tsv, the words and their counts, which voice_count.py writes from it.

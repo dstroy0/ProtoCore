@@ -41,12 +41,18 @@
  * A caller sets the members a call takes, invokes it through ::Protocols, and reads the outcome off
  * ::ProtocolsV. The handlers themselves live in SessionCtx, reached only through the borrow.
  *
- * @var ProtoRegistryNs::proto              the protocol a call names
- * @var ProtoRegistryNs::h                  the handler an add binds to it
- * @var ProtoRegistryNs::handler            the handler a lookup reports, or NULL when none is bound
- * @var ProtoRegistryNs::register_builtins  install every handler the build compiled in
- * @var ProtoRegistryNs::add                bind one handler to one protocol
- * @var ProtoRegistryNs::get                the handler for a protocol, or null if none is bound
+ * @var ProtocolsVars::proto
+ *                                          the protocol a call names
+ * @var ProtocolsVars::h
+ *                                          the handler an add binds to it
+ * @var ProtocolsVars::handler
+ *                                          the handler a lookup reports, or NULL when none is bound
+ * @var ProtoRegistryNs::register_builtins
+ *                                          install every handler the build compiled in
+ * @var ProtoRegistryNs::add
+ *                                          bind one handler to one protocol
+ * @var ProtoRegistryNs::get
+ *                                          the handler for a protocol, or null if none is bound
  */
 typedef struct
 {
@@ -90,11 +96,13 @@ static const ProtoRegistryNs Protocols __attribute__((unused)) = {
  * CONN_POOL_SLOTS, not MAX_CONNS: the HTTP/3 dispatch slot is a reserved index above the TCP range.
  * All BSS. Defined in session.c.
  *
- * @var http_req_start_ms  protocore_millis() at the first byte of the in-progress request (0 = none).
+ * @var http_req_start_ms
+ *                         protocore_millis() at the first byte of the in-progress request (0 = none).
  *                         The request-header deadline (PROTOCORE_REQUEST_TIMEOUT_MS, slow-loris
  *                         defense) measures against this; unlike the transport's idle timer a
  *                         trickle byte cannot reset it.
- * @var http_resp_sink     where a response for the slot is written, per slot.
+ * @var http_resp_sink
+ *                         where a response for the slot is written, per slot.
  */
 typedef embed_bool (*protocore_resp_sink_fn)(uint8_t slot, int code, const char *content_type, const char *body,
                                              size_t len);
@@ -155,7 +163,7 @@ extern FileSend file_send[CONN_POOL_SLOTS];
  * Session opens and closes the connection, so session holds it.
  */
 EMBED_ENUM_BYTE(ScpSt, PROTOCORE_NONE,
-                WAIT_CLINE, ///< reading the C<mode> <size> <name> control line
+                WAIT_CLINE, ///< reading the C<mode> `<size>` `<name>` control line
                 RECV,       ///< streaming file data to disk
                 WAIT_END    ///< the file's bytes are in; awaiting the end-of-record byte
 );
@@ -226,13 +234,15 @@ extern SftpSession sftp_sess[MAX_SSH_CONNS];
  *
  * A caller sets the members a call takes and invokes it through ::Session.
  *
- * @var SessionNs::worker_id  which worker is turning: whose slots it sweeps and whose queue it drains
- * @var SessionNs::conn_timeout_ms
+ * @var SessionVars::worker_id
+ *                              which worker is turning: whose slots it sweeps and whose queue it drains
+ * @var SessionVars::conn_timeout_ms
  *                            milliseconds of inactivity before a connection is closed, applied by
  *                            the sweep this layer drives
- * @var SessionNs::tick       drive the layer for one loop iteration: sweep, drain, dispatch
- * @var SessionNs::proto      the protocol registry a connection is dispatched through
- * @var SessionNs::workers    the worker tasks that turn the pipeline, their deferred-callback
+ * @var SessionNs::tick
+ *                            drive the layer for one loop iteration: sweep, drain, dispatch
+ * @var SessionVars::workers
+ *                              the worker tasks that turn the pipeline, their deferred-callback
  *                            path, and the queue they jump when one is compiled in
  *
  * A child is a pointer: a table in one translation unit is not a constant expression in another.

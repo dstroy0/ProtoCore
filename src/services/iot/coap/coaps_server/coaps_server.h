@@ -105,19 +105,31 @@ typedef struct
  * No slot member: one server owns the pool, and a call that names an endpoint names it inside its own
  * argument group rather than at the top.
  *
- * @var CoapsServerNs::identity  the certificate, keys and CSPRNG a begin installs
- * @var CoapsServerNs::bind      the port a begin binds
- * @var CoapsServerNs::sink      where an outbound datagram goes with no network stack
- * @var CoapsServerNs::dgram     one datagram injected in place of a receive
- * @var CoapsServerNs::ok        a call's true/false outcome
- * @var CoapsServerNs::u8        the pool slots in use
- * @var CoapsServerNs::begin         install @c identity, bind @c bind.port, and route its datagrams into the pool
- * @var CoapsServerNs::poll          drain the ingest ring through the bridge, fire the retransmission timer
+ * @var CoapsServerVars::identity
+ *                                 the certificate, keys and CSPRNG a begin installs
+ * @var CoapsServerVars::bind
+ *                                 the port a begin binds
+ * @var CoapsServerVars::sink
+ *                                 where an outbound datagram goes with no network stack
+ * @var CoapsServerVars::dgram
+ *                                 one datagram injected in place of a receive
+ * @var CoapsServerVars::ok
+ *                                 a call's true/false outcome
+ * @var CoapsServerVars::u8
+ *                                 the pool slots in use
+ * @var CoapsServerNs::begin
+ *                                   install @c identity, bind @c bind.port, and route its datagrams into the pool
+ * @var CoapsServerNs::poll
+ *                                   drain the ingest ring through the bridge, fire the retransmission timer
  *                                   (RFC 9147 sec 5.8), and reclaim failed or quiet connections
- * @var CoapsServerNs::active_conns  report the pool slots in use
- * @var CoapsServerNs::stop          stop polling, release every slot, and empty the ingest ring
- * @var CoapsServerNs::set_out_sink  install @c sink
- * @var CoapsServerNs::ingest        queue @c dgram as though it had been received
+ * @var CoapsServerNs::active_conns
+ *                                   report the pool slots in use
+ * @var CoapsServerNs::stop
+ *                                   stop polling, release every slot, and empty the ingest ring
+ * @var CoapsServerNs::set_out_sink
+ *                                   install @c sink
+ * @var CoapsServerNs::ingest
+ *                                   queue @c dgram as though it had been received
  */
 typedef struct
 {
@@ -170,6 +182,9 @@ static const CoapsServerNs CoapsServer __attribute__((unused)) = {
 #if !PROTOCORE_HAS_NET_STACK
     .set_out_sink = protocore_coaps_server_set_out_sink,
     .ingest = protocore_coaps_server_ingest,
+#else
+    .set_out_sink = NULL,
+    .ingest = NULL,
 #endif
 };
 

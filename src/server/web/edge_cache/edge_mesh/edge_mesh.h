@@ -20,8 +20,10 @@
  *
  * Wire format (little-endian, versioned; magic 'E','M'):
  *   request : 'E' 'M' | ver=1 | op=GET(1) | digest[32] | u16 key_len + key | u16 hdrs_len + req_hdrs
+ * @code{.c}
  *   response: 'E' 'M' | ver=1 | status (MISS=0 / HIT=1) | [ u16 entry_len + entry_frame ]   (entry on HIT)
  *   entry   : timing trailer (i64 date | i64 expires | u32 lifetime_s | u32 age_hdr | u32 current_age)
+ * @endcode
  *             followed by an ::edge_sd_serialize body (content: key/status/ct/validators/encoding/Vary/body)
  *
  * @author  Douglas Quigg (dstroy0)
@@ -188,6 +190,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::EdgeMesh with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   EdgeMesh.build_request_args.digest = ...;
  *   EdgeMesh.build_request_args.canon = ...;
  *   EdgeMesh.build_request_args.req_hdrs = ...;
@@ -195,29 +198,52 @@ typedef struct
  *   EdgeMesh.build_request_args.cap = ...;
  *   EdgeMesh.build_request(work);
  *   // EdgeMesh.n is what the call reports
+ * @endcode
  *
- * @var EdgeMeshNs::build_request_args  what build_request takes: digest, canon, req_hdrs, out, cap
- * @var EdgeMeshNs::parse_request_args  what parse_request takes: buf, len, digest_out, canon_out,
- * @var EdgeMeshNs::serialize_entry_args  what serialize_entry takes: e, current_age, out, cap
- * @var EdgeMeshNs::deserialize_entry_args  what deserialize_entry takes: entry_buf, buf, len, e, now_ms
- * @var EdgeMeshNs::build_response_args  what build_response takes: hit, entry, entry_len, out, cap
- * @var EdgeMeshNs::parse_response_args  what parse_response takes: buf, len, entry_off, entry_len
- * @var EdgeMeshNs::fetch_begin_args  what fetch_begin takes: m, t, host, port, request, req_len,
- * @var EdgeMeshNs::fetch_pump_args  what fetch_pump takes: m, t, now_ms
- * @var EdgeMeshNs::fetch_end_args  what fetch_end takes: m, t
- * @var EdgeMeshNs::ok  a call's true/false outcome
- * @var EdgeMeshNs::n  the entry-frame length, or 0 if it would not fit cap
- * @var EdgeMeshNs::parse  EDGE_MESH_PARSE_HIT with digest_out / canon_out / hdrs_out filled ...
- * @var EdgeMeshNs::status  what a call reports
- * @var EdgeMeshNs::build_request  build a GET request for digest / canon into out
- * @var EdgeMeshNs::parse_request  parse an accumulated request buffer
- * @var EdgeMeshNs::serialize_entry  serialize e (content via the shared ::edge_sd_serialize) plus a ...
- * @var EdgeMeshNs::deserialize_entry  rehydrate e from an entry frame: content via ::edge_sd_deserialize, ...
- * @var EdgeMeshNs::build_response  build a response (hit -> carry entry / entry_len; else a MISS). ...
- * @var EdgeMeshNs::parse_response  parse an accumulated response buffer
- * @var EdgeMeshNs::fetch_begin  dial host:port, send request, begin receiving into buf (cap >= ...
- * @var EdgeMeshNs::fetch_pump  drain available bytes and advance; honors PROTOCORE_MESH_QUERY_MS. ...
- * @var EdgeMeshNs::fetch_end  release the peer connection (idempotent)
+ * @var EdgeMeshVars::build_request_args
+ *                                        what build_request takes: digest, canon, req_hdrs, out, cap
+ * @var EdgeMeshVars::parse_request_args
+ *                                        what parse_request takes: buf, len, digest_out, canon_out,
+ * @var EdgeMeshVars::serialize_entry_args
+ *                                          what serialize_entry takes: e, current_age, out, cap
+ * @var EdgeMeshVars::deserialize_entry_args
+ *                                            what deserialize_entry takes: entry_buf, buf, len, e, now_ms
+ * @var EdgeMeshVars::build_response_args
+ *                                         what build_response takes: hit, entry, entry_len, out, cap
+ * @var EdgeMeshVars::parse_response_args
+ *                                         what parse_response takes: buf, len, entry_off, entry_len
+ * @var EdgeMeshVars::fetch_begin_args
+ *                                      what fetch_begin takes: m, t, host, port, request, req_len,
+ * @var EdgeMeshVars::fetch_pump_args
+ *                                     what fetch_pump takes: m, t, now_ms
+ * @var EdgeMeshVars::fetch_end_args
+ *                                    what fetch_end takes: m, t
+ * @var EdgeMeshVars::ok
+ *                        a call's true/false outcome
+ * @var EdgeMeshVars::n
+ *                       the entry-frame length, or 0 if it would not fit cap
+ * @var EdgeMeshVars::parse
+ *                           EDGE_MESH_PARSE_HIT with digest_out / canon_out / hdrs_out filled ...
+ * @var EdgeMeshVars::status
+ *                            what a call reports
+ * @var EdgeMeshNs::build_request
+ *                                 build a GET request for digest / canon into out
+ * @var EdgeMeshNs::parse_request
+ *                                 parse an accumulated request buffer
+ * @var EdgeMeshNs::serialize_entry
+ *                                   serialize e (content via the shared ::edge_sd_serialize) plus a ...
+ * @var EdgeMeshNs::deserialize_entry
+ *                                     rehydrate e from an entry frame: content via ::edge_sd_deserialize, ...
+ * @var EdgeMeshNs::build_response
+ *                                  build a response (hit -> carry entry / entry_len; else a MISS). ...
+ * @var EdgeMeshNs::parse_response
+ *                                  parse an accumulated response buffer
+ * @var EdgeMeshNs::fetch_begin
+ *                               dial host:port, send request, begin receiving into buf (cap >= ...
+ * @var EdgeMeshNs::fetch_pump
+ *                              drain available bytes and advance; honors PROTOCORE_MESH_QUERY_MS. ...
+ * @var EdgeMeshNs::fetch_end
+ *                             release the peer connection (idempotent)
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

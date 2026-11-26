@@ -100,6 +100,7 @@ typedef struct
  * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
  * named here.
  *
+ * @code{.c}
  *   Aes128Gcm.key_args.key = key;
  *   Aes128Gcm.key_init(work);
  *   Aes128Gcm.seal_args.nonce = nonce;
@@ -110,23 +111,37 @@ typedef struct
  *   Aes128Gcm.seal_args.ct_out = ct;
  *   Aes128Gcm.seal_args.tag_out = ct + pt_len;
  *   Aes128Gcm.seal(work);
+ * @endcode
  *
- * @var Aes128GcmNs::key_args        the key the AEAD context is bound to
- * @var Aes128GcmNs::seal_args       one record sealed under the bound key
- * @var Aes128GcmNs::open_args       one record opened under the bound key
- * @var Aes128GcmNs::block_key_args  the key the single-block cipher is bound to
- * @var Aes128GcmNs::block_args      the one block an ECB encryption runs over
- * @var Aes128GcmNs::ok              a call's true/false outcome
- * @var Aes128GcmNs::key_init        bind the borrow as a context keyed with @ref Aes128GcmNs::key_args
- * @var Aes128GcmNs::key_wipe        release what the AEAD context attached; call on rekey and on close
- * @var Aes128GcmNs::seal            encrypt one record and write its detached tag
- * @var Aes128GcmNs::open            verify the tag over aad || ct in constant time, then decrypt
- * @var Aes128GcmNs::block_init      key the single block with @ref Aes128GcmNs::block_key_args
- * @var Aes128GcmNs::block_encrypt   encrypt one 16-byte block (ECB) under that key
- * @var Aes128GcmNs::block_wipe      release what the block context attached; call on rekey and on close
+ * @var Aes128GcmVars::key_args
+ *                                     the key the AEAD context is bound to
+ * @var Aes128GcmVars::seal_args
+ *                                     one record sealed under the bound key
+ * @var Aes128GcmVars::open_args
+ *                                     one record opened under the bound key
+ * @var Aes128GcmVars::block_key_args
+ *                                     the key the single-block cipher is bound to
+ * @var Aes128GcmVars::block_args
+ *                                     the one block an ECB encryption runs over
+ * @var Aes128GcmVars::ok
+ *                                     a call's true/false outcome
+ * @var Aes128GcmNs::key_init
+ *                                   bind the borrow as a context keyed with @ref Aes128GcmVars::key_args
+ * @var Aes128GcmNs::key_wipe
+ *                                   release what the AEAD context attached; call on rekey and on close
+ * @var Aes128GcmNs::seal
+ *                                   encrypt one record and write its detached tag
+ * @var Aes128GcmNs::open
+ *                                   verify the tag over aad || ct in constant time, then decrypt
+ * @var Aes128GcmNs::block_init
+ *                                   key the single block with @ref Aes128GcmVars::block_key_args
+ * @var Aes128GcmNs::block_encrypt
+ *                                   encrypt one 16-byte block (ECB) under that key
+ * @var Aes128GcmNs::block_wipe
+ *                                   release what the block context attached; call on rekey and on close
  *
  * @ref Aes128GcmNs::open produces no plaintext on a tag mismatch: it authenticates the received
- * ciphertext first and leaves @c out untouched when @ref Aes128GcmNs::ok comes back false.
+ * ciphertext first and leaves @c out untouched when @ref Aes128GcmVars::ok comes back false.
  *
  * The AEAD key and the block key are separate: @ref Aes128GcmNs::key_init and
  * @ref Aes128GcmNs::block_init bind different parts of the borrow, so a record and its header mask run
@@ -137,7 +152,7 @@ typedef struct
  * it, holds it, releases it, nor wipes it. The borrow IS the keyed context, so two directions are two borrows and never
  * collide, and both block contexts die with the release.
  *
- * No storage member and no context: a caller sets operands and reads @ref Aes128GcmNs::ok, and that is
+ * No storage member and no context: a caller sets operands and reads @ref Aes128GcmVars::ok, and that is
  * all the surface there is.
  */
 typedef struct

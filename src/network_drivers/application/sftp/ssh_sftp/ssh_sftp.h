@@ -42,7 +42,8 @@ typedef struct
 PROTOCORE_NS_LAYOUT(SshSftpNs, begin);
 
 /**
- * @brief Serve the SFTP subsystem from the mounted filesystem. Installs the .
+ * @brief Serve the SFTP subsystem from the mounted filesystem. Installs the channel subsystem +
+ *        data callbacks. Call once, after protocore_ssh_conn_setup() and protocore_fs_begin().
  * @param work PROTOCORE_SSH_SFTP_BORROW bytes the caller took. Not held past the call.
  */
 void protocore_ssh_sftp_begin(uint8_t *work);

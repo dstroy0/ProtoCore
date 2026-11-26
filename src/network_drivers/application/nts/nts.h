@@ -123,6 +123,7 @@ extern const char NTS_EXPORTER_LABEL[]; ///< "EXPORTER-network-time-security".
  * A caller sets the members a call takes, invokes it through ::Nts with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Nts.ke_record_args.critical = ...;
  *   Nts.ke_record_args.type = ...;
  *   Nts.ke_record_args.body = ...;
@@ -131,21 +132,36 @@ extern const char NTS_EXPORTER_LABEL[]; ///< "EXPORTER-network-time-security".
  *   Nts.ke_record_args.cap = ...;
  *   Nts.ke_record(work);
  *   // Nts.n is what the call reports
+ * @endcode
  *
- * @var NtsNs::ke_record_args  what ke_record takes: critical, type, body, body_len, out,
- * @var NtsNs::ke_request_args  what ke_request takes: out, cap
- * @var NtsNs::ke_parse_args  what ke_parse takes: buf, len, cb, arg
- * @var NtsNs::ef_args  what ef takes: field_type, value, value_len, out, cap
- * @var NtsNs::ef_unique_id_args  what ef_unique_id takes: nonce, nonce_len, out, cap
- * @var NtsNs::ef_cookie_args  what ef_cookie takes: cookie, cookie_len, out, cap
- * @var NtsNs::ok  true if the stream is well-formed and ends with an End-of-Message ...
- * @var NtsNs::n  the total field length written (a multiple of 4), or 0 if it won't ...
- * @var NtsNs::ke_record  build one NTS-KE record `[critical|type][len][body]`. bytes ...
- * @var NtsNs::ke_request  build the standard NTS-KE client request: Next Protocol (NTPv4), ...
- * @var NtsNs::ke_parse  walk an NTS-KE record stream, invoking cb for each record
- * @var NtsNs::ef  build an RFC 7822 extension field ...
- * @var NtsNs::ef_unique_id  build a Unique Identifier EF (>= 32 bytes of the caller's random, ...
- * @var NtsNs::ef_cookie  build an NTS Cookie EF carrying cookie
+ * @var NtsVars::ke_record_args
+ *                               what ke_record takes: critical, type, body, body_len, out,
+ * @var NtsVars::ke_request_args
+ *                                what ke_request takes: out, cap
+ * @var NtsVars::ke_parse_args
+ *                              what ke_parse takes: buf, len, cb, arg
+ * @var NtsVars::ef_args
+ *                        what ef takes: field_type, value, value_len, out, cap
+ * @var NtsVars::ef_unique_id_args
+ *                                  what ef_unique_id takes: nonce, nonce_len, out, cap
+ * @var NtsVars::ef_cookie_args
+ *                               what ef_cookie takes: cookie, cookie_len, out, cap
+ * @var NtsVars::ok
+ *                   true if the stream is well-formed and ends with an End-of-Message ...
+ * @var NtsVars::n
+ *                  the total field length written (a multiple of 4), or 0 if it won't ...
+ * @var NtsNs::ke_record
+ *                        build one NTS-KE record `[critical|type][len][body]`. bytes ...
+ * @var NtsNs::ke_request
+ *                         build the standard NTS-KE client request: Next Protocol (NTPv4), ...
+ * @var NtsNs::ke_parse
+ *                       walk an NTS-KE record stream, invoking cb for each record
+ * @var NtsNs::ef
+ *                 build an RFC 7822 extension field ...
+ * @var NtsNs::ef_unique_id
+ *                           build a Unique Identifier EF (>= 32 bytes of the caller's random, ...
+ * @var NtsNs::ef_cookie
+ *                        build an NTS Cookie EF carrying cookie
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

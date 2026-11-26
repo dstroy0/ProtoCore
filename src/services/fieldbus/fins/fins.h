@@ -173,6 +173,7 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Fins with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Fins.build_command_args.buf = ...;
  *   Fins.build_command_args.cap = ...;
  *   Fins.build_command_args.h = ...;
@@ -182,23 +183,40 @@ typedef struct
  *   Fins.build_command_args.params_len = ...;
  *   Fins.build_command(work);
  *   // Fins.n is what the call reports
+ * @endcode
  *
- * @var FinsNs::build_command_args  what build_command takes: buf, cap, h, mrc, src, params,
- * @var FinsNs::build_memory_area_read_args  what build_memory_area_read takes: buf, cap, h, area,
- * @var FinsNs::build_memory_area_write_args  what build_memory_area_write takes: buf, cap, h, area,
- * @var FinsNs::build_run_args  what build_run takes: buf, cap, h, mode
- * @var FinsNs::build_stop_args  what build_stop takes: buf, cap, h
- * @var FinsNs::parse_command_args  what parse_command takes: buf, len, out
- * @var FinsNs::parse_response_args  what parse_response takes: buf, len, out
- * @var FinsNs::ok  a call's true/false outcome
- * @var FinsNs::n  total octets written, or 0 on a null data pointer with a nonzero ...
- * @var FinsNs::build_command  build a command frame: header + MRC + SRC + params. Returns total ...
- * @var FinsNs::build_memory_area_read  build a Memory Area Read command (0101): area code, 2-octet word ...
- * @var FinsNs::build_memory_area_write  build a Memory Area Write command (0102): the same area / word ...
- * @var FinsNs::build_run  build a RUN command (0401): switches the PLC to mode. Parameters ...
- * @var FinsNs::build_stop  build a STOP command (0402): switches the PLC to PROGRAM mode ...
- * @var FinsNs::parse_command  parse a command frame (header + MRC + SRC + params)
- * @var FinsNs::parse_response  parse a response frame (header + MRC + SRC + MRES + SRES + data)
+ * @var FinsVars::build_command_args
+ *                                    what build_command takes: buf, cap, h, mrc, src, params,
+ * @var FinsVars::build_memory_area_read_args
+ *                                             what build_memory_area_read takes: buf, cap, h, area,
+ * @var FinsVars::build_memory_area_write_args
+ *                                              what build_memory_area_write takes: buf, cap, h, area,
+ * @var FinsVars::build_run_args
+ *                                what build_run takes: buf, cap, h, mode
+ * @var FinsVars::build_stop_args
+ *                                 what build_stop takes: buf, cap, h
+ * @var FinsVars::parse_command_args
+ *                                    what parse_command takes: buf, len, out
+ * @var FinsVars::parse_response_args
+ *                                     what parse_response takes: buf, len, out
+ * @var FinsVars::ok
+ *                    a call's true/false outcome
+ * @var FinsVars::n
+ *                   total octets written, or 0 on a null data pointer with a nonzero ...
+ * @var FinsNs::build_command
+ *                             build a command frame: header + MRC + SRC + params. Returns total ...
+ * @var FinsNs::build_memory_area_read
+ *                                      build a Memory Area Read command (0101): area code, 2-octet word ...
+ * @var FinsNs::build_memory_area_write
+ *                                       build a Memory Area Write command (0102): the same area / word ...
+ * @var FinsNs::build_run
+ *                         build a RUN command (0401): switches the PLC to mode. Parameters ...
+ * @var FinsNs::build_stop
+ *                          build a STOP command (0402): switches the PLC to PROGRAM mode ...
+ * @var FinsNs::parse_command
+ *                             parse a command frame (header + MRC + SRC + params)
+ * @var FinsNs::parse_response
+ *                              parse a response frame (header + MRC + SRC + MRES + SRES + data)
  *
  * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
  * between calls, so there is no state to keep and nothing to wipe. The parameter is there so

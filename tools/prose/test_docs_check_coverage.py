@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# orior - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
-# SPDX-License-Identifier: AGPL-3.0-or-later OR LicenseRef-Commercial OR LicenseRef-Educational
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
 #
 # Tests for what docs_check can open and what its alphabet stage can see.
 #
-#   Usage:  python utils/maint/prose/test_docs_check_coverage.py
+#   Usage:  python tools/prose/test_docs_check_coverage.py
 #
 # Two rules in one file, because either one alone hides the other: a build file
 # such as CMakeLists.txt is opened by the extension list, and the alphabet stage reads the pattern

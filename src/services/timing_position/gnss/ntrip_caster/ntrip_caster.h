@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * @file protocore_ntrip_caster.h
+ * @file ntrip_caster.h
  * @brief NTRIP caster protocol codec (PROTOCORE_ENABLE_NTRIP_CASTER) - the pure, host-tested core.
  *
  * NTRIP (Networked Transport of RTCM via Internet Protocol) is how a GNSS base's RTCM corrections reach

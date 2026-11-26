@@ -45,9 +45,12 @@ typedef struct
 /**
  * @brief The stable MAC-derived device identity.
  *
- * @var DeviceIdNs::args      the address a UUID is derived from, and where the text lands
- * @var DeviceIdNs::from_mac  format a UUIDv5 from the caller's address
- * @var DeviceIdNs::uuid      format one from the part's own burned-in address
+ * @var DeviceIdVars::args
+ *                              the address a UUID is derived from, and where the text lands
+ * @var DeviceIdNs::from_mac
+ *                            format a UUIDv5 from the caller's address
+ * @var DeviceIdNs::uuid
+ *                            format one from the part's own burned-in address
  *
  * No storage member: both calls write into the caller's buffer and hold nothing.
  */

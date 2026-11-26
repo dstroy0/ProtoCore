@@ -118,33 +118,58 @@ typedef struct
  * A caller sets the members a call takes, invokes it through ::Ina219 with the bytes it runs
  * out of, and reads the outcome off the same handle.
  *
+ * @code{.c}
  *   Ina219.bus_mv_args.raw = ...;
  *   Ina219.bus_mv(work);
  *   // Ina219.value is what the call reports
+ * @endcode
  *
- * @var Ina219Ns::bus_mv_args  what bus_mv takes: raw
- * @var Ina219Ns::shunt_uv_args  what shunt_uv takes: raw
- * @var Ina219Ns::calibration_args  what calibration takes: current_lsb_ua, shunt_mohm
- * @var Ina219Ns::current_ua_args  what current_ua takes: raw, current_lsb_ua
- * @var Ina219Ns::power_uw_args  what power_uw takes: raw, current_lsb_ua
- * @var Ina219Ns::begin_args  what begin takes: addr, current_lsb_ua, shunt_mohm
- * @var Ina219Ns::read_bus_mv_args  what read_bus_mv takes: millivolts
- * @var Ina219Ns::read_shunt_uv_args  what read_shunt_uv takes: microvolts
- * @var Ina219Ns::read_current_ua_args  what read_current_ua takes: microamps
- * @var Ina219Ns::read_power_uw_args  what read_power_uw takes: microwatts
- * @var Ina219Ns::ok  a call's true/false outcome
- * @var Ina219Ns::value  the value a call reports
- * @var Ina219Ns::cal  what a call reports
- * @var Ina219Ns::bus_mv  decode the bus-voltage register to millivolts (value is bits ...
- * @var Ina219Ns::shunt_uv  decode the shunt-voltage register to microvolts (signed, LSB 10 uV)
- * @var Ina219Ns::calibration  compute the calibration register from the current LSB (microamps ...
- * @var Ina219Ns::current_ua  scale the raw current register to microamps (raw * current_lsb_ua)
- * @var Ina219Ns::power_uw  scale the raw power register to microwatts (power LSB is 20 * ...
- * @var Ina219Ns::begin  program the INA219 at addr: write the calibration for ...
- * @var Ina219Ns::read_bus_mv  read the bus voltage into millivolts. false on I2C error
- * @var Ina219Ns::read_shunt_uv  read the shunt voltage into microvolts. false on I2C error
- * @var Ina219Ns::read_current_ua  read the current into microamps (needs the calibration set by ...
- * @var Ina219Ns::read_power_uw  read the power into microwatts (needs the calibration set by ...
+ * @var Ina219Vars::bus_mv_args
+ *                               what bus_mv takes: raw
+ * @var Ina219Vars::shunt_uv_args
+ *                                 what shunt_uv takes: raw
+ * @var Ina219Vars::calibration_args
+ *                                    what calibration takes: current_lsb_ua, shunt_mohm
+ * @var Ina219Vars::current_ua_args
+ *                                   what current_ua takes: raw, current_lsb_ua
+ * @var Ina219Vars::power_uw_args
+ *                                 what power_uw takes: raw, current_lsb_ua
+ * @var Ina219Vars::begin_args
+ *                              what begin takes: addr, current_lsb_ua, shunt_mohm
+ * @var Ina219Vars::read_bus_mv_args
+ *                                    what read_bus_mv takes: millivolts
+ * @var Ina219Vars::read_shunt_uv_args
+ *                                      what read_shunt_uv takes: microvolts
+ * @var Ina219Vars::read_current_ua_args
+ *                                        what read_current_ua takes: microamps
+ * @var Ina219Vars::read_power_uw_args
+ *                                      what read_power_uw takes: microwatts
+ * @var Ina219Vars::ok
+ *                      a call's true/false outcome
+ * @var Ina219Vars::value
+ *                         the value a call reports
+ * @var Ina219Vars::cal
+ *                       what a call reports
+ * @var Ina219Ns::bus_mv
+ *                        decode the bus-voltage register to millivolts (value is bits ...
+ * @var Ina219Ns::shunt_uv
+ *                          decode the shunt-voltage register to microvolts (signed, LSB 10 uV)
+ * @var Ina219Ns::calibration
+ *                             compute the calibration register from the current LSB (microamps ...
+ * @var Ina219Ns::current_ua
+ *                            scale the raw current register to microamps (raw * current_lsb_ua)
+ * @var Ina219Ns::power_uw
+ *                          scale the raw power register to microwatts (power LSB is 20 * ...
+ * @var Ina219Ns::begin
+ *                       program the INA219 at addr: write the calibration for ...
+ * @var Ina219Ns::read_bus_mv
+ *                             read the bus voltage into millivolts. false on I2C error
+ * @var Ina219Ns::read_shunt_uv
+ *                               read the shunt voltage into microvolts. false on I2C error
+ * @var Ina219Ns::read_current_ua
+ *                                 read the current into microamps (needs the calibration set by ...
+ * @var Ina219Ns::read_power_uw
+ *                               read the power into microwatts (needs the calibration set by ...
  *
  * @c work is PROTOCORE_I2C_DEVICE_BORROW bytes the CALLER took, at an address it knows. It is not held past the call,
  * so nothing here aliases it. How those bytes are carved is this module's and is never named here.

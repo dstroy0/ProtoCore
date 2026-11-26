@@ -13,7 +13,7 @@
  * with an immediate context-switch request). Each processing task pops items in order
  * and hands each to a user handler.
  *
- * **Named lanes.** There are several queues, addressed by @ref protocore_pq_lane:
+ * **Named lanes.** There are several queues, addressed by @ref protocore_pq_lane "protocore_pq_lane":
  *   - `PROTOCORE_PQ_LANE_USER` - the single lane exposed to the application. The no-lane
  *     `protocore_pq_*` API drives it. Lowest priority.
  *   - `PROTOCORE_PQ_LANE_DMA` / `_FORWARD` / `_DEVICE` - internal lanes for the library's own
@@ -90,23 +90,38 @@ typedef struct
  * @brief The preempting work queues.
  *
  * A caller names the lane, sets the members a call takes, invokes it through ::PreemptQueue, and
- * reads the outcome off the same handle. The queue storage and the tasks are behind @ref internal.
+ * reads the outcome off the same handle. The queue storage and the tasks are internal.
  *
- * @var PreemptQueueNs::lane           the lane every call names
- * @var PreemptQueueNs::cfg            what starting a lane installs
- * @var PreemptQueueNs::post_args      what a post carries
- * @var PreemptQueueNs::ok             a call's true/false outcome
- * @var PreemptQueueNs::n              the peak depth a high-water read reports
- * @var PreemptQueueNs::u8             the priority a lookup reports
- * @var PreemptQueueNs::post_from_isr  post from an ISR, then hand the CPU to the lane if it outranks us
- * @var PreemptQueueNs::post_urgent    post to the front of the lane, ahead of what is already queued
- * @var PreemptQueueNs::high_water     the most items ever queued at once, as a sizing aid
- * @var PreemptQueueNs::priority       the lane's default task priority
- * @var PreemptQueueNs::running        the lane's task is up
- * @var PreemptQueueNs::start          create the queue and spawn the lane's task
- * @var PreemptQueueNs::post           post to the back of the lane
- * @var PreemptQueueNs::drain          run the handler over what is queued, where no task does it
- * @var PreemptQueueNs::stop           stop the lane's task
+ * @var PreemptQueueVars::lane
+ *                                       the lane every call names
+ * @var PreemptQueueVars::cfg
+ *                                       what starting a lane installs
+ * @var PreemptQueueVars::post_args
+ *                                       what a post carries
+ * @var PreemptQueueVars::ok
+ *                                       a call's true/false outcome
+ * @var PreemptQueueVars::n
+ *                                       the peak depth a high-water read reports
+ * @var PreemptQueueVars::u8
+ *                                       the priority a lookup reports
+ * @var PreemptQueueNs::post_from_isr
+ *                                     post from an ISR, then hand the CPU to the lane if it outranks us
+ * @var PreemptQueueNs::post_urgent
+ *                                     post to the front of the lane, ahead of what is already queued
+ * @var PreemptQueueNs::high_water
+ *                                     the most items ever queued at once, as a sizing aid
+ * @var PreemptQueueNs::priority
+ *                                     the lane's default task priority
+ * @var PreemptQueueNs::running
+ *                                     the lane's task is up
+ * @var PreemptQueueNs::start
+ *                                     create the queue and spawn the lane's task
+ * @var PreemptQueueNs::post
+ *                                     post to the back of the lane
+ * @var PreemptQueueNs::drain
+ *                                     run the handler over what is queued, where no task does it
+ * @var PreemptQueueNs::stop
+ *                                     stop the lane's task
  */
 typedef struct
 {

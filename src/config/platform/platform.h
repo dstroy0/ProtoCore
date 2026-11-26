@@ -6,12 +6,12 @@
  * @brief The platform contract: what the library asks of a target, in the library's own words.
  *
  * Nothing here names a vendor. The axis itself is resolved in vendor/vendor_detect.h, which then
- * pulls in exactly one vendor/<vendor>/ header. This file states the questions that header has to
+ * pulls in exactly one `vendor/<vendor>/` header. This file states the questions that header has to
  * answer and refuses the build, by name, for any it did not.
  *
  * Two kinds of thing live here:
  *   - the capability questions (PROTOCORE_HAS_*): does this part carry the thing at all. Each is
- *     `#ifndef`, so a build states what it has by defining it, and an unanswered one is an #error
+ *     `#ifndef`, so a build states what it has by defining it, and an unanswered one is an `#error`
  *     rather than a silent 0.
  *   - the seams (protocore_platform_*): declared under the capability that answers whether the part
  *     carries the thing, so reaching for an absent one is a compile error, not a link-time surprise.

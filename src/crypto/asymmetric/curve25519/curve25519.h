@@ -73,6 +73,7 @@ typedef struct
  * and reads the outcome off the same handle. How those bytes are carved is this module's and is never
  * named here.
  *
+ * @code{.c}
  *   Curve25519.x25519_base_args.scalar = ephemeral_priv;
  *   Curve25519.x25519_base_args.out = our_share;
  *   Curve25519.x25519_base(work);
@@ -80,12 +81,18 @@ typedef struct
  *   Curve25519.x25519_args.point = peer_share;
  *   Curve25519.x25519_args.out = shared_secret;
  *   Curve25519.x25519(work);
+ * @endcode
  *
- * @var Curve25519Ns::x25519_args       the scalar and the point one X25519 runs over
- * @var Curve25519Ns::x25519_base_args  the scalar one X25519 against the standard base point runs over
- * @var Curve25519Ns::ok                a call's true/false outcome
- * @var Curve25519Ns::x25519            out = scalar * point, the Montgomery ladder of RFC 7748 §5
- * @var Curve25519Ns::x25519_base       out = scalar * G, the same ladder against u = 9
+ * @var Curve25519Vars::x25519_args
+ *                                        the scalar and the point one X25519 runs over
+ * @var Curve25519Vars::x25519_base_args
+ *                                        the scalar one X25519 against the standard base point runs over
+ * @var Curve25519Vars::ok
+ *                                        a call's true/false outcome
+ * @var Curve25519Ns::x25519
+ *                                      out = scalar * point, the Montgomery ladder of RFC 7748 §5
+ * @var Curve25519Ns::x25519_base
+ *                                      out = scalar * G, the same ladder against u = 9
  *
  * Both entries clamp the scalar per RFC 7748 §5 and are constant-time in it: the ladder swaps
  * conditionally rather than branching on a scalar bit.
@@ -96,7 +103,7 @@ typedef struct
  * clamped private scalar and every ladder intermediate live in those bytes and nowhere else, so none of
  * them reaches BSS or the stack. Two key exchanges running at once are two borrows and never collide.
  *
- * No storage member and no context: a caller sets operands and reads @ref Curve25519Ns::ok, and that is
+ * No storage member and no context: a caller sets operands and reads @ref Curve25519Vars::ok, and that is
  * all the surface there is.
  */
 typedef struct
