@@ -7968,7 +7968,8 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_UINT32(200u, flow_send_cap(&f, 4096u));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(512u, flow_send_cap(&f, 4096u));</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(4096u, flow_send_cap(&f, 4096u));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_MAX_PACKET, flow_send_cap(&f, 4096u));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(1024u, flow_send_cap(&f, 1024u));</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -7988,7 +7989,7 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
     * **Assertions**:
       * <code>TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu, f.peer_window);</code>
       * <code>Assert true (flow_send_allows(&f, 32768u))</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(32768u, flow_send_cap(&f, 0xFFFFFFFFu));</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(SSH_CHAN_MAX_PACKET, flow_send_cap(&f, 0xFFFFFFFFu));</code>
       * <code>TEST_ASSERT_EQUAL_UINT32(0xFFFFFFFFu - 32768u, f.peer_window);</code>
   </details>
 
@@ -55602,7 +55603,7 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
       * <code>Assert true (SSH_OFF_MAC_WORK &lt; SSH_SLOT_BORROW)</code>
       * <code>Assert true (SSH_OFF_CRYPTO_WORK &lt; SSH_SLOT_BORROW)</code>
       * <code>Assert true (SSH_OFF_RX_READ + RX_BUF_SIZE &lt;= SSH_SLOT_BORROW)</code>
-      * <code>Assert true (SSH_OFF_RX_ASM + SSH_RFC_MAX_PAYLOAD &lt;= SSH_SLOT_BORROW)</code>
+      * <code>Assert true (SSH_OFF_RX_ASM + SSH_RX_ASM_CAP &lt;= SSH_SLOT_BORROW)</code>
   </details>
 
   <details style="margin-left: 20px;">
@@ -55671,21 +55672,21 @@ A thorough directory of all **5567 test cases** across **349 suites**. Expand a 
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_sec6_1_reassembly_region_holds_a_full_payload</b> &mdash; <i>Sec6 1 reassembly region holds a full payload</i></summary>
+    <summary><b>test_reassembly_region_holds_the_largest_accepted_packet</b> &mdash; <i>Reassembly region holds the largest accepted packet</i></summary>
 
-    * **Objective**: Sec6 1 reassembly region holds a full payload
+    * **Objective**: Reassembly region holds the largest accepted packet
     * **Assertions**:
-      * <code>Assert true (SSH_RFC_MAX_PAYLOAD &gt;= 32768u)</code>
-      * <code>Assert true (SSH_OFF_RX_ASM + SSH_RFC_MAX_PAYLOAD &lt;= SSH_SLOT_BORROW)</code>
+      * <code>Assert true (SSH_RX_ASM_CAP &gt;= SSH_PKT_WIRE_MAX)</code>
+      * <code>Assert true (SSH_OFF_RX_ASM + SSH_RX_ASM_CAP &lt;= SSH_SLOT_BORROW)</code>
   </details>
 
   <details style="margin-left: 20px;">
-    <summary><b>test_the_wire_holds_two_packets_and_is_a_power_of_two</b> &mdash; <i>The wire holds two packets and is a power of two</i></summary>
+    <summary><b>test_the_wire_holds_two_packets_and_keeps_the_alignment</b> &mdash; <i>The wire holds two packets and keeps the alignment</i></summary>
 
-    * **Objective**: The wire holds two packets and is a power of two
+    * **Objective**: The wire holds two packets and keeps the alignment
     * **Assertions**:
-      * <code>Assert true (SSH_WIRE_CAP &gt;= 2u * SSH_RFC_MAX_PAYLOAD)</code>
-      * <code>TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)(SSH_WIRE_CAP & (SSH_WIRE_CAP - 1u)));</code>
+      * <code>Assert true (SSH_WIRE_CAP &gt;= 2u * SSH_PKT_WIRE_MAX)</code>
+      * <code>TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)(SSH_WIRE_CAP % 16u));</code>
   </details>
 
 </details>
