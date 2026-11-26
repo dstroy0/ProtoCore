@@ -120,6 +120,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`8b872d1`](https://github.com/dstroy0/ProtoCore/commit/8b872d19f66c0b155da78a255629e72a57a3107d))
 - update CHANGELOG.md [skip ci] ([`af6a471`](https://github.com/dstroy0/ProtoCore/commit/af6a471294572a6fade88cab10bcf28b9c7fcb8a))
 - update CHANGELOG.md [skip ci] ([`d095ac3`](https://github.com/dstroy0/ProtoCore/commit/d095ac31fff825a7374753b0f4cadab0a6bee878))
 - update CHANGELOG.md [skip ci] ([`f52e327`](https://github.com/dstroy0/ProtoCore/commit/f52e327c237107055f8839b8d4fa3b7a7bb32970))
@@ -479,6 +480,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- The SSH slot, the secure pool and the docs build are sized to what each one takes, and the CI warnings and gcc 15 coverage are fixed. ([`8c67c8d`](https://github.com/dstroy0/ProtoCore/commit/8c67c8d5d580332bbecd43b7a05131cff839030f))
 - The harness builds each file at the CMake word, ProtoCore owns `tools/repotools`, the gate permits the conditional operator, and the code fixes most SonarCloud findings. ([`6295582`](https://github.com/dstroy0/ProtoCore/commit/62955824a7570cc10e02835ddb7f21c69e7eb254))
 - The const borrow reaches each caller that only reads it, each operand pointer goes back to NULL, and the bot stops on a conflict. ([`71047f8`](https://github.com/dstroy0/ProtoCore/commit/71047f8d65a2aa9c0884da5f6d44c29107f830eb))
 - Merge pull request #50 from `dstroy0/dependabot/github_actions/github/codeql-action-4.39.3` ([`fc7623e`](https://github.com/dstroy0/ProtoCore/commit/fc7623e5d638aa0a90402564292212da0e8aaaf1))
@@ -788,7 +790,7 @@ All notable changes to ProtoCore are documented here.
 - convert shape: say what it guesses and what it must not move ([`d43c677`](https://github.com/dstroy0/ProtoCore/commit/d43c677f163b49a5588bd12fb9f547e169c6a8c3))
 - clang-format the vendor HAL headers ([`d126f0f`](https://github.com/dstroy0/ProtoCore/commit/d126f0fabcb0c8e2e159b63b866ec82a941c9908))
 - black over tools/ ([`4067311`](https://github.com/dstroy0/ProtoCore/commit/40673111739ffa30840b4e764423e77d9cd65d14))
-- clang-format the 77 files that drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
+- clang-format the 77 files that had drifted ([`240c74f`](https://github.com/dstroy0/ProtoCore/commit/240c74ff0d1a42ac89ad94743921c6d11c58c91a))
 - retire the stand-in arrays, 663 sites ([`c78ea4b`](https://github.com/dstroy0/ProtoCore/commit/c78ea4b9ebe232ba6da845628c6e45d575ce3080))
 - only the config include above the gate, 195 files ([`1cd928d`](https://github.com/dstroy0/ProtoCore/commit/1cd928d6a858f175eeae18d2705d0ebb75367e09))
 - read the gate, and see a static with no initializer ([`96b0057`](https://github.com/dstroy0/ProtoCore/commit/96b00576c692dcff7ae4859f0a4a57eb5c573bb4))
@@ -922,6 +924,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- update ESP32 build footprints [skip ci] ([`5fdce6d`](https://github.com/dstroy0/ProtoCore/commit/5fdce6dcd3b489bb98760d6df6fd4d446fd73222))
+- regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`957f5d9`](https://github.com/dstroy0/ProtoCore/commit/957f5d9fc4adae3d3e92afc7c7c230fee911419b))
 - update ESP32 build footprints [skip ci] ([`b9c9698`](https://github.com/dstroy0/ProtoCore/commit/b9c9698614fcdea4ba3c438086c0845b7b8cc0b0))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`27a03db`](https://github.com/dstroy0/ProtoCore/commit/27a03db00ba47cba0c981767ea37cb624b82eea6))
 - update ESP32 build footprints [skip ci] ([`163eea3`](https://github.com/dstroy0/ProtoCore/commit/163eea3bc5bba7c621983a12205d5e5fba0cc62d))
