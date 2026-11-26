@@ -1,8 +1,8 @@
 # Test Report
 
-**Generated:** 2026-11-03 03:13:45
-**Command:** `harness.py run` over 383 native envs
-**Result:** ✅ 6616 passed, 0 failed - 1442s
+**Generated:** 2026-11-26 17:28:50
+**Command:** `harness.py run` over 386 native envs
+**Result:** ✅ 6625 passed, 0 failed - 1846s
 
 ---
 
@@ -117,6 +117,9 @@
 | test_focas              | native_focas                |    15 |   ✅   |        - |
 | test_form_params        | native_form_params          |     5 |   ✅   |        - |
 | test_forward            | native_forward              |    33 |   ✅   |        - |
+| test_stack              | native_stack                |     2 |   ✅   |        - |
+| test_stack              | native_stack_transport      |     2 |   ✅   |        - |
+| test_wifi_link          | native_wifi_link            |     5 |   ✅   |        - |
 | test_forwarded_trust    | native_forwarded_trust      |    15 |   ✅   |        - |
 | test_ftp                | native_ftp                  |    17 |   ✅   |        - |
 | test_binary_asset_blobs | native_binary_asset_blobs   |     6 |   ✅   |        - |
@@ -3390,6 +3393,51 @@
 
 ---
 
+## test_stack - native_stack - ✅ 2 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+|   # | Test                                                 | Status | Description                                   |
+| --: | :--------------------------------------------------- | :----: | :-------------------------------------------- |
+|   1 | `test_an_arp_request_for_the_interface_gets_a_reply` |   ✅   | An arp request for the interface gets a reply |
+|   2 | `test_an_echo_to_the_interface_gets_an_echo_reply`   |   ✅   | An echo to the interface gets an echo reply   |
+
+</details>
+
+---
+
+## test_stack - native_stack_transport - ✅ 2 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+|   # | Test                                                 | Status | Description                                   |
+| --: | :--------------------------------------------------- | :----: | :-------------------------------------------- |
+|   1 | `test_an_arp_request_for_the_interface_gets_a_reply` |   ✅   | An arp request for the interface gets a reply |
+|   2 | `test_an_echo_to_the_interface_gets_an_echo_reply`   |   ✅   | An echo to the interface gets an echo reply   |
+
+</details>
+
+---
+
+## test_wifi_link - native_wifi_link - ✅ 5 passed
+
+<details>
+<summary><b>Expand Suite Details</b></summary>
+
+|   # | Test                                                                | Status | Description                                                  |
+| --: | :------------------------------------------------------------------ | :----: | :----------------------------------------------------------- |
+|   1 | `test_a_release_frees_only_the_buffer_that_it_names`                |   ✅   | A release frees only the buffer that it names                |
+|   2 | `test_a_full_ring_drops_and_counts`                                 |   ✅   | A full ring drops and counts                                 |
+|   3 | `test_a_frame_off_a_word_boundary_is_dropped_and_counted`           |   ✅   | A frame off a word boundary is dropped and counted           |
+|   4 | `test_the_link_reports_the_association`                             |   ✅   | The link reports the association                             |
+|   5 | `test_an_arp_request_from_the_radio_gets_a_reply_through_the_radio` |   ✅   | An arp request from the radio gets a reply through the radio |
+
+</details>
+
+---
+
 ## test_forwarded_trust - native_forwarded_trust - ✅ 15 passed
 
 <details>
@@ -4741,7 +4789,7 @@
 |   8 | `test_rfc4301_sad_is_keyed_by_spi`                              |   ✅   | A duplicate SPI is refused: two SAs answering one demux key would be ambiguous.              |
 |   9 | `test_sad_remove`                                               |   ✅   | The SPI is free again after the delete.                                                      |
 |  10 | `test_sad_is_bounded`                                           |   ✅   | Every SPI installed is still reachable.                                                      |
-|  11 | `test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles` |   ✅   | One short of the wrap issues the last legal number; the next call refuses and the counter is |
+|  11 | `test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles` |   ✅   | One short of the wrap issues the last legal number. The next call refuses and the counter is |
 |  12 | `test_sequence_numbers_are_per_sa`                              |   ✅   | Sequence numbers are per sa                                                                  |
 |  13 | `test_inbound_sa_carries_its_replay_window`                     |   ✅   | A second inbound SA's window is independent of the first's.                                  |
 |  14 | `test_null_arguments_are_refused`                               |   ✅   | A flow with no address octets cannot be matched against anything.                            |
@@ -5264,23 +5312,23 @@
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-|   # | Test                                                                 | Status | Description                                                                                  |
-| --: | :------------------------------------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
-|   1 | `test_begin_joins_the_rfc6762_group`                                 |   ✅   | Begin joins the rfc6762 group                                                                |
-|   2 | `test_a_response_carries_the_rfc6762_header_bits`                    |   ✅   | A response carries the rfc6762 header bits                                                   |
-|   3 | `test_the_cache_flush_bit_separates_unique_records_from_shared_ones` |   ✅   | The cache flush bit separates unique records from shared ones                                |
-|   4 | `test_service_enumeration_lists_the_registered_type`                 |   ✅   | Service enumeration lists the registered type                                                |
-|   5 | `test_the_service_type_points_at_the_instance`                       |   ✅   | The service type points at the instance                                                      |
-|   6 | `test_the_instance_srv_carries_the_port_and_the_target`              |   ✅   | The instance srv carries the port and the target                                             |
-|   7 | `test_a_txt_record_is_never_zero_length`                             |   ✅   | A txt record is never zero length                                                            |
-|   8 | `test_txt_pairs_are_length_prefixed_key_equals_value`                |   ✅   | Txt pairs are length prefixed key equals value                                               |
-|   9 | `test_qtype_any_on_an_instance_answers_srv_and_txt`                  |   ✅   | Qtype any on an instance answers srv and txt                                                 |
-|  10 | `test_an_added_service_is_advertised_beside_the_first`               |   ✅   | The first type still answers.                                                                |
-|  11 | `test_a_name_this_host_does_not_own_draws_silence`                   |   ✅   | The A record is the egress address, and there is none on a host with no link up, so the name |
-|  12 | `test_a_response_on_the_group_is_not_answered`                       |   ✅   | A response on the group is not answered                                                      |
-|  13 | `test_a_malformed_query_is_dropped`                                  |   ✅   | QDCOUNT 1, then a label claiming five octets with three present.                             |
-|  14 | `test_the_service_table_fills_and_then_refuses`                      |   ✅   | The first service still answers, so the refusal did not disturb the table.                   |
-|  15 | `test_a_missing_name_is_refused`                                     |   ✅   | A missing name is refused                                                                    |
+|   # | Test                                                                 | Status | Description                                                                              |
+| --: | :------------------------------------------------------------------- | :----: | :--------------------------------------------------------------------------------------- |
+|   1 | `test_begin_joins_the_rfc6762_group`                                 |   ✅   | Begin joins the rfc6762 group                                                            |
+|   2 | `test_a_response_carries_the_rfc6762_header_bits`                    |   ✅   | A response carries the rfc6762 header bits                                               |
+|   3 | `test_the_cache_flush_bit_separates_unique_records_from_shared_ones` |   ✅   | The cache flush bit separates unique records from shared ones                            |
+|   4 | `test_service_enumeration_lists_the_registered_type`                 |   ✅   | Service enumeration lists the registered type                                            |
+|   5 | `test_the_service_type_points_at_the_instance`                       |   ✅   | The service type points at the instance                                                  |
+|   6 | `test_the_instance_srv_carries_the_port_and_the_target`              |   ✅   | The instance srv carries the port and the target                                         |
+|   7 | `test_a_txt_record_is_never_zero_length`                             |   ✅   | A txt record is never zero length                                                        |
+|   8 | `test_txt_pairs_are_length_prefixed_key_equals_value`                |   ✅   | Txt pairs are length prefixed key equals value                                           |
+|   9 | `test_qtype_any_on_an_instance_answers_srv_and_txt`                  |   ✅   | Qtype any on an instance answers srv and txt                                             |
+|  10 | `test_an_added_service_is_advertised_beside_the_first`               |   ✅   | The first type still answers.                                                            |
+|  11 | `test_a_name_this_host_does_not_own_draws_silence`                   |   ✅   | The A record is the egress address. There is none on a host with no link up, so the name |
+|  12 | `test_a_response_on_the_group_is_not_answered`                       |   ✅   | A response on the group is not answered                                                  |
+|  13 | `test_a_malformed_query_is_dropped`                                  |   ✅   | QDCOUNT 1, then a label claiming five octets with three present.                         |
+|  14 | `test_the_service_table_fills_and_then_refuses`                      |   ✅   | The first service still answers, so the refusal did not disturb the table.               |
+|  15 | `test_a_missing_name_is_refused`                                     |   ✅   | A missing name is refused                                                                |
 
 </details>
 
@@ -5404,7 +5452,7 @@
 | --: | :--------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------- |
 |   1 | `test_map_published_pdu_examples`                    |   ✅   | section 6.1, "read discrete outputs 20-38": start 0013h, quantity 0013h. The published        |
 |   2 | `test_unsupported_function_returns_illegal_function` |   ✅   | Unsupported function returns illegal function                                                 |
-|   3 | `test_quantity_bounds`                               |   ✅   | the top of the spec's range is never a data-value problem: it either reads, or it runs        |
+|   3 | `test_quantity_bounds`                               |   ✅   | the top of the spec's range is never a data-value problem. It either reads, or it runs        |
 |   4 | `test_address_plus_quantity_boundary`                |   ✅   | Address plus quantity boundary                                                                |
 |   5 | `test_write_single_coil_value_is_ff00_or_0000`       |   ✅   | Write single coil value is ff00 or 0000                                                       |
 |   6 | `test_write_multiple_byte_count_must_match_quantity` |   ✅   | and the declared byte count must actually be present in the PDU                               |
@@ -7420,20 +7468,20 @@
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-|   # | Test                                                        | Status | Description                                                                                 |
-| --: | :---------------------------------------------------------- | :----: | :------------------------------------------------------------------------------------------ |
-|   1 | `test_fresh_core_is_absent`                                 |   ✅   | Fresh core is absent                                                                        |
-|   2 | `test_a_level_is_believed_only_after_the_debounce`          |   ✅   | A level is believed only after the debounce                                                 |
-|   3 | `test_chatter_below_the_debounce_is_swallowed`              |   ✅   | Chatter below the debounce is swallowed                                                     |
-|   4 | `test_hold_bridges_the_retrigger_gap`                       |   ✅   | OUT drops, and is sampled LOW across a gap well inside the hold                             |
-|   5 | `test_presence_clears_exactly_one_hold_after_the_last_high` |   ✅   | Presence clears exactly one hold after the last high                                        |
-|   6 | `test_event_is_taken_once_per_edge`                         |   ✅   | polling on while present raises no new event                                                |
-|   7 | `test_zero_debounce_and_zero_hold_follow_the_level`         |   ✅   | Zero debounce and zero hold follow the level                                                |
-|   8 | `test_zero_hold_still_debounces`                            |   ✅   | the LOW is not believed until it too has outlasted the debounce; then presence goes at once |
-|   9 | `test_timing_survives_the_millis_rollover`                  |   ✅   | Timing survives the millis rollover                                                         |
-|  10 | `test_rcwl0516_defaults`                                    |   ✅   | Rcwl0516 defaults                                                                           |
-|  11 | `test_repeated_timestamps_are_harmless`                     |   ✅   | Repeated timestamps are harmless                                                            |
-|  12 | `test_null_core_is_refused`                                 |   ✅   | Null core is refused                                                                        |
+|   # | Test                                                        | Status | Description                                                                             |
+| --: | :---------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------- |
+|   1 | `test_fresh_core_is_absent`                                 |   ✅   | Fresh core is absent                                                                    |
+|   2 | `test_a_level_is_believed_only_after_the_debounce`          |   ✅   | A level is believed only after the debounce                                             |
+|   3 | `test_chatter_below_the_debounce_is_swallowed`              |   ✅   | Chatter below the debounce is swallowed                                                 |
+|   4 | `test_hold_bridges_the_retrigger_gap`                       |   ✅   | OUT drops, and is sampled LOW across a gap well inside the hold                         |
+|   5 | `test_presence_clears_exactly_one_hold_after_the_last_high` |   ✅   | Presence clears exactly one hold after the last high                                    |
+|   6 | `test_event_is_taken_once_per_edge`                         |   ✅   | polling on while present raises no new event                                            |
+|   7 | `test_zero_debounce_and_zero_hold_follow_the_level`         |   ✅   | Zero debounce and zero hold follow the level                                            |
+|   8 | `test_zero_hold_still_debounces`                            |   ✅   | the LOW is not believed until it too outlasted the debounce; then presence goes at once |
+|   9 | `test_timing_survives_the_millis_rollover`                  |   ✅   | Timing survives the millis rollover                                                     |
+|  10 | `test_rcwl0516_defaults`                                    |   ✅   | Rcwl0516 defaults                                                                       |
+|  11 | `test_repeated_timestamps_are_harmless`                     |   ✅   | Repeated timestamps are harmless                                                        |
+|  12 | `test_null_core_is_refused`                                 |   ✅   | Null core is refused                                                                    |
 
 </details>
 
@@ -7873,32 +7921,32 @@
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-|   # | Test                                                      | Status | Description                                                                                   |
-| --: | :-------------------------------------------------------- | :----: | :-------------------------------------------------------------------------------------------- |
-|   1 | `test_scpi99_exact_short_or_long_form_only`               |   ✅   | Scpi99 exact short or long form only                                                          |
-|   2 | `test_query_marker_and_depth_must_agree`                  |   ✅   | Query marker and depth must agree                                                             |
-|   3 | `test_numeric_suffix_defaults_to_one`                     |   ✅   | Numeric suffix defaults to one                                                                |
-|   4 | `test_leading_colon_and_parameters_are_ignored`           |   ✅   | Leading colon and parameters are ignored                                                      |
-|   5 | `test_common_commands`                                    |   ✅   | Common commands                                                                               |
-|   6 | `test_command_line_form`                                  |   ✅   | Command line form                                                                             |
-|   7 | `test_build_refuses_bad_arguments`                        |   ✅   | Build refuses bad arguments                                                                   |
-|   8 | `test_numeric_response_forms`                             |   ✅   | Numeric response forms                                                                        |
-|   9 | `test_scpi99_special_numeric_values`                      |   ✅   | Scpi99 special numeric values                                                                 |
-|  10 | `test_malformed_numbers_are_refused`                      |   ✅   | Malformed numbers are refused                                                                 |
-|  11 | `test_real_format_round_trips`                            |   ✅   | Real format round trips                                                                       |
-|  12 | `test_boolean_responses`                                  |   ✅   | Boolean responses                                                                             |
-|  13 | `test_string_responses`                                   |   ✅   | a doubled quote inside collapses to one                                                       |
-|  14 | `test_ieee4882_definite_length_block`                     |   ✅   | a block carrying binary octets, which is the whole point of the form                          |
-|  15 | `test_ieee4882_indefinite_length_block`                   |   ✅   | without the terminator the block is not yet complete                                          |
-|  16 | `test_block_refuses_malformed_and_truncated`              |   ✅   | Block refuses malformed and truncated                                                         |
-|  17 | `test_ieee4882_register_bit_positions`                    |   ✅   | Ieee4882 register bit positions                                                               |
-|  18 | `test_scpi99_error_class_sets_its_esr_bit`                |   ✅   | sec 21.8: "The value, zero, is also reserved to indicate that no error or event has occurred" |
-|  19 | `test_scpi99_error_queue_is_fifo_and_empties_to_no_error` |   ✅   | Scpi99 error queue is fifo and empties to no error                                            |
-|  20 | `test_scpi99_queue_overflow_rule`                         |   ✅   | the least recent entries survive in order                                                     |
-|  21 | `test_scpi99_standard_error_messages`                     |   ✅   | a device-specific (positive) number has no standard text                                      |
-|  22 | `test_status_byte_summary_bits`                           |   ✅   | a queued error raises EAV, and popping it lowers it again                                     |
-|  23 | `test_cls_clears_events_not_enables`                      |   ✅   | status_init is the power-on state: everything clear                                           |
-|  24 | `test_status_calls_tolerate_null`                         |   ✅   | Status calls tolerate null                                                                    |
+|   # | Test                                                      | Status | Description                                                                               |
+| --: | :-------------------------------------------------------- | :----: | :---------------------------------------------------------------------------------------- |
+|   1 | `test_scpi99_exact_short_or_long_form_only`               |   ✅   | Scpi99 exact short or long form only                                                      |
+|   2 | `test_query_marker_and_depth_must_agree`                  |   ✅   | Query marker and depth must agree                                                         |
+|   3 | `test_numeric_suffix_defaults_to_one`                     |   ✅   | Numeric suffix defaults to one                                                            |
+|   4 | `test_leading_colon_and_parameters_are_ignored`           |   ✅   | Leading colon and parameters are ignored                                                  |
+|   5 | `test_common_commands`                                    |   ✅   | Common commands                                                                           |
+|   6 | `test_command_line_form`                                  |   ✅   | Command line form                                                                         |
+|   7 | `test_build_refuses_bad_arguments`                        |   ✅   | Build refuses bad arguments                                                               |
+|   8 | `test_numeric_response_forms`                             |   ✅   | Numeric response forms                                                                    |
+|   9 | `test_scpi99_special_numeric_values`                      |   ✅   | Scpi99 special numeric values                                                             |
+|  10 | `test_malformed_numbers_are_refused`                      |   ✅   | Malformed numbers are refused                                                             |
+|  11 | `test_real_format_round_trips`                            |   ✅   | Real format round trips                                                                   |
+|  12 | `test_boolean_responses`                                  |   ✅   | Boolean responses                                                                         |
+|  13 | `test_string_responses`                                   |   ✅   | a doubled quote inside collapses to one                                                   |
+|  14 | `test_ieee4882_definite_length_block`                     |   ✅   | a block carrying binary octets, which is the whole point of the form                      |
+|  15 | `test_ieee4882_indefinite_length_block`                   |   ✅   | without the terminator the block is not yet complete                                      |
+|  16 | `test_block_refuses_malformed_and_truncated`              |   ✅   | Block refuses malformed and truncated                                                     |
+|  17 | `test_ieee4882_register_bit_positions`                    |   ✅   | Ieee4882 register bit positions                                                           |
+|  18 | `test_scpi99_error_class_sets_its_esr_bit`                |   ✅   | sec 21.8: "The value, zero, is also reserved to indicate that no error or event occurred" |
+|  19 | `test_scpi99_error_queue_is_fifo_and_empties_to_no_error` |   ✅   | Scpi99 error queue is fifo and empties to no error                                        |
+|  20 | `test_scpi99_queue_overflow_rule`                         |   ✅   | the least recent entries survive in order                                                 |
+|  21 | `test_scpi99_standard_error_messages`                     |   ✅   | a device-specific (positive) number has no standard text                                  |
+|  22 | `test_status_byte_summary_bits`                           |   ✅   | a queued error raises EAV, and popping it lowers it again                                 |
+|  23 | `test_cls_clears_events_not_enables`                      |   ✅   | status_init is the power-on state: everything clear                                       |
+|  24 | `test_status_calls_tolerate_null`                         |   ✅   | Status calls tolerate null                                                                |
 
 </details>
 
@@ -9167,7 +9215,7 @@
 |   8 | `test_sec6_minimum_packet_is_sixteen_bytes`                  |   ✅   | Sec6 minimum packet is sixteen bytes                                                         |
 |   9 | `test_sec6_block_aligned_payload_still_pads`                 |   ✅   | 4 + 1 + 3 = 8, so a 3-byte payload would be aligned with no padding at all.                  |
 |  10 | `test_sec6_1_the_required_payload_size_is_carried`           |   ✅   | Sec6 1 the required payload size is carried                                                  |
-|  11 | `test_sec6_1_reassembly_holds_a_full_payload`                |   ✅   | Sec6 1 reassembly holds a full payload                                                       |
+|  11 | `test_reassembly_holds_the_largest_accepted_packet`          |   ✅   | Reassembly holds the largest accepted packet                                                 |
 |  12 | `test_sec6_1_oversized_payload_is_refused`                   |   ✅   | Sec6 1 oversized payload is refused                                                          |
 |  13 | `test_sec6_undersized_wire_is_refused`                       |   ✅   | Sec6 undersized wire is refused                                                              |
 |  14 | `test_sec6_4_send_counter_starts_at_zero`                    |   ✅   | Sec6 4 send counter starts at zero                                                           |
@@ -9208,21 +9256,21 @@
 <details>
 <summary><b>Expand Suite Details</b></summary>
 
-|   # | Test                                                    | Status | Description                                              |
-| --: | :------------------------------------------------------ | :----: | :------------------------------------------------------- |
-|   1 | `test_every_slot_in_range_has_storage`                  |   ✅   | Every slot in range has storage                          |
-|   2 | `test_slot_past_the_pool_is_null`                       |   ✅   | Slot past the pool is null                               |
-|   3 | `test_the_same_slot_answers_the_same_base`              |   ✅   | The same slot answers the same base                      |
-|   4 | `test_slots_are_distinct_and_one_borrow_apart`          |   ⚠️   | Slots are distinct and one borrow apart                  |
-|   5 | `test_writing_a_whole_slot_leaves_its_neighbour_alone`  |   ⚠️   | Writing a whole slot leaves its neighbour alone          |
-|   6 | `test_every_region_ends_within_the_borrow`              |   ✅   | Every region ends within the borrow                      |
-|   7 | `test_offsets_are_laid_out_in_ascending_order`          |   ✅   | wire, then session: what outlives a single key exchange. |
-|   8 | `test_regions_partition_the_slot`                       |   ✅   | Regions partition the slot                               |
-|   9 | `test_the_transient_regions_are_contiguous`             |   ✅   | The transient regions are contiguous                     |
-|  10 | `test_the_wire_is_first_and_key_material_is_behind_it`  |   ✅   | The wire is first and key material is behind it          |
-|  11 | `test_the_two_key_epochs_are_one_stride_apart`          |   ✅   | The two key epochs are one stride apart                  |
-|  12 | `test_sec6_1_reassembly_region_holds_a_full_payload`    |   ✅   | Sec6 1 reassembly region holds a full payload            |
-|  13 | `test_the_wire_holds_two_packets_and_is_a_power_of_two` |   ✅   | The wire holds two packets and is a power of two         |
+|   # | Test                                                       | Status | Description                                              |
+| --: | :--------------------------------------------------------- | :----: | :------------------------------------------------------- |
+|   1 | `test_every_slot_in_range_has_storage`                     |   ✅   | Every slot in range has storage                          |
+|   2 | `test_slot_past_the_pool_is_null`                          |   ✅   | Slot past the pool is null                               |
+|   3 | `test_the_same_slot_answers_the_same_base`                 |   ✅   | The same slot answers the same base                      |
+|   4 | `test_slots_are_distinct_and_one_borrow_apart`             |   ⚠️   | Slots are distinct and one borrow apart                  |
+|   5 | `test_writing_a_whole_slot_leaves_its_neighbour_alone`     |   ⚠️   | Writing a whole slot leaves its neighbour alone          |
+|   6 | `test_every_region_ends_within_the_borrow`                 |   ✅   | Every region ends within the borrow                      |
+|   7 | `test_offsets_are_laid_out_in_ascending_order`             |   ✅   | wire, then session: what outlives a single key exchange. |
+|   8 | `test_regions_partition_the_slot`                          |   ✅   | Regions partition the slot                               |
+|   9 | `test_the_transient_regions_are_contiguous`                |   ✅   | The transient regions are contiguous                     |
+|  10 | `test_the_wire_is_first_and_key_material_is_behind_it`     |   ✅   | The wire is first and key material is behind it          |
+|  11 | `test_the_two_key_epochs_are_one_stride_apart`             |   ✅   | The two key epochs are one stride apart                  |
+|  12 | `test_reassembly_region_holds_the_largest_accepted_packet` |   ✅   | Reassembly region holds the largest accepted packet      |
+|  13 | `test_the_wire_holds_two_packets_and_keeps_the_alignment`  |   ✅   | The wire holds two packets and keeps the alignment       |
 
 </details>
 
@@ -10761,7 +10809,7 @@
 |   # | Test                                                     | Status | Description                                                                                  |
 | --: | :------------------------------------------------------- | :----: | :------------------------------------------------------------------------------------------- |
 |   1 | `test_rfc8448_protected_records`                         |   ✅   | Record 0 under the client handshake key: the Finished message.                               |
-|   2 | `test_rfc8448_records_open_again`                        |   ✅   | Opening the same record again is a different sequence number, so it no longer verifies: this |
+|   2 | `test_rfc8448_records_open_again`                        |   ✅   | Opening the same record again is a different sequence number. So it no longer verifies: this |
 |   3 | `test_rfc8446_5_1_plaintext_record`                      |   ✅   | Rfc8446 5 1 plaintext record                                                                 |
 |   4 | `test_plaintext_parse_waits_for_the_whole_record`        |   ✅   | Extra bytes after the record belong to the next one: the parse reports only its own length.  |
 |   5 | `test_plaintext_build_bounds`                            |   ✅   | A destination one octet short writes nothing.                                                |
