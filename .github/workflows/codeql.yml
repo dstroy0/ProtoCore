@@ -58,7 +58,7 @@ jobs:
       # The database comes from the traced build below, so the build mode is manual. An overlay database needs
       # build mode none, so the overlay mode is none, and the action builds a full database with no warning.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.39.3
+        uses: github/codeql-action/init@v4.39.5
         env:
           CODEQL_OVERLAY_DATABASE_MODE: none
         with:
@@ -94,6 +94,6 @@ jobs:
           exit 0
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4.39.3
+        uses: github/codeql-action/analyze@v4.39.5
         with:
           category: "/language:c-cpp"
